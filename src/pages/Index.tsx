@@ -1,100 +1,150 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { FlashcardList } from "@/components/FlashcardList";
-import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
-import { BookOpen, Plus, GraduationCap } from "lucide-react";
+import { CollectionCard } from "@/components/CollectionCard";
+import { CreateCollectionDialog } from "@/components/CreateCollectionDialog";
+import { GraduationCap, LogOut } from "lucide-react";
+import { toast } from "sonner";
 import heroImage from "@/assets/hero-bg.jpg";
 
-interface FlashcardData {
+interface Collection {
   id: string;
-  front: string;
-  back: string;
+  name: string;
+  description?: string;
 }
 
 const Index = () => {
-  const [flashcards, setFlashcards] = useState<FlashcardData[]>([
-    { id: "1", front: "Olá", back: "Hello" },
-    { id: "2", front: "Obrigado", back: "Thank you" },
-    { id: "3", front: "Por favor", back: "Please" },
-  ]);
-  const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [flashcardCounts, setFlashcardCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
-  const handleAddFlashcard = (front: string, back: string) => {
-    const newCard: FlashcardData = {
-      id: Date.now().toString(),
-      front,
-      back,
-    };
-    setFlashcards([...flashcards, newCard]);
-    setShowForm(false);
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadCollections();
+    }
+  }, [user]);
+
+  const checkAuth = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+
+    setUser(session.user);
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        navigate("/auth");
+      } else if (session) {
+        setUser(session.user);
+      }
+    });
+  };
+
+  const loadCollections = async () => {
+    setLoading(true);
+
+    const { data: collectionsData, error } = await supabase
+      .from("collections")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Erro ao carregar coleções");
+    } else {
+      setCollections(collectionsData || []);
+
+      // Load flashcard counts for each collection
+      const counts: Record<string, number> = {};
+      for (const collection of collectionsData || []) {
+        const { count } = await supabase
+          .from("flashcards")
+          .select("*", { count: "exact", head: true })
+          .eq("collection_id", collection.id);
+
+        counts[collection.id] = count || 0;
+      }
+      setFlashcardCounts(counts);
+    }
+
+    setLoading(false);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    toast.success("Logout realizado!");
   };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section 
+      <section
         className="relative bg-gradient-to-br from-primary via-primary-glow to-accent text-primary-foreground overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, hsl(250 70% 60% / 0.95), hsl(260 80% 70% / 0.95)), url(${heroImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
-        <div className="container mx-auto px-4 py-20 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="flex justify-center mb-6">
-              <GraduationCap className="h-16 w-16" />
+        <div className="container mx-auto px-4 py-16 relative z-10">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-3">
+              <GraduationCap className="h-10 w-10" />
+              <h1 className="text-3xl font-bold">Minhas Coleções</h1>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Flashcards de Inglês
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 opacity-95">
-              Aprenda vocabulário de forma interativa e divertida
+            <Button variant="secondary" size="sm" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </div>
+
+          <div className="max-w-2xl">
+            <p className="text-lg mb-6 opacity-95">
+              Organize seus flashcards em coleções e pratique com diferentes modos de estudo!
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                variant="hero"
-                size="lg"
-                onClick={() => setShowForm(!showForm)}
-                className="shadow-xl"
-              >
-                <Plus className="mr-2 h-5 w-5" />
-                Criar Novo Flashcard
-              </Button>
-              <Button 
-                variant="secondary"
-                size="lg"
-                onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
-              >
-                <BookOpen className="mr-2 h-5 w-5" />
-                Ver Flashcards
-              </Button>
-            </div>
+            <CreateCollectionDialog onCollectionCreated={loadCollections} />
           </div>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent pointer-events-none"></div>
       </section>
 
-      {/* Create Form Section */}
-      {showForm && (
-        <section className="py-12 bg-muted/30">
-          <div className="container mx-auto px-4 max-w-2xl">
-            <h2 className="text-3xl font-bold mb-6 text-center">Criar Novo Flashcard</h2>
-            <CreateFlashcardForm onAdd={handleAddFlashcard} />
-          </div>
-        </section>
-      )}
-
-      {/* Flashcards Section */}
-      <section className="py-16">
+      {/* Collections Section */}
+      <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="mb-8 text-center">
-            <h2 className="text-4xl font-bold mb-2">Seus Flashcards</h2>
-            <p className="text-muted-foreground text-lg">
-              Clique em um card para ver a tradução
-            </p>
-          </div>
-          <FlashcardList flashcards={flashcards} />
+          {loading ? (
+            <p className="text-center text-muted-foreground">Carregando...</p>
+          ) : collections.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg mb-4">
+                Você ainda não tem coleções. Crie sua primeira!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {collections.map((collection) => (
+                <CollectionCard
+                  key={collection.id}
+                  id={collection.id}
+                  name={collection.name}
+                  description={collection.description}
+                  flashcardCount={flashcardCounts[collection.id] || 0}
+                  onSelect={() => navigate(`/collection/${collection.id}`)}
+                  onDelete={loadCollections}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>
