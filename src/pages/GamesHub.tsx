@@ -1,0 +1,173 @@
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, RotateCcw, Pencil, Layers3 } from "lucide-react";
+import { toast } from "sonner";
+
+interface Collection {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+const GamesHub = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [collection, setCollection] = useState<Collection | null>(null);
+  const [direction, setDirection] = useState<"pt-en" | "en-pt" | "any">("any");
+  const [order, setOrder] = useState<"random" | "sequential">("random");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadCollection();
+  }, [id]);
+
+  const loadCollection = async () => {
+    if (!id) return;
+
+    const { data, error } = await supabase
+      .from("collections")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      toast.error("Erro ao carregar coleção");
+      navigate("/");
+      return;
+    }
+
+    if (!data) {
+      toast.error("Coleção não encontrada");
+      navigate("/");
+      return;
+    }
+
+    setCollection(data);
+    setLoading(false);
+  };
+
+  const startGame = (mode: "flip" | "write" | "mixed") => {
+    navigate(`/collection/${id}/study?mode=${mode}&dir=${direction}&order=${order}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <Button variant="ghost" onClick={() => navigate("/")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
+
+        {collection && (
+          <div className="mb-12 text-center">
+            <h1 className="text-4xl font-bold mb-2">Hub de Jogos</h1>
+            <p className="text-xl text-muted-foreground">{collection.name}</p>
+            {collection.description && (
+              <p className="text-muted-foreground mt-2">{collection.description}</p>
+            )}
+          </div>
+        )}
+
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Direção</label>
+              <Select value={direction} onValueChange={(v: any) => setDirection(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pt-en">PT → EN</SelectItem>
+                  <SelectItem value="en-pt">EN → PT</SelectItem>
+                  <SelectItem value="any">Misturar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Ordem</label>
+              <Select value={order} onValueChange={(v: any) => setOrder(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="random">Aleatória</SelectItem>
+                  <SelectItem value="sequential">Sequencial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card
+              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+              onClick={() => startGame("flip")}
+            >
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <RotateCcw className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Virar Cartas</h3>
+                <p className="text-sm text-muted-foreground">
+                  Veja a frente e tente lembrar o verso antes de revelar
+                </p>
+              </div>
+            </Card>
+
+            <Card
+              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+              onClick={() => startGame("write")}
+            >
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Pencil className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Praticar Escrita</h3>
+                <p className="text-sm text-muted-foreground">
+                  Digite as traduções e receba correção em tempo real
+                </p>
+              </div>
+            </Card>
+
+            <Card
+              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+              onClick={() => startGame("mixed")}
+            >
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Layers3 className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Estudar (Misto)</h3>
+                <p className="text-sm text-muted-foreground">
+                  Alterna entre virar cartas e praticar escrita
+                </p>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default GamesHub;

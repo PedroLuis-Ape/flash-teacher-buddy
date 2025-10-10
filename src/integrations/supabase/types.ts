@@ -43,6 +43,8 @@ export type Database = {
       }
       flashcards: {
         Row: {
+          accepted_answers_en: string[] | null
+          accepted_answers_pt: string[] | null
           audio_url: string | null
           back: string
           collection_id: string
@@ -53,6 +55,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          accepted_answers_en?: string[] | null
+          accepted_answers_pt?: string[] | null
           audio_url?: string | null
           back: string
           collection_id: string
@@ -63,6 +67,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          accepted_answers_en?: string[] | null
+          accepted_answers_pt?: string[] | null
           audio_url?: string | null
           back?: string
           collection_id?: string

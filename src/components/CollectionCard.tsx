@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Trash2, Edit } from "lucide-react";
+import { BookOpen, Trash2, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface CollectionCardProps {
   id: string;
@@ -21,6 +22,8 @@ export const CollectionCard = ({
   onSelect,
   onDelete,
 }: CollectionCardProps) => {
+  const navigate = useNavigate();
+
   const handleDelete = async () => {
     const { error } = await supabase.from("collections").delete().eq("id", id);
 
@@ -54,13 +57,24 @@ export const CollectionCard = ({
         <p className="text-muted-foreground mb-4">{description}</p>
       )}
 
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
+      <div className="space-y-3">
+        <span className="text-sm text-muted-foreground block">
           {flashcardCount} flashcard{flashcardCount !== 1 ? "s" : ""}
         </span>
-        <Button onClick={onSelect} size="sm">
-          Abrir
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate(`/collection/${id}/games`)}
+            className="flex-1"
+          >
+            <Gamepad2 className="mr-2 h-4 w-4" />
+            Estudar
+          </Button>
+          <Button onClick={onSelect} variant="secondary" size="sm" className="flex-1">
+            Ver Flashcards
+          </Button>
+        </div>
       </div>
     </Card>
   );
