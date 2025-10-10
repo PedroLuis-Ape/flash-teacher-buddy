@@ -30,11 +30,15 @@ interface Flashcard {
 }
 
 const Study = () => {
-  const { id } = useParams();
+  const { id, collectionId } = useParams();
+  const resolvedId = (id as string) || (collectionId as string) || "";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "flip";
-  const direction = (searchParams.get("dir") || "any") as "pt-en" | "en-pt" | "any";
+  const direction = (searchParams.get("direction") || searchParams.get("dir") || "any") as
+    | "pt-en"
+    | "en-pt"
+    | "any";
   const order = searchParams.get("order") || "random";
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
@@ -56,11 +60,11 @@ const Study = () => {
     goToNext,
     goToPrevious,
     saveSession,
-  } = useStudyEngine(id || "", flashcards.length);
+  } = useStudyEngine(resolvedId, flashcards.length);
 
   useEffect(() => {
     loadFlashcards();
-  }, [id]);
+  }, [resolvedId]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -74,25 +78,27 @@ const Study = () => {
   }, []);
 
   const loadFlashcards = async () => {
-    if (!id) return;
+    if (!resolvedId) return;
 
     setLoading(true);
     const { data, error } = await supabase
       .from("flashcards")
       .select("*")
-      .eq("collection_id", id);
+      .eq("collection_id", resolvedId);
 
-    if (error) {
-      toast.error("Erro ao carregar flashcards");
-      navigate("/");
-      return;
-    }
+  if (error) {
+    toast.error("Erro ao carregar flashcards");
+    const isPublic = window.location.pathname.startsWith("/portal/collection/");
+    navigate(isPublic ? `/portal/collection/${resolvedId}` : "/");
+    return;
+  }
 
-    if (!data || data.length === 0) {
-      toast.error("Esta coleção não tem flashcards ainda");
-      navigate(`/collection/${id}`);
-      return;
-    }
+  if (!data || data.length === 0) {
+    toast.error("Esta coleção não tem flashcards ainda");
+    const isPublic = window.location.pathname.startsWith("/portal/collection/");
+    navigate(isPublic ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}`);
+    return;
+  }
 
     const orderedData = order === "random" ? shuffleArray([...data]) : data;
     setFlashcards(orderedData);
@@ -131,8 +137,13 @@ const Study = () => {
   };
 
   const handleExit = () => {
-    saveSession(mode, direction);
-    navigate(`/collection/${id}/games`);
+    const isPublic = window.location.pathname.startsWith("/portal/collection/");
+    if (!isPublic) {
+      saveSession(mode, direction);
+      navigate(`/collection/${resolvedId}/games`);
+    } else {
+      navigate(`/portal/collection/${resolvedId}`);
+    }
   };
 
   if (loading) {
@@ -194,7 +205,10 @@ const Study = () => {
                   Rever apenas os errados
                 </Button>
               )}
-              <Button size="lg" onClick={() => navigate(`/collection/${id}/games`)}>
+              <Button size="lg" onClick={() => {
+                const isPublic = window.location.pathname.startsWith("/portal/collection/");
+                navigate(isPublic ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}/games`);
+              }}>
                 Voltar ao Hub
               </Button>
             </div>
