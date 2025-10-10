@@ -67,12 +67,9 @@ export const WriteStudyView = ({
 
     if (result.isCorrect) {
       setFeedback("correct");
-      setTimeout(() => {
-        onCorrect();
-      }, 1500);
+      // Auto-advance removed - user will click "Próximo"
     } else {
       setFeedback("incorrect");
-      onIncorrect();
     }
   };
 
@@ -148,7 +145,10 @@ export const WriteStudyView = ({
         {feedback === "correct" && (
           <Alert className="border-green-500 bg-green-50 dark:bg-green-950 animate-fade-in">
             <AlertDescription className="text-green-700 dark:text-green-300">
-              ✓ Você acertou! <br />
+              <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+                <span className="text-2xl">✓</span>
+                Correto!
+              </div>
               <span className="font-semibold">{correctAnswer}</span>
               {acceptedAnswers.length > 1 && (
                 <>
@@ -165,7 +165,11 @@ export const WriteStudyView = ({
         {feedback === "incorrect" && (
           <Alert className="border-red-500 bg-red-50 dark:bg-red-950 animate-fade-in">
             <AlertDescription className="text-red-700 dark:text-red-300">
-              ✗ Quase… compare com o gabarito:
+              <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+                <span className="text-2xl">✗</span>
+                Incorreto
+              </div>
+              Compare sua resposta com o gabarito:
               <br />
               <div className="mt-2 font-mono text-base">
                 <div>
@@ -192,7 +196,7 @@ export const WriteStudyView = ({
         )}
       </div>
 
-      {!feedback && (
+      {feedback === null && (
         <div className="flex gap-3 flex-wrap">
           <Button variant="outline" onClick={onSkip}>
             <SkipForward className="mr-2 h-4 w-4" />
@@ -210,6 +214,22 @@ export const WriteStudyView = ({
           )}
           <Button onClick={handleSubmit} className="ml-auto">
             Corrigir
+          </Button>
+        </div>
+      )}
+
+      {feedback === "correct" && (
+        <div className="flex justify-end">
+          <Button onClick={onCorrect} size="lg" className="bg-green-600 hover:bg-green-700">
+            Próximo
+          </Button>
+        </div>
+      )}
+
+      {feedback === "incorrect" && (
+        <div className="flex justify-end">
+          <Button onClick={onIncorrect} variant="destructive" size="lg">
+            Continuar
           </Button>
         </div>
       )}
