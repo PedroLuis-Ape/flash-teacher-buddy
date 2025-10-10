@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2 } from "lucide-react";
-import { speak, getVoiceForLang } from "@/lib/edgeTTS";
-import { pickLang } from "@/lib/speech";
+import { speakText, pickLang } from "@/lib/speech";
 
 interface FlipStudyViewProps {
   front: string;
@@ -35,15 +34,13 @@ export const FlipStudyView = ({
     if (!isFlipped) {
       setIsFlipped(true);
       const lang = pickLang(direction, hideText);
-      const voice = getVoiceForLang(lang);
-      await speak(hideText, voice);
+      await speakText(hideText, lang);
     }
   };
 
   const handlePlayAgain = async () => {
     const lang = pickLang(direction, hideText);
-    const voice = getVoiceForLang(lang);
-    await speak(hideText, voice);
+    await speakText(hideText, lang);
   };
 
   useEffect(() => {

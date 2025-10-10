@@ -6,8 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, Eye, SkipForward, Volume2 } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
-import { speak, getVoiceForLang } from "@/lib/edgeTTS";
-import { pickLang } from "@/lib/speech";
+import { speakText, pickLang } from "@/lib/speech";
 
 interface WriteStudyViewProps {
   front: string;
@@ -105,8 +104,7 @@ export const WriteStudyView = ({
               size="sm"
               onClick={async () => {
                 const lang = pickLang(direction, prompt);
-                const voice = getVoiceForLang(lang);
-                await speak(prompt, voice);
+                await speakText(prompt, lang);
               }}
             >
               <Volume2 className="h-5 w-5" />
