@@ -1,6 +1,29 @@
-// Text-to-Speech utilities using Web Speech API
+// Text-to-Speech utilities using Puter.js with Web Speech API fallback
 
-export function speakText(text: string, lang: "pt-BR" | "en-US") {
+// Declare Puter types
+declare global {
+  interface Window {
+    puter?: {
+      ai?: {
+        txt2speech: (text: string, lang: string) => Promise<HTMLAudioElement>;
+      };
+    };
+  }
+}
+
+export async function speakText(text: string, lang: "pt-BR" | "en-US") {
+  try {
+    // Try Puter.js first (better quality, free)
+    if (window.puter?.ai?.txt2speech) {
+      const audio = await window.puter.ai.txt2speech(text, lang);
+      audio.play();
+      return;
+    }
+  } catch (err) {
+    console.warn("Puter TTS failed, falling back to Web Speech API:", err);
+  }
+
+  // Fallback to Web Speech API
   const synth = window.speechSynthesis;
   if (!synth) {
     console.warn("Speech synthesis not supported");
@@ -47,9 +70,18 @@ export function getAvailableVoices() {
   return synth.getVoices();
 }
 
-// Load voices on page load (some browsers need this)
+// Load voices on page load (for fallback Web Speech API)
 if (typeof window !== 'undefined' && window.speechSynthesis) {
   window.speechSynthesis.onvoiceschanged = () => {
     window.speechSynthesis.getVoices();
   };
+}
+
+// Wait for Puter.js to load
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    if (!window.puter) {
+      console.warn("Puter.js not loaded, will use Web Speech API fallback");
+    }
+  });
 }
