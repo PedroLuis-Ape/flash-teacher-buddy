@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { GraduationCap } from "lucide-react";
 import { PitecoMascot } from "@/components/PitecoMascot";
+import { PitecoLogo } from "@/components/PitecoLogo";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -113,7 +113,7 @@ const Auth = () => {
         {/* Welcome Card */}
         <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur">
           <div className="flex flex-col items-center text-center">
-            <GraduationCap className="h-16 w-16 text-primary mb-4" />
+            <PitecoLogo className="h-24 w-24 mb-4" />
             <h1 className="text-4xl font-bold mb-2">Bem-vindo à APE! 🎓</h1>
             <p className="text-muted-foreground text-lg">
               Apprenticeship Practice and Enhancement
