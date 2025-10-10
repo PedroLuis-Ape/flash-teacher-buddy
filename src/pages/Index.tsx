@@ -14,6 +14,7 @@ interface Collection {
   id: string;
   name: string;
   description?: string;
+  visibility?: string;
 }
 
 const Index = () => {
@@ -284,8 +285,10 @@ const Index = () => {
                   name={collection.name}
                   description={collection.description}
                   flashcardCount={flashcardCounts[collection.id] || 0}
+                  visibility={collection.visibility}
                   onSelect={() => navigate(`/collection/${collection.id}`)}
                   onDelete={loadCollections}
+                  onToggleShare={loadCollections}
                 />
               ))}
             </div>

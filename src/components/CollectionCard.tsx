@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Trash2, Gamepad2 } from "lucide-react";
+import { BookOpen, Trash2, Gamepad2, Share2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -10,8 +10,10 @@ interface CollectionCardProps {
   name: string;
   description?: string;
   flashcardCount: number;
+  visibility?: string;
   onSelect: () => void;
   onDelete: () => void;
+  onToggleShare: () => void;
 }
 
 export const CollectionCard = ({
@@ -19,10 +21,13 @@ export const CollectionCard = ({
   name,
   description,
   flashcardCount,
+  visibility = "private",
   onSelect,
   onDelete,
+  onToggleShare,
 }: CollectionCardProps) => {
   const navigate = useNavigate();
+  const isPublic = visibility === "public";
 
   const handleDelete = async () => {
     const { error } = await supabase.from("collections").delete().eq("id", id);
@@ -34,6 +39,23 @@ export const CollectionCard = ({
 
     toast.success("Coleção excluída!");
     onDelete();
+  };
+
+  const handleToggleShare = async () => {
+    const newVisibility = isPublic ? "private" : "public";
+    
+    const { error } = await supabase
+      .from("collections")
+      .update({ visibility: newVisibility })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao atualizar compartilhamento");
+      return;
+    }
+
+    toast.success(isPublic ? "Compartilhamento desativado!" : "Compartilhamento ativado!");
+    onToggleShare();
   };
 
   return (
@@ -58,9 +80,29 @@ export const CollectionCard = ({
       )}
 
       <div className="space-y-3">
-        <span className="text-sm text-muted-foreground block">
-          {flashcardCount} flashcard{flashcardCount !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            {flashcardCount} flashcard{flashcardCount !== 1 ? "s" : ""}
+          </span>
+          <Button
+            variant={isPublic ? "default" : "outline"}
+            size="sm"
+            onClick={handleToggleShare}
+            className="gap-2"
+          >
+            {isPublic ? (
+              <>
+                <Share2 className="h-4 w-4" />
+                Compartilhado
+              </>
+            ) : (
+              <>
+                <Lock className="h-4 w-4" />
+                Privado
+              </>
+            )}
+          </Button>
+        </div>
         <div className="flex gap-2">
           <Button
             variant="default"
