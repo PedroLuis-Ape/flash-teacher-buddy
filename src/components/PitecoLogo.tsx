@@ -6,11 +6,11 @@ export function PitecoLogo({ className = "h-16 w-16" }: { className?: string }) 
   const [processedImage, setProcessedImage] = useState<string>("");
 
   useEffect(() => {
-    // Remove green chroma key background (standard green screen)
+    // Remove green chroma key background with stronger settings
     removeChromaBackground(
       pitecoImage,
-      { r: 0, g: 255, b: 0 }, // Standard green chroma key
-      60 // Standard threshold
+      { r: 50, g: 200, b: 50 }, // Adjusted to match the actual green in the image
+      80 // Higher threshold for better green removal
     )
       .then(setProcessedImage)
       .catch((err) => {
