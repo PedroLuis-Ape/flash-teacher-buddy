@@ -6,11 +6,11 @@ export function PitecoLogo({ className = "h-16 w-16" }: { className?: string }) 
   const [processedImage, setProcessedImage] = useState<string>("");
 
   useEffect(() => {
-    // Remove purple/violet chroma key background
+    // Remove purple/violet chroma key background with lighter tolerance
     removeChromaBackground(
       pitecoImage,
-      { r: 138, g: 43, b: 226 }, // Purple/violet color
-      60
+      { r: 158, g: 88, b: 226 }, // Adjusted purple color
+      35 // Reduced tolerance for softer effect
     )
       .then(setProcessedImage)
       .catch((err) => {
