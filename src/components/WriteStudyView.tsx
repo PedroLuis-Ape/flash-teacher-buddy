@@ -3,9 +3,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lightbulb, Eye, SkipForward } from "lucide-react";
+import { Lightbulb, Eye, SkipForward, Volume2 } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
+import { speakText, pickLang } from "@/lib/speech";
 
 interface WriteStudyViewProps {
   front: string;
@@ -99,7 +100,19 @@ export const WriteStudyView = ({
       <Card className="p-8 bg-gradient-to-br from-card to-muted/20">
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
-          <p className="text-3xl font-semibold mb-8">{prompt}</p>
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <p className="text-3xl font-semibold">{prompt}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const lang = pickLang(direction, prompt);
+                speakText(prompt, lang);
+              }}
+            >
+              <Volume2 className="h-5 w-5" />
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground">Traduza para {answerLabel}:</p>
         </div>
       </Card>

@@ -8,11 +8,13 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { GraduationCap } from "lucide-react";
+import { PitecoMascot } from "@/components/PitecoMascot";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,22 +28,47 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firstName.trim()) {
+      toast.error("Por favor, preencha seu primeiro nome");
+      return;
+    }
+    
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
+        data: {
+          first_name: firstName.trim(),
+        },
       },
     });
 
     if (error) {
-      toast.error(error.message);
-    } else {
+      if (error.message.includes("already registered") || error.message.includes("already been registered")) {
+        toast.error("Este e-mail já está em uso");
+      } else {
+        toast.error(error.message);
+      }
+    } else if (data.user) {
+      // Create or update profile with first name
+      const ownerEmail = import.meta.env.VITE_OWNER_EMAIL;
+      const isOwner = email.toLowerCase() === ownerEmail?.toLowerCase();
+      
+      await supabase.from("profiles").upsert({
+        id: data.user.id,
+        email: email,
+        first_name: firstName.trim(),
+        role: isOwner ? "owner" : "student",
+        is_primary: isOwner,
+      });
+      
       toast.success("Conta criada! Você já pode fazer login.");
       setEmail("");
       setPassword("");
+      setFirstName("");
     }
     setLoading(false);
   };
@@ -50,7 +77,7 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -58,15 +85,30 @@ const Auth = () => {
     if (error) {
       toast.error(error.message);
       setLoading(false);
-    } else {
+    } else if (data.user) {
+      // Bootstrap owner profile if needed
+      const ownerEmail = import.meta.env.VITE_OWNER_EMAIL;
+      const isOwner = email.toLowerCase() === ownerEmail?.toLowerCase();
+      
+      if (isOwner) {
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          email: data.user.email,
+          first_name: import.meta.env.VITE_OWNER_FIRST_NAME || "Pedro",
+          role: "owner",
+          is_primary: true,
+        });
+      }
+      
       toast.success("Login realizado!");
       navigate("/");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-accent flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-[var(--shadow-card)]">
+    <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-accent flex items-center justify-center p-4 relative overflow-hidden">
+      <PitecoMascot />
+      <Card className="w-full max-w-md p-8 shadow-[var(--shadow-card)] relative z-20">
         <div className="flex justify-center mb-6">
           <GraduationCap className="h-12 w-12 text-primary" />
         </div>
@@ -118,7 +160,19 @@ const Auth = () => {
           <TabsContent value="signup">
             <form onSubmit={handleSignUp} className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
+                <Label htmlFor="signup-firstname">Primeiro Nome *</Label>
+                <Input
+                  id="signup-firstname"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Seu primeiro nome"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email *</Label>
                 <Input
                   id="signup-email"
                   type="email"
@@ -130,7 +184,7 @@ const Auth = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Senha</Label>
+                <Label htmlFor="signup-password">Senha *</Label>
                 <Input
                   id="signup-password"
                   type="password"

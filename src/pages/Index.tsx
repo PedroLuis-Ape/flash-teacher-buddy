@@ -20,6 +20,7 @@ const Index = () => {
   const [flashcardCounts, setFlashcardCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState<{first_name?: string; email?: string} | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -28,8 +29,23 @@ const Index = () => {
   useEffect(() => {
     if (user) {
       loadCollections();
+      loadProfile();
     }
   }, [user]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from("profiles")
+      .select("first_name, email")
+      .eq("id", user.id)
+      .single();
+    
+    if (data) {
+      setProfile(data);
+    }
+  };
 
   const checkAuth = async () => {
     const {
@@ -55,6 +71,7 @@ const Index = () => {
   const loadCollections = async () => {
     setLoading(true);
 
+    // Load collections owned by user or shared via class
     const { data: collectionsData, error } = await supabase
       .from("collections")
       .select("*")
@@ -101,7 +118,14 @@ const Index = () => {
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-3">
               <GraduationCap className="h-10 w-10" />
-              <h1 className="text-3xl font-bold">APE - Apprenticeship Practice and Enhancement</h1>
+              <div>
+                <h1 className="text-3xl font-bold">APE - Apprenticeship Practice and Enhancement</h1>
+                {profile && (
+                  <p className="text-lg mt-1 opacity-90">
+                    Olá, {profile.first_name?.split(' ')[0] || profile.email?.split('@')[0] || 'Aluno'}!
+                  </p>
+                )}
+              </div>
             </div>
             <Button variant="secondary" size="sm" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />

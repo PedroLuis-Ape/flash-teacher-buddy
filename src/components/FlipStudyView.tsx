@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Volume2 } from "lucide-react";
+import { speakText, pickLang } from "@/lib/speech";
 
 interface FlipStudyViewProps {
   front: string;
@@ -20,15 +21,36 @@ export const FlipStudyView = ({
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
+  const showText = direction === "pt-en" || direction === "any" ? front : back;
+  const hideText = direction === "pt-en" || direction === "any" ? back : front;
+  const showLabel = direction === "pt-en" || direction === "any" ? "Português" : "English";
+  const hideLabel = direction === "pt-en" || direction === "any" ? "English" : "Português";
+
   useEffect(() => {
     setIsFlipped(false);
   }, [front, back]);
+
+  const handleFlip = () => {
+    if (!isFlipped) {
+      setIsFlipped(true);
+      // Auto-play on reveal
+      setTimeout(() => {
+        const lang = pickLang(direction, hideText);
+        speakText(hideText, lang);
+      }, 100);
+    }
+  };
+
+  const handlePlayAgain = () => {
+    const lang = pickLang(direction, hideText);
+    speakText(hideText, lang);
+  };
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === " " && !isFlipped) {
         e.preventDefault();
-        setIsFlipped(true);
+        handleFlip();
       } else if (e.key === " " && isFlipped) {
         e.preventDefault();
         onKnew();
@@ -37,18 +59,13 @@ export const FlipStudyView = ({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isFlipped, onKnew]);
-
-  const showText = direction === "pt-en" || direction === "any" ? front : back;
-  const hideText = direction === "pt-en" || direction === "any" ? back : front;
-  const showLabel = direction === "pt-en" || direction === "any" ? "Português" : "English";
-  const hideLabel = direction === "pt-en" || direction === "any" ? "English" : "Português";
+  }, [isFlipped, onKnew, direction, hideText]);
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto">
       <div
         className="flip-card w-full h-80 cursor-pointer"
-        onClick={() => !isFlipped && setIsFlipped(true)}
+        onClick={() => !isFlipped && handleFlip()}
       >
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           <div className="flip-card-front">
@@ -63,7 +80,19 @@ export const FlipStudyView = ({
           <div className="flip-card-back">
             <Card className="w-full h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-primary/10 to-accent/10">
               <p className="text-sm text-muted-foreground mb-4">{hideLabel}</p>
-              <p className="text-3xl font-semibold text-center">{hideText}</p>
+              <p className="text-3xl font-semibold text-center mb-4">{hideText}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePlayAgain();
+                }}
+                className="mt-4"
+              >
+                <Volume2 className="mr-2 h-4 w-4" />
+                Ouvir novamente
+              </Button>
             </Card>
           </div>
         </div>

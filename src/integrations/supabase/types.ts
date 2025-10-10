@@ -14,32 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      class_members: {
+        Row: {
+          class_id: string
+          joined_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          class_id: string
+          joined_at?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          class_id?: string
+          joined_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_members_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      classes: {
+        Row: {
+          created_at: string | null
+          id: string
+          invite_code: string | null
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          invite_code?: string | null
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          invite_code?: string | null
+          name?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collections: {
         Row: {
+          class_id: string | null
           created_at: string
           description: string | null
           id: string
           name: string
+          owner_id: string | null
           updated_at: string
           user_id: string
+          visibility: string | null
         }
         Insert: {
+          class_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
           name: string
+          owner_id?: string | null
           updated_at?: string
           user_id: string
+          visibility?: string | null
         }
         Update: {
+          class_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
           name?: string
+          owner_id?: string | null
           updated_at?: string
           user_id?: string
+          visibility?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "collections_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collections_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       flashcards: {
         Row: {
@@ -125,6 +217,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          is_primary: boolean | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id: string
+          is_primary?: boolean | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          is_primary?: boolean | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

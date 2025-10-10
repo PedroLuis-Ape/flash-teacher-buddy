@@ -50,6 +50,7 @@ export const CreateCollectionDialog = ({
       name: name.trim(),
       description: description.trim() || null,
       user_id: user.id,
+      owner_id: user.id,
     });
 
     if (error) {

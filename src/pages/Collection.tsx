@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { FlashcardList } from "@/components/FlashcardList";
 import { PracticeMode } from "@/components/PracticeMode";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ArrowLeft, Play, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,11 +29,28 @@ const Collection = () => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [practiceMode, setPracticeMode] = useState<"write_pt_en" | "write_en_pt" | null>(null);
+  const [profile, setProfile] = useState<{first_name?: string; email?: string} | null>(null);
 
   useEffect(() => {
     loadCollection();
     loadFlashcards();
+    loadProfile();
   }, [id]);
+
+  const loadProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from("profiles")
+      .select("first_name, email")
+      .eq("id", user.id)
+      .single();
+    
+    if (data) {
+      setProfile(data);
+    }
+  };
 
   const loadCollection = async () => {
     if (!id) return;
@@ -122,13 +140,25 @@ const Collection = () => {
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2">{collection.name}</h1>
             {collection.description && (
-              <p className="text-muted-foreground text-lg">{collection.description}</p>
+              <p className="text-muted-foreground text-lg mb-2">{collection.description}</p>
+            )}
+            {profile && (
+              <p className="text-lg text-muted-foreground">
+                Olá, {profile.first_name?.split(' ')[0] || profile.email?.split('@')[0] || 'Aluno'}!
+              </p>
             )}
           </div>
         )}
 
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Adicionar Flashcard</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold">Adicionar Flashcard</h2>
+            <BulkImportDialog
+              collectionId={id!}
+              existingCards={flashcards.map(f => ({ front: f.front, back: f.back }))}
+              onImported={loadFlashcards}
+            />
+          </div>
           <CreateFlashcardForm onAdd={handleAddFlashcard} />
         </div>
 
