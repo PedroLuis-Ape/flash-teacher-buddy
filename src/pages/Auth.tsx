@@ -125,32 +125,15 @@ const Auth = () => {
         <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur hover:shadow-xl transition-shadow">
           <h2 className="text-2xl font-bold text-center mb-2">Modo Aluno</h2>
           <p className="text-center text-muted-foreground mb-4">
-            Acesse o portal público do seu professor
+            Acesse o material de estudo
           </p>
-          <div className="space-y-3">
-            <Input
-              type="text"
-              placeholder="Nome do professor (ex: pedro)"
-              id="teacher-slug-input"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                  navigate(`/student/${e.currentTarget.value.trim().toLowerCase()}`);
-                }
-              }}
-            />
-            <Button 
-              className="w-full" 
-              size="lg"
-              onClick={() => {
-                const input = document.getElementById('teacher-slug-input') as HTMLInputElement;
-                if (input?.value.trim()) {
-                  navigate(`/student/${input.value.trim().toLowerCase()}`);
-                }
-              }}
-            >
-              Acessar como Aluno
-            </Button>
-          </div>
+          <Button 
+            className="w-full" 
+            size="lg"
+            onClick={() => navigate("/portal")}
+          >
+            Acessar como Aluno
+          </Button>
         </Card>
 
         {/* Teacher Login/Signup Card */}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,48 +12,24 @@ interface Collection {
   description?: string;
 }
 
-interface Profile {
-  first_name?: string;
-  public_slug?: string;
-}
-
-export default function StudentPortal() {
-  const { teacherSlug } = useParams<{ teacherSlug: string }>();
+export default function PublicPortal() {
   const navigate = useNavigate();
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [teacher, setTeacher] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [flashcardCounts, setFlashcardCounts] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
-    loadTeacherAndCollections();
-  }, [teacherSlug]);
+    loadPublicCollections();
+  }, []);
 
-  const loadTeacherAndCollections = async () => {
+  const loadPublicCollections = async () => {
     try {
       setLoading(true);
 
-      // Find teacher by public slug
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, first_name, public_slug, public_access_enabled")
-        .eq("public_slug", teacherSlug)
-        .eq("public_access_enabled", true)
-        .single();
-
-      if (profileError || !profileData) {
-        console.error("Teacher not found or public access disabled:", profileError);
-        navigate("/auth");
-        return;
-      }
-
-      setTeacher(profileData);
-
-      // Load teacher's public collections
+      // Find the teacher's public collections
       const { data: collectionsData, error: collectionsError } = await supabase
         .from("collections")
         .select("*")
-        .eq("owner_id", profileData.id)
         .in("visibility", ["public", "class"])
         .order("created_at", { ascending: false });
 
@@ -94,12 +70,14 @@ export default function StudentPortal() {
       
       <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="mb-8">
-          <Link to="/auth">
-            <Button variant="ghost" className="text-primary-foreground hover:bg-white/20">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            className="text-primary-foreground hover:bg-white/20"
+            onClick={() => navigate("/auth")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
         </div>
 
         <div className="max-w-4xl mx-auto">
@@ -108,7 +86,7 @@ export default function StudentPortal() {
               Portal do Aluno
             </h1>
             <p className="text-xl text-primary-foreground/90">
-              {teacher?.first_name ? `Professor(a) ${teacher.first_name}` : "Portal de Estudos"}
+              Professor Pedro
             </p>
           </div>
 
@@ -127,7 +105,7 @@ export default function StudentPortal() {
                 <Card 
                   key={collection.id}
                   className="bg-white/95 backdrop-blur hover:shadow-xl transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/student/${teacherSlug}/collection/${collection.id}`)}
+                  onClick={() => navigate(`/portal/collection/${collection.id}`)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">

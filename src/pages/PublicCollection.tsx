@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,8 @@ interface Collection {
   description?: string;
 }
 
-export default function StudentCollection() {
-  const { teacherSlug, collectionId } = useParams<{ teacherSlug: string; collectionId: string }>();
+export default function PublicCollection() {
+  const { collectionId } = useParams<{ collectionId: string }>();
   const navigate = useNavigate();
   const [collection, setCollection] = useState<Collection | null>(null);
   const [flashcardCount, setFlashcardCount] = useState(0);
@@ -45,7 +45,7 @@ export default function StudentCollection() {
       setFlashcardCount(count || 0);
     } catch (error) {
       console.error("Error loading collection:", error);
-      navigate(`/student/${teacherSlug}`);
+      navigate("/portal");
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export default function StudentCollection() {
 
   const startGame = (mode: "flip" | "write" | "mixed") => {
     navigate(
-      `/student/${teacherSlug}/collection/${collectionId}/study?mode=${mode}&direction=any&order=random`
+      `/portal/collection/${collectionId}/study?mode=${mode}&direction=any&order=random`
     );
   };
 
@@ -71,12 +71,14 @@ export default function StudentCollection() {
       
       <div className="container mx-auto px-4 py-8 relative z-20">
         <div className="mb-8">
-          <Link to={`/student/${teacherSlug}`}>
-            <Button variant="ghost" className="text-primary-foreground hover:bg-white/20">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            className="text-primary-foreground hover:bg-white/20"
+            onClick={() => navigate("/portal")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
         </div>
 
         <div className="max-w-4xl mx-auto">
