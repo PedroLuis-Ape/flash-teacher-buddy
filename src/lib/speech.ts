@@ -11,45 +11,78 @@ declare global {
   }
 }
 
-export async function speakText(text: string, lang: "pt-BR" | "en-US") {
+export async function speakText(text: string, lang: "pt-BR" | "en-US"): Promise<void> {
+  const label = `[TTS] (${lang})`;
   try {
-    // Try Puter.js first (better quality, free)
+    // Prefer Puter.js (free, higher quality)
     if (window.puter?.ai?.txt2speech) {
-      const audio = await window.puter.ai.txt2speech(text, lang);
-      audio.play();
-      return;
+      try {
+        // Try exact locale first
+        let audio = await window.puter.ai.txt2speech(text, lang);
+        audio.volume = 1;
+        await audio.play();
+        console.debug(label, "Puter.js playback started (exact)");
+        return;
+      } catch (errExact) {
+        console.warn(label, "Puter exact locale failed, trying base lang...", errExact);
+        // Fallback to base language code (e.g., en, pt)
+        const baseLang = lang.split('-')[0];
+        try {
+          const audioBase = await window.puter.ai.txt2speech(text, baseLang);
+          audioBase.volume = 1;
+          await audioBase.play();
+          console.debug(label, "Puter.js playback started (base)");
+          return;
+        } catch (errBase) {
+          console.warn(label, "Puter base locale failed, falling back to Web Speech API", errBase);
+        }
+      }
     }
   } catch (err) {
-    console.warn("Puter TTS failed, falling back to Web Speech API:", err);
+    console.warn("Puter TTS access failed, falling back to Web Speech API:", err);
   }
 
   // Fallback to Web Speech API
-  const synth = window.speechSynthesis;
+  const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
   if (!synth) {
-    console.warn("Speech synthesis not supported");
+    console.warn(label, "Speech synthesis not supported");
     return;
   }
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang;
-  utterance.rate = Number(localStorage.getItem("speechRate") || "1");
-  
-  const preferredVoice = localStorage.getItem("speechVoice");
-  const voices = synth.getVoices();
-  
-  if (preferredVoice) {
-    const voice = voices.find(v => v.name === preferredVoice);
-    if (voice) utterance.voice = voice;
-  } else {
-    // Auto-select best voice for language
-    const langVoices = voices.filter(v => v.lang.startsWith(lang.split('-')[0]));
-    if (langVoices.length > 0) {
-      utterance.voice = langVoices[0];
+  return new Promise<void>((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = Number(localStorage.getItem("speechRate") || "1");
+
+    const preferredVoice = localStorage.getItem("speechVoice");
+    const voices = synth.getVoices();
+
+    if (preferredVoice) {
+      const voice = voices.find(v => v.name === preferredVoice);
+      if (voice) utterance.voice = voice;
+    } else {
+      const langVoices = voices.filter(v => v.lang?.startsWith(lang.split('-')[0]));
+      if (langVoices.length > 0) utterance.voice = langVoices[0];
     }
-  }
-  
-  synth.cancel(); // Cancel any ongoing speech
-  synth.speak(utterance);
+
+    utterance.onstart = () => console.debug(label, "Web Speech playback started");
+    utterance.onend = () => {
+      console.debug(label, "Web Speech playback ended");
+      resolve();
+    };
+    utterance.onerror = (e) => {
+      console.error(label, "Web Speech error", e);
+      resolve();
+    };
+
+    try {
+      synth.cancel(); // cancel any ongoing speech
+      synth.speak(utterance);
+    } catch (e) {
+      console.error(label, "Failed to speak via Web Speech", e);
+      resolve();
+    }
+  });
 }
 
 export function pickLang(
