@@ -108,16 +108,57 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-accent flex items-center justify-center p-4 relative overflow-hidden">
       <PitecoMascot />
-      <Card className="w-full max-w-md p-8 shadow-[var(--shadow-card)] relative z-20">
-        <div className="flex justify-center mb-6">
-          <GraduationCap className="h-12 w-12 text-primary" />
-        </div>
-        <h1 className="text-3xl font-bold text-center mb-6">
-          APE
-        </h1>
-        <p className="text-center text-muted-foreground mb-6">
-          Apprenticeship Practice and Enhancement
-        </p>
+      
+      <div className="w-full max-w-md space-y-6 relative z-20">
+        {/* Welcome Card */}
+        <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur">
+          <div className="flex flex-col items-center text-center">
+            <GraduationCap className="h-16 w-16 text-primary mb-4" />
+            <h1 className="text-4xl font-bold mb-2">Bem-vindo à APE! 🎓</h1>
+            <p className="text-muted-foreground text-lg">
+              Apprenticeship Practice and Enhancement
+            </p>
+          </div>
+        </Card>
+
+        {/* Student Access Card */}
+        <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur hover:shadow-xl transition-shadow">
+          <h2 className="text-2xl font-bold text-center mb-2">Modo Aluno</h2>
+          <p className="text-center text-muted-foreground mb-4">
+            Acesse o portal público do seu professor
+          </p>
+          <div className="space-y-3">
+            <Input
+              type="text"
+              placeholder="Nome do professor (ex: pedro)"
+              id="teacher-slug-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                  navigate(`/student/${e.currentTarget.value.trim().toLowerCase()}`);
+                }
+              }}
+            />
+            <Button 
+              className="w-full" 
+              size="lg"
+              onClick={() => {
+                const input = document.getElementById('teacher-slug-input') as HTMLInputElement;
+                if (input?.value.trim()) {
+                  navigate(`/student/${input.value.trim().toLowerCase()}`);
+                }
+              }}
+            >
+              Acessar como Aluno
+            </Button>
+          </div>
+        </Card>
+
+        {/* Teacher Login/Signup Card */}
+        <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur">
+          <h2 className="text-2xl font-bold text-center mb-2">Área do Professor</h2>
+          <p className="text-center text-muted-foreground mb-4">
+            Gerencie suas coleções e compartilhe com alunos
+          </p>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -202,7 +243,8 @@ const Auth = () => {
             </form>
           </TabsContent>
         </Tabs>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -225,6 +225,8 @@ export type Database = {
           first_name: string | null
           id: string
           is_primary: boolean | null
+          public_access_enabled: boolean | null
+          public_slug: string | null
           role: string | null
           updated_at: string | null
         }
@@ -234,6 +236,8 @@ export type Database = {
           first_name?: string | null
           id: string
           is_primary?: boolean | null
+          public_access_enabled?: boolean | null
+          public_slug?: string | null
           role?: string | null
           updated_at?: string | null
         }
@@ -243,6 +247,8 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_primary?: boolean | null
+          public_access_enabled?: boolean | null
+          public_slug?: string | null
           role?: string | null
           updated_at?: string | null
         }

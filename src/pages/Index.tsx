@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CollectionCard } from "@/components/CollectionCard";
 import { CreateCollectionDialog } from "@/components/CreateCollectionDialog";
-import { GraduationCap, LogOut } from "lucide-react";
+import { GraduationCap, LogOut, Share2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero-bg.jpg";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Collection {
   id: string;
@@ -20,7 +22,9 @@ const Index = () => {
   const [flashcardCounts, setFlashcardCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState<{first_name?: string; email?: string} | null>(null);
+  const [profile, setProfile] = useState<{first_name?: string; email?: string; public_slug?: string; public_access_enabled?: boolean} | null>(null);
+  const [publicSlug, setPublicSlug] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -38,13 +42,70 @@ const Index = () => {
     
     const { data } = await supabase
       .from("profiles")
-      .select("first_name, email")
+      .select("first_name, email, public_slug, public_access_enabled")
       .eq("id", user.id)
       .single();
     
     if (data) {
       setProfile(data);
+      setPublicSlug(data.public_slug || "");
     }
+  };
+
+  const generatePublicLink = async () => {
+    if (!user || !publicSlug.trim()) {
+      toast.error("Digite um nome para o link");
+      return;
+    }
+
+    const slug = publicSlug.trim().toLowerCase().replace(/\s+/g, '-');
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ 
+        public_slug: slug,
+        public_access_enabled: true 
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      if (error.message.includes("unique")) {
+        toast.error("Este nome já está em uso. Escolha outro.");
+      } else {
+        toast.error("Erro ao gerar link");
+      }
+    } else {
+      toast.success("Link público ativado!");
+      loadProfile();
+    }
+  };
+
+  const togglePublicAccess = async () => {
+    if (!user) return;
+
+    const newStatus = !profile?.public_access_enabled;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ public_access_enabled: newStatus })
+      .eq("id", user.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar acesso público");
+    } else {
+      toast.success(newStatus ? "Acesso público ativado!" : "Acesso público desativado!");
+      loadProfile();
+    }
+  };
+
+  const copyPublicLink = () => {
+    if (!profile?.public_slug) return;
+    
+    const link = `${window.location.origin}/student/${profile.public_slug}`;
+    navigator.clipboard.writeText(link);
+    setLinkCopied(true);
+    toast.success("Link copiado!");
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const checkAuth = async () => {
@@ -133,14 +194,74 @@ const Index = () => {
             </Button>
           </div>
 
-          <div className="max-w-2xl">
+          <div className="max-w-3xl">
             <p className="text-lg mb-6 opacity-95">
               Organize seus flashcards em coleções e pratique com diferentes modos de estudo!
             </p>
-            <CreateCollectionDialog onCollectionCreated={loadCollections} />
+            <div className="flex flex-wrap gap-4">
+              <CreateCollectionDialog onCollectionCreated={loadCollections} />
+            </div>
           </div>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent pointer-events-none"></div>
+      </section>
+
+      {/* Public Link Section */}
+      <section className="py-8 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="h-5 w-5" />
+                Link Público para Alunos
+              </CardTitle>
+              <CardDescription>
+                Gere um link para seus alunos acessarem suas coleções públicas
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!profile?.public_slug ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Escolha um nome (ex: pedro)"
+                    value={publicSlug}
+                    onChange={(e) => setPublicSlug(e.target.value)}
+                  />
+                  <Button onClick={generatePublicLink}>
+                    Gerar Link
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <code className="flex-1 text-sm">
+                      {window.location.origin}/student/{profile.public_slug}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={copyPublicLink}
+                    >
+                      {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button
+                    variant={profile.public_access_enabled ? "destructive" : "default"}
+                    onClick={togglePublicAccess}
+                    className="w-full"
+                  >
+                    {profile.public_access_enabled ? "Desativar Link" : "Ativar Link"}
+                  </Button>
+                  <p className="text-sm text-muted-foreground text-center">
+                    {profile.public_access_enabled 
+                      ? "✅ Link ativo - Alunos podem acessar suas coleções públicas" 
+                      : "❌ Link desativado - Ninguém pode acessar"}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       {/* Collections Section */}
