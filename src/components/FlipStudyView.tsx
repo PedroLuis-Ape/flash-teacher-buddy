@@ -34,16 +34,16 @@ export const FlipStudyView = ({
     if (!isFlipped) {
       setIsFlipped(true);
       // Auto-play on reveal
-      setTimeout(() => {
+      setTimeout(async () => {
         const lang = pickLang(direction, hideText);
-        speakText(hideText, lang);
+        await speakText(hideText, lang);
       }, 100);
     }
   };
 
-  const handlePlayAgain = () => {
+  const handlePlayAgain = async () => {
     const lang = pickLang(direction, hideText);
-    speakText(hideText, lang);
+    await speakText(hideText, lang);
   };
 
   useEffect(() => {

@@ -102,9 +102,9 @@ export const WriteStudyView = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
                 const lang = pickLang(direction, prompt);
-                speakText(prompt, lang);
+                await speakText(prompt, lang);
               }}
             >
               <Volume2 className="h-5 w-5" />
