@@ -101,7 +101,7 @@ const Index = () => {
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-3">
               <GraduationCap className="h-10 w-10" />
-              <h1 className="text-3xl font-bold">Minhas Coleções</h1>
+              <h1 className="text-3xl font-bold">APE - Apprenticeship Practice and Enhancement</h1>
             </div>
             <Button variant="secondary" size="sm" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
