@@ -60,14 +60,32 @@ const Folder = () => {
         setFolder(data);
         setIsOwner(session.user.id === data.owner_id);
       } else {
+        // Acesso público via portal
         const { data, error } = await supabase.rpc('get_portal_folder', { _id: id });
-        if (error || !data) throw error || new Error('Pasta não encontrada');
+        
+        if (error) {
+          console.error("Erro RPC get_portal_folder:", error);
+          toast.error("Pasta não encontrada ou não está compartilhada");
+          navigate("/portal");
+          return;
+        }
+        
+        if (!data) {
+          console.log("Nenhuma pasta retornada do RPC");
+          toast.error("Pasta não encontrada ou não está compartilhada");
+          navigate("/portal");
+          return;
+        }
+        
+        console.log("Pasta carregada via portal:", data);
         setFolder(data as any);
         setIsOwner(false);
       }
     } catch (error: any) {
+      console.error("Erro ao carregar pasta:", error);
       toast.error("Erro ao carregar pasta: " + error.message);
-      navigate("/portal");
+      const { data: { session } } = await supabase.auth.getSession();
+      navigate(session ? "/folders" : "/portal");
     }
   };
 
@@ -76,6 +94,7 @@ const Folder = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       let listsData: any[] = [];
+      
       if (session) {
         const { data, error } = await supabase
           .from("lists")
@@ -85,18 +104,33 @@ const Folder = () => {
         if (error) throw error;
         listsData = data || [];
       } else {
+        // Acesso público via portal
         const { data, error } = await supabase.rpc('get_portal_lists', { _folder_id: id });
-        if (error) throw error;
+        
+        if (error) {
+          console.error("Erro RPC get_portal_lists:", error);
+        }
+        
         listsData = (data as any[]) || [];
+        console.log(`${listsData.length} listas carregadas via portal`);
       }
 
+      // Carregar contagem de cards para cada lista
       const listsWithCounts = await Promise.all(
         (listsData || []).map(async (list: any) => {
-          const { count } = await supabase
-            .from("flashcards")
-            .select("*", { count: "exact", head: true })
-            .eq("list_id", list.id);
-          return { ...list, card_count: count || 0 };
+          if (session) {
+            const { count } = await supabase
+              .from("flashcards")
+              .select("*", { count: "exact", head: true })
+              .eq("list_id", list.id);
+            return { ...list, card_count: count || 0 };
+          } else {
+            // Para acesso público, usar RPC para contar flashcards
+            const { data: flashcards } = await supabase.rpc('get_portal_flashcards', { 
+              _list_id: list.id 
+            });
+            return { ...list, card_count: flashcards?.length || 0 };
+          }
         })
       );
 
