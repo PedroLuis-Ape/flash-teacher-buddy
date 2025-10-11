@@ -22,7 +22,7 @@ export function SessionWatcher() {
     let gotFirstAuthEvent = false;
 
     const maybeSetReady = () => {
-      if (gotInitialSession && gotFirstAuthEvent) {
+      if (gotInitialSession || gotFirstAuthEvent) {
         sessionStorage.setItem('authReady', '1');
       }
     };
@@ -43,9 +43,12 @@ export function SessionWatcher() {
         maybeSetReady();
       }
 
-      // Ao logar novamente, limpar a flag de logout
+      // Ao logar novamente, limpar a flag de logout e sair de /auth rapidamente
       if (event === 'SIGNED_IN') {
         sessionStorage.removeItem('logoutInProgress');
+        if (window.location.pathname === '/auth') {
+          navigate('/', { replace: true });
+        }
       }
 
       // Fluxo de logout explícito: limpar e ir imediatamente para /auth
