@@ -129,12 +129,13 @@ const GamesHub = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" onClick={() => {
+            const onPortal = location.pathname.startsWith('/portal/list');
             if (collection) {
               navigate(`/collection/${collection.id}`);
             } else if (list) {
-              navigate(`/list/${list.id}`);
+              navigate(onPortal ? `/portal/list/${list.id}` : `/list/${list.id}`);
             } else {
-              navigate("/folders");
+              navigate(onPortal ? "/portal" : "/folders");
             }
           }}>
             <ArrowLeft className="mr-2 h-4 w-4" />
