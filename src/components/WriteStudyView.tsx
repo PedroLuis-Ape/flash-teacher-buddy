@@ -7,6 +7,7 @@ import { Lightbulb, Eye, SkipForward, Volume2 } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
 import { speakText, pickLang } from "@/lib/speech";
+import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 
@@ -32,7 +33,7 @@ export const WriteStudyView = ({
   onSkip,
 }: WriteStudyViewProps) => {
   const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
+  const [feedback, setFeedback] = useState<"correct" | "almost" | "incorrect" | null>(null);
   const [hintLevel, setHintLevel] = useState(0);
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -71,9 +72,17 @@ export const WriteStudyView = ({
 
     if (result.isCorrect) {
       setFeedback("correct");
-      // Auto-advance removed - user will click "Próximo"
     } else {
-      setFeedback("incorrect");
+      // Verifica se está quase correto (1 caractere de diferença)
+      const almostCorrect = acceptedAnswers.some(accepted => 
+        isAlmostCorrect(answer, accepted)
+      );
+      
+      if (almostCorrect) {
+        setFeedback("almost");
+      } else {
+        setFeedback("incorrect");
+      }
     }
   };
 
@@ -140,6 +149,8 @@ export const WriteStudyView = ({
           } ${
             feedback === "correct"
               ? "border-green-500 bg-green-50 dark:bg-green-950"
+              : feedback === "almost"
+              ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950"
               : feedback === "incorrect"
               ? "border-red-500 bg-red-50 dark:bg-red-950"
               : ""
@@ -169,6 +180,31 @@ export const WriteStudyView = ({
                       </span>
                     </>
                   )}
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {feedback === "almost" && (
+          <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950 animate-fade-in">
+            <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+              <div className="flex items-start gap-4">
+                <img 
+                  src={pitecoHappy} 
+                  alt="Piteco quase feliz" 
+                  className="w-16 h-16 object-contain flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+                    <span className="text-2xl">⚠</span>
+                    Quase perfeito!
+                  </div>
+                  Você escreveu <span className="font-semibold">"{answer}"</span>, mas o correto seria <span className="font-semibold">"{correctAnswer}"</span>.
+                  <br />
+                  <span className="text-sm mt-2 block">
+                    Faltou ou sobrou apenas 1 caractere. Vamos considerar como acerto!
+                  </span>
                 </div>
               </div>
             </AlertDescription>
@@ -240,9 +276,13 @@ export const WriteStudyView = ({
         </div>
       )}
 
-      {feedback === "correct" && (
+      {(feedback === "correct" || feedback === "almost") && (
         <div className="flex justify-end">
-          <Button onClick={onCorrect} size="lg" className="bg-green-600 hover:bg-green-700">
+          <Button 
+            onClick={onCorrect} 
+            size="lg" 
+            className={feedback === "almost" ? "bg-yellow-600 hover:bg-yellow-700" : "bg-green-600 hover:bg-green-700"}
+          >
             Próximo
           </Button>
         </div>
