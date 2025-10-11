@@ -31,37 +31,21 @@ serve(async (req) => {
       });
     }
 
-    // Sanitize text: remove potentially dangerous SSML tags and special characters
+    // Sanitize text to prevent SSML injection
     const sanitizedText = text
-      .replace(/<[^>]*>/g, '') // Remove any HTML/XML tags
-      .replace(/[^\w\s\u00C0-\u024F.,!?;:'"()-]/g, '') // Allow only safe characters including accented letters
+      .replace(/[<>]/g, '') // Remove angle brackets to prevent SSML injection
+      .replace(/&/g, '&amp;')
       .trim();
 
-    if (!sanitizedText) {
-      return new Response(JSON.stringify({ error: "Text contains no valid characters" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Validate voice parameter (whitelist approach)
-    const validVoices = [
-      "en-US-JennyNeural",
-      "en-US-GuyNeural",
-      "pt-BR-AntonioNeural",
-      "pt-BR-FranciscaNeural"
-    ];
-    const selectedVoice = validVoices.includes(voice) ? voice : "en-US-JennyNeural";
-
-    console.log(`[TTS] Generating speech for: "${sanitizedText.substring(0, 50)}..." with voice: ${selectedVoice}`);
+    console.log(`[TTS] Generating speech for: "${sanitizedText.substring(0, 50)}..." with voice: ${voice}`);
 
     // Generate unique request ID
     const requestId = crypto.randomUUID().replace(/-/g, "");
     const timestamp = new Date().toISOString();
 
-    // Build SSML with properly escaped text
-    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${selectedVoice.substring(0, 5)}'>
-        <voice name='${selectedVoice}'>${sanitizedText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")}</voice>
+    // Build SSML with sanitized text
+    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${voice.substring(0, 5)}'>
+        <voice name='${voice}'>${sanitizedText}</voice>
     </speak>`;
 
     // Connect to Edge TTS WebSocket
