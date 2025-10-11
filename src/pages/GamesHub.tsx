@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,17 +19,56 @@ interface Collection {
   description?: string;
 }
 
+interface List {
+  id: string;
+  title: string;
+  description?: string;
+}
+
 const GamesHub = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [collection, setCollection] = useState<Collection | null>(null);
+  const [list, setList] = useState<List | null>(null);
   const [direction, setDirection] = useState<"pt-en" | "en-pt" | "any">("any");
   const [order, setOrder] = useState<"random" | "sequential">("random");
   const [loading, setLoading] = useState(true);
 
+  const isListRoute = location.pathname.includes("/list/");
+
   useEffect(() => {
-    loadCollection();
-  }, [id]);
+    if (isListRoute) {
+      loadList();
+    } else {
+      loadCollection();
+    }
+  }, [id, isListRoute]);
+
+  const loadList = async () => {
+    if (!id) return;
+
+    const { data, error } = await supabase
+      .from("lists")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      toast.error("Erro ao carregar lista");
+      navigate("/");
+      return;
+    }
+
+    if (!data) {
+      toast.error("Lista não encontrada");
+      navigate("/");
+      return;
+    }
+
+    setList(data);
+    setLoading(false);
+  };
 
   const loadCollection = async () => {
     if (!id) return;
@@ -57,7 +96,8 @@ const GamesHub = () => {
   };
 
   const startGame = (mode: "flip" | "write" | "mixed") => {
-    navigate(`/collection/${id}/study?mode=${mode}&dir=${direction}&order=${order}`);
+    const basePath = isListRoute ? `/list/${id}` : `/collection/${id}`;
+    navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}`);
   };
 
   if (loading) {
@@ -72,18 +112,22 @@ const GamesHub = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" onClick={() => navigate("/")}>
+          <Button variant="ghost" onClick={() => navigate(isListRoute ? `/list/${id}` : "/")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
         </div>
 
-        {collection && (
+        {(collection || list) && (
           <div className="mb-12 text-center">
             <h1 className="text-4xl font-bold mb-2">Hub de Jogos</h1>
-            <p className="text-xl text-muted-foreground">{collection.name}</p>
-            {collection.description && (
-              <p className="text-muted-foreground mt-2">{collection.description}</p>
+            <p className="text-xl text-muted-foreground">
+              {isListRoute ? list?.title : collection?.name}
+            </p>
+            {(isListRoute ? list?.description : collection?.description) && (
+              <p className="text-muted-foreground mt-2">
+                {isListRoute ? list?.description : collection?.description}
+              </p>
             )}
           </div>
         )}

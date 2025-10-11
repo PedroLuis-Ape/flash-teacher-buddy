@@ -29,6 +29,7 @@ const App = () => (
           <Route path="/folders" element={<Folders />} />
           <Route path="/folder/:id" element={<Folder />} />
           <Route path="/list/:id" element={<ListDetail />} />
+          <Route path="/list/:id/games" element={<GamesHub />} />
           <Route path="/list/:id/study" element={<Study />} />
           <Route path="/collection/:id" element={<Collection />} />
           <Route path="/collection/:id/games" element={<GamesHub />} />
