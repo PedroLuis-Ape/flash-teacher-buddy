@@ -16,34 +16,63 @@ export function SessionWatcher() {
   useEffect(() => {
     let mounted = true;
 
-    // 1) Verificação inicial
+    // Flags globais de controle no escopo do efeito
+    sessionStorage.setItem('authReady', '0');
+    let gotInitialSession = false;
+    let gotFirstAuthEvent = false;
+
+    const maybeSetReady = () => {
+      if (gotInitialSession && gotFirstAuthEvent) {
+        sessionStorage.setItem('authReady', '1');
+      }
+    };
+
+    // 1) Verificação inicial (sem redirecionar ainda)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
-      if (!session && isProtectedPath(pathname)) {
-        navigate("/auth", { replace: true });
-      }
+      gotInitialSession = true;
+      maybeSetReady();
+      // Não redirecionamos aqui para evitar loops; a guarda acontece quando authReady === '1'
     });
 
     // 2) Listener único de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Redireciona para /auth quando fizer sign out ou quando não houver sessão
-      if (event === "SIGNED_OUT" || !session) {
+      // Marca o primeiro evento e libera a guarda quando combinado com o getSession
+      if (!gotFirstAuthEvent) {
+        gotFirstAuthEvent = true;
+        maybeSetReady();
+      }
+
+      // Fluxo de logout explícito: limpar e ir imediatamente para /auth
+      if (event === 'SIGNED_OUT') {
         try {
-          // Limpa estados locais/armazenamento
+          // Sinaliza logout em progresso (mantemos em sessionStorage)
+          sessionStorage.setItem('logoutInProgress', String(Date.now()));
+          // Limpa estados locais/persistência do app
           localStorage.clear();
-          sessionStorage.clear();
+          // Remover chaves conhecidas de sessão sem limpar tudo
+          sessionStorage.removeItem('returnTo');
         } catch (e) {
           // ignore
         }
-        if (isProtectedPath(window.location.pathname)) {
-          navigate("/auth", { replace: true });
-          // Fallback forte para evitar estados travados
-          setTimeout(() => {
-            if (window.location.pathname !== "/auth") {
-              window.location.replace("/auth");
-            }
-          }, 100);
-        }
+        navigate('/auth', { replace: true });
+        setTimeout(() => {
+          if (window.location.pathname !== '/auth') {
+            window.location.replace('/auth');
+          }
+        }, 100);
+        return;
+      }
+
+      // Guarda de rotas após inicialização completa
+      const authReady = sessionStorage.getItem('authReady') === '1';
+      if (authReady && !session && isProtectedPath(window.location.pathname)) {
+        navigate('/auth', { replace: true });
+        setTimeout(() => {
+          if (window.location.pathname !== '/auth') {
+            window.location.replace('/auth');
+          }
+        }, 100);
       }
     });
 
@@ -51,7 +80,7 @@ export function SessionWatcher() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate, pathname]);
+  }, [navigate]);
 
   return null;
 }
