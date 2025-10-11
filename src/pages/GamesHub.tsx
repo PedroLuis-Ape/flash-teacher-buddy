@@ -112,7 +112,13 @@ const GamesHub = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
+          <Button variant="ghost" onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate("/auth", { replace: true });
+            }
+          }}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>

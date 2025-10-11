@@ -10,11 +10,11 @@ const Index = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        navigate("/auth");
+        navigate("/auth", { replace: true });
         return;
       }
       
-      navigate("/folders");
+      navigate("/folders", { replace: true });
     };
 
     checkAuth();

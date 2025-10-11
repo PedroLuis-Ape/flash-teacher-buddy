@@ -38,7 +38,7 @@ const Folders = () => {
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      navigate("/auth");
+      navigate("/auth", { replace: true });
       return;
     }
 
@@ -167,8 +167,13 @@ const Folders = () => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+    try {
+      await supabase.auth.signOut();
+      // Navega para a tela de login após logout
+      navigate("/auth", { replace: true });
+    } catch (error: any) {
+      toast.error("Erro ao sair: " + error.message);
+    }
   };
 
   return (

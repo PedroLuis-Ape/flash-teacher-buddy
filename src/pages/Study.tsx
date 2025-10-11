@@ -146,7 +146,14 @@ const Study = () => {
     if (!isPublic) {
       saveSession(mode, direction);
     }
-    navigate(-1);
+    
+    // Verifica se há histórico de navegação
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // Fallback para a tela de login se não houver histórico
+      navigate("/auth", { replace: true });
+    }
   };
 
   if (loading) {
