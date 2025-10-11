@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 // Rotas públicas que não exigem sessão
-const PUBLIC_PREFIXES = ["/auth", "/portal", "/share"] as const;
+const PUBLIC_PREFIXES = ["/auth"] as const;
 
 function isProtectedPath(pathname: string) {
   return !PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));

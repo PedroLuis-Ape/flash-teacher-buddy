@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
-import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil } from "lucide-react";
+import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil, Search } from "lucide-react";
 
 interface FolderType {
   id: string;
@@ -200,10 +200,16 @@ const Folders = () => {
               )}
             </div>
           </div>
-          <Button onClick={handleSignOut} variant="outline">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/search")} variant="outline">
+              <Search className="mr-2 h-4 w-4" />
+              Buscar Professor
+            </Button>
+            <Button onClick={handleSignOut} variant="outline">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </div>
         </div>
 
         <div className="mb-6">
