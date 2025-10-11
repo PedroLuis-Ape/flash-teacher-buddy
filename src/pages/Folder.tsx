@@ -306,15 +306,22 @@ const Folder = () => {
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <p className="text-sm text-muted-foreground">
-                    A pasta será marcada como compartilhada com a turma. As listas dentro dela também serão compartilhadas.
+                    A pasta será compartilhada com a turma. As listas e flashcards dentro dela também serão compartilhados.
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
                     <Checkbox
                       id="allow-public"
                       checked={allowPublicPortal}
                       onCheckedChange={(c) => setAllowPublicPortal(Boolean(c))}
                     />
-                    <Label htmlFor="allow-public">Permitir acesso sem login no Portal do Aluno</Label>
+                    <div className="flex-1">
+                      <Label htmlFor="allow-public" className="font-semibold cursor-pointer">
+                        Permitir acesso sem login no Portal do Aluno
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Os alunos poderão acessar o conteúdo em /portal sem precisar fazer login
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>

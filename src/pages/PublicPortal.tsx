@@ -109,15 +109,12 @@ export default function PublicPortal() {
             <Card className="bg-white/95 backdrop-blur">
               <CardContent className="py-12 text-center">
                 <FolderOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                <p className="text-lg text-muted-foreground">
-                  Ainda não há pastas públicas disponíveis.
+                <p className="text-lg text-muted-foreground mb-2">
+                  Ainda não há pastas compartilhadas disponíveis.
                 </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Se você é aluno, faça login para acessar conteúdos compartilhados que exigem autenticação.
+                <p className="text-sm text-muted-foreground">
+                  O professor precisa compartilhar as pastas marcando a opção "Permitir acesso sem login".
                 </p>
-                <Button className="mt-4" onClick={() => navigate("/auth")}>
-                  Entrar
-                </Button>
               </CardContent>
             </Card>
           ) : (
