@@ -35,9 +35,11 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
+  const [isPtToEn] = useState(() => 
+    direction === "pt-en" || (direction === "any" && Math.random() > 0.5)
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isPtToEn = direction === "pt-en" || (direction === "any" && Math.random() > 0.5);
   const prompt = isPtToEn ? front : back;
   const correctAnswer = isPtToEn ? back : front;
   const promptLabel = isPtToEn ? "Português" : "English";
