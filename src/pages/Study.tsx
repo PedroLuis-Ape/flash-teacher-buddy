@@ -81,24 +81,29 @@ const Study = () => {
     if (!resolvedId) return;
 
     setLoading(true);
+    
+    // Check if this is a list or collection
+    const isListRoute = window.location.pathname.includes("/list/");
+    const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
+    
+    const queryColumn = isListRoute ? "list_id" : "collection_id";
+    
     const { data, error } = await supabase
       .from("flashcards")
       .select("*")
-      .eq("collection_id", resolvedId);
+      .eq(queryColumn, resolvedId);
 
-  if (error) {
-    toast.error("Erro ao carregar flashcards");
-    const isPublic = window.location.pathname.startsWith("/portal/collection/");
-    navigate(isPublic ? `/portal/collection/${resolvedId}` : "/");
-    return;
-  }
+    if (error) {
+      toast.error("Erro ao carregar flashcards");
+      navigate(isListRoute ? `/list/${resolvedId}` : (isPublicRoute ? `/portal/collection/${resolvedId}` : "/"));
+      return;
+    }
 
-  if (!data || data.length === 0) {
-    toast.error("Esta coleção não tem flashcards ainda");
-    const isPublic = window.location.pathname.startsWith("/portal/collection/");
-    navigate(isPublic ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}`);
-    return;
-  }
+    if (!data || data.length === 0) {
+      toast.error(isListRoute ? "Esta lista não tem flashcards ainda" : "Esta coleção não tem flashcards ainda");
+      navigate(isListRoute ? `/list/${resolvedId}` : (isPublicRoute ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}`));
+      return;
+    }
 
     const orderedData = order === "random" ? shuffleArray([...data]) : data;
     setFlashcards(orderedData);

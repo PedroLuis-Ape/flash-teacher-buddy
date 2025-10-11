@@ -1,0 +1,252 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { PitecoLogo } from "@/components/PitecoLogo";
+import { toast } from "sonner";
+import { FolderPlus, Folder, LogOut, FileText, CreditCard } from "lucide-react";
+
+interface FolderType {
+  id: string;
+  title: string;
+  description: string | null;
+  visibility: string;
+  list_count?: number;
+  card_count?: number;
+}
+
+const Folders = () => {
+  const navigate = useNavigate();
+  const [folders, setFolders] = useState<FolderType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [firstName, setFirstName] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newFolder, setNewFolder] = useState({ title: "", description: "" });
+
+  useEffect(() => {
+    checkAuth();
+    loadFolders();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("first_name")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (profile?.first_name) {
+      setFirstName(profile.first_name);
+    }
+  };
+
+  const loadFolders = async () => {
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: foldersData, error } = await supabase
+        .from("folders")
+        .select("*")
+        .eq("owner_id", session.user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Carregar contadores para cada pasta
+      const foldersWithCounts = await Promise.all(
+        (foldersData || []).map(async (folder) => {
+          const { data: lists } = await supabase
+            .from("lists")
+            .select("id")
+            .eq("folder_id", folder.id);
+
+          const listIds = lists?.map(l => l.id) || [];
+          
+          let cardCount = 0;
+          if (listIds.length > 0) {
+            const { count } = await supabase
+              .from("flashcards")
+              .select("*", { count: "exact", head: true })
+              .in("list_id", listIds);
+            cardCount = count || 0;
+          }
+
+          return {
+            ...folder,
+            list_count: lists?.length || 0,
+            card_count: cardCount,
+          };
+        })
+      );
+
+      setFolders(foldersWithCounts);
+    } catch (error: any) {
+      toast.error("Erro ao carregar pastas: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newFolder.title.trim()) {
+      toast.error("O título é obrigatório");
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { error } = await supabase
+        .from("folders")
+        .insert({
+          title: newFolder.title,
+          description: newFolder.description,
+          owner_id: session.user.id,
+        });
+
+      if (error) throw error;
+
+      toast.success("Pasta criada com sucesso!");
+      setDialogOpen(false);
+      setNewFolder({ title: "", description: "" });
+      loadFolders();
+    } catch (error: any) {
+      toast.error("Erro ao criar pasta: " + error.message);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <PitecoLogo className="w-16 h-16" />
+            <div>
+              <h1 className="text-3xl font-bold">Minhas Pastas</h1>
+              {firstName && (
+                <p className="text-muted-foreground">Olá, {firstName}</p>
+              )}
+            </div>
+          </div>
+          <Button onClick={handleSignOut} variant="outline">
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </Button>
+        </div>
+
+        <div className="mb-6">
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg">
+                <FolderPlus className="mr-2 h-5 w-5" />
+                Nova Pasta
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Nova Pasta</DialogTitle>
+                <DialogDescription>
+                  Organize suas listas de flashcards em pastas
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateFolder}>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Título</Label>
+                    <Input
+                      id="title"
+                      value={newFolder.title}
+                      onChange={(e) => setNewFolder({ ...newFolder, title: e.target.value })}
+                      placeholder="Ex: Inglês - Verbos"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição (opcional)</Label>
+                    <Textarea
+                      id="description"
+                      value={newFolder.description}
+                      onChange={(e) => setNewFolder({ ...newFolder, description: e.target.value })}
+                      placeholder="Descreva o conteúdo desta pasta..."
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Criar Pasta</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {loading ? (
+          <p className="text-center text-muted-foreground">Carregando...</p>
+        ) : folders.length === 0 ? (
+          <Card className="text-center p-12">
+            <CardHeader>
+              <CardTitle>Nenhuma pasta ainda</CardTitle>
+              <CardDescription>
+                Crie sua primeira pasta para organizar seus flashcards
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {folders.map((folder) => (
+              <Card
+                key={folder.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/folder/${folder.id}`)}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <Folder className="h-8 w-8 text-primary" />
+                  </div>
+                  <CardTitle className="mt-4">{folder.title}</CardTitle>
+                  {folder.description && (
+                    <CardDescription>{folder.description}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <FileText className="h-4 w-4" />
+                      <span>{folder.list_count || 0} listas</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <CreditCard className="h-4 w-4" />
+                      <span>{folder.card_count || 0} cards</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Folders;

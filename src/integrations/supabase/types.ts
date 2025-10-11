@@ -139,10 +139,11 @@ export type Database = {
           accepted_answers_pt: string[] | null
           audio_url: string | null
           back: string
-          collection_id: string
+          collection_id: string | null
           created_at: string
           front: string
           id: string
+          list_id: string | null
           updated_at: string
           user_id: string
         }
@@ -151,10 +152,11 @@ export type Database = {
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
           back: string
-          collection_id: string
+          collection_id?: string | null
           created_at?: string
           front: string
           id?: string
+          list_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -163,10 +165,11 @@ export type Database = {
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
           back?: string
-          collection_id?: string
+          collection_id?: string | null
           created_at?: string
           front?: string
           id?: string
+          list_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -176,6 +179,93 @@ export type Database = {
             columns: ["collection_id"]
             isOneToOne: false
             referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id: string
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
+      lists: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          description: string | null
+          folder_id: string
+          id: string
+          order_index: number
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          folder_id: string
+          id?: string
+          order_index?: number
+          owner_id: string
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          folder_id?: string
+          id?: string
+          order_index?: number
+          owner_id?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lists_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
             referencedColumns: ["id"]
           },
         ]
