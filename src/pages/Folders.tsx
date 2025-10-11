@@ -171,6 +171,12 @@ const Folders = () => {
       await supabase.auth.signOut();
       // Navega para a tela de login após logout
       navigate("/auth", { replace: true });
+      // Fallback hard redirect para evitar estado travado
+      setTimeout(() => {
+        if (window.location.pathname !== "/auth") {
+          window.location.assign("/auth");
+        }
+      }, 100);
     } catch (error: any) {
       toast.error("Erro ao sair: " + error.message);
     }
