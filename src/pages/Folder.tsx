@@ -152,11 +152,11 @@ const Folder = () => {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate("/folders")}
+            onClick={() => navigate(-1)}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para Pastas
+            Voltar
           </Button>
           
           <h1 className="text-3xl font-bold">{folder.title}</h1>

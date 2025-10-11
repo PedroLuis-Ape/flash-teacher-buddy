@@ -188,11 +188,11 @@ const ListDetail = () => {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/folder/${folder.id}`)}
+            onClick={() => navigate(-1)}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para {folder.title}
+            Voltar
           </Button>
           
           <div className="flex items-center justify-between">

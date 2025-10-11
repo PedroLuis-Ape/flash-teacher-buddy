@@ -145,10 +145,8 @@ const Study = () => {
     const isPublic = window.location.pathname.startsWith("/portal/collection/");
     if (!isPublic) {
       saveSession(mode, direction);
-      navigate(`/collection/${resolvedId}/games`);
-    } else {
-      navigate(`/portal/collection/${resolvedId}`);
     }
+    navigate(-1);
   };
 
   if (loading) {
@@ -210,11 +208,8 @@ const Study = () => {
                   Rever apenas os errados
                 </Button>
               )}
-              <Button size="lg" onClick={() => {
-                const isPublic = window.location.pathname.startsWith("/portal/collection/");
-                navigate(isPublic ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}/games`);
-              }}>
-                Voltar ao Hub
+              <Button size="lg" onClick={() => navigate(-1)}>
+                Voltar
               </Button>
             </div>
           </Card>
