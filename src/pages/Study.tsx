@@ -142,14 +142,11 @@ const Study = () => {
   };
 
   const handleExit = () => {
-    setShowExitDialog(false);
     const isPublic = window.location.pathname.startsWith("/portal/collection/");
     if (!isPublic) {
       saveSession(mode, direction);
     }
-    setTimeout(() => {
-      navigate(-1);
-    }, 100);
+    navigate(-1);
   };
 
   if (loading) {
@@ -292,7 +289,15 @@ const Study = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continuar estudando</AlertDialogCancel>
-            <AlertDialogAction onClick={handleExit}>Sair</AlertDialogAction>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                setShowExitDialog(false);
+                handleExit();
+              }}
+            >
+              Sair
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
