@@ -7,6 +7,7 @@ import { Lightbulb, Eye, SkipForward, Volume2 } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
 import { speakText, pickLang } from "@/lib/speech";
+import pitecoSad from "@/assets/piteco-sad.png";
 
 interface WriteStudyViewProps {
   front: string;
@@ -167,30 +168,39 @@ export const WriteStudyView = ({
         {feedback === "incorrect" && (
           <Alert className="border-red-500 bg-red-50 dark:bg-red-950 animate-fade-in">
             <AlertDescription className="text-red-700 dark:text-red-300">
-              <div className="flex items-center gap-2 text-lg font-semibold mb-2">
-                <span className="text-2xl">✗</span>
-                Incorreto
-              </div>
-              Compare sua resposta com o gabarito:
-              <br />
-              <div className="mt-2 font-mono text-base">
-                <div>
-                  Você digitou:{" "}
-                  {diffTokens.map((token, idx) => (
-                    <span
-                      key={idx}
-                      className={
-                        token.type === "insert"
-                          ? "bg-red-200 dark:bg-red-900 line-through"
-                          : ""
-                      }
-                    >
-                      {token.text}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-1">
-                  Correto: <span className="font-semibold">{correctAnswer}</span>
+              <div className="flex items-start gap-4">
+                <img 
+                  src={pitecoSad} 
+                  alt="Piteco triste" 
+                  className="w-16 h-16 object-contain flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+                    <span className="text-2xl">✗</span>
+                    Incorreto
+                  </div>
+                  Compare sua resposta com o gabarito:
+                  <br />
+                  <div className="mt-2 font-mono text-base">
+                    <div>
+                      Você digitou:{" "}
+                      {diffTokens.map((token, idx) => (
+                        <span
+                          key={idx}
+                          className={
+                            token.type === "insert"
+                              ? "bg-red-200 dark:bg-red-900 line-through"
+                              : ""
+                          }
+                        >
+                          {token.text}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-1">
+                      Correto: <span className="font-semibold">{correctAnswer}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </AlertDescription>
