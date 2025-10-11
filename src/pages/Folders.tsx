@@ -18,6 +18,7 @@ interface FolderType {
   visibility: string;
   list_count?: number;
   card_count?: number;
+  isOwner?: boolean;
 }
 
 const Folders = () => {
@@ -59,17 +60,20 @@ const Folders = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Carregar todas as pastas visíveis (próprias e compartilhadas)
       const { data: foldersData, error } = await supabase
         .from("folders")
         .select("*")
-        .eq("owner_id", session.user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Carregar contadores para cada pasta
+      // Carregar contadores para cada pasta (apenas listas e cards visíveis)
       const foldersWithCounts = await Promise.all(
         (foldersData || []).map(async (folder) => {
+          // Verificar se é owner para mostrar controles de edição
+          const isOwner = session.user.id === folder.owner_id;
+          
           const { data: lists } = await supabase
             .from("lists")
             .select("id")
@@ -90,6 +94,7 @@ const Folders = () => {
             ...folder,
             list_count: lists?.length || 0,
             card_count: cardCount,
+            isOwner, // Adicionar flag de owner
           };
         })
       );
@@ -266,18 +271,20 @@ const Folders = () => {
               >
                 <div onClick={() => navigate(`/folder/${folder.id}`)}>
                   <CardHeader>
-                    <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between">
                       <Folder className="h-8 w-8 text-primary" />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditFolder(folder);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      {folder.isOwner && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditFolder(folder);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                     <CardTitle className="mt-4">{folder.title}</CardTitle>
                   {folder.description && (
