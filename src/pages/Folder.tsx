@@ -50,44 +50,53 @@ const Folder = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      const { data, error } = await supabase
-        .from("folders")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) throw error;
-
-      setFolder(data);
-      setIsOwner(session?.user?.id === data.owner_id);
+      if (session) {
+        const { data, error } = await supabase
+          .from("folders")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (error) throw error;
+        setFolder(data);
+        setIsOwner(session.user.id === data.owner_id);
+      } else {
+        const { data, error } = await supabase.rpc('get_portal_folder', { _id: id });
+        if (error || !data) throw error || new Error('Pasta não encontrada');
+        setFolder(data as any);
+        setIsOwner(false);
+      }
     } catch (error: any) {
       toast.error("Erro ao carregar pasta: " + error.message);
-      navigate("/folders");
+      navigate("/portal");
     }
   };
 
   const loadLists = async () => {
     setLoading(true);
     try {
-      const { data: listsData, error } = await supabase
-        .from("lists")
-        .select("*")
-        .eq("folder_id", id)
-        .order("order_index", { ascending: true });
-
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      let listsData: any[] = [];
+      if (session) {
+        const { data, error } = await supabase
+          .from("lists")
+          .select("*")
+          .eq("folder_id", id)
+          .order("order_index", { ascending: true });
+        if (error) throw error;
+        listsData = data || [];
+      } else {
+        const { data, error } = await supabase.rpc('get_portal_lists', { _folder_id: id });
+        if (error) throw error;
+        listsData = (data as any[]) || [];
+      }
 
       const listsWithCounts = await Promise.all(
-        (listsData || []).map(async (list) => {
+        (listsData || []).map(async (list: any) => {
           const { count } = await supabase
             .from("flashcards")
             .select("*", { count: "exact", head: true })
             .eq("list_id", list.id);
-
-          return {
-            ...list,
-            card_count: count || 0,
-          };
+          return { ...list, card_count: count || 0 };
         })
       );
 

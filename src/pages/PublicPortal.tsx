@@ -27,38 +27,17 @@ export default function PublicPortal() {
     try {
       setLoading(true);
 
-      // Carregar pastas compartilhadas (visibility='class')
-      const { data: foldersData, error: foldersError } = await supabase
-        .from("folders")
-        .select("*")
-        .eq("visibility", "class")
-        .order("created_at", { ascending: false });
+      // Carregar pastas públicas via RPC com security definer
+      const { data: rpcFolders, error: rpcError } = await supabase.rpc('get_portal_folders');
+      if (rpcError) throw rpcError;
 
-      if (foldersError) throw foldersError;
-
-      // Carregar contadores para cada pasta
       const foldersWithCounts = await Promise.all(
-        (foldersData || []).map(async (folder) => {
-          const { data: lists } = await supabase
-            .from("lists")
-            .select("id")
-            .eq("folder_id", folder.id);
-
-          const listIds = lists?.map(l => l.id) || [];
-          
-          let cardCount = 0;
-          if (listIds.length > 0) {
-            const { count } = await supabase
-              .from("flashcards")
-              .select("*", { count: "exact", head: true })
-              .in("list_id", listIds);
-            cardCount = count || 0;
-          }
-
+        (rpcFolders || []).map(async (folder: any) => {
+          const { data: counts } = await supabase.rpc('get_portal_counts', { _folder_id: folder.id });
           return {
             ...folder,
-            list_count: lists?.length || 0,
-            card_count: cardCount,
+            list_count: counts?.[0]?.list_count ?? 0,
+            card_count: counts?.[0]?.card_count ?? 0,
           };
         })
       );

@@ -370,6 +370,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_portal_counts: {
+        Args: { _folder_id: string }
+        Returns: {
+          card_count: number
+          list_count: number
+        }[]
+      }
+      get_portal_folder: {
+        Args: { _id: string }
+        Returns: {
+          class_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+      }
+      get_portal_folders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          class_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
+      }
+      get_portal_lists: {
+        Args: { _folder_id: string }
+        Returns: {
+          class_id: string | null
+          created_at: string
+          description: string | null
+          folder_id: string
+          id: string
+          order_index: number
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
