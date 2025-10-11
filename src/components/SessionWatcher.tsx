@@ -61,11 +61,6 @@ export function SessionWatcher() {
           // ignore
         }
         navigate('/auth', { replace: true });
-        setTimeout(() => {
-          if (window.location.pathname !== '/auth') {
-            window.location.replace('/auth');
-          }
-        }, 100);
         return;
       }
 
@@ -73,11 +68,6 @@ export function SessionWatcher() {
       const authReady = sessionStorage.getItem('authReady') === '1';
       if (authReady && !session && isProtectedPath(window.location.pathname)) {
         navigate('/auth', { replace: true });
-        setTimeout(() => {
-          if (window.location.pathname !== '/auth') {
-            window.location.replace('/auth');
-          }
-        }, 100);
       }
     });
 

@@ -29,8 +29,8 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
-    // Debounce para evitar ler sessão antiga do storage
-    const timer = setTimeout(async () => {
+    // Verificação rápida de sessão existente
+    const checkSession = async () => {
       const authReady = sessionStorage.getItem('authReady') === '1';
       const logoutFlag = !!sessionStorage.getItem('logoutInProgress');
       if (!authReady || logoutFlag) return;
@@ -38,8 +38,8 @@ const Auth = () => {
       if (session) {
         navigate('/', { replace: true });
       }
-    }, 400);
-    return () => clearTimeout(timer);
+    };
+    checkSession();
   }, [navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {

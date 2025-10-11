@@ -6,7 +6,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
+    const checkSession = async () => {
       const ready = sessionStorage.getItem('authReady') === '1';
       const logoutFlag = !!sessionStorage.getItem('logoutInProgress');
       if (!ready || logoutFlag) return;
@@ -15,8 +15,8 @@ const Index = () => {
         navigate('/folders', { replace: true });
       }
       // Se não houver sessão, a guarda global cuidará do redirecionamento para /auth
-    }, 400);
-    return () => clearTimeout(timer);
+    };
+    checkSession();
   }, [navigate]);
 
   return (
