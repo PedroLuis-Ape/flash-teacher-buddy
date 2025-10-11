@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2 } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy } from "lucide-react";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
-import { FlashcardList } from "@/components/FlashcardList";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface ListType {
   id: string;
@@ -19,6 +21,7 @@ interface ListType {
 interface FolderType {
   id: string;
   title: string;
+  visibility: string;
 }
 
 interface Flashcard {
@@ -36,6 +39,7 @@ const ListDetail = () => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     loadList();
@@ -59,7 +63,7 @@ const ListDetail = () => {
 
       const { data: folderData, error: folderError } = await supabase
         .from("folders")
-        .select("id, title")
+        .select("id, title, visibility")
         .eq("id", listData.folder_id)
         .single();
 
@@ -140,6 +144,40 @@ const ListDetail = () => {
     }
   };
 
+  const handleToggleSharing = async () => {
+    if (!folder) return;
+    
+    setIsSharing(true);
+    try {
+      const newVisibility = folder.visibility === 'class' ? 'private' : 'class';
+      
+      const { error } = await supabase
+        .from("folders")
+        .update({ visibility: newVisibility })
+        .eq("id", folder.id);
+
+      if (error) throw error;
+
+      setFolder({ ...folder, visibility: newVisibility });
+      toast.success(
+        newVisibility === 'class' 
+          ? "Pasta compartilhada com sucesso!" 
+          : "Compartilhamento desativado"
+      );
+    } catch (error: any) {
+      toast.error("Erro ao alterar compartilhamento: " + error.message);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (!folder) return;
+    const shareUrl = `${window.location.origin}/share/folder/${folder.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success("Link copiado para a área de transferência!");
+  };
+
   if (!list || !folder) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
@@ -165,21 +203,72 @@ const ListDetail = () => {
                 <p className="text-muted-foreground mt-2">{list.description}</p>
               )}
             </div>
-            {flashcards.length > 0 && (
-              <Button
-                size="lg"
-                onClick={() => navigate(`/list/${id}/study`)}
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Estudar
-              </Button>
-            )}
+            <div className="flex items-center gap-3">
+              {flashcards.length > 0 && (
+                <Button
+                  size="lg"
+                  onClick={() => navigate(`/list/${id}/study`)}
+                >
+                  <Play className="mr-2 h-5 w-5" />
+                  Estudar
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
+        {isOwner && (
+          <Card className="p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="share-mode"
+                  checked={folder.visibility === 'class'}
+                  onCheckedChange={handleToggleSharing}
+                  disabled={isSharing}
+                />
+                <Label htmlFor="share-mode" className="cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Share2 className="h-4 w-4" />
+                    <span className="font-semibold">
+                      {folder.visibility === 'class' ? "Pasta Compartilhada" : "Compartilhar Pasta"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground font-normal">
+                    {folder.visibility === 'class' 
+                      ? "Alunos podem acessar via link" 
+                      : "Ative para gerar link de acesso"}
+                  </p>
+                </Label>
+              </div>
+              {folder.visibility === 'class' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyShareLink}
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copiar Link
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
+
         <div className="space-y-8">
           {isOwner && (
-            <CreateFlashcardForm onAdd={handleAddFlashcard} />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <CreateFlashcardForm onAdd={handleAddFlashcard} />
+              </div>
+              <div className="flex items-start">
+                <BulkImportDialog
+                  collectionId={id!}
+                  existingCards={flashcards.map(f => ({ front: f.front, back: f.back }))}
+                  onImported={loadFlashcards}
+                />
+              </div>
+            </div>
           )}
 
           {loading ? (
