@@ -102,7 +102,7 @@ export default function PublicPortal() {
                 <Card 
                   key={folder.id}
                   className="bg-white/95 backdrop-blur hover:shadow-xl transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/folder/${folder.id}`)}
+                  onClick={() => navigate(`/portal/folder/${folder.id}`)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">

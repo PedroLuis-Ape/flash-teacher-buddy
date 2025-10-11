@@ -111,7 +111,8 @@ const GamesHub = () => {
   };
 
   const startGame = (mode: "flip" | "write" | "mixed") => {
-    const basePath = isListRoute ? `/list/${id}` : `/collection/${id}`;
+    const onPortal = location.pathname.startsWith('/portal/list');
+    const basePath = onPortal ? `/portal/list/${id}` : (isListRoute ? `/list/${id}` : `/collection/${id}`);
     navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}`);
   };
 

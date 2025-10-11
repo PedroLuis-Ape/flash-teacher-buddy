@@ -37,6 +37,10 @@ const App = () => (
           <Route path="/collection/:id/games" element={<GamesHub />} />
           <Route path="/collection/:id/study" element={<Study />} />
           <Route path="/portal" element={<PublicPortal />} />
+          <Route path="/portal/folder/:id" element={<Folder />} />
+          <Route path="/portal/list/:id" element={<ListDetail />} />
+          <Route path="/portal/list/:id/games" element={<GamesHub />} />
+          <Route path="/portal/list/:id/study" element={<Study />} />
           <Route path="/portal/collection/:collectionId" element={<PublicCollection />} />
           <Route path="/portal/collection/:collectionId/study" element={<Study />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

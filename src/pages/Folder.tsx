@@ -277,7 +277,7 @@ const Folder = () => {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate("/folders")}
+            onClick={() => navigate(isOwner ? "/folders" : "/portal")}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -399,7 +399,7 @@ const Folder = () => {
                 key={list.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"
               >
-                <div onClick={() => navigate(`/list/${list.id}`)}>
+                <div onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}`)}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <FileText className="h-8 w-8 text-primary" />
