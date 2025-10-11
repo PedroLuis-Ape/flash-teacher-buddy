@@ -46,7 +46,7 @@ export function SessionWatcher() {
       // Ao logar novamente, limpar a flag de logout e sair de /auth rapidamente
       if (event === 'SIGNED_IN') {
         sessionStorage.removeItem('logoutInProgress');
-        if (window.location.pathname === '/auth') {
+        if (window.location.pathname.startsWith('/auth')) {
           navigate('/', { replace: true });
         }
       }
