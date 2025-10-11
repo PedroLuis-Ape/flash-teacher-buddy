@@ -188,13 +188,7 @@ const ListDetail = () => {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate("/auth", { replace: true });
-              }
-            }}
+            onClick={() => navigate(`/folder/${list.folder_id}`)}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
