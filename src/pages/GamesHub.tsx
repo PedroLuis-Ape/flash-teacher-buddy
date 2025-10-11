@@ -23,6 +23,7 @@ interface List {
   id: string;
   title: string;
   description?: string;
+  folder_id?: string;
 }
 
 const GamesHub = () => {
@@ -133,7 +134,11 @@ const GamesHub = () => {
             if (collection) {
               navigate(`/collection/${collection.id}`);
             } else if (list) {
-              navigate(onPortal ? `/portal/list/${list.id}` : `/list/${list.id}`);
+              if (onPortal && list.folder_id) {
+                navigate(`/portal/folder/${list.folder_id}`);
+              } else {
+                navigate(onPortal ? "/portal" : `/list/${list.id}`);
+              }
             } else {
               navigate(onPortal ? "/portal" : "/folders");
             }

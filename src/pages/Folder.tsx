@@ -399,7 +399,7 @@ const Folder = () => {
                 key={list.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"
               >
-                <div onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}`)}>
+                <div onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <FileText className="h-8 w-8 text-primary" />
