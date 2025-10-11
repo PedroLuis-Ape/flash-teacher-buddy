@@ -1,49 +1,9 @@
-// Text-to-Speech utilities using Puter.js with Web Speech API fallback
-
-// Declare Puter types
-declare global {
-  interface Window {
-    puter?: {
-      ai?: {
-        txt2speech: (text: string, lang: string) => Promise<HTMLAudioElement>;
-      };
-    };
-  }
-}
+// Text-to-Speech utilities using native Web Speech API
 
 export async function speakText(text: string, lang: "pt-BR" | "en-US"): Promise<void> {
   const label = `[TTS] (${lang})`;
-  try {
-    // Prefer Puter.js (free, higher quality)
-    if (window.puter?.ai?.txt2speech) {
-      try {
-        // Try exact locale first
-        let audio = await window.puter.ai.txt2speech(text, lang);
-        audio.volume = 1;
-        await audio.play();
-        console.debug(label, "Puter.js playback started (exact)");
-        return;
-      } catch (errExact) {
-        console.warn(label, "Puter exact locale failed, trying base lang...", errExact);
-        // Fallback to base language code (e.g., en, pt)
-        const baseLang = lang.split('-')[0];
-        try {
-          const audioBase = await window.puter.ai.txt2speech(text, baseLang);
-          audioBase.volume = 1;
-          await audioBase.play();
-          console.debug(label, "Puter.js playback started (base)");
-          return;
-        } catch (errBase) {
-          console.warn(label, "Puter base locale failed, falling back to Web Speech API", errBase);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Puter TTS access failed, falling back to Web Speech API:", err);
-  }
-
-  // Fallback to Web Speech API
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+  
   if (!synth) {
     console.warn(label, "Speech synthesis not supported");
     return;
@@ -103,18 +63,9 @@ export function getAvailableVoices() {
   return synth.getVoices();
 }
 
-// Load voices on page load (for fallback Web Speech API)
+// Load voices on page load
 if (typeof window !== 'undefined' && window.speechSynthesis) {
   window.speechSynthesis.onvoiceschanged = () => {
     window.speechSynthesis.getVoices();
   };
-}
-
-// Wait for Puter.js to load
-if (typeof window !== 'undefined') {
-  window.addEventListener('load', () => {
-    if (!window.puter) {
-      console.warn("Puter.js not loaded, will use Web Speech API fallback");
-    }
-  });
 }
