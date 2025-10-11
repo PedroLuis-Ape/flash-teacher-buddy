@@ -3,52 +3,67 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, FolderOpen } from "lucide-react";
+import { ArrowLeft, FolderOpen, FileText, CreditCard } from "lucide-react";
 import { PitecoMascot } from "@/components/PitecoMascot";
 
-interface Collection {
+interface Folder {
   id: string;
-  name: string;
+  title: string;
   description?: string;
+  list_count?: number;
+  card_count?: number;
 }
 
 export default function PublicPortal() {
   const navigate = useNavigate();
-  const [collections, setCollections] = useState<Collection[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [flashcardCounts, setFlashcardCounts] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
-    loadPublicCollections();
+    loadSharedFolders();
   }, []);
 
-  const loadPublicCollections = async () => {
+  const loadSharedFolders = async () => {
     try {
       setLoading(true);
 
-      // Find the teacher's public collections
-      const { data: collectionsData, error: collectionsError } = await supabase
-        .from("collections")
+      // Carregar pastas compartilhadas (visibility='class')
+      const { data: foldersData, error: foldersError } = await supabase
+        .from("folders")
         .select("*")
-        .in("visibility", ["public", "class"])
+        .eq("visibility", "class")
         .order("created_at", { ascending: false });
 
-      if (collectionsError) throw collectionsError;
+      if (foldersError) throw foldersError;
 
-      setCollections(collectionsData || []);
+      // Carregar contadores para cada pasta
+      const foldersWithCounts = await Promise.all(
+        (foldersData || []).map(async (folder) => {
+          const { data: lists } = await supabase
+            .from("lists")
+            .select("id")
+            .eq("folder_id", folder.id);
 
-      // Load flashcard counts
-      if (collectionsData) {
-        const counts: { [key: string]: number } = {};
-        for (const collection of collectionsData) {
-          const { count } = await supabase
-            .from("flashcards")
-            .select("*", { count: "exact", head: true })
-            .eq("collection_id", collection.id);
-          counts[collection.id] = count || 0;
-        }
-        setFlashcardCounts(counts);
-      }
+          const listIds = lists?.map(l => l.id) || [];
+          
+          let cardCount = 0;
+          if (listIds.length > 0) {
+            const { count } = await supabase
+              .from("flashcards")
+              .select("*", { count: "exact", head: true })
+              .in("list_id", listIds);
+            cardCount = count || 0;
+          }
+
+          return {
+            ...folder,
+            list_count: lists?.length || 0,
+            card_count: cardCount,
+          };
+        })
+      );
+
+      setFolders(foldersWithCounts);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -90,42 +105,46 @@ export default function PublicPortal() {
             </p>
           </div>
 
-          {collections.length === 0 ? (
+          {folders.length === 0 ? (
             <Card className="bg-white/95 backdrop-blur">
               <CardContent className="py-12 text-center">
                 <FolderOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
                 <p className="text-lg text-muted-foreground">
-                  Ainda não há coleções disponíveis para estudo.
+                  Ainda não há pastas compartilhadas para estudo.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-6 md:grid-cols-2">
-              {collections.map((collection) => (
+              {folders.map((folder) => (
                 <Card 
-                  key={collection.id}
+                  key={folder.id}
                   className="bg-white/95 backdrop-blur hover:shadow-xl transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/portal/collection/${collection.id}`)}
+                  onClick={() => navigate(`/folder/${folder.id}`)}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-2xl mb-2">{collection.name}</CardTitle>
-                        {collection.description && (
+                        <CardTitle className="text-2xl mb-2">{folder.title}</CardTitle>
+                        {folder.description && (
                           <CardDescription className="text-base">
-                            {collection.description}
+                            {folder.description}
                           </CardDescription>
                         )}
                       </div>
-                      <BookOpen className="h-8 w-8 text-primary ml-4" />
+                      <FolderOpen className="h-8 w-8 text-primary ml-4" />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{flashcardCounts[collection.id] || 0} cartões</span>
-                      <Button variant="secondary" size="sm">
-                        Estudar
-                      </Button>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <FileText className="h-4 w-4" />
+                        <span>{folder.list_count || 0} listas</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <CreditCard className="h-4 w-4" />
+                        <span>{folder.card_count || 0} cards</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
