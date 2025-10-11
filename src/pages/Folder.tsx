@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface ListType {
@@ -36,6 +37,9 @@ const Folder = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<ListType | null>(null);
   const [newList, setNewList] = useState({ title: "", description: "" });
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [allowPublicPortal, setAllowPublicPortal] = useState(true);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     loadFolder();
@@ -92,6 +96,32 @@ const Folder = () => {
       toast.error("Erro ao carregar listas: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShareFolder = async () => {
+    setSharing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Faça login para compartilhar");
+      const updates: Promise<any>[] = [
+        supabase.from("folders").update({ visibility: "class" }).eq("id", id),
+        supabase.from("lists").update({ visibility: "class" }).eq("folder_id", id as string),
+      ];
+      if (allowPublicPortal) {
+        updates.push(
+          supabase.from("profiles").update({ public_access_enabled: true }).eq("id", session.user.id)
+        );
+      }
+      const results = await Promise.all(updates);
+      const firstError = (results as any[]).find(r => r.error);
+      if (firstError?.error) throw firstError.error;
+      toast.success("Pasta compartilhada com sucesso!");
+      setShareDialogOpen(false);
+    } catch (error: any) {
+      toast.error("Erro ao compartilhar: " + error.message);
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -207,7 +237,7 @@ const Folder = () => {
         </div>
 
         {isOwner && (
-          <div className="mb-6">
+          <div className="mb-6 flex flex-wrap gap-3">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="lg">
@@ -248,6 +278,41 @@ const Folder = () => {
                     <Button type="submit">Criar Lista</Button>
                   </DialogFooter>
                 </form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary" size="lg">
+                  <Share2 className="mr-2 h-5 w-5" />
+                  Compartilhar Pasta
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Compartilhar Pasta</DialogTitle>
+                  <DialogDescription>
+                    Torne esta pasta e todo o seu conteúdo visível para seus alunos no Portal do Aluno.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <p className="text-sm text-muted-foreground">
+                    A pasta será marcada como compartilhada com a turma. As listas dentro dela também serão compartilhadas.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="allow-public"
+                      checked={allowPublicPortal}
+                      onCheckedChange={(c) => setAllowPublicPortal(Boolean(c))}
+                    />
+                    <Label htmlFor="allow-public">Permitir acesso sem login no Portal do Aluno</Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleShareFolder} disabled={sharing}>
+                    {sharing ? "Compartilhando..." : "Compartilhar"}
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
