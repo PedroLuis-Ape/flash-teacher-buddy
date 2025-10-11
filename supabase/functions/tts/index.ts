@@ -15,6 +15,7 @@ serve(async (req) => {
     const text = url.searchParams.get("text");
     const voice = url.searchParams.get("voice") || "en-US-JennyNeural";
 
+    // Input validation
     if (!text) {
       return new Response(JSON.stringify({ error: "Text parameter required" }), {
         status: 400,
@@ -22,15 +23,45 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[TTS] Generating speech for: "${text.substring(0, 50)}..." with voice: ${voice}`);
+    // Validate text length (max 5000 characters)
+    if (text.length > 5000) {
+      return new Response(JSON.stringify({ error: "Text exceeds maximum length of 5000 characters" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Sanitize text: remove potentially dangerous SSML tags and special characters
+    const sanitizedText = text
+      .replace(/<[^>]*>/g, '') // Remove any HTML/XML tags
+      .replace(/[^\w\s\u00C0-\u024F.,!?;:'"()-]/g, '') // Allow only safe characters including accented letters
+      .trim();
+
+    if (!sanitizedText) {
+      return new Response(JSON.stringify({ error: "Text contains no valid characters" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate voice parameter (whitelist approach)
+    const validVoices = [
+      "en-US-JennyNeural",
+      "en-US-GuyNeural",
+      "pt-BR-AntonioNeural",
+      "pt-BR-FranciscaNeural"
+    ];
+    const selectedVoice = validVoices.includes(voice) ? voice : "en-US-JennyNeural";
+
+    console.log(`[TTS] Generating speech for: "${sanitizedText.substring(0, 50)}..." with voice: ${selectedVoice}`);
 
     // Generate unique request ID
     const requestId = crypto.randomUUID().replace(/-/g, "");
     const timestamp = new Date().toISOString();
 
-    // Build SSML
-    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${voice.substring(0, 5)}'>
-        <voice name='${voice}'>${text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</voice>
+    // Build SSML with properly escaped text
+    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${selectedVoice.substring(0, 5)}'>
+        <voice name='${selectedVoice}'>${sanitizedText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")}</voice>
     </speak>`;
 
     // Connect to Edge TTS WebSocket

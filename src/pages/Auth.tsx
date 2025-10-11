@@ -61,6 +61,29 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
+        // Check if user has owner role in user_roles table
+        const { data: roleData, error: roleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "owner")
+          .maybeSingle();
+
+        if (roleError) throw roleError;
+
+        // If user doesn't have owner role, assign it
+        if (!roleData) {
+          const { error: insertError } = await supabase
+            .from("user_roles")
+            .insert({
+              user_id: data.user.id,
+              role: "owner",
+            });
+
+          if (insertError) throw insertError;
+        }
+
+        // Update or create profile (keep for display name purposes)
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -74,14 +97,12 @@ const Auth = () => {
               id: data.user.id,
               email: data.user.email,
               first_name: OWNER_FIRST_NAME,
-              role: 'owner',
               is_primary: true,
             });
         } else {
           await supabase
             .from('profiles')
             .update({
-              role: 'owner',
               is_primary: true,
               first_name: profile.first_name || OWNER_FIRST_NAME,
             })
