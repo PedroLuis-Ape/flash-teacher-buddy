@@ -86,6 +86,33 @@ const Study = () => {
     const isListRoute = window.location.pathname.includes("/list/");
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
     
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Se for lista sem sessão, usar RPC público
+    if (isListRoute && !session) {
+      const { data, error } = await supabase.rpc('get_portal_flashcards', { 
+        _list_id: resolvedId 
+      });
+
+      if (error) {
+        console.error("Erro ao carregar flashcards:", error);
+        toast.error("Erro ao carregar flashcards");
+        setLoading(false);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        toast.error("Esta lista não possui flashcards");
+        setLoading(false);
+        return;
+      }
+
+      const shuffled = order === "random" ? shuffleArray([...data]) : data;
+      setFlashcards(shuffled);
+      setLoading(false);
+      return;
+    }
+    
     const queryColumn = isListRoute ? "list_id" : "collection_id";
     
     const { data, error } = await supabase

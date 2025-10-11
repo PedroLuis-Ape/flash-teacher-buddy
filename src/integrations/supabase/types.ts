@@ -377,6 +377,22 @@ export type Database = {
           list_count: number
         }[]
       }
+      get_portal_flashcards: {
+        Args: { _list_id: string }
+        Returns: {
+          accepted_answers_en: string[] | null
+          accepted_answers_pt: string[] | null
+          audio_url: string | null
+          back: string
+          collection_id: string | null
+          created_at: string
+          front: string
+          id: string
+          list_id: string | null
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_portal_folder: {
         Args: { _id: string }
         Returns: {

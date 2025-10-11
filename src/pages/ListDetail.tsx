@@ -50,6 +50,41 @@ const ListDetail = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
+      // Tentar carregar via RPC público primeiro (para alunos sem login)
+      if (!session) {
+        const { data: publicLists } = await supabase.rpc('get_portal_lists', { 
+          _folder_id: '' // Vamos buscar pela lista diretamente
+        });
+        
+        // Como não temos RPC específico para lista individual, vamos usar query normal
+        // que deve funcionar se as RLS policies estiverem corretas
+        const { data: listData, error: listError } = await supabase
+          .from("lists")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (listError) {
+          console.error("Erro ao carregar lista pública:", listError);
+          toast.error("Lista não encontrada ou não está compartilhada");
+          navigate("/portal");
+          return;
+        }
+
+        setList(listData);
+        setIsOwner(false);
+
+        const { data: folderData } = await supabase.rpc('get_portal_folder', { 
+          _id: listData.folder_id 
+        });
+
+        if (folderData) {
+          setFolder(folderData);
+        }
+        return;
+      }
+
+      // Fluxo normal para usuários logados
       const { data: listData, error: listError } = await supabase
         .from("lists")
         .select("*")
@@ -78,14 +113,31 @@ const ListDetail = () => {
   const loadFlashcards = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("flashcards")
-        .select("*")
-        .eq("list_id", id)
-        .order("created_at", { ascending: true });
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (error) throw error;
-      setFlashcards(data || []);
+      // Se não tiver sessão, usar RPC público
+      if (!session) {
+        const { data, error } = await supabase.rpc('get_portal_flashcards', { 
+          _list_id: id 
+        });
+
+        if (error) {
+          console.error("Erro ao carregar flashcards públicos:", error);
+          setFlashcards([]);
+        } else {
+          setFlashcards(data || []);
+        }
+      } else {
+        // Fluxo normal para usuários logados
+        const { data, error } = await supabase
+          .from("flashcards")
+          .select("*")
+          .eq("list_id", id)
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+        setFlashcards(data || []);
+      }
     } catch (error: any) {
       toast.error("Erro ao carregar flashcards: " + error.message);
     } finally {

@@ -46,28 +46,43 @@ const GamesHub = () => {
   }, [id, isListRoute]);
 
   const loadList = async () => {
-    if (!id) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    const { data, error } = await supabase
-      .from("lists")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+      // Se não tiver sessão, tentar carregar como público
+      if (!session) {
+        const { data, error } = await supabase
+          .from("lists")
+          .select("*")
+          .eq("id", id)
+          .single();
 
-    if (error) {
+        if (error) {
+          console.error("Erro ao carregar lista pública:", error);
+          toast.error("Lista não encontrada ou não está compartilhada");
+          navigate("/portal");
+          return;
+        }
+        setList(data);
+        setLoading(false);
+        return;
+      }
+
+      // Fluxo normal para usuários logados
+      const { data, error } = await supabase
+        .from("lists")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      setList(data);
+      setLoading(false);
+    } catch (error: any) {
       toast.error("Erro ao carregar lista");
-      navigate("/");
-      return;
+      console.error(error);
+      setLoading(false);
     }
-
-    if (!data) {
-      toast.error("Lista não encontrada");
-      navigate("/");
-      return;
-    }
-
-    setList(data);
-    setLoading(false);
   };
 
   const loadCollection = async () => {
