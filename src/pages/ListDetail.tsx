@@ -207,7 +207,7 @@ const ListDetail = () => {
               {flashcards.length > 0 && (
                 <Button
                   size="lg"
-                  onClick={() => navigate(`/list/${id}/study`)}
+                  onClick={() => navigate(`/list/${id}/games`)}
                 >
                   <Play className="mr-2 h-5 w-5" />
                   Estudar
