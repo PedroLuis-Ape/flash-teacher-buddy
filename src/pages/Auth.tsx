@@ -17,19 +17,11 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [logoutJustOccurred, setLogoutJustOccurred] = useState(false);
 
   useEffect(() => {
-    // Detecta logout via flag ou query e limpa a flag imediatamente ao carregar /auth
+    // Remove apenas o parâmetro de logout da URL, mas mantém a flag até novo login
     const params = new URLSearchParams(window.location.search);
-    const queryLogout = params.get('logout') === '1';
-    const flagLogout = !!sessionStorage.getItem('logoutInProgress');
-    if (queryLogout || flagLogout) {
-      setLogoutJustOccurred(true);
-    }
-    // Limpa a flag e remove o parâmetro da URL
-    sessionStorage.removeItem('logoutInProgress');
-    if (queryLogout) {
+    if (params.get('logout') === '1') {
       params.delete('logout');
       const url = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
       window.history.replaceState({}, '', url);
@@ -40,14 +32,15 @@ const Auth = () => {
     // Debounce para evitar ler sessão antiga do storage
     const timer = setTimeout(async () => {
       const authReady = sessionStorage.getItem('authReady') === '1';
-      if (!authReady || logoutJustOccurred) return;
+      const logoutFlag = !!sessionStorage.getItem('logoutInProgress');
+      if (!authReady || logoutFlag) return;
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         navigate('/', { replace: true });
       }
     }, 400);
     return () => clearTimeout(timer);
-  }, [navigate, logoutJustOccurred]);
+  }, [navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +89,6 @@ const Auth = () => {
         }
 
         toast.success(`Bem-vindo, ${OWNER_FIRST_NAME}!`);
-        navigate("/");
       }
     } catch (error: any) {
       toast.error(error.message);

@@ -43,6 +43,11 @@ export function SessionWatcher() {
         maybeSetReady();
       }
 
+      // Ao logar novamente, limpar a flag de logout
+      if (event === 'SIGNED_IN') {
+        sessionStorage.removeItem('logoutInProgress');
+      }
+
       // Fluxo de logout explícito: limpar e ir imediatamente para /auth
       if (event === 'SIGNED_OUT') {
         try {
