@@ -104,18 +104,33 @@ const Folder = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Faça login para compartilhar");
-      const updates: Promise<any>[] = [
-        supabase.from("folders").update({ visibility: "class" }).eq("id", id),
-        supabase.from("lists").update({ visibility: "class" }).eq("folder_id", id as string),
-      ];
+      
+      // Update folder visibility
+      const { error: folderError } = await supabase
+        .from("folders")
+        .update({ visibility: "class" })
+        .eq("id", id);
+      
+      if (folderError) throw folderError;
+
+      // Update all lists in folder
+      const { error: listsError } = await supabase
+        .from("lists")
+        .update({ visibility: "class" })
+        .eq("folder_id", id as string);
+      
+      if (listsError) throw listsError;
+
+      // Enable public portal access if requested
       if (allowPublicPortal) {
-        updates.push(
-          supabase.from("profiles").update({ public_access_enabled: true }).eq("id", session.user.id)
-        );
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ public_access_enabled: true })
+          .eq("id", session.user.id);
+        
+        if (profileError) throw profileError;
       }
-      const results = await Promise.all(updates);
-      const firstError = (results as any[]).find(r => r.error);
-      if (firstError?.error) throw firstError.error;
+
       toast.success("Pasta compartilhada com sucesso!");
       setShareDialogOpen(false);
     } catch (error: any) {
