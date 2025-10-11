@@ -14,6 +14,7 @@ import Study from "./pages/Study";
 import PublicPortal from "./pages/PublicPortal";
 import PublicCollection from "./pages/PublicCollection";
 import NotFound from "./pages/NotFound";
+import { SessionWatcher } from "@/components/SessionWatcher";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SessionWatcher />
         <Routes>
           <Route path="/" element={<Folders />} />
           <Route path="/auth" element={<Auth />} />
