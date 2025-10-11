@@ -142,11 +142,14 @@ const Study = () => {
   };
 
   const handleExit = () => {
+    setShowExitDialog(false);
     const isPublic = window.location.pathname.startsWith("/portal/collection/");
     if (!isPublic) {
       saveSession(mode, direction);
     }
-    navigate(-1);
+    setTimeout(() => {
+      navigate(-1);
+    }, 100);
   };
 
   if (loading) {
