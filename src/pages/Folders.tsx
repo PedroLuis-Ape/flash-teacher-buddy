@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
-import { FolderPlus, Folder, LogOut, FileText, CreditCard } from "lucide-react";
+import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil } from "lucide-react";
 
 interface FolderType {
   id: string;
@@ -26,6 +26,8 @@ const Folders = () => {
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
   const [newFolder, setNewFolder] = useState({ title: "", description: "" });
 
   useEffect(() => {
@@ -131,6 +133,39 @@ const Folders = () => {
     }
   };
 
+  const handleEditFolder = (folder: FolderType) => {
+    setEditingFolder(folder);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingFolder || !editingFolder.title.trim()) {
+      toast.error("O título é obrigatório");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("folders")
+        .update({
+          title: editingFolder.title,
+          description: editingFolder.description,
+        })
+        .eq("id", editingFolder.id);
+
+      if (error) throw error;
+
+      toast.success("Pasta atualizada com sucesso!");
+      setEditDialogOpen(false);
+      setEditingFolder(null);
+      loadFolders();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar pasta: " + error.message);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -216,14 +251,24 @@ const Folders = () => {
             {folders.map((folder) => (
               <Card
                 key={folder.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => navigate(`/folder/${folder.id}`)}
+                className="cursor-pointer hover:shadow-lg transition-shadow relative"
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <Folder className="h-8 w-8 text-primary" />
-                  </div>
-                  <CardTitle className="mt-4">{folder.title}</CardTitle>
+                <div onClick={() => navigate(`/folder/${folder.id}`)}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <Folder className="h-8 w-8 text-primary" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditFolder(folder);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <CardTitle className="mt-4">{folder.title}</CardTitle>
                   {folder.description && (
                     <CardDescription>{folder.description}</CardDescription>
                   )}
@@ -240,10 +285,50 @@ const Folders = () => {
                     </div>
                   </div>
                 </CardContent>
+              </div>
               </Card>
             ))}
           </div>
         )}
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Pasta</DialogTitle>
+              <DialogDescription>
+                Altere o título e descrição da pasta
+              </DialogDescription>
+            </DialogHeader>
+            {editingFolder && (
+              <form onSubmit={handleUpdateFolder}>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-title">Título</Label>
+                    <Input
+                      id="edit-title"
+                      value={editingFolder.title}
+                      onChange={(e) => setEditingFolder({ ...editingFolder, title: e.target.value })}
+                      placeholder="Ex: Inglês - Verbos"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-description">Descrição (opcional)</Label>
+                    <Textarea
+                      id="edit-description"
+                      value={editingFolder.description || ""}
+                      onChange={(e) => setEditingFolder({ ...editingFolder, description: e.target.value })}
+                      placeholder="Descreva o conteúdo desta pasta..."
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Salvar Alterações</Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

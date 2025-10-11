@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2 } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface ListType {
@@ -33,6 +33,8 @@ const Folder = () => {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingList, setEditingList] = useState<ListType | null>(null);
   const [newList, setNewList] = useState({ title: "", description: "" });
 
   useEffect(() => {
@@ -123,6 +125,39 @@ const Folder = () => {
       loadLists();
     } catch (error: any) {
       toast.error("Erro ao criar lista: " + error.message);
+    }
+  };
+
+  const handleEditList = (list: ListType) => {
+    setEditingList(list);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingList || !editingList.title.trim()) {
+      toast.error("O título é obrigatório");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("lists")
+        .update({
+          title: editingList.title,
+          description: editingList.description,
+        })
+        .eq("id", editingList.id);
+
+      if (error) throw error;
+
+      toast.success("Lista atualizada com sucesso!");
+      setEditDialogOpen(false);
+      setEditingList(null);
+      loadLists();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar lista: " + error.message);
     }
   };
 
@@ -231,40 +266,52 @@ const Folder = () => {
               <Card
                 key={list.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => navigate(`/list/${list.id}`)}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <FileText className="h-8 w-8 text-primary" />
-                    {isOwner && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                <div onClick={() => navigate(`/list/${list.id}`)}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <FileText className="h-8 w-8 text-primary" />
+                      {isOwner && (
+                        <div className="flex gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditList(list);
+                            }}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-                  <CardTitle className="mt-4">{list.title}</CardTitle>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </div>
+                    <CardTitle className="mt-4">{list.title}</CardTitle>
                   {list.description && (
                     <CardDescription>{list.description}</CardDescription>
                   )}
@@ -275,10 +322,50 @@ const Folder = () => {
                     <span>{list.card_count || 0} cards</span>
                   </div>
                 </CardContent>
+              </div>
               </Card>
             ))}
           </div>
         )}
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Lista</DialogTitle>
+              <DialogDescription>
+                Altere o título e descrição da lista
+              </DialogDescription>
+            </DialogHeader>
+            {editingList && (
+              <form onSubmit={handleUpdateList}>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-list-title">Título</Label>
+                    <Input
+                      id="edit-list-title"
+                      value={editingList.title}
+                      onChange={(e) => setEditingList({ ...editingList, title: e.target.value })}
+                      placeholder="Ex: Verbos Irregulares"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-list-description">Descrição (opcional)</Label>
+                    <Textarea
+                      id="edit-list-description"
+                      value={editingList.description || ""}
+                      onChange={(e) => setEditingList({ ...editingList, description: e.target.value })}
+                      placeholder="Descreva o conteúdo desta lista..."
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Salvar Alterações</Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
