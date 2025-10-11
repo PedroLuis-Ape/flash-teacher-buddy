@@ -9,14 +9,13 @@ import { PitecoMascot } from "@/components/PitecoMascot";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
 
-const OWNER_EMAIL = import.meta.env.VITE_OWNER_EMAIL || "";
-const OWNER_FIRST_NAME = import.meta.env.VITE_OWNER_FIRST_NAME || "Professor";
-
 const Auth = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
     // Remove apenas o parâmetro de logout da URL, mas mantém a flag até novo login
@@ -42,74 +41,54 @@ const Auth = () => {
     checkSession();
   }, [navigate]);
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (email.toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
-      toast.error("Apenas o professor pode fazer login nesta área.");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      if (isSignUp) {
+        // Sign up
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      if (data.user) {
-        // Check if user has owner role in user_roles table
-        const { data: roleData, error: roleError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id)
-          .eq("role", "owner")
-          .maybeSingle();
-
-        if (roleError) throw roleError;
-
-        // If user doesn't have owner role, assign it
-        if (!roleData) {
-          const { error: insertError } = await supabase
-            .from("user_roles")
-            .insert({
-              user_id: data.user.id,
-              role: "owner",
-            });
-
-          if (insertError) throw insertError;
-        }
-
-        // Update or create profile (keep for display name purposes)
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .maybeSingle();
-
-        if (!profile) {
+        if (data.user) {
+          // Create profile
           await supabase
             .from('profiles')
             .insert({
               id: data.user.id,
               email: data.user.email,
-              first_name: OWNER_FIRST_NAME,
-              is_primary: true,
+              first_name: firstName,
             });
-        } else {
-          await supabase
-            .from('profiles')
-            .update({
-              is_primary: true,
-              first_name: profile.first_name || OWNER_FIRST_NAME,
-            })
-            .eq('id', data.user.id);
-        }
 
-        toast.success(`Bem-vindo, ${OWNER_FIRST_NAME}!`);
+          toast.success("Conta criada com sucesso! Bem-vindo!");
+        }
+      } else {
+        // Sign in
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          // Get user profile for welcome message
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+          toast.success(`Bem-vindo${profile?.first_name ? `, ${profile.first_name}` : ''}!`);
+        }
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -133,27 +112,28 @@ const Auth = () => {
           </div>
         </Card>
 
-        <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur hover:shadow-xl transition-shadow">
-          <h2 className="text-2xl font-bold text-center mb-2">Modo Aluno</h2>
-          <p className="text-center text-muted-foreground mb-4">
-            Acesse o material de estudo
-          </p>
-          <Button 
-            className="w-full" 
-            size="lg"
-            onClick={() => navigate("/portal")}
-          >
-            Acessar como Aluno
-          </Button>
-        </Card>
-
         <Card className="w-full max-w-md bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl">
           <CardHeader>
-            <CardTitle className="text-2xl">Acesso do Professor</CardTitle>
-            <CardDescription>Entre com suas credenciais</CardDescription>
+            <CardTitle className="text-2xl">{isSignUp ? "Criar Conta" : "Entrar"}</CardTitle>
+            <CardDescription>
+              {isSignUp ? "Preencha seus dados para criar uma conta" : "Entre com suas credenciais"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4 mt-4">
+            <form onSubmit={handleAuth} className="space-y-4 mt-4">
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">Nome</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="Seu nome"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -176,8 +156,18 @@ const Auth = () => {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Entrando..." : "Entrar"}
+                {loading ? (isSignUp ? "Criando conta..." : "Entrando...") : (isSignUp ? "Criar Conta" : "Entrar")}
               </Button>
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-sm"
+                >
+                  {isSignUp ? "Já tem uma conta? Entre aqui" : "Não tem conta? Crie uma"}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
