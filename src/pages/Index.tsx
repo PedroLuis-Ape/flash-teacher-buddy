@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CollectionCard } from "@/components/CollectionCard";
 import { CreateCollectionDialog } from "@/components/CreateCollectionDialog";
-import { GraduationCap, LogOut, Share2, Copy, Check } from "lucide-react";
+import { LogOut, Share2, Copy, Check } from "lucide-react";
+import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero-bg.jpg";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,7 +180,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-16 relative z-10">
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-3">
-              <GraduationCap className="h-10 w-10" />
+              <PitecoLogo className="h-10 w-10" />
               <div>
                 <h1 className="text-3xl font-bold">APE - Apprenticeship Practice and Enhancement</h1>
                 {profile && (
