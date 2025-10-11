@@ -27,8 +27,23 @@ export function SessionWatcher() {
     // 2) Listener único de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Redireciona para /auth quando fizer sign out ou quando não houver sessão
-      if ((event === "SIGNED_OUT" || !session) && isProtectedPath(window.location.pathname)) {
-        navigate("/auth", { replace: true });
+      if (event === "SIGNED_OUT" || !session) {
+        try {
+          // Limpa estados locais/armazenamento
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (e) {
+          // ignore
+        }
+        if (isProtectedPath(window.location.pathname)) {
+          navigate("/auth", { replace: true });
+          // Fallback forte para evitar estados travados
+          setTimeout(() => {
+            if (window.location.pathname !== "/auth") {
+              window.location.replace("/auth");
+            }
+          }, 100);
+        }
       }
     });
 
