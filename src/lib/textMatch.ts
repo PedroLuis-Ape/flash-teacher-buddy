@@ -1,12 +1,19 @@
 // Utility functions for text matching and comparison
 
+/**
+ * Normaliza texto para comparação, preservando a integridade da string
+ * Remove acentos, pontuação leve, espaços extras e converte para minúsculas
+ * IMPORTANTE: Esta função NUNCA deve ser usada para exibição, apenas para comparação
+ */
 export function normalize(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
-    .replace(/[.,!?;:]/g, "") // Remove light punctuation
-    .replace(/\s+/g, " ") // Collapse spaces
+    .replace(/[\u0300-\u036f]/g, "") // Remove diacritics/acentos
+    .replace(/[.,!?;:]/g, "") // Remove pontuação leve
+    .replace(/\s+/g, " ") // Colapsa múltiplos espaços em um único
     .trim();
 }
 

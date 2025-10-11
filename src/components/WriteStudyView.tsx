@@ -62,20 +62,25 @@ export const WriteStudyView = ({
   }, [front, back]);
 
   const handleSubmit = () => {
-    if (!answer.trim()) {
+    // Preserva o texto original digitado pelo usuário (NÃO normaliza para exibição)
+    const userOriginalAnswer = answer.trim();
+    
+    if (!userOriginalAnswer) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
       return;
     }
 
-    const result = isAcceptableAnswer(answer, acceptedAnswers);
+    // Usa normalização APENAS para comparação, não para exibição
+    const result = isAcceptableAnswer(userOriginalAnswer, acceptedAnswers);
 
     if (result.isCorrect) {
       setFeedback("correct");
     } else {
       // Verifica se está quase correto (1 caractere de diferença)
+      // A função isAlmostCorrect já faz a normalização internamente
       const almostCorrect = acceptedAnswers.some(accepted => 
-        isAlmostCorrect(answer, accepted)
+        isAlmostCorrect(userOriginalAnswer, accepted)
       );
       
       if (almostCorrect) {
@@ -200,7 +205,7 @@ export const WriteStudyView = ({
                     <span className="text-2xl">⚠</span>
                     Quase perfeito!
                   </div>
-                  Você escreveu <span className="font-semibold">"{answer}"</span>, mas o correto seria <span className="font-semibold">"{correctAnswer}"</span>.
+                  Você escreveu <span className="font-semibold">"{answer.trim()}"</span>, mas o correto seria <span className="font-semibold">"{correctAnswer}"</span>.
                   <br />
                   <span className="text-sm mt-2 block">
                     Faltou ou sobrou apenas 1 caractere. Vamos considerar como acerto!
