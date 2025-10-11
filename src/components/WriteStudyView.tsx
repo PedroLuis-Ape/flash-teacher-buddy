@@ -8,6 +8,7 @@ import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
 import { speakText, pickLang } from "@/lib/speech";
 import pitecoSad from "@/assets/piteco-sad.png";
+import pitecoHappy from "@/assets/piteco-happy.png";
 
 interface WriteStudyViewProps {
   front: string;
@@ -148,19 +149,28 @@ export const WriteStudyView = ({
         {feedback === "correct" && (
           <Alert className="border-green-500 bg-green-50 dark:bg-green-950 animate-fade-in">
             <AlertDescription className="text-green-700 dark:text-green-300">
-              <div className="flex items-center gap-2 text-lg font-semibold mb-2">
-                <span className="text-2xl">✓</span>
-                Correto!
+              <div className="flex items-start gap-4">
+                <img 
+                  src={pitecoHappy} 
+                  alt="Piteco feliz" 
+                  className="w-16 h-16 object-contain flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+                    <span className="text-2xl">✓</span>
+                    Correto!
+                  </div>
+                  <span className="font-semibold">{correctAnswer}</span>
+                  {acceptedAnswers.length > 1 && (
+                    <>
+                      <br />
+                      <span className="text-sm">
+                        Outras respostas: {acceptedAnswers.slice(1).join(", ")}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
-              <span className="font-semibold">{correctAnswer}</span>
-              {acceptedAnswers.length > 1 && (
-                <>
-                  <br />
-                  <span className="text-sm">
-                    Outras respostas: {acceptedAnswers.slice(1).join(", ")}
-                  </span>
-                </>
-              )}
             </AlertDescription>
           </Alert>
         )}
