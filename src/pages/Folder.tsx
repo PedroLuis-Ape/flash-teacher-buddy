@@ -125,8 +125,10 @@ const Folder = () => {
       if (allowPublicPortal) {
         const { error: profileError } = await supabase
           .from("profiles")
-          .update({ public_access_enabled: true })
-          .eq("id", session.user.id);
+          .upsert(
+            { id: session.user.id, public_access_enabled: true },
+            { onConflict: "id" }
+          );
         
         if (profileError) throw profileError;
       }
