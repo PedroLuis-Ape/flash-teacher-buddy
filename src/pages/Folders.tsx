@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
-import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil, Search } from "lucide-react";
+import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil, Search, Lock, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface FolderType {
   id: string;
@@ -29,7 +30,8 @@ const Folders = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
-  const [newFolder, setNewFolder] = useState({ title: "", description: "" });
+  const [newFolder, setNewFolder] = useState({ title: "", description: "", visibility: "private" });
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -51,6 +53,17 @@ const Folders = () => {
 
     if (profile?.first_name) {
       setFirstName(profile.first_name);
+    }
+
+    // Buscar o role do usuário
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
+    if (roleData) {
+      setUserRole(roleData.role);
     }
   };
 
@@ -125,13 +138,14 @@ const Folders = () => {
           title: newFolder.title,
           description: newFolder.description,
           owner_id: session.user.id,
+          visibility: newFolder.visibility,
         });
 
       if (error) throw error;
 
       toast.success("Pasta criada com sucesso!");
       setDialogOpen(false);
-      setNewFolder({ title: "", description: "" });
+      setNewFolder({ title: "", description: "", visibility: "private" });
       loadFolders();
     } catch (error: any) {
       toast.error("Erro ao criar pasta: " + error.message);
@@ -157,6 +171,7 @@ const Folders = () => {
         .update({
           title: editingFolder.title,
           description: editingFolder.description,
+          visibility: editingFolder.visibility,
         })
         .eq("id", editingFolder.id);
 
@@ -248,6 +263,25 @@ const Folders = () => {
                       placeholder="Descreva o conteúdo desta pasta..."
                     />
                   </div>
+                  {userRole === 'owner' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="visibility">Modo Compartilhado</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Permite que alunos encontrem esta pasta
+                          </p>
+                        </div>
+                        <Switch
+                          id="visibility"
+                          checked={newFolder.visibility === 'class'}
+                          onCheckedChange={(checked) => 
+                            setNewFolder({ ...newFolder, visibility: checked ? 'class' : 'private' })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="submit">Criar Pasta</Button>
@@ -278,7 +312,14 @@ const Folders = () => {
                 <div onClick={() => navigate(`/folder/${folder.id}`)}>
                   <CardHeader>
                   <div className="flex items-start justify-between">
-                      <Folder className="h-8 w-8 text-primary" />
+                      <div className="flex items-center gap-2">
+                        <Folder className="h-8 w-8 text-primary" />
+                        {folder.visibility === 'private' ? (
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Globe className="h-4 w-4 text-accent" />
+                        )}
+                      </div>
                       {folder.isOwner && (
                         <Button
                           variant="ghost"
@@ -345,6 +386,25 @@ const Folders = () => {
                       placeholder="Descreva o conteúdo desta pasta..."
                     />
                   </div>
+                  {userRole === 'owner' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="edit-visibility">Modo Compartilhado</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Permite que alunos encontrem esta pasta
+                          </p>
+                        </div>
+                        <Switch
+                          id="edit-visibility"
+                          checked={editingFolder.visibility === 'class'}
+                          onCheckedChange={(checked) => 
+                            setEditingFolder({ ...editingFolder, visibility: checked ? 'class' : 'private' })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="submit">Salvar Alterações</Button>
