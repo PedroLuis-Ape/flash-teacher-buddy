@@ -225,6 +225,9 @@ const Folders = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => navigate("/profile")} variant="outline">
+              Perfil
+            </Button>
             <Button onClick={() => navigate("/search")} variant="outline">
               <Search className="mr-2 h-4 w-4" />
               Buscar Professor
