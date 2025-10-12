@@ -27,6 +27,7 @@ const Folders = () => {
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState("");
+  const [username, setUsername] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
@@ -47,12 +48,15 @@ const Folders = () => {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("first_name")
+      .select("first_name, public_slug")
       .eq("id", session.user.id)
       .maybeSingle();
 
     if (profile?.first_name) {
       setFirstName(profile.first_name);
+    }
+    if (profile?.public_slug) {
+      setUsername(profile.public_slug);
     }
 
     // Buscar o role do usuário
@@ -211,7 +215,12 @@ const Folders = () => {
             <div>
               <h1 className="text-3xl font-bold">Minhas Pastas</h1>
               {firstName && (
-                <p className="text-muted-foreground">Olá, {firstName}</p>
+                <p className="text-muted-foreground">
+                  Olá, {firstName}
+                  {username && userRole === 'owner' && (
+                    <span className="ml-2 text-primary font-medium">@{username}</span>
+                  )}
+                </p>
               )}
             </div>
           </div>

@@ -14,9 +14,12 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [isProfessor, setIsProfessor] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   useEffect(() => {
     // Remove apenas o parâmetro de logout da URL, mas mantém a flag até novo login
@@ -42,12 +45,49 @@ const Auth = () => {
     checkSession();
   }, [navigate]);
 
+  // Verificar disponibilidade do username
+  useEffect(() => {
+    if (!isSignUp || !isProfessor || !username || username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    const checkUsername = async () => {
+      setCheckingUsername(true);
+      const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('public_slug')
+        .eq('public_slug', cleanUsername)
+        .maybeSingle();
+
+      setUsernameAvailable(!data && !error);
+      setCheckingUsername(false);
+    };
+
+    const timer = setTimeout(checkUsername, 500);
+    return () => clearTimeout(timer);
+  }, [username, isSignUp, isProfessor]);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isSignUp) {
+        // Validação do username para professores
+        if (isProfessor) {
+          if (!username || username.length < 3) {
+            toast.error("Username deve ter pelo menos 3 caracteres");
+            return;
+          }
+          if (usernameAvailable === false) {
+            toast.error("Este username já está em uso");
+            return;
+          }
+        }
+
         // Sign up
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -60,6 +100,8 @@ const Auth = () => {
         if (error) throw error;
 
         if (data.user) {
+          const cleanUsername = isProfessor ? username.toLowerCase().replace(/[^a-z0-9_]/g, '') : null;
+          
           // Create profile
           await supabase
             .from('profiles')
@@ -67,6 +109,8 @@ const Auth = () => {
               id: data.user.id,
               email: data.user.email,
               first_name: firstName,
+              public_slug: cleanUsername,
+              public_access_enabled: isProfessor,
             });
 
           // Assign role
@@ -77,7 +121,7 @@ const Auth = () => {
               role: isProfessor ? 'owner' : 'student',
             });
 
-          toast.success("Conta criada com sucesso! Bem-vindo!");
+          toast.success(`Conta criada com sucesso! ${isProfessor ? `Seu @ é: @${cleanUsername}` : 'Bem-vindo!'}`);
         }
       } else {
         // Sign in
@@ -164,6 +208,32 @@ const Auth = () => {
                       </Button>
                     </div>
                   </div>
+                  {isProfessor && (
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username (seu @)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                        <Input
+                          id="username"
+                          type="text"
+                          placeholder="seunome"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className="pl-8"
+                          required
+                          minLength={3}
+                        />
+                      </div>
+                      {username && username.length >= 3 && (
+                        <p className={`text-sm ${checkingUsername ? 'text-muted-foreground' : usernameAvailable ? 'text-green-600' : 'text-red-600'}`}>
+                          {checkingUsername ? 'Verificando...' : usernameAvailable ? '✓ Disponível!' : '✗ Já está em uso'}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Apenas letras, números e _ (mínimo 3 caracteres)
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
               <div className="space-y-2">
