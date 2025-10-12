@@ -16,6 +16,7 @@ const Auth = () => {
   const [firstName, setFirstName] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isProfessor, setIsProfessor] = useState(false);
 
   useEffect(() => {
     // Remove apenas o parâmetro de logout da URL, mas mantém a flag até novo login
@@ -66,6 +67,14 @@ const Auth = () => {
               id: data.user.id,
               email: data.user.email,
               first_name: firstName,
+            });
+
+          // Assign role
+          await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: isProfessor ? 'owner' : 'student',
             });
 
           toast.success("Conta criada com sucesso! Bem-vindo!");
@@ -122,17 +131,40 @@ const Auth = () => {
           <CardContent>
             <form onSubmit={handleAuth} className="space-y-4 mt-4">
               {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">Nome</Label>
-                  <Input
-                    id="firstName"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Nome</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Seu nome"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tipo de conta</Label>
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant={!isProfessor ? "default" : "outline"}
+                        onClick={() => setIsProfessor(false)}
+                        className="flex-1"
+                      >
+                        Aluno
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={isProfessor ? "default" : "outline"}
+                        onClick={() => setIsProfessor(true)}
+                        className="flex-1"
+                      >
+                        Professor
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
