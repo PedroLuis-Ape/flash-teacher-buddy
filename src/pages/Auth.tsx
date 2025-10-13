@@ -102,28 +102,31 @@ const Auth = () => {
         if (data.user) {
           const cleanUsername = isProfessor ? username.toLowerCase().replace(/[^a-z0-9_]/g, '') : null;
           
-          // Update profile (trigger já criou o registro básico)
+          // O trigger handle_new_user já cria o perfil básico
+          // Agora apenas atualizamos os campos adicionais
           const { error: profileError } = await supabase
             .from('profiles')
             .update({
               first_name: firstName,
               public_slug: cleanUsername,
               public_access_enabled: isProfessor,
-              role: isProfessor ? 'owner' : 'student',
             })
             .eq('id', data.user.id);
 
           if (profileError) throw profileError;
 
-          // Assign role
+          // Assign role - só insere se não existir
           const { error: roleError } = await supabase
             .from('user_roles')
-            .insert({
+            .upsert({
               user_id: data.user.id,
               role: isProfessor ? 'owner' : 'student',
+            }, {
+              onConflict: 'user_id',
+              ignoreDuplicates: false
             });
 
-          if (roleError) throw roleError;
+          if (roleError && !roleError.message.includes('duplicate')) throw roleError;
 
           toast.success(`Conta criada com sucesso! ${isProfessor ? `Seu @ é: @${cleanUsername}` : 'Bem-vindo!'}`);
         }
