@@ -10,6 +10,8 @@ import Folders from "./pages/Folders";
 import Folder from "./pages/Folder";
 import ListDetail from "./pages/ListDetail";
 import Collection from "./pages/Collection";
+import PublicCollection from "./pages/PublicCollection";
+import PublicPortal from "./pages/PublicPortal";
 import GamesHub from "./pages/GamesHub";
 import Study from "./pages/Study";
 import Search from "./pages/Search";
@@ -38,6 +40,12 @@ const App = () => (
           <Route path="/collection/:id" element={<Collection />} />
           <Route path="/collection/:id/games" element={<GamesHub />} />
           <Route path="/collection/:id/study" element={<Study />} />
+          <Route path="/portal" element={<PublicPortal />} />
+          <Route path="/portal/folder/:id" element={<Folder />} />
+          <Route path="/portal/list/:id/games" element={<GamesHub />} />
+          <Route path="/portal/list/:id/study" element={<Study />} />
+          <Route path="/portal/collection/:id" element={<PublicCollection />} />
+          <Route path="/portal/collection/:id/study" element={<Study />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
