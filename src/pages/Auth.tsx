@@ -102,24 +102,28 @@ const Auth = () => {
         if (data.user) {
           const cleanUsername = isProfessor ? username.toLowerCase().replace(/[^a-z0-9_]/g, '') : null;
           
-          // Create profile
-          await supabase
+          // Update profile (trigger já criou o registro básico)
+          const { error: profileError } = await supabase
             .from('profiles')
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
+            .update({
               first_name: firstName,
               public_slug: cleanUsername,
               public_access_enabled: isProfessor,
-            });
+              role: isProfessor ? 'owner' : 'student',
+            })
+            .eq('id', data.user.id);
+
+          if (profileError) throw profileError;
 
           // Assign role
-          await supabase
+          const { error: roleError } = await supabase
             .from('user_roles')
             .insert({
               user_id: data.user.id,
               role: isProfessor ? 'owner' : 'student',
             });
+
+          if (roleError) throw roleError;
 
           toast.success(`Conta criada com sucesso! ${isProfessor ? `Seu @ é: @${cleanUsername}` : 'Bem-vindo!'}`);
         }
