@@ -23,8 +23,8 @@ import { toast } from "sonner";
 
 interface Flashcard {
   id: string;
-  front: string;
-  back: string;
+  term: string;
+  translation: string;
   accepted_answers_en?: string[];
   accepted_answers_pt?: string[];
 }
@@ -283,16 +283,16 @@ const Study = () => {
         <div className="mb-6">
           {currentMode === "flip" ? (
             <FlipStudyView
-              front={currentCard.front}
-              back={currentCard.back}
+              front={currentCard.term}
+              back={currentCard.translation}
               direction={direction}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
             />
           ) : (
             <WriteStudyView
-              front={currentCard.front}
-              back={currentCard.back}
+              front={currentCard.term}
+              back={currentCard.translation}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               direction={direction}

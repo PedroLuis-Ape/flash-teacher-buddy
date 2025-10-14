@@ -69,8 +69,8 @@ export const BulkImportDialog = ({
     const flashcards = validPairs.map(pair => ({
       list_id: collectionId,
       user_id: user.id,
-      front: pair.pt!,
-      back: pair.en!,
+      term: pair.pt!,
+      translation: pair.en!,
       accepted_answers_en: [],
       accepted_answers_pt: [],
     }));

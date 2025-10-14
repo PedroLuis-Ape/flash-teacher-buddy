@@ -11,8 +11,8 @@ import { toast } from "sonner";
 
 interface Flashcard {
   id: string;
-  front: string;
-  back: string;
+  term: string;
+  translation: string;
   audio_url?: string;
 }
 
@@ -88,7 +88,7 @@ const Collection = () => {
     setLoading(false);
   };
 
-  const handleAddFlashcard = async (front: string, back: string) => {
+  const handleAddFlashcard = async (term: string, translation: string) => {
     if (!id) return;
 
     const {
@@ -103,8 +103,8 @@ const Collection = () => {
     const { error } = await supabase.from("flashcards").insert({
       collection_id: id,
       user_id: user.id,
-      front,
-      back,
+      term,
+      translation,
     });
 
     if (error) {
@@ -155,7 +155,7 @@ const Collection = () => {
             <h2 className="text-2xl font-bold">Adicionar Flashcard</h2>
             <BulkImportDialog
               collectionId={id!}
-              existingCards={flashcards.map(f => ({ front: f.front, back: f.back }))}
+              existingCards={flashcards.map(f => ({ front: f.term, back: f.translation }))}
               onImported={loadFlashcards}
             />
           </div>

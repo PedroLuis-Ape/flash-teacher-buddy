@@ -8,8 +8,8 @@ import { toast } from "sonner";
 
 interface Flashcard {
   id: string;
-  front: string;
-  back: string;
+  term: string;
+  translation: string;
 }
 
 interface PracticeModeProps {
@@ -28,8 +28,8 @@ export const PracticeMode = ({ flashcards, mode, onExit }: PracticeModeProps) =>
   const currentCard = flashcards[currentIndex];
   const progress = ((currentIndex + 1) / flashcards.length) * 100;
 
-  const question = mode === "write_pt_en" ? currentCard.front : currentCard.back;
-  const correctAnswer = mode === "write_pt_en" ? currentCard.back : currentCard.front;
+  const question = mode === "write_pt_en" ? currentCard.term : currentCard.translation;
+  const correctAnswer = mode === "write_pt_en" ? currentCard.translation : currentCard.term;
 
   const handleSubmit = () => {
     const userAnswer = answer.trim().toLowerCase();

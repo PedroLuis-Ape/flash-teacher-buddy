@@ -26,8 +26,9 @@ interface FolderType {
 
 interface Flashcard {
   id: string;
-  front: string;
-  back: string;
+  term: string;
+  translation: string;
+  hint?: string | null;
   audio_url: string | null;
 }
 
@@ -145,7 +146,7 @@ const ListDetail = () => {
     }
   };
 
-  const handleAddFlashcard = async (front: string, back: string) => {
+  const handleAddFlashcard = async (term: string, translation: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -155,8 +156,8 @@ const ListDetail = () => {
         .insert({
           list_id: id,
           user_id: session.user.id,
-          front,
-          back,
+          term,
+          translation,
         });
 
       if (error) throw error;
@@ -181,11 +182,11 @@ const ListDetail = () => {
     }
   };
 
-  const handleUpdateFlashcard = async (id: string, front: string, back: string) => {
+  const handleUpdateFlashcard = async (id: string, term: string, translation: string) => {
     try {
       const { error } = await supabase
         .from("flashcards")
-        .update({ front, back })
+        .update({ term, translation })
         .eq("id", id);
 
       if (error) throw error;
@@ -316,7 +317,7 @@ const ListDetail = () => {
               <div className="flex items-start">
                 <BulkImportDialog
                   collectionId={id!}
-                  existingCards={flashcards.map(f => ({ front: f.front, back: f.back }))}
+                  existingCards={flashcards.map(f => ({ front: f.term, back: f.translation }))}
                   onImported={loadFlashcards}
                 />
               </div>
@@ -339,8 +340,8 @@ const ListDetail = () => {
                 <Card key={flashcard.id} className="p-6">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1">
-                      <p className="font-semibold text-lg mb-2">{flashcard.front}</p>
-                      <p className="text-muted-foreground">{flashcard.back}</p>
+                      <p className="font-semibold text-lg mb-2">{flashcard.term}</p>
+                      <p className="text-muted-foreground">{flashcard.translation}</p>
                     </div>
                     {isOwner && (
                       <Button

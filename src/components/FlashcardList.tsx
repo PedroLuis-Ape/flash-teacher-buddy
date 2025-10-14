@@ -2,8 +2,8 @@ import { Flashcard } from "./Flashcard";
 
 interface FlashcardData {
   id: string;
-  front: string;
-  back: string;
+  term: string;
+  translation: string;
 }
 
 interface FlashcardListProps {
@@ -26,8 +26,8 @@ export const FlashcardList = ({ flashcards }: FlashcardListProps) => {
       {flashcards.map((card) => (
         <Flashcard
           key={card.id}
-          front={card.front}
-          back={card.back}
+          term={card.term}
+          translation={card.translation}
         />
       ))}
     </div>

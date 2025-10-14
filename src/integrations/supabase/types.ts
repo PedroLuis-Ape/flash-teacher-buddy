@@ -138,12 +138,13 @@ export type Database = {
           accepted_answers_en: string[] | null
           accepted_answers_pt: string[] | null
           audio_url: string | null
-          back: string
           collection_id: string | null
           created_at: string
-          front: string
+          hint: string | null
           id: string
           list_id: string | null
+          term: string
+          translation: string
           updated_at: string
           user_id: string
         }
@@ -151,12 +152,13 @@ export type Database = {
           accepted_answers_en?: string[] | null
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
-          back: string
           collection_id?: string | null
           created_at?: string
-          front: string
+          hint?: string | null
           id?: string
           list_id?: string | null
+          term: string
+          translation: string
           updated_at?: string
           user_id: string
         }
@@ -164,12 +166,13 @@ export type Database = {
           accepted_answers_en?: string[] | null
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
-          back?: string
           collection_id?: string | null
           created_at?: string
-          front?: string
+          hint?: string | null
           id?: string
           list_id?: string | null
+          term?: string
+          translation?: string
           updated_at?: string
           user_id?: string
         }
@@ -383,12 +386,13 @@ export type Database = {
           accepted_answers_en: string[] | null
           accepted_answers_pt: string[] | null
           audio_url: string | null
-          back: string
           collection_id: string | null
           created_at: string
-          front: string
+          hint: string | null
           id: string
           list_id: string | null
+          term: string
+          translation: string
           updated_at: string
           user_id: string
         }[]

@@ -3,12 +3,12 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface FlashcardProps {
-  front: string;
-  back: string;
+  term: string;
+  translation: string;
   className?: string;
 }
 
-export const Flashcard = ({ front, back, className }: FlashcardProps) => {
+export const Flashcard = ({ term, translation, className }: FlashcardProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
   return (
@@ -21,7 +21,7 @@ export const Flashcard = ({ front, back, className }: FlashcardProps) => {
           <Card className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-card to-muted/20 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-shadow duration-300">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">Português</p>
-              <p className="text-2xl font-semibold">{front}</p>
+              <p className="text-2xl font-semibold">{term}</p>
             </div>
           </Card>
         </div>
@@ -29,7 +29,7 @@ export const Flashcard = ({ front, back, className }: FlashcardProps) => {
           <Card className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-primary/10 to-accent/10 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-shadow duration-300">
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">English</p>
-              <p className="text-2xl font-semibold">{back}</p>
+              <p className="text-2xl font-semibold">{translation}</p>
             </div>
           </Card>
         </div>
