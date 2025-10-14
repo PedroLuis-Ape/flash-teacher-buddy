@@ -51,13 +51,13 @@ export function parsePastedFlashcards(input: string): FlashcardPair[] {
 
 export function deduplicateFlashcards(
   pairs: FlashcardPair[],
-  existingCards: { front: string; back: string }[]
+  existingCards: { term: string; translation: string }[]
 ): FlashcardPair[] {
   const seen = new Set<string>();
   
   // Add existing cards to seen set
   existingCards.forEach(card => {
-    const key = `${card.front.toLowerCase().trim()}|${card.back.toLowerCase().trim()}`;
+    const key = `${card.term.toLowerCase().trim()}|${card.translation.toLowerCase().trim()}`;
     seen.add(key);
   });
   

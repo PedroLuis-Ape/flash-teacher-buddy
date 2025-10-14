@@ -317,7 +317,7 @@ const ListDetail = () => {
               <div className="flex items-start">
                 <BulkImportDialog
                   collectionId={id!}
-                  existingCards={flashcards.map(f => ({ front: f.term, back: f.translation }))}
+                  existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
                   onImported={loadFlashcards}
                 />
               </div>

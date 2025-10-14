@@ -7,24 +7,24 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface CreateFlashcardFormProps {
-  onAdd: (front: string, back: string) => void;
+  onAdd: (term: string, translation: string) => void;
 }
 
 export const CreateFlashcardForm = ({ onAdd }: CreateFlashcardFormProps) => {
-  const [front, setFront] = useState("");
-  const [back, setBack] = useState("");
+  const [term, setTerm] = useState("");
+  const [translation, setTranslation] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!front.trim() || !back.trim()) {
+    if (!term.trim() || !translation.trim()) {
       toast.error("Preencha ambos os campos!");
       return;
     }
 
-    onAdd(front, back);
-    setFront("");
-    setBack("");
+    onAdd(term, translation);
+    setTerm("");
+    setTranslation("");
     toast.success("Flashcard criado com sucesso!");
   };
 
@@ -32,26 +32,26 @@ export const CreateFlashcardForm = ({ onAdd }: CreateFlashcardFormProps) => {
     <Card className="p-6 bg-gradient-to-br from-card to-muted/10 shadow-[var(--shadow-card)]">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="front" className="text-foreground">
+          <Label htmlFor="term" className="text-foreground">
             Português
           </Label>
           <Input
-            id="front"
-            value={front}
-            onChange={(e) => setFront(e.target.value)}
+            id="term"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
             placeholder="Digite a palavra em português..."
             className="bg-background"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="back" className="text-foreground">
+          <Label htmlFor="translation" className="text-foreground">
             English
           </Label>
           <Input
-            id="back"
-            value={back}
-            onChange={(e) => setBack(e.target.value)}
+            id="translation"
+            value={translation}
+            onChange={(e) => setTranslation(e.target.value)}
             placeholder="Type the word in English..."
             className="bg-background"
           />

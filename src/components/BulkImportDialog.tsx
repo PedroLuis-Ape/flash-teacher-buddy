@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface BulkImportDialogProps {
   collectionId: string;
-  existingCards: { front: string; back: string }[];
+  existingCards: { term: string; translation: string }[];
   onImported: () => void;
 }
 

@@ -155,7 +155,7 @@ const Collection = () => {
             <h2 className="text-2xl font-bold">Adicionar Flashcard</h2>
             <BulkImportDialog
               collectionId={id!}
-              existingCards={flashcards.map(f => ({ front: f.term, back: f.translation }))}
+              existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
               onImported={loadFlashcards}
             />
           </div>
