@@ -115,6 +115,19 @@ const Auth = () => {
 
           if (profileError) throw profileError;
 
+          // Inserir role - o trigger assign_default_role já deve ter criado, mas garantimos aqui
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: isProfessor ? 'owner' : 'student',
+            });
+
+          // Ignorar erro se já existir (trigger já criou)
+          if (roleError && !roleError.message?.includes('duplicate') && !roleError.code?.includes('23505')) {
+            console.error('Erro ao criar role:', roleError);
+          }
+
           toast.success(`Conta criada com sucesso! ${isProfessor ? `Seu @ é: @${cleanUsername}` : 'Bem-vindo!'}`);
         }
       } else {
