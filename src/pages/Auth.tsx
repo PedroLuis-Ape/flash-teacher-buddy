@@ -115,18 +115,18 @@ const Auth = () => {
 
           if (profileError) throw profileError;
 
-          // Assign role - só insere se não existir
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .upsert({
-              user_id: data.user.id,
-              role: isProfessor ? 'owner' : 'student',
-            }, {
-              onConflict: 'user_id',
-              ignoreDuplicates: false
+          // Atualizar role se for professor (o trigger assign_default_role já criou como 'student')
+          if (isProfessor) {
+            const { error: roleError } = await supabase.rpc('update_user_role', {
+              p_user_id: data.user.id,
+              p_role: 'owner'
             });
-
-          if (roleError && !roleError.message.includes('duplicate')) throw roleError;
+            
+            if (roleError) {
+              console.error('Erro ao atualizar role:', roleError);
+              // Não bloqueia a criação da conta, apenas loga o erro
+            }
+          }
 
           toast.success(`Conta criada com sucesso! ${isProfessor ? `Seu @ é: @${cleanUsername}` : 'Bem-vindo!'}`);
         }
