@@ -115,19 +115,6 @@ const Auth = () => {
 
           if (profileError) throw profileError;
 
-          // Atualizar role se for professor (o trigger assign_default_role já criou como 'student')
-          if (isProfessor) {
-            const { error: roleError } = await supabase.rpc('update_user_role', {
-              p_user_id: data.user.id,
-              p_role: 'owner'
-            });
-            
-            if (roleError) {
-              console.error('Erro ao atualizar role:', roleError);
-              // Não bloqueia a criação da conta, apenas loga o erro
-            }
-          }
-
           toast.success(`Conta criada com sucesso! ${isProfessor ? `Seu @ é: @${cleanUsername}` : 'Bem-vindo!'}`);
         }
       } else {
