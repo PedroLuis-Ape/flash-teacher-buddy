@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PitecoLogo } from "@/components/PitecoLogo";
-import { toast } from "sonner";
-import { ArrowLeft, Users } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { toast } from "sonner";
+import { ArrowLeft, Users, Calendar } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Student {
   id: string;
@@ -15,20 +17,21 @@ interface Student {
   created_at: string;
 }
 
-const MyStudents = () => {
+export default function MyStudents() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    checkAuthAndRole();
+    checkAuth();
+    loadStudents();
   }, []);
 
-  const checkAuthAndRole = async () => {
+  const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      navigate("/auth", { replace: true });
+      navigate("/auth");
       return;
     }
 
@@ -38,46 +41,45 @@ const MyStudents = () => {
       .eq("user_id", session.user.id)
       .maybeSingle();
 
-    if (roleData) {
-      setUserRole(roleData.role);
-      if (roleData.role !== 'owner') {
-        toast.error("Apenas professores podem acessar esta página");
-        navigate("/folders");
-        return;
-      }
-      loadStudents(session.user.id);
+    if (roleData?.role !== 'owner') {
+      toast.error("Apenas professores podem acessar esta página");
+      navigate("/folders");
+      return;
     }
+
+    setUserRole(roleData.role);
   };
 
-  const loadStudents = async (teacherId: string) => {
+  const loadStudents = async () => {
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("student_id, created_at")
-        .eq("teacher_id", teacherId);
+        .select(`
+          student_id,
+          created_at,
+          profiles:student_id (
+            id,
+            first_name,
+            email
+          )
+        `)
+        .eq("teacher_id", session.user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        const studentIds = data.map(s => s.student_id);
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, first_name, email")
-          .in("id", studentIds);
+      const studentsData = (data || []).map(sub => ({
+        id: sub.student_id,
+        first_name: (sub.profiles as any)?.first_name || null,
+        email: (sub.profiles as any)?.email || null,
+        created_at: sub.created_at,
+      }));
 
-        if (profilesError) throw profilesError;
-
-        const studentsWithDates = profilesData?.map(profile => {
-          const subscription = data.find(s => s.student_id === profile.id);
-          return {
-            ...profile,
-            created_at: subscription?.created_at || "",
-          };
-        }) || [];
-
-        setStudents(studentsWithDates);
-      }
+      setStudents(studentsData);
     } catch (error: any) {
       toast.error("Erro ao carregar alunos: " + error.message);
     } finally {
@@ -110,8 +112,7 @@ const MyStudents = () => {
         ) : students.length === 0 ? (
           <Card className="text-center p-12">
             <CardHeader>
-              <Users className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-              <CardTitle>Nenhum aluno inscrito ainda</CardTitle>
+              <CardTitle>Nenhum aluno inscrito</CardTitle>
               <CardDescription>
                 Quando alunos se inscreverem em você, eles aparecerão aqui
               </CardDescription>
@@ -123,13 +124,19 @@ const MyStudents = () => {
               <Card key={student.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>{student.first_name || "Aluno"}</CardTitle>
-                      <CardDescription>{student.email}</CardDescription>
+                    <div className="flex items-center gap-3">
+                      <Users className="h-8 w-8 text-primary" />
+                      <div>
+                        <CardTitle>{student.first_name || "Aluno"}</CardTitle>
+                        <CardDescription>{student.email}</CardDescription>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Inscrito em: {new Date(student.created_at).toLocaleDateString('pt-BR')}
-                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        Inscrito em {format(new Date(student.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    </div>
                   </div>
                 </CardHeader>
               </Card>
@@ -139,6 +146,4 @@ const MyStudents = () => {
       </div>
     </div>
   );
-};
-
-export default MyStudents;
+}

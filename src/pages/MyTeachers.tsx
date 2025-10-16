@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PitecoLogo } from "@/components/PitecoLogo";
-import { toast } from "sonner";
-import { ArrowLeft, GraduationCap, FolderOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { toast } from "sonner";
+import { ArrowLeft, User, FolderOpen, Calendar } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Teacher {
   id: string;
@@ -16,63 +18,64 @@ interface Teacher {
   folder_count?: number;
 }
 
-const MyTeachers = () => {
+export default function MyTeachers() {
   const navigate = useNavigate();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkAuth();
+    loadTeachers();
   }, []);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      navigate("/auth", { replace: true });
-      return;
+      navigate("/auth");
     }
-    loadTeachers(session.user.id);
   };
 
-  const loadTeachers = async (studentId: string) => {
+  const loadTeachers = async () => {
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("teacher_id, created_at")
-        .eq("student_id", studentId);
+        .select(`
+          teacher_id,
+          created_at,
+          profiles:teacher_id (
+            id,
+            first_name,
+            public_slug
+          )
+        `)
+        .eq("student_id", session.user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        const teacherIds = data.map(s => s.teacher_id);
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, first_name, public_slug")
-          .in("id", teacherIds);
+      const teachersData = await Promise.all(
+        (data || []).map(async (sub) => {
+          const { count } = await supabase
+            .from("folders")
+            .select("*", { count: "exact", head: true })
+            .eq("owner_id", sub.teacher_id)
+            .eq("visibility", "class");
 
-        if (profilesError) throw profilesError;
+          return {
+            id: sub.teacher_id,
+            first_name: (sub.profiles as any)?.first_name || null,
+            public_slug: (sub.profiles as any)?.public_slug || null,
+            created_at: sub.created_at,
+            folder_count: count || 0,
+          };
+        })
+      );
 
-        const teachersWithData = await Promise.all(
-          (profilesData || []).map(async (profile) => {
-            const subscription = data.find(s => s.teacher_id === profile.id);
-            
-            const { count } = await supabase
-              .from("folders")
-              .select("*", { count: "exact", head: true })
-              .eq("owner_id", profile.id)
-              .eq("visibility", "class");
-
-            return {
-              ...profile,
-              created_at: subscription?.created_at || "",
-              folder_count: count || 0,
-            };
-          })
-        );
-
-        setTeachers(teachersWithData);
-      }
+      setTeachers(teachersData);
     } catch (error: any) {
       toast.error("Erro ao carregar professores: " + error.message);
     } finally {
@@ -80,26 +83,25 @@ const MyTeachers = () => {
     }
   };
 
-  const unsubscribe = async (teacherId: string) => {
-    const confirm = window.confirm("Tem certeza de que deseja cancelar a inscrição?");
-    if (!confirm) return;
-
+  const goToTeacherFolders = async (teacherId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { error } = await supabase
-        .from("subscriptions")
-        .delete()
-        .eq("teacher_id", teacherId)
-        .eq("student_id", session.user.id);
+      const { data, error } = await supabase
+        .from("folders")
+        .select("id")
+        .eq("owner_id", teacherId)
+        .eq("visibility", "class")
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
-
-      toast.success("Inscrição cancelada com sucesso!");
-      loadTeachers(session.user.id);
+      
+      if (data) {
+        navigate(`/folder/${data.id}`);
+      } else {
+        toast.info("Este professor ainda não tem pastas compartilhadas");
+      }
     } catch (error: any) {
-      toast.error("Erro ao cancelar inscrição: " + error.message);
+      toast.error("Erro ao acessar pastas");
     }
   };
 
@@ -111,7 +113,7 @@ const MyTeachers = () => {
             <PitecoLogo className="w-16 h-16" />
             <div>
               <h1 className="text-3xl font-bold">Meus Professores</h1>
-              <p className="text-muted-foreground">Professores que você segue</p>
+              <p className="text-muted-foreground">Professores em que você está inscrito</p>
             </div>
           </div>
           <div className="flex gap-2 items-center">
@@ -128,14 +130,13 @@ const MyTeachers = () => {
         ) : teachers.length === 0 ? (
           <Card className="text-center p-12">
             <CardHeader>
-              <GraduationCap className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-              <CardTitle>Nenhuma inscrição ainda</CardTitle>
+              <CardTitle>Nenhum professor ainda</CardTitle>
               <CardDescription>
-                Use a busca para encontrar professores e se inscrever neles
+                Busque professores e inscreva-se para ter acesso às suas pastas
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => navigate("/search")} className="mt-4">
+              <Button onClick={() => navigate("/search")}>
                 Buscar Professores
               </Button>
             </CardContent>
@@ -143,37 +144,39 @@ const MyTeachers = () => {
         ) : (
           <div className="grid gap-4">
             {teachers.map((teacher) => (
-              <Card key={teacher.id}>
+              <Card key={teacher.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <GraduationCap className="h-5 w-5" />
-                        {teacher.first_name || "Professor"}
-                        {teacher.public_slug && (
-                          <span className="text-primary font-normal">@{teacher.public_slug}</span>
-                        )}
-                      </CardTitle>
-                      <CardDescription>
-                        {teacher.folder_count} pasta{teacher.folder_count !== 1 ? "s" : ""} compartilhada{teacher.folder_count !== 1 ? "s" : ""}
-                      </CardDescription>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Inscrito em: {new Date(teacher.created_at).toLocaleDateString('pt-BR')}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <User className="h-8 w-8 text-primary" />
+                      <div>
+                        <CardTitle>
+                          {teacher.first_name || "Professor"}
+                          {teacher.public_slug && (
+                            <span className="ml-2 text-sm text-primary font-medium">
+                              @{teacher.public_slug}
+                            </span>
+                          )}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2 mt-1">
+                          <FolderOpen className="h-4 w-4" />
+                          {teacher.folder_count} pasta{teacher.folder_count !== 1 ? "s" : ""} compartilhada{teacher.folder_count !== 1 ? "s" : ""}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {format(new Date(teacher.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      </div>
                       <Button
+                        onClick={() => goToTeacherFolders(teacher.id)}
                         variant="outline"
-                        onClick={() => navigate("/search")}
+                        size="sm"
                       >
-                        <FolderOpen className="mr-2 h-4 w-4" />
                         Ver Pastas
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => unsubscribe(teacher.id)}
-                      >
-                        Cancelar Inscrição
                       </Button>
                     </div>
                   </div>
@@ -185,6 +188,4 @@ const MyTeachers = () => {
       </div>
     </div>
   );
-};
-
-export default MyTeachers;
+}

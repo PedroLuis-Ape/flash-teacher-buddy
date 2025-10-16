@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search as SearchIcon, FolderOpen, FileText, CreditCard, User, UserPlus, UserMinus } from "lucide-react";
+import { Search as SearchIcon, FolderOpen, FileText, CreditCard, User, UserPlus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { PitecoMascot } from "@/components/PitecoMascot";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -13,7 +13,9 @@ interface Profile {
   id: string;
   first_name: string | null;
   email: string | null;
+  public_slug: string | null;
   folder_count?: number;
+  isSubscribed?: boolean;
 }
 
 interface Folder {
@@ -32,8 +34,6 @@ export default function Search() {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [subscriptions, setSubscriptions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     checkAuth();
@@ -43,67 +43,6 @@ export default function Search() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
-      return;
-    }
-    setCurrentUserId(session.user.id);
-    loadSubscriptions(session.user.id);
-  };
-
-  const loadSubscriptions = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("teacher_id")
-        .eq("student_id", userId);
-
-      if (error) throw error;
-      
-      const teacherIds = new Set(data?.map(s => s.teacher_id) || []);
-      setSubscriptions(teacherIds);
-    } catch (error: any) {
-      console.error("Erro ao carregar inscrições:", error);
-    }
-  };
-
-  const handleSubscribe = async (teacherId: string) => {
-    if (!currentUserId) return;
-
-    try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .insert({
-          teacher_id: teacherId,
-          student_id: currentUserId,
-        });
-
-      if (error) throw error;
-
-      toast.success("Inscrito com sucesso!");
-      loadSubscriptions(currentUserId);
-    } catch (error: any) {
-      toast.error("Erro ao se inscrever: " + error.message);
-    }
-  };
-
-  const handleUnsubscribe = async (teacherId: string) => {
-    if (!currentUserId) return;
-
-    const confirmar = window.confirm("Tem certeza de que deseja cancelar a inscrição?");
-    if (!confirmar) return;
-
-    try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .delete()
-        .eq("teacher_id", teacherId)
-        .eq("student_id", currentUserId);
-
-      if (error) throw error;
-
-      toast.success("Inscrição cancelada!");
-      loadSubscriptions(currentUserId);
-    } catch (error: any) {
-      toast.error("Erro ao cancelar inscrição: " + error.message);
     }
   };
 
@@ -118,16 +57,17 @@ export default function Search() {
     setFolders([]);
 
     try {
-      // Buscar professores/usuários pelo nome
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, first_name, email")
+        .select("id, first_name, email, public_slug")
         .ilike("first_name", `%${searchTerm}%`)
         .limit(10);
 
       if (error) throw error;
 
-      // Contar pastas compartilhadas de cada perfil
       const profilesWithCounts = await Promise.all(
         (data || []).map(async (profile) => {
           const { count } = await supabase
@@ -135,14 +75,26 @@ export default function Search() {
             .select("*", { count: "exact", head: true })
             .eq("owner_id", profile.id)
             .eq("visibility", "class");
+
+          const { data: subData } = await supabase
+            .from("subscriptions")
+            .select("id")
+            .eq("teacher_id", profile.id)
+            .eq("student_id", session.user.id)
+            .maybeSingle();
           
-          return { ...profile, folder_count: count || 0 };
+          return { 
+            ...profile, 
+            folder_count: count || 0,
+            isSubscribed: !!subData
+          };
         })
       );
 
-      setProfiles(profilesWithCounts.filter(p => p.folder_count && p.folder_count > 0));
+      const teachersOnly = profilesWithCounts.filter(p => p.folder_count && p.folder_count > 0);
+      setProfiles(teachersOnly);
 
-      if (profilesWithCounts.filter(p => p.folder_count && p.folder_count > 0).length === 0) {
+      if (teachersOnly.length === 0) {
         toast.info("Nenhum professor encontrado com esse nome");
       }
     } catch (error: any) {
@@ -153,18 +105,51 @@ export default function Search() {
     }
   };
 
-  const loadFolders = async (profileId: string, profileName: string) => {
+  const handleSubscription = async (teacherId: string, currentlySubscribed: boolean) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      if (currentlySubscribed) {
+        const { error } = await supabase
+          .from("subscriptions")
+          .delete()
+          .eq("teacher_id", teacherId)
+          .eq("student_id", session.user.id);
+
+        if (error) throw error;
+        toast.success("Inscrição cancelada");
+      } else {
+        const { error } = await supabase
+          .from("subscriptions")
+          .insert({
+            teacher_id: teacherId,
+            student_id: session.user.id,
+          });
+
+        if (error) throw error;
+        toast.success("Inscrito com sucesso!");
+      }
+
+      setProfiles(prev => prev.map(p => 
+        p.id === teacherId ? { ...p, isSubscribed: !currentlySubscribed } : p
+      ));
+    } catch (error: any) {
+      toast.error("Erro ao gerenciar inscrição: " + error.message);
+    }
+  };
+
+  const loadFolders = async (profile: Profile) => {
     try {
       const { data, error } = await supabase
         .from("folders")
         .select("*")
-        .eq("owner_id", profileId)
+        .eq("owner_id", profile.id)
         .eq("visibility", "class")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Carregar contagens para cada pasta
       const foldersWithCounts = await Promise.all(
         (data || []).map(async (folder) => {
           const { count: listCount } = await supabase
@@ -192,7 +177,7 @@ export default function Search() {
       );
 
       setFolders(foldersWithCounts);
-      setSelectedProfile({ id: profileId, first_name: profileName, email: null });
+      setSelectedProfile(profile);
     } catch (error: any) {
       console.error("Erro ao carregar pastas:", error);
       toast.error("Erro ao carregar pastas");
@@ -225,7 +210,6 @@ export default function Search() {
             </p>
           </div>
 
-          {/* Barra de busca */}
           <Card className="bg-white/95 backdrop-blur mb-8">
             <CardContent className="pt-6">
               <div className="flex gap-2">
@@ -244,7 +228,6 @@ export default function Search() {
             </CardContent>
           </Card>
 
-          {/* Resultados da busca - Professores */}
           {profiles.length > 0 && !selectedProfile && (
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-primary-foreground mb-4">
@@ -254,40 +237,41 @@ export default function Search() {
                 {profiles.map((profile) => (
                   <Card
                     key={profile.id}
-                    className="bg-white/95 backdrop-blur hover:shadow-xl transition-shadow cursor-pointer"
-                    onClick={() => loadFolders(profile.id, profile.first_name || "Professor")}
+                    className="bg-white/95 backdrop-blur hover:shadow-xl transition-shadow"
                   >
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <div 
+                          className="flex items-center gap-3 flex-1 cursor-pointer"
+                          onClick={() => loadFolders(profile)}
+                        >
                           <User className="h-8 w-8 text-primary" />
                           <div>
                             <CardTitle className="text-xl">
                               {profile.first_name || "Professor"}
+                              {profile.public_slug && (
+                                <span className="ml-2 text-sm text-primary">@{profile.public_slug}</span>
+                              )}
                             </CardTitle>
                             <CardDescription>
                               {profile.folder_count} pasta{profile.folder_count !== 1 ? "s" : ""} compartilhada{profile.folder_count !== 1 ? "s" : ""}
                             </CardDescription>
                           </div>
                         </div>
-                        <div onClick={(e) => e.stopPropagation()}>
-                          {subscriptions.has(profile.id) ? (
-                            <Button
-                              variant="outline"
-                              onClick={() => handleUnsubscribe(profile.id)}
-                            >
-                              <UserMinus className="mr-2 h-4 w-4" />
-                              Cancelar Inscrição
-                            </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubscription(profile.id, profile.isSubscribed || false);
+                          }}
+                          variant={profile.isSubscribed ? "outline" : "default"}
+                          size="sm"
+                        >
+                          {profile.isSubscribed ? (
+                            <><UserCheck className="mr-2 h-4 w-4" />Inscrito</>
                           ) : (
-                            <Button
-                              onClick={() => handleSubscribe(profile.id)}
-                            >
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Inscrever-se
-                            </Button>
+                            <><UserPlus className="mr-2 h-4 w-4" />Inscrever-se</>
                           )}
-                        </div>
+                        </Button>
                       </div>
                     </CardHeader>
                   </Card>
@@ -296,7 +280,6 @@ export default function Search() {
             </div>
           )}
 
-          {/* Pastas do professor selecionado */}
           {selectedProfile && (
             <>
               <div className="mb-6 flex items-center justify-between">
