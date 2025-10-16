@@ -15,6 +15,8 @@ import PublicPortal from "./pages/PublicPortal";
 import GamesHub from "./pages/GamesHub";
 import Study from "./pages/Study";
 import Search from "./pages/Search";
+import MyStudents from "./pages/MyStudents";
+import MyTeachers from "./pages/MyTeachers";
 import NotFound from "./pages/NotFound";
 import { SessionWatcher } from "@/components/SessionWatcher";
 
@@ -46,6 +48,8 @@ const App = () => (
           <Route path="/portal/list/:id/study" element={<Study />} />
           <Route path="/portal/collection/:id" element={<PublicCollection />} />
           <Route path="/portal/collection/:id/study" element={<Study />} />
+          <Route path="/my-students" element={<MyStudents />} />
+          <Route path="/my-teachers" element={<MyTeachers />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -146,10 +147,13 @@ const Profile = () => {
               <p className="text-muted-foreground">Gerencie suas informações pessoais</p>
             </div>
           </div>
-          <Button onClick={() => navigate("/")} variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
+          <div className="flex gap-2 items-center">
+            <ThemeToggle />
+            <Button onClick={() => navigate("/")} variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+          </div>
         </div>
 
         <Card className="max-w-2xl">

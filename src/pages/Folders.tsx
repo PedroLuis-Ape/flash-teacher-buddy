@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
-import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil, Search, Lock, Globe } from "lucide-react";
+import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil, Search, Lock, Globe, Users, GraduationCap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface FolderType {
   id: string;
@@ -191,11 +192,12 @@ const Folders = () => {
   };
 
   const handleSignOut = async () => {
+    const confirmar = window.confirm("Tem certeza de que deseja sair da sua conta?");
+    if (!confirmar) return;
+
     try {
       await supabase.auth.signOut();
-      // Navega para a tela de login após logout
       navigate("/auth", { replace: true });
-      // Fallback hard redirect para evitar estado travado
       setTimeout(() => {
         if (window.location.pathname !== "/auth") {
           window.location.assign("/auth");
@@ -224,10 +226,23 @@ const Folders = () => {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <ThemeToggle />
             <Button onClick={() => navigate("/profile")} variant="outline">
               Perfil
             </Button>
+            {userRole === 'owner' && (
+              <Button onClick={() => navigate("/my-students")} variant="outline">
+                <Users className="mr-2 h-4 w-4" />
+                Meus Alunos
+              </Button>
+            )}
+            {userRole === 'student' && (
+              <Button onClick={() => navigate("/my-teachers")} variant="outline">
+                <GraduationCap className="mr-2 h-4 w-4" />
+                Meus Professores
+              </Button>
+            )}
             <Button onClick={() => navigate("/search")} variant="outline">
               <Search className="mr-2 h-4 w-4" />
               Buscar Professor

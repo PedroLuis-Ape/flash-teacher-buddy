@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search as SearchIcon, FolderOpen, FileText, CreditCard, User } from "lucide-react";
+import { Search as SearchIcon, FolderOpen, FileText, CreditCard, User, UserPlus, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { PitecoMascot } from "@/components/PitecoMascot";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Profile {
   id: string;
@@ -31,6 +32,8 @@ export default function Search() {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [subscriptions, setSubscriptions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     checkAuth();
@@ -40,6 +43,67 @@ export default function Search() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
+      return;
+    }
+    setCurrentUserId(session.user.id);
+    loadSubscriptions(session.user.id);
+  };
+
+  const loadSubscriptions = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("teacher_id")
+        .eq("student_id", userId);
+
+      if (error) throw error;
+      
+      const teacherIds = new Set(data?.map(s => s.teacher_id) || []);
+      setSubscriptions(teacherIds);
+    } catch (error: any) {
+      console.error("Erro ao carregar inscrições:", error);
+    }
+  };
+
+  const handleSubscribe = async (teacherId: string) => {
+    if (!currentUserId) return;
+
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .insert({
+          teacher_id: teacherId,
+          student_id: currentUserId,
+        });
+
+      if (error) throw error;
+
+      toast.success("Inscrito com sucesso!");
+      loadSubscriptions(currentUserId);
+    } catch (error: any) {
+      toast.error("Erro ao se inscrever: " + error.message);
+    }
+  };
+
+  const handleUnsubscribe = async (teacherId: string) => {
+    if (!currentUserId) return;
+
+    const confirmar = window.confirm("Tem certeza de que deseja cancelar a inscrição?");
+    if (!confirmar) return;
+
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .delete()
+        .eq("teacher_id", teacherId)
+        .eq("student_id", currentUserId);
+
+      if (error) throw error;
+
+      toast.success("Inscrição cancelada!");
+      loadSubscriptions(currentUserId);
+    } catch (error: any) {
+      toast.error("Erro ao cancelar inscrição: " + error.message);
     }
   };
 
@@ -140,7 +204,7 @@ export default function Search() {
       <PitecoMascot />
       
       <div className="container mx-auto px-4 py-8 relative z-20">
-        <div className="mb-8">
+        <div className="mb-8 flex items-center justify-between">
           <Button 
             variant="ghost" 
             className="text-primary-foreground hover:bg-white/20"
@@ -148,6 +212,7 @@ export default function Search() {
           >
             Minhas Pastas
           </Button>
+          <ThemeToggle />
         </div>
 
         <div className="max-w-4xl mx-auto">
@@ -204,6 +269,24 @@ export default function Search() {
                               {profile.folder_count} pasta{profile.folder_count !== 1 ? "s" : ""} compartilhada{profile.folder_count !== 1 ? "s" : ""}
                             </CardDescription>
                           </div>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          {subscriptions.has(profile.id) ? (
+                            <Button
+                              variant="outline"
+                              onClick={() => handleUnsubscribe(profile.id)}
+                            >
+                              <UserMinus className="mr-2 h-4 w-4" />
+                              Cancelar Inscrição
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => handleSubscribe(profile.id)}
+                            >
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              Inscrever-se
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardHeader>
