@@ -78,18 +78,56 @@ const Folders = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Carregar todas as pastas visíveis (próprias e compartilhadas)
-      const { data: foldersData, error } = await supabase
-        .from("folders")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Buscar o role do usuário primeiro
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      let foldersData;
 
-      // Carregar contadores para cada pasta (apenas listas e cards visíveis)
+      if (roleData?.role === 'student') {
+        // Alunos só veem pastas de professores que seguem
+        const { data: subscriptions } = await supabase
+          .from("subscriptions")
+          .select("teacher_id")
+          .eq("student_id", session.user.id);
+
+        const teacherIds = subscriptions?.map(s => s.teacher_id) || [];
+
+        if (teacherIds.length === 0) {
+          // Se não segue ninguém, não mostra nenhuma pasta
+          setFolders([]);
+          setLoading(false);
+          return;
+        }
+
+        // Buscar apenas pastas compartilhadas dos professores que segue
+        const { data, error } = await supabase
+          .from("folders")
+          .select("*")
+          .in("owner_id", teacherIds)
+          .eq("visibility", "class")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        foldersData = data;
+      } else {
+        // Professores veem suas próprias pastas
+        const { data, error } = await supabase
+          .from("folders")
+          .select("*")
+          .eq("owner_id", session.user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        foldersData = data;
+      }
+
+      // Carregar contadores para cada pasta
       const foldersWithCounts = await Promise.all(
         (foldersData || []).map(async (folder) => {
-          // Verificar se é owner para mostrar controles de edição
           const isOwner = session.user.id === folder.owner_id;
           
           const { data: lists } = await supabase
@@ -112,7 +150,7 @@ const Folders = () => {
             ...folder,
             list_count: lists?.length || 0,
             card_count: cardCount,
-            isOwner, // Adicionar flag de owner
+            isOwner,
           };
         })
       );

@@ -60,10 +60,11 @@ export default function Search() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Buscar por nome OU por @slug público
       const { data, error } = await supabase
         .from("profiles")
         .select("id, first_name, email, public_slug")
-        .ilike("first_name", `%${searchTerm}%`)
+        .or(`first_name.ilike.%${searchTerm}%,public_slug.ilike.%${searchTerm.replace('@', '')}%`)
         .limit(10);
 
       if (error) throw error;
