@@ -43,32 +43,48 @@ export default function MyTeachers() {
 
       const { data, error } = await supabase
         .from("subscriptions")
-        .select(`
-          teacher_id,
-          created_at,
-          profiles:teacher_id (
-            id,
-            first_name,
-            public_slug
-          )
-        `)
+        .select("teacher_id, created_at")
         .eq("student_id", session.user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
+      // Buscar perfis dos professores sem depender de FK
+      const teacherIds = Array.from(new Set((data || []).map((s) => s.teacher_id)));
+
+      const profileMap = new Map<string, { id: string; first_name: string | null; public_slug: string | null }>();
+      if (teacherIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, public_slug")
+          .in("id", teacherIds);
+        if (profilesError) throw profilesError;
+        profilesData?.forEach((p) =>
+          profileMap.set(p.id, { id: p.id, first_name: p.first_name ?? null, public_slug: p.public_slug ?? null })
+        );
+      }
+
+      // Garantir apenas uma inscrição por professor
+      const firstSubByTeacher = new Map<string, (typeof data)[number]>();
+      (data || []).forEach((sub) => {
+        if (!firstSubByTeacher.has(sub.teacher_id)) firstSubByTeacher.set(sub.teacher_id, sub);
+      });
+      const subsToProcess = Array.from(firstSubByTeacher.values());
+
       const teachersData = await Promise.all(
-        (data || []).map(async (sub) => {
+        subsToProcess.map(async (sub) => {
           const { count } = await supabase
             .from("folders")
             .select("*", { count: "exact", head: true })
             .eq("owner_id", sub.teacher_id)
             .eq("visibility", "class");
 
+          const profile = profileMap.get(sub.teacher_id);
+
           return {
             id: sub.teacher_id,
-            first_name: (sub.profiles as any)?.first_name || null,
-            public_slug: (sub.profiles as any)?.public_slug || null,
+            first_name: profile?.first_name ?? null,
+            public_slug: profile?.public_slug ?? null,
             created_at: sub.created_at,
             folder_count: count || 0,
           };
