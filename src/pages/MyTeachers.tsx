@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import { ArrowLeft, User, FolderOpen, Calendar } from "lucide-react";
+import { ArrowLeft, User, FolderOpen, Calendar, UserMinus } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -121,6 +122,26 @@ export default function MyTeachers() {
     }
   };
 
+  const handleUnsubscribe = async (teacherId: string, teacherName: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .delete()
+        .eq("student_id", session.user.id)
+        .eq("teacher_id", teacherId);
+
+      if (error) throw error;
+
+      toast.success(`Você se desinscreveu de ${teacherName}`);
+      loadTeachers();
+    } catch (error: any) {
+      toast.error("Erro ao desinscrever: " + error.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <div className="container mx-auto px-4 py-8">
@@ -187,13 +208,41 @@ export default function MyTeachers() {
                           {format(new Date(teacher.created_at), "dd/MM/yyyy", { locale: ptBR })}
                         </span>
                       </div>
-                      <Button
-                        onClick={() => goToTeacherFolders(teacher.id)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Ver Pastas
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => goToTeacherFolders(teacher.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Ver Pastas
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                              <UserMinus className="h-4 w-4 mr-1" />
+                              Desinscrever
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Desinscrever-se?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja se desinscrever de {teacher.first_name || "este professor"}? 
+                                Você não terá mais acesso às pastas compartilhadas.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleUnsubscribe(teacher.id, teacher.first_name || "Professor")}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Sim, desinscrever
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
