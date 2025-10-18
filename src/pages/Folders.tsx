@@ -22,6 +22,8 @@ interface FolderType {
   list_count?: number;
   card_count?: number;
   isOwner?: boolean;
+  owner_id?: string;
+  teacher_name?: string;
 }
 
 const Folders = () => {
@@ -113,7 +115,19 @@ const Folders = () => {
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        foldersData = data;
+        
+        // Buscar nomes dos professores
+        const { data: teacherProfiles } = await supabase
+          .from("profiles")
+          .select("id, first_name")
+          .in("id", teacherIds);
+
+        const teacherMap = new Map(teacherProfiles?.map(p => [p.id, p.first_name || "Professor"]) || []);
+        
+        foldersData = data?.map(folder => ({
+          ...folder,
+          teacher_name: teacherMap.get(folder.owner_id)
+        }));
       } else {
         // Professores veem suas próprias pastas
         const { data, error } = await supabase
@@ -379,11 +393,75 @@ const Folders = () => {
             <CardHeader>
               <CardTitle>Nenhuma pasta ainda</CardTitle>
               <CardDescription>
-                Crie sua primeira pasta para organizar seus flashcards
+                {userRole === 'student' 
+                  ? "Você ainda não está seguindo nenhum professor. Use o botão 'Buscar Professor' para encontrar professores."
+                  : "Crie sua primeira pasta para organizar seus flashcards"
+                }
               </CardDescription>
             </CardHeader>
           </Card>
+        ) : userRole === 'student' ? (
+          // Agrupar pastas por professor para alunos
+          (() => {
+            const foldersByTeacher = folders.reduce((acc, folder) => {
+              const teacherId = folder.owner_id || 'unknown';
+              if (!acc[teacherId]) {
+                acc[teacherId] = {
+                  teacherName: folder.teacher_name || 'Professor',
+                  folders: []
+                };
+              }
+              acc[teacherId].folders.push(folder);
+              return acc;
+            }, {} as Record<string, { teacherName: string; folders: FolderType[] }>);
+
+            return (
+              <div className="space-y-8">
+                {Object.entries(foldersByTeacher).map(([teacherId, { teacherName, folders: teacherFolders }]) => (
+                  <div key={teacherId}>
+                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                      <GraduationCap className="h-6 w-6 text-primary" />
+                      Professor {teacherName}
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {teacherFolders.map((folder) => (
+                        <Card
+                          key={folder.id}
+                          className="cursor-pointer hover:shadow-lg transition-shadow"
+                          onClick={() => navigate(`/folder/${folder.id}`)}
+                        >
+                          <CardHeader>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Folder className="h-8 w-8 text-primary" />
+                              <Globe className="h-4 w-4 text-accent" />
+                            </div>
+                            <CardTitle>{folder.title}</CardTitle>
+                            {folder.description && (
+                              <CardDescription>{folder.description}</CardDescription>
+                            )}
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <FileText className="h-4 w-4" />
+                                <span>{folder.list_count || 0} listas</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <CreditCard className="h-4 w-4" />
+                                <span>{folder.card_count || 0} cards</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()
         ) : (
+          // Professores veem lista normal
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {folders.map((folder) => (
               <Card
