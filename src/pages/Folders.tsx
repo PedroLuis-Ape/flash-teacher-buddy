@@ -261,7 +261,7 @@ const Folders = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8"> {/* PATCH: wrap no mobile */}
           <div className="flex items-center gap-4">
             <PitecoLogo className="w-16 h-16" />
             <div>
@@ -276,7 +276,7 @@ const Folders = () => {
               )}
             </div>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center"> {/* PATCH: wrap no mobile */}
             <ThemeToggle />
             <Button onClick={() => navigate("/profile")} variant="outline">
               Perfil
