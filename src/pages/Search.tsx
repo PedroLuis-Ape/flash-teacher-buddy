@@ -215,7 +215,7 @@ export default function Search() {
 
           <Card className="bg-white/95 backdrop-blur mb-8">
             <CardContent className="pt-6">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Input
                   placeholder="Digite o nome do professor..."
                   value={searchTerm}
@@ -223,7 +223,7 @@ export default function Search() {
                   onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                   className="flex-1"
                 />
-                <Button onClick={handleSearch} disabled={searching}>
+                <Button onClick={handleSearch} disabled={searching} className="w-full sm:w-auto">
                   <SearchIcon className="mr-2 h-4 w-4" />
                   {searching ? "Buscando..." : "Buscar"}
                 </Button>
