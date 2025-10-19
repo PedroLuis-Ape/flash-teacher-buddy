@@ -248,7 +248,7 @@ const ListDetail = () => {
             Voltar
           </Button>
           
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2"> {/* PATCH: wrap no mobile */}
             <div>
               <p className="text-sm text-muted-foreground mb-1">{folder.title}</p>
               <h1 className="text-3xl font-bold">{list.title}</h1>
@@ -272,7 +272,7 @@ const ListDetail = () => {
 
         {isOwner && (
           <Card className="p-4 mb-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2"> {/* PATCH: wrap no mobile */}
               <div className="flex items-center gap-3">
                 <Switch
                   id="share-mode"

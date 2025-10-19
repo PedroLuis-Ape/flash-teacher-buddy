@@ -145,7 +145,7 @@ export default function MyTeachers() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-8"> {/* PATCH: wrap no mobile */}
           <div className="flex items-center gap-4">
             <PitecoLogo className="w-16 h-16" />
             <div>
@@ -153,7 +153,7 @@ export default function MyTeachers() {
               <p className="text-muted-foreground">Professores em que você está inscrito</p>
             </div>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center"> {/* PATCH: wrap no mobile */}
             <ThemeToggle />
             <Button onClick={() => navigate("/folders")} variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />

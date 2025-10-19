@@ -243,9 +243,9 @@ export default function Search() {
                     className="bg-white/95 backdrop-blur hover:shadow-xl transition-shadow"
                   >
                     <CardHeader>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2"> {/* PATCH: wrap no mobile */}
                         <div 
-                          className="flex items-center gap-3 flex-1 cursor-pointer"
+                          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" /* PATCH: min-w-0 para texto */
                           onClick={() => loadFolders(profile)}
                         >
                           <User className="h-8 w-8 text-primary" />
