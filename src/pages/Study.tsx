@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FlipStudyView } from "@/components/FlipStudyView";
 import { WriteStudyView } from "@/components/WriteStudyView";
+import { MultipleChoiceStudyView } from "@/components/MultipleChoiceStudyView";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
 import { ArrowLeft, Trophy, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -44,8 +45,8 @@ const Study = () => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [currentMode, setCurrentMode] = useState<"flip" | "write">(
-    mode === "mixed" ? "flip" : (mode as "flip" | "write")
+  const [currentMode, setCurrentMode] = useState<"flip" | "write" | "multiple">(
+    mode === "mixed" ? (Math.random() > 0.66 ? "multiple" : Math.random() > 0.5 ? "flip" : "write") : (mode as "flip" | "write")
   );
 
   const {
@@ -152,7 +153,15 @@ const Study = () => {
     }
 
     if (mode === "mixed") {
-      setCurrentMode(Math.random() > 0.5 ? "flip" : "write");
+      // Escolher aleatoriamente entre os 3 modos no modo misto
+      const rand = Math.random();
+      if (rand > 0.66) {
+        setCurrentMode("multiple");
+      } else if (rand > 0.33) {
+        setCurrentMode("write");
+      } else {
+        setCurrentMode("flip");
+      }
     }
 
     goToNext();
@@ -289,7 +298,7 @@ const Study = () => {
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
             />
-          ) : (
+          ) : currentMode === "write" ? (
             <WriteStudyView
               front={currentCard.term}
               back={currentCard.translation}
@@ -299,6 +308,14 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
+            />
+          ) : (
+            <MultipleChoiceStudyView
+              currentCard={currentCard}
+              allCards={flashcards}
+              direction={direction}
+              onCorrect={() => handleNext(true)}
+              onIncorrect={() => handleNext(false)}
             />
           )}
         </div>

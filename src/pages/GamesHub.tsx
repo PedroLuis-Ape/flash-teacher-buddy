@@ -233,7 +233,7 @@ const GamesHub = () => {
                 </div>
                 <h3 className="text-xl font-semibold">Estudar (Misto)</h3>
                 <p className="text-sm text-muted-foreground">
-                  Alterna entre virar cartas e praticar escrita
+                  Alterna entre virar cartas, praticar escrita e múltipla escolha
                 </p>
               </div>
             </Card>
