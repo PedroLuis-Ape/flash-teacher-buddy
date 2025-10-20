@@ -46,7 +46,9 @@ const Study = () => {
   const [loading, setLoading] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [currentMode, setCurrentMode] = useState<"flip" | "write" | "multiple">(
-    mode === "mixed" ? (Math.random() > 0.66 ? "multiple" : Math.random() > 0.5 ? "flip" : "write") : (mode as "flip" | "write")
+    mode === "mixed" 
+      ? (Math.random() > 0.66 ? "multiple" : Math.random() > 0.5 ? "flip" : "write") 
+      : (mode as "flip" | "write" | "multiple")
   );
 
   const {

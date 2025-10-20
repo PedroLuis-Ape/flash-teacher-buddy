@@ -111,7 +111,7 @@ const GamesHub = () => {
     setLoading(false);
   };
 
-  const startGame = (mode: "flip" | "write" | "mixed") => {
+  const startGame = (mode: "flip" | "write" | "mixed" | "multiple") => {
     const onPortal = location.pathname.startsWith('/portal/list');
     const basePath = onPortal ? `/portal/list/${id}` : (isListRoute ? `/list/${id}` : `/collection/${id}`);
     navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}`);
@@ -192,7 +192,7 @@ const GamesHub = () => {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card
               className="p-6 hover:shadow-lg transition-all cursor-pointer group"
               onClick={() => startGame("flip")}
@@ -219,6 +219,21 @@ const GamesHub = () => {
                 <h3 className="text-xl font-semibold">Praticar Escrita</h3>
                 <p className="text-sm text-muted-foreground">
                   Digite as traduções e receba correção em tempo real
+                </p>
+              </div>
+            </Card>
+
+            <Card
+              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+              onClick={() => startGame("multiple")}
+            >
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <span className="text-3xl">🎯</span>
+                </div>
+                <h3 className="text-xl font-semibold">Múltipla Escolha</h3>
+                <p className="text-sm text-muted-foreground">
+                  Escolha a tradução correta entre 4 opções
                 </p>
               </div>
             </Card>
