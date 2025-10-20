@@ -9,13 +9,13 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 220 25% 97%;
-    --foreground: 240 10% 15%;
+    --foreground: 240 15% 10%; /* PATCH: texto escuro no tema claro */
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 15%;
+    --card-foreground: 240 15% 10%; /* PATCH: texto escuro no tema claro */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 15%;
+    --popover-foreground: 240 15% 10%; /* PATCH: texto escuro no tema claro */
 
     --primary: 250 70% 60%;
     --primary-foreground: 0 0% 100%;
@@ -25,7 +25,7 @@ All colors MUST be HSL.
     --secondary-foreground: 0 0% 100%;
 
     --muted: 220 15% 92%;
-    --muted-foreground: 240 5% 45%;
+    --muted-foreground: 240 10% 30%; /* PATCH: texto escuro no tema claro */
 
     --accent: 280 65% 65%;
     --accent-foreground: 0 0% 100%;

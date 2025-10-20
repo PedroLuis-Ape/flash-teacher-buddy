@@ -197,7 +197,7 @@ const Folder = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { error } = await supabase
+      const { data: createdList, error } = await supabase
         .from("lists")
         .insert({
           folder_id: id,
@@ -205,14 +205,22 @@ const Folder = () => {
           description: newList.description,
           owner_id: session.user.id,
           order_index: lists.length,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success("Lista criada com sucesso!");
+      toast.success("Lista criada! Edite o conteúdo abaixo.");
       setDialogOpen(false);
       setNewList({ title: "", description: "" });
-      loadLists();
+      
+      // Navegar automaticamente para a lista criada
+      if (createdList) {
+        navigate(`/list/${createdList.id}`);
+      } else {
+        loadLists();
+      }
     } catch (error: any) {
       toast.error("Erro ao criar lista: " + error.message);
     }
@@ -268,7 +276,14 @@ const Folder = () => {
   };
 
   if (!folder) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Carregando pasta...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -293,7 +308,7 @@ const Folder = () => {
         {isOwner && (
           <div className="mb-6 flex flex-wrap gap-3">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
+               <DialogTrigger asChild>
                 <Button size="lg">
                   <ListPlus className="mr-2 h-5 w-5" />
                   Nova Lista
@@ -303,7 +318,7 @@ const Folder = () => {
                 <DialogHeader>
                   <DialogTitle>Criar Nova Lista</DialogTitle>
                   <DialogDescription>
-                    Adicione uma nova lista de flashcards nesta pasta
+                    A lista será criada e você será redirecionado automaticamente para editá-la.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateList}>

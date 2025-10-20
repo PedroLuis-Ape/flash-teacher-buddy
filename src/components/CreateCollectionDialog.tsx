@@ -46,12 +46,16 @@ export const CreateCollectionDialog = ({
       return;
     }
 
-    const { error } = await supabase.from("collections").insert({
-      name: name.trim(),
-      description: description.trim() || null,
-      user_id: user.id,
-      owner_id: user.id,
-    });
+    const { data: createdCollection, error } = await supabase
+      .from("collections")
+      .insert({
+        name: name.trim(),
+        description: description.trim() || null,
+        user_id: user.id,
+        owner_id: user.id,
+      })
+      .select()
+      .single();
 
     if (error) {
       toast.error("Erro ao criar coleção");

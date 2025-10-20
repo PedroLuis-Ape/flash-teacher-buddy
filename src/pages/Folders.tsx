@@ -190,21 +190,29 @@ const Folders = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { error } = await supabase
+      const { data: createdFolder, error } = await supabase
         .from("folders")
         .insert({
           title: newFolder.title,
           description: newFolder.description,
           owner_id: session.user.id,
           visibility: newFolder.visibility,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success("Pasta criada com sucesso!");
+      toast.success("Pasta criada! Edite o conteúdo abaixo.");
       setDialogOpen(false);
       setNewFolder({ title: "", description: "", visibility: "private" });
-      loadFolders();
+      
+      // Navegar automaticamente para a pasta criada
+      if (createdFolder) {
+        navigate(`/folder/${createdFolder.id}`);
+      } else {
+        loadFolders();
+      }
     } catch (error: any) {
       toast.error("Erro ao criar pasta: " + error.message);
     }
@@ -334,7 +342,7 @@ const Folders = () => {
               <DialogHeader>
                 <DialogTitle>Criar Nova Pasta</DialogTitle>
                 <DialogDescription>
-                  Organize suas listas de flashcards em pastas
+                  A pasta será criada e você será redirecionado automaticamente para editá-la.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateFolder}>
@@ -387,7 +395,12 @@ const Folders = () => {
         </div>
 
         {loading ? (
-          <p className="text-center text-muted-foreground">Carregando...</p>
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center space-y-3">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">Carregando pastas...</p>
+            </div>
+          </div>
         ) : folders.length === 0 ? (
           <Card className="text-center p-12">
             <CardHeader>
