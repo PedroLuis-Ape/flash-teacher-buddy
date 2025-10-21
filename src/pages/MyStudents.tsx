@@ -76,14 +76,22 @@ export default function MyStudents() {
 
       if (error) throw error;
 
+      console.log("📋 Subscriptions encontradas:", subscriptions?.length);
+
       // Buscar dados de cada aluno
       const studentsData = await Promise.all((subscriptions || []).map(async (sub) => {
         // Buscar perfil do aluno
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("first_name, email")
           .eq("id", sub.student_id)
           .maybeSingle();
+
+        if (profileError) {
+          console.error("❌ Erro ao buscar perfil:", sub.student_id, profileError);
+        } else {
+          console.log("✅ Perfil encontrado:", profile?.first_name || "(sem nome)", profile?.email);
+        }
 
         // Buscar contagem de sessões do aluno
         const { count: sessionCount } = await supabase
@@ -110,9 +118,12 @@ export default function MyStudents() {
         };
       }));
 
+      console.log("👥 Alunos carregados:", studentsData);
+
       setStudents(studentsData);
       setFilteredStudents(studentsData);
     } catch (error: any) {
+      console.error("❌ Erro geral:", error);
       toast.error("Erro ao carregar alunos: " + error.message);
     } finally {
       setLoading(false);
