@@ -67,23 +67,24 @@ export default function MyStudents() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data, error } = await supabase
+      // Buscar inscrições
+      const { data: subscriptions, error } = await supabase
         .from("subscriptions")
-        .select(`
-          student_id,
-          created_at,
-          profiles:student_id (
-            id,
-            first_name,
-            email
-          )
-        `)
+        .select("student_id, created_at")
         .eq("teacher_id", session.user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      const studentsData = await Promise.all((data || []).map(async (sub) => {
+      // Buscar dados de cada aluno
+      const studentsData = await Promise.all((subscriptions || []).map(async (sub) => {
+        // Buscar perfil do aluno
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, email")
+          .eq("id", sub.student_id)
+          .maybeSingle();
+
         // Buscar contagem de sessões do aluno
         const { count: sessionCount } = await supabase
           .from("practice_sessions")
@@ -101,8 +102,8 @@ export default function MyStudents() {
 
         return {
           id: sub.student_id,
-          first_name: (sub.profiles as any)?.first_name || null,
-          email: (sub.profiles as any)?.email || null,
+          first_name: profile?.first_name || null,
+          email: profile?.email || null,
           created_at: sub.created_at,
           session_count: sessionCount || 0,
           last_activity: lastSession?.created_at || null,
