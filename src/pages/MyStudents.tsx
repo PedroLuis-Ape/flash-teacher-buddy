@@ -249,7 +249,7 @@ export default function MyStudents() {
                       
                       <div className="flex-1 min-w-0">
                         <CardTitle className="text-xl mb-1">
-                          {student.first_name || "Aluno"}
+                          {student.first_name || student.email?.split("@")[0] || "Aluno"}
                         </CardTitle>
                         <CardDescription className="break-all">
                           {student.email}

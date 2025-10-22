@@ -417,6 +417,12 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "flashcards"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_portal_folder: {
         Args: { _id: string }
@@ -430,9 +436,15 @@ export type Database = {
           updated_at: string
           visibility: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "folders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       get_portal_folders: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           class_id: string | null
           created_at: string
@@ -443,6 +455,12 @@ export type Database = {
           updated_at: string
           visibility: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "folders"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_portal_lists: {
         Args: { _folder_id: string }
@@ -458,6 +476,12 @@ export type Database = {
           updated_at: string
           visibility: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "lists"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
