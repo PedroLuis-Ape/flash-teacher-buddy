@@ -103,11 +103,12 @@ export const MultipleChoiceStudyView = ({
       <Card className="p-8 bg-gradient-to-br from-card to-muted/20">
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <p className="text-3xl font-semibold">{prompt}</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2">{prompt}</p>
             <Button
               variant="ghost"
               size="sm"
+              className="flex-shrink-0"
               onClick={async () => {
                 const lang = pickLang(direction, prompt);
                 await speakText(prompt, lang);
@@ -116,7 +117,7 @@ export const MultipleChoiceStudyView = ({
               <Volume2 className="h-5 w-5" />
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">Escolha a tradução em {answerLabel}:</p>
+          <p className="text-sm text-muted-foreground break-words px-2">Escolha a tradução em {answerLabel}:</p>
         </div>
       </Card>
 
