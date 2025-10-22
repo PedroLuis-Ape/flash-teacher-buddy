@@ -179,8 +179,8 @@ const Auth = () => {
               {isSignUp ? "Preencha seus dados para criar uma conta" : "Entre com suas credenciais"}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAuth} className="space-y-4 mt-4">
+          <CardContent className="flex flex-col items-center">
+            <form onSubmit={handleAuth} className="space-y-4 mt-4 w-full max-w-md">
               {isSignUp && (
                 <>
                   <div className="space-y-2">
@@ -264,10 +264,12 @@ const Auth = () => {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? (isSignUp ? "Criando conta..." : "Entrando...") : (isSignUp ? "Criar Conta" : "Entrar")}
-              </Button>
-              <div className="text-center">
+              <div className="flex justify-center w-full">
+                <Button type="submit" className="w-full max-w-xs" size="lg" disabled={loading}>
+                  {loading ? (isSignUp ? "Criando conta..." : "Entrando...") : (isSignUp ? "Criar Conta" : "Entrar")}
+                </Button>
+              </div>
+              <div className="flex justify-center w-full">
                 <Button
                   type="button"
                   variant="link"
