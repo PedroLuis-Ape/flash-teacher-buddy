@@ -45,11 +45,14 @@ const Study = () => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [currentMode, setCurrentMode] = useState<"flip" | "write" | "multiple">(
+  const [currentMode, setCurrentMode] = useState<"flip" | "write" | "multiple-choice">(
     mode === "mixed" 
-      ? (Math.random() > 0.66 ? "multiple" : Math.random() > 0.5 ? "flip" : "write") 
-      : (mode as "flip" | "write" | "multiple")
+      ? (Math.random() > 0.66 ? "multiple-choice" : Math.random() > 0.5 ? "flip" : "write") 
+      : (mode === "multiple" ? "multiple-choice" : mode as "flip" | "write" | "multiple-choice")
   );
+
+  const isListRoute = window.location.pathname.includes("/list/");
+  const listId = isListRoute ? resolvedId : undefined;
 
   const {
     currentIndex,
@@ -59,11 +62,11 @@ const Study = () => {
     skippedCount,
     results,
     isFinished,
+    isLoading: studyLoading,
     recordResult,
     goToNext,
     goToPrevious,
-    saveSession,
-  } = useStudyEngine(resolvedId, flashcards.length);
+  } = useStudyEngine(listId, flashcards, currentMode);
 
   useEffect(() => {
     loadFlashcards();
@@ -158,7 +161,7 @@ const Study = () => {
       // Escolher aleatoriamente entre os 3 modos no modo misto
       const rand = Math.random();
       if (rand > 0.66) {
-        setCurrentMode("multiple");
+        setCurrentMode("multiple-choice");
       } else if (rand > 0.33) {
         setCurrentMode("write");
       } else {
@@ -180,11 +183,6 @@ const Study = () => {
   };
 
   const handleExit = () => {
-    const isPublic = window.location.pathname.startsWith("/portal/collection/");
-    if (!isPublic) {
-      saveSession(mode, direction);
-    }
-    
     // Verifica se há histórico de navegação
     if (window.history.length > 1) {
       navigate(-1);
@@ -194,7 +192,7 @@ const Study = () => {
     }
   };
 
-  if (loading) {
+  if (loading || studyLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>

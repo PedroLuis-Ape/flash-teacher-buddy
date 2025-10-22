@@ -133,6 +133,60 @@ export type Database = {
           },
         ]
       }
+      flashcard_progress: {
+        Row: {
+          correct_count: number
+          created_at: string
+          flashcard_id: string
+          id: string
+          incorrect_count: number
+          last_reviewed: string | null
+          list_id: string
+          next_review: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          correct_count?: number
+          created_at?: string
+          flashcard_id: string
+          id?: string
+          incorrect_count?: number
+          last_reviewed?: string | null
+          list_id: string
+          next_review?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          correct_count?: number
+          created_at?: string
+          flashcard_id?: string
+          id?: string
+          incorrect_count?: number
+          last_reviewed?: string | null
+          list_id?: string
+          next_review?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_progress_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcard_progress_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flashcards: {
         Row: {
           accepted_answers_en: string[] | null
@@ -346,6 +400,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      study_sessions: {
+        Row: {
+          cards_order: Json
+          completed: boolean
+          created_at: string
+          current_index: number
+          id: string
+          list_id: string
+          mode: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cards_order: Json
+          completed?: boolean
+          created_at?: string
+          current_index?: number
+          id?: string
+          list_id: string
+          mode: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cards_order?: Json
+          completed?: boolean
+          created_at?: string
+          current_index?: number
+          id?: string
+          list_id?: string
+          mode?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_sessions_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
