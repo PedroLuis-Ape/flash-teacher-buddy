@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, RotateCcw, Pencil, Layers3 } from "lucide-react";
+import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
 interface Collection {
@@ -111,7 +111,7 @@ const GamesHub = () => {
     setLoading(false);
   };
 
-  const startGame = (mode: "flip" | "write" | "mixed" | "multiple") => {
+  const startGame = (mode: "flip" | "write" | "mixed" | "multiple" | "unscramble") => {
     const onPortal = location.pathname.startsWith('/portal/list');
     const basePath = onPortal ? `/portal/list/${id}` : (isListRoute ? `/list/${id}` : `/collection/${id}`);
     navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}`);
@@ -192,7 +192,7 @@ const GamesHub = () => {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
             <Card
               className="p-6 hover:shadow-lg transition-all cursor-pointer group"
               onClick={() => startGame("flip")}
@@ -240,6 +240,21 @@ const GamesHub = () => {
 
             <Card
               className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+              onClick={() => startGame("unscramble")}
+            >
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ListOrdered className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Desembaralhar</h3>
+                <p className="text-sm text-muted-foreground">
+                  Organize as palavras na ordem correta
+                </p>
+              </div>
+            </Card>
+
+            <Card
+              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
               onClick={() => startGame("mixed")}
             >
               <div className="text-center space-y-4">
@@ -248,7 +263,7 @@ const GamesHub = () => {
                 </div>
                 <h3 className="text-xl font-semibold">Estudar (Misto)</h3>
                 <p className="text-sm text-muted-foreground">
-                  Alterna entre virar cartas, praticar escrita e múltipla escolha
+                  Alterna entre todos os modos de estudo
                 </p>
               </div>
             </Card>

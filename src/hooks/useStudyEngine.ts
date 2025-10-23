@@ -29,7 +29,7 @@ interface FlashcardWithProgress {
 export function useStudyEngine(
   listId: string | undefined,
   flashcards: { id: string; term: string; translation: string }[],
-  mode: "flip" | "multiple-choice" | "write"
+  mode: "flip" | "multiple-choice" | "write" | "unscramble"
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
