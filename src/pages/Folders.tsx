@@ -256,11 +256,6 @@ const Folders = () => {
     try {
       await supabase.auth.signOut();
       navigate("/auth", { replace: true });
-      setTimeout(() => {
-        if (window.location.pathname !== "/auth") {
-          window.location.assign("/auth");
-        }
-      }, 100);
     } catch (error: any) {
       toast.error("Erro ao sair: " + error.message);
     }
