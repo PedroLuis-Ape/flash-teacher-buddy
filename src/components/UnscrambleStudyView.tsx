@@ -34,8 +34,8 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
   const [isCorrect, setIsCorrect] = useState(false);
 
   const actualDirection = direction === "any" ? (Math.random() > 0.5 ? "pt-en" : "en-pt") : direction;
-  const correctSentence = actualDirection === "pt-en" ? back : front;
   const question = actualDirection === "pt-en" ? front : back;
+  const correctSentence = actualDirection === "pt-en" ? back : front;
 
   useEffect(() => {
     const words = correctSentence.split(/\s+/);
