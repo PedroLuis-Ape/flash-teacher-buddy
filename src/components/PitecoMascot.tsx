@@ -23,6 +23,7 @@ export function PitecoMascot() {
 
   return (
     <img
+      loading="lazy"
       src={processedImage}
       alt=""
       aria-hidden="true"

@@ -32,9 +32,8 @@ export const MultipleChoiceStudyView = ({
   const [showFeedback, setShowFeedback] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
-  const [isPtToEn] = useState(() => 
-    direction === "pt-en" || (direction === "any" && Math.random() > 0.5)
-  );
+  
+  const isPtToEn = direction === "pt-en";
 
   const prompt = isPtToEn ? currentCard.term : currentCard.translation;
   const correctAnswer = isPtToEn ? currentCard.translation : currentCard.term;

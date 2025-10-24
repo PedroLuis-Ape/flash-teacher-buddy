@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -35,116 +36,68 @@ interface Flashcard {
 const ListDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [list, setList] = useState<ListType | null>(null);
-  const [folder, setFolder] = useState<FolderType | null>(null);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 
-  useEffect(() => {
-    loadList();
-    loadFlashcards();
-  }, [id]);
-
-  const loadList = async () => {
-    try {
+  const { data: list, isLoading: listLoading } = useQuery({
+    queryKey: ["list", id],
+    queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
-
-      // Tentar carregar via RPC público primeiro (para alunos sem login)
-      if (!session) {
-        const { data: publicLists } = await supabase.rpc('get_portal_lists', { 
-          _folder_id: '' // Vamos buscar pela lista diretamente
-        });
-        
-        // Como não temos RPC específico para lista individual, vamos usar query normal
-        // que deve funcionar se as RLS policies estiverem corretas
-        const { data: listData, error: listError } = await supabase
-          .from("lists")
-          .select("*")
-          .eq("id", id)
-          .single();
-
-        if (listError) {
-          console.error("Erro ao carregar lista pública:", listError);
-          toast.error("Lista não encontrada ou não está compartilhada");
-          navigate("/portal");
-          return;
-        }
-
-        setList(listData);
-        setIsOwner(false);
-
-        const { data: folderData } = await supabase.rpc('get_portal_folder', { 
-          _id: listData.folder_id 
-        });
-
-        if (folderData) {
-          setFolder(folderData);
-        }
-        return;
-      }
-
-      // Fluxo normal para usuários logados
-      const { data: listData, error: listError } = await supabase
+      const { data, error } = await supabase
         .from("lists")
         .select("*")
         .eq("id", id)
         .single();
+      
+      if (error) throw error;
+      setIsOwner(session?.user?.id === data.owner_id);
+      return data as ListType;
+    },
+    staleTime: 60_000,
+  });
 
-      if (listError) throw listError;
-
-      setList(listData);
-      setIsOwner(session?.user?.id === listData.owner_id);
-
-      const { data: folderData, error: folderError } = await supabase
+  const { data: folder } = useQuery({
+    queryKey: ["folder", list?.folder_id],
+    queryFn: async () => {
+      if (!list?.folder_id) return null;
+      const { data, error } = await supabase
         .from("folders")
         .select("id, title, visibility")
-        .eq("id", listData.folder_id)
+        .eq("id", list.folder_id)
         .single();
+      
+      if (error) throw error;
+      return data as FolderType;
+    },
+    enabled: !!list?.folder_id,
+    staleTime: 60_000,
+  });
 
-      if (folderError) throw folderError;
-      setFolder(folderData);
-    } catch (error: any) {
-      toast.error("Erro ao carregar lista: " + error.message);
-      navigate("/folders");
-    }
-  };
-
-  const loadFlashcards = async () => {
-    setLoading(true);
-    try {
+  const { data: flashcards = [], isLoading: flashcardsLoading, refetch: loadFlashcards } = useQuery({
+    queryKey: ["flashcards", id],
+    queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
-
-      // Se não tiver sessão, usar RPC público
+      
       if (!session) {
         const { data, error } = await supabase.rpc('get_portal_flashcards', { 
           _list_id: id 
         });
-
-        if (error) {
-          console.error("Erro ao carregar flashcards públicos:", error);
-          setFlashcards([]);
-        } else {
-          setFlashcards(data || []);
-        }
-      } else {
-        // Fluxo normal para usuários logados
-        const { data, error } = await supabase
-          .from("flashcards")
-          .select("*")
-          .eq("list_id", id)
-          .order("created_at", { ascending: true });
-
         if (error) throw error;
-        setFlashcards(data || []);
+        return data as Flashcard[];
       }
-    } catch (error: any) {
-      toast.error("Erro ao carregar flashcards: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      
+      const { data, error } = await supabase
+        .from("flashcards")
+        .select("*")
+        .eq("list_id", id)
+        .order("created_at", { ascending: true });
+      
+      if (error) throw error;
+      return data as Flashcard[];
+    },
+    staleTime: 30_000,
+  });
+
 
   const handleAddFlashcard = async (term: string, translation: string) => {
     try {
@@ -211,7 +164,6 @@ const ListDetail = () => {
 
       if (error) throw error;
 
-      setFolder({ ...folder, visibility: newVisibility });
       toast.success(
         newVisibility === 'class' 
           ? "Pasta compartilhada com sucesso!" 
@@ -231,8 +183,14 @@ const ListDetail = () => {
     toast.success("Link copiado para a área de transferência!");
   };
 
-  if (!list || !folder) {
+  const loading = listLoading || flashcardsLoading;
+
+  if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (!list) {
+    return <div className="min-h-screen flex items-center justify-center">Lista não encontrada</div>;
   }
 
   return (

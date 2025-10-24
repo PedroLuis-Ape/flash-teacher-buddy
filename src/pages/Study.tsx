@@ -36,21 +36,23 @@ const Study = () => {
   const resolvedId = (id as string) || (collectionId as string) || "";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const mode = searchParams.get("mode") || "flip";
-  const direction = (searchParams.get("direction") || searchParams.get("dir") || "any") as
-    | "pt-en"
-    | "en-pt"
-    | "any";
-  const order = searchParams.get("order") || "random";
+  
+  // Normalizar mode, dir/direction e order
+  const rawMode = (searchParams.get("mode") || "flip").toLowerCase();
+  const validModes = new Set(["flip","write","multiple","multiple-choice","unscramble","mixed"]);
+  const mode = validModes.has(rawMode) ? rawMode : "flip";
+  const normalizedMode = mode === "multiple" ? "multiple-choice" : mode;
+
+  const rawDir = (searchParams.get("dir") || searchParams.get("direction") || "any").toLowerCase();
+  const validDirs = new Set(["pt-en","en-pt","any"]);
+  const dirParam = validDirs.has(rawDir) ? (rawDir as "pt-en"|"en-pt"|"any") : "any";
+
+  const rawOrder = (searchParams.get("order") || "random").toLowerCase();
+  const order = rawOrder === "asc" ? "asc" : "random";
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [currentMode, setCurrentMode] = useState<"flip" | "write" | "multiple-choice" | "unscramble">(
-    mode === "mixed" 
-      ? (Math.random() > 0.75 ? "unscramble" : Math.random() > 0.5 ? "multiple-choice" : Math.random() > 0.25 ? "flip" : "write") 
-      : (mode === "multiple" ? "multiple-choice" : mode as "flip" | "write" | "multiple-choice" | "unscramble")
-  );
 
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
@@ -67,7 +69,21 @@ const Study = () => {
     recordResult,
     goToNext,
     goToPrevious,
-  } = useStudyEngine(listId, flashcards, currentMode);
+  } = useStudyEngine(listId, flashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble");
+  
+  // Direção estável por card
+  const decideDirection = (idx: number): "pt-en" | "en-pt" => {
+    if (dirParam !== "any") return dirParam;
+    return idx % 2 === 0 ? "pt-en" : "en-pt";
+  };
+  
+  const resolvedDirection = decideDirection(currentIndex);
+  
+  // Mixed mode determinístico
+  const modesCycle = ["flip","write","multiple-choice","unscramble"] as const;
+  const mixedModeFor = (idx: number) => modesCycle[idx % modesCycle.length];
+  
+  const effectiveMode = normalizedMode === "mixed" ? mixedModeFor(currentIndex) : normalizedMode;
 
   useEffect(() => {
     loadFlashcards();
@@ -157,21 +173,6 @@ const Study = () => {
     if (currentIndex < flashcards.length) {
       recordResult(flashcards[currentIndex].id, correct, skipped);
     }
-
-    if (mode === "mixed") {
-      // Escolher aleatoriamente entre os 4 modos no modo misto
-      const rand = Math.random();
-      if (rand > 0.75) {
-        setCurrentMode("unscramble");
-      } else if (rand > 0.5) {
-        setCurrentMode("multiple-choice");
-      } else if (rand > 0.25) {
-        setCurrentMode("write");
-      } else {
-        setCurrentMode("flip");
-      }
-    }
-
     goToNext();
   };
 
@@ -293,41 +294,44 @@ const Study = () => {
         </div>
 
         <div className="mb-6">
-          {currentMode === "flip" ? (
+          {effectiveMode === "flip" && (
             <FlipStudyView
               front={currentCard.term}
               back={currentCard.translation}
-              direction={direction}
+              direction={resolvedDirection}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
             />
-          ) : currentMode === "write" ? (
+          )}
+          {effectiveMode === "write" && (
             <WriteStudyView
               front={currentCard.term}
               back={currentCard.translation}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
-              direction={direction}
+              direction={resolvedDirection}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
             />
-          ) : currentMode === "unscramble" ? (
-            <UnscrambleStudyView
-              front={currentCard.term}
-              back={currentCard.translation}
-              direction={direction}
-              onCorrect={() => handleNext(true)}
-              onIncorrect={() => handleNext(false)}
-              onSkip={() => handleNext(false, true)}
-            />
-          ) : (
+          )}
+          {effectiveMode === "multiple-choice" && (
             <MultipleChoiceStudyView
               currentCard={currentCard}
               allCards={flashcards}
-              direction={direction}
+              direction={resolvedDirection}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
+            />
+          )}
+          {effectiveMode === "unscramble" && (
+            <UnscrambleStudyView
+              front={currentCard.term}
+              back={currentCard.translation}
+              direction={resolvedDirection}
+              onCorrect={() => handleNext(true)}
+              onIncorrect={() => handleNext(false)}
+              onSkip={() => handleNext(false, true)}
             />
           )}
         </div>

@@ -21,10 +21,10 @@ export const FlipStudyView = ({
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
-  const showText = direction === "pt-en" || direction === "any" ? front : back;
-  const hideText = direction === "pt-en" || direction === "any" ? back : front;
-  const showLabel = direction === "pt-en" || direction === "any" ? "Português" : "English";
-  const hideLabel = direction === "pt-en" || direction === "any" ? "English" : "Português";
+  const showText = direction === "pt-en" ? front : back;
+  const hideText = direction === "pt-en" ? back : front;
+  const showLabel = direction === "pt-en" ? "Português" : "English";
+  const hideLabel = direction === "pt-en" ? "English" : "Português";
 
   useEffect(() => {
     setIsFlipped(false);

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
+import { isPortalPath, buildBasePath } from "@/lib/utils";
 
 interface Collection {
   id: string;
@@ -112,8 +113,8 @@ const GamesHub = () => {
   };
 
   const startGame = (mode: "flip" | "write" | "mixed" | "multiple" | "unscramble") => {
-    const onPortal = location.pathname.startsWith('/portal/list');
-    const basePath = onPortal ? `/portal/list/${id}` : (isListRoute ? `/list/${id}` : `/collection/${id}`);
+    const kind = isListRoute ? "list" : "collection";
+    const basePath = buildBasePath(location.pathname, kind, id!);
     navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}`);
   };
 
@@ -130,7 +131,7 @@ const GamesHub = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-8"> {/* PATCH: wrap no mobile */}
           <Button variant="ghost" onClick={() => {
-            const onPortal = location.pathname.startsWith('/portal/list');
+            const onPortal = isPortalPath(location.pathname);
             if (collection) {
               navigate(`/collection/${collection.id}`);
             } else if (list) {

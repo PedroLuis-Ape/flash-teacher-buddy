@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { FlashcardList } from "@/components/FlashcardList";
@@ -25,68 +26,55 @@ interface Collection {
 const Collection = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [collection, setCollection] = useState<Collection | null>(null);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [loading, setLoading] = useState(true);
   const [practiceMode, setPracticeMode] = useState<"write_pt_en" | "write_en_pt" | null>(null);
-  const [profile, setProfile] = useState<{first_name?: string; email?: string} | null>(null);
 
-  useEffect(() => {
-    loadCollection();
-    loadFlashcards();
-    loadProfile();
-  }, [id]);
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name, email")
+        .eq("id", user.id)
+        .single();
+      
+      return data;
+    },
+    staleTime: 300_000,
+  });
 
-  const loadProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    
-    const { data } = await supabase
-      .from("profiles")
-      .select("first_name, email")
-      .eq("id", user.id)
-      .single();
-    
-    if (data) {
-      setProfile(data);
-    }
-  };
+  const { data: collection } = useQuery({
+    queryKey: ["collection", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("collections")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-  const loadCollection = async () => {
-    if (!id) return;
+      if (error) throw error;
+      return data as Collection;
+    },
+    staleTime: 60_000,
+  });
 
-    const { data, error } = await supabase
-      .from("collections")
-      .select("*")
-      .eq("id", id)
-      .single();
+  const { data: flashcards = [], isLoading: flashcardsLoading, refetch: loadFlashcards } = useQuery({
+    queryKey: ["flashcards-collection", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("flashcards")
+        .select("*")
+        .eq("collection_id", id)
+        .order("created_at", { ascending: true });
 
-    if (error) {
-      toast.error("Erro ao carregar coleção");
-      navigate("/");
-      return;
-    }
+      if (error) throw error;
+      return data as Flashcard[];
+    },
+    staleTime: 30_000,
+  });
 
-    setCollection(data);
-  };
-
-  const loadFlashcards = async () => {
-    if (!id) return;
-
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("flashcards")
-      .select("*")
-      .eq("collection_id", id)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      toast.error("Erro ao carregar flashcards");
-    } else {
-      setFlashcards(data || []);
-    }
-    setLoading(false);
-  };
 
   const handleAddFlashcard = async (term: string, translation: string) => {
     if (!id) return;
@@ -187,7 +175,7 @@ const Collection = () => {
           <h2 className="text-2xl font-bold mb-4">
             Flashcards ({flashcards.length})
           </h2>
-          {loading ? (
+          {flashcardsLoading ? (
             <p className="text-muted-foreground">Carregando...</p>
           ) : (
             <FlashcardList flashcards={flashcards} />

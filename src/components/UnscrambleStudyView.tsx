@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Volume2, RotateCcw, Check } from "lucide-react";
-import { speak, getVoiceForLang } from "@/lib/edgeTTS";
+import { speakText, pickLang } from "@/lib/speech";
 
 interface UnscrambleStudyViewProps {
   front: string;
@@ -33,9 +33,8 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
 
-  const actualDirection = direction === "any" ? (Math.random() > 0.5 ? "pt-en" : "en-pt") : direction;
-  const question = actualDirection === "pt-en" ? front : back;
-  const correctSentence = actualDirection === "pt-en" ? back : front;
+  const question = direction === "pt-en" ? front : back;
+  const correctSentence = direction === "pt-en" ? back : front;
 
   useEffect(() => {
     const words = correctSentence.split(/\s+/);
@@ -87,9 +86,8 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
   };
 
   const handlePlayAudio = async () => {
-    const lang = actualDirection === "pt-en" ? "pt-BR" : "en-US";
-    const voice = getVoiceForLang(lang);
-    await speak(question, voice);
+    const lang = pickLang(direction, question);
+    await speakText(question, lang);
   };
 
   return (
