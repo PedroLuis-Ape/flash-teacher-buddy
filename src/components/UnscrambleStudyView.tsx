@@ -22,9 +22,14 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return shuffled;
 };
 
+interface WordItem {
+  word: string;
+  id: string;
+}
+
 export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
-  const [selectedWords, setSelectedWords] = useState<string[]>([]);
-  const [availableWords, setAvailableWords] = useState<string[]>([]);
+  const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
+  const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
 
@@ -34,34 +39,42 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
 
   useEffect(() => {
     const words = correctSentence.split(/\s+/);
-    setAvailableWords(shuffleArray(words));
+    const wordItems: WordItem[] = words.map((word, index) => ({
+      word,
+      id: `${word}-${index}-${Math.random()}`
+    }));
+    setAvailableWords(shuffleArray(wordItems));
     setSelectedWords([]);
     setSubmitted(false);
     setIsCorrect(false);
   }, [front, back, correctSentence]);
 
-  const handleWordClick = (word: string, fromAvailable: boolean) => {
+  const handleWordClick = (item: WordItem, fromAvailable: boolean) => {
     if (submitted) return;
 
     if (fromAvailable) {
-      setAvailableWords((prev) => prev.filter((w) => w !== word));
-      setSelectedWords((prev) => [...prev, word]);
+      setAvailableWords((prev) => prev.filter((w) => w.id !== item.id));
+      setSelectedWords((prev) => [...prev, item]);
     } else {
-      setSelectedWords((prev) => prev.filter((w) => w !== word));
-      setAvailableWords((prev) => [...prev, word]);
+      setSelectedWords((prev) => prev.filter((w) => w.id !== item.id));
+      setAvailableWords((prev) => [...prev, item]);
     }
   };
 
   const handleReset = () => {
     const words = correctSentence.split(/\s+/);
-    setAvailableWords(shuffleArray(words));
+    const wordItems: WordItem[] = words.map((word, index) => ({
+      word,
+      id: `${word}-${index}-${Math.random()}`
+    }));
+    setAvailableWords(shuffleArray(wordItems));
     setSelectedWords([]);
     setSubmitted(false);
     setIsCorrect(false);
   };
 
   const handleSubmit = () => {
-    const userAnswer = selectedWords.join(" ").toLowerCase().trim();
+    const userAnswer = selectedWords.map(item => item.word).join(" ").toLowerCase().trim();
     const correct = userAnswer === correctSentence.toLowerCase().trim();
     setIsCorrect(correct);
     setSubmitted(true);
@@ -102,15 +115,15 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
           {selectedWords.length === 0 ? (
             <p className="text-muted-foreground">Clique nas palavras abaixo para montar a frase</p>
           ) : (
-            selectedWords.map((word, index) => (
+            selectedWords.map((item) => (
               <Button
-                key={`${word}-${index}`}
+                key={item.id}
                 variant="default"
-                onClick={() => handleWordClick(word, false)}
+                onClick={() => handleWordClick(item, false)}
                 disabled={submitted}
                 className="text-lg px-4 py-2"
               >
-                {word}
+                {item.word}
               </Button>
             ))
           )}
@@ -119,15 +132,15 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
 
       {/* Available words */}
       <div className="flex flex-wrap gap-2 justify-center w-full">
-        {availableWords.map((word, index) => (
+        {availableWords.map((item) => (
           <Button
-            key={`${word}-${index}`}
+            key={item.id}
             variant="outline"
-            onClick={() => handleWordClick(word, true)}
+            onClick={() => handleWordClick(item, true)}
             disabled={submitted}
             className="text-lg px-4 py-2"
           >
-            {word}
+            {item.word}
           </Button>
         ))}
       </div>
