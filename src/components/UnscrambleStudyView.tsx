@@ -77,8 +77,10 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
     const correct = userAnswer === correctSentence.toLowerCase().trim();
     setIsCorrect(correct);
     setSubmitted(true);
-    
-    if (correct) {
+  };
+
+  const handleNext = () => {
+    if (isCorrect) {
       onCorrect();
     } else {
       onIncorrect();
@@ -175,6 +177,16 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
               Resposta correta: <span className="font-semibold">{correctSentence}</span>
             </p>
           )}
+          <div className="flex justify-center mt-4">
+            <Button
+              onClick={handleNext}
+              size="lg"
+              className={isCorrect ? "bg-green-600 hover:bg-green-700" : ""}
+              variant={isCorrect ? "default" : "destructive"}
+            >
+              {isCorrect ? "Próximo" : "Continuar"}
+            </Button>
+          </div>
         </Card>
       )}
     </div>
