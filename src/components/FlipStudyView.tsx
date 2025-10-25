@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2 } from "lucide-react";
 import { speakText, pickLang } from "@/lib/speech";
+import { SpeechRateControl } from "./SpeechRateControl";
 
 interface FlipStudyViewProps {
   front: string;
@@ -60,6 +61,9 @@ export const FlipStudyView = ({
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto">
+      <div className="w-full flex justify-end mb-2">
+        <SpeechRateControl />
+      </div>
       <div
         className="flip-card w-full h-80 cursor-pointer"
         onClick={() => !isFlipped && handleFlip()}

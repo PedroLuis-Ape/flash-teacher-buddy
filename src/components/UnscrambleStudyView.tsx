@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Volume2, RotateCcw, Check } from "lucide-react";
 import { speakText, pickLang } from "@/lib/speech";
+import { SpeechRateControl } from "./SpeechRateControl";
 
 interface UnscrambleStudyViewProps {
   front: string;
@@ -97,14 +98,17 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
       <Card className="w-full p-6 bg-card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Organize as palavras:</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handlePlayAudio}
-            className="shrink-0"
-          >
-            <Volume2 className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <SpeechRateControl />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePlayAudio}
+              className="shrink-0"
+            >
+              <Volume2 className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
         <p className="text-2xl font-bold text-center mb-6">{question}</p>
       </Card>

@@ -10,6 +10,7 @@ import { speakText, pickLang } from "@/lib/speech";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
+import { SpeechRateControl } from "./SpeechRateControl";
 
 interface WriteStudyViewProps {
   front: string;
@@ -117,16 +118,19 @@ export const WriteStudyView = ({
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex items-center justify-center gap-3 mb-8">
             <p className="text-3xl font-semibold">{prompt}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={async () => {
-                const lang = pickLang(direction, prompt);
-                await speakText(prompt, lang);
-              }}
-            >
-              <Volume2 className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <SpeechRateControl />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  const lang = pickLang(direction, prompt);
+                  await speakText(prompt, lang);
+                }}
+              >
+                <Volume2 className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">Traduza para {answerLabel}:</p>
         </div>

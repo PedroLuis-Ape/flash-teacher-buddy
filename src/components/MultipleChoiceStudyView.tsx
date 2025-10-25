@@ -6,6 +6,7 @@ import { Volume2 } from "lucide-react";
 import { speakText, pickLang } from "@/lib/speech";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
+import { SpeechRateControl } from "./SpeechRateControl";
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
@@ -104,17 +105,20 @@ export const MultipleChoiceStudyView = ({
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
             <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2">{prompt}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-shrink-0"
-              onClick={async () => {
-                const lang = pickLang(direction, prompt);
-                await speakText(prompt, lang);
-              }}
-            >
-              <Volume2 className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <SpeechRateControl />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-shrink-0"
+                onClick={async () => {
+                  const lang = pickLang(direction, prompt);
+                  await speakText(prompt, lang);
+                }}
+              >
+                <Volume2 className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground break-words px-2">Escolha a tradução em {answerLabel}:</p>
         </div>
