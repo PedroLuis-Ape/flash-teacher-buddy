@@ -47,16 +47,18 @@ const ListDetail = () => {
         .from("lists")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      setIsOwner(session?.user?.id === data.owner_id);
-      return data as ListType;
+      if (data) {
+        setIsOwner(session?.user?.id === data.owner_id);
+      }
+      return data as ListType | null;
     },
     staleTime: 60_000,
   });
 
-  const { data: folder } = useQuery({
+  const { data: folder, isLoading: folderLoading } = useQuery({
     queryKey: ["folder", list?.folder_id],
     queryFn: async () => {
       if (!list?.folder_id) return null;
@@ -64,10 +66,10 @@ const ListDetail = () => {
         .from("folders")
         .select("id, title, visibility")
         .eq("id", list.folder_id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      return data as FolderType;
+      return data as FolderType | null;
     },
     enabled: !!list?.folder_id,
     staleTime: 60_000,
@@ -183,7 +185,7 @@ const ListDetail = () => {
     toast.success("Link copiado para a área de transferência!");
   };
 
-  const loading = listLoading || flashcardsLoading;
+  const loading = listLoading || flashcardsLoading || folderLoading;
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
@@ -191,6 +193,10 @@ const ListDetail = () => {
 
   if (!list) {
     return <div className="min-h-screen flex items-center justify-center">Lista não encontrada</div>;
+  }
+
+  if (!folder) {
+    return <div className="min-h-screen flex items-center justify-center">Pasta não encontrada</div>;
   }
 
   return (
