@@ -26,6 +26,9 @@ interface FlashcardWithProgress {
   lastReviewed: string | null;
 }
 
+// Limite de cards por sessão
+const MAX_CARDS_PER_SESSION = 10;
+
 export function useStudyEngine(
   listId: string | undefined,
   flashcards: { id: string; term: string; translation: string }[],
@@ -38,6 +41,7 @@ export function useStudyEngine(
   const [isFinished, setIsFinished] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const correctCount = results.filter((r) => r.correct && !r.skipped).length;
   const errorCount = results.filter((r) => !r.correct && !r.skipped).length;
@@ -46,14 +50,30 @@ export function useStudyEngine(
 
   // Carregar ou criar sessão de estudo
   const initializeSession = useCallback(async () => {
-    if (!listId || flashcards.length === 0) {
+    if (flashcards.length === 0) {
       setIsLoading(false);
       return;
     }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
+        // Modo não autenticado (portal público) - usar lógica simples
+        setIsAuthenticated(false);
+        const shuffledIds = flashcards
+          .map(f => f.id)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, MAX_CARDS_PER_SESSION);
+        setCardsOrder(shuffledIds);
+        setCurrentIndex(0);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+
+      if (!listId) {
         setIsLoading(false);
         return;
       }
@@ -77,7 +97,7 @@ export function useStudyEngine(
         setCardsOrder(existingSession.cards_order as string[]);
         toast.success("Continuando de onde você parou!");
       } else {
-        // Criar nova sessão com flashcards priorizados
+        // Criar nova sessão com flashcards priorizados (limitado)
         const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards);
         
         const { data: newSession, error } = await supabase
@@ -101,12 +121,19 @@ export function useStudyEngine(
       }
     } catch (error) {
       console.error('Erro ao inicializar sessão:', error);
+      // Fallback: usar flashcards diretamente
+      const shuffledIds = flashcards
+        .map(f => f.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, MAX_CARDS_PER_SESSION);
+      setCardsOrder(shuffledIds);
+      setCurrentIndex(0);
     } finally {
       setIsLoading(false);
     }
   }, [listId, flashcards, mode]);
 
-  // Priorizar flashcards com mais erros
+  // Priorizar flashcards com mais erros (limitado a MAX_CARDS_PER_SESSION)
   const getPrioritizedFlashcards = async (
     userId: string,
     listId: string,
@@ -136,10 +163,14 @@ export function useStudyEngine(
         return Math.random() - 0.5;
       });
 
-      return cardsWithProgress.map(c => c.id);
+      // Limitar a MAX_CARDS_PER_SESSION
+      return cardsWithProgress.slice(0, MAX_CARDS_PER_SESSION).map(c => c.id);
     } catch (error) {
       console.error('Erro ao priorizar flashcards:', error);
-      return cards.map(c => c.id).sort(() => Math.random() - 0.5);
+      return cards
+        .map(c => c.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, MAX_CARDS_PER_SESSION);
     }
   };
 
@@ -177,7 +208,8 @@ export function useStudyEngine(
       return [...prev, { flashcardId, correct, skipped, attempts: 1 }];
     });
 
-    if (!listId || skipped) return;
+    // Não salvar progresso se não estiver autenticado ou se pulou
+    if (!isAuthenticated || !listId || skipped) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -217,7 +249,7 @@ export function useStudyEngine(
     } catch (error) {
       console.error('Erro ao registrar resultado:', error);
     }
-  }, [listId]);
+  }, [listId, isAuthenticated]);
 
   const goToNext = useCallback(() => {
     if (currentIndex < cardsOrder.length - 1) {
@@ -235,7 +267,7 @@ export function useStudyEngine(
   }, [currentIndex]);
 
   const completeSession = async () => {
-    if (!sessionId) return;
+    if (!sessionId || !isAuthenticated) return;
 
     try {
       await supabase
