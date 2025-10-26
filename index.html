@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>APE - Apprenticeship Practice and Enhancement</title>
+    
+    <!-- Aplicar tema antes do React renderizar -->
+    <script>
+      (function() {
+        try {
+          // Aplicar tema salvo ou padrão
+          const theme = localStorage.getItem('theme') || 'dark';
+          document.documentElement.classList.add(theme);
+          
+          // Aplicar background sólido imediatamente
+          document.documentElement.style.backgroundColor = 
+            theme === 'dark' ? 'hsl(224 71% 4%)' : 'hsl(0 0% 100%)';
+        } catch (e) {
+          // Fallback para tema escuro
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.backgroundColor = 'hsl(224 71% 4%)';
+        }
+      })();
+    </script>
     <meta name="description" content="Aplicativo de flashcards para prática e aprimoramento do aprendizado. Crie coleções e estude com diferentes modos interativos." />
     <meta name="author" content="Lovable" />
 
@@ -21,6 +40,19 @@
   </head>
 
   <body>
+    <!-- Limpar service workers antigos -->
+    <script>
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            registrations.forEach(function(registration) {
+              registration.unregister();
+            });
+          });
+        }
+      })();
+    </script>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

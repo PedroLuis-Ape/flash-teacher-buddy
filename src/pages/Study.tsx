@@ -22,6 +22,7 @@ import { UnscrambleStudyView } from "@/components/UnscrambleStudyView";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
 import { ArrowLeft, Trophy, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
+import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 
 interface Flashcard {
   id: string;
@@ -187,13 +188,8 @@ const Study = () => {
   };
 
   const handleExit = () => {
-    // Verifica se há histórico de navegação
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      // Fallback para a tela de login se não houver histórico
-      navigate("/auth", { replace: true });
-    }
+    const fallback = getFallbackRoute(window.location.pathname);
+    safeGoBack(navigate, fallback);
   };
 
   if (loading || studyLoading) {
@@ -255,7 +251,7 @@ const Study = () => {
                   Rever apenas os errados
                 </Button>
               )}
-              <Button size="lg" onClick={() => navigate(-1)}>
+              <Button size="lg" onClick={handleExit}>
                 Voltar
               </Button>
             </div>

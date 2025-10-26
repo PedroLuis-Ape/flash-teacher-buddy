@@ -1,22 +1,38 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const checkSession = async () => {
-      const ready = sessionStorage.getItem('authReady') === '1';
-      const logoutFlag = !!sessionStorage.getItem('logoutInProgress');
-      if (!ready || logoutFlag) return false;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/folders', { replace: true });
+      try {
+        const ready = sessionStorage.getItem('authReady') === '1';
+        const logoutFlag = !!sessionStorage.getItem('logoutInProgress');
+        
+        if (!ready || logoutFlag) {
+          return false;
+        }
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          navigate('/folders', { replace: true });
+        } else {
+          navigate('/auth', { replace: true });
+        }
+        
+        setIsChecking(false);
+        return true;
+      } catch (error) {
+        console.error("[Index] Erro ao verificar sessão:", error);
+        navigate('/auth', { replace: true });
+        setIsChecking(false);
         return true;
       }
-      // Se não houver sessão, a guarda global cuidará do redirecionamento para /auth
-      return true;
     };
     
     // Verificar imediatamente e depois em intervalos até authReady estar pronto
@@ -34,9 +50,13 @@ const Index = () => {
     };
   }, [navigate]);
 
+  if (!isChecking) {
+    return null; // Já redirecionou
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-muted-foreground">Carregando...</p>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <LoadingSpinner message="Carregando..." />
     </div>
   );
 };
