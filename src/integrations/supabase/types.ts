@@ -487,6 +487,66 @@ export type Database = {
         }
         Relationships: []
       }
+      videos: {
+        Row: {
+          created_at: string
+          created_by: string
+          folder_id: string
+          id: string
+          is_published: boolean
+          order_index: number
+          provider: string
+          thumbnail_url: string
+          title: string | null
+          updated_at: string
+          url: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          folder_id: string
+          id?: string
+          is_published?: boolean
+          order_index?: number
+          provider?: string
+          thumbnail_url: string
+          title?: string | null
+          updated_at?: string
+          url: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          folder_id?: string
+          id?: string
+          is_published?: boolean
+          order_index?: number
+          provider?: string
+          thumbnail_url?: string
+          title?: string | null
+          updated_at?: string
+          url?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { VideoList } from "@/components/VideoList";
 
 interface ListType {
   id: string;
@@ -305,175 +307,188 @@ const Folder = () => {
           )}
         </div>
 
-        {isOwner && (
-          <div className="mb-6 flex flex-wrap gap-3">
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-               <DialogTrigger asChild>
-                <Button size="lg">
-                  <ListPlus className="mr-2 h-5 w-5" />
-                  Nova Lista
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Criar Nova Lista</DialogTitle>
-                  <DialogDescription>
-                    A lista será criada e você será redirecionado automaticamente para editá-la.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateList}>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Título</Label>
-                      <Input
-                        id="title"
-                        value={newList.title}
-                        onChange={(e) => setNewList({ ...newList, title: e.target.value })}
-                        placeholder="Ex: Verbos Irregulares"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Descrição (opcional)</Label>
-                      <Textarea
-                        id="description"
-                        value={newList.description}
-                        onChange={(e) => setNewList({ ...newList, description: e.target.value })}
-                        placeholder="Descreva o conteúdo desta lista..."
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">Criar Lista</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+        <Tabs defaultValue="lists" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="lists">Listas</TabsTrigger>
+            <TabsTrigger value="videos">Vídeos</TabsTrigger>
+          </TabsList>
 
-            <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="secondary" size="lg">
-                  <Share2 className="mr-2 h-5 w-5" />
-                  Compartilhar Pasta
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Compartilhar Pasta</DialogTitle>
-                  <DialogDescription>
-                    Torne esta pasta e todo o seu conteúdo visível para seus alunos no Portal do Aluno.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-2">
-                  <p className="text-sm text-muted-foreground">
-                    A pasta será compartilhada com a turma. As listas e flashcards dentro dela também serão compartilhados.
-                  </p>
-                  <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
-                    <Checkbox
-                      id="allow-public"
-                      checked={allowPublicPortal}
-                      onCheckedChange={(c) => setAllowPublicPortal(Boolean(c))}
-                    />
-                    <div className="flex-1">
-                      <Label htmlFor="allow-public" className="font-semibold cursor-pointer">
-                        Permitir acesso sem login no Portal do Aluno
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Os alunos poderão acessar o conteúdo em /portal sem precisar fazer login
+          <TabsContent value="lists">
+            {isOwner && (
+              <div className="mb-6 flex flex-wrap gap-3">
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="lg">
+                      <ListPlus className="mr-2 h-5 w-5" />
+                      Nova Lista
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Criar Nova Lista</DialogTitle>
+                      <DialogDescription>
+                        A lista será criada e você será redirecionado automaticamente para editá-la.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateList}>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="title">Título</Label>
+                          <Input
+                            id="title"
+                            value={newList.title}
+                            onChange={(e) => setNewList({ ...newList, title: e.target.value })}
+                            placeholder="Ex: Verbos Irregulares"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Descrição (opcional)</Label>
+                          <Textarea
+                            id="description"
+                            value={newList.description}
+                            onChange={(e) => setNewList({ ...newList, description: e.target.value })}
+                            placeholder="Descreva o conteúdo desta lista..."
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">Criar Lista</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" size="lg">
+                      <Share2 className="mr-2 h-5 w-5" />
+                      Compartilhar Pasta
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Compartilhar Pasta</DialogTitle>
+                      <DialogDescription>
+                        Torne esta pasta e todo o seu conteúdo visível para seus alunos no Portal do Aluno.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <p className="text-sm text-muted-foreground">
+                        A pasta será compartilhada com a turma. As listas e flashcards dentro dela também serão compartilhados.
                       </p>
+                      <div className="flex items-start gap-2 p-3 bg-primary/5 rounded-lg">
+                        <Checkbox
+                          id="allow-public"
+                          checked={allowPublicPortal}
+                          onCheckedChange={(c) => setAllowPublicPortal(Boolean(c))}
+                        />
+                        <div className="flex-1">
+                          <Label htmlFor="allow-public" className="font-semibold cursor-pointer">
+                            Permitir acesso sem login no Portal do Aluno
+                          </Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Os alunos poderão acessar o conteúdo em /portal sem precisar fazer login
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleShareFolder} disabled={sharing}>
-                    {sharing ? "Compartilhando..." : "Compartilhar"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
+                    <DialogFooter>
+                      <Button onClick={handleShareFolder} disabled={sharing}>
+                        {sharing ? "Compartilhando..." : "Compartilhar"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
 
-        {loading ? (
-          <p className="text-center text-muted-foreground">Carregando...</p>
-        ) : lists.length === 0 ? (
-          <Card className="text-center p-12">
-            <CardHeader>
-              <CardTitle>Nenhuma lista ainda</CardTitle>
-              <CardDescription>
-                {isOwner
-                  ? "Crie sua primeira lista de flashcards"
-                  : "Esta pasta ainda não possui listas"}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {lists.map((list) => (
-              <Card
-                key={list.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-              >
-                <div onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <FileText className="h-8 w-8 text-primary" />
-                      {isOwner && (
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditList(list);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
+            {loading ? (
+              <p className="text-center text-muted-foreground">Carregando...</p>
+            ) : lists.length === 0 ? (
+              <Card className="text-center p-12">
+                <CardHeader>
+                  <CardTitle>Nenhuma lista ainda</CardTitle>
+                  <CardDescription>
+                    {isOwner
+                      ? "Crie sua primeira lista de flashcards"
+                      : "Esta pasta ainda não possui listas"}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {lists.map((list) => (
+                  <Card
+                    key={list.id}
+                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                  >
+                    <div onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <FileText className="h-8 w-8 text-primary" />
+                          {isOwner && (
+                            <div className="flex gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditList(list);
+                                }}
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
+                                      Excluir
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
                         </div>
-                      )}
+                        <CardTitle className="mt-4">{list.title}</CardTitle>
+                        {list.description && (
+                          <CardDescription>{list.description}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <CreditCard className="h-4 w-4" />
+                          <span>{list.card_count || 0} cards</span>
+                        </div>
+                      </CardContent>
                     </div>
-                    <CardTitle className="mt-4">{list.title}</CardTitle>
-                  {list.description && (
-                    <CardDescription>{list.description}</CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <CreditCard className="h-4 w-4" />
-                    <span>{list.card_count || 0} cards</span>
-                  </div>
-                </CardContent>
+                  </Card>
+                ))}
               </div>
-              </Card>
-            ))}
-          </div>
-        )}
+            )}
+          </TabsContent>
+
+          <TabsContent value="videos">
+            <VideoList folderId={id as string} isOwner={isOwner} />
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent>
