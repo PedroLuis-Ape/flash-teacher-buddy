@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { InventoryTab } from "@/components/InventoryTab";
 import { AppearanceTab } from "@/components/AppearanceTab";
+import { StatisticsTab } from "@/components/StatisticsTab";
+import { HistoryTab } from "@/components/HistoryTab";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -160,10 +162,12 @@ const Profile = () => {
           </div>
         </div>
 
-{FEATURE_FLAGS.economy_enabled ? (
+        {FEATURE_FLAGS.economy_enabled ? (
           <Tabs defaultValue="profile" className="max-w-4xl">
             <TabsList className="mb-4">
               <TabsTrigger value="profile">Perfil</TabsTrigger>
+              <TabsTrigger value="stats">Estatísticas</TabsTrigger>
+              <TabsTrigger value="history">Histórico</TabsTrigger>
               <TabsTrigger value="inventory">Inventário</TabsTrigger>
               <TabsTrigger value="appearance">Aparência</TabsTrigger>
             </TabsList>
@@ -240,6 +244,14 @@ const Profile = () => {
                   </form>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="stats">
+              <StatisticsTab />
+            </TabsContent>
+
+            <TabsContent value="history">
+              <HistoryTab />
             </TabsContent>
 
             <TabsContent value="inventory">

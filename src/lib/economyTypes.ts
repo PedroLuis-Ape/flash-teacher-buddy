@@ -58,7 +58,34 @@ export function calculateLevel(xp: number): number {
 }
 
 /**
- * Get mock user economy data
+ * Get user economy data from database
+ * Falls back to mock data if not found
+ */
+export async function getUserEconomy(userId: string): Promise<UserEconomy> {
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('balance_pitecoin, xp_total, pts_weekly, level')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+
+    return {
+      balance_pitecoin: data.balance_pitecoin || 0,
+      xp_total: data.xp_total || 0,
+      pts_weekly: data.pts_weekly || 0,
+      level: data.level || 0,
+    };
+  } catch (error) {
+    console.error('[EconomyTypes] Error fetching economy:', error);
+    return getMockEconomy();
+  }
+}
+
+/**
+ * Get mock user economy data (fallback)
  */
 export function getMockEconomy(): UserEconomy {
   return {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 export interface StudyResult {
   flashcardId: string;
@@ -215,6 +217,11 @@ export function useStudyEngine(
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Award points for correct answer
+      if (correct && FEATURE_FLAGS.economy_enabled) {
+        await awardPoints(user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta');
+      }
+
       // Buscar progresso existente
       const { data: existingProgress } = await supabase
         .from('flashcard_progress')
@@ -267,13 +274,22 @@ export function useStudyEngine(
   }, [currentIndex]);
 
   const completeSession = async () => {
-    if (!sessionId || !isAuthenticated) return;
+    if (!isAuthenticated) return;
 
     try {
-      await supabase
-        .from('study_sessions')
-        .update({ completed: true })
-        .eq('id', sessionId);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Award session completion bonus
+      if (user && FEATURE_FLAGS.economy_enabled) {
+        await awardPoints(user.id, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
+      }
+
+      if (sessionId) {
+        await supabase
+          .from('study_sessions')
+          .update({ completed: true })
+          .eq('id', sessionId);
+      }
 
       toast.success("Sessão de estudo concluída! 🎉");
     } catch (error) {

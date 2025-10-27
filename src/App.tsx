@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
+import { EconomyInitializer } from "@/components/EconomyInitializer";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -33,6 +34,7 @@ const App = () => (
       <Suspense fallback={<div className="p-8 text-muted-foreground">Carregando…</div>}>
         <BrowserRouter>
           <SessionWatcher />
+          <EconomyInitializer />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />

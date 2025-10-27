@@ -1,17 +1,56 @@
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { getMockEconomy } from "@/lib/economyTypes";
+import { getEconomyProfile } from "@/lib/rewardEngine";
+import { supabase } from "@/integrations/supabase/client";
 import { Coins } from "lucide-react";
 
 export function EconomyBadge() {
-  const economy = getMockEconomy();
+  const [balance, setBalance] = useState(0);
+
+  useEffect(() => {
+    loadBalance();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('economy_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${supabase.auth.getUser().then(r => r.data.user?.id)}`,
+        },
+        (payload) => {
+          if (payload.new && 'balance_pitecoin' in payload.new) {
+            setBalance((payload.new as any).balance_pitecoin || 0);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadBalance = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const profile = await getEconomyProfile(session.user.id);
+    if (profile) {
+      setBalance(profile.balance_pitecoin);
+    }
+  };
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge variant="outline" className="gap-1.5 cursor-help">
           <Coins className="h-3.5 w-3.5" />
-          <span className="font-semibold">₱{economy.balance_pitecoin}</span>
+          <span className="font-semibold">₱{balance}</span>
         </Badge>
       </TooltipTrigger>
       <TooltipContent>

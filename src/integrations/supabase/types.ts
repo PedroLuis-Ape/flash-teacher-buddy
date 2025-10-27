@@ -133,6 +133,85 @@ export type Database = {
           },
         ]
       }
+      conversion_history: {
+        Row: {
+          converted_at: string
+          id: string
+          pitecoin_awarded: number
+          pts_converted: number
+          streak_bonus_pct: number
+          streak_weeks: number
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          converted_at?: string
+          id?: string
+          pitecoin_awarded: number
+          pts_converted: number
+          streak_bonus_pct?: number
+          streak_weeks?: number
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          converted_at?: string
+          id?: string
+          pitecoin_awarded?: number
+          pts_converted?: number
+          streak_bonus_pct?: number
+          streak_weeks?: number
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversion_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_activity: {
+        Row: {
+          actions_count: number
+          activity_date: string
+          created_at: string
+          id: string
+          pts_earned: number
+          user_id: string
+        }
+        Insert: {
+          actions_count?: number
+          activity_date: string
+          created_at?: string
+          id?: string
+          pts_earned?: number
+          user_id: string
+        }
+        Update: {
+          actions_count?: number
+          activity_date?: string
+          created_at?: string
+          id?: string
+          pts_earned?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flashcard_progress: {
         Row: {
           correct_count: number
@@ -327,6 +406,44 @@ export type Database = {
           },
         ]
       }
+      pitecoin_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          source: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          source: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          source?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pitecoin_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_sessions: {
         Row: {
           collection_id: string
@@ -367,37 +484,61 @@ export type Database = {
       }
       profiles: {
         Row: {
+          balance_pitecoin: number
+          best_streak: number
           created_at: string | null
+          current_streak: number
           email: string | null
           first_name: string | null
           id: string
           is_primary: boolean | null
+          last_conversion: string | null
+          last_daily_reward: string | null
+          level: number
+          pts_weekly: number
           public_access_enabled: boolean | null
           public_slug: string | null
           role: string | null
           updated_at: string | null
+          xp_total: number
         }
         Insert: {
+          balance_pitecoin?: number
+          best_streak?: number
           created_at?: string | null
+          current_streak?: number
           email?: string | null
           first_name?: string | null
           id: string
           is_primary?: boolean | null
+          last_conversion?: string | null
+          last_daily_reward?: string | null
+          level?: number
+          pts_weekly?: number
           public_access_enabled?: boolean | null
           public_slug?: string | null
           role?: string | null
           updated_at?: string | null
+          xp_total?: number
         }
         Update: {
+          balance_pitecoin?: number
+          best_streak?: number
           created_at?: string | null
+          current_streak?: number
           email?: string | null
           first_name?: string | null
           id?: string
           is_primary?: boolean | null
+          last_conversion?: string | null
+          last_daily_reward?: string | null
+          level?: number
+          pts_weekly?: number
           public_access_enabled?: boolean | null
           public_slug?: string | null
           role?: string | null
           updated_at?: string | null
+          xp_total?: number
         }
         Relationships: []
       }
