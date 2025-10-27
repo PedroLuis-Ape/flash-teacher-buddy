@@ -20,6 +20,7 @@ const Study = lazy(() => import("./pages/Study"));
 const Search = lazy(() => import("./pages/Search"));
 const MyStudents = lazy(() => import("./pages/MyStudents"));
 const MyTeachers = lazy(() => import("./pages/MyTeachers"));
+const Store = lazy(() => import("./pages/Store"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/portal/collection/:id/study" element={<Study />} />
             <Route path="/my-students" element={<MyStudents />} />
             <Route path="/my-teachers" element={<MyTeachers />} />
+            <Route path="/store" element={<Store />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

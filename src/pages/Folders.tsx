@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
-import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil, Search, Lock, Globe, Users, GraduationCap } from "lucide-react";
+import { FolderPlus, Folder, LogOut, FileText, CreditCard, Pencil, Search, Lock, Globe, Users, GraduationCap, ShoppingBag } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 interface FolderType {
   id: string;
@@ -281,6 +282,12 @@ const Folders = () => {
           </div>
           <div className="flex flex-wrap gap-2 items-center"> {/* PATCH: wrap no mobile */}
             <ThemeToggle />
+            {FEATURE_FLAGS.store_visible && (
+              <Button onClick={() => navigate("/store")} variant="outline">
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                Loja do Piteco
+              </Button>
+            )}
             <Button onClick={() => navigate("/profile")} variant="outline">
               Perfil
             </Button>
