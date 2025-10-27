@@ -6,10 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PitecoLogo } from "@/components/PitecoLogo";
+import { InventoryTab } from "@/components/InventoryTab";
+import { AppearanceTab } from "@/components/AppearanceTab";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -156,77 +160,169 @@ const Profile = () => {
           </div>
         </div>
 
-        <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle>Informações Pessoais</CardTitle>
-            <CardDescription>
-              Atualize seus dados de perfil
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSave} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">Nome</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  placeholder="Seu nome"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                />
-              </div>
-
-              {userRole === 'owner' && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Username (seu @)</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+{FEATURE_FLAGS.economy_enabled ? (
+          <Tabs defaultValue="profile" className="max-w-4xl">
+            <TabsList className="mb-4">
+              <TabsTrigger value="profile">Perfil</TabsTrigger>
+              <TabsTrigger value="inventory">Inventário</TabsTrigger>
+              <TabsTrigger value="appearance">Aparência</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="profile">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informações Pessoais</CardTitle>
+                  <CardDescription>
+                    Atualize seus dados de perfil
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSave} className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">Nome</Label>
                       <Input
-                        id="username"
+                        id="firstName"
                         type="text"
-                        placeholder="seunome"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="pl-8"
-                        minLength={3}
+                        placeholder="Seu nome"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
                       />
                     </div>
-                    {username && username.length >= 3 && username !== originalUsername && (
-                      <p className={`text-sm ${checkingUsername ? 'text-muted-foreground' : usernameAvailable ? 'text-green-600' : 'text-red-600'}`}>
-                        {checkingUsername ? 'Verificando...' : usernameAvailable ? '✓ Disponível!' : '✗ Já está em uso'}
-                      </p>
+
+                    {userRole === 'owner' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username (seu @)</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                            <Input
+                              id="username"
+                              type="text"
+                              placeholder="seunome"
+                              value={username}
+                              onChange={(e) => setUsername(e.target.value)}
+                              className="pl-8"
+                              minLength={3}
+                            />
+                          </div>
+                          {username && username.length >= 3 && username !== originalUsername && (
+                            <p className={`text-sm ${checkingUsername ? 'text-muted-foreground' : usernameAvailable ? 'text-green-600' : 'text-red-600'}`}>
+                              {checkingUsername ? 'Verificando...' : usernameAvailable ? '✓ Disponível!' : '✗ Já está em uso'}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Apenas letras, números e _ (mínimo 3 caracteres)
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="publicAccess">Aparecer na Busca Pública</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Permite que alunos encontrem você e suas pastas compartilhadas
+                              </p>
+                            </div>
+                            <Switch
+                              id="publicAccess"
+                              checked={publicAccessEnabled}
+                              onCheckedChange={setPublicAccessEnabled}
+                            />
+                          </div>
+                        </div>
+                      </>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Apenas letras, números e _ (mínimo 3 caracteres)
-                    </p>
-                  </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="publicAccess">Aparecer na Busca Pública</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Permite que alunos encontrem você e suas pastas compartilhadas
-                        </p>
+                    <Button type="submit" disabled={saving}>
+                      {saving ? "Salvando..." : "Salvar Alterações"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="inventory">
+              <InventoryTab />
+            </TabsContent>
+
+            <TabsContent value="appearance">
+              <AppearanceTab />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle>Informações Pessoais</CardTitle>
+              <CardDescription>
+                Atualize seus dados de perfil
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSave} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">Nome</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="Seu nome"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {userRole === 'owner' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username (seu @)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                        <Input
+                          id="username"
+                          type="text"
+                          placeholder="seunome"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className="pl-8"
+                          minLength={3}
+                        />
                       </div>
-                      <Switch
-                        id="publicAccess"
-                        checked={publicAccessEnabled}
-                        onCheckedChange={setPublicAccessEnabled}
-                      />
+                      {username && username.length >= 3 && username !== originalUsername && (
+                        <p className={`text-sm ${checkingUsername ? 'text-muted-foreground' : usernameAvailable ? 'text-green-600' : 'text-red-600'}`}>
+                          {checkingUsername ? 'Verificando...' : usernameAvailable ? '✓ Disponível!' : '✗ Já está em uso'}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Apenas letras, números e _ (mínimo 3 caracteres)
+                      </p>
                     </div>
-                  </div>
-                </>
-              )}
 
-              <Button type="submit" disabled={saving}>
-                {saving ? "Salvando..." : "Salvar Alterações"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="publicAccess">Aparecer na Busca Pública</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Permite que alunos encontrem você e suas pastas compartilhadas
+                          </p>
+                        </div>
+                        <Switch
+                          id="publicAccess"
+                          checked={publicAccessEnabled}
+                          onCheckedChange={setPublicAccessEnabled}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
