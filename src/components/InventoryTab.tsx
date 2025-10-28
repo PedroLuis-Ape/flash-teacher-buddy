@@ -1,35 +1,53 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getMockInventory, MOCK_SKINS_CATALOG, type SkinCatalogItem } from "@/lib/economyTypes";
+import { getUserInventory, getRarityColor, getRarityLabel, type InventoryItem } from "@/lib/storeEngine";
 import { PitecoLogo } from "@/components/PitecoLogo";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export function InventoryTab() {
-  const inventory = getMockInventory();
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Map inventory items to catalog items
-  const ownedSkins = inventory
-    .map(item => MOCK_SKINS_CATALOG.find(skin => skin.id === item.skin_id))
-    .filter((skin): skin is SkinCatalogItem => skin !== undefined);
+  useEffect(() => {
+    loadInventory();
+  }, []);
 
-  const getRarityColor = (rarity: string) => {
-    switch (rarity) {
-      case 'legendary': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'epic': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
-      case 'rare': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      default: return 'bg-muted text-muted-foreground';
+  const loadInventory = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const items = await getUserInventory(session.user.id);
+      setInventory(items);
+    } catch (error) {
+      console.error('Error loading inventory:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-12 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Inventário</CardTitle>
         <CardDescription>
-          Seus pacotes e skins coletados
+          Suas cartas e avatares colecionados
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {ownedSkins.length === 0 ? (
+        {inventory.length === 0 ? (
           <div className="text-center py-12 space-y-4">
             <PitecoLogo className="w-24 h-24 mx-auto opacity-50" />
             <div>
@@ -37,21 +55,25 @@ export function InventoryTab() {
                 Você ainda não possui nenhum pacote.
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Continue estudando para desbloquear!
+                Continue estudando para ganhar PITECOINS e visite a loja!
               </p>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {ownedSkins.map((skin) => (
-              <Card key={skin.id} className="overflow-hidden">
-                <div className="aspect-square bg-muted/50 flex items-center justify-center p-4">
-                  <PitecoLogo className="w-full h-full" />
+            {inventory.map((item) => (
+              <Card key={item.id} className="overflow-hidden">
+                <div className="aspect-square bg-muted/50">
+                  <img
+                    src={item.skin?.card_img}
+                    alt={item.skin?.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <CardContent className="p-3 space-y-2">
-                  <p className="font-medium text-sm truncate">{skin.name}</p>
-                  <Badge variant="outline" className={getRarityColor(skin.rarity)}>
-                    {skin.rarity}
+                  <p className="font-medium text-sm truncate">{item.skin?.name}</p>
+                  <Badge variant="outline" className={getRarityColor(item.skin?.rarity || 'normal')}>
+                    {getRarityLabel(item.skin?.rarity || 'normal')}
                   </Badge>
                 </CardContent>
               </Card>

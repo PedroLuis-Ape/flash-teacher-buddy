@@ -484,6 +484,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_skin_id: string | null
           balance_pitecoin: number
           best_streak: number
           created_at: string | null
@@ -495,6 +496,7 @@ export type Database = {
           last_conversion: string | null
           last_daily_reward: string | null
           level: number
+          mascot_skin_id: string | null
           pts_weekly: number
           public_access_enabled: boolean | null
           public_slug: string | null
@@ -503,6 +505,7 @@ export type Database = {
           xp_total: number
         }
         Insert: {
+          avatar_skin_id?: string | null
           balance_pitecoin?: number
           best_streak?: number
           created_at?: string | null
@@ -514,6 +517,7 @@ export type Database = {
           last_conversion?: string | null
           last_daily_reward?: string | null
           level?: number
+          mascot_skin_id?: string | null
           pts_weekly?: number
           public_access_enabled?: boolean | null
           public_slug?: string | null
@@ -522,6 +526,7 @@ export type Database = {
           xp_total?: number
         }
         Update: {
+          avatar_skin_id?: string | null
           balance_pitecoin?: number
           best_streak?: number
           created_at?: string | null
@@ -533,12 +538,64 @@ export type Database = {
           last_conversion?: string | null
           last_daily_reward?: string | null
           level?: number
+          mascot_skin_id?: string | null
           pts_weekly?: number
           public_access_enabled?: boolean | null
           public_slug?: string | null
           role?: string | null
           updated_at?: string | null
           xp_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_avatar_skin_id_fkey"
+            columns: ["avatar_skin_id"]
+            isOneToOne: false
+            referencedRelation: "skins_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_mascot_skin_id_fkey"
+            columns: ["mascot_skin_id"]
+            isOneToOne: false
+            referencedRelation: "skins_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skins_catalog: {
+        Row: {
+          avatar_img: string
+          card_img: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price_pitecoin: number
+          rarity: string
+        }
+        Insert: {
+          avatar_img: string
+          card_img: string
+          created_at?: string
+          description?: string | null
+          id: string
+          is_active?: boolean
+          name: string
+          price_pitecoin?: number
+          rarity: string
+        }
+        Update: {
+          avatar_img?: string
+          card_img?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_pitecoin?: number
+          rarity?: string
         }
         Relationships: []
       }
@@ -606,6 +663,35 @@ export type Database = {
           teacher_id?: string
         }
         Relationships: []
+      }
+      user_inventory: {
+        Row: {
+          acquired_at: string
+          id: string
+          skin_id: string
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          id?: string
+          skin_id: string
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string
+          id?: string
+          skin_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_inventory_skin_id_fkey"
+            columns: ["skin_id"]
+            isOneToOne: false
+            referencedRelation: "skins_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

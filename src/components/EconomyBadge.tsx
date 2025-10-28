@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getEconomyProfile } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
-import { Coins } from "lucide-react";
+import pitecoinIcon from "@/assets/pitecoin.png";
 
 export function EconomyBadge() {
   const [balance, setBalance] = useState(0);
@@ -49,12 +49,12 @@ export function EconomyBadge() {
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge variant="outline" className="gap-1.5 cursor-help">
-          <Coins className="h-3.5 w-3.5" />
+          <img src={pitecoinIcon} alt="PITECOIN" className="h-4 w-4" />
           <span className="font-semibold">₱{balance}</span>
         </Badge>
       </TooltipTrigger>
       <TooltipContent>
-        <p className="text-xs">Moeda simbólica da série APE</p>
+        <p className="text-xs">PITECOIN — moeda simbólica da série APE</p>
       </TooltipContent>
     </Tooltip>
   );

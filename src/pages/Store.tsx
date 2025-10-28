@@ -1,12 +1,96 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PitecoLogo } from "@/components/PitecoLogo";
-import { ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { EconomyBadge } from "@/components/EconomyBadge";
+import { SkinCard } from "@/components/SkinCard";
+import { getSkinsCaltalog, getUserInventory, purchaseSkin, type SkinItem } from "@/lib/storeEngine";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 const Store = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [skins, setSkins] = useState<SkinItem[]>([]);
+  const [ownedSkinIds, setOwnedSkinIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadStoreData();
+  }, []);
+
+  const loadStoreData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/auth');
+        return;
+      }
+
+      setUserId(session.user.id);
+
+      const [catalogData, inventoryData] = await Promise.all([
+        getSkinsCaltalog(),
+        getUserInventory(session.user.id),
+      ]);
+
+      setSkins(catalogData);
+      setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
+    } catch (error) {
+      console.error('Error loading store:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar a loja.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePurchase = async (skinId: string, price: number) => {
+    if (!userId) return;
+
+    setPurchasing(true);
+    try {
+      const result = await purchaseSkin(userId, skinId, price);
+      
+      if (result.success) {
+        toast({
+          title: "Compra realizada!",
+          description: result.message,
+        });
+        // Reload inventory
+        const inventoryData = await getUserInventory(userId);
+        setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
+      } else {
+        toast({
+          title: "Erro na compra",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Purchase error:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível processar a compra.",
+        variant: "destructive",
+      });
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  if (!FEATURE_FLAGS.store_visible) {
+    navigate('/folders');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -25,39 +109,33 @@ const Store = () => {
             <div>
               <h1 className="text-3xl font-bold">Loja do Piteco</h1>
               <p className="text-sm text-muted-foreground">
-                Colecione cartas e avatares do Piteco. (Em breve)
+                Colecione cartas e avatares exclusivos do Piteco
               </p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            {FEATURE_FLAGS.economy_enabled && <EconomyBadge />}
+            <ThemeToggle />
+          </div>
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <Card className="text-center p-12">
-            <CardHeader className="space-y-4">
-              <div className="flex justify-center">
-                <div className="relative">
-                  <PitecoLogo className="w-32 h-32 opacity-80" />
-                  <Package className="absolute bottom-0 right-0 h-12 w-12 text-primary/60" />
-                </div>
-              </div>
-              <CardTitle className="text-2xl">A vitrine ainda está sendo montada.</CardTitle>
-              <CardDescription className="text-base">
-                Volte em breve para ver os pacotes de cartas e avatares exclusivos do Piteco!
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
-                Em breve você poderá usar seus <span className="font-semibold text-primary">PITECOINS</span> para
-                adquirir itens especiais e personalizar sua experiência de estudo.
-              </div>
-              <Button onClick={() => navigate("/folders")} variant="outline" className="mt-4">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar para Pastas
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {skins.map((skin) => (
+              <SkinCard
+                key={skin.id}
+                skin={skin}
+                owned={ownedSkinIds.has(skin.id)}
+                onPurchase={handlePurchase}
+                loading={purchasing}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
