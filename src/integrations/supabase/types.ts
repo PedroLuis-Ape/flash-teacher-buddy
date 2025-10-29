@@ -359,6 +359,53 @@ export type Database = {
         }
         Relationships: []
       }
+      gift_offers: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          message: string | null
+          recipient_user_id: string
+          request_id: string | null
+          sent_by: string
+          skin_id: string
+          status: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          recipient_user_id: string
+          request_id?: string | null
+          sent_by?: string
+          skin_id: string
+          status?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          recipient_user_id?: string
+          request_id?: string | null
+          sent_by?: string
+          skin_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_offers_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lists: {
         Row: {
           class_id: string | null
@@ -484,6 +531,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_id: string | null
           avatar_skin_id: string | null
           balance_pitecoin: number
           best_streak: number
@@ -502,9 +550,11 @@ export type Database = {
           public_slug: string | null
           role: string | null
           updated_at: string | null
+          user_tag: string | null
           xp_total: number
         }
         Insert: {
+          account_id?: string | null
           avatar_skin_id?: string | null
           balance_pitecoin?: number
           best_streak?: number
@@ -523,9 +573,11 @@ export type Database = {
           public_slug?: string | null
           role?: string | null
           updated_at?: string | null
+          user_tag?: string | null
           xp_total?: number
         }
         Update: {
+          account_id?: string | null
           avatar_skin_id?: string | null
           balance_pitecoin?: number
           best_streak?: number
@@ -544,6 +596,7 @@ export type Database = {
           public_slug?: string | null
           role?: string | null
           updated_at?: string | null
+          user_tag?: string | null
           xp_total?: number
         }
         Relationships: [
@@ -566,36 +619,57 @@ export type Database = {
       skins_catalog: {
         Row: {
           avatar_img: string
+          avatar_src: string | null
           card_img: string
+          card_src: string | null
           created_at: string
+          current_supply: number | null
           description: string | null
+          ends_at: string | null
           id: string
           is_active: boolean
+          max_supply: number | null
           name: string
           price_pitecoin: number
           rarity: string
+          starts_at: string | null
+          status: string | null
         }
         Insert: {
           avatar_img: string
+          avatar_src?: string | null
           card_img: string
+          card_src?: string | null
           created_at?: string
+          current_supply?: number | null
           description?: string | null
+          ends_at?: string | null
           id: string
           is_active?: boolean
+          max_supply?: number | null
           name: string
           price_pitecoin?: number
           rarity: string
+          starts_at?: string | null
+          status?: string | null
         }
         Update: {
           avatar_img?: string
+          avatar_src?: string | null
           card_img?: string
+          card_src?: string | null
           created_at?: string
+          current_supply?: number | null
           description?: string | null
+          ends_at?: string | null
           id?: string
           is_active?: boolean
+          max_supply?: number | null
           name?: string
           price_pitecoin?: number
           rarity?: string
+          starts_at?: string | null
+          status?: string | null
         }
         Relationships: []
       }
@@ -779,6 +853,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_user_tag: { Args: never; Returns: string }
       get_portal_counts: {
         Args: { _folder_id: string }
         Returns: {
@@ -876,6 +951,7 @@ export type Database = {
         Args: { _class_id: string; _user_id: string }
         Returns: boolean
       }
+      is_developer_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "student"
