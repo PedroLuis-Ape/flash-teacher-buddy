@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2 } from "lucide-react";
 import { speakText, pickLang } from "@/lib/speech";
 import { SpeechRateControl } from "./SpeechRateControl";
+import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FlipStudyViewProps {
   front: string;
@@ -21,6 +23,14 @@ export const FlipStudyView = ({
   direction,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
+  
+  const handleKnew = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await awardPoints(session.user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'flashcard_correct');
+    }
+    onKnew();
+  };
 
   const showText = direction === "pt-en" ? front : back;
   const hideText = direction === "pt-en" ? back : front;
@@ -51,13 +61,13 @@ export const FlipStudyView = ({
         handleFlip();
       } else if (e.key === " " && isFlipped) {
         e.preventDefault();
-        onKnew();
+        handleKnew();
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isFlipped, onKnew, direction, hideText]);
+  }, [isFlipped, direction, hideText]);
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto">
@@ -105,7 +115,7 @@ export const FlipStudyView = ({
             <RotateCcw className="mr-2 h-5 w-5" />
             Não Sabia
           </Button>
-          <Button variant="default" size="lg" onClick={onKnew}>
+          <Button variant="default" size="lg" onClick={handleKnew}>
             Sabia
           </Button>
         </div>

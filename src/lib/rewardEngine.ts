@@ -6,13 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { FEATURE_FLAGS } from "./featureFlags";
 
 export const REWARD_AMOUNTS = {
-  CORRECT_ANSWER: 2,
+  CORRECT_ANSWER: 5,
+  SESSION_BONUS: 10,
+  SESSION_BONUS_MIN_CORRECT: 10,
   SESSION_COMPLETE: 20,
   WEEKLY_CHALLENGE: 100,
   DAILY_LOGIN: 10,
   STREAK_DAILY: 5,
   MAX_STREAK_BONUS: 35, // 7 days × 5
-  DAILY_CAP: 300, // PTS cap per day
+  DAILY_CAP: 500, // PTS cap per day
+  CONVERSION_RATE: 100, // 100 PTS => 1 PITECOIN
 } as const;
 
 export interface EconomyProfile {
@@ -113,10 +116,58 @@ export async function awardPoints(
         .eq('id', userId);
     }
 
+    // Auto-convert if needed
+    await convertPointsIfNeeded(userId);
+
     return { success: true, ptsAwarded: cappedPts, xpAwarded };
   } catch (error) {
     console.error('[RewardEngine] Error awarding points:', error);
     return { success: false, ptsAwarded: 0, xpAwarded: 0 };
+  }
+}
+
+/**
+ * Convert points to PITECOIN automatically
+ */
+export async function convertPointsIfNeeded(userId: string): Promise<void> {
+  if (!FEATURE_FLAGS.economy_enabled) return;
+
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('pts_weekly, balance_pitecoin')
+      .eq('id', userId)
+      .single();
+
+    if (!profile) return;
+
+    const ptsToConvert = Math.floor(profile.pts_weekly / REWARD_AMOUNTS.CONVERSION_RATE) * REWARD_AMOUNTS.CONVERSION_RATE;
+    
+    if (ptsToConvert === 0) return;
+
+    const pitecoinToAdd = ptsToConvert / REWARD_AMOUNTS.CONVERSION_RATE;
+    const newBalance = profile.balance_pitecoin + pitecoinToAdd;
+    const remainingPts = profile.pts_weekly - ptsToConvert;
+
+    // Update profile
+    await supabase
+      .from('profiles')
+      .update({
+        pts_weekly: remainingPts,
+        balance_pitecoin: newBalance,
+      })
+      .eq('id', userId);
+
+    // Log transaction
+    await supabase.from('pitecoin_transactions').insert({
+      user_id: userId,
+      amount: pitecoinToAdd,
+      balance_after: newBalance,
+      type: 'conversion',
+      source: 'auto_convert'
+    });
+  } catch (err) {
+    console.error('[RewardEngine] Error converting points:', err);
   }
 }
 

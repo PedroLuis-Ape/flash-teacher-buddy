@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
+import { GlobalLayout } from "@/components/GlobalLayout";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -38,34 +39,35 @@ const App = () => (
         <BrowserRouter>
           <SessionWatcher />
           <EconomyInitializer />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/folders" element={<Folders />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/folder/:id" element={<Folder />} />
-            <Route path="/list/:id" element={<ListDetail />} />
-            <Route path="/list/:id/games" element={<GamesHub />} />
-            <Route path="/list/:id/study" element={<Study />} />
-            <Route path="/collection/:id" element={<Collection />} />
-            <Route path="/collection/:id/games" element={<GamesHub />} />
-            <Route path="/collection/:id/study" element={<Study />} />
-            <Route path="/portal" element={<PublicPortal />} />
-            <Route path="/portal/folder/:id" element={<Folder />} />
-            <Route path="/portal/list/:id/games" element={<GamesHub />} />
-            <Route path="/portal/list/:id/study" element={<Study />} />
-            <Route path="/portal/collection/:id" element={<PublicCollection />} />
-            <Route path="/portal/collection/:id/study" element={<Study />} />
-            <Route path="/my-students" element={<MyStudents />} />
-            <Route path="/my-teachers" element={<MyTeachers />} />
-            <Route path="/store" element={<Store />} />
-            <Route path="/gifts" element={<PresentBox />} />
-            <Route path="/admin/catalog" element={<AdminCatalog />} />
-            <Route path="/admin/gifts" element={<AdminGifts />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <GlobalLayout>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/folders" element={<Folders />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/folder/:id" element={<Folder />} />
+              <Route path="/list/:id" element={<ListDetail />} />
+              <Route path="/list/:id/games" element={<GamesHub />} />
+              <Route path="/list/:id/study" element={<Study />} />
+              <Route path="/collection/:id" element={<Collection />} />
+              <Route path="/collection/:id/games" element={<GamesHub />} />
+              <Route path="/collection/:id/study" element={<Study />} />
+              <Route path="/portal" element={<PublicPortal />} />
+              <Route path="/portal/folder/:id" element={<Folder />} />
+              <Route path="/portal/list/:id/games" element={<GamesHub />} />
+              <Route path="/portal/list/:id/study" element={<Study />} />
+              <Route path="/portal/collection/:id" element={<PublicCollection />} />
+              <Route path="/portal/collection/:id/study" element={<Study />} />
+              <Route path="/my-students" element={<MyStudents />} />
+              <Route path="/my-teachers" element={<MyTeachers />} />
+              <Route path="/store" element={<Store />} />
+              <Route path="/gifts" element={<PresentBox />} />
+              <Route path="/admin/catalog" element={<AdminCatalog />} />
+              <Route path="/admin/gifts" element={<AdminGifts />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </GlobalLayout>
         </BrowserRouter>
       </Suspense>
     </TooltipProvider>

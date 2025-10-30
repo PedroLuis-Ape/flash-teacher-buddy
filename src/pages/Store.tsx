@@ -123,6 +123,10 @@ const Store = () => {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : skins.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Nenhum pacote publicado no momento.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {skins.map((skin) => (

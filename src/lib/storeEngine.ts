@@ -59,6 +59,7 @@ export async function getSkinsCaltalog(): Promise<SkinItem[]> {
       .from('skins_catalog')
       .select('*')
       .eq('is_active', true)
+      .eq('status', 'published')
       .order('price_pitecoin', { ascending: true });
 
     if (error) throw error;

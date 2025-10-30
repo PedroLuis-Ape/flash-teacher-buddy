@@ -16,11 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { toast } from "@/hooks/use-toast";
 import { getRarityColor, getRarityLabel } from "@/lib/storeEngine";
+import { AdminCatalogForm } from "./AdminCatalogForm";
 
 export default function AdminCatalog() {
   const [skins, setSkins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -139,6 +141,20 @@ export default function AdminCatalog() {
     );
   }
 
+  if (showForm) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <AdminCatalogForm
+          onSuccess={() => {
+            setShowForm(false);
+            loadSkins();
+          }}
+          onCancel={() => setShowForm(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="container max-w-6xl py-8">
       <div className="flex items-center justify-between mb-6">
@@ -146,7 +162,7 @@ export default function AdminCatalog() {
           <h1 className="text-3xl font-bold">Catálogo de Skins</h1>
           <p className="text-muted-foreground">Gerenciar pacotes da loja</p>
         </div>
-        <Button>
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nova Skin
         </Button>

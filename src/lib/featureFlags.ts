@@ -16,7 +16,7 @@ export const FEATURE_FLAGS = {
    * When false: no balance, no inventory, no economy UI
    * When true: shows balance badge, inventory and appearance tabs, users earn PTS/XP
    */
-  economy_enabled: false,
+  economy_enabled: true,
 
   /**
    * Weekly conversion cron job
@@ -30,7 +30,7 @@ export const FEATURE_FLAGS = {
    * When false: no Admin → Catalog panel
    * When true: developer_admin can manage skins catalog
    */
-  admin_skins_enabled: false,
+  admin_skins_enabled: true,
 
   /**
    * User directory / search
@@ -51,12 +51,12 @@ export const FEATURE_FLAGS = {
    * When false: no gift inbox in UI
    * When true: users can see and claim their gifts
    */
-  present_inbox_visible: false,
+  present_inbox_visible: true,
 
   /**
    * Currency header
    * When false: no global currency display
    * When true: shows points + PITECOIN in header across all pages
    */
-  currency_header_enabled: false,
+  currency_header_enabled: true,
 } as const;

@@ -7,6 +7,8 @@ import { speakText, pickLang } from "@/lib/speech";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl } from "./SpeechRateControl";
+import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
@@ -66,11 +68,19 @@ export const MultipleChoiceStudyView = ({
     setShowFeedback(false);
   }, [currentCard, allCards, isPtToEn]);
 
-  const handleOptionClick = (index: number) => {
+  const handleOptionClick = async (index: number) => {
     if (showFeedback) return; // Prevenir cliques após resposta
 
     setSelectedOption(index);
     setShowFeedback(true);
+
+    // Award points if correct
+    if (index === correctIndex) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await awardPoints(session.user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'flashcard_correct');
+      }
+    }
 
     // Dar feedback visual antes de avançar
     setTimeout(() => {
