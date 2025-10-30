@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Gift, Clock, Check, X } from "lucide-react";
+import { Gift, Clock, Check, X, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -118,7 +118,19 @@ export default function PresentBox() {
   return (
     <div className="container max-w-4xl py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">🎁 Caixa de Presentes</h1>
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/folders")}
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">🎁 Caixa de Presentes</h1>
+          </div>
+        </div>
         <p className="text-muted-foreground">
           Presentes enviados pelos administradores
         </p>
