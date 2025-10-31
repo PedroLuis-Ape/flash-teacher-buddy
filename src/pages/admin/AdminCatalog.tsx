@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Archive } from "lucide-react";
+import { Plus, Edit, Trash2, Archive, ArrowLeft, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -17,12 +27,16 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { toast } from "@/hooks/use-toast";
 import { getRarityColor, getRarityLabel } from "@/lib/storeEngine";
 import { AdminCatalogForm } from "./AdminCatalogForm";
+import { logAdminAction } from "@/lib/adminLogger";
 
 export default function AdminCatalog() {
   const [skins, setSkins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingSkin, setEditingSkin] = useState<any>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; skin: any }>({ open: false, skin: null });
+  const [archiveDialog, setArchiveDialog] = useState<{ open: boolean; skin: any }>({ open: false, skin: null });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -81,52 +95,68 @@ export default function AdminCatalog() {
     setLoading(false);
   };
 
-  const toggleStatus = async (skinId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'published' ? 'archived' : 'published';
+  const confirmToggleStatus = async () => {
+    if (!archiveDialog.skin) return;
+    
+    const skin = archiveDialog.skin;
+    const newStatus = skin.status === 'published' ? 'archived' : 'published';
     
     const { error } = await supabase
       .from('skins_catalog')
       .update({ status: newStatus })
-      .eq('id', skinId);
+      .eq('id', skin.id);
 
     if (error) {
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: "Não foi possível atualizar o status.",
         variant: "destructive",
       });
     } else {
+      await logAdminAction(
+        newStatus === 'archived' ? 'archive_package' : 'publish_package',
+        skin.name,
+        { old_status: skin.status, new_status: newStatus }
+      );
+      
       toast({
-        title: "Status atualizado",
+        title: "✅ Status atualizado",
         description: `Skin ${newStatus === 'published' ? 'publicada' : 'arquivada'} com sucesso.`,
       });
       loadSkins();
     }
+    setArchiveDialog({ open: false, skin: null });
   };
 
-  const deleteSkin = async (skinId: string) => {
-    if (!confirm('Tem certeza que deseja deletar esta skin? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
+  const confirmDelete = async () => {
+    if (!deleteDialog.skin) return;
+    
+    const skin = deleteDialog.skin;
+    
     const { error } = await supabase
       .from('skins_catalog')
       .delete()
-      .eq('id', skinId);
+      .eq('id', skin.id);
 
     if (error) {
       toast({
-        title: "Erro",
+        title: "❌ Erro",
         description: "Não foi possível deletar a skin.",
         variant: "destructive",
       });
     } else {
+      await logAdminAction('delete_package', skin.name, { 
+        rarity: skin.rarity,
+        price: skin.price_pitecoin 
+      });
+      
       toast({
-        title: "Skin deletada",
-        description: "A skin foi removida do catálogo.",
+        title: "✅ Skin excluída",
+        description: "A skin foi removida permanentemente do catálogo.",
       });
       loadSkins();
     }
+    setDeleteDialog({ open: false, skin: null });
   };
 
   if (!isAdmin || loading) {
@@ -141,15 +171,20 @@ export default function AdminCatalog() {
     );
   }
 
-  if (showForm) {
+  if (showForm || editingSkin) {
     return (
       <div className="container max-w-4xl py-8">
         <AdminCatalogForm
+          skin={editingSkin}
           onSuccess={() => {
             setShowForm(false);
+            setEditingSkin(null);
             loadSkins();
           }}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingSkin(null);
+          }}
         />
       </div>
     );
@@ -158,14 +193,30 @@ export default function AdminCatalog() {
   return (
     <div className="container max-w-6xl py-8">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Catálogo de Skins</h1>
-          <p className="text-muted-foreground">Gerenciar pacotes da loja</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/store')}
+            aria-label="Voltar à Loja"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Catálogo de Skins</h1>
+            <p className="text-muted-foreground">Gerenciar pacotes da loja</p>
+          </div>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Skin
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/admin/logs')}>
+            <FileText className="h-4 w-4 mr-2" />
+            Logs
+          </Button>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Skin
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -214,22 +265,29 @@ export default function AdminCatalog() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => setEditingSkin(skin)}
+                        title="Editar"
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        onClick={() => toggleStatus(skin.id, skin.status)}
+                        onClick={() => setArchiveDialog({ open: true, skin })}
+                        title={skin.status === 'published' ? 'Arquivar' : 'Publicar'}
                       >
                         <Archive className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        onClick={() => deleteSkin(skin.id)}
+                        onClick={() => setDeleteDialog({ open: true, skin })}
+                        title="Excluir permanentemente"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>
@@ -245,6 +303,61 @@ export default function AdminCatalog() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, skin: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Excluir Pacote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente e não pode ser desfeita.
+              <br />
+              Deseja realmente excluir o pacote <strong>{deleteDialog.skin?.name}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Archive/Publish Confirmation Dialog */}
+      <AlertDialog open={archiveDialog.open} onOpenChange={(open) => setArchiveDialog({ open, skin: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {archiveDialog.skin?.status === 'published' ? 'Arquivar Pacote' : 'Publicar Pacote'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {archiveDialog.skin?.status === 'published' ? (
+                <>
+                  O pacote será removido da loja, mas continuará salvo no painel.
+                  <br />
+                  Deseja arquivar <strong>{archiveDialog.skin?.name}</strong>?
+                </>
+              ) : (
+                <>
+                  O pacote será publicado e ficará visível na loja.
+                  <br />
+                  Deseja publicar <strong>{archiveDialog.skin?.name}</strong>?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleStatus}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

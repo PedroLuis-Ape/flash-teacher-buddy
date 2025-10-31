@@ -25,6 +25,7 @@ const MyTeachers = lazy(() => import("./pages/MyTeachers"));
 const Store = lazy(() => import("./pages/Store"));
 const PresentBox = lazy(() => import("./pages/PresentBox"));
 const AdminCatalog = lazy(() => import("./pages/admin/AdminCatalog"));
+const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminGifts = lazy(() => import("./pages/admin/AdminGifts"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/store" element={<Store />} />
               <Route path="/gifts" element={<PresentBox />} />
               <Route path="/admin/catalog" element={<AdminCatalog />} />
+              <Route path="/admin/logs" element={<AdminLogs />} />
               <Route path="/admin/gifts" element={<AdminGifts />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

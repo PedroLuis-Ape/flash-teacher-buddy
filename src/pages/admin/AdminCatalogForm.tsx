@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,26 +8,68 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { logAdminAction } from "@/lib/adminLogger";
 
 interface AdminCatalogFormProps {
+  skin?: any;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function AdminCatalogForm({ onSuccess, onCancel }: AdminCatalogFormProps) {
+export function AdminCatalogForm({ skin, onSuccess, onCancel }: AdminCatalogFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     rarity: "normal" as "normal" | "rare" | "epic" | "legendary",
-    price_pitecoin: 0,
+    price_pitecoin: 10,
     description: "",
     avatar_img: "",
     card_img: "",
     status: "draft" as "draft" | "preview" | "published" | "archived",
     is_active: true,
   });
+
+  // Auto-calculate price based on rarity
+  useEffect(() => {
+    const rarityPrices = {
+      normal: 10,
+      rare: 25,
+      epic: 50,
+      legendary: 100,
+    };
+    setFormData(prev => ({ ...prev, price_pitecoin: rarityPrices[prev.rarity] }));
+  }, [formData.rarity]);
+
+  // Load existing skin data for editing
+  useEffect(() => {
+    if (skin) {
+      setFormData({
+        name: skin.name || "",
+        rarity: skin.rarity || "normal",
+        price_pitecoin: skin.price_pitecoin || 10,
+        description: skin.description || "",
+        avatar_img: skin.avatar_img || "",
+        card_img: skin.card_img || "",
+        status: skin.status || "draft",
+        is_active: skin.is_active ?? true,
+      });
+    }
+  }, [skin]);
+
+  const validateImage = (url: string, type: 'avatar' | 'card'): boolean => {
+    const extension = url.split('.').pop()?.toLowerCase();
+    if (!extension || !['png', 'webp'].includes(extension)) {
+      toast({
+        title: "Formato inválido",
+        description: `${type === 'avatar' ? 'Avatar' : 'Card'} deve ser PNG ou WebP`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,35 +83,77 @@ export function AdminCatalogForm({ onSuccess, onCancel }: AdminCatalogFormProps)
       return;
     }
 
+    if (!validateImage(formData.avatar_img, 'avatar') || !validateImage(formData.card_img, 'card')) {
+      return;
+    }
+
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('skins_catalog')
-        .insert({
-          id: formData.name.toLowerCase().replace(/\s+/g, '-'),
-          name: formData.name,
+      const skinId = formData.name.toLowerCase().replace(/\s+/g, '-');
+      
+      if (skin) {
+        // Update existing skin
+        const { error } = await supabase
+          .from('skins_catalog')
+          .update({
+            name: formData.name,
+            rarity: formData.rarity,
+            price_pitecoin: formData.price_pitecoin,
+            description: formData.description || null,
+            avatar_img: formData.avatar_img,
+            card_img: formData.card_img,
+            status: formData.status,
+            is_active: formData.is_active,
+          })
+          .eq('id', skin.id);
+
+        if (error) throw error;
+
+        await logAdminAction('update_package', formData.name, {
           rarity: formData.rarity,
-          price_pitecoin: formData.price_pitecoin,
-          description: formData.description || null,
-          avatar_img: formData.avatar_img,
-          card_img: formData.card_img,
+          price: formData.price_pitecoin,
           status: formData.status,
-          is_active: formData.is_active,
         });
 
-      if (error) throw error;
+        toast({
+          title: "✅ Skin atualizada",
+          description: "As alterações foram salvas com sucesso!",
+        });
+      } else {
+        // Create new skin
+        const { error } = await supabase
+          .from('skins_catalog')
+          .insert({
+            id: skinId,
+            name: formData.name,
+            rarity: formData.rarity,
+            price_pitecoin: formData.price_pitecoin,
+            description: formData.description || null,
+            avatar_img: formData.avatar_img,
+            card_img: formData.card_img,
+            status: formData.status,
+            is_active: formData.is_active,
+          });
 
-      toast({
-        title: "Skin criada",
-        description: "Pacote adicionado ao catálogo com sucesso!",
-      });
+        if (error) throw error;
+
+        await logAdminAction('create_package', formData.name, {
+          rarity: formData.rarity,
+          price: formData.price_pitecoin,
+        });
+
+        toast({
+          title: "✅ Skin criada",
+          description: "Pacote adicionado ao catálogo com sucesso!",
+        });
+      }
 
       onSuccess();
     } catch (error: any) {
-      console.error('Error creating skin:', error);
+      console.error('Error saving skin:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível criar a skin.",
+        title: "❌ Erro",
+        description: error.message || "Não foi possível salvar a skin.",
         variant: "destructive",
       });
     } finally {
@@ -80,7 +164,18 @@ export function AdminCatalogForm({ onSuccess, onCancel }: AdminCatalogFormProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Nova Skin</CardTitle>
+        <div className="flex items-center gap-4">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onCancel}
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <CardTitle>{skin ? 'Editar Skin' : 'Nova Skin'}</CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,14 +208,19 @@ export function AdminCatalogForm({ onSuccess, onCancel }: AdminCatalogFormProps)
           </div>
 
           <div>
-            <Label htmlFor="price">Preço (PITECOIN)</Label>
+            <Label htmlFor="price">Preço (PITECOIN) - Automático por raridade</Label>
             <Input
               id="price"
               type="number"
               min="0"
               value={formData.price_pitecoin}
               onChange={(e) => setFormData({ ...formData, price_pitecoin: parseInt(e.target.value) || 0 })}
+              disabled
+              className="bg-muted"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Normal: ₱10 | Raro: ₱25 | Épico: ₱50 | Lendário: ₱100
+            </p>
           </div>
 
           <div>
@@ -188,7 +288,7 @@ export function AdminCatalogForm({ onSuccess, onCancel }: AdminCatalogFormProps)
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Criar Skin
+              {skin ? 'Salvar Alterações' : 'Criar Skin'}
             </Button>
           </div>
         </form>
