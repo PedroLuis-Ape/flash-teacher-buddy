@@ -26,7 +26,7 @@ export function AdminButton() {
       .eq('user_id', session.user.id)
       .maybeSingle();
 
-    setIsAdmin(role?.role === 'developer_admin');
+    setIsAdmin((role?.role as string) === 'developer_admin');
   };
 
   if (!isAdmin) return null;
