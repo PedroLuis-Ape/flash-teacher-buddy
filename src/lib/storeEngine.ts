@@ -10,8 +10,8 @@ export interface SkinItem {
   name: string;
   rarity: 'normal' | 'rare' | 'epic' | 'legendary';
   price_pitecoin: number;
-  avatar_img: string;
-  card_img: string;
+  avatar_final: string;
+  card_final: string;
   description: string | null;
   is_active: boolean;
 }
@@ -56,10 +56,9 @@ export function getRarityLabel(rarity: string): string {
 export async function getSkinsCaltalog(): Promise<SkinItem[]> {
   try {
     const { data, error } = await supabase
-      .from('skins_catalog')
+      .from('public_catalog')
       .select('*')
       .eq('is_active', true)
-      .eq('status', 'published')
       .order('price_pitecoin', { ascending: true });
 
     if (error) throw error;
@@ -79,7 +78,7 @@ export async function getUserInventory(userId: string): Promise<InventoryItem[]>
       .from('user_inventory')
       .select(`
         *,
-        skin:skins_catalog(*)
+        skin:public_catalog(*)
       `)
       .eq('user_id', userId)
       .order('acquired_at', { ascending: false });

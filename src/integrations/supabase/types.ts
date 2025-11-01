@@ -643,6 +643,45 @@ export type Database = {
           },
         ]
       }
+      public_catalog: {
+        Row: {
+          avatar_final: string
+          card_final: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price_pitecoin: number
+          rarity: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_final: string
+          card_final: string
+          created_at?: string
+          description?: string | null
+          id: string
+          is_active?: boolean
+          name: string
+          price_pitecoin: number
+          rarity: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_final?: string
+          card_final?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_pitecoin?: number
+          rarity?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       skins_catalog: {
         Row: {
           avatar_img: string
