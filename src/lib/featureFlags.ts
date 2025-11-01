@@ -30,7 +30,7 @@ export const FEATURE_FLAGS = {
    * When false: no Admin → Catalog panel
    * When true: developer_admin can manage skins catalog
    */
-  admin_skins_enabled: true,
+  admin_skins_enabled: false,
 
   /**
    * User directory / search
@@ -59,4 +59,11 @@ export const FEATURE_FLAGS = {
    * When true: shows points + PITECOIN in header across all pages
    */
   currency_header_enabled: true,
+
+  /**
+   * Journey system
+   * When false: journey features disabled
+   * When true: journey features enabled
+   */
+  journey_enabled: false,
 } as const;

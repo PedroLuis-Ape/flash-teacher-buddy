@@ -116,9 +116,6 @@ export async function awardPoints(
         .eq('id', userId);
     }
 
-    // Auto-convert if needed
-    await convertPointsIfNeeded(userId);
-
     return { success: true, ptsAwarded: cappedPts, xpAwarded };
   } catch (error) {
     console.error('[RewardEngine] Error awarding points:', error);

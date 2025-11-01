@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { CurrencyHeader } from "./CurrencyHeader";
 import { PresentBoxBadge } from "./PresentBoxBadge";
-import { AdminButton } from "./AdminButton";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -28,7 +27,6 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
             <div className="container flex h-14 items-center justify-end gap-4 px-4">
               <CurrencyHeader />
               {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
-              <AdminButton />
             </div>
           </header>
         )}
