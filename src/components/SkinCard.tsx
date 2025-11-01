@@ -34,7 +34,7 @@ export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
         <CardHeader className="p-0">
           <div className="aspect-square bg-muted relative overflow-hidden">
             <img
-              src={skin.card_img}
+              src={skin.card_final}
               alt={skin.name}
               className="w-full h-full object-cover"
             />
@@ -74,7 +74,7 @@ export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
           <div className="space-y-4">
             <div className="aspect-square bg-muted rounded-lg overflow-hidden">
               <img
-                src={skin.card_img}
+                src={skin.card_final}
                 alt={skin.name}
                 className="w-full h-full object-cover"
               />

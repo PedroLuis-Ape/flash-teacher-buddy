@@ -117,7 +117,7 @@ export function AppearanceTab() {
             {equippedAvatar ? (
               <>
                 <img 
-                  src={getEquippedSkin(equippedAvatar)?.avatar_img} 
+                  src={getEquippedSkin(equippedAvatar)?.avatar_final} 
                   alt="Avatar"
                   className="w-16 h-16 rounded-full object-cover"
                 />
@@ -166,7 +166,7 @@ export function AppearanceTab() {
             {equippedMascot ? (
               <>
                 <img 
-                  src={getEquippedSkin(equippedMascot)?.card_img} 
+                  src={getEquippedSkin(equippedMascot)?.card_final} 
                   alt="Mascote"
                   className="w-16 h-16 rounded-lg object-cover"
                 />

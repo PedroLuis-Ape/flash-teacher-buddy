@@ -65,7 +65,7 @@ export function InventoryTab() {
               <Card key={item.id} className="overflow-hidden">
                 <div className="aspect-square bg-muted/50">
                   <img
-                    src={item.skin?.card_img}
+                    src={item.skin?.card_final}
                     alt={item.skin?.name}
                     className="w-full h-full object-cover"
                   />

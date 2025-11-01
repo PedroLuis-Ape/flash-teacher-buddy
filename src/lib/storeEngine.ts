@@ -70,21 +70,36 @@ export async function getSkinsCaltalog(): Promise<SkinItem[]> {
 }
 
 /**
- * Fetch user's inventory
+ * Fetch user's inventory with skin details
  */
 export async function getUserInventory(userId: string): Promise<InventoryItem[]> {
   try {
-    const { data, error } = await supabase
+    // Fetch inventory
+    const { data: inventoryData, error: invError } = await supabase
       .from('user_inventory')
-      .select(`
-        *,
-        skin:public_catalog(*)
-      `)
+      .select('*')
       .eq('user_id', userId)
       .order('acquired_at', { ascending: false });
 
-    if (error) throw error;
-    return (data || []) as InventoryItem[];
+    if (invError) throw invError;
+    if (!inventoryData || inventoryData.length === 0) return [];
+
+    // Fetch all skins from catalog
+    const skinIds = inventoryData.map(item => item.skin_id);
+    const { data: skinsData, error: skinsError } = await supabase
+      .from('public_catalog')
+      .select('*')
+      .in('id', skinIds);
+
+    if (skinsError) throw skinsError;
+
+    // Map skins to inventory items
+    const skinsMap = new Map(skinsData?.map(skin => [skin.id, skin as SkinItem]) || []);
+    
+    return inventoryData.map(item => ({
+      ...item,
+      skin: skinsMap.get(item.skin_id)
+    })) as InventoryItem[];
   } catch (error) {
     console.error('[StoreEngine] Error fetching inventory:', error);
     return [];
