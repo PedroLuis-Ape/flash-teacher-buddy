@@ -26,6 +26,16 @@
     <meta name="description" content="Aplicativo de flashcards para prática e aprimoramento do aprendizado. Crie coleções e estude com diferentes modos interativos." />
     <meta name="author" content="Lovable" />
 
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#FFD700" />
+    
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Piteco" />
+    <link rel="apple-touch-icon" href="/icons/pwa-192.png" />
+
     <meta property="og:title" content="APE - Apprenticeship Practice and Enhancement" />
     <meta property="og:description" content="Aplicativo de flashcards para prática e aprimoramento do aprendizado" />
     <meta property="og:type" content="website" />
@@ -40,19 +50,6 @@
   </head>
 
   <body>
-    <!-- Limpar service workers antigos -->
-    <script>
-      (function() {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            registrations.forEach(function(registration) {
-              registration.unregister();
-            });
-          });
-        }
-      })();
-    </script>
-    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
