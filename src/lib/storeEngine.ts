@@ -152,13 +152,17 @@ export async function purchaseSkin(
       .eq('id', userId)
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('[StoreEngine] Profile error:', profileError);
+      throw profileError;
+    }
+    
     if (!profile) {
       return { success: false, message: 'Perfil não encontrado' };
     }
 
-    // Check if user has enough balance
-    if (profile.balance_pitecoin < price) {
+    // Check if user has enough balance (free items don't need balance)
+    if (price > 0 && profile.balance_pitecoin < price) {
       return {
         success: false,
         message: `Saldo insuficiente! Você tem ₱${profile.balance_pitecoin}, mas precisa de ₱${price}.`
@@ -167,13 +171,18 @@ export async function purchaseSkin(
 
     const newBalance = profile.balance_pitecoin - price;
 
-    // Deduct balance
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ balance_pitecoin: newBalance })
-      .eq('id', userId);
+    // Deduct balance (only if price > 0)
+    if (price > 0) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ balance_pitecoin: newBalance })
+        .eq('id', userId);
 
-    if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[StoreEngine] Balance update error:', updateError);
+        throw updateError;
+      }
+    }
 
     // Add to inventory
     const { error: inventoryError } = await supabase
@@ -183,22 +192,41 @@ export async function purchaseSkin(
         skin_id: skinId,
       });
 
-    if (inventoryError) throw inventoryError;
+    if (inventoryError) {
+      console.error('[StoreEngine] Inventory error:', inventoryError);
+      // Rollback balance if inventory insert fails
+      if (price > 0) {
+        await supabase
+          .from('profiles')
+          .update({ balance_pitecoin: profile.balance_pitecoin })
+          .eq('id', userId);
+      }
+      throw inventoryError;
+    }
 
-    // Log transaction
-    await supabase
-      .from('pitecoin_transactions')
-      .insert({
-        user_id: userId,
-        amount: -price,
-        balance_after: newBalance,
-        type: 'spend',
-        source: `Compra: ${skinId}`,
-      });
+    // Log transaction (only if price > 0)
+    if (price > 0) {
+      const { error: txError } = await supabase
+        .from('pitecoin_transactions')
+        .insert({
+          user_id: userId,
+          amount: -price,
+          balance_after: newBalance,
+          type: 'spend',
+          source: `Compra: ${skinId}`,
+        });
+
+      if (txError) {
+        console.error('[StoreEngine] Transaction log error:', txError);
+        // Don't rollback - the purchase succeeded, just log failed
+      }
+    }
 
     return {
       success: true,
-      message: '✅ Pacote adquirido e adicionado ao seu inventário!'
+      message: price === 0 
+        ? '✅ Pacote gratuito adicionado ao seu inventário!' 
+        : '✅ Compra realizada! Pacote adicionado ao seu inventário!'
     };
   } catch (error) {
     console.error('[StoreEngine] Error purchasing skin:', error);
