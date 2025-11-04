@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
 import { GlobalLayout } from "@/components/GlobalLayout";
+import { InstallPWA } from "@/components/InstallPWA";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </GlobalLayout>
+          <InstallPWA />
         </BrowserRouter>
       </Suspense>
     </TooltipProvider>
