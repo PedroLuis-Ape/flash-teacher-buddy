@@ -127,106 +127,63 @@ export async function userOwnsSkin(userId: string, skinId: string): Promise<bool
 }
 
 /**
- * Purchase a skin with PITECOIN
+ * Purchase a skin with PITECOIN - ATOMIC & IDEMPOTENT
  */
 export async function purchaseSkin(
   userId: string,
   skinId: string,
   price: number
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; newBalance?: number }> {
   if (!FEATURE_FLAGS.economy_enabled) {
     return { success: false, message: 'Sistema de economia desabilitado' };
   }
 
   try {
-    // Check if already owned
-    const alreadyOwned = await userOwnsSkin(userId, skinId);
-    if (alreadyOwned) {
-      return { success: false, message: 'Você já possui este pacote!' };
+    // Generate unique operation ID for idempotency
+    const operationId = crypto.randomUUID();
+
+    console.log('[StoreEngine] Processing purchase:', {
+      operationId,
+      userId,
+      skinId,
+      price
+    });
+
+    // Call atomic purchase function in database
+    const { data, error } = await supabase.rpc('process_skin_purchase', {
+      p_operation_id: operationId,
+      p_buyer_id: userId,
+      p_skin_id: skinId,
+      p_price: price
+    });
+
+    if (error) {
+      console.error('[StoreEngine] RPC error:', error);
+      throw error;
     }
 
-    // Get current balance
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('balance_pitecoin')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('[StoreEngine] Profile error:', profileError);
-      throw profileError;
-    }
-    
-    if (!profile) {
-      return { success: false, message: 'Perfil não encontrado' };
-    }
-
-    // Check if user has enough balance (free items don't need balance)
-    if (price > 0 && profile.balance_pitecoin < price) {
+    if (!data) {
       return {
         success: false,
-        message: `Saldo insuficiente! Você tem ₱${profile.balance_pitecoin}, mas precisa de ₱${price}.`
+        message: 'Erro ao processar compra. Tente novamente.'
       };
     }
 
-    const newBalance = profile.balance_pitecoin - price;
+    const result = data as {
+      success: boolean;
+      error?: string;
+      message: string;
+      new_balance?: number;
+      purchase_id?: string;
+      inventory_id?: string;
+    };
 
-    // Deduct balance (only if price > 0)
-    if (price > 0) {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ balance_pitecoin: newBalance })
-        .eq('id', userId);
-
-      if (updateError) {
-        console.error('[StoreEngine] Balance update error:', updateError);
-        throw updateError;
-      }
-    }
-
-    // Add to inventory
-    const { error: inventoryError } = await supabase
-      .from('user_inventory')
-      .insert({
-        user_id: userId,
-        skin_id: skinId,
-      });
-
-    if (inventoryError) {
-      console.error('[StoreEngine] Inventory error:', inventoryError);
-      // Rollback balance if inventory insert fails
-      if (price > 0) {
-        await supabase
-          .from('profiles')
-          .update({ balance_pitecoin: profile.balance_pitecoin })
-          .eq('id', userId);
-      }
-      throw inventoryError;
-    }
-
-    // Log transaction (only if price > 0)
-    if (price > 0) {
-      const { error: txError } = await supabase
-        .from('pitecoin_transactions')
-        .insert({
-          user_id: userId,
-          amount: -price,
-          balance_after: newBalance,
-          type: 'spend',
-          source: `Compra: ${skinId}`,
-        });
-
-      if (txError) {
-        console.error('[StoreEngine] Transaction log error:', txError);
-        // Don't rollback - the purchase succeeded, just log failed
-      }
-    }
+    console.log('[StoreEngine] Purchase result:', result);
 
     return {
-      success: true,
-      message: price === 0 
-        ? '✅ Pacote gratuito adicionado ao seu inventário!' 
-        : '✅ Compra realizada! Pacote adicionado ao seu inventário!'
+      success: result.success,
+      message: result.message,
+      newBalance: result.new_balance
     };
   } catch (error) {
     console.error('[StoreEngine] Error purchasing skin:', error);

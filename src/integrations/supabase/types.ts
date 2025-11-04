@@ -682,6 +682,45 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_logs: {
+        Row: {
+          balance_after: number
+          balance_before: number
+          buyer_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          operation_id: string
+          price_pitecoin: number
+          skin_id: string
+          status: string
+        }
+        Insert: {
+          balance_after: number
+          balance_before: number
+          buyer_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          operation_id: string
+          price_pitecoin: number
+          skin_id: string
+          status?: string
+        }
+        Update: {
+          balance_after?: number
+          balance_before?: number
+          buyer_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          operation_id?: string
+          price_pitecoin?: number
+          skin_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       skins_catalog: {
         Row: {
           avatar_img: string
@@ -1018,6 +1057,15 @@ export type Database = {
         Returns: boolean
       }
       is_developer_admin: { Args: { _user_id: string }; Returns: boolean }
+      process_skin_purchase: {
+        Args: {
+          p_buyer_id: string
+          p_operation_id: string
+          p_price: number
+          p_skin_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "owner" | "student" | "developer_admin"
