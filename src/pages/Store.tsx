@@ -17,8 +17,9 @@ const Store = () => {
   const [skins, setSkins] = useState<SkinItem[]>([]);
   const [ownedSkinIds, setOwnedSkinIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const [purchasing, setPurchasing] = useState(false);
+  const [purchasingItems, setPurchasingItems] = useState<Set<string>>(new Set());
   const [userId, setUserId] = useState<string | null>(null);
+  const [userBalance, setUserBalance] = useState<number>(0);
 
   useEffect(() => {
     loadStoreData();
@@ -34,13 +35,15 @@ const Store = () => {
 
       setUserId(session.user.id);
 
-      const [catalogData, inventoryData] = await Promise.all([
+      const [catalogData, inventoryData, profileData] = await Promise.all([
         getSkinsCaltalog(),
         getUserInventory(session.user.id),
+        supabase.from('profiles').select('balance_pitecoin').eq('id', session.user.id).single(),
       ]);
 
       setSkins(catalogData);
       setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
+      setUserBalance(profileData.data?.balance_pitecoin || 0);
     } catch (error) {
       console.error('Error loading store:', error);
       toast({
@@ -54,9 +57,11 @@ const Store = () => {
   };
 
   const handlePurchase = async (skinId: string, price: number) => {
-    if (!userId) return;
+    if (!userId || purchasingItems.has(skinId)) return;
 
-    setPurchasing(true);
+    // Mark this item as being purchased
+    setPurchasingItems(prev => new Set(prev).add(skinId));
+    
     try {
       const result = await purchaseSkin(userId, skinId, price);
       
@@ -65,9 +70,12 @@ const Store = () => {
           title: "Compra realizada!",
           description: result.message,
         });
-        // Reload inventory
+        // Update inventory and balance
         const inventoryData = await getUserInventory(userId);
         setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
+        if (result.newBalance !== undefined) {
+          setUserBalance(result.newBalance);
+        }
       } else {
         toast({
           title: "Erro na compra",
@@ -83,7 +91,12 @@ const Store = () => {
         variant: "destructive",
       });
     } finally {
-      setPurchasing(false);
+      // Remove this item from purchasing set
+      setPurchasingItems(prev => {
+        const next = new Set(prev);
+        next.delete(skinId);
+        return next;
+      });
     }
   };
 
@@ -135,7 +148,7 @@ const Store = () => {
                 skin={skin}
                 owned={ownedSkinIds.has(skin.id)}
                 onPurchase={handlePurchase}
-                loading={purchasing}
+                loading={purchasingItems.has(skin.id)}
               />
             ))}
           </div>
