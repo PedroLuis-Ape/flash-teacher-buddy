@@ -1,14 +1,37 @@
 // Utility functions for text matching and comparison
 
 /**
+ * Remove parênteses e seu conteúdo (anotações)
+ * Ex: "I am (verbo ser)" -> "I am"
+ */
+export function stripParentheses(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/\([^)]*\)/g, '') // Remove tudo entre parênteses
+    .replace(/\s+/g, ' ') // Colapsa múltiplos espaços
+    .trim();
+}
+
+/**
+ * Extrai anotações de dentro dos parênteses
+ * Ex: "I am (verbo ser) (presente)" -> ["verbo ser", "presente"]
+ */
+export function extractAnnotations(text: string): string[] {
+  if (!text || typeof text !== 'string') return [];
+  const matches = text.match(/\(([^)]+)\)/g);
+  if (!matches) return [];
+  return matches.map(m => m.slice(1, -1).trim());
+}
+
+/**
  * Normaliza texto para comparação, preservando a integridade da string
- * Remove acentos, pontuação leve, espaços extras e converte para minúsculas
+ * Remove acentos, pontuação leve, espaços extras, PARÊNTESES e converte para minúsculas
  * IMPORTANTE: Esta função NUNCA deve ser usada para exibição, apenas para comparação
  */
 export function normalize(text: string): string {
   if (!text || typeof text !== 'string') return '';
   
-  return text
+  return stripParentheses(text) // Remove parênteses PRIMEIRO
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Remove diacritics/acentos

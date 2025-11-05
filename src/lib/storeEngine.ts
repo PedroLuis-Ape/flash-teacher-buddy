@@ -14,6 +14,10 @@ export interface SkinItem {
   card_final: string;
   description: string | null;
   is_active: boolean;
+  slug?: string;
+  approved?: boolean;
+  approved_by?: string;
+  created_at?: string;
 }
 
 export interface InventoryItem {
@@ -50,8 +54,17 @@ export function getRarityLabel(rarity: string): string {
   }
 }
 
+// Allowed slugs for store (whitelist)
+const ALLOWED_SLUGS = [
+  'piteco_vampiro',
+  'piteco_prime',
+  'piteco_astronaut',
+  'piteco_gold',
+  'piteco_scientist'
+];
+
 /**
- * Fetch all available skins from catalog
+ * Fetch all available skins from catalog (approved and whitelisted only)
  */
 export async function getSkinsCaltalog(): Promise<SkinItem[]> {
   try {
@@ -59,10 +72,22 @@ export async function getSkinsCaltalog(): Promise<SkinItem[]> {
       .from('public_catalog')
       .select('*')
       .eq('is_active', true)
+      .eq('approved', true)
+      .in('slug', ALLOWED_SLUGS)
       .order('price_pitecoin', { ascending: true });
 
     if (error) throw error;
-    return (data || []) as SkinItem[];
+    
+    // Deduplicate by slug (keep only the most recent per slug)
+    const deduped = new Map<string, SkinItem>();
+    (data || []).forEach((item: any) => {
+      const existing = deduped.get(item.slug);
+      if (!existing || new Date(item.created_at) > new Date(existing.created_at)) {
+        deduped.set(item.slug, item as SkinItem);
+      }
+    });
+    
+    return Array.from(deduped.values());
   } catch (error) {
     console.error('[StoreEngine] Error fetching catalog:', error);
     return [];

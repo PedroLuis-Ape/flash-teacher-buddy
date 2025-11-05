@@ -1,7 +1,54 @@
 // Text-to-Speech utilities using native Web Speech API
 
-export async function speakText(text: string, lang: "pt-BR" | "en-US"): Promise<void> {
-  const label = `[TTS] (${lang})`;
+/**
+ * Remove parênteses do texto (anotações não devem ser faladas)
+ */
+function stripParentheses(text: string): string {
+  return text.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Detecta o idioma do texto usando heurística
+ * Ordem de prioridade: deckLang -> cardLang -> auto-detect
+ */
+function detectLanguage(
+  text: string,
+  deckLang?: string,
+  cardLang?: string
+): "pt-BR" | "en-US" {
+  // 1) Use card language if specified
+  if (cardLang === "pt-BR" || cardLang === "en-US") return cardLang;
+  
+  // 2) Use deck language if specified
+  if (deckLang === "pt-BR" || deckLang === "en-US") return deckLang;
+  
+  // 3) Auto-detect: check for Portuguese-specific characters
+  const ptChars = /[áéíóúâêîôûãõç]/i;
+  const ptWords = /\b(o|a|os|as|de|da|do|para|com|em|que|não|ser|estar|ter)\b/i;
+  
+  if (ptChars.test(text) || ptWords.test(text)) {
+    return "pt-BR";
+  }
+  
+  // Default to English if mostly ASCII
+  const asciiRatio = text.split('').filter(c => /[A-Za-z]/.test(c)).length / Math.max(1, text.length);
+  return asciiRatio > 0.6 ? "en-US" : "pt-BR";
+}
+
+export async function speakText(
+  text: string, 
+  lang: "pt-BR" | "en-US",
+  deckLang?: string,
+  cardLang?: string
+): Promise<void> {
+  // Clean text: remove parentheses (annotations)
+  const cleanText = stripParentheses(text);
+  
+  // Auto-detect language if not explicitly set
+  const detectedLang = detectLanguage(cleanText, deckLang, cardLang);
+  const finalLang = lang || detectedLang;
+  
+  const label = `[TTS] (${finalLang})`;
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
   
   if (!synth) {
@@ -10,8 +57,8 @@ export async function speakText(text: string, lang: "pt-BR" | "en-US"): Promise<
   }
 
   return new Promise<void>((resolve) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = finalLang;
     utterance.rate = Number(localStorage.getItem("speechRate") || "1");
 
     const preferredVoice = localStorage.getItem("speechVoice");
@@ -21,7 +68,7 @@ export async function speakText(text: string, lang: "pt-BR" | "en-US"): Promise<
       const voice = voices.find(v => v.name === preferredVoice);
       if (voice) utterance.voice = voice;
     } else {
-      const langVoices = voices.filter(v => v.lang?.startsWith(lang.split('-')[0]));
+      const langVoices = voices.filter(v => v.lang?.startsWith(finalLang.split('-')[0]));
       if (langVoices.length > 0) utterance.voice = langVoices[0];
     }
 

@@ -300,9 +300,13 @@ export type Database = {
           audio_url: string | null
           collection_id: string | null
           created_at: string
+          display_text: string | null
+          eval_text: string | null
           hint: string | null
           id: string
+          lang: string | null
           list_id: string | null
+          note_text: string[] | null
           term: string
           translation: string
           updated_at: string
@@ -314,9 +318,13 @@ export type Database = {
           audio_url?: string | null
           collection_id?: string | null
           created_at?: string
+          display_text?: string | null
+          eval_text?: string | null
           hint?: string | null
           id?: string
+          lang?: string | null
           list_id?: string | null
+          note_text?: string[] | null
           term: string
           translation: string
           updated_at?: string
@@ -328,9 +336,13 @@ export type Database = {
           audio_url?: string | null
           collection_id?: string | null
           created_at?: string
+          display_text?: string | null
+          eval_text?: string | null
           hint?: string | null
           id?: string
+          lang?: string | null
           list_id?: string | null
+          note_text?: string[] | null
           term?: string
           translation?: string
           updated_at?: string
@@ -440,6 +452,7 @@ export type Database = {
           description: string | null
           folder_id: string
           id: string
+          lang: string | null
           order_index: number
           owner_id: string
           title: string
@@ -452,6 +465,7 @@ export type Database = {
           description?: string | null
           folder_id: string
           id?: string
+          lang?: string | null
           order_index?: number
           owner_id: string
           title: string
@@ -464,6 +478,7 @@ export type Database = {
           description?: string | null
           folder_id?: string
           id?: string
+          lang?: string | null
           order_index?: number
           owner_id?: string
           title?: string
@@ -645,6 +660,8 @@ export type Database = {
       }
       public_catalog: {
         Row: {
+          approved: boolean
+          approved_by: string | null
           avatar_final: string
           card_final: string
           created_at: string
@@ -654,9 +671,12 @@ export type Database = {
           name: string
           price_pitecoin: number
           rarity: string
+          slug: string | null
           updated_at: string
         }
         Insert: {
+          approved?: boolean
+          approved_by?: string | null
           avatar_final: string
           card_final: string
           created_at?: string
@@ -666,9 +686,12 @@ export type Database = {
           name: string
           price_pitecoin: number
           rarity: string
+          slug?: string | null
           updated_at?: string
         }
         Update: {
+          approved?: boolean
+          approved_by?: string | null
           avatar_final?: string
           card_final?: string
           created_at?: string
@@ -678,6 +701,7 @@ export type Database = {
           name?: string
           price_pitecoin?: number
           rarity?: string
+          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -718,6 +742,39 @@ export type Database = {
           price_pitecoin?: number
           skin_id?: string
           status?: string
+        }
+        Relationships: []
+      }
+      quarantine_logs: {
+        Row: {
+          actor: string
+          created_at: string
+          filename: string
+          id: string
+          metadata: Json | null
+          moved_to: string
+          original_path: string
+          reason: string
+        }
+        Insert: {
+          actor?: string
+          created_at?: string
+          filename: string
+          id?: string
+          metadata?: Json | null
+          moved_to: string
+          original_path: string
+          reason: string
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          filename?: string
+          id?: string
+          metadata?: Json | null
+          moved_to?: string
+          original_path?: string
+          reason?: string
         }
         Relationships: []
       }
@@ -974,9 +1031,13 @@ export type Database = {
           audio_url: string | null
           collection_id: string | null
           created_at: string
+          display_text: string | null
+          eval_text: string | null
           hint: string | null
           id: string
+          lang: string | null
           list_id: string | null
+          note_text: string[] | null
           term: string
           translation: string
           updated_at: string
@@ -1035,6 +1096,7 @@ export type Database = {
           description: string | null
           folder_id: string
           id: string
+          lang: string | null
           order_index: number
           owner_id: string
           title: string
