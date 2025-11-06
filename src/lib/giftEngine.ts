@@ -81,7 +81,7 @@ export async function getUserGifts(): Promise<GiftOffer[]> {
 }
 
 /**
- * Claim a gift (idempotent)
+ * Claim a gift (atomic operation via database function)
  */
 export async function claimGift(
   giftId: string
@@ -92,103 +92,26 @@ export async function claimGift(
       return { success: false, error: "Not authenticated" };
     }
 
-    // Get gift details
-    const { data: gift, error: giftError } = await supabase
-      .from('gift_offers')
-      .select('*')
-      .eq('id', giftId)
-      .eq('recipient_user_id', session.user.id)
-      .single();
+    // Call atomic database function
+    const { data, error } = await supabase.rpc('claim_gift_atomic', {
+      p_gift_id: giftId,
+      p_user_id: session.user.id
+    });
 
-    if (giftError || !gift) {
-      return { success: false, error: "Gift not found" };
+    if (error) {
+      console.error('Error claiming gift:', error);
+      return { success: false, error: error.message };
     }
 
-    if (gift.status !== 'pending') {
-      return { success: false, error: "Gift already processed" };
-    }
+    // Parse result from database function
+    const result = data as { 
+      success: boolean; 
+      error?: string; 
+      alreadyOwned?: boolean; 
+      pitecoinBonus?: number 
+    };
 
-    // Check if expired
-    if (gift.expires_at && new Date(gift.expires_at) < new Date()) {
-      return { success: false, error: "Gift expired" };
-    }
-
-    // Check if user already owns this skin
-    const { data: existingItem } = await supabase
-      .from('user_inventory')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .eq('skin_id', gift.skin_id)
-      .maybeSingle();
-
-    if (existingItem) {
-      // User already owns it - convert to PITECOIN
-      const { data: skin } = await supabase
-        .from('skins_catalog')
-        .select('price_pitecoin')
-        .eq('id', gift.skin_id)
-        .single();
-
-      const bonus = skin?.price_pitecoin || 0;
-
-      // Update profile balance
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('balance_pitecoin')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profile) {
-        const newBalance = profile.balance_pitecoin + bonus;
-
-        await supabase
-          .from('profiles')
-          .update({ balance_pitecoin: newBalance })
-          .eq('id', session.user.id);
-
-        // Log transaction
-        await supabase.from('pitecoin_transactions').insert({
-          user_id: session.user.id,
-          amount: bonus,
-          balance_after: newBalance,
-          type: 'bonus',
-          source: 'gift_conversion'
-        });
-      }
-
-      // Mark gift as claimed
-      await supabase
-        .from('gift_offers')
-        .update({ status: 'claimed', claimed_at: new Date().toISOString() })
-        .eq('id', giftId);
-
-      return { success: true, alreadyOwned: true, pitecoinBonus: bonus };
-    }
-
-    // Add skin to inventory
-    const { error: inventoryError } = await supabase
-      .from('user_inventory')
-      .insert({
-        user_id: session.user.id,
-        skin_id: gift.skin_id
-      });
-
-    if (inventoryError) {
-      console.error('Error adding to inventory:', inventoryError);
-      return { success: false, error: inventoryError.message };
-    }
-
-    // Mark gift as claimed
-    const { error: updateError } = await supabase
-      .from('gift_offers')
-      .update({ status: 'claimed', claimed_at: new Date().toISOString() })
-      .eq('id', giftId);
-
-    if (updateError) {
-      console.error('Error updating gift status:', updateError);
-    }
-
-    return { success: true, alreadyOwned: false };
+    return result;
   } catch (err) {
     console.error('Exception claiming gift:', err);
     return { success: false, error: String(err) };

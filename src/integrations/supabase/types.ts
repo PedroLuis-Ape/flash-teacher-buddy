@@ -1015,6 +1015,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_gift_atomic: {
+        Args: { p_gift_id: string; p_user_id: string }
+        Returns: Json
+      }
       generate_user_tag: { Args: never; Returns: string }
       get_portal_counts: {
         Args: { _folder_id: string }
