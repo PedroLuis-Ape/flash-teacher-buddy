@@ -167,13 +167,6 @@ export async function purchaseSkin(
     // Generate unique operation ID for idempotency
     const operationId = crypto.randomUUID();
 
-    console.log('[StoreEngine] Processing purchase:', {
-      operationId,
-      userId,
-      skinId,
-      price
-    });
-
     // Call atomic purchase function in database
     const { data, error } = await supabase.rpc('process_skin_purchase', {
       p_operation_id: operationId,
@@ -183,7 +176,6 @@ export async function purchaseSkin(
     });
 
     if (error) {
-      console.error('[StoreEngine] RPC error:', error);
       throw error;
     }
 
@@ -202,8 +194,6 @@ export async function purchaseSkin(
       purchase_id?: string;
       inventory_id?: string;
     };
-
-    console.log('[StoreEngine] Purchase result:', result);
 
     return {
       success: result.success,
