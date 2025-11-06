@@ -8,6 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PitecoMascot } from "@/components/PitecoMascot";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
+import { Download } from "lucide-react";
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -20,6 +26,8 @@ const Auth = () => {
   const [isProfessor, setIsProfessor] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     // Remove apenas o parâmetro de logout da URL, mas mantém a flag até novo login
@@ -43,6 +51,21 @@ const Auth = () => {
       }
     };
     checkSession();
+
+    // Detecta se o app pode ser instalado
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+
+    // Verifica se já está instalado
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, [navigate]);
 
   // Verificar disponibilidade do username
@@ -157,9 +180,43 @@ const Auth = () => {
     }
   };
 
+  const handleDownload = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        toast.success("App instalado com sucesso!");
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else if (isInstalled) {
+      toast.info("O app já está instalado!");
+    } else {
+      // Instruções para instalação manual
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        toast.info("No Safari, toque em 'Compartilhar' → 'Adicionar à Tela de Início'");
+      } else {
+        toast.info("Use o menu do navegador para instalar o app");
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-accent flex items-center justify-center p-4 relative overflow-hidden">
       <PitecoMascot />
+
+      {/* Download button - fixed position */}
+      {!isInstalled && (
+        <Button
+          onClick={handleDownload}
+          className="fixed top-4 right-4 z-50 gap-2 shadow-lg"
+          size="lg"
+        >
+          <Download className="w-5 h-5" />
+          Download
+        </Button>
+      )}
       
       <div className="w-full max-w-md space-y-6 relative z-20">
         <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur">
