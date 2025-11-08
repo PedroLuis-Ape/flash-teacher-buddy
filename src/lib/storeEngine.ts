@@ -57,12 +57,7 @@ export function getRarityLabel(rarity: string): string {
 // Allowed slugs for store (whitelist)
 const ALLOWED_SLUGS = [
   'piteco_vampiro',
-  'piteco_prime',
-  'piteco_astronaut',
-  'piteco_gold',
-  'piteco_scientist',
-  'piteco_dourado',    // Slug alternativo para gold
-  'piteco_cientista'   // Slug alternativo para scientist
+  'piteco_prime'
 ];
 
 /**
