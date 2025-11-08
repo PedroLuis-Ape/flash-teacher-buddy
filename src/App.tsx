@@ -23,6 +23,7 @@ const Study = lazy(() => import("./pages/Study"));
 const Search = lazy(() => import("./pages/Search"));
 const MyStudents = lazy(() => import("./pages/MyStudents"));
 const MyTeachers = lazy(() => import("./pages/MyTeachers"));
+const TeacherFolders = lazy(() => import("./pages/TeacherFolders"));
 const Store = lazy(() => import("./pages/Store"));
 const PresentBox = lazy(() => import("./pages/PresentBox"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/portal/collection/:id/study" element={<Study />} />
               <Route path="/my-students" element={<MyStudents />} />
               <Route path="/my-teachers" element={<MyTeachers />} />
+              <Route path="/teacher/:teacherId/folders" element={<TeacherFolders />} />
               <Route path="/store" element={<Store />} />
               <Route path="/gifts" element={<PresentBox />} />
               <Route path="*" element={<NotFound />} />

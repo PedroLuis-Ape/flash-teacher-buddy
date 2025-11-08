@@ -422,62 +422,73 @@ const Folders = () => {
             </CardHeader>
           </Card>
         ) : userRole === 'student' ? (
-          // Agrupar pastas por professor para alunos
+          // Mostrar cards de professores para alunos
           (() => {
-            const foldersByTeacher = folders.reduce((acc, folder) => {
+            const teachersMap = folders.reduce((acc, folder) => {
               const teacherId = folder.owner_id || 'unknown';
               if (!acc[teacherId]) {
                 acc[teacherId] = {
                   teacherName: folder.teacher_name || 'Professor',
-                  folders: []
+                  folderCount: 0,
+                  totalCards: 0,
+                  totalLists: 0
                 };
               }
-              acc[teacherId].folders.push(folder);
+              acc[teacherId].folderCount += 1;
+              acc[teacherId].totalCards += folder.card_count || 0;
+              acc[teacherId].totalLists += folder.list_count || 0;
               return acc;
-            }, {} as Record<string, { teacherName: string; folders: FolderType[] }>);
+            }, {} as Record<string, { teacherName: string; folderCount: number; totalCards: number; totalLists: number }>);
 
             return (
-              <div className="space-y-8">
-                {Object.entries(foldersByTeacher).map(([teacherId, { teacherName, folders: teacherFolders }]) => (
-                  <div key={teacherId}>
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <GraduationCap className="h-6 w-6 text-primary" />
-                      Professor {teacherName}
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {teacherFolders.map((folder) => (
-                        <Card
-                          key={folder.id}
-                          className="cursor-pointer hover:shadow-lg transition-shadow"
-                          onClick={() => navigate(`/folder/${folder.id}`)}
-                        >
-                          <CardHeader>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Folder className="h-8 w-8 text-primary" />
-                              <Globe className="h-4 w-4 text-accent" />
-                            </div>
-                            <CardTitle>{folder.title}</CardTitle>
-                            {folder.description && (
-                              <CardDescription>{folder.description}</CardDescription>
-                            )}
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-4 w-4" />
-                                <span>{folder.list_count || 0} listas</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <CreditCard className="h-4 w-4" />
-                                <span>{folder.card_count || 0} cards</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div>
+                <h2 className="text-2xl font-bold mb-6">Meus Professores</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.entries(teachersMap).map(([teacherId, data]) => (
+                    <Card
+                      key={teacherId}
+                      className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+                      onClick={() => navigate(`/teacher/${teacherId}/folders`)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <GraduationCap className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl">Professor {data.teacherName}</CardTitle>
+                            <p className="text-sm text-muted-foreground">Clique para ver as pastas</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Folder className="h-4 w-4" />
+                              Pastas
+                            </span>
+                            <span className="font-semibold">{data.folderCount}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <FileText className="h-4 w-4" />
+                              Listas
+                            </span>
+                            <span className="font-semibold">{data.totalLists}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <CreditCard className="h-4 w-4" />
+                              Cards
+                            </span>
+                            <span className="font-semibold">{data.totalCards}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             );
           })()
