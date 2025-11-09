@@ -1,140 +1,96 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, FolderOpen, FileText, CreditCard } from "lucide-react";
-import { PitecoMascot } from "@/components/PitecoMascot";
+import { ApeAppBar } from "@/components/ape/ApeAppBar";
+import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
+import { ApeGrid } from "@/components/ape/ApeGrid";
+import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
+import { BookOpen } from "lucide-react";
 
-interface Folder {
+interface FolderType {
   id: string;
   title: string;
-  description?: string;
+  description: string | null;
   list_count?: number;
   card_count?: number;
 }
 
-export default function PublicPortal() {
+const PublicPortal = () => {
   const navigate = useNavigate();
-  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folders, setFolders] = useState<FolderType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSharedFolders();
+    loadFolders();
   }, []);
 
-  const loadSharedFolders = async () => {
+  const loadFolders = async () => {
     try {
-      setLoading(true);
+      const { data, error } = await supabase.rpc('get_portal_folders');
 
-      // Carregar pastas públicas via RPC com security definer
-      const { data: rpcFolders, error: rpcError } = await supabase.rpc('get_portal_folders');
-      if (rpcError) throw rpcError;
+      if (error) throw error;
 
+      // Load counts for each folder
       const foldersWithCounts = await Promise.all(
-        (rpcFolders || []).map(async (folder: any) => {
-          const { data: counts } = await supabase.rpc('get_portal_counts', { _folder_id: folder.id });
+        (data || []).map(async (folder: any) => {
+          const { data: countsData } = await supabase.rpc('get_portal_counts', {
+            _folder_id: folder.id
+          });
+
+          const counts = countsData as any;
+
           return {
             ...folder,
-            list_count: counts?.[0]?.list_count ?? 0,
-            card_count: counts?.[0]?.card_count ?? 0,
+            list_count: counts?.list_count || 0,
+            card_count: counts?.card_count || 0,
           };
         })
       );
 
       setFolders(foldersWithCounts);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading folders:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-primary flex items-center justify-center">
-        <div className="text-primary-foreground text-xl">Carregando...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-primary">
-      <PitecoMascot />
-      
-      <div className="container mx-auto px-4 py-8 relative z-20">
-        <div className="mb-8">
-          <Button 
-            variant="ghost" 
-            className="text-primary-foreground hover:bg-white/20"
-            onClick={() => navigate("/auth")}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
+    <div className="min-h-screen bg-background">
+      <ApeAppBar title="Portal do Aluno" />
 
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-primary-foreground mb-4">
-              Portal do Aluno
-            </h1>
-            <p className="text-xl text-primary-foreground/90">
-              Professor Pedro
+      <div className="container mx-auto px-4 py-6">
+        <ApeSectionTitle>
+          Conteúdo Compartilhado
+        </ApeSectionTitle>
+
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">
+            Carregando...
+          </div>
+        ) : folders.length === 0 ? (
+          <div className="text-center py-12">
+            <BookOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Nenhum conteúdo público disponível no momento
             </p>
           </div>
-
-          {folders.length === 0 ? (
-            <Card className="bg-white/95 backdrop-blur">
-              <CardContent className="py-12 text-center">
-                <FolderOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                <p className="text-lg text-muted-foreground mb-2">
-                  Ainda não há pastas compartilhadas disponíveis.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  O professor precisa compartilhar as pastas marcando a opção "Permitir acesso sem login".
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {folders.map((folder) => (
-                <Card 
-                  key={folder.id}
-                  className="bg-white/95 backdrop-blur hover:shadow-xl transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/portal/folder/${folder.id}`)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-2xl mb-2">{folder.title}</CardTitle>
-                        {folder.description && (
-                          <CardDescription className="text-base">
-                            {folder.description}
-                          </CardDescription>
-                        )}
-                      </div>
-                      <FolderOpen className="h-8 w-8 text-primary ml-4" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <FileText className="h-4 w-4" />
-                        <span>{folder.list_count || 0} listas</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CreditCard className="h-4 w-4" />
-                        <span>{folder.card_count || 0} cards</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+        ) : (
+          <ApeGrid>
+            {folders.map((folder) => (
+              <ApeCardFolder
+                key={folder.id}
+                title={folder.title}
+                listCount={folder.list_count}
+                cardCount={folder.card_count}
+                onClick={() => navigate(`/portal/folder/${folder.id}`)}
+              />
+            ))}
+          </ApeGrid>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default PublicPortal;

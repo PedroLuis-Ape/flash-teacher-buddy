@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApeAppBar } from "@/components/ape/ApeAppBar";
-import { ApeGrid } from "@/components/ape/ApeGrid";
+import { Button } from "@/components/ui/button";
+import { PitecoLogo } from "@/components/PitecoLogo";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { EconomyBadge } from "@/components/EconomyBadge";
 import { SkinCard } from "@/components/SkinCard";
 import { getSkinsCaltalog, getUserInventory, purchaseSkin, type SkinItem } from "@/lib/storeEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
-import { Loader2 } from "lucide-react";
 
 const Store = () => {
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ const Store = () => {
   const [loading, setLoading] = useState(true);
   const [purchasingItems, setPurchasingItems] = useState<Set<string>>(new Set());
   const [userId, setUserId] = useState<string | null>(null);
+  const [userBalance, setUserBalance] = useState<number>(0);
 
   useEffect(() => {
     loadStoreData();
@@ -32,13 +35,15 @@ const Store = () => {
 
       setUserId(session.user.id);
 
-      const [catalogData, inventoryData] = await Promise.all([
+      const [catalogData, inventoryData, profileData] = await Promise.all([
         getSkinsCaltalog(),
         getUserInventory(session.user.id),
+        supabase.from('profiles').select('balance_pitecoin').eq('id', session.user.id).single(),
       ]);
 
       setSkins(catalogData);
       setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
+      setUserBalance(profileData.data?.balance_pitecoin || 0);
     } catch (error) {
       console.error('Error loading store:', error);
       toast({
@@ -54,6 +59,7 @@ const Store = () => {
   const handlePurchase = async (skinId: string, price: number) => {
     if (!userId || purchasingItems.has(skinId)) return;
 
+    // Mark this item as being purchased
     setPurchasingItems(prev => new Set(prev).add(skinId));
     
     try {
@@ -64,8 +70,12 @@ const Store = () => {
           title: "Compra realizada!",
           description: result.message,
         });
+        // Update inventory and balance
         const inventoryData = await getUserInventory(userId);
         setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
+        if (result.newBalance !== undefined) {
+          setUserBalance(result.newBalance);
+        }
       } else {
         toast({
           title: "Erro na compra",
@@ -81,6 +91,7 @@ const Store = () => {
         variant: "destructive",
       });
     } finally {
+      // Remove this item from purchasing set
       setPurchasingItems(prev => {
         const next = new Set(prev);
         next.delete(skinId);
@@ -95,10 +106,32 @@ const Store = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <ApeAppBar title="Loja do Piteco" showBack backPath="/folders" />
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/folders")}
+              aria-label="Voltar para pastas"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <PitecoLogo className="w-12 h-12" />
+            <div>
+              <h1 className="text-3xl font-bold">Loja do Piteco</h1>
+              <p className="text-sm text-muted-foreground">
+                Colecione cartas e avatares exclusivos do Piteco
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {FEATURE_FLAGS.economy_enabled && <EconomyBadge />}
+            <ThemeToggle />
+          </div>
+        </div>
 
-      <div className="container mx-auto px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -108,7 +141,7 @@ const Store = () => {
             <p className="text-muted-foreground">Nenhum pacote publicado no momento.</p>
           </div>
         ) : (
-          <ApeGrid cols={{ default: 2, md: 3, lg: 4 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 max-w-[1600px] mx-auto">
             {skins.map((skin) => (
               <SkinCard
                 key={skin.id}
@@ -118,7 +151,7 @@ const Store = () => {
                 loading={purchasingItems.has(skin.id)}
               />
             ))}
-          </ApeGrid>
+          </div>
         )}
       </div>
     </div>
