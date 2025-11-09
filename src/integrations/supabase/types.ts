@@ -924,7 +924,7 @@ export type Database = {
             foreignKeyName: "user_inventory_skin_id_fkey"
             columns: ["skin_id"]
             isOneToOne: false
-            referencedRelation: "skins_catalog"
+            referencedRelation: "public_catalog"
             referencedColumns: ["id"]
           },
         ]
