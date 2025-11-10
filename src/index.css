@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Button spacing tokens */
+  .ape-button-stack {
+    @apply space-y-3 md:space-y-4;
+  }
+  
+  .ape-button {
+    @apply min-h-[44px] px-4 rounded-xl;
+  }
+  
+  /* Card internal spacing */
+  .ape-card-content {
+    @apply p-4;
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

@@ -1,36 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useHomeData } from "@/hooks/useHomeData";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
-import { ApeGrid } from "@/components/ape/ApeGrid";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Play } from "lucide-react";
-
-interface RecentList {
-  id: string;
-  title: string;
-  card_count: number;
-  lang?: string;
-}
-
-interface ContinueStudy {
-  list_id: string;
-  list_title: string;
-  mode: string;
-  progress: number;
-  current_index: number;
-  total_cards: number;
-}
 
 const Index = () => {
   const navigate = useNavigate();
-  const [recentLists, setRecentLists] = useState<RecentList[]>([]);
-  const [continueStudy, setContinueStudy] = useState<ContinueStudy | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { last, recents, loading } = useHomeData();
 
   useEffect(() => {
     checkAuth();
@@ -40,71 +23,6 @@ const Index = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth", { replace: true });
-      return;
-    }
-
-    loadData(session.user.id);
-  };
-
-  const loadData = async (userId: string) => {
-    try {
-      // Load continue studying
-      const { data: sessionData } = await supabase
-        .from("study_sessions")
-        .select(`
-          list_id,
-          mode,
-          current_index,
-          cards_order,
-          lists (
-            id,
-            title
-          )
-        `)
-        .eq("user_id", userId)
-        .eq("completed", false)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (sessionData && sessionData.lists) {
-        const cardsOrder = sessionData.cards_order as any[];
-        setContinueStudy({
-          list_id: sessionData.list_id,
-          list_title: (sessionData.lists as any).title,
-          mode: sessionData.mode,
-          progress: (sessionData.current_index / cardsOrder.length) * 100,
-          current_index: sessionData.current_index,
-          total_cards: cardsOrder.length,
-        });
-      }
-
-      // Load recent lists (simplified)
-      const { data: listsData } = await supabase
-        .from("lists")
-        .select(`
-          id,
-          title,
-          lang,
-          flashcards(id)
-        `)
-        .eq("owner_id", userId)
-        .order("updated_at", { ascending: false })
-        .limit(5);
-
-      if (listsData) {
-        const processed = listsData.map((list: any) => ({
-          id: list.id,
-          title: list.title,
-          card_count: list.flashcards?.length || 0,
-          lang: list.lang,
-        }));
-        setRecentLists(processed);
-      }
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -118,37 +36,47 @@ const Index = () => {
     return labels[mode] || mode;
   };
 
+  // Defensive progress math
+  const total = Math.max(0, Number(last?.total) || 0);
+  const done = Math.min(total, Math.max(0, Number(last?.reviewed) || 0));
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  const hasData = last !== null || recents.length > 0;
+
   return (
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Início" />
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Continue Studying Card */}
-        {continueStudy && (
-          <Card className="p-6 bg-gradient-to-br from-primary/10 to-secondary/10">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-1">
+        {loading ? (
+          <Skeleton className="h-[88px] w-full rounded-xl" />
+        ) : last && total > 0 ? (
+          <Card className="p-4 bg-gradient-to-br from-primary/10 to-secondary/10">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base mb-1">
                   Voltar para onde parou
                 </h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {continueStudy.list_title}
+                <p className="text-sm text-muted-foreground mb-1 line-clamp-2">
+                  {last.title}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {getModeLabel(continueStudy.mode)} • {continueStudy.current_index}/{continueStudy.total_cards} cards
+                  {getModeLabel(last.mode)} • {done}/{total} cards
                 </p>
               </div>
               <Button 
-                onClick={() => navigate(`/list/${continueStudy.list_id}/study`, { state: { mode: continueStudy.mode } })}
-                className="shrink-0"
+                onClick={() => navigate(`/list/${last.id}/study`, { state: { mode: last.mode } })}
+                className="shrink-0 min-h-[44px]"
+                size="sm"
               >
                 <Play className="h-4 w-4 mr-2" />
                 Continuar
               </Button>
             </div>
-            <Progress value={continueStudy.progress} className="h-2" />
+            {total > 0 && <Progress value={pct} className="h-2" />}
           </Card>
-        )}
+        ) : null}
 
         {/* Recent Lists */}
         <div className="space-y-4">
@@ -158,6 +86,7 @@ const Index = () => {
                 variant="ghost" 
                 size="sm"
                 onClick={() => navigate("/folders")}
+                className="min-h-[44px]"
               >
                 Ver tudo
               </Button>
@@ -167,27 +96,37 @@ const Index = () => {
           </ApeSectionTitle>
 
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Carregando...
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
+              ))}
             </div>
-          ) : recentLists.length === 0 ? (
+          ) : !hasData ? (
             <div className="text-center py-12">
               <BookOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
               <p className="text-muted-foreground mb-4">
                 Você ainda não tem listas de estudo
               </p>
-              <Button onClick={() => navigate("/folders")}>
+              <Button 
+                onClick={() => navigate("/folders")}
+                className="min-h-[44px]"
+              >
                 Criar sua primeira lista
               </Button>
             </div>
+          ) : recents.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">
+                Nenhuma lista recente
+              </p>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {recentLists.map((list) => (
+            <div className="space-y-3">
+              {recents.map((list) => (
                 <ApeCardList
                   key={list.id}
                   title={list.title}
-                  cardCount={list.card_count}
-                  language={list.lang}
+                  cardCount={list.count}
                   onClick={() => navigate(`/list/${list.id}`)}
                 />
               ))}
