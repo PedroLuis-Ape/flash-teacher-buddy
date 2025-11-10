@@ -41,6 +41,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_config: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       class_members: {
         Row: {
           class_id: string
@@ -263,6 +284,39 @@ export type Database = {
           operation_id?: string
           skin_id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      exchange_logs: {
+        Row: {
+          created_at: string
+          id: string
+          operation_id: string
+          ppc_received: number
+          pts_spent: number
+          rate: number
+          user_id: string
+          ymd: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          operation_id: string
+          ppc_received: number
+          pts_spent: number
+          rate: number
+          user_id: string
+          ymd?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          operation_id?: string
+          ppc_received?: number
+          pts_spent?: number
+          rate?: number
+          user_id?: string
+          ymd?: string
         }
         Relationships: []
       }
@@ -1060,6 +1114,11 @@ export type Database = {
       }
       generate_public_id: { Args: { p_user_type: string }; Returns: string }
       generate_user_tag: { Args: never; Returns: string }
+      get_exchange_config: { Args: never; Returns: Json }
+      get_exchange_quote: {
+        Args: { p_pts: number; p_user_id: string }
+        Returns: Json
+      }
       get_portal_counts: {
         Args: { _folder_id: string }
         Returns: {
@@ -1165,6 +1224,10 @@ export type Database = {
         Returns: boolean
       }
       is_developer_admin: { Args: { _user_id: string }; Returns: boolean }
+      process_exchange: {
+        Args: { p_operation_id: string; p_pts: number; p_user_id: string }
+        Returns: Json
+      }
       process_skin_purchase: {
         Args: {
           p_buyer_id: string

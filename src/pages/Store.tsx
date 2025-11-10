@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeGrid } from "@/components/ape/ApeGrid";
 import { SkinCard } from "@/components/SkinCard";
+import { ExchangeTab } from "@/components/ExchangeTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSkinsCaltalog, getUserInventory, purchaseSkin, type SkinItem } from "@/lib/storeEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useEconomy } from "@/contexts/EconomyContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShoppingBag, ArrowRightLeft } from "lucide-react";
 
 const Store = () => {
   const navigate = useNavigate();
@@ -105,29 +107,52 @@ const Store = () => {
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Loja do Piteco" showBack backPath="/folders" />
 
-      <div className="container mx-auto px-4 py-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <Tabs defaultValue="pacotes" className="w-full">
+        <div className="border-b bg-background/95 backdrop-blur sticky top-16 z-30">
+          <div className="container mx-auto px-4">
+            <TabsList className="w-full grid grid-cols-2 h-12">
+              <TabsTrigger value="pacotes" className="gap-2">
+                <ShoppingBag className="h-4 w-4" />
+                Pacotes
+              </TabsTrigger>
+              <TabsTrigger value="cambio" className="gap-2">
+                <ArrowRightLeft className="h-4 w-4" />
+                Câmbio
+              </TabsTrigger>
+            </TabsList>
           </div>
-        ) : skins.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhum pacote publicado no momento.</p>
+        </div>
+
+        <TabsContent value="pacotes" className="mt-0">
+          <div className="container mx-auto px-4 py-6">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : skins.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Nenhum pacote publicado no momento.</p>
+              </div>
+            ) : (
+              <ApeGrid cols={{ default: 2, md: 3, lg: 4 }}>
+                {skins.map((skin) => (
+                  <SkinCard
+                    key={skin.id}
+                    skin={skin}
+                    owned={ownedSkinIds.has(skin.id)}
+                    onPurchase={handlePurchase}
+                    loading={purchasingItems.has(skin.id)}
+                  />
+                ))}
+              </ApeGrid>
+            )}
           </div>
-        ) : (
-          <ApeGrid cols={{ default: 2, md: 3, lg: 4 }}>
-            {skins.map((skin) => (
-              <SkinCard
-                key={skin.id}
-                skin={skin}
-                owned={ownedSkinIds.has(skin.id)}
-                onPurchase={handlePurchase}
-                loading={purchasingItems.has(skin.id)}
-              />
-            ))}
-          </ApeGrid>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="cambio" className="mt-0">
+          <ExchangeTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

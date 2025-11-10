@@ -67,11 +67,17 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
         async (payload) => {
           const { data: { session } } = await supabase.auth.getSession();
           if (session && payload.new && 'id' in payload.new && payload.new.id === session.user.id) {
+            const updates: Partial<EconomyState> = {};
+            
             if ('balance_pitecoin' in payload.new) {
-              setState(prev => ({
-                ...prev,
-                balance_pitecoin: (payload.new as any).balance_pitecoin || 0,
-              }));
+              updates.balance_pitecoin = (payload.new as any).balance_pitecoin || 0;
+            }
+            if ('pts_weekly' in payload.new) {
+              updates.pts_weekly = (payload.new as any).pts_weekly || 0;
+            }
+            
+            if (Object.keys(updates).length > 0) {
+              setState(prev => ({ ...prev, ...updates }));
             }
           }
         }
