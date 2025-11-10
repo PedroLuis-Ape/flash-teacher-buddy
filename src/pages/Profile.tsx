@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeTabs } from "@/components/ape/ApeTabs";
-import { AppearanceTab } from "@/components/AppearanceTab";
+import { DeckTab } from "@/components/DeckTab";
 import { HistoryTab } from "@/components/HistoryTab";
 import { StatisticsTab } from "@/components/StatisticsTab";
 import { Button } from "@/components/ui/button";
@@ -17,25 +17,11 @@ const Profile = () => {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [mascotUrl, setMascotUrl] = useState("");
   const [publicId, setPublicId] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadProfile();
-    
-    // Listen for appearance changes
-    const handleAppearanceChange = () => {
-      console.log('[Profile] Appearance changed, reloading profile...');
-      loadProfile();
-    };
-    
-    window.addEventListener('appearanceChanged', handleAppearanceChange);
-    
-    return () => {
-      window.removeEventListener('appearanceChanged', handleAppearanceChange);
-    };
   }, []);
 
   const loadProfile = async () => {
@@ -51,7 +37,7 @@ const Profile = () => {
       // Force fresh data from server (no cache)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("first_name, email, avatar_skin_id, mascot_skin_id, user_tag")
+        .select("first_name, email, user_tag")
         .eq("id", session.user.id)
         .single();
 
@@ -75,38 +61,6 @@ const Profile = () => {
           }
         } else {
           setPublicId(profile.user_tag);
-        }
-        
-        // Clear URLs first
-        setAvatarUrl("");
-        setMascotUrl("");
-        
-        // Load avatar and mascot from catalog if equipped
-        console.log('[Profile] Avatar ID:', profile.avatar_skin_id, 'Mascot ID:', profile.mascot_skin_id);
-        
-        if (profile.avatar_skin_id || profile.mascot_skin_id) {
-          const skinIds = [profile.avatar_skin_id, profile.mascot_skin_id].filter(Boolean);
-          
-          const { data: skins, error: skinsError } = await supabase
-            .from("public_catalog")
-            .select("id, avatar_final, card_final")
-            .in("id", skinIds);
-          
-          console.log('[Profile] Loaded skins:', skins, 'Error:', skinsError);
-          
-          if (skins && skins.length > 0) {
-            const avatarSkin = skins.find(s => s.id === profile.avatar_skin_id);
-            const mascotSkin = skins.find(s => s.id === profile.mascot_skin_id);
-            
-            if (avatarSkin && avatarSkin.avatar_final) {
-              console.log('[Profile] Setting avatar URL:', avatarSkin.avatar_final);
-              setAvatarUrl(avatarSkin.avatar_final);
-            }
-            if (mascotSkin && mascotSkin.card_final) {
-              console.log('[Profile] Setting mascot URL:', mascotSkin.card_final);
-              setMascotUrl(mascotSkin.card_final);
-            }
-          }
         }
       }
     } catch (error) {
@@ -148,7 +102,6 @@ const Profile = () => {
       <Card className="p-6">
         <div className="flex flex-col items-center text-center space-y-4">
           <Avatar className="h-24 w-24">
-            <AvatarImage src={avatarUrl} alt={firstName} />
             <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
               {initials}
             </AvatarFallback>
@@ -166,17 +119,6 @@ const Profile = () => {
                 <span className="font-mono text-sm">{publicId}</span>
                 <Copy className="h-3 w-3" />
               </Button>
-            )}
-            
-            {/* Mascot badge */}
-            {mascotUrl && (
-              <div className="flex items-center justify-center gap-2 pt-2">
-                <img 
-                  src={mascotUrl} 
-                  alt="Mascote" 
-                  className="w-12 h-16 rounded object-cover"
-                />
-              </div>
             )}
           </div>
         </div>
@@ -210,7 +152,7 @@ const Profile = () => {
 
   if (FEATURE_FLAGS.economy_enabled) {
     tabs.push(
-      { value: "appearance", label: "Aparência", content: <AppearanceTab /> },
+      { value: "deck", label: "Baralho", content: <DeckTab /> },
       { value: "history", label: "Histórico", content: <HistoryTab /> },
       { value: "statistics", label: "Estatísticas", content: <StatisticsTab /> }
     );
