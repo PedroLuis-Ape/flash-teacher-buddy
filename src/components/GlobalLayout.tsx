@@ -40,7 +40,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   }, [location.pathname, user, refreshBalance]);
   
   // Don't show header/tabbar on auth pages
-  const isAuthPage = location.pathname === '/auth' || location.pathname === '/';
+  const isAuthPage = location.pathname === '/auth';
   
   if (isAuthPage) {
     return <>{children}</>;
