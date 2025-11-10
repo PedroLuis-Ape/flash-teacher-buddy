@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/" },
   { id: "study", label: "Estudar", icon: BookOpen, path: "/folders" },
-  { id: "library", label: "Biblioteca", icon: Library, path: "/folders" },
   { id: "store", label: "Loja", icon: Store, path: "/store" },
   { id: "profile", label: "Perfil", icon: User, path: "/profile" },
 ];
