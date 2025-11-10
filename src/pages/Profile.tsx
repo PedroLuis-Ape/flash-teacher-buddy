@@ -48,11 +48,17 @@ const Profile = () => {
 
       console.log('[Profile] Loading profile for user:', session.user.id);
 
-      const { data: profile } = await supabase
+      // Force fresh data from server (no cache)
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("first_name, email, avatar_skin_id, mascot_skin_id, user_tag")
         .eq("id", session.user.id)
-        .maybeSingle();
+        .single();
+
+      if (profileError) {
+        console.error('[Profile] Error loading profile:', profileError);
+        return;
+      }
 
       console.log('[Profile] Profile data:', profile);
 
@@ -71,6 +77,10 @@ const Profile = () => {
           setPublicId(profile.user_tag);
         }
         
+        // Clear URLs first
+        setAvatarUrl("");
+        setMascotUrl("");
+        
         // Load avatar and mascot from catalog if equipped
         console.log('[Profile] Avatar ID:', profile.avatar_skin_id, 'Mascot ID:', profile.mascot_skin_id);
         
@@ -84,7 +94,7 @@ const Profile = () => {
           
           console.log('[Profile] Loaded skins:', skins, 'Error:', skinsError);
           
-          if (skins) {
+          if (skins && skins.length > 0) {
             const avatarSkin = skins.find(s => s.id === profile.avatar_skin_id);
             const mascotSkin = skins.find(s => s.id === profile.mascot_skin_id);
             
@@ -97,10 +107,6 @@ const Profile = () => {
               setMascotUrl(mascotSkin.card_final);
             }
           }
-        } else {
-          // Clear URLs if no skins equipped
-          setAvatarUrl("");
-          setMascotUrl("");
         }
       }
     } catch (error) {

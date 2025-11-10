@@ -24,9 +24,14 @@ export function DeckPicker({ open, onClose, inventory, mode, onSelect, equipping
 
   const handleSelect = async () => {
     if (!selectedItem) return;
-    await onSelect(selectedItem.skin_id);
-    setSelectedItem(null);
-    onClose();
+    try {
+      await onSelect(selectedItem.skin_id);
+      // Only close and reset after success
+      setSelectedItem(null);
+    } catch (error) {
+      // Keep modal open on error so user can retry
+      console.error('[DeckPicker] Error selecting item:', error);
+    }
   };
 
   const handleClose = () => {

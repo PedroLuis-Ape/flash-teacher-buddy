@@ -68,11 +68,6 @@ export function AppearanceTab() {
       console.log('[AppearanceTab] Equip result:', result);
       
       if (result.success) {
-        toast({
-          title: "Sucesso!",
-          description: result.message,
-        });
-        
         // Update local state immediately
         if (type === 'avatar') {
           setEquippedAvatar(skinId);
@@ -83,11 +78,19 @@ export function AppearanceTab() {
         // Reload appearance to get fresh data
         await loadAppearance();
         
-        // Dispatch event to notify Profile page
-        window.dispatchEvent(new CustomEvent('appearanceChanged'));
-        
-        // Close picker
+        // Close picker FIRST
         setPickerOpen(false);
+        
+        // Then dispatch event to notify Profile page (after modal closes)
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('appearanceChanged'));
+        }, 100);
+        
+        // Show success toast
+        toast({
+          title: "Sucesso!",
+          description: result.message,
+        });
       } else {
         // Handle specific error codes
         const errorMessages: Record<string, string> = {
@@ -96,7 +99,7 @@ export function AppearanceTab() {
           'ALREADY_PROCESSED': 'Esta operação já foi processada.',
           'INVALID_INPUT': 'Dados inválidos.',
           'NOT_FOUND': 'Item não encontrado.',
-          'INTERNAL_ERROR': 'Erro ao equipar. Tente novamente.'
+          'INTERNAL_ERROR': 'Não foi possível ativar. Tente novamente.'
         };
         
         const errorMessage = result.error 
@@ -108,14 +111,14 @@ export function AppearanceTab() {
           description: errorMessage,
           variant: "destructive",
         });
+        
+        // Re-throw to keep picker open
+        throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error('Equip error:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível equipar o item.",
-        variant: "destructive",
-      });
+      console.error('[AppearanceTab] Equip error:', error);
+      // Error toast already shown above, just rethrow to keep picker open
+      throw error;
     } finally {
       setEquipping(false);
     }
