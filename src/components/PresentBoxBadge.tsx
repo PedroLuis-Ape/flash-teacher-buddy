@@ -43,14 +43,14 @@ export function PresentBoxBadge() {
     <Button
       variant="ghost"
       size="icon"
-      className="relative"
+      className="relative h-9 w-9"
       onClick={() => navigate('/gifts')}
     >
-      <Gift className="h-5 w-5" />
+      <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
       {count > 0 && (
         <Badge 
           variant="destructive" 
-          className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+          className="absolute -top-0.5 -right-0.5 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center p-0 text-[10px] sm:text-xs"
         >
           {count}
         </Badge>

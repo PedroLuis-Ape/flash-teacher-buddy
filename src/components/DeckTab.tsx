@@ -73,46 +73,46 @@ export function DeckTab() {
 
   return (
     <>
-      <div className="p-4 space-y-6">
+      <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Baralho</CardTitle>
-            <CardDescription>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg">Baralho</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Sua coleção de avatares e mascotes
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             {/* Avatares Carousel */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-base">Avatares</h3>
-                <span className="text-sm text-muted-foreground">
+                <h3 className="font-semibold text-sm sm:text-base">Avatares</h3>
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   {avatares.length} {avatares.length === 1 ? 'item' : 'itens'}
                 </span>
               </div>
 
               {avatares.length > 0 ? (
                 <div className="relative">
-                  <div className="flex items-center gap-4 p-6 border rounded-xl bg-muted/30">
+                  <div className="flex items-center gap-2 sm:gap-4 p-4 sm:p-6 border rounded-xl bg-muted/30">
                     {avatares.length > 1 && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={handlePrevAvatar}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8"
+                        className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 sm:h-8 sm:w-8"
                       >
-                        <ChevronLeft className="h-5 w-5" />
+                        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                     )}
 
-                    <div className="flex-1 flex flex-col items-center gap-3 animate-fade-in">
+                    <div className="flex-1 flex flex-col items-center gap-2 sm:gap-3 animate-fade-in">
                       <img 
                         src={currentAvatar.skin!.avatar_final} 
                         alt={currentAvatar.skin!.name}
-                        className="w-32 h-32 rounded-full object-cover"
+                        className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover"
                       />
                       <div className="text-center">
-                        <p className="font-semibold">{currentAvatar.skin!.name}</p>
+                        <p className="font-semibold text-sm sm:text-base">{currentAvatar.skin!.name}</p>
                         <Badge className={cn("text-xs border mt-1", getRarityColor(currentAvatar.skin!.rarity))}>
                           <Sparkles className="h-3 w-3 mr-1" />
                           {getRarityLabel(currentAvatar.skin!.rarity)}
@@ -125,15 +125,15 @@ export function DeckTab() {
                         variant="ghost"
                         size="icon"
                         onClick={handleNextAvatar}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8"
+                        className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 sm:h-8 sm:w-8"
                       >
-                        <ChevronRight className="h-5 w-5" />
+                        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                     )}
                   </div>
                   
                   {avatares.length > 1 && (
-                    <div className="flex justify-center gap-1 mt-3">
+                    <div className="flex justify-center gap-1 mt-2 sm:mt-3">
                       {avatares.map((_, idx) => (
                         <div
                           key={idx}
@@ -147,8 +147,8 @@ export function DeckTab() {
                   )}
                 </div>
               ) : (
-                <div className="p-8 text-center border rounded-xl bg-muted/20">
-                  <p className="text-sm text-muted-foreground">
+                <div className="p-6 sm:p-8 text-center border rounded-xl bg-muted/20">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Nenhum avatar na sua coleção ainda
                   </p>
                 </div>
@@ -158,7 +158,7 @@ export function DeckTab() {
                 <Button
                   onClick={() => openViewAll("avatares")}
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-9 sm:h-10 text-xs sm:text-sm"
                 >
                   Ver todos os avatares
                 </Button>
@@ -166,36 +166,36 @@ export function DeckTab() {
             </div>
 
             {/* Mascotes Carousel */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-base">Mascotes</h3>
-                <span className="text-sm text-muted-foreground">
+                <h3 className="font-semibold text-sm sm:text-base">Mascotes</h3>
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   {mascotes.length} {mascotes.length === 1 ? 'item' : 'itens'}
                 </span>
               </div>
 
               {mascotes.length > 0 ? (
                 <div className="relative">
-                  <div className="flex items-center gap-4 p-6 border rounded-xl bg-muted/30">
+                  <div className="flex items-center gap-2 sm:gap-4 p-4 sm:p-6 border rounded-xl bg-muted/30">
                     {mascotes.length > 1 && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={handlePrevMascot}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8"
+                        className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 sm:h-8 sm:w-8"
                       >
-                        <ChevronLeft className="h-5 w-5" />
+                        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                     )}
 
-                    <div className="flex-1 flex flex-col items-center gap-3 animate-fade-in">
+                    <div className="flex-1 flex flex-col items-center gap-2 sm:gap-3 animate-fade-in">
                       <img 
                         src={currentMascot.skin!.card_final} 
                         alt={currentMascot.skin!.name}
-                        className="w-40 h-56 rounded-lg object-cover"
+                        className="w-32 h-44 sm:w-40 sm:h-56 rounded-lg object-cover"
                       />
                       <div className="text-center">
-                        <p className="font-semibold">{currentMascot.skin!.name}</p>
+                        <p className="font-semibold text-sm sm:text-base">{currentMascot.skin!.name}</p>
                         <Badge className={cn("text-xs border mt-1", getRarityColor(currentMascot.skin!.rarity))}>
                           <Sparkles className="h-3 w-3 mr-1" />
                           {getRarityLabel(currentMascot.skin!.rarity)}
@@ -208,15 +208,15 @@ export function DeckTab() {
                         variant="ghost"
                         size="icon"
                         onClick={handleNextMascot}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8"
+                        className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 h-7 w-7 sm:h-8 sm:w-8"
                       >
-                        <ChevronRight className="h-5 w-5" />
+                        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                       </Button>
                     )}
                   </div>
 
                   {mascotes.length > 1 && (
-                    <div className="flex justify-center gap-1 mt-3">
+                    <div className="flex justify-center gap-1 mt-2 sm:mt-3">
                       {mascotes.map((_, idx) => (
                         <div
                           key={idx}
@@ -230,8 +230,8 @@ export function DeckTab() {
                   )}
                 </div>
               ) : (
-                <div className="p-8 text-center border rounded-xl bg-muted/20">
-                  <p className="text-sm text-muted-foreground">
+                <div className="p-6 sm:p-8 text-center border rounded-xl bg-muted/20">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Nenhum mascote na sua coleção ainda
                   </p>
                 </div>
@@ -241,7 +241,7 @@ export function DeckTab() {
                 <Button
                   onClick={() => openViewAll("mascotes")}
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-9 sm:h-10 text-xs sm:text-sm"
                 >
                   Ver todos os mascotes
                 </Button>
@@ -249,7 +249,7 @@ export function DeckTab() {
             </div>
 
             {inventory.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-xs sm:text-sm text-muted-foreground text-center py-3 sm:py-4">
                 Compre pacotes na loja para começar sua coleção!
               </p>
             )}
@@ -261,22 +261,22 @@ export function DeckTab() {
       <Dialog open={viewAllOpen} onOpenChange={setViewAllOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {viewMode === "avatares" ? "Todos os Avatares" : "Todos os Mascotes"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4">
             {(viewMode === "avatares" ? avatares : mascotes).map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-xl border bg-card text-center space-y-2"
+                className="p-3 sm:p-4 rounded-xl border bg-card text-center space-y-1.5 sm:space-y-2"
               >
                 <div className={cn(
                   "overflow-hidden mx-auto bg-muted",
                   viewMode === "avatares" 
-                    ? "w-24 h-24 rounded-full" 
-                    : "w-24 h-32 rounded-lg"
+                    ? "w-20 h-20 sm:w-24 sm:h-24 rounded-full" 
+                    : "w-20 h-28 sm:w-24 sm:h-32 rounded-lg"
                 )}>
                   <img
                     src={viewMode === "avatares" ? item.skin!.avatar_final : item.skin!.card_final}
@@ -284,9 +284,9 @@ export function DeckTab() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <p className="text-sm font-medium truncate">{item.skin!.name}</p>
+                <p className="text-xs sm:text-sm font-medium truncate">{item.skin!.name}</p>
                 <Badge className={cn("text-xs border", getRarityColor(item.skin!.rarity))}>
-                  <Sparkles className="h-3 w-3 mr-1" />
+                  <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                   {getRarityLabel(item.skin!.rarity)}
                 </Badge>
               </div>

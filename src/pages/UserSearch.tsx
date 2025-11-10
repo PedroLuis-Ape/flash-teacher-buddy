@@ -86,12 +86,13 @@ export default function UserSearch() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="flex-1"
+                className="flex-1 h-10"
               />
               <Button
                 onClick={handleSearch}
                 disabled={loading || query.trim().length < 2}
-                className="min-h-[44px] px-4"
+                size="icon"
+                className="h-10 w-10 shrink-0"
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -103,10 +104,10 @@ export default function UserSearch() {
 
             {/* Type Filter */}
             <Tabs value={userType} onValueChange={(v) => setUserType(v as any)}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="todos">Todos</TabsTrigger>
-                <TabsTrigger value="professor">Professores</TabsTrigger>
-                <TabsTrigger value="aluno">Alunos</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 h-9">
+                <TabsTrigger value="todos" className="text-xs sm:text-sm">Todos</TabsTrigger>
+                <TabsTrigger value="professor" className="text-xs sm:text-sm">Professores</TabsTrigger>
+                <TabsTrigger value="aluno" className="text-xs sm:text-sm">Alunos</TabsTrigger>
               </TabsList>
             </Tabs>
           </CardContent>
@@ -153,11 +154,11 @@ export default function UserSearch() {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold truncate">{user.name || "Sem nome"}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs gap-1">
+                            <Badge variant="outline" className="text-xs gap-1 shrink-0">
                               <TypeIcon className="h-3 w-3" />
-                              {getUserTypeLabel(user.user_type)}
+                              <span className="hidden sm:inline">{getUserTypeLabel(user.user_type)}</span>
                             </Badge>
-                            <span className="text-xs text-muted-foreground font-mono">
+                            <span className="text-xs text-muted-foreground font-mono truncate">
                               {user.public_id}
                             </span>
                           </div>
@@ -166,9 +167,9 @@ export default function UserSearch() {
                         <Button
                           size="sm"
                           onClick={() => handleVisitProfile(user.public_id)}
-                          className="min-h-[36px]"
+                          className="h-9 px-3 text-xs shrink-0"
                         >
-                          Visitar Perfil
+                          <span className="hidden sm:inline">Visitar </span>Perfil
                         </Button>
                       </div>
                     );
@@ -184,7 +185,7 @@ export default function UserSearch() {
           <Button
             onClick={() => navigate(-1)}
             variant="outline"
-            className="flex-1 min-h-[44px]"
+            className="flex-1 h-11"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
@@ -193,7 +194,7 @@ export default function UserSearch() {
             <Button
               onClick={handleClear}
               variant="secondary"
-              className="flex-1 min-h-[44px]"
+              className="flex-1 h-11"
             >
               Limpar
             </Button>

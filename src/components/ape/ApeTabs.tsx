@@ -37,17 +37,17 @@ export function ApeTabs({
         "bg-background border-b border-border",
         sticky && "sticky top-14 z-30"
       )}>
-        <TabsList className="w-full h-12 bg-transparent rounded-none border-0 p-0 grid" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+        <TabsList className="w-full h-10 sm:h-12 bg-transparent rounded-none border-0 p-0 grid" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none h-full px-2"
             >
-              <span className="text-sm font-medium">
+              <span className="text-xs sm:text-sm font-medium truncate">
                 {tab.label}
                 {typeof tab.count === "number" && (
-                  <span className="ml-1 text-xs text-muted-foreground">({tab.count})</span>
+                  <span className="ml-0.5 sm:ml-1 text-xs text-muted-foreground">({tab.count})</span>
                 )}
               </span>
             </TabsTrigger>

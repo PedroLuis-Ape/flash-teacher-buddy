@@ -51,39 +51,39 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Início" />
 
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stats Cards Grid */}
         {loading ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
+              <Skeleton key={i} className="h-16 sm:h-20 rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/profile")}>
-              <CardContent className="p-4 text-center">
-                <TrendingUp className="h-5 w-5 mx-auto mb-1 text-primary" />
-                <p className="text-2xl font-bold">{pts_weekly}</p>
-                <p className="text-xs text-muted-foreground">PTS Semanal</p>
+              <CardContent className="p-2.5 sm:p-4 text-center">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-primary" />
+                <p className="text-xl sm:text-2xl font-bold">{pts_weekly}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">PTS Semanal</p>
               </CardContent>
             </Card>
 
             <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/profile")}>
-              <CardContent className="p-4 text-center">
-                <div className="h-5 w-5 mx-auto mb-1 flex items-center justify-center text-primary font-bold text-lg">
+              <CardContent className="p-2.5 sm:p-4 text-center">
+                <div className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 flex items-center justify-center text-primary font-bold text-base sm:text-lg">
                   {level}
                 </div>
-                <p className="text-2xl font-bold">{current_streak}</p>
-                <p className="text-xs text-muted-foreground">Dias seguidos</p>
+                <p className="text-xl sm:text-2xl font-bold">{current_streak}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Dias seguidos</p>
               </CardContent>
             </Card>
 
             <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/folders")}>
-              <CardContent className="p-4 text-center">
-                <Layers className="h-5 w-5 mx-auto mb-1 text-primary" />
-                <p className="text-2xl font-bold">{stats.total_lists}</p>
-                <p className="text-xs text-muted-foreground">Listas</p>
+              <CardContent className="p-2.5 sm:p-4 text-center">
+                <Layers className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 text-primary" />
+                <p className="text-xl sm:text-2xl font-bold">{stats.total_lists}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Listas</p>
               </CardContent>
             </Card>
           </div>
@@ -91,52 +91,52 @@ const Index = () => {
 
         {/* Continue Studying Card */}
         {loading ? (
-          <Skeleton className="h-[88px] w-full rounded-xl" />
+          <Skeleton className="h-[76px] sm:h-[88px] w-full rounded-xl" />
         ) : last && total > 0 ? (
-          <Card className="p-4 bg-gradient-to-br from-primary/10 to-secondary/10 hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between gap-3 mb-3">
+          <Card className="p-3 sm:p-4 bg-gradient-to-br from-primary/10 to-secondary/10 hover:shadow-lg transition-shadow">
+            <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base mb-1">
+                <h3 className="font-semibold text-sm sm:text-base mb-1">
                   Voltar para onde parou
                 </h3>
-                <p className="text-sm text-muted-foreground mb-1 line-clamp-2">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1 line-clamp-2">
                   {last.title}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {getModeLabel(last.mode)} • {done}/{total} cards
                 </p>
               </div>
               <Button 
                 onClick={() => navigate(`/list/${last.id}/study`, { state: { mode: last.mode } })}
-                className="shrink-0 min-h-[44px]"
+                className="shrink-0 h-9 sm:h-10 px-2.5 sm:px-4"
                 size="sm"
               >
-                <Play className="h-4 w-4 mr-2" />
-                Continuar
+                <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Continuar</span>
               </Button>
             </div>
-            {total > 0 && <Progress value={pct} className="h-2" />}
+            {total > 0 && <Progress value={pct} className="h-1.5 sm:h-2" />}
           </Card>
         ) : null}
 
         {/* Modo Reino Card */}
         {!loading && FEATURE_FLAGS.reinos_enabled && (
           <Card 
-            className="p-4 bg-black hover:shadow-lg transition-shadow cursor-pointer min-h-[88px] flex items-center"
+            className="p-3 sm:p-4 bg-black hover:shadow-lg transition-shadow cursor-pointer min-h-[70px] sm:min-h-[88px] flex items-center"
             onClick={() => navigate("/reinos")}
             role="button"
             tabIndex={0}
             aria-label="Modo Reino - Em breve"
           >
-            <div className="flex items-center gap-4 w-full">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center shrink-0">
-                <Crown className="h-6 w-6 text-yellow-500" />
+            <div className="flex items-center gap-3 sm:gap-4 w-full">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center shrink-0">
+                <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base text-white mb-1">
+                <h3 className="font-semibold text-sm sm:text-base text-white mb-0.5 sm:mb-1">
                   Modo Reino
                 </h3>
-                <p className="text-sm text-gray-400">
+                <p className="text-xs sm:text-sm text-gray-400">
                   Em breve
                 </p>
               </div>
