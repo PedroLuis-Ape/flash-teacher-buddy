@@ -103,24 +103,32 @@ const Folders = () => {
       setFolders(processedFolders);
 
       // Load teachers (subscriptions)
-      const { data: subscriptions } = await supabase
+      const { data: subscriptions, error: subsError } = await supabase
         .from("subscriptions")
-        .select(`
-          teacher_id,
-          profiles:teacher_id (
-            id,
-            first_name,
-            email
-          )
-        `)
+        .select("teacher_id")
         .eq("student_id", session.user.id);
 
-      if (subscriptions) {
-        const teachersList = subscriptions
-          .filter((sub: any) => sub.profiles)
-          .map((sub: any) => sub.profiles);
+      if (subsError) {
+        console.error("Error loading subscriptions:", subsError);
+      }
+
+      if (subscriptions && subscriptions.length > 0) {
+        // Get unique teacher IDs
+        const teacherIds = Array.from(new Set(subscriptions.map(s => s.teacher_id)));
         
-        setTeachers(teachersList);
+        // Fetch teacher profiles separately
+        const { data: teacherProfiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, email")
+          .in("id", teacherIds);
+
+        if (profilesError) {
+          console.error("Error loading teacher profiles:", profilesError);
+        }
+
+        if (teacherProfiles) {
+          setTeachers(teacherProfiles as TeacherType[]);
+        }
       }
 
     } catch (error: any) {
