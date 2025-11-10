@@ -219,15 +219,23 @@ export default function PublicProfile() {
         </Card>
 
         {/* Ver Baralho Button */}
-        {(avatares.length > 0 || mascotes.length > 0) && (
-          <Button
-            onClick={() => setShowDeckModal(true)}
-            className="w-full h-12 text-base font-semibold"
-            size="lg"
-          >
-            Ver Baralho ({avatares.length + mascotes.length} {avatares.length + mascotes.length === 1 ? 'item' : 'itens'})
-          </Button>
-        )}
+        <Button
+          onClick={() => setShowDeckModal(true)}
+          className="w-full h-12 text-base font-semibold"
+          size="lg"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Carregando baralho...
+            </>
+          ) : (avatares.length > 0 || mascotes.length > 0) ? (
+            `Ver Baralho (${avatares.length + mascotes.length} ${avatares.length + mascotes.length === 1 ? 'item' : 'itens'})`
+          ) : (
+            'Ver Baralho (vazio)'
+          )}
+        </Button>
 
         {/* Deck Card - Hidden, now shown in modal */}
         {false && (avatares.length > 0 || mascotes.length > 0) && (
@@ -460,68 +468,78 @@ export default function PublicProfile() {
       <Dialog open={showDeckModal} onOpenChange={setShowDeckModal}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl">Baralho de {profile.name}</DialogTitle>
+            <DialogTitle className="text-xl">Baralho de {profile?.name || 'Usuário'}</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6 py-4">
-            {/* Avatares Section */}
-            {avatares.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="text-lg font-semibold">Avatares</h3>
-                  <span className="text-sm text-muted-foreground">{avatares.length} {avatares.length === 1 ? 'item' : 'itens'}</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {avatares.map((item) => (
-                    <div key={item.id} className="relative group">
-                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-border bg-card">
-                        <img
-                          src={item.skin?.avatar_final}
-                          alt={item.skin?.name}
-                          className="w-full h-full object-cover"
-                        />
+          {loading ? (
+            <div className="py-12 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (avatares.length === 0 && mascotes.length === 0) ? (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">Este usuário ainda não possui itens no baralho.</p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {/* Avatares Section */}
+              {avatares.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-semibold">Avatares</h3>
+                    <span className="text-sm text-muted-foreground">{avatares.length} {avatares.length === 1 ? 'item' : 'itens'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {avatares.map((item) => (
+                      <div key={item.id} className="relative group">
+                        <div className="aspect-square rounded-lg overflow-hidden border-2 border-border bg-card">
+                          <img
+                            src={item.skin?.avatar_final}
+                            alt={item.skin?.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="mt-2 text-center">
+                          <p className="text-xs font-medium truncate">{item.skin?.name}</p>
+                          <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
+                            {getRarityLabel(item.skin?.rarity || 'normal')}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="mt-2 text-center">
-                        <p className="text-xs font-medium truncate">{item.skin?.name}</p>
-                        <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
-                          {getRarityLabel(item.skin?.rarity || 'normal')}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Mascotes Section */}
-            {mascotes.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="text-lg font-semibold">Mascotes</h3>
-                  <span className="text-sm text-muted-foreground">{mascotes.length} {mascotes.length === 1 ? 'item' : 'itens'}</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {mascotes.map((item) => (
-                    <div key={item.id} className="relative group">
-                      <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-border bg-card">
-                        <img
-                          src={item.skin?.card_final}
-                          alt={item.skin?.name}
-                          className="w-full h-full object-cover"
-                        />
+              {/* Mascotes Section */}
+              {mascotes.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-lg font-semibold">Mascotes</h3>
+                    <span className="text-sm text-muted-foreground">{mascotes.length} {mascotes.length === 1 ? 'item' : 'itens'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {mascotes.map((item) => (
+                      <div key={item.id} className="relative group">
+                        <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-border bg-card">
+                          <img
+                            src={item.skin?.card_final}
+                            alt={item.skin?.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="mt-2 text-center">
+                          <p className="text-xs font-medium truncate">{item.skin?.name}</p>
+                          <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
+                            {getRarityLabel(item.skin?.rarity || 'normal')}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="mt-2 text-center">
-                        <p className="text-xs font-medium truncate">{item.skin?.name}</p>
-                        <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
-                          {getRarityLabel(item.skin?.rarity || 'normal')}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
