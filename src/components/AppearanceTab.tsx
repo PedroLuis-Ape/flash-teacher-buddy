@@ -59,9 +59,13 @@ export function AppearanceTab() {
     setEquipping(true);
     try {
       const type = pickerMode === "avatar" ? "avatar" : "mascot";
+      console.log(`[AppearanceTab] Equipando ${type}:`, skinId);
+      
       // Generate unique operation ID for idempotency
       const operationId = crypto.randomUUID();
       const result = await equipSkin(userId, skinId, type, operationId);
+      
+      console.log('[AppearanceTab] Equip result:', result);
       
       if (result.success) {
         toast({
@@ -78,6 +82,12 @@ export function AppearanceTab() {
         
         // Reload appearance to get fresh data
         await loadAppearance();
+        
+        // Dispatch event to notify Profile page
+        window.dispatchEvent(new CustomEvent('appearanceChanged'));
+        
+        // Close picker
+        setPickerOpen(false);
       } else {
         // Handle specific error codes
         const errorMessages: Record<string, string> = {

@@ -24,6 +24,18 @@ const Profile = () => {
 
   useEffect(() => {
     loadProfile();
+    
+    // Listen for appearance changes
+    const handleAppearanceChange = () => {
+      console.log('[Profile] Appearance changed, reloading profile...');
+      loadProfile();
+    };
+    
+    window.addEventListener('appearanceChanged', handleAppearanceChange);
+    
+    return () => {
+      window.removeEventListener('appearanceChanged', handleAppearanceChange);
+    };
   }, []);
 
   const loadProfile = async () => {
@@ -34,11 +46,15 @@ const Profile = () => {
         return;
       }
 
+      console.log('[Profile] Loading profile for user:', session.user.id);
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("first_name, email, avatar_skin_id, mascot_skin_id, user_tag")
         .eq("id", session.user.id)
         .maybeSingle();
+
+      console.log('[Profile] Profile data:', profile);
 
       if (profile) {
         setFirstName(profile.first_name || "");
@@ -56,29 +72,39 @@ const Profile = () => {
         }
         
         // Load avatar and mascot from catalog if equipped
+        console.log('[Profile] Avatar ID:', profile.avatar_skin_id, 'Mascot ID:', profile.mascot_skin_id);
+        
         if (profile.avatar_skin_id || profile.mascot_skin_id) {
           const skinIds = [profile.avatar_skin_id, profile.mascot_skin_id].filter(Boolean);
           
-          const { data: skins } = await supabase
+          const { data: skins, error: skinsError } = await supabase
             .from("public_catalog")
             .select("id, avatar_final, card_final")
             .in("id", skinIds);
+          
+          console.log('[Profile] Loaded skins:', skins, 'Error:', skinsError);
           
           if (skins) {
             const avatarSkin = skins.find(s => s.id === profile.avatar_skin_id);
             const mascotSkin = skins.find(s => s.id === profile.mascot_skin_id);
             
-            if (avatarSkin) {
+            if (avatarSkin && avatarSkin.avatar_final) {
+              console.log('[Profile] Setting avatar URL:', avatarSkin.avatar_final);
               setAvatarUrl(avatarSkin.avatar_final);
             }
-            if (mascotSkin) {
+            if (mascotSkin && mascotSkin.card_final) {
+              console.log('[Profile] Setting mascot URL:', mascotSkin.card_final);
               setMascotUrl(mascotSkin.card_final);
             }
           }
+        } else {
+          // Clear URLs if no skins equipped
+          setAvatarUrl("");
+          setMascotUrl("");
         }
       }
     } catch (error) {
-      console.error("Error loading profile:", error);
+      console.error("[Profile] Error loading profile:", error);
     } finally {
       setLoading(false);
     }
