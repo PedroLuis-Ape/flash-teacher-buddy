@@ -5,18 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Copy, GraduationCap, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Copy, GraduationCap, User as UserIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { getPublicProfile, type PublicProfile as PublicProfileType } from "@/lib/profileEngine";
+import { getUserInventory, type InventoryItem, getRarityColor, getRarityLabel } from "@/lib/storeEngine";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import pitecoinIcon from "@/assets/pitecoin.png";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function PublicProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<PublicProfileType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [avatarIndex, setAvatarIndex] = useState(0);
+  const [mascotIndex, setMascotIndex] = useState(0);
+  const [showAllAvatars, setShowAllAvatars] = useState(false);
+  const [showAllMascots, setShowAllMascots] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -31,6 +38,9 @@ export default function PublicProfile() {
       
       if (result.success && result.profile) {
         setProfile(result.profile);
+        // Load user's inventory by finding their user_id
+        // We need to fetch the actual user_id from profiles table using public_id
+        await loadInventory(publicId);
       } else {
         toast.error(result.message || "Usuário não encontrado.");
         navigate("/");
@@ -41,6 +51,25 @@ export default function PublicProfile() {
       navigate("/");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInventory = async (publicId: string) => {
+    try {
+      // Get userId from profiles table using public_id (user_tag)
+      const { data: profileData, error: profileError } = await (await import("@/integrations/supabase/client")).supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_tag', publicId)
+        .single();
+
+      if (profileError) throw profileError;
+      if (!profileData) return;
+
+      const items = await getUserInventory(profileData.id);
+      setInventory(items);
+    } catch (error) {
+      console.error("Error loading inventory:", error);
     }
   };
 
@@ -57,6 +86,25 @@ export default function PublicProfile() {
 
   const getUserTypeIcon = (type: string) => {
     return type === 'professor' ? GraduationCap : UserIcon;
+  };
+
+  const avatares = inventory.filter(item => item.skin?.avatar_final);
+  const mascotes = inventory.filter(item => item.skin?.card_final);
+
+  const handlePrevAvatar = () => {
+    setAvatarIndex((prev) => (prev > 0 ? prev - 1 : avatares.length - 1));
+  };
+
+  const handleNextAvatar = () => {
+    setAvatarIndex((prev) => (prev < avatares.length - 1 ? prev + 1 : 0));
+  };
+
+  const handlePrevMascot = () => {
+    setMascotIndex((prev) => (prev > 0 ? prev - 1 : mascotes.length - 1));
+  };
+
+  const handleNextMascot = () => {
+    setMascotIndex((prev) => (prev < mascotes.length - 1 ? prev + 1 : 0));
   };
 
   if (loading) {
@@ -169,6 +217,192 @@ export default function PublicProfile() {
           </CardContent>
         </Card>
 
+        {/* Deck Card */}
+        {(avatares.length > 0 || mascotes.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Baralho</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Avatares Section */}
+              {avatares.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">Avatares ({avatares.length})</h3>
+                    {avatares.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllAvatars(true)}
+                        className="h-7 text-xs"
+                      >
+                        Ver todos
+                      </Button>
+                    )}
+                  </div>
+
+                  {avatares.length === 1 ? (
+                    <div className="flex justify-center">
+                      <div className="relative group w-40">
+                        <div className="aspect-square rounded-lg overflow-hidden border-2 border-border bg-card">
+                          <img
+                            src={avatares[0].skin?.avatar_final}
+                            alt={avatares[0].skin?.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="mt-2 text-center">
+                          <p className="text-xs font-medium">{avatares[0].skin?.name}</p>
+                          <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(avatares[0].skin?.rarity || 'normal')}`}>
+                            {getRarityLabel(avatares[0].skin?.rarity || 'normal')}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="flex justify-center items-center gap-4">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handlePrevAvatar}
+                          className="h-8 w-8"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </Button>
+
+                        <div className="relative group w-40">
+                          <div className="aspect-square rounded-lg overflow-hidden border-2 border-border bg-card">
+                            <img
+                              src={avatares[avatarIndex]?.skin?.avatar_final}
+                              alt={avatares[avatarIndex]?.skin?.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="mt-2 text-center">
+                            <p className="text-xs font-medium">{avatares[avatarIndex]?.skin?.name}</p>
+                            <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(avatares[avatarIndex]?.skin?.rarity || 'normal')}`}>
+                              {getRarityLabel(avatares[avatarIndex]?.skin?.rarity || 'normal')}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleNextAvatar}
+                          className="h-8 w-8"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </div>
+
+                      <div className="flex justify-center gap-1 mt-3">
+                        {avatares.map((_, idx) => (
+                          <div
+                            key={idx}
+                            className={`h-1.5 rounded-full transition-all ${
+                              idx === avatarIndex ? 'w-6 bg-primary' : 'w-1.5 bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mascotes Section */}
+              {mascotes.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">Mascotes ({mascotes.length})</h3>
+                    {mascotes.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllMascots(true)}
+                        className="h-7 text-xs"
+                      >
+                        Ver todos
+                      </Button>
+                    )}
+                  </div>
+
+                  {mascotes.length === 1 ? (
+                    <div className="flex justify-center">
+                      <div className="relative group w-40">
+                        <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-border bg-card">
+                          <img
+                            src={mascotes[0].skin?.card_final}
+                            alt={mascotes[0].skin?.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="mt-2 text-center">
+                          <p className="text-xs font-medium">{mascotes[0].skin?.name}</p>
+                          <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(mascotes[0].skin?.rarity || 'normal')}`}>
+                            {getRarityLabel(mascotes[0].skin?.rarity || 'normal')}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="flex justify-center items-center gap-4">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handlePrevMascot}
+                          className="h-8 w-8"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </Button>
+
+                        <div className="relative group w-40">
+                          <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-border bg-card">
+                            <img
+                              src={mascotes[mascotIndex]?.skin?.card_final}
+                              alt={mascotes[mascotIndex]?.skin?.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="mt-2 text-center">
+                            <p className="text-xs font-medium">{mascotes[mascotIndex]?.skin?.name}</p>
+                            <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(mascotes[mascotIndex]?.skin?.rarity || 'normal')}`}>
+                              {getRarityLabel(mascotes[mascotIndex]?.skin?.rarity || 'normal')}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleNextMascot}
+                          className="h-8 w-8"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </div>
+
+                      <div className="flex justify-center gap-1 mt-3">
+                        {mascotes.map((_, idx) => (
+                          <div
+                            key={idx}
+                            className={`h-1.5 rounded-full transition-all ${
+                              idx === mascotIndex ? 'w-6 bg-primary' : 'w-1.5 bg-muted'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2">
           <Button
@@ -181,6 +415,62 @@ export default function PublicProfile() {
           </Button>
         </div>
       </div>
+
+      {/* Full Avatares Modal */}
+      <Dialog open={showAllAvatars} onOpenChange={setShowAllAvatars}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Todos os Avatares ({avatares.length})</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
+            {avatares.map((item) => (
+              <div key={item.id} className="relative group">
+                <div className="aspect-square rounded-lg overflow-hidden border-2 border-border bg-card">
+                  <img
+                    src={item.skin?.avatar_final}
+                    alt={item.skin?.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="mt-2 text-center">
+                  <p className="text-xs font-medium truncate">{item.skin?.name}</p>
+                  <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
+                    {getRarityLabel(item.skin?.rarity || 'normal')}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full Mascots Modal */}
+      <Dialog open={showAllMascots} onOpenChange={setShowAllMascots}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Todos os Mascotes ({mascotes.length})</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
+            {mascotes.map((item) => (
+              <div key={item.id} className="relative group">
+                <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-border bg-card">
+                  <img
+                    src={item.skin?.card_final}
+                    alt={item.skin?.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="mt-2 text-center">
+                  <p className="text-xs font-medium truncate">{item.skin?.name}</p>
+                  <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
+                    {getRarityLabel(item.skin?.rarity || 'normal')}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
