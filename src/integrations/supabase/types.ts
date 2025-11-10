@@ -526,6 +526,33 @@ export type Database = {
           },
         ]
       }
+      ingest_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          operation_id: string
+          payload: Json | null
+          sku: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          operation_id: string
+          payload?: Json | null
+          sku: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          operation_id?: string
+          payload?: Json | null
+          sku?: string
+        }
+        Relationships: []
+      }
       lists: {
         Row: {
           class_id: string | null
@@ -749,14 +776,18 @@ export type Database = {
           avatar_final: string
           card_final: string
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
           is_active: boolean
           name: string
           price_pitecoin: number
           rarity: string
+          sku: string | null
           slug: string | null
+          type: string | null
           updated_at: string
+          version: number | null
         }
         Insert: {
           approved?: boolean
@@ -764,14 +795,18 @@ export type Database = {
           avatar_final: string
           card_final: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id: string
           is_active?: boolean
           name: string
           price_pitecoin: number
           rarity: string
+          sku?: string | null
           slug?: string | null
+          type?: string | null
           updated_at?: string
+          version?: number | null
         }
         Update: {
           approved?: boolean
@@ -779,14 +814,18 @@ export type Database = {
           avatar_final?: string
           card_final?: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
           name?: string
           price_pitecoin?: number
           rarity?: string
+          sku?: string | null
           slug?: string | null
+          type?: string | null
           updated_at?: string
+          version?: number | null
         }
         Relationships: []
       }
@@ -1214,6 +1253,7 @@ export type Database = {
         }
       }
       get_public_profile: { Args: { p_public_id: string }; Returns: Json }
+      get_rarity_fallback_price: { Args: { p_rarity: string }; Returns: number }
       init_public_id: { Args: { p_user_id: string }; Returns: Json }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
