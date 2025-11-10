@@ -5,6 +5,7 @@ import { User } from "@supabase/supabase-js";
 import { CurrencyHeader } from "./CurrencyHeader";
 import { PresentBoxBadge } from "./PresentBoxBadge";
 import { ApeTabBar } from "./ape/ApeTabBar";
+import { GiftNotificationModal } from "./GiftNotificationModal";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEconomy } from "@/contexts/EconomyContext";
@@ -61,6 +62,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           {children}
         </main>
         {user && <ApeTabBar />}
+        {user && <GiftNotificationModal />}
       </div>
     </TooltipProvider>
   );
