@@ -18,6 +18,7 @@ const Profile = () => {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [mascotUrl, setMascotUrl] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,7 +35,7 @@ const Profile = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, email, avatar_skin_id")
+        .select("first_name, email, avatar_skin_id, mascot_skin_id")
         .eq("id", session.user.id)
         .maybeSingle();
 
@@ -42,16 +43,25 @@ const Profile = () => {
         setFirstName(profile.first_name || "");
         setEmail(profile.email || session.user.email || "");
         
-        // Load avatar from inventory if equipped
-        if (profile.avatar_skin_id) {
-          const { data: skin } = await supabase
-            .from("public_catalog")
-            .select("avatar_final")
-            .eq("id", profile.avatar_skin_id)
-            .maybeSingle();
+        // Load avatar and mascot from catalog if equipped
+        if (profile.avatar_skin_id || profile.mascot_skin_id) {
+          const skinIds = [profile.avatar_skin_id, profile.mascot_skin_id].filter(Boolean);
           
-          if (skin) {
-            setAvatarUrl(skin.avatar_final);
+          const { data: skins } = await supabase
+            .from("public_catalog")
+            .select("id, avatar_final, card_final")
+            .in("id", skinIds);
+          
+          if (skins) {
+            const avatarSkin = skins.find(s => s.id === profile.avatar_skin_id);
+            const mascotSkin = skins.find(s => s.id === profile.mascot_skin_id);
+            
+            if (avatarSkin) {
+              setAvatarUrl(avatarSkin.avatar_final);
+            }
+            if (mascotSkin) {
+              setMascotUrl(mascotSkin.card_final);
+            }
           }
         }
       }
@@ -92,9 +102,20 @@ const Profile = () => {
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div>
+          <div className="space-y-2">
             <h2 className="text-xl font-bold">{firstName || "Usuário"}</h2>
             <p className="text-sm text-muted-foreground">{email}</p>
+            
+            {/* Mascot badge */}
+            {mascotUrl && (
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <img 
+                  src={mascotUrl} 
+                  alt="Mascote" 
+                  className="w-12 h-16 rounded object-cover"
+                />
+              </div>
+            )}
           </div>
         </div>
       </Card>

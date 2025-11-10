@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PitecoLogo } from "@/components/PitecoLogo";
-import { getEquippedSkins, getUserInventory, equipSkin, type InventoryItem, type SkinItem } from "@/lib/storeEngine";
+import { DeckPicker } from "@/components/DeckPicker";
+import { getEquippedSkins, getUserInventory, equipSkin, type InventoryItem } from "@/lib/storeEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Loader2, Sparkles } from "lucide-react";
+import { getRarityColor, getRarityLabel } from "@/lib/storeEngine";
+import { cn } from "@/lib/utils";
 
 export function AppearanceTab() {
   const { toast } = useToast();
@@ -21,6 +19,8 @@ export function AppearanceTab() {
   const [loading, setLoading] = useState(true);
   const [equipping, setEquipping] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"avatar" | "mascote">("avatar");
 
   useEffect(() => {
     loadAppearance();
@@ -48,11 +48,17 @@ export function AppearanceTab() {
     }
   };
 
-  const handleEquip = async (skinId: string, type: 'avatar' | 'mascot') => {
+  const openPicker = (mode: "avatar" | "mascote") => {
+    setPickerMode(mode);
+    setPickerOpen(true);
+  };
+
+  const handleEquip = async (skinId: string) => {
     if (!userId) return;
 
     setEquipping(true);
     try {
+      const type = pickerMode === "avatar" ? "avatar" : "mascot";
       const result = await equipSkin(userId, skinId, type);
       
       if (result.success) {
@@ -65,6 +71,8 @@ export function AppearanceTab() {
         } else {
           setEquippedMascot(skinId);
         }
+        // Reload appearance to get fresh data
+        await loadAppearance();
       } else {
         toast({
           title: "Erro",
@@ -84,7 +92,7 @@ export function AppearanceTab() {
     }
   };
 
-  const getEquippedSkin = (skinId: string | null): SkinItem | undefined => {
+  const getEquippedSkin = (skinId: string | null) => {
     const item = inventory.find(i => i.skin_id === skinId);
     return item?.skin;
   };
@@ -99,121 +107,120 @@ export function AppearanceTab() {
     );
   }
 
+  const equippedAvatarSkin = getEquippedSkin(equippedAvatar);
+  const equippedMascotSkin = getEquippedSkin(equippedMascot);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Aparência</CardTitle>
-        <CardDescription>
-          Personalize seu perfil e mascote
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Avatar Section */}
-        <div className="space-y-3">
-          <h3 className="font-semibold flex items-center gap-2">
-            Avatar Atual
-          </h3>
-          <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/30">
-            {equippedAvatar ? (
-              <>
-                <img 
-                  src={getEquippedSkin(equippedAvatar)?.avatar_final} 
-                  alt="Avatar"
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-                <div className="flex-1">
-                  <p className="font-medium">{getEquippedSkin(equippedAvatar)?.name}</p>
-                  <p className="text-sm text-muted-foreground">Avatar equipado</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <PitecoLogo className="w-16 h-16" />
-                <div className="flex-1">
-                  <p className="font-medium">Nenhum avatar equipado</p>
-                  <p className="text-sm text-muted-foreground">Selecione um abaixo</p>
-                </div>
-              </>
+    <>
+      <div className="p-4 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Aparência</CardTitle>
+            <CardDescription>
+              Personalize seu perfil e mascote
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Avatar Section */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-base">Avatar Atual</h3>
+              <div className="flex items-center gap-4 p-4 border rounded-xl bg-muted/30">
+                {equippedAvatarSkin ? (
+                  <>
+                    <img 
+                      src={equippedAvatarSkin.avatar_final} 
+                      alt="Avatar"
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{equippedAvatarSkin.name}</p>
+                      <Badge className={cn("text-xs border mt-1", getRarityColor(equippedAvatarSkin.rarity))}>
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        {getRarityLabel(equippedAvatarSkin.rarity)}
+                      </Badge>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <PitecoLogo className="w-20 h-20" />
+                    <div className="flex-1">
+                      <p className="font-medium">Nenhum avatar equipado</p>
+                      <p className="text-sm text-muted-foreground">Selecione um da sua coleção</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <Button
+                onClick={() => openPicker("avatar")}
+                variant="outline"
+                className="w-full min-h-[44px]"
+                disabled={inventory.length === 0}
+              >
+                Selecionar um avatar
+              </Button>
+            </div>
+
+            {/* Mascot Section */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-base">Mascote Atual</h3>
+              <div className="flex items-center gap-4 p-4 border rounded-xl bg-muted/30">
+                {equippedMascotSkin ? (
+                  <>
+                    <img 
+                      src={equippedMascotSkin.card_final} 
+                      alt="Mascote"
+                      className="w-20 h-28 rounded-lg object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{equippedMascotSkin.name}</p>
+                      <Badge className={cn("text-xs border mt-1", getRarityColor(equippedMascotSkin.rarity))}>
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        {getRarityLabel(equippedMascotSkin.rarity)}
+                      </Badge>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-20 h-28 bg-muted rounded-lg flex items-center justify-center">
+                      <PitecoLogo className="w-16 h-16" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Nenhum mascote equipado</p>
+                      <p className="text-sm text-muted-foreground">Selecione um da sua coleção</p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <Button
+                onClick={() => openPicker("mascote")}
+                variant="outline"
+                className="w-full min-h-[44px]"
+                disabled={inventory.length === 0}
+              >
+                Selecionar um mascote
+              </Button>
+            </div>
+
+            {inventory.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Compre pacotes na loja para personalizar sua aparência!
+              </p>
             )}
-          </div>
-          
-          {inventory.length > 0 && (
-            <Select
-              value={equippedAvatar || ''}
-              onValueChange={(value) => handleEquip(value, 'avatar')}
-              disabled={equipping}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um avatar" />
-              </SelectTrigger>
-              <SelectContent>
-                {inventory.map((item) => (
-                  <SelectItem key={item.id} value={item.skin_id}>
-                    {item.skin?.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Mascot Section */}
-        <div className="space-y-3">
-          <h3 className="font-semibold flex items-center gap-2">
-            Mascote Atual
-          </h3>
-          <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/30">
-            {equippedMascot ? (
-              <>
-                <img 
-                  src={getEquippedSkin(equippedMascot)?.card_final} 
-                  alt="Mascote"
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <div className="flex-1">
-                  <p className="font-medium">{getEquippedSkin(equippedMascot)?.name}</p>
-                  <p className="text-sm text-muted-foreground">Card equipado</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
-                  <PitecoLogo className="w-12 h-12" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">Nenhum mascote equipado</p>
-                  <p className="text-sm text-muted-foreground">Selecione um abaixo</p>
-                </div>
-              </>
-            )}
-          </div>
-
-          {inventory.length > 0 && (
-            <Select
-              value={equippedMascot || ''}
-              onValueChange={(value) => handleEquip(value, 'mascot')}
-              disabled={equipping}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um mascote" />
-              </SelectTrigger>
-              <SelectContent>
-                {inventory.map((item) => (
-                  <SelectItem key={item.id} value={item.skin_id}>
-                    {item.skin?.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        {inventory.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Compre pacotes na loja para personalizar sua aparência!
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      {/* Deck Picker Modal */}
+      <DeckPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        inventory={inventory}
+        mode={pickerMode}
+        onSelect={handleEquip}
+        equipping={equipping}
+      />
+    </>
   );
 }
