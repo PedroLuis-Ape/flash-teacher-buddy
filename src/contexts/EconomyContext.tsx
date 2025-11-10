@@ -7,6 +7,7 @@ interface EconomyState {
   xp_total: number;
   level: number;
   inventory_count: number;
+  current_streak: number;
 }
 
 interface EconomyContextValue extends EconomyState {
@@ -24,6 +25,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     xp_total: 0,
     level: 0,
     inventory_count: 0,
+    current_streak: 0,
   });
   const [loading, setLoading] = useState(true);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -52,7 +54,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
           // Also fetch XP and level from profiles (not in HUD)
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('xp_total, level')
+            .select('xp_total, level, current_streak')
             .eq('id', session.user.id)
             .single();
 
@@ -62,6 +64,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
             xp_total: profileData?.xp_total || prev.xp_total,
             level: profileData?.level || prev.level,
             inventory_count: data.inventory_count || 0,
+            current_streak: profileData?.current_streak || prev.current_streak,
           }));
         }
       } catch (error) {
@@ -92,10 +95,10 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
 
         if (data?.ok && mounted) {
-          // Also fetch XP and level from profiles (not in HUD)
+          // Also fetch XP, level and streak from profiles (not in HUD)
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('xp_total, level')
+            .select('xp_total, level, current_streak')
             .eq('id', session.user.id)
             .single();
 
@@ -105,6 +108,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
             xp_total: profileData?.xp_total || 0,
             level: profileData?.level || 0,
             inventory_count: data.inventory_count || 0,
+            current_streak: profileData?.current_streak || 0,
           });
         }
       } catch (error) {
@@ -136,6 +140,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
               pts_weekly: payload.new.pts_weekly || 0,
               xp_total: payload.new.xp_total || 0,
               level: payload.new.level || 0,
+              current_streak: payload.new.current_streak || 0,
             }));
           }
         }

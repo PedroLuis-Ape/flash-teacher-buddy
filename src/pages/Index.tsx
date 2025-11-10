@@ -2,18 +2,21 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useHomeData } from "@/hooks/useHomeData";
+import { useEconomy } from "@/contexts/EconomyContext";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
+import { ApeCardProfessor } from "@/components/ape/ApeCardProfessor";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Play } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Layers, ChevronRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { last, recents, loading } = useHomeData();
+  const { last, recents, teachers, stats, loading } = useHomeData();
+  const { pts_weekly, level, current_streak } = useEconomy();
 
   useEffect(() => {
     checkAuth();
@@ -48,11 +51,48 @@ const Index = () => {
       <ApeAppBar title="Início" />
 
       <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Stats Cards Grid */}
+        {loading ? (
+          <div className="grid grid-cols-3 gap-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/profile")}>
+              <CardContent className="p-4 text-center">
+                <TrendingUp className="h-5 w-5 mx-auto mb-1 text-primary" />
+                <p className="text-2xl font-bold">{pts_weekly}</p>
+                <p className="text-xs text-muted-foreground">PTS Semanal</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/profile")}>
+              <CardContent className="p-4 text-center">
+                <div className="h-5 w-5 mx-auto mb-1 flex items-center justify-center text-primary font-bold text-lg">
+                  {level}
+                </div>
+                <p className="text-2xl font-bold">{current_streak}</p>
+                <p className="text-xs text-muted-foreground">Dias seguidos</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/folders")}>
+              <CardContent className="p-4 text-center">
+                <Layers className="h-5 w-5 mx-auto mb-1 text-primary" />
+                <p className="text-2xl font-bold">{stats.total_lists}</p>
+                <p className="text-xs text-muted-foreground">Listas</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Continue Studying Card */}
         {loading ? (
           <Skeleton className="h-[88px] w-full rounded-xl" />
         ) : last && total > 0 ? (
-          <Card className="p-4 bg-gradient-to-br from-primary/10 to-secondary/10">
+          <Card className="p-4 bg-gradient-to-br from-primary/10 to-secondary/10 hover:shadow-lg transition-shadow">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base mb-1">
@@ -78,6 +118,39 @@ const Index = () => {
           </Card>
         ) : null}
 
+        {/* Teachers Section */}
+        {!loading && teachers.length > 0 && (
+          <div className="space-y-4">
+            <ApeSectionTitle
+              action={
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate("/my-teachers")}
+                  className="min-h-[44px]"
+                >
+                  Ver todos
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              }
+            >
+              <Users className="h-5 w-5 mr-2" />
+              Meus Professores
+            </ApeSectionTitle>
+
+            <div className="space-y-3">
+              {teachers.map((teacher) => (
+                <ApeCardProfessor
+                  key={teacher.id}
+                  name={teacher.name}
+                  folderCount={teacher.folder_count}
+                  onClick={() => navigate("/my-teachers")}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Recent Lists */}
         <div className="space-y-4">
           <ApeSectionTitle
@@ -89,10 +162,12 @@ const Index = () => {
                 className="min-h-[44px]"
               >
                 Ver tudo
+                <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             }
           >
-            Listas Recentes
+            <BookOpen className="h-5 w-5 mr-2" />
+            Listas para Estudar
           </ApeSectionTitle>
 
           {loading ? (
@@ -102,37 +177,65 @@ const Index = () => {
               ))}
             </div>
           ) : !hasData ? (
-            <div className="text-center py-12">
-              <BookOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">
-                Você ainda não tem listas de estudo
-              </p>
-              <Button 
-                onClick={() => navigate("/folders")}
-                className="min-h-[44px]"
-              >
-                Criar sua primeira lista
-              </Button>
-            </div>
+            <Card className="text-center py-12">
+              <CardContent>
+                <BookOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground mb-4">
+                  Você ainda não tem listas de estudo
+                </p>
+                <Button 
+                  onClick={() => navigate("/folders")}
+                  className="min-h-[44px]"
+                >
+                  Criar sua primeira lista
+                </Button>
+              </CardContent>
+            </Card>
           ) : recents.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">
-                Nenhuma lista recente
-              </p>
-            </div>
+            <Card className="text-center py-8">
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma lista disponível
+                </p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
               {recents.map((list) => (
                 <ApeCardList
                   key={list.id}
                   title={list.title}
+                  subtitle={list.folder_name}
                   cardCount={list.count}
+                  badge={list.is_own ? undefined : "Compartilhado"}
                   onClick={() => navigate(`/list/${list.id}`)}
                 />
               ))}
             </div>
           )}
         </div>
+
+        {/* Quick Actions */}
+        {!loading && (
+          <div className="grid grid-cols-2 gap-3 pb-4">
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={() => navigate("/store")}
+            >
+              <div className="text-2xl">🏪</div>
+              <span className="text-sm">Loja</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={() => navigate("/search")}
+            >
+              <Users className="h-6 w-6" />
+              <span className="text-sm">Buscar Professores</span>
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

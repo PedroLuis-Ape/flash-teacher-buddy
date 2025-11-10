@@ -1,18 +1,23 @@
 import { FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface ApeCardListProps {
   title: string;
+  subtitle?: string;
   cardCount?: number;
   language?: string;
+  badge?: string;
   onClick?: () => void;
   className?: string;
 }
 
 export function ApeCardList({
   title,
+  subtitle,
   cardCount,
   language,
+  badge,
   onClick,
   className
 }: ApeCardListProps) {
@@ -20,7 +25,7 @@ export function ApeCardList({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 w-full h-14 px-4 rounded-xl",
+        "flex items-center gap-3 w-full min-h-14 px-4 py-3 rounded-xl",
         "bg-card hover:bg-accent transition-colors",
         "border border-border",
         "text-left",
@@ -32,12 +37,20 @@ export function ApeCardList({
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm truncate">
-          {title}
-        </h3>
-        {(cardCount !== undefined || language) && (
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-sm truncate">
+            {title}
+          </h3>
+          {badge && (
+            <Badge variant="secondary" className="text-xs shrink-0">
+              {badge}
+            </Badge>
+          )}
+        </div>
+        {(subtitle || cardCount !== undefined || language) && (
           <p className="text-xs text-muted-foreground">
             {[
+              subtitle,
               cardCount !== undefined && `${cardCount} ${cardCount === 1 ? 'card' : 'cards'}`,
               language
             ].filter(Boolean).join(' • ')}
