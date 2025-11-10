@@ -107,16 +107,47 @@ export async function getUserInventory(userId: string): Promise<InventoryItem[]>
     if (!inventoryData || inventoryData.length === 0) return [];
 
     // Fetch all skins from catalog
-    const skinIds = inventoryData.map(item => item.skin_id);
-    const { data: skinsData, error: skinsError } = await supabase
+    const skinIds = inventoryData.map(i => i.skin_id);
+    const { data: pubSkins, error: pubErr } = await supabase
       .from('public_catalog')
       .select('*')
       .in('id', skinIds);
 
-    if (skinsError) throw skinsError;
+    if (pubErr) throw pubErr;
 
-    // Map skins to inventory items
-    const skinsMap = new Map(skinsData?.map(skin => [skin.id, skin as SkinItem]) || []);
+    // Start with public_catalog results
+    const skinsMap = new Map<string, SkinItem>((pubSkins || []).map((s: any) => [s.id, s as SkinItem]));
+
+    // Fallback: fetch any missing items from skins_catalog and map fields
+    const missingIds = skinIds.filter(id => !skinsMap.has(id));
+    if (missingIds.length) {
+      const { data: skuSkins, error: skuErr } = await supabase
+        .from('skins_catalog')
+        .select('id, name, rarity, price_pitecoin, avatar_src, card_src, avatar_img, card_img, is_active, description')
+        .in('id', missingIds);
+
+      if (skuErr) {
+        console.warn('[StoreEngine] skins_catalog fallback error:', skuErr);
+      } else {
+        (skuSkins || []).forEach((s: any) => {
+          const mapped: SkinItem = {
+            id: s.id,
+            name: s.name,
+            rarity: s.rarity,
+            price_pitecoin: s.price_pitecoin,
+            avatar_final: s.avatar_src || s.avatar_img || '',
+            card_final: s.card_src || s.card_img || '',
+            description: s.description || null,
+            is_active: s.is_active ?? true,
+          } as SkinItem;
+
+          // Only add if there is at least one media to display
+          if (mapped.avatar_final || mapped.card_final) {
+            skinsMap.set(mapped.id, mapped);
+          }
+        });
+      }
+    }
     
     return inventoryData.map(item => ({
       ...item,

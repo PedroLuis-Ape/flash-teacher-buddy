@@ -41,7 +41,13 @@ export function DeckPicker({ open, onClose, inventory, mode, onSelect, equipping
 
   // Filter items by tab
   const getFilteredItems = () => {
-    return inventory.filter((item) => item.skin); // Only items with skin data
+    return inventory.filter((item) => {
+      const skin = item.skin;
+      if (!skin) return false;
+      if (activeTab === 'avatares') return !!skin.avatar_final;
+      if (activeTab === 'mascotes') return !!skin.card_final;
+      return true;
+    });
   };
 
   const filteredItems = getFilteredItems();
