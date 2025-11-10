@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ArrowLeft, Gift } from "lucide-react";
+import { ArrowLeft, Gift, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -65,6 +65,15 @@ export function ApeAppBar({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/pesquisar')}
+            aria-label="Pesquisar usuários"
+            title="Pesquisar"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
           {FEATURE_FLAGS.economy_enabled && <EconomyBadge />}
           {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
           <ThemeToggle />

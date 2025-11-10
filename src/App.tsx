@@ -13,6 +13,8 @@ import { InstallPWA } from "@/components/InstallPWA";
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Profile = lazy(() => import("./pages/Profile"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+const UserSearch = lazy(() => import("./pages/UserSearch"));
 const Folders = lazy(() => import("./pages/Folders"));
 const Folder = lazy(() => import("./pages/Folder"));
 const ListDetail = lazy(() => import("./pages/ListDetail"));
@@ -46,6 +48,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/perfil/:id" element={<PublicProfile />} />
+                <Route path="/pesquisar" element={<UserSearch />} />
                 <Route path="/folders" element={<Folders />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/folder/:id" element={<Folder />} />

@@ -75,13 +75,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "class_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       classes: {
@@ -112,13 +105,6 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "classes_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -172,13 +158,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "collections_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       conversion_history: {
@@ -223,13 +202,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "conversion_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       daily_activity: {
@@ -263,13 +235,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_activity_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -505,13 +470,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "gift_offers_recipient_user_id_fkey"
-            columns: ["recipient_user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       lists: {
@@ -598,13 +556,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pitecoin_transactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1081,13 +1032,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "videos_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "videos_folder_id_fkey"
             columns: ["folder_id"]
             isOneToOne: false
@@ -1098,66 +1042,7 @@ export type Database = {
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          avatar_skin_id: string | null
-          cards_studied: number | null
-          id: string | null
-          level: number | null
-          lists_created: number | null
-          mascot_skin_id: string | null
-          name: string | null
-          points: number | null
-          ptc: number | null
-          public_id: string | null
-          user_type: string | null
-          xp_total: number | null
-        }
-        Insert: {
-          avatar_skin_id?: string | null
-          cards_studied?: never
-          id?: string | null
-          level?: number | null
-          lists_created?: never
-          mascot_skin_id?: string | null
-          name?: string | null
-          points?: number | null
-          ptc?: number | null
-          public_id?: string | null
-          user_type?: never
-          xp_total?: number | null
-        }
-        Update: {
-          avatar_skin_id?: string | null
-          cards_studied?: never
-          id?: string | null
-          level?: number | null
-          lists_created?: never
-          mascot_skin_id?: string | null
-          name?: string | null
-          points?: number | null
-          ptc?: number | null
-          public_id?: string | null
-          user_type?: never
-          xp_total?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_avatar_skin_id_fkey"
-            columns: ["avatar_skin_id"]
-            isOneToOne: false
-            referencedRelation: "skins_catalog"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_mascot_skin_id_fkey"
-            columns: ["mascot_skin_id"]
-            isOneToOne: false
-            referencedRelation: "skins_catalog"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       claim_gift_atomic: {
@@ -1269,6 +1154,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_public_profile: { Args: { p_public_id: string }; Returns: Json }
       init_public_id: { Args: { p_user_id: string }; Returns: Json }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
@@ -1285,6 +1171,15 @@ export type Database = {
           p_operation_id: string
           p_price: number
           p_skin_id: string
+        }
+        Returns: Json
+      }
+      search_users: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_query: string
+          p_user_type?: string
         }
         Returns: Json
       }

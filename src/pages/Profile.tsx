@@ -9,7 +9,7 @@ import { StatisticsTab } from "@/components/StatisticsTab";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, BarChart3, Clock } from "lucide-react";
+import { LogOut, User, BarChart3, Clock, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
@@ -19,6 +19,7 @@ const Profile = () => {
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [mascotUrl, setMascotUrl] = useState("");
+  const [publicId, setPublicId] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,13 +36,24 @@ const Profile = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, email, avatar_skin_id, mascot_skin_id")
+        .select("first_name, email, avatar_skin_id, mascot_skin_id, user_tag")
         .eq("id", session.user.id)
         .maybeSingle();
 
       if (profile) {
         setFirstName(profile.first_name || "");
         setEmail(profile.email || session.user.email || "");
+        
+        // Initialize public ID if needed
+        if (!profile.user_tag || !profile.user_tag.match(/^[PA][0-9]{6}$/)) {
+          const { initPublicId } = await import("@/lib/profileEngine");
+          const result = await initPublicId(session.user.id);
+          if (result.success && result.publicId) {
+            setPublicId(result.publicId);
+          }
+        } else {
+          setPublicId(profile.user_tag);
+        }
         
         // Load avatar and mascot from catalog if equipped
         if (profile.avatar_skin_id || profile.mascot_skin_id) {
@@ -87,6 +99,13 @@ const Profile = () => {
     }
   };
 
+  const handleCopyId = () => {
+    if (publicId) {
+      navigator.clipboard.writeText(publicId);
+      toast.success("ID copiado!");
+    }
+  };
+
   const initials = firstName
     ? firstName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
@@ -105,6 +124,17 @@ const Profile = () => {
           <div className="space-y-2">
             <h2 className="text-xl font-bold">{firstName || "Usuário"}</h2>
             <p className="text-sm text-muted-foreground">{email}</p>
+            {publicId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopyId}
+                className="h-8 gap-2 mt-2"
+              >
+                <span className="font-mono text-sm">{publicId}</span>
+                <Copy className="h-3 w-3" />
+              </Button>
+            )}
             
             {/* Mascot badge */}
             {mascotUrl && (
