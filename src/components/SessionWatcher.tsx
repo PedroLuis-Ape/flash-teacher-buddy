@@ -15,6 +15,7 @@ export function SessionWatcher() {
 
   useEffect(() => {
     let mounted = true;
+    let refreshInterval: NodeJS.Timeout;
 
     // Flags globais de controle no escopo do efeito
     sessionStorage.setItem('authReady', '0');
@@ -27,12 +28,21 @@ export function SessionWatcher() {
       }
     };
 
-    // 1) Verificação inicial (sem redirecionar ainda)
+    // 1) Verificação inicial e configuração de refresh automático
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       gotInitialSession = true;
       maybeSetReady();
-      // Não redirecionamos aqui para evitar loops; a guarda acontece quando authReady === '1'
+      
+      // Configurar refresh automático do token a cada 50 minutos (tokens expiram em 1h)
+      if (session) {
+        refreshInterval = setInterval(async () => {
+          const { error } = await supabase.auth.refreshSession();
+          if (error) {
+            console.error('[SessionWatcher] Token refresh failed:', error);
+          }
+        }, 50 * 60 * 1000); // 50 minutos
+      }
     });
 
     // 2) Listener único de auth
@@ -77,6 +87,7 @@ export function SessionWatcher() {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      if (refreshInterval) clearInterval(refreshInterval);
     };
   }, [navigate]);
 

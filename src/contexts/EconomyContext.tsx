@@ -48,6 +48,36 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
           },
         });
 
+        // Se der erro 401, tentar renovar o token e tentar novamente
+        if (error && error.message?.includes('401')) {
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          if (refreshData.session) {
+            const { data: retryData, error: retryError } = await supabase.functions.invoke('hud-summary', {
+              headers: {
+                Authorization: `Bearer ${refreshData.session.access_token}`,
+              },
+            });
+            if (!retryError && retryData?.ok) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('xp_total, level, current_streak')
+                .eq('id', refreshData.session.user.id)
+                .single();
+
+              setState(prev => ({
+                balance_pitecoin: retryData.ptc || 0,
+                pts_weekly: retryData.points || 0,
+                xp_total: profileData?.xp_total || prev.xp_total,
+                level: profileData?.level || prev.level,
+                inventory_count: retryData.inventory_count || 0,
+                current_streak: profileData?.current_streak || prev.current_streak,
+              }));
+              return;
+            }
+          }
+          throw error;
+        }
+
         if (error) throw error;
 
         if (data?.ok) {
@@ -91,6 +121,36 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
             Authorization: `Bearer ${session.access_token}`,
           },
         });
+
+        // Se der erro 401, tentar renovar o token e tentar novamente
+        if (error && error.message?.includes('401')) {
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          if (refreshData.session && mounted) {
+            const { data: retryData, error: retryError } = await supabase.functions.invoke('hud-summary', {
+              headers: {
+                Authorization: `Bearer ${refreshData.session.access_token}`,
+              },
+            });
+            if (!retryError && retryData?.ok) {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('xp_total, level, current_streak')
+                .eq('id', refreshData.session.user.id)
+                .single();
+
+              setState({
+                balance_pitecoin: retryData.ptc || 0,
+                pts_weekly: retryData.points || 0,
+                xp_total: profileData?.xp_total || 0,
+                level: profileData?.level || 0,
+                inventory_count: retryData.inventory_count || 0,
+                current_streak: profileData?.current_streak || 0,
+              });
+              return;
+            }
+          }
+          throw error;
+        }
 
         if (error) throw error;
 
