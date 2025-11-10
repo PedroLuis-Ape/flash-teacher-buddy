@@ -15,7 +15,7 @@ import { Loader2, ShoppingBag, ArrowRightLeft } from "lucide-react";
 const Store = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { updateBalance } = useEconomy();
+  const { refreshBalance } = useEconomy();
   const [skins, setSkins] = useState<SkinItem[]>([]);
   const [ownedSkinIds, setOwnedSkinIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -68,11 +68,9 @@ const Store = () => {
           title: "Compra realizada!",
           description: result.message,
         });
-        // Update balance immediately
-        if (result.newBalance !== undefined) {
-          updateBalance(result.newBalance);
-        }
-        // Refresh inventory
+        // Refresh HUD immediately (PTC and inventory count)
+        await refreshBalance();
+        // Refresh inventory list
         const inventoryData = await getUserInventory(userId);
         setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
       } else {

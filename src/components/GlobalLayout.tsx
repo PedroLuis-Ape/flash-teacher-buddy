@@ -7,6 +7,7 @@ import { PresentBoxBadge } from "./PresentBoxBadge";
 import { ApeTabBar } from "./ape/ApeTabBar";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEconomy } from "@/contexts/EconomyContext";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -15,6 +16,7 @@ interface GlobalLayoutProps {
 export function GlobalLayout({ children }: GlobalLayoutProps) {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const { refreshBalance } = useEconomy();
   
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,6 +31,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
 
     return () => subscription.unsubscribe();
   }, []);
+  
+  // Refresh HUD on route change
+  useEffect(() => {
+    if (user) {
+      refreshBalance();
+    }
+  }, [location.pathname, user, refreshBalance]);
   
   // Don't show header/tabbar on auth pages
   const isAuthPage = location.pathname === '/auth' || location.pathname === '/';

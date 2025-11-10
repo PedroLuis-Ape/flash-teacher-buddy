@@ -1,12 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getEconomyProfile } from "@/lib/rewardEngine";
 
 interface EconomyState {
   balance_pitecoin: number;
   pts_weekly: number;
   xp_total: number;
   level: number;
+  inventory_count: number;
 }
 
 interface EconomyContextValue extends EconomyState {
@@ -23,28 +23,51 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     pts_weekly: 0,
     xp_total: 0,
     level: 0,
+    inventory_count: 0,
   });
   const [loading, setLoading] = useState(true);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const refreshBalance = useCallback(async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const profile = await getEconomyProfile(session.user.id);
-      if (profile) {
-        setState({
-          balance_pitecoin: profile.balance_pitecoin,
-          pts_weekly: profile.pts_weekly,
-          xp_total: profile.xp_total,
-          level: profile.level,
-        });
-      }
-    } catch (error) {
-      console.error('[EconomyContext] Error refreshing balance:', error);
-    } finally {
-      setLoading(false);
+    // Debounce: clear any pending refresh
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
     }
+
+    refreshTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        // Call HUD summary endpoint for fresh data
+        const { data, error } = await supabase.functions.invoke('hud-summary', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.ok) {
+          // Also fetch XP and level from profiles (not in HUD)
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('xp_total, level')
+            .eq('id', session.user.id)
+            .single();
+
+          setState(prev => ({
+            balance_pitecoin: data.ptc || 0,
+            pts_weekly: data.points || 0,
+            xp_total: profileData?.xp_total || prev.xp_total,
+            level: profileData?.level || prev.level,
+            inventory_count: data.inventory_count || 0,
+          }));
+        }
+      } catch (error) {
+        console.error('[EconomyContext] Error refreshing balance:', error);
+      }
+    }, 300); // 300ms debounce
   }, []);
 
   const updateBalance = useCallback((newBalance: number) => {
@@ -52,11 +75,52 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshBalance();
+    let mounted = true;
 
-    // Subscribe to realtime updates
+    const loadInitialData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !mounted) return;
+
+        // Call HUD summary endpoint
+        const { data, error } = await supabase.functions.invoke('hud-summary', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.ok && mounted) {
+          // Also fetch XP and level from profiles (not in HUD)
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('xp_total, level')
+            .eq('id', session.user.id)
+            .single();
+
+          setState({
+            balance_pitecoin: data.ptc || 0,
+            pts_weekly: data.points || 0,
+            xp_total: profileData?.xp_total || 0,
+            level: profileData?.level || 0,
+            inventory_count: data.inventory_count || 0,
+          });
+        }
+      } catch (error) {
+        console.error('[EconomyContext] Error loading initial data:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialData();
+
+    // Subscribe to realtime changes on profiles
     const channel = supabase
-      .channel('economy_updates')
+      .channel('profile-changes')
       .on(
         'postgres_changes',
         {
@@ -64,28 +128,43 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
           schema: 'public',
           table: 'profiles',
         },
-        async (payload) => {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session && payload.new && 'id' in payload.new && payload.new.id === session.user.id) {
-            const updates: Partial<EconomyState> = {};
-            
-            if ('balance_pitecoin' in payload.new) {
-              updates.balance_pitecoin = (payload.new as any).balance_pitecoin || 0;
-            }
-            if ('pts_weekly' in payload.new) {
-              updates.pts_weekly = (payload.new as any).pts_weekly || 0;
-            }
-            
-            if (Object.keys(updates).length > 0) {
-              setState(prev => ({ ...prev, ...updates }));
-            }
+        (payload) => {
+          if (mounted && payload.new) {
+            setState(prev => ({
+              ...prev,
+              balance_pitecoin: payload.new.balance_pitecoin || 0,
+              pts_weekly: payload.new.pts_weekly || 0,
+              xp_total: payload.new.xp_total || 0,
+              level: payload.new.level || 0,
+            }));
           }
         }
       )
       .subscribe();
 
+    // Listen to visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshBalance();
+      }
+    };
+
+    // Listen to online event
+    const handleOnline = () => {
+      refreshBalance();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+
     return () => {
-      supabase.removeChannel(channel);
+      mounted = false;
+      channel.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
   }, [refreshBalance]);
 
