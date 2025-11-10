@@ -59,24 +59,43 @@ export function AppearanceTab() {
     setEquipping(true);
     try {
       const type = pickerMode === "avatar" ? "avatar" : "mascot";
-      const result = await equipSkin(userId, skinId, type);
+      // Generate unique operation ID for idempotency
+      const operationId = crypto.randomUUID();
+      const result = await equipSkin(userId, skinId, type, operationId);
       
       if (result.success) {
         toast({
           title: "Sucesso!",
           description: result.message,
         });
+        
+        // Update local state immediately
         if (type === 'avatar') {
           setEquippedAvatar(skinId);
         } else {
           setEquippedMascot(skinId);
         }
+        
         // Reload appearance to get fresh data
         await loadAppearance();
       } else {
+        // Handle specific error codes
+        const errorMessages: Record<string, string> = {
+          'NOT_OWNER': 'Você não possui este item.',
+          'MISSING_ASSET': 'Este item não tem a mídia necessária.',
+          'ALREADY_PROCESSED': 'Esta operação já foi processada.',
+          'INVALID_INPUT': 'Dados inválidos.',
+          'NOT_FOUND': 'Item não encontrado.',
+          'INTERNAL_ERROR': 'Erro ao equipar. Tente novamente.'
+        };
+        
+        const errorMessage = result.error 
+          ? errorMessages[result.error] || result.message
+          : result.message;
+        
         toast({
           title: "Erro",
-          description: result.message,
+          description: errorMessage,
           variant: "destructive",
         });
       }

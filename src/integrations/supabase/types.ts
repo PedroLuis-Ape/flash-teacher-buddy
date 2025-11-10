@@ -239,6 +239,33 @@ export type Database = {
           },
         ]
       }
+      equip_logs: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          operation_id: string
+          skin_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          operation_id: string
+          skin_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          operation_id?: string
+          skin_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       flashcard_progress: {
         Row: {
           correct_count: number
@@ -1017,6 +1044,15 @@ export type Database = {
     Functions: {
       claim_gift_atomic: {
         Args: { p_gift_id: string; p_user_id: string }
+        Returns: Json
+      }
+      equip_skin_atomic: {
+        Args: {
+          p_kind: string
+          p_operation_id: string
+          p_skin_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
       generate_user_tag: { Args: never; Returns: string }

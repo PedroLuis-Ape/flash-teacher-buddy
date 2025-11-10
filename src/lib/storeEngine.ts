@@ -207,38 +207,65 @@ export async function purchaseSkin(
 }
 
 /**
- * Equip a skin (avatar or mascot)
+ * Equip a skin (avatar or mascot) - ATOMIC & IDEMPOTENT
  */
 export async function equipSkin(
   userId: string,
   skinId: string,
-  type: 'avatar' | 'mascot'
-): Promise<{ success: boolean; message: string }> {
+  type: 'avatar' | 'mascot',
+  operationId?: string
+): Promise<{ 
+  success: boolean; 
+  message: string;
+  error?: string;
+  alreadyProcessed?: boolean;
+}> {
   try {
-    // Check if user owns the skin
-    const owns = await userOwnsSkin(userId, skinId);
-    if (!owns) {
-      return { success: false, message: 'Você não possui este item!' };
+    // Generate operation ID for idempotency if not provided
+    const opId = operationId || crypto.randomUUID();
+
+    // Call atomic equip function in database
+    const { data, error } = await supabase.rpc('equip_skin_atomic', {
+      p_operation_id: opId,
+      p_user_id: userId,
+      p_kind: type,
+      p_skin_id: skinId
+    });
+
+    if (error) {
+      console.error('[StoreEngine] RPC error:', error);
+      throw error;
     }
 
-    // Update profile
-    const field = type === 'avatar' ? 'avatar_skin_id' : 'mascot_skin_id';
-    const { error } = await supabase
-      .from('profiles')
-      .update({ [field]: skinId })
-      .eq('id', userId);
+    if (!data) {
+      return {
+        success: false,
+        message: 'Erro ao equipar item. Tente novamente.',
+        error: 'INTERNAL_ERROR'
+      };
+    }
 
-    if (error) throw error;
+    const result = data as {
+      success: boolean;
+      error?: string;
+      message: string;
+      already_processed?: boolean;
+      avatar_skin_id?: string;
+      mascot_skin_id?: string;
+    };
 
     return {
-      success: true,
-      message: `${type === 'avatar' ? 'Avatar' : 'Mascote'} equipado com sucesso!`
+      success: result.success,
+      message: result.message,
+      error: result.error,
+      alreadyProcessed: result.already_processed
     };
   } catch (error) {
     console.error('[StoreEngine] Error equipping skin:', error);
     return {
       success: false,
-      message: 'Erro ao equipar item. Tente novamente.'
+      message: 'Erro ao equipar item. Tente novamente.',
+      error: 'INTERNAL_ERROR'
     };
   }
 }
