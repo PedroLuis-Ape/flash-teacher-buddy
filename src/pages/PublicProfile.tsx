@@ -24,6 +24,7 @@ export default function PublicProfile() {
   const [mascotIndex, setMascotIndex] = useState(0);
   const [showAllAvatars, setShowAllAvatars] = useState(false);
   const [showAllMascots, setShowAllMascots] = useState(false);
+  const [showDeckModal, setShowDeckModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -217,8 +218,19 @@ export default function PublicProfile() {
           </CardContent>
         </Card>
 
-        {/* Deck Card */}
+        {/* Ver Baralho Button */}
         {(avatares.length > 0 || mascotes.length > 0) && (
+          <Button
+            onClick={() => setShowDeckModal(true)}
+            className="w-full h-12 text-base font-semibold"
+            size="lg"
+          >
+            Ver Baralho ({avatares.length + mascotes.length} {avatares.length + mascotes.length === 1 ? 'item' : 'itens'})
+          </Button>
+        )}
+
+        {/* Deck Card - Hidden, now shown in modal */}
+        {false && (avatares.length > 0 || mascotes.length > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Baralho</CardTitle>
@@ -440,6 +452,75 @@ export default function PublicProfile() {
                 </div>
               </div>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deck Modal - Main View */}
+      <Dialog open={showDeckModal} onOpenChange={setShowDeckModal}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Baralho de {profile.name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Avatares Section */}
+            {avatares.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-lg font-semibold">Avatares</h3>
+                  <span className="text-sm text-muted-foreground">{avatares.length} {avatares.length === 1 ? 'item' : 'itens'}</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {avatares.map((item) => (
+                    <div key={item.id} className="relative group">
+                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-border bg-card">
+                        <img
+                          src={item.skin?.avatar_final}
+                          alt={item.skin?.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="mt-2 text-center">
+                        <p className="text-xs font-medium truncate">{item.skin?.name}</p>
+                        <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
+                          {getRarityLabel(item.skin?.rarity || 'normal')}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mascotes Section */}
+            {mascotes.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-lg font-semibold">Mascotes</h3>
+                  <span className="text-sm text-muted-foreground">{mascotes.length} {mascotes.length === 1 ? 'item' : 'itens'}</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {mascotes.map((item) => (
+                    <div key={item.id} className="relative group">
+                      <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-border bg-card">
+                        <img
+                          src={item.skin?.card_final}
+                          alt={item.skin?.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="mt-2 text-center">
+                        <p className="text-xs font-medium truncate">{item.skin?.name}</p>
+                        <Badge variant="outline" className={`text-xs mt-1 ${getRarityColor(item.skin?.rarity || 'normal')}`}>
+                          {getRarityLabel(item.skin?.rarity || 'normal')}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
