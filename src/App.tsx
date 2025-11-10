@@ -29,6 +29,7 @@ const MyTeachers = lazy(() => import("./pages/MyTeachers"));
 const TeacherFolders = lazy(() => import("./pages/TeacherFolders"));
 const Store = lazy(() => import("./pages/Store"));
 const PresentBox = lazy(() => import("./pages/PresentBox"));
+const Reinos = lazy(() => import("./pages/Reinos"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => (
                 <Route path="/teacher/:teacherId/folders" element={<TeacherFolders />} />
                 <Route path="/store" element={<Store />} />
                 <Route path="/gifts" element={<PresentBox />} />
+                <Route path="/reinos" element={<Reinos />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </GlobalLayout>

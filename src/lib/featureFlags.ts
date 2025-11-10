@@ -66,4 +66,11 @@ export const FEATURE_FLAGS = {
    * When true: journey features enabled
    */
   journey_enabled: false,
+
+  /**
+   * Reinos (Realms) system
+   * When false: no Modo Reino button or features
+   * When true: shows Modo Reino card on home and enables /reinos route
+   */
+  reinos_enabled: true,
 } as const;

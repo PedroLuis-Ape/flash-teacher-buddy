@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useEconomy } from "@/contexts/EconomyContext";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
 import { ApeCardProfessor } from "@/components/ape/ApeCardProfessor";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Play, TrendingUp, Users, Layers, ChevronRight } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Layers, ChevronRight, Crown } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -117,6 +118,31 @@ const Index = () => {
             {total > 0 && <Progress value={pct} className="h-2" />}
           </Card>
         ) : null}
+
+        {/* Modo Reino Card */}
+        {!loading && FEATURE_FLAGS.reinos_enabled && (
+          <Card 
+            className="p-4 bg-black hover:shadow-lg transition-shadow cursor-pointer min-h-[88px] flex items-center"
+            onClick={() => navigate("/reinos")}
+            role="button"
+            tabIndex={0}
+            aria-label="Modo Reino - Em breve"
+          >
+            <div className="flex items-center gap-4 w-full">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center shrink-0">
+                <Crown className="h-6 w-6 text-yellow-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base text-white mb-1">
+                  Modo Reino
+                </h3>
+                <p className="text-sm text-gray-400">
+                  Em breve
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Teachers Section */}
         {!loading && teachers.length > 0 && (
