@@ -13,8 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FolderPlus, ShoppingBag } from "lucide-react";
-import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { FolderPlus } from "lucide-react";
 
 interface FolderType {
   id: string;
@@ -312,31 +311,11 @@ const Folders = () => {
     </div>
   );
 
-  // Tab: Store
-  const storeTab = (
-    <div className="p-4 space-y-4">
-      <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-xl p-6 text-center">
-        <ShoppingBag className="h-12 w-12 mx-auto mb-3 text-yellow-600" />
-        <h3 className="text-lg font-semibold mb-2">Loja do Piteco</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Colecione cartas e avatares exclusivos usando seus PiteCoins
-        </p>
-        <Button onClick={() => navigate("/store")}>
-          Ir para a Loja
-        </Button>
-      </div>
-    </div>
-  );
-
   const tabs = [
     { value: "overview", label: "Visão Geral", content: overviewTab },
     { value: "folders", label: "Pastas", count: folders.length, content: foldersTab },
     { value: "teachers", label: "Professores", count: teachers.length, content: teachersTab },
   ];
-
-  if (FEATURE_FLAGS.store_visible) {
-    tabs.push({ value: "store", label: "Loja", content: storeTab });
-  }
 
   return (
     <div className="min-h-screen bg-background">
