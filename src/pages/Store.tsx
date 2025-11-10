@@ -7,11 +7,13 @@ import { getSkinsCaltalog, getUserInventory, purchaseSkin, type SkinItem } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { useEconomy } from "@/contexts/EconomyContext";
 import { Loader2 } from "lucide-react";
 
 const Store = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateBalance } = useEconomy();
   const [skins, setSkins] = useState<SkinItem[]>([]);
   const [ownedSkinIds, setOwnedSkinIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -64,6 +66,11 @@ const Store = () => {
           title: "Compra realizada!",
           description: result.message,
         });
+        // Update balance immediately
+        if (result.newBalance !== undefined) {
+          updateBalance(result.newBalance);
+        }
+        // Refresh inventory
         const inventoryData = await getUserInventory(userId);
         setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
       } else {
