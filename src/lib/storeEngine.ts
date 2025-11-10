@@ -224,7 +224,7 @@ export async function equipSkin(
     // Generate operation ID for idempotency if not provided
     const opId = operationId || crypto.randomUUID();
 
-    // Call atomic equip function in database
+    // Call atomic equip function in database (preferred path)
     const { data, error } = await supabase.rpc('equip_skin_atomic', {
       p_operation_id: opId,
       p_user_id: userId,
@@ -234,37 +234,106 @@ export async function equipSkin(
 
     if (error) {
       console.error('[StoreEngine] RPC error:', error);
-      throw error;
     }
 
-    if (!data) {
+    // If RPC returned a valid success response, honor it
+    if (data && (data as any).success) {
+      const result = data as {
+        success: boolean;
+        error?: string;
+        message: string;
+        already_processed?: boolean;
+        avatar_skin_id?: string;
+        mascot_skin_id?: string;
+      };
+
       return {
-        success: false,
-        message: 'Erro ao equipar item. Tente novamente.',
-        error: 'INTERNAL_ERROR'
+        success: true,
+        message: result.message,
+        error: result.error,
+        alreadyProcessed: result.already_processed
       };
     }
 
-    const result = data as {
-      success: boolean;
-      error?: string;
-      message: string;
-      already_processed?: boolean;
-      avatar_skin_id?: string;
-      mascot_skin_id?: string;
-    };
+    // Fallback path: perform validated client-side equip to avoid user being blocked
+    console.warn('[StoreEngine] Falling back to client-side equip flow');
+
+    // 1) Ownership check (RLS ensures we only see own rows)
+    const { data: ownInv, error: ownErr } = await supabase
+      .from('user_inventory')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('skin_id', skinId)
+      .maybeSingle();
+
+    if (ownErr) {
+      console.error('[StoreEngine] Ownership check error:', ownErr);
+      return { success: false, message: 'Não foi possível ativar. Tente novamente.', error: 'INTERNAL_ERROR' };
+    }
+    if (!ownInv) {
+      return { success: false, message: 'Você não possui este item.', error: 'NOT_OWNER' };
+    }
+
+    // 2) Load catalog media and validate required asset
+    const { data: cat, error: catErr } = await supabase
+      .from('public_catalog')
+      .select('id, avatar_final, card_final')
+      .eq('id', skinId)
+      .maybeSingle();
+
+    if (catErr || !cat) {
+      console.error('[StoreEngine] Catalog fetch error:', catErr);
+      return { success: false, message: 'Item não encontrado.', error: 'NOT_FOUND' };
+    }
+
+    if (type === 'avatar' && (!cat.avatar_final || cat.avatar_final === '')) {
+      return { success: false, message: 'Este item não tem a imagem de avatar necessária.', error: 'MISSING_ASSET' };
+    }
+    if (type === 'mascot' && (!cat.card_final || cat.card_final === '')) {
+      return { success: false, message: 'Este item não tem a imagem de card necessária.', error: 'MISSING_ASSET' };
+    }
+
+    // 3) Update profile (RLS allows user to update own profile)
+    const updates = type === 'avatar' 
+      ? { avatar_skin_id: skinId }
+      : { mascot_skin_id: skinId };
+
+    const { error: upErr } = await supabase
+      .from('profiles')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (upErr) {
+      console.error('[StoreEngine] Profile update error:', upErr);
+      return { success: false, message: 'Não foi possível ativar. Tente novamente.', error: 'INTERNAL_ERROR' };
+    }
+
+    // 4) Idempotent log (best-effort)
+    const { data: existingLog } = await supabase
+      .from('equip_logs')
+      .select('id')
+      .eq('operation_id', opId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!existingLog) {
+      await supabase.from('equip_logs').insert({
+        operation_id: opId,
+        user_id: userId,
+        kind: type,
+        skin_id: skinId
+      });
+    }
 
     return {
-      success: result.success,
-      message: result.message,
-      error: result.error,
-      alreadyProcessed: result.already_processed
+      success: true,
+      message: type === 'avatar' ? 'Avatar ativado com sucesso.' : 'Mascote ativado com sucesso.'
     };
   } catch (error) {
     console.error('[StoreEngine] Error equipping skin:', error);
     return {
       success: false,
-      message: 'Erro ao equipar item. Tente novamente.',
+      message: 'Não foi possível ativar. Tente novamente.',
       error: 'INTERNAL_ERROR'
     };
   }
