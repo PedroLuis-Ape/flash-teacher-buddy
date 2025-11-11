@@ -30,11 +30,19 @@ export function useAnnouncements(classId: string) {
     try {
       setLoading(true);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Você precisa estar logado para ver anúncios.');
+      }
+
       const response = await supabase.functions.invoke('announcements-list', {
         body: {
           class_id: classId,
           limit: 20,
           ...(cursor && { cursor }),
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
@@ -61,8 +69,12 @@ export function useAnnouncements(classId: string) {
   const createAnnouncement = useCallback(
     async (title: string, body: string, pinned: boolean = false) => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Você precisa estar logado.');
+
         const { data, error } = await supabase.functions.invoke('announcements-create', {
           body: { class_id: classId, title, body, pinned },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
         if (error) throw error;
@@ -86,8 +98,12 @@ export function useAnnouncements(classId: string) {
       updates: { title?: string; body?: string; pinned?: boolean; archived?: boolean }
     ) => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Você precisa estar logado.');
+
         const { data, error } = await supabase.functions.invoke('announcements-update', {
           body: { id, ...updates },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
         if (error) throw error;

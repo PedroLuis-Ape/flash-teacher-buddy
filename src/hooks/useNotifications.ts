@@ -23,10 +23,18 @@ export function useNotifications() {
     try {
       setLoading(true);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Você precisa estar logado para ver notificações.');
+      }
+
       const response = await supabase.functions.invoke('notifications-list', {
         body: {
           limit: 20,
           ...(cursor && { cursor }),
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
