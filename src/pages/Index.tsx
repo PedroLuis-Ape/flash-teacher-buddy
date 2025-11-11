@@ -89,6 +89,72 @@ const Index = () => {
           </div>
         )}
 
+        {/* Teachers Section */}
+        <div className="space-y-4">
+          <ApeSectionTitle
+            action={
+              teachers.length > 0 ? (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate("/my-teachers")}
+                  className="min-h-[44px]"
+                >
+                  Ver todos
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate("/search")}
+                  className="min-h-[44px]"
+                >
+                  Buscar
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              )
+            }
+          >
+            <Users className="h-5 w-5 mr-2" />
+            Meus Professores
+          </ApeSectionTitle>
+
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : teachers.length > 0 ? (
+            <div className="space-y-3">
+              {teachers.map((teacher) => (
+                <ApeCardProfessor
+                  key={teacher.id}
+                  name={teacher.name}
+                  folderCount={teacher.folder_count}
+                  onClick={() => navigate("/my-teachers")}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="text-center py-8">
+              <CardContent>
+                <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  Você ainda não segue nenhum professor
+                </p>
+                <Button 
+                  onClick={() => navigate("/search")}
+                  className="min-h-[44px]"
+                >
+                  Buscar Professores
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
         {/* Continue Studying Card */}
         {loading ? (
           <Skeleton className="h-[76px] sm:h-[88px] w-full rounded-xl" />
@@ -146,39 +212,6 @@ const Index = () => {
               </div>
             </div>
           </Card>
-        )}
-
-        {/* Teachers Section */}
-        {!loading && teachers.length > 0 && (
-          <div className="space-y-4">
-            <ApeSectionTitle
-              action={
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate("/my-teachers")}
-                  className="min-h-[44px]"
-                >
-                  Ver todos
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              }
-            >
-              <Users className="h-5 w-5 mr-2" />
-              Meus Professores
-            </ApeSectionTitle>
-
-            <div className="space-y-3">
-              {teachers.map((teacher) => (
-                <ApeCardProfessor
-                  key={teacher.id}
-                  name={teacher.name}
-                  folderCount={teacher.folder_count}
-                  onClick={() => navigate("/my-teachers")}
-                />
-              ))}
-            </div>
-          </div>
         )}
 
         {/* Recent Lists */}
