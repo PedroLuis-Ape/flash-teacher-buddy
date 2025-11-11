@@ -24,24 +24,33 @@ export function useNotifications() {
       setLoading(true);
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Você precisa estar logado para ver notificações.');
-      }
+      if (!session) throw new Error('Você precisa estar logado para ver notificações.');
 
-      const response = await supabase.functions.invoke('notifications-list', {
-        body: {
-          limit: 20,
-          ...(cursor && { cursor }),
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+      const body = { limit: 20, ...(cursor && { cursor }) } as const;
+
+      // 1ª tentativa com o token atual
+      let { data, error } = await supabase.functions.invoke('notifications-list', {
+        body,
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (response.error) throw new Error(response.error.message);
+      // Se der 401, tenta um refresh e re-invoca uma vez
+      if (error) {
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        const newToken = refreshData.session?.access_token;
+        if (newToken) {
+          const retry = await supabase.functions.invoke('notifications-list', {
+            body,
+            headers: { Authorization: `Bearer ${newToken}` },
+          });
+          data = retry.data;
+          error = retry.error;
+        }
+      }
 
-      const result = response.data;
+      if (error) throw new Error(error.message || 'Erro ao buscar notificações');
 
+      const result = data as any;
       if (cursor) {
         setNotifications((prev) => [...prev, ...(result.notifications || [])]);
       } else {
