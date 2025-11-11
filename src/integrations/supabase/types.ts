@@ -85,6 +85,50 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          archived_at: string | null
+          author_id: string
+          body: string
+          class_id: string
+          created_at: string
+          id: string
+          pinned: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          author_id: string
+          body: string
+          class_id: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          author_id?: string
+          body?: string
+          class_id?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_config: {
         Row: {
           id: string
@@ -833,6 +877,36 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          ref_id: string
+          ref_type: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          ref_id: string
+          ref_type: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          ref_id?: string
+          ref_type?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pitecoin_transactions: {
         Row: {
           amount: number
@@ -1291,30 +1365,46 @@ export type Database = {
       }
       threads: {
         Row: {
+          announcement_id: string | null
+          assignment_id: string | null
           class_id: string
           created_at: string
           id: string
+          student_id: string | null
           type: string
           user_a_id: string
           user_b_id: string
         }
         Insert: {
+          announcement_id?: string | null
+          assignment_id?: string | null
           class_id: string
           created_at?: string
           id?: string
+          student_id?: string | null
           type?: string
           user_a_id: string
           user_b_id: string
         }
         Update: {
+          announcement_id?: string | null
+          assignment_id?: string | null
           class_id?: string
           created_at?: string
           id?: string
+          student_id?: string | null
           type?: string
           user_a_id?: string
           user_b_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "threads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "threads_class_id_fkey"
             columns: ["class_id"]
