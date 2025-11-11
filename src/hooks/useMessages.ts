@@ -209,5 +209,6 @@ export function useMessages(threadId: string | null) {
     retryMessage,
     markAsRead,
     refetch: fetchMessages,
+    fetchMessages,
   };
 }

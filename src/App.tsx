@@ -33,6 +33,7 @@ const Reinos = lazy(() => import("./pages/Reinos"));
 const KingdomDetail = lazy(() => import("./pages/KingdomDetail"));
 const KingdomImport = lazy(() => import("./pages/KingdomImport"));
 const Classes = lazy(() => import("./pages/Classes"));
+const AnnouncementDetail = lazy(() => import("./pages/AnnouncementDetail"));
 const AdminCatalog = lazy(() => import("./pages/admin/AdminCatalog"));
 const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminGifts = lazy(() => import("./pages/admin/AdminGifts"));
@@ -85,6 +86,7 @@ const App = () => (
                 <Route path="/admin/catalog" element={<AdminCatalog />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
                 <Route path="/admin/gifts" element={<AdminGifts />} />
+                <Route path="/announcements/:id" element={<AnnouncementDetail />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </GlobalLayout>

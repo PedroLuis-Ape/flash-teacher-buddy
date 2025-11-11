@@ -6,6 +6,8 @@ export interface Class {
   id: string;
   name: string;
   code: string;
+  owner_id: string;
+  visibility: string;
   role: 'teacher' | 'student';
   joined_at: string;
   is_owner: boolean;
