@@ -96,8 +96,10 @@ export function pickLang(
   direction: "pt-en" | "en-pt" | "any",
   text: string
 ): "pt-BR" | "en-US" {
-  if (direction === "pt-en") return "pt-BR";
-  if (direction === "en-pt") return "en-US";
+  // direction pt-en = front is PT, back is EN → speak EN
+  // direction en-pt = front is EN, back is PT → speak PT
+  if (direction === "pt-en") return "en-US";
+  if (direction === "en-pt") return "pt-BR";
   
   // Auto-detect based on accents
   return /[áéíóúâêîôûãõç]/i.test(text) ? "pt-BR" : "en-US";
