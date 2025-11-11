@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Upload, X } from "lucide-react";
 import { logAdminAction } from "@/lib/adminLogger";
 
 interface AdminCatalogFormProps {
@@ -20,6 +20,9 @@ interface AdminCatalogFormProps {
 export function AdminCatalogForm({ skin, onSuccess, onCancel }: AdminCatalogFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState<'avatar' | 'card' | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [cardFile, setCardFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     rarity: "normal" as "normal" | "rare" | "epic" | "legendary",
@@ -58,37 +61,118 @@ export function AdminCatalogForm({ skin, onSuccess, onCancel }: AdminCatalogForm
     }
   }, [skin]);
 
-  const validateImage = (url: string, type: 'avatar' | 'card'): boolean => {
-    const extension = url.split('.').pop()?.toLowerCase();
-    if (!extension || !['png', 'webp'].includes(extension)) {
+  const handleFileSelect = async (file: File, type: 'avatar' | 'card') => {
+    // Validate file type
+    if (!['image/png', 'image/webp', 'image/jpeg'].includes(file.type)) {
       toast({
         title: "Formato inválido",
-        description: `${type === 'avatar' ? 'Avatar' : 'Card'} deve ser PNG ou WebP`,
+        description: "Use PNG, WebP ou JPEG",
         variant: "destructive",
       });
-      return false;
+      return;
     }
-    return true;
+
+    // Validate file size (5MB)
+    if (file.size > 5242880) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "Tamanho máximo: 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (type === 'avatar') {
+      setAvatarFile(file);
+    } else {
+      setCardFile(file);
+    }
+  };
+
+  const uploadImage = async (file: File, type: 'avatar' | 'card'): Promise<string | null> => {
+    setUploading(type);
+    try {
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${formData.name.toLowerCase().replace(/\s+/g, '-')}_${type}_${timestamp}.${fileExt}`;
+      const filePath = `${type}s/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('skins')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('skins')
+        .getPublicUrl(filePath);
+
+      toast({
+        title: "✅ Upload concluído",
+        description: `${type === 'avatar' ? 'Avatar' : 'Card'} enviado com sucesso!`,
+      });
+
+      return publicUrl;
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: "❌ Erro no upload",
+        description: error.message || "Não foi possível enviar a imagem.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploading(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.avatar_img || !formData.card_img) {
+    if (!formData.name) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha nome, avatar e card",
+        title: "Nome obrigatório",
+        description: "Preencha o nome da skin",
         variant: "destructive",
       });
       return;
     }
 
-    if (!validateImage(formData.avatar_img, 'avatar') || !validateImage(formData.card_img, 'card')) {
-      return;
-    }
-
     setLoading(true);
     try {
+      let avatarUrl = formData.avatar_img;
+      let cardUrl = formData.card_img;
+
+      // Upload avatar if new file selected
+      if (avatarFile) {
+        const url = await uploadImage(avatarFile, 'avatar');
+        if (!url) {
+          setLoading(false);
+          return;
+        }
+        avatarUrl = url;
+      }
+
+      // Upload card if new file selected
+      if (cardFile) {
+        const url = await uploadImage(cardFile, 'card');
+        if (!url) {
+          setLoading(false);
+          return;
+        }
+        cardUrl = url;
+      }
+
+      // Check if both images are present
+      if (!avatarUrl || !cardUrl) {
+        toast({
+          title: "Imagens obrigatórias",
+          description: "Envie avatar e card",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
       const skinId = formData.name.toLowerCase().replace(/\s+/g, '-');
       
       if (skin) {
@@ -100,8 +184,8 @@ export function AdminCatalogForm({ skin, onSuccess, onCancel }: AdminCatalogForm
             rarity: formData.rarity,
             price_pitecoin: formData.price_pitecoin,
             description: formData.description || null,
-            avatar_img: formData.avatar_img,
-            card_img: formData.card_img,
+            avatar_img: avatarUrl,
+            card_img: cardUrl,
             status: formData.status,
             is_active: formData.is_active,
           })
@@ -129,8 +213,8 @@ export function AdminCatalogForm({ skin, onSuccess, onCancel }: AdminCatalogForm
             rarity: formData.rarity,
             price_pitecoin: formData.price_pitecoin,
             description: formData.description || null,
-            avatar_img: formData.avatar_img,
-            card_img: formData.card_img,
+            avatar_img: avatarUrl,
+            card_img: cardUrl,
             status: formData.status,
             is_active: formData.is_active,
           });
@@ -233,26 +317,98 @@ export function AdminCatalogForm({ skin, onSuccess, onCancel }: AdminCatalogForm
             />
           </div>
 
-          <div>
-            <Label htmlFor="avatar">URL Avatar * (PNG/WebP 1024×1024)</Label>
+          <div className="space-y-2">
+            <Label>Avatar * (PNG/WebP/JPG - 1024×1024)</Label>
+            {formData.avatar_img && !avatarFile && (
+              <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
+                <img src={formData.avatar_img} alt="Avatar atual" className="w-full h-full object-cover" />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                  className="absolute top-1 right-1 h-6 w-6"
+                  onClick={() => setFormData({ ...formData, avatar_img: "" })}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {avatarFile && (
+              <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
+                <img src={URL.createObjectURL(avatarFile)} alt="Novo avatar" className="w-full h-full object-cover" />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                  className="absolute top-1 right-1 h-6 w-6"
+                  onClick={() => setAvatarFile(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <Input
-              id="avatar"
-              value={formData.avatar_img}
-              onChange={(e) => setFormData({ ...formData, avatar_img: e.target.value })}
-              placeholder="https://..."
-              required
+              type="file"
+              accept="image/png,image/webp,image/jpeg"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileSelect(file, 'avatar');
+              }}
+              disabled={uploading === 'avatar'}
             />
+            {uploading === 'avatar' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Fazendo upload...
+              </div>
+            )}
           </div>
 
-          <div>
-            <Label htmlFor="card">URL Card * (PNG/WebP 1920×1080)</Label>
+          <div className="space-y-2">
+            <Label>Card * (PNG/WebP/JPG - 1920×1080)</Label>
+            {formData.card_img && !cardFile && (
+              <div className="relative w-48 h-32 rounded-lg overflow-hidden border">
+                <img src={formData.card_img} alt="Card atual" className="w-full h-full object-cover" />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                  className="absolute top-1 right-1 h-6 w-6"
+                  onClick={() => setFormData({ ...formData, card_img: "" })}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {cardFile && (
+              <div className="relative w-48 h-32 rounded-lg overflow-hidden border">
+                <img src={URL.createObjectURL(cardFile)} alt="Novo card" className="w-full h-full object-cover" />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                  className="absolute top-1 right-1 h-6 w-6"
+                  onClick={() => setCardFile(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <Input
-              id="card"
-              value={formData.card_img}
-              onChange={(e) => setFormData({ ...formData, card_img: e.target.value })}
-              placeholder="https://..."
-              required
+              type="file"
+              accept="image/png,image/webp,image/jpeg"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileSelect(file, 'card');
+              }}
+              disabled={uploading === 'card'}
             />
+            {uploading === 'card' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Fazendo upload...
+              </div>
+            )}
           </div>
 
           <div>
