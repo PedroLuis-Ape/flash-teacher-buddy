@@ -78,7 +78,7 @@ serve(async (req) => {
     // Contar mensagens não lidas para cada turma
     const classesWithUnread = await Promise.all(
       (memberships || []).map(async (membership) => {
-        const classData = membership.classes;
+        const classData = Array.isArray(membership.classes) ? membership.classes[0] : membership.classes;
 
         // Buscar threads do usuário nesta turma
         const { data: threads } = await supabaseClient

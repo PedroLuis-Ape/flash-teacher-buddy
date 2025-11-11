@@ -29,9 +29,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const url = new URL(req.url);
-    const cursor = url.searchParams.get('cursor');
-    const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+    // Ler do body quando chamado via supabase.functions.invoke
+    const body = req.method === 'POST' ? await req.json() : {};
+    const cursor = body.cursor || new URL(req.url).searchParams.get('cursor');
+    const limit = parseInt(body.limit?.toString() || new URL(req.url).searchParams.get('limit') || '20', 10);
 
     let query = supabase
       .from('notifications')
