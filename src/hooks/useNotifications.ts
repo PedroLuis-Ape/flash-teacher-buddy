@@ -23,28 +23,21 @@ export function useNotifications() {
     try {
       setLoading(true);
 
-      const params = new URLSearchParams({
-        limit: '20',
-        ...(cursor && { cursor }),
+      const response = await supabase.functions.invoke('notifications-list', {
+        body: {
+          limit: 20,
+          ...(cursor && { cursor }),
+        },
       });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications-list?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          },
-        }
-      );
+      if (response.error) throw new Error(response.error.message);
 
-      if (!response.ok) throw new Error('Erro ao buscar notificações');
-
-      const result = await response.json();
+      const result = response.data;
 
       if (cursor) {
-        setNotifications((prev) => [...prev, ...result.notifications]);
+        setNotifications((prev) => [...prev, ...(result.notifications || [])]);
       } else {
-        setNotifications(result.notifications);
+        setNotifications(result.notifications || []);
       }
 
       setNextCursor(result.next_cursor);

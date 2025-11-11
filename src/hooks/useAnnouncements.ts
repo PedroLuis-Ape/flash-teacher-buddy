@@ -30,36 +30,22 @@ export function useAnnouncements(classId: string) {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase.functions.invoke('announcements-list', {
-        body: null,
-        method: 'GET',
+      const response = await supabase.functions.invoke('announcements-list', {
+        body: {
+          class_id: classId,
+          limit: 20,
+          ...(cursor && { cursor }),
+        },
       });
 
-      if (error) throw error;
+      if (response.error) throw new Error(response.error.message);
 
-      const params = new URLSearchParams({
-        class_id: classId,
-        limit: '20',
-        ...(cursor && { cursor }),
-      });
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/announcements-list?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error('Erro ao buscar anúncios');
-
-      const result = await response.json();
+      const result = response.data;
 
       if (cursor) {
-        setAnnouncements((prev) => [...prev, ...result.announcements]);
+        setAnnouncements((prev) => [...prev, ...(result.announcements || [])]);
       } else {
-        setAnnouncements(result.announcements);
+        setAnnouncements(result.announcements || []);
       }
 
       setNextCursor(result.next_cursor);

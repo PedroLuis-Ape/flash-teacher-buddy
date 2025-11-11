@@ -108,15 +108,9 @@ export default function Classes() {
     navigate(`/announcements/${announcement.id}`);
   };
 
-  // Separar turmas que sou owner das que sou membro
-  const myClasses = classes.filter(c => c.owner_id === (async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id;
-  }));
-  const enrolledClasses = classes.filter(c => c.owner_id !== (async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user?.id;
-  }));
+  // Separar turmas que sou owner das que sou membro (filtrar pela flag is_owner que vem da API)
+  const myClasses = classes.filter(c => c.is_owner);
+  const enrolledClasses = classes.filter(c => !c.is_owner);
 
   // Vista de detalhe da turma com mural
   if (selectedClass) {
