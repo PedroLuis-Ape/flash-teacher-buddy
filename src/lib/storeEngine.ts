@@ -57,7 +57,8 @@ export function getRarityLabel(rarity: string): string {
 // Allowed slugs for store (whitelist)
 const ALLOWED_SLUGS = [
   'piteco_vampiro',
-  'piteco_prime'
+  'piteco_prime',
+  'piteco_zombie'
 ];
 
 /**
