@@ -1254,6 +1254,13 @@ export type Database = {
       }
       get_public_profile: { Args: { p_public_id: string }; Returns: Json }
       get_rarity_fallback_price: { Args: { p_rarity: string }; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       init_public_id: { Args: { p_user_id: string }; Returns: Json }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
