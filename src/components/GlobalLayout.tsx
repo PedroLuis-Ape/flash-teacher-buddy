@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { CurrencyHeader } from "./CurrencyHeader";
 import { PresentBoxBadge } from "./PresentBoxBadge";
+import { AdminButton } from "./AdminButton";
 import { ApeTabBar } from "./ape/ApeTabBar";
 import { GiftNotificationModal } from "./GiftNotificationModal";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
@@ -52,9 +53,12 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
       <div className="min-h-screen flex flex-col">
         {FEATURE_FLAGS.currency_header_enabled && (
           <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-14 items-center justify-end gap-4 px-4">
-              <CurrencyHeader />
-              {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
+            <div className="container flex h-14 items-center justify-between gap-4 px-4">
+              <AdminButton />
+              <div className="flex items-center gap-4">
+                <CurrencyHeader />
+                {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
+              </div>
             </div>
           </header>
         )}
