@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_progress: {
+        Row: {
+          activity_id: string
+          attempts: number
+          best_score: number
+          created_at: string
+          id: string
+          last_answer_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          attempts?: number
+          best_score?: number
+          created_at?: string
+          id?: string
+          last_answer_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          attempts?: number
+          best_score?: number
+          created_at?: string
+          id?: string
+          last_answer_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_progress_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "kingdom_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_logs: {
         Row: {
           action: string
@@ -550,6 +594,148 @@ export type Database = {
           operation_id?: string
           payload?: Json | null
           sku?: string
+        }
+        Relationships: []
+      }
+      kingdom_activities: {
+        Row: {
+          activity_type: string
+          alt_answers: Json | null
+          canonical_answer: string
+          choices: Json | null
+          created_at: string
+          hint: string | null
+          id: string
+          kingdom_code: string
+          lang: string
+          level_code: string
+          points: number | null
+          prompt: string
+          tags: string[] | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_type: string
+          alt_answers?: Json | null
+          canonical_answer: string
+          choices?: Json | null
+          created_at?: string
+          hint?: string | null
+          id?: string
+          kingdom_code: string
+          lang?: string
+          level_code: string
+          points?: number | null
+          prompt: string
+          tags?: string[] | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: string
+          alt_answers?: Json | null
+          canonical_answer?: string
+          choices?: Json | null
+          created_at?: string
+          hint?: string | null
+          id?: string
+          kingdom_code?: string
+          lang?: string
+          level_code?: string
+          points?: number | null
+          prompt?: string
+          tags?: string[] | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kingdom_activities_kingdom_code_fkey"
+            columns: ["kingdom_code"]
+            isOneToOne: false
+            referencedRelation: "kingdoms"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      kingdom_progress: {
+        Row: {
+          accuracy_pct: number
+          completed_count: number
+          created_at: string
+          id: string
+          kingdom_code: string
+          last_played_at: string | null
+          total_count: number
+          updated_at: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          accuracy_pct?: number
+          completed_count?: number
+          created_at?: string
+          id?: string
+          kingdom_code: string
+          last_played_at?: string | null
+          total_count?: number
+          updated_at?: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          accuracy_pct?: number
+          completed_count?: number
+          created_at?: string
+          id?: string
+          kingdom_code?: string
+          last_played_at?: string | null
+          total_count?: number
+          updated_at?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kingdom_progress_kingdom_code_fkey"
+            columns: ["kingdom_code"]
+            isOneToOne: false
+            referencedRelation: "kingdoms"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      kingdoms: {
+        Row: {
+          code: string
+          created_at: string
+          icon_url: string | null
+          id: string
+          name: string
+          order_index: number
+          unlock_rule: Json | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          icon_url?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          unlock_rule?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          icon_url?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          unlock_rule?: Json | null
+          updated_at?: string
         }
         Relationships: []
       }
