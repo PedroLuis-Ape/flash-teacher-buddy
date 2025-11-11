@@ -94,24 +94,24 @@ const Index = () => {
           <Skeleton className="h-[76px] sm:h-[88px] w-full rounded-xl" />
         ) : last && total > 0 ? (
           <Card className="p-3 sm:p-4 bg-gradient-to-br from-primary/10 to-secondary/10 hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
+            <div className="flex items-center justify-between gap-3 mb-2 sm:mb-3">
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm sm:text-base mb-1">
+                <h3 className="font-semibold text-sm sm:text-base mb-1 whitespace-nowrap overflow-hidden text-ellipsis">
                   Voltar para onde parou
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-1 line-clamp-2">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1 line-clamp-1">
                   {last.title}
                 </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                   {getModeLabel(last.mode)} • {done}/{total} cards
                 </p>
               </div>
               <Button 
                 onClick={() => navigate(`/list/${last.id}/study`, { state: { mode: last.mode } })}
-                className="shrink-0 h-9 sm:h-10 px-2.5 sm:px-4"
+                className="shrink-0 h-12 w-12 sm:h-10 sm:w-auto sm:px-4"
                 size="sm"
               >
-                <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <Play className="h-5 w-5 sm:h-4 sm:w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Continuar</span>
               </Button>
             </div>
