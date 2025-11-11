@@ -32,6 +32,7 @@ const PresentBox = lazy(() => import("./pages/PresentBox"));
 const Reinos = lazy(() => import("./pages/Reinos"));
 const KingdomDetail = lazy(() => import("./pages/KingdomDetail"));
 const KingdomImport = lazy(() => import("./pages/KingdomImport"));
+const Classes = lazy(() => import("./pages/Classes"));
 const AdminCatalog = lazy(() => import("./pages/admin/AdminCatalog"));
 const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminGifts = lazy(() => import("./pages/admin/AdminGifts"));
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="/teacher/:teacherId/folders" element={<TeacherFolders />} />
                 <Route path="/store" element={<Store />} />
                 <Route path="/gifts" element={<PresentBox />} />
+                <Route path="/classes" element={<Classes />} />
                 <Route path="/reinos" element={<Reinos />} />
                 <Route path="/reino" element={<Reinos />} />
                 <Route path="/reino/:code" element={<KingdomDetail />} />

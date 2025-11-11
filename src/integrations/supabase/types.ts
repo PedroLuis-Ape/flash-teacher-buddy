@@ -111,18 +111,21 @@ export type Database = {
           class_id: string
           joined_at: string | null
           role: string
+          status: string
           user_id: string
         }
         Insert: {
           class_id: string
           joined_at?: string | null
           role: string
+          status?: string
           user_id: string
         }
         Update: {
           class_id?: string
           joined_at?: string | null
           role?: string
+          status?: string
           user_id?: string
         }
         Relationships: [
@@ -144,25 +147,31 @@ export type Database = {
       }
       classes: {
         Row: {
+          archived_at: string | null
+          code: string | null
           created_at: string | null
           id: string
-          invite_code: string | null
           name: string
           owner_id: string
+          visibility: string
         }
         Insert: {
+          archived_at?: string | null
+          code?: string | null
           created_at?: string | null
           id?: string
-          invite_code?: string | null
           name: string
           owner_id: string
+          visibility?: string
         }
         Update: {
+          archived_at?: string | null
+          code?: string | null
           created_at?: string | null
           id?: string
-          invite_code?: string | null
           name?: string
           owner_id?: string
+          visibility?: string
         }
         Relationships: [
           {
@@ -789,6 +798,41 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          body: string
+          client_msg_id: string
+          created_at: string
+          id: string
+          sender_id: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          client_msg_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          client_msg_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pitecoin_transactions: {
         Row: {
           amount: number
@@ -1087,6 +1131,42 @@ export type Database = {
         }
         Relationships: []
       }
+      read_receipts: {
+        Row: {
+          last_read_message_id: string | null
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_read_message_id?: string | null
+          thread_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_read_message_id?: string | null
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "read_receipts_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "read_receipts_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skins_catalog: {
         Row: {
           avatar_img: string
@@ -1208,6 +1288,41 @@ export type Database = {
           teacher_id?: string
         }
         Relationships: []
+      }
+      threads: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          type: string
+          user_a_id: string
+          user_b_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          type?: string
+          user_a_id: string
+          user_b_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          type?: string
+          user_a_id?: string
+          user_b_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threads_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_inventory: {
         Row: {
@@ -1337,6 +1452,7 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_class_code: { Args: never; Returns: string }
       generate_public_id: { Args: { p_user_type: string }; Returns: string }
       generate_user_tag: { Args: never; Returns: string }
       get_exchange_config: { Args: never; Returns: Json }
