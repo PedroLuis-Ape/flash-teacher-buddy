@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Archive, ArrowLeft, FileText, Store } from "lucide-react";
+import { Plus, Edit, Trash2, Archive, ArrowLeft, FileText, Store, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,7 @@ export default function AdminCatalog() {
   const [archiveDialog, setArchiveDialog] = useState<{ open: boolean; skin: any }>({ open: false, skin: null });
   const [inStore, setInStore] = useState<Set<string>>(new Set());
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -139,6 +140,53 @@ export default function AdminCatalog() {
     }
     
     setPublishing(null);
+  };
+
+  const importNewPackages = async () => {
+    setImporting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('store-admin-batch-import');
+
+      if (error) {
+        throw error;
+      }
+
+      const result = data as { success: boolean; successCount: number; errorCount: number; results: any[] };
+
+      if (result.success) {
+        toast({
+          title: "✅ Pacotes importados",
+          description: `${result.successCount} pacote(s) adicionado(s) à loja com sucesso!`,
+        });
+        
+        // Log each successful import
+        for (const pkg of result.results.filter((r: any) => r.success)) {
+          await logAdminAction('import_package', pkg.title, { 
+            sku: pkg.sku,
+          });
+        }
+        
+        loadSkins();
+      }
+
+      if (result.errorCount > 0) {
+        toast({
+          title: "⚠️ Alguns erros",
+          description: `${result.errorCount} pacote(s) falharam na importação.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error importing packages:', error);
+      toast({
+        title: "❌ Erro",
+        description: "Não foi possível importar os pacotes. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+
+    setImporting(false);
   };
 
   const confirmToggleStatus = async () => {
@@ -254,6 +302,14 @@ export default function AdminCatalog() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={importNewPackages}
+            disabled={importing}
+          >
+            <Upload className={`h-4 w-4 mr-2 ${importing ? 'animate-pulse' : ''}`} />
+            Importar Novos
+          </Button>
           <Button variant="outline" onClick={() => navigate('/admin/logs')}>
             <FileText className="h-4 w-4 mr-2" />
             Logs
