@@ -58,7 +58,7 @@ export function getRarityLabel(rarity: string): string {
 const ALLOWED_SLUGS = [
   'piteco_vampiro',
   'piteco_prime',
-  'piteco_zombie'
+  'piteco-zombie'
 ];
 
 /**
