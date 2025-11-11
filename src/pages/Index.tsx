@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Play, TrendingUp, Users, Layers, ChevronRight, Crown } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Layers, ChevronRight, Crown, Lock } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -119,25 +119,29 @@ const Index = () => {
           </Card>
         ) : null}
 
-        {/* Modo Reino Card */}
+        {/* Modo Reino Card - Bloqueado */}
         {!loading && FEATURE_FLAGS.reinos_enabled && (
           <Card 
-            className="p-3 sm:p-4 bg-black hover:shadow-lg transition-shadow cursor-pointer min-h-[70px] sm:min-h-[88px] flex items-center"
-            onClick={() => navigate("/reinos")}
+            className="p-3 sm:p-4 bg-black/50 border-dashed border-muted min-h-[70px] sm:min-h-[88px] flex items-center opacity-60 cursor-not-allowed relative overflow-hidden"
             role="button"
-            tabIndex={0}
-            aria-label="Modo Reino - Em breve"
+            tabIndex={-1}
+            aria-label="Modo Reino - Bloqueado"
           >
+            <div className="absolute top-2 right-2">
+              <div className="h-6 w-6 rounded-full bg-muted/20 flex items-center justify-center">
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+            </div>
             <div className="flex items-center gap-3 sm:gap-4 w-full">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center shrink-0">
-                <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-yellow-500/10 to-orange-500/10 flex items-center justify-center shrink-0">
+                <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500/50" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm sm:text-base text-white mb-0.5 sm:mb-1">
+                <h3 className="font-semibold text-sm sm:text-base text-muted-foreground mb-0.5 sm:mb-1">
                   Modo Reino
                 </h3>
-                <p className="text-xs sm:text-sm text-gray-400">
-                  Em breve
+                <p className="text-xs sm:text-sm text-muted-foreground/70">
+                  🔒 Em breve
                 </p>
               </div>
             </div>
