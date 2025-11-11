@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Archive, ArrowLeft, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, Archive, ArrowLeft, FileText, Store } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,8 @@ export default function AdminCatalog() {
   const [editingSkin, setEditingSkin] = useState<any>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; skin: any }>({ open: false, skin: null });
   const [archiveDialog, setArchiveDialog] = useState<{ open: boolean; skin: any }>({ open: false, skin: null });
+  const [inStore, setInStore] = useState<Set<string>>(new Set());
+  const [publishing, setPublishing] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,7 +94,51 @@ export default function AdminCatalog() {
     } else {
       setSkins(data || []);
     }
+
+    // Carregar quais skins estão no catálogo público
+    const { data: publicData } = await supabase
+      .from('public_catalog')
+      .select('id')
+      .eq('is_active', true);
+    
+    if (publicData) {
+      setInStore(new Set(publicData.map(s => s.id)));
+    }
+
     setLoading(false);
+  };
+
+  const publishToStore = async (skin: any) => {
+    setPublishing(skin.id);
+    
+    const { data, error } = await supabase.rpc('publish_skin_to_store', {
+      p_skin_id: skin.id
+    });
+
+    const result = data as { success: boolean; message?: string } | null;
+
+    if (error || !result?.success) {
+      toast({
+        title: "❌ Erro",
+        description: result?.message || "Não foi possível publicar na loja.",
+        variant: "destructive",
+      });
+    } else {
+      await logAdminAction('publish_to_store', skin.name, { 
+        rarity: skin.rarity,
+        price: skin.price_pitecoin 
+      });
+      
+      toast({
+        title: "✅ Publicado na loja",
+        description: "Skin agora está disponível para todos os usuários!",
+      });
+      
+      // Atualizar lista de skins na loja
+      setInStore(prev => new Set([...prev, skin.id]));
+    }
+    
+    setPublishing(null);
   };
 
   const confirmToggleStatus = async () => {
@@ -233,6 +279,7 @@ export default function AdminCatalog() {
                 <TableHead>Preço</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ativo</TableHead>
+                <TableHead>Na Loja</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -263,6 +310,17 @@ export default function AdminCatalog() {
                       {skin.is_active ? 'Sim' : 'Não'}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {inStore.has(skin.id) ? (
+                      <Badge variant="default" className="bg-green-600">
+                        ✓ Sim
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        Não
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
@@ -273,6 +331,17 @@ export default function AdminCatalog() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      {skin.status === 'published' && skin.is_active && !inStore.has(skin.id) && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => publishToStore(skin)}
+                          disabled={publishing === skin.id}
+                          title="Publicar na Loja"
+                        >
+                          <Store className={`h-4 w-4 ${publishing === skin.id ? 'animate-pulse' : ''}`} />
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon"

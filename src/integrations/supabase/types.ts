@@ -1284,6 +1284,7 @@ export type Database = {
         }
         Returns: Json
       }
+      publish_skin_to_store: { Args: { p_skin_id: string }; Returns: Json }
       search_users: {
         Args: {
           p_limit?: number
