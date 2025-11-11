@@ -62,8 +62,12 @@ export function useNotifications() {
   const markAsRead = useCallback(
     async (ids?: string[]) => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Você precisa estar logado.');
+
         const { data, error } = await supabase.functions.invoke('notifications-read', {
           body: ids ? { ids } : { mark_all: true },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
         if (error) throw error;
