@@ -30,7 +30,7 @@ export const FEATURE_FLAGS = {
    * When false: no Admin → Catalog panel
    * When true: developer_admin can manage skins catalog
    */
-  admin_skins_enabled: false,
+  admin_skins_enabled: true,
 
   /**
    * User directory / search

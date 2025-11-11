@@ -2,3 +2,9 @@ project_id = "ymahldldyxvwjeruaxpr"
 
 [functions.tts]
 verify_jwt = false
+
+[functions.ping]
+verify_jwt = false
+
+[functions.admin-ping]
+verify_jwt = true
