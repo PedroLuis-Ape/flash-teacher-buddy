@@ -89,27 +89,6 @@ const Index = () => {
           </div>
         )}
 
-        {/* Modo Reino Card */}
-        <Card 
-          className="p-4 sm:p-5 bg-gradient-to-br from-primary/20 to-accent/20 hover:shadow-lg transition-all cursor-pointer"
-          onClick={() => navigate("/reino")}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-full bg-primary/20">
-                <Crown className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base sm:text-lg">Modo Reino</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Complete missões e desbloqueie novos reinos
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </Card>
-
         {/* Continue Studying Card */}
         {loading ? (
           <Skeleton className="h-[76px] sm:h-[88px] w-full rounded-xl" />
