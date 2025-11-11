@@ -10,6 +10,8 @@ import { GiftNotificationModal } from "./GiftNotificationModal";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEconomy } from "@/contexts/EconomyContext";
+import { APP_VERSION } from "@/lib/versionManager";
+import { Badge } from "@/components/ui/badge";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -67,6 +69,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
         </main>
         {user && <ApeTabBar />}
         {user && <GiftNotificationModal />}
+        
+        {/* Version Badge */}
+        <div className="fixed bottom-20 right-4 z-40">
+          <Badge variant="secondary" className="opacity-50 hover:opacity-100 transition-opacity text-xs">
+            v{APP_VERSION}
+          </Badge>
+        </div>
       </div>
     </TooltipProvider>
   );
