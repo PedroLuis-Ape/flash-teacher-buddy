@@ -28,27 +28,23 @@ export function useNotifications() {
 
       const body = { limit: 20, ...(cursor && { cursor }) } as const;
 
-      // 1ª tentativa com o token atual
-      let { data, error } = await supabase.functions.invoke('notifications-list', {
+      // 1ª tentativa - supabase.functions.invoke injeta o JWT automaticamente a partir da sessão atual
+      let { data, error }: any = await supabase.functions.invoke('notifications-list', {
         body,
-        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      // Se der 401, tenta um refresh e re-invoca uma vez
-      if (error) {
+      // Se 401, tenta refresh e re-invoca uma vez
+      const status = (error as any)?.context?.status;
+      if (error && status === 401) {
         const { data: refreshData } = await supabase.auth.refreshSession();
-        const newToken = refreshData.session?.access_token;
-        if (newToken) {
-          const retry = await supabase.functions.invoke('notifications-list', {
-            body,
-            headers: { Authorization: `Bearer ${newToken}` },
-          });
+        if (refreshData.session) {
+          const retry = await supabase.functions.invoke('notifications-list', { body });
           data = retry.data;
-          error = retry.error;
+          error = retry.error as any;
         }
       }
 
-      if (error) throw new Error(error.message || 'Erro ao buscar notificações');
+      if (error) throw new Error((error as any)?.message || 'Erro ao buscar notificações');
 
       const result = data as any;
       if (cursor) {
@@ -62,6 +58,17 @@ export function useNotifications() {
       setUnreadCount(result.unread_count);
     } catch (error: any) {
       console.error('Error fetching notifications:', error);
+      const status = (error?.context as any)?.status;
+      if (status === 401 || /não autorizado|unauthorized|401/i.test(error?.message)) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        try {
+          sessionStorage.setItem('logoutInProgress', String(Date.now()));
+          await supabase.auth.signOut();
+        } finally {
+          window.location.replace('/auth');
+        }
+        return;
+      }
       toast.error(error.message || 'Erro ao buscar notificações');
     } finally {
       setLoading(false);
@@ -76,11 +83,10 @@ export function useNotifications() {
 
         const { data, error } = await supabase.functions.invoke('notifications-read', {
           body: ids ? { ids } : { mark_all: true },
-          headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
-        if (error) throw error;
-        if (!data.success) throw new Error(data.error || 'Erro ao marcar como lidas');
+        if (error) throw error as any;
+        if (!(data as any)?.success) throw new Error((data as any)?.error || 'Erro ao marcar como lidas');
 
         // Atualizar localmente
         if (ids) {
@@ -94,6 +100,17 @@ export function useNotifications() {
         }
       } catch (error: any) {
         console.error('Error marking notifications as read:', error);
+        const status = (error?.context as any)?.status;
+        if (status === 401 || /não autorizado|unauthorized|401/i.test(error?.message)) {
+          toast.error('Sessão expirada. Faça login novamente.');
+          try {
+            sessionStorage.setItem('logoutInProgress', String(Date.now()));
+            await supabase.auth.signOut();
+          } finally {
+            window.location.replace('/auth');
+          }
+          return;
+        }
         toast.error(error.message || 'Erro ao marcar como lidas');
       }
     },

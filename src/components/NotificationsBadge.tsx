@@ -16,7 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export function NotificationsBadge() {
-  const { notifications, unreadCount, markAsRead, loadMore, hasMore } = useNotifications();
+  const { notifications, unreadCount, markAsRead, loadMore, hasMore, loading } = useNotifications();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -88,7 +88,13 @@ export function NotificationsBadge() {
           <SheetTitle>Notificações</SheetTitle>
         </SheetHeader>
 
-        {notifications.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3 mt-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
             <Bell className="h-12 w-12 mb-4 opacity-50" />
             <p>Nada novo por aqui.</p>
