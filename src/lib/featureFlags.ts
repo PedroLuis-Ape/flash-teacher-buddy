@@ -80,4 +80,11 @@ export const FEATURE_FLAGS = {
    * When true: enables full integration system (Turmas + Atribuições)
    */
   classes_enabled: true,
+
+  /**
+   * Class communications (chat, DM, comments)
+   * When false: no chat, DM or comments in classes
+   * When true: enables messaging system for classes
+   */
+  class_comms_enabled: true,
 } as const;
