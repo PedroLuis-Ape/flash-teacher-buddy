@@ -120,6 +120,34 @@ export default function TurmaDetail() {
     enabled: !!turmaData?.turma?.owner_teacher_id,
   });
 
+  // Buscar alunos inscritos no professor
+  const { data: meusAlunosData } = useQuery({
+    queryKey: ['meus-alunos-inscritos', currentUser?.id, turmaId, turmaData?.turma?.turma_membros],
+    queryFn: async () => {
+      if (!currentUser?.id || !turmaData?.turma) return [];
+
+      const { data: subscriptions } = await supabase
+        .from('subscriptions')
+        .select('student_id')
+        .eq('teacher_id', currentUser.id);
+
+      if (!subscriptions || subscriptions.length === 0) return [];
+
+      const studentIds = subscriptions.map(s => s.student_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, ape_id, avatar_skin_id')
+        .in('id', studentIds)
+        .order('first_name', { ascending: true });
+
+      // Filtrar alunos que já estão na turma
+      const membros = turmaData.turma.turma_membros || [];
+      const alunosNaTurma = new Set(membros.map((m: any) => m.user_id));
+      return (profiles || []).filter(p => !alunosNaTurma.has(p.id));
+    },
+    enabled: !!currentUser?.id && !!turmaData?.isOwner && !!turmaId,
+  });
+
   if (turmaLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
@@ -190,8 +218,10 @@ export default function TurmaDetail() {
     }
   };
 
-  const handleEnrollAluno = async () => {
-    if (!turmaId || !enrollApeId.trim()) {
+  const handleEnrollAluno = async (apeId?: string) => {
+    const idToUse = apeId || enrollApeId;
+    
+    if (!turmaId || !idToUse.trim()) {
       toast.error('❌ APE ID é obrigatório');
       return;
     }
@@ -199,7 +229,7 @@ export default function TurmaDetail() {
     try {
       await enrollAluno.mutateAsync({
         turma_id: turmaId,
-        ape_id: enrollApeId,
+        ape_id: idToUse,
       });
       toast.success('✅ Aluno matriculado!');
       setEnrollDialogOpen(false);
@@ -322,11 +352,69 @@ export default function TurmaDetail() {
 
       {/* Enroll Dialog */}
       <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Adicionar Aluno</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Lista de alunos inscritos */}
+            {meusAlunosData && meusAlunosData.length > 0 && (
+              <div>
+                <Label className="mb-2 block">Meus Alunos Inscritos</Label>
+                <ScrollArea className="h-[200px] border rounded-lg p-2">
+                  <div className="space-y-1">
+                    {meusAlunosData.map((aluno: any) => (
+                      <div
+                        key={aluno.id}
+                        className="flex items-center justify-between p-3 rounded hover:bg-muted cursor-pointer transition-colors"
+                        onClick={() => handleEnrollAluno(aluno.ape_id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-lg font-semibold text-primary">
+                              {aluno.first_name?.[0] || '?'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{aluno.first_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              APE: {aluno.ape_id}
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEnrollAluno(aluno.ape_id);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Adicionar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
+            {/* Separador */}
+            {meusAlunosData && meusAlunosData.length > 0 && (
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Ou digite o APE ID
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Input manual */}
             <div>
               <Label htmlFor="enroll-ape-id">APE ID do Aluno</Label>
               <Input
@@ -334,6 +422,11 @@ export default function TurmaDetail() {
                 value={enrollApeId}
                 onChange={(e) => setEnrollApeId(e.target.value)}
                 placeholder="Ex: ABC12345"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && enrollApeId.trim()) {
+                    handleEnrollAluno();
+                  }
+                }}
               />
             </div>
           </div>
@@ -341,7 +434,7 @@ export default function TurmaDetail() {
             <Button variant="outline" onClick={() => setEnrollDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleEnrollAluno} disabled={enrollAluno.isPending}>
+            <Button onClick={() => handleEnrollAluno()} disabled={enrollAluno.isPending || !enrollApeId.trim()}>
               {enrollAluno.isPending ? 'Adicionando...' : 'Adicionar'}
             </Button>
           </DialogFooter>
