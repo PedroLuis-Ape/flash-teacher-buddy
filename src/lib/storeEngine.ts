@@ -252,7 +252,6 @@ export async function equipAvatarAsPhoto(
       .from('profiles')
       .update({ 
         avatar_url: urlWithCache,
-        avatar_skin_id: skinId,
         updated_at: new Date().toISOString()
       })
       .eq('id', userId);
