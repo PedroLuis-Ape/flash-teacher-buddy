@@ -1,11 +1,11 @@
-import { Users, BookOpen } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export function TurmasCard() {
+export function MinhasTurmasCard() {
   const navigate = useNavigate();
 
   const { data: profile } = useQuery({
@@ -24,12 +24,8 @@ export function TurmasCard() {
     },
   });
 
-  if (!FEATURE_FLAGS.classes_enabled) return null;
-
-  const isTeacher = profile?.is_teacher || false;
-  
-  // Don't show for teachers (they have separate cards)
-  if (isTeacher) return null;
+  // Only show for teachers with feature enabled
+  if (!FEATURE_FLAGS.classes_enabled || !profile?.is_teacher) return null;
 
   return (
     <Card
@@ -37,19 +33,11 @@ export function TurmasCard() {
       onClick={() => navigate('/turmas')}
     >
       <div className="flex items-center gap-4">
-        {isTeacher ? (
-          <Users className="h-8 w-8 text-primary" />
-        ) : (
-          <BookOpen className="h-8 w-8 text-primary" />
-        )}
+        <BookOpen className="h-8 w-8 text-primary" />
         <div className="flex-1">
-          <h3 className="text-lg font-semibold">
-            {isTeacher ? 'Minhas Turmas' : 'Turmas'}
-          </h3>
+          <h3 className="text-lg font-semibold">Minhas Turmas</h3>
           <p className="text-sm text-muted-foreground">
-            {isTeacher
-              ? 'Gerencie turmas e atribuições'
-              : 'Veja suas turmas e atribuições'}
+            Crie e gerencie suas turmas
           </p>
         </div>
       </div>

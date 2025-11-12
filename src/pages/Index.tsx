@@ -9,6 +9,8 @@ import { ApeCardList } from "@/components/ape/ApeCardList";
 import { ApeCardProfessor } from "@/components/ape/ApeCardProfessor";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { TurmasCard } from "@/components/TurmasCard";
+import { MeusAlunosCard } from "@/components/MeusAlunosCard";
+import { MinhasTurmasCard } from "@/components/MinhasTurmasCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -282,6 +284,11 @@ const Index = () => {
         {/* Quick Actions */}
         {!loading && (
           <div className="space-y-3">
+            {/* Professor Cards */}
+            <MeusAlunosCard />
+            <MinhasTurmasCard />
+            
+            {/* Student Turmas Card */}
             {FEATURE_FLAGS.classes_enabled && <TurmasCard />}
             
             <div className="grid grid-cols-2 gap-3 pb-4">

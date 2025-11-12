@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -62,7 +62,8 @@ export default function Turmas() {
 
             <TabsContent value="professor" className="space-y-4 mt-4">
               <Button onClick={() => navigate('/turmas/professor')} className="w-full">
-                Gerenciar Turmas (Professor)
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Nova Turma
               </Button>
               {turmasProfessor.length === 0 ? (
                 <Card className="p-8 text-center">
