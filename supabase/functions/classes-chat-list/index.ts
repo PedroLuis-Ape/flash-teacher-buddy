@@ -59,10 +59,7 @@ serve(async (req) => {
 
     let query = supabaseClient
       .from('mensagens')
-      .select(`
-        *,
-        profiles:sender_id(first_name, avatar_skin_id)
-      `)
+      .select('*')
       .eq('turma_id', turma_id)
       .eq('thread_tipo', thread_tipo)
       .eq('thread_chave', thread_chave)
@@ -84,6 +81,20 @@ serve(async (req) => {
       );
     }
 
+    // Fetch profiles for all unique sender_ids
+    const senderIds = [...new Set((messages || []).map(m => m.sender_id))];
+    const { data: profiles } = await supabaseClient
+      .from('profiles')
+      .select('id, first_name, avatar_skin_id')
+      .in('id', senderIds);
+
+    // Map profiles to messages
+    const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+    const enrichedMessages = (messages || []).map(msg => ({
+      ...msg,
+      profiles: profileMap.get(msg.sender_id) || null
+    }));
+
     const hasMore = messages && messages.length === limit;
     const nextCursor = messages && messages.length > 0 
       ? messages[messages.length - 1].created_at 
@@ -91,7 +102,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        messages: messages || [], 
+        messages: enrichedMessages, 
         has_more: hasMore,
         next_cursor: nextCursor,
       }),
