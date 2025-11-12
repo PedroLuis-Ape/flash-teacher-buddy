@@ -30,6 +30,8 @@ const KingdomImport = lazy(() => import("./pages/KingdomImport"));
 const AdminCatalog = lazy(() => import("./pages/admin/AdminCatalog"));
 const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminGifts = lazy(() => import("./pages/admin/AdminGifts"));
+const TurmasProfessor = lazy(() => import("./pages/TurmasProfessor"));
+const TurmasAluno = lazy(() => import("./pages/TurmasAluno"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -73,6 +75,8 @@ const App = () => (
                 <Route path="/admin/catalog" element={<AdminCatalog />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
                 <Route path="/admin/gifts" element={<AdminGifts />} />
+                <Route path="/turmas/professor" element={<TurmasProfessor />} />
+                <Route path="/turmas/aluno" element={<TurmasAluno />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </GlobalLayout>

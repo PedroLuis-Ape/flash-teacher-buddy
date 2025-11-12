@@ -150,6 +150,85 @@ export type Database = {
         }
         Relationships: []
       }
+      atribuicoes: {
+        Row: {
+          created_at: string
+          data_limite: string | null
+          descricao: string | null
+          fonte_id: string
+          fonte_tipo: Database["public"]["Enums"]["atribuicao_fonte_tipo"]
+          id: string
+          pontos_vale: number
+          titulo: string
+          turma_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_limite?: string | null
+          descricao?: string | null
+          fonte_id: string
+          fonte_tipo: Database["public"]["Enums"]["atribuicao_fonte_tipo"]
+          id?: string
+          pontos_vale?: number
+          titulo: string
+          turma_id: string
+        }
+        Update: {
+          created_at?: string
+          data_limite?: string | null
+          descricao?: string | null
+          fonte_id?: string
+          fonte_tipo?: Database["public"]["Enums"]["atribuicao_fonte_tipo"]
+          id?: string
+          pontos_vale?: number
+          titulo?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atribuicoes_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atribuicoes_status: {
+        Row: {
+          aluno_id: string
+          atribuicao_id: string
+          id: string
+          progresso: number
+          status: Database["public"]["Enums"]["atribuicao_status"]
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          atribuicao_id: string
+          id?: string
+          progresso?: number
+          status?: Database["public"]["Enums"]["atribuicao_status"]
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          atribuicao_id?: string
+          id?: string
+          progresso?: number
+          status?: Database["public"]["Enums"]["atribuicao_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atribuicoes_status_atribuicao_id_fkey"
+            columns: ["atribuicao_id"]
+            isOneToOne: false
+            referencedRelation: "atribuicoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_members: {
         Row: {
           class_id: string
@@ -986,6 +1065,7 @@ export type Database = {
       profiles: {
         Row: {
           account_id: string | null
+          ape_id: string | null
           avatar_skin_id: string | null
           balance_pitecoin: number
           best_streak: number
@@ -995,6 +1075,7 @@ export type Database = {
           first_name: string | null
           id: string
           is_primary: boolean | null
+          is_teacher: boolean | null
           last_conversion: string | null
           last_daily_reward: string | null
           level: number
@@ -1010,6 +1091,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          ape_id?: string | null
           avatar_skin_id?: string | null
           balance_pitecoin?: number
           best_streak?: number
@@ -1019,6 +1101,7 @@ export type Database = {
           first_name?: string | null
           id: string
           is_primary?: boolean | null
+          is_teacher?: boolean | null
           last_conversion?: string | null
           last_daily_reward?: string | null
           level?: number
@@ -1034,6 +1117,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          ape_id?: string | null
           avatar_skin_id?: string | null
           balance_pitecoin?: number
           best_streak?: number
@@ -1043,6 +1127,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_primary?: boolean | null
+          is_teacher?: boolean | null
           last_conversion?: string | null
           last_daily_reward?: string | null
           level?: number
@@ -1414,6 +1499,71 @@ export type Database = {
           },
         ]
       }
+      turma_membros: {
+        Row: {
+          ativo: boolean
+          id: string
+          joined_at: string
+          role: Database["public"]["Enums"]["turma_role"]
+          turma_id: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          id?: string
+          joined_at?: string
+          role?: Database["public"]["Enums"]["turma_role"]
+          turma_id: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          id?: string
+          joined_at?: string
+          role?: Database["public"]["Enums"]["turma_role"]
+          turma_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turma_membros_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turmas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          owner_teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          owner_teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          owner_teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_inventory: {
         Row: {
           acquired_at: string
@@ -1542,6 +1692,7 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_ape_id: { Args: never; Returns: string }
       generate_class_code: { Args: never; Returns: string }
       generate_public_id: { Args: { p_user_type: string }; Returns: string }
       generate_user_tag: { Args: never; Returns: string }
@@ -1663,6 +1814,14 @@ export type Database = {
         Returns: boolean
       }
       is_developer_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_turma_member: {
+        Args: { _turma_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_turma_owner: {
+        Args: { _turma_id: string; _user_id: string }
+        Returns: boolean
+      }
       process_exchange: {
         Args: { p_operation_id: string; p_pts: number; p_user_id: string }
         Returns: Json
@@ -1689,6 +1848,9 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "student" | "developer_admin"
+      atribuicao_fonte_tipo: "lista" | "pasta" | "cardset"
+      atribuicao_status: "pendente" | "em_andamento" | "concluida"
+      turma_role: "aluno" | "professor_assistente"
       user_type: "professor" | "aluno"
     }
     CompositeTypes: {
@@ -1818,6 +1980,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "student", "developer_admin"],
+      atribuicao_fonte_tipo: ["lista", "pasta", "cardset"],
+      atribuicao_status: ["pendente", "em_andamento", "concluida"],
+      turma_role: ["aluno", "professor_assistente"],
       user_type: ["professor", "aluno"],
     },
   },

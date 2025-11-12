@@ -8,6 +8,7 @@ import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
 import { ApeCardProfessor } from "@/components/ape/ApeCardProfessor";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
+import { TurmasCard } from "@/components/TurmasCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -280,23 +281,27 @@ const Index = () => {
 
         {/* Quick Actions */}
         {!loading && (
-          <div className="grid grid-cols-2 gap-3 pb-4">
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2"
-              onClick={() => navigate("/store")}
-            >
-              <div className="text-2xl">🏪</div>
-              <span className="text-sm">Loja</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-20 flex-col gap-2"
-              onClick={() => navigate("/search")}
-            >
-              <Users className="h-6 w-6" />
-              <span className="text-sm">Buscar Professores</span>
-            </Button>
+          <div className="space-y-3">
+            {FEATURE_FLAGS.classes_enabled && <TurmasCard />}
+            
+            <div className="grid grid-cols-2 gap-3 pb-4">
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2"
+                onClick={() => navigate("/store")}
+              >
+                <div className="text-2xl">🏪</div>
+                <span className="text-sm">Loja</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2"
+                onClick={() => navigate("/search")}
+              >
+                <Users className="h-6 w-6" />
+                <span className="text-sm">Buscar Professores</span>
+              </Button>
+            </div>
           </div>
         )}
       </div>
