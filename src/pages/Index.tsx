@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useHomeData } from "@/hooks/useHomeData";
@@ -15,21 +15,64 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, Play, TrendingUp, Users, Layers, ChevronRight, Crown, Lock } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
   const { last, recents, teachers, stats, loading } = useHomeData();
   const { pts_weekly, level, current_streak } = useEconomy();
+  const [profileData, setProfileData] = useState<{
+    firstName: string;
+    avatarUrl: string | null;
+  }>({ firstName: "", avatarUrl: null });
 
   useEffect(() => {
     checkAuth();
+    loadProfileData();
   }, []);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth", { replace: true });
+    }
+  };
+
+  const loadProfileData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, avatar_url, avatar_skin_id")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile) {
+        let avatarUrl = profile.avatar_url;
+        
+        // Fallback to avatar_skin_id if no avatar_url
+        if (!avatarUrl && profile.avatar_skin_id) {
+          const { data: avatarData } = await supabase
+            .from("public_catalog")
+            .select("avatar_final")
+            .eq("id", profile.avatar_skin_id)
+            .single();
+          
+          if (avatarData?.avatar_final) {
+            avatarUrl = avatarData.avatar_final;
+          }
+        }
+
+        setProfileData({
+          firstName: profile.first_name || "Usuário",
+          avatarUrl: avatarUrl || null
+        });
+      }
+    } catch (error) {
+      console.error("[Index] Error loading profile:", error);
     }
   };
 
@@ -50,9 +93,39 @@ const Index = () => {
 
   const hasData = last !== null || recents.length > 0;
 
+  const initials = profileData.firstName
+    ? profileData.firstName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()
+    : "U";
+
   return (
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Início" />
+
+      {/* Profile Header */}
+      <div className="bg-background border-b border-border">
+        <div className="container mx-auto px-3 sm:px-4 py-3">
+          <div 
+            className="flex items-center gap-3 justify-end cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate("/profile")}
+          >
+            <div className="text-right">
+              <p className="text-sm font-semibold leading-tight">{profileData.firstName}</p>
+            </div>
+            <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+              {profileData.avatarUrl ? (
+                <AvatarImage 
+                  src={profileData.avatarUrl} 
+                  alt="Avatar" 
+                  className="object-cover"
+                />
+              ) : null}
+              <AvatarFallback className="bg-primary text-primary-foreground text-base">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Stats Cards Grid */}
