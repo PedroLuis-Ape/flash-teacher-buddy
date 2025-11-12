@@ -9,15 +9,52 @@ export function useStudentsList(q?: string) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const { data, error } = await supabase.functions.invoke('professor-students-list', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: { q: q || '' },
-      });
+      // Buscar inscrições onde o usuário atual é o professor
+      const { data: subs, error: subsError } = await supabase
+        .from('subscriptions')
+        .select('student_id, created_at')
+        .eq('teacher_id', session.user.id)
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data || { students: [], nextCursor: null, hasMore: false };
+      if (subsError) throw subsError;
+      if (!subs || subs.length === 0) {
+        return { students: [], nextCursor: null, hasMore: false };
+      }
+
+      const studentIds = subs.map((s: any) => s.student_id).filter(Boolean);
+      if (studentIds.length === 0) {
+        return { students: [], nextCursor: null, hasMore: false };
+      }
+
+      const { data: profiles, error: profError } = await supabase
+        .from('profiles')
+        .select('id, first_name, ape_id, avatar_skin_id')
+        .in('id', studentIds);
+
+      if (profError) throw profError;
+
+      const profilesById: Record<string, any> = {};
+      (profiles || []).forEach((p: any) => { profilesById[p.id] = p; });
+
+      let students = subs.map((sub: any) => ({
+        aluno_id: sub.student_id,
+        nome: profilesById[sub.student_id]?.first_name || 'Sem nome',
+        ape_id: profilesById[sub.student_id]?.ape_id || '',
+        avatar_skin_id: profilesById[sub.student_id]?.avatar_skin_id,
+        desde_em: sub.created_at,
+        status: 'ativo',
+        origem: 'follow',
+      }));
+
+      if (q && q.trim()) {
+        const qLower = q.toLowerCase();
+        students = students.filter((s: any) =>
+          (s.nome || '').toLowerCase().includes(qLower) ||
+          (s.ape_id || '').toLowerCase().includes(qLower)
+        );
+      }
+
+      return { students, nextCursor: null, hasMore: false };
     },
     enabled: FEATURE_FLAGS.meus_alunos_enabled && q !== undefined,
   });
