@@ -103,15 +103,12 @@ const Index = () => {
 
       {/* Profile Header */}
       <div className="bg-background border-b border-border">
-        <div className="container mx-auto px-3 sm:px-4 py-3">
+        <div className="container mx-auto px-3 sm:px-4 py-4">
           <div 
-            className="flex items-center gap-3 justify-end cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity animate-fade-in"
             onClick={() => navigate("/profile")}
           >
-            <div className="text-right">
-              <p className="text-sm font-semibold leading-tight">{profileData.firstName}</p>
-            </div>
-            <Avatar className="h-12 w-12 ring-2 ring-primary/20">
+            <Avatar className="h-20 w-20 ring-2 ring-primary/20">
               {profileData.avatarUrl ? (
                 <AvatarImage 
                   src={profileData.avatarUrl} 
@@ -119,10 +116,11 @@ const Index = () => {
                   className="object-cover"
                 />
               ) : null}
-              <AvatarFallback className="bg-primary text-primary-foreground text-base">
+              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                 {initials}
               </AvatarFallback>
             </Avatar>
+            <p className="text-base font-semibold">{profileData.firstName}</p>
           </div>
         </div>
       </div>
