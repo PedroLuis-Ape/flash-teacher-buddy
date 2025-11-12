@@ -30,6 +30,9 @@ const KingdomImport = lazy(() => import("./pages/KingdomImport"));
 const AdminCatalog = lazy(() => import("./pages/admin/AdminCatalog"));
 const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminGifts = lazy(() => import("./pages/admin/AdminGifts"));
+const Turmas = lazy(() => import("./pages/Turmas"));
+const TurmaDetail = lazy(() => import("./pages/TurmaDetail"));
+const AtribuicaoDetail = lazy(() => import("./pages/AtribuicaoDetail"));
 const TurmasProfessor = lazy(() => import("./pages/TurmasProfessor"));
 const TurmasAluno = lazy(() => import("./pages/TurmasAluno"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -75,8 +78,11 @@ const App = () => (
                 <Route path="/admin/catalog" element={<AdminCatalog />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
                 <Route path="/admin/gifts" element={<AdminGifts />} />
+                <Route path="/turmas" element={<Turmas />} />
                 <Route path="/turmas/professor" element={<TurmasProfessor />} />
                 <Route path="/turmas/aluno" element={<TurmasAluno />} />
+                <Route path="/turmas/:turmaId" element={<TurmaDetail />} />
+                <Route path="/turmas/:turmaId/atribuicoes/:atribuicaoId" element={<AtribuicaoDetail />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </GlobalLayout>

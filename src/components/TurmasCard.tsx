@@ -31,7 +31,7 @@ export function TurmasCard() {
   return (
     <Card
       className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={() => navigate(isTeacher ? '/turmas/professor' : '/turmas/aluno')}
+      onClick={() => navigate('/turmas')}
     >
       <div className="flex items-center gap-4">
         {isTeacher ? (
