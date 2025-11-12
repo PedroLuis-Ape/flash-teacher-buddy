@@ -31,18 +31,19 @@ serve(async (req) => {
       );
     }
 
-    const url = new URL(req.url);
-    const turma_id_qs = url.searchParams.get('turma_id');
-
-    let turma_id = turma_id_qs;
-    if (req.method !== 'GET' && !turma_id) {
+    // Read body first (for POST requests from invoke)
+    let bodyData: any = {};
+    if (req.method === 'POST') {
       try {
-        const body = await req.json();
-        turma_id = body?.turma_id || undefined;
+        bodyData = await req.json();
       } catch (_) {
-        // ignore body parse errors
+        // ignore parse errors
       }
     }
+
+    // Get params from body or querystring
+    const url = new URL(req.url);
+    const turma_id = bodyData?.turma_id || url.searchParams.get('turma_id');
 
     if (!turma_id) {
       return new Response(
