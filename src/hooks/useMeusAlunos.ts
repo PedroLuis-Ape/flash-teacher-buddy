@@ -56,7 +56,7 @@ export function useStudentsList(q?: string) {
 
       return { students, nextCursor: null, hasMore: false };
     },
-    enabled: FEATURE_FLAGS.meus_alunos_enabled && q !== undefined,
+    enabled: FEATURE_FLAGS.meus_alunos_enabled,
   });
 }
 
