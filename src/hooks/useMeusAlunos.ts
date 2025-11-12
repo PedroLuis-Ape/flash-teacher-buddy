@@ -126,8 +126,8 @@ export function useStudentOverview(aluno_id: string | null) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const params = new URLSearchParams({ aluno_id });
       const { data, error } = await supabase.functions.invoke('professor-students-overview', {
+        body: { aluno_id },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },

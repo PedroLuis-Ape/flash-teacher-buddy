@@ -31,8 +31,8 @@ serve(async (req) => {
       );
     }
 
-    const url = new URL(req.url);
-    const aluno_id = url.searchParams.get('aluno_id');
+    // Read aluno_id from request body
+    const { aluno_id } = await req.json();
 
     if (!aluno_id) {
       return new Response(
