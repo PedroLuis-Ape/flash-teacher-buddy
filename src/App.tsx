@@ -13,8 +13,6 @@ import { InstallPWA } from "@/components/InstallPWA";
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Profile = lazy(() => import("./pages/Profile"));
-const PublicProfile = lazy(() => import("./pages/PublicProfile"));
-const UserSearch = lazy(() => import("./pages/UserSearch"));
 const Folders = lazy(() => import("./pages/Folders"));
 const Folder = lazy(() => import("./pages/Folder"));
 const ListDetail = lazy(() => import("./pages/ListDetail"));
@@ -24,16 +22,11 @@ const PublicPortal = lazy(() => import("./pages/PublicPortal"));
 const GamesHub = lazy(() => import("./pages/GamesHub"));
 const Study = lazy(() => import("./pages/Study"));
 const Search = lazy(() => import("./pages/Search"));
-const MyStudents = lazy(() => import("./pages/MyStudents"));
-const MyTeachers = lazy(() => import("./pages/MyTeachers"));
-const TeacherFolders = lazy(() => import("./pages/TeacherFolders"));
 const Store = lazy(() => import("./pages/Store"));
 const PresentBox = lazy(() => import("./pages/PresentBox"));
 const Reinos = lazy(() => import("./pages/Reinos"));
 const KingdomDetail = lazy(() => import("./pages/KingdomDetail"));
 const KingdomImport = lazy(() => import("./pages/KingdomImport"));
-const Classes = lazy(() => import("./pages/Classes"));
-const AnnouncementDetail = lazy(() => import("./pages/AnnouncementDetail"));
 const AdminCatalog = lazy(() => import("./pages/admin/AdminCatalog"));
 const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminGifts = lazy(() => import("./pages/admin/AdminGifts"));
@@ -56,8 +49,6 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/perfil/:id" element={<PublicProfile />} />
-                <Route path="/pesquisar" element={<UserSearch />} />
                 <Route path="/folders" element={<Folders />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/folder/:id" element={<Folder />} />
@@ -73,12 +64,8 @@ const App = () => (
                 <Route path="/portal/list/:id/study" element={<Study />} />
                 <Route path="/portal/collection/:id" element={<PublicCollection />} />
                 <Route path="/portal/collection/:id/study" element={<Study />} />
-                <Route path="/my-students" element={<MyStudents />} />
-                <Route path="/my-teachers" element={<MyTeachers />} />
-                <Route path="/teacher/:teacherId/folders" element={<TeacherFolders />} />
                 <Route path="/store" element={<Store />} />
                 <Route path="/gifts" element={<PresentBox />} />
-                <Route path="/classes" element={<Classes />} />
                 <Route path="/reinos" element={<Reinos />} />
                 <Route path="/reino" element={<Reinos />} />
                 <Route path="/reino/:code" element={<KingdomDetail />} />
@@ -86,7 +73,6 @@ const App = () => (
                 <Route path="/admin/catalog" element={<AdminCatalog />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
                 <Route path="/admin/gifts" element={<AdminGifts />} />
-                <Route path="/announcements/:id" element={<AnnouncementDetail />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </GlobalLayout>

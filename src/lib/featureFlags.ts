@@ -73,4 +73,11 @@ export const FEATURE_FLAGS = {
    * When true: shows Modo Reino card on home and enables /reinos route
    */
   reinos_enabled: true,
+
+  /**
+   * Classes/Student-Teacher linking system
+   * When false: no classes, messages, notifications, student-teacher features
+   * When true: enables full integration system
+   */
+  classes_enabled: false,
 } as const;
