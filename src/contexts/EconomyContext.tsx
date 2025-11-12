@@ -38,8 +38,13 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     refreshTimeoutRef.current = setTimeout(async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        // Se não há sessão ou erro ao buscar sessão, não continuar
+        if (sessionError || !session) {
+          console.log('[EconomyContext] No valid session, skipping refresh');
+          return;
+        }
 
         // Call HUD summary endpoint for fresh data
         const { data, error } = await supabase.functions.invoke('hud-summary', {
@@ -48,9 +53,17 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
           },
         });
 
-        // Se der erro 401, tentar renovar o token e tentar novamente
-        if (error && error.message?.includes('401')) {
-          const { data: refreshData } = await supabase.auth.refreshSession();
+        // Se der erro 401 ou 403, tentar renovar o token uma única vez
+        if (error && (error.message?.includes('401') || error.message?.includes('403'))) {
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          
+          // Se falhar ao renovar, significa que a sessão está inválida - forçar logout
+          if (refreshError || !refreshData.session) {
+            console.log('[EconomyContext] Session refresh failed, session invalid');
+            await supabase.auth.signOut();
+            return;
+          }
+          
           if (refreshData.session) {
             const { data: retryData, error: retryError } = await supabase.functions.invoke('hud-summary', {
               headers: {
@@ -73,9 +86,13 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
                 current_streak: profileData?.current_streak || prev.current_streak,
               }));
               return;
+            } else {
+              // Se o retry também falhar, logout
+              console.log('[EconomyContext] Retry failed, forcing logout');
+              await supabase.auth.signOut();
+              return;
             }
           }
-          throw error;
         }
 
         if (error) throw error;
@@ -112,8 +129,14 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     const loadInitialData = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session || !mounted) return;
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        // Se não há sessão ou erro ao buscar, não continuar
+        if (sessionError || !session || !mounted) {
+          console.log('[EconomyContext] No valid session on init, skipping');
+          setLoading(false);
+          return;
+        }
 
         // Call HUD summary endpoint
         const { data, error } = await supabase.functions.invoke('hud-summary', {
@@ -122,9 +145,17 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
           },
         });
 
-        // Se der erro 401, tentar renovar o token e tentar novamente
-        if (error && error.message?.includes('401')) {
-          const { data: refreshData } = await supabase.auth.refreshSession();
+        // Se der erro 401 ou 403, tentar renovar o token uma única vez
+        if (error && (error.message?.includes('401') || error.message?.includes('403'))) {
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          
+          // Se falhar ao renovar, significa que a sessão está inválida - forçar logout
+          if (refreshError || !refreshData.session) {
+            console.log('[EconomyContext] Session refresh failed on init, forcing logout');
+            await supabase.auth.signOut();
+            return;
+          }
+          
           if (refreshData.session && mounted) {
             const { data: retryData, error: retryError } = await supabase.functions.invoke('hud-summary', {
               headers: {
@@ -147,9 +178,13 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
                 current_streak: profileData?.current_streak || 0,
               });
               return;
+            } else {
+              // Se o retry também falhar, logout
+              console.log('[EconomyContext] Retry failed on init, forcing logout');
+              await supabase.auth.signOut();
+              return;
             }
           }
-          throw error;
         }
 
         if (error) throw error;

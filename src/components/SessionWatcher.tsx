@@ -70,9 +70,17 @@ export function SessionWatcher() {
           localStorage.clear();
           // Remover chaves conhecidas de sessão sem limpar tudo
           sessionStorage.removeItem('returnTo');
+          sessionStorage.setItem('authReady', '0');
         } catch (e) {
           // ignore
         }
+        navigate('/auth', { replace: true });
+        return;
+      }
+      
+      // Token expirado ou sessão revogada remotamente
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        console.log('[SessionWatcher] Token refresh failed, session lost');
         navigate('/auth', { replace: true });
         return;
       }
