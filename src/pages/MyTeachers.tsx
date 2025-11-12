@@ -26,7 +26,7 @@ export default function MyTeachers() {
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ['my-teachers', currentUserId],
     queryFn: async () => {
-      if (!currentUserId) return [];
+      if (!currentUserId) throw new Error('Não autenticado');
 
       const { data, error } = await supabase
         .from('subscriptions')
@@ -56,7 +56,7 @@ export default function MyTeachers() {
     enabled: !!currentUserId,
   });
 
-  if (isLoading) {
+  if (!currentUserId || isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
