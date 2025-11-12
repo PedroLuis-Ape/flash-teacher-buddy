@@ -77,7 +77,7 @@ export const FEATURE_FLAGS = {
   /**
    * Classes/Student-Teacher linking system
    * When false: no classes, messages, notifications, student-teacher features
-   * When true: enables full integration system
+   * When true: enables full integration system (Turmas + Atribuições)
    */
-  classes_enabled: false,
+  classes_enabled: true,
 } as const;
