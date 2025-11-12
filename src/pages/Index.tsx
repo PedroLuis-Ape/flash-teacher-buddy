@@ -92,6 +92,18 @@ const Index = () => {
           </div>
         )}
 
+        {/* Essential Cards - Professor/Student Actions */}
+        {!loading && (
+          <div className="space-y-3">
+            {/* Professor Cards */}
+            <MeusAlunosCard />
+            <MinhasTurmasCard />
+            
+            {/* Student Turmas Card */}
+            {FEATURE_FLAGS.classes_enabled && <TurmasCard />}
+          </div>
+        )}
+
         {/* Teachers Section */}
         <div className="space-y-4">
           <ApeSectionTitle
@@ -283,32 +295,23 @@ const Index = () => {
 
         {/* Quick Actions */}
         {!loading && (
-          <div className="space-y-3">
-            {/* Professor Cards */}
-            <MeusAlunosCard />
-            <MinhasTurmasCard />
-            
-            {/* Student Turmas Card */}
-            {FEATURE_FLAGS.classes_enabled && <TurmasCard />}
-            
-            <div className="grid grid-cols-2 gap-3 pb-4">
-              <Button 
-                variant="outline" 
-                className="h-20 flex-col gap-2"
-                onClick={() => navigate("/store")}
-              >
-                <div className="text-2xl">🏪</div>
-                <span className="text-sm">Loja</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-20 flex-col gap-2"
-                onClick={() => navigate("/search")}
-              >
-                <Users className="h-6 w-6" />
-                <span className="text-sm">Buscar Professores</span>
-              </Button>
-            </div>
+          <div className="grid grid-cols-2 gap-3 pb-4">
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={() => navigate("/store")}
+            >
+              <div className="text-2xl">🏪</div>
+              <span className="text-sm">Loja</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col gap-2"
+              onClick={() => navigate("/search")}
+            >
+              <Users className="h-6 w-6" />
+              <span className="text-sm">Buscar Professores</span>
+            </Button>
           </div>
         )}
       </div>
