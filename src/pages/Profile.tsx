@@ -18,6 +18,8 @@ const Profile = () => {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [publicId, setPublicId] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [mascotUrl, setMascotUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ const Profile = () => {
       // Force fresh data from server (no cache)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("first_name, email, user_tag")
+        .select("first_name, email, user_tag, avatar_skin_id, mascot_skin_id")
         .eq("id", session.user.id)
         .single();
 
@@ -61,6 +63,31 @@ const Profile = () => {
           }
         } else {
           setPublicId(profile.user_tag);
+        }
+
+        // Load avatar and mascot from catalog
+        if (profile.avatar_skin_id) {
+          const { data: avatarData } = await supabase
+            .from("public_catalog")
+            .select("avatar_final")
+            .eq("id", profile.avatar_skin_id)
+            .single();
+          
+          if (avatarData?.avatar_final) {
+            setAvatarUrl(avatarData.avatar_final);
+          }
+        }
+
+        if (profile.mascot_skin_id) {
+          const { data: mascotData } = await supabase
+            .from("public_catalog")
+            .select("card_final")
+            .eq("id", profile.mascot_skin_id)
+            .single();
+          
+          if (mascotData?.card_final) {
+            setMascotUrl(mascotData.card_final);
+          }
         }
       }
     } catch (error) {
@@ -109,6 +136,9 @@ const Profile = () => {
       <Card className="p-6">
         <div className="flex flex-col items-center text-center space-y-4">
           <Avatar className="h-24 w-24">
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt="Avatar" />
+            ) : null}
             <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
               {initials}
             </AvatarFallback>
@@ -129,6 +159,20 @@ const Profile = () => {
             )}
           </div>
         </div>
+
+        {/* Mascot Display */}
+        {mascotUrl && (
+          <div className="mt-6 pt-6 border-t">
+            <p className="text-sm text-muted-foreground mb-3 text-center">Mascote Equipado</p>
+            <div className="aspect-[4/3] relative overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 to-secondary/10">
+              <img 
+                src={mascotUrl} 
+                alt="Mascote"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
       <div className="space-y-3">

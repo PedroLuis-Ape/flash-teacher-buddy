@@ -74,21 +74,16 @@ export async function getSkinsCaltalog(): Promise<SkinItem[]> {
       .select('*')
       .eq('is_active', true)
       .eq('approved', true)
-      .in('slug', ALLOWED_SLUGS)
       .order('price_pitecoin', { ascending: true });
 
     if (error) throw error;
     
-    // Deduplicate by slug (keep only the most recent per slug)
-    const deduped = new Map<string, SkinItem>();
-    (data || []).forEach((item: any) => {
-      const existing = deduped.get(item.slug);
-      if (!existing || new Date(item.created_at) > new Date(existing.created_at)) {
-        deduped.set(item.slug, item as SkinItem);
-      }
-    });
+    // Filter only items with valid assets (avatar + card)
+    const validItems = (data || []).filter((item: any) => 
+      item.avatar_final && item.card_final
+    );
     
-    return Array.from(deduped.values());
+    return validItems as SkinItem[];
   } catch (error) {
     console.error('[StoreEngine] Error fetching catalog:', error);
     return [];

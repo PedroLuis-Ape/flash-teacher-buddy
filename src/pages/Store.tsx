@@ -4,13 +4,14 @@ import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeGrid } from "@/components/ape/ApeGrid";
 import { SkinCard } from "@/components/SkinCard";
 import { ExchangeTab } from "@/components/ExchangeTab";
+import { InventoryTab } from "@/components/InventoryTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSkinsCaltalog, getUserInventory, purchaseSkin, type SkinItem } from "@/lib/storeEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useEconomy } from "@/contexts/EconomyContext";
-import { Loader2, ShoppingBag, ArrowRightLeft } from "lucide-react";
+import { Loader2, ShoppingBag, ArrowRightLeft, Package } from "lucide-react";
 
 const Store = () => {
   const navigate = useNavigate();
@@ -99,17 +100,26 @@ const Store = () => {
     return null;
   }
 
+  // Detect initial tab from URL
+  const location = window.location.pathname;
+  const initialTab = location.includes('/exchange') ? 'cambio' : 
+                     location.includes('/inventory') ? 'inventario' : 'pacotes';
+
   return (
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Loja do Piteco" showBack backPath="/folders" />
 
-      <Tabs defaultValue="pacotes" className="w-full">
+      <Tabs defaultValue={initialTab} className="w-full">
         <div className="border-b bg-background/95 backdrop-blur sticky top-16 z-30">
           <div className="container mx-auto px-4">
-            <TabsList className="w-full grid grid-cols-2 h-12">
+            <TabsList className="w-full grid grid-cols-3 h-12">
               <TabsTrigger value="pacotes" className="gap-2">
                 <ShoppingBag className="h-4 w-4" />
                 Pacotes
+              </TabsTrigger>
+              <TabsTrigger value="inventario" className="gap-2">
+                <Package className="h-4 w-4" />
+                Inventário
               </TabsTrigger>
               <TabsTrigger value="cambio" className="gap-2">
                 <ArrowRightLeft className="h-4 w-4" />
@@ -143,6 +153,10 @@ const Store = () => {
               </ApeGrid>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="inventario" className="mt-0">
+          <InventoryTab />
         </TabsContent>
 
         <TabsContent value="cambio" className="mt-0">

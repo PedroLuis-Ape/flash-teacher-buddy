@@ -78,6 +78,8 @@ const App = () => (
                 <Route path="/reinos" element={<Reinos />} />
                 <Route path="/reino" element={<Reinos />} />
                 <Route path="/reino/:code" element={<KingdomDetail />} />
+                <Route path="/store/inventory" element={<Store />} />
+                <Route path="/store/exchange" element={<Store />} />
                 <Route path="/reino/importar" element={<KingdomImport />} />
                 <Route path="/admin/catalog" element={<AdminCatalog />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
