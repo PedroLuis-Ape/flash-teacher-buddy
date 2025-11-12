@@ -54,14 +54,12 @@ export function getRarityLabel(rarity: string): string {
   }
 }
 
-// Allowed slugs for store (whitelist)
+// Allowed slugs for store (whitelist) - Apenas 3 pacotes
 const ALLOWED_SLUGS = [
   'piteco_vampiro',
   'piteco_prime',
   'piteco-zombie',
-  'piteco_astronaut',
-  'piteco_gold',
-  'piteco_dourado'
+  'piteco_zombie'
 ];
 
 /**
@@ -74,6 +72,7 @@ export async function getSkinsCaltalog(): Promise<SkinItem[]> {
       .select('*')
       .eq('is_active', true)
       .eq('approved', true)
+      .in('slug', ALLOWED_SLUGS)
       .order('price_pitecoin', { ascending: true });
 
     if (error) throw error;
