@@ -26,21 +26,26 @@ export default function TurmasProfessor() {
 
   const handleCreateTurma = async () => {
     if (!newTurmaNome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error('❌ Nome é obrigatório');
       return;
     }
 
     try {
-      await createTurma.mutateAsync({
+      const result = await createTurma.mutateAsync({
         nome: newTurmaNome,
         descricao: newTurmaDesc,
       });
-      toast.success('Turma criada com sucesso!');
+      toast.success('✅ Turma criada com sucesso!');
       setCreateDialogOpen(false);
       setNewTurmaNome('');
       setNewTurmaDesc('');
+      
+      // Redirect to turma detail page
+      if (result?.turma?.id) {
+        navigate(`/turmas/${result.turma.id}`);
+      }
     } catch (error) {
-      toast.error('Erro ao criar turma');
+      toast.error('❌ Erro ao criar turma');
     }
   };
 
@@ -177,9 +182,9 @@ export default function TurmasProfessor() {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => navigate(`/turmas/${turma.id}/atribuicoes`)}
+                      onClick={() => navigate(`/turmas/${turma.id}`)}
                     >
-                      Ver Atribuições
+                      Gerenciar
                     </Button>
                   </div>
                 </div>

@@ -93,3 +93,52 @@ export function useEnrollAluno() {
     },
   });
 }
+
+export function useUpdateTurma() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ turma_id, nome, descricao }: { turma_id: string; nome?: string; descricao?: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data, error } = await supabase.functions.invoke('turmas-update', {
+        body: { turma_id, nome, descricao },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['turmas'] });
+      queryClient.invalidateQueries({ queryKey: ['turma'] });
+    },
+  });
+}
+
+export function useDeleteTurma() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (turma_id: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data, error } = await supabase.functions.invoke('turmas-delete', {
+        body: { turma_id },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['turmas'] });
+    },
+  });
+}
