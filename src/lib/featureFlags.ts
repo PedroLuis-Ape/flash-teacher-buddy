@@ -87,4 +87,11 @@ export const FEATURE_FLAGS = {
    * When true: enables messaging system for classes
    */
   class_comms_enabled: true,
+
+  /**
+   * Meus Alunos (professor's student list)
+   * When false: no student list, no direct assignment
+   * When true: professor can see students, add to classes, assign activities
+   */
+  meus_alunos_enabled: true,
 } as const;

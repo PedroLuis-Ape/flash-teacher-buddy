@@ -35,6 +35,8 @@ const TurmaDetail = lazy(() => import("./pages/TurmaDetail"));
 const AtribuicaoDetail = lazy(() => import("./pages/AtribuicaoDetail"));
 const TurmasProfessor = lazy(() => import("./pages/TurmasProfessor"));
 const TurmasAluno = lazy(() => import("./pages/TurmasAluno"));
+const MeusAlunos = lazy(() => import("./pages/MeusAlunos"));
+const AlunoProfile = lazy(() => import("./pages/AlunoProfile"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -83,6 +85,8 @@ const App = () => (
                 <Route path="/turmas/aluno" element={<TurmasAluno />} />
                 <Route path="/turmas/:turmaId" element={<TurmaDetail />} />
                 <Route path="/turmas/:turmaId/atribuicoes/:atribuicaoId" element={<AtribuicaoDetail />} />
+                <Route path="/professor/alunos" element={<MeusAlunos />} />
+                <Route path="/professor/alunos/:alunoId" element={<AlunoProfile />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </GlobalLayout>
