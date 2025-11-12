@@ -17,7 +17,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization') || '';
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    
+    // Log mascarado (dev only)
+    console.log('[notifications-read] Auth header presente:', authHeader ? `${authHeader.substring(0, 20)}...` : 'MISSING');
+    
+    if (!authHeader) {
+      console.error('[notifications-read] Nenhum header de autorização encontrado');
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado - token ausente' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -29,7 +41,16 @@ Deno.serve(async (req) => {
     );
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    console.log('[notifications-read] getUser result:', { 
+      hasUser: !!user, 
+      userId: user?.id?.substring(0, 8),
+      hasError: !!authError,
+      errorMsg: authError?.message 
+    });
+    
     if (authError || !user) {
+      console.error('[notifications-read] Auth failed:', authError?.message || 'no user');
       return new Response(
         JSON.stringify({ error: 'Não autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -66,7 +87,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Notifications marked as read for user:', user.id);
+    console.log('[notifications-read] Success for user:', user.id.substring(0, 8));
 
     return new Response(
       JSON.stringify({
