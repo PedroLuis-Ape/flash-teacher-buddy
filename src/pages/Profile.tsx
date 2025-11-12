@@ -9,9 +9,11 @@ import { StatisticsTab } from "@/components/StatisticsTab";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, BarChart3, Clock, Copy } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LogOut, User, Camera, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { equipAvatarAsPhoto } from "@/lib/storeEngine";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -21,6 +23,8 @@ const Profile = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [mascotUrl, setMascotUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPhotoDialog, setShowPhotoDialog] = useState(false);
+  const [equippedAvatarSkinId, setEquippedAvatarSkinId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -79,6 +83,9 @@ const Profile = () => {
             setAvatarUrl(avatarData.avatar_final);
           }
         }
+        
+        // Store equipped avatar skin ID for quick equip
+        setEquippedAvatarSkinId(profile.avatar_skin_id);
 
         // Load mascot
         if (profile.mascot_skin_id) {
@@ -129,6 +136,31 @@ const Profile = () => {
     }
   };
 
+  const handleUseEquippedAvatar = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    if (!equippedAvatarSkinId || !avatarUrl) {
+      toast.error("Nenhum avatar equipado");
+      return;
+    }
+
+    try {
+      const result = await equipAvatarAsPhoto(session.user.id, equippedAvatarSkinId, avatarUrl);
+      if (result.success) {
+        toast.success(result.message);
+        setShowPhotoDialog(false);
+        // Force refresh avatar with cache bust
+        setAvatarUrl(`${avatarUrl.split('?')[0]}?v=${Date.now()}`);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error setting photo:", error);
+      toast.error("Erro ao definir foto de perfil");
+    }
+  };
+
   const initials = firstName
     ? firstName.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
@@ -138,18 +170,30 @@ const Profile = () => {
     <div className="p-4 space-y-6">
       <Card className="p-6">
         <div className="flex flex-col items-center text-center space-y-4">
-          <Avatar className="h-24 w-24 ring-2 ring-primary/20">
-            {avatarUrl ? (
-              <AvatarImage 
-                src={avatarUrl} 
-                alt="Avatar" 
-                className="object-cover"
-              />
-            ) : null}
-            <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          {/* Avatar with camera badge */}
+          <div className="relative">
+            <Avatar className="h-32 w-32 ring-2 ring-primary/20">
+              {avatarUrl ? (
+                <AvatarImage 
+                  src={avatarUrl} 
+                  alt="Avatar" 
+                  className="object-cover"
+                />
+              ) : null}
+              <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            {/* Camera badge */}
+            <button
+              onClick={() => setShowPhotoDialog(true)}
+              className="absolute bottom-0 right-0 h-10 w-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
+              aria-label="Alterar foto"
+            >
+              <Camera className="h-5 w-5" />
+            </button>
+          </div>
+
           <div className="space-y-2">
             <h2 className="text-xl font-bold">{firstName || "Usuário"}</h2>
             <p className="text-sm text-muted-foreground">{email}</p>
@@ -165,6 +209,17 @@ const Profile = () => {
               </Button>
             )}
           </div>
+
+          {/* Change photo button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPhotoDialog(true)}
+            className="gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            Alterar foto
+          </Button>
         </div>
 
         {/* Mascot Display */}
@@ -232,6 +287,37 @@ const Profile = () => {
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Perfil" showBack backPath="/folders" />
       <ApeTabs tabs={tabs} defaultValue="overview" />
+
+      {/* Photo change dialog */}
+      <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar foto de perfil</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-4">
+            <Button
+              variant="default"
+              className="w-full justify-start min-h-[44px]"
+              onClick={handleUseEquippedAvatar}
+              disabled={!equippedAvatarSkinId}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              Usar avatar equipado
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start min-h-[44px]"
+              onClick={() => {
+                setShowPhotoDialog(false);
+                navigate("/store/inventory");
+              }}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Escolher no Baralho
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
