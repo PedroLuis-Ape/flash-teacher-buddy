@@ -176,29 +176,6 @@ const Folders = () => {
     }
   };
 
-  // Tab: Overview (Visão Geral)
-  const overviewTab = (
-    <div className="p-4 space-y-6">
-      <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-2">Bem-vindo! 👋</h2>
-        <p className="text-muted-foreground">
-          Organize suas pastas de estudo e acesse o conteúdo dos seus professores
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="text-2xl font-bold text-primary">{folders.length}</div>
-          <div className="text-sm text-muted-foreground">Pastas</div>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="text-2xl font-bold text-primary">{teachers.length}</div>
-          <div className="text-sm text-muted-foreground">Professores</div>
-        </div>
-      </div>
-    </div>
-  );
-
   // Tab: Folders (Pastas)
   const foldersTab = (
     <div className="p-4 space-y-4">
@@ -330,7 +307,6 @@ const Folders = () => {
   );
 
   const tabs = [
-    { value: "overview", label: "Visão Geral", content: overviewTab },
     { value: "folders", label: "Pastas", count: folders.length, content: foldersTab },
     { value: "teachers", label: "Professores", count: teachers.length, content: teachersTab },
   ];
@@ -338,7 +314,7 @@ const Folders = () => {
   return (
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Biblioteca" />
-      <ApeTabs tabs={tabs} defaultValue="overview" />
+      <ApeTabs tabs={tabs} defaultValue="folders" />
     </div>
   );
 };
