@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -73,13 +73,22 @@ export default function Turmas() {
                 turmasProfessor.map((turma: any) => (
                   <Card
                     key={turma.id}
-                    className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => navigate(`/turmas/${turma.id}`)}
+                    className="p-6 relative group hover:shadow-lg transition-shadow"
                   >
-                    <h3 className="text-lg font-semibold">{turma.nome}</h3>
-                    {turma.descricao && (
-                      <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
-                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute top-4 right-4 opacity-70 hover:opacity-100"
+                      onClick={() => navigate(`/turmas/${turma.id}`)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <div className="pr-12">
+                      <h3 className="text-lg font-semibold">{turma.nome}</h3>
+                      {turma.descricao && (
+                        <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
+                      )}
+                    </div>
                   </Card>
                 ))
               )}
