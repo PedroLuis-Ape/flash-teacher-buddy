@@ -6,26 +6,20 @@ export function useStudentsList(q?: string) {
   return useQuery({
     queryKey: ['professor-students', q],
     queryFn: async () => {
-      if (!FEATURE_FLAGS.meus_alunos_enabled) return { students: [] };
-      
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return { students: [] };
-
-      const params = new URLSearchParams();
-      if (q) params.append('q', q);
+      if (!session) throw new Error('Não autenticado');
 
       const { data, error } = await supabase.functions.invoke('professor-students-list', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: params.toString() ? undefined : {},
-        method: 'GET',
+        body: { q: q || '' },
       });
 
       if (error) throw error;
-      return data;
+      return data || { students: [], nextCursor: null, hasMore: false };
     },
-    enabled: FEATURE_FLAGS.meus_alunos_enabled,
+    enabled: FEATURE_FLAGS.meus_alunos_enabled && q !== undefined,
   });
 }
 
@@ -90,16 +84,16 @@ export function useStudentOverview(aluno_id: string | null) {
   return useQuery({
     queryKey: ['professor-student-overview', aluno_id],
     queryFn: async () => {
-      if (!FEATURE_FLAGS.meus_alunos_enabled || !aluno_id) return null;
+      if (!aluno_id) throw new Error('ID do aluno não fornecido');
       
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return null;
+      if (!session) throw new Error('Não autenticado');
 
+      const params = new URLSearchParams({ aluno_id });
       const { data, error } = await supabase.functions.invoke('professor-students-overview', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
-        method: 'GET',
       });
 
       if (error) throw error;
