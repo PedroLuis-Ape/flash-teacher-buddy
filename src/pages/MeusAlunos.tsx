@@ -77,12 +77,12 @@ export default function MeusAlunos() {
         turma_id: selectedTurmaId,
         student_ids: Array.from(selectedStudents),
       });
-      toast.success('Alunos adicionados à turma.');
+      toast.success('✅ Alunos adicionados à turma.');
       setShowAddToClassDialog(false);
       setSelectedStudents(new Set());
       setSelectedTurmaId('');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao adicionar alunos');
+      toast.error(error.message || '❌ Erro ao adicionar alunos');
     }
   };
 

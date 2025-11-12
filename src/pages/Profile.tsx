@@ -70,18 +70,25 @@ const Profile = () => {
     }
   };
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    
     try {
+      setIsLoggingOut(true);
       sessionStorage.setItem('logoutInProgress', '1');
       await supabase.auth.signOut();
       sessionStorage.removeItem('authReady');
       sessionStorage.removeItem('logoutInProgress');
-      toast.success("Logout realizado com sucesso");
+      toast.success("✅ Logout realizado com sucesso");
       navigate("/auth", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
-      toast.error("Erro ao fazer logout");
+      toast.error("❌ Erro ao fazer logout");
       sessionStorage.removeItem('logoutInProgress');
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -127,7 +134,7 @@ const Profile = () => {
       <div className="space-y-3">
         <Button
           variant="outline"
-          className="w-full justify-start"
+          className="w-full justify-start min-h-[44px]"
           onClick={() => navigate("/folders")}
         >
           <User className="h-4 w-4 mr-2" />
@@ -136,11 +143,12 @@ const Profile = () => {
 
         <Button
           variant="outline"
-          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 min-h-[44px]"
           onClick={handleLogout}
+          disabled={isLoggingOut}
         >
           <LogOut className="h-4 w-4 mr-2" />
-          Sair da conta
+          {isLoggingOut ? 'Saindo...' : 'Sair da conta'}
         </Button>
       </div>
     </div>

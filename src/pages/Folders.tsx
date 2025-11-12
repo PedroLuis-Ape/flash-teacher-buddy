@@ -138,13 +138,18 @@ const Folders = () => {
     }
   };
 
+  const [isCreating, setIsCreating] = useState(false);
+
   const createFolder = async () => {
     if (!newFolder.title.trim()) {
       toast.error("Digite um título para a pasta");
       return;
     }
 
+    if (isCreating) return;
+
     try {
+      setIsCreating(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -159,13 +164,15 @@ const Folders = () => {
 
       if (error) throw error;
 
-      toast.success("Pasta criada com sucesso!");
+      toast.success("✅ Pasta criada com sucesso!");
       setDialogOpen(false);
       setNewFolder({ title: "", description: "", visibility: "private" });
       loadData();
     } catch (error: any) {
       console.error("Error creating folder:", error);
-      toast.error("Erro ao criar pasta");
+      toast.error("❌ Erro ao criar pasta");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -232,10 +239,21 @@ const Folders = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                  disabled={isCreating}
+                  className="min-h-[44px]"
+                >
                   Cancelar
                 </Button>
-                <Button onClick={createFolder}>Criar Pasta</Button>
+                <Button 
+                  onClick={createFolder}
+                  disabled={isCreating}
+                  className="min-h-[44px]"
+                >
+                  {isCreating ? 'Criando...' : 'Criar Pasta'}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

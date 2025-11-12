@@ -65,17 +65,15 @@ const Store = () => {
       
       if (result.success) {
         toast({
-          title: "Compra realizada!",
+          title: "✅ Compra realizada!",
           description: result.message,
         });
-        // Refresh HUD immediately (PTC and inventory count)
         await refreshBalance();
-        // Refresh inventory list
         const inventoryData = await getUserInventory(userId);
         setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
       } else {
         toast({
-          title: "Erro na compra",
+          title: "❌ Erro na compra",
           description: result.message,
           variant: "destructive",
         });
