@@ -9,6 +9,7 @@ import { PitecoMascot } from "@/components/PitecoMascot";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
+import { APP_VERSION } from "@/lib/versionManager";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -228,6 +229,15 @@ const Auth = () => {
             </p>
           </div>
         </Card>
+
+        {/* Version Badge */}
+        <div className="flex justify-center">
+          <div className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg">
+            <p className="text-2xl font-bold text-primary-foreground">
+              Lucy version
+            </p>
+          </div>
+        </div>
 
         <Card className="w-full max-w-md bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl">
           <CardHeader>
