@@ -12,6 +12,7 @@ export function useChatMessages(turmaId: string | null, threadTipo: string, thre
       if (!session) return { messages: [] };
 
       const { data, error } = await supabase.functions.invoke('classes-chat-list', {
+        body: { turma_id: turmaId, thread_tipo: threadTipo, thread_chave: threadChave },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },

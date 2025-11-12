@@ -12,6 +12,7 @@ export function useAtribuicoesByTurma(turmaId: string | null) {
       if (!session) return { atribuicoes: [] };
 
       const { data, error } = await supabase.functions.invoke('atribuicoes-by-turma', {
+        body: { turma_id: turmaId },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },

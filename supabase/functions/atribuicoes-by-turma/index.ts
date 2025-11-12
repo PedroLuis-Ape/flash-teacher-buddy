@@ -32,7 +32,17 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const turma_id = url.searchParams.get('turma_id');
+    const turma_id_qs = url.searchParams.get('turma_id');
+
+    let turma_id = turma_id_qs;
+    if (req.method !== 'GET' && !turma_id) {
+      try {
+        const body = await req.json();
+        turma_id = body?.turma_id || undefined;
+      } catch (_) {
+        // ignore body parse errors
+      }
+    }
 
     if (!turma_id) {
       return new Response(

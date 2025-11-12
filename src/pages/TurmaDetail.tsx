@@ -44,13 +44,30 @@ export default function TurmaDetail() {
 
       const { data: turma } = await supabase
         .from('turmas')
-        .select('*, turma_membros(*, profiles(first_name, avatar_skin_id, ape_id))')
+        .select('*, turma_membros(*)')
         .eq('id', turmaId)
         .single();
 
-      const isOwner = turma?.owner_teacher_id === user.id;
+      // Attach profiles manually to avoid missing FK join in PostgREST
+      let membrosWithProfiles = turma?.turma_membros || [];
+      if (membrosWithProfiles && membrosWithProfiles.length > 0) {
+        const ids = membrosWithProfiles.map((m: any) => m.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, avatar_skin_id, ape_id')
+          .in('id', ids);
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        membrosWithProfiles = membrosWithProfiles.map((m: any) => ({
+          ...m,
+          profiles: profileMap.get(m.user_id) || null,
+        }));
+      }
 
-      return { turma, isOwner };
+      const turmaWithMembros = turma ? { ...turma, turma_membros: membrosWithProfiles } : null;
+
+      const isOwner = turmaWithMembros?.owner_teacher_id === user.id;
+
+      return { turma: turmaWithMembros, isOwner };
     },
   });
 

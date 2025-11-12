@@ -32,11 +32,27 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const turma_id = url.searchParams.get('turma_id');
-    const thread_tipo = url.searchParams.get('thread_tipo');
-    const thread_chave = url.searchParams.get('thread_chave');
+    const turma_id_qs = url.searchParams.get('turma_id');
+    const thread_tipo_qs = url.searchParams.get('thread_tipo');
+    const thread_chave_qs = url.searchParams.get('thread_chave');
     const cursor = url.searchParams.get('cursor');
     const limit = parseInt(url.searchParams.get('limit') || '50');
+
+    let turma_id = turma_id_qs;
+    let thread_tipo = thread_tipo_qs;
+    let thread_chave = thread_chave_qs;
+
+    if (req.method !== 'GET' && (!turma_id || !thread_tipo || !thread_chave)) {
+      try {
+        const body = await req.json();
+        turma_id = turma_id || body?.turma_id || undefined;
+        thread_tipo = thread_tipo || body?.thread_tipo || undefined;
+        thread_chave = thread_chave || body?.thread_chave || undefined;
+      } catch (_) {
+        // ignore body parse errors
+      }
+    }
+
 
     if (!turma_id || !thread_tipo || !thread_chave) {
       return new Response(
