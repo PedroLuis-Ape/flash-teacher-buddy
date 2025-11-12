@@ -236,6 +236,49 @@ export async function purchaseSkin(
 }
 
 /**
+ * Equip avatar as profile photo (updates avatar_url in profile)
+ */
+export async function equipAvatarAsPhoto(
+  userId: string,
+  skinId: string,
+  avatarUrl: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    // Add timestamp for cache busting
+    const timestamp = Date.now();
+    const urlWithCache = `${avatarUrl}?v=${timestamp}`;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        avatar_url: urlWithCache,
+        avatar_skin_id: skinId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('[StoreEngine] Error updating profile photo:', error);
+      return {
+        success: false,
+        message: 'Erro ao atualizar foto de perfil'
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Foto de perfil atualizada!'
+    };
+  } catch (error) {
+    console.error('[StoreEngine] Unexpected error:', error);
+    return {
+      success: false,
+      message: 'Erro ao atualizar foto de perfil'
+    };
+  }
+}
+
+/**
  * Equip a skin (avatar or mascot) - ATOMIC & IDEMPOTENT
  */
 export async function equipSkin(

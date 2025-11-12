@@ -39,7 +39,7 @@ const Profile = () => {
       // Force fresh data from server (no cache)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("first_name, email, user_tag, avatar_skin_id, mascot_skin_id")
+        .select("first_name, email, user_tag, avatar_skin_id, mascot_skin_id, avatar_url")
         .eq("id", session.user.id)
         .single();
 
@@ -65,8 +65,10 @@ const Profile = () => {
           setPublicId(profile.user_tag);
         }
 
-        // Load avatar and mascot from catalog
-        if (profile.avatar_skin_id) {
+        // Load avatar from profile (priority: avatar_url, then avatar_skin_id)
+        if (profile.avatar_url) {
+          setAvatarUrl(profile.avatar_url);
+        } else if (profile.avatar_skin_id) {
           const { data: avatarData } = await supabase
             .from("public_catalog")
             .select("avatar_final")
@@ -78,6 +80,7 @@ const Profile = () => {
           }
         }
 
+        // Load mascot
         if (profile.mascot_skin_id) {
           const { data: mascotData } = await supabase
             .from("public_catalog")
@@ -135,9 +138,13 @@ const Profile = () => {
     <div className="p-4 space-y-6">
       <Card className="p-6">
         <div className="flex flex-col items-center text-center space-y-4">
-          <Avatar className="h-24 w-24">
+          <Avatar className="h-24 w-24 ring-2 ring-primary/20">
             {avatarUrl ? (
-              <AvatarImage src={avatarUrl} alt="Avatar" />
+              <AvatarImage 
+                src={avatarUrl} 
+                alt="Avatar" 
+                className="object-cover"
+              />
             ) : null}
             <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
               {initials}

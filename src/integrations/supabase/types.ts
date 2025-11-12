@@ -1229,6 +1229,7 @@ export type Database = {
           account_id: string | null
           ape_id: string | null
           avatar_skin_id: string | null
+          avatar_url: string | null
           balance_pitecoin: number
           best_streak: number
           created_at: string | null
@@ -1255,6 +1256,7 @@ export type Database = {
           account_id?: string | null
           ape_id?: string | null
           avatar_skin_id?: string | null
+          avatar_url?: string | null
           balance_pitecoin?: number
           best_streak?: number
           created_at?: string | null
@@ -1281,6 +1283,7 @@ export type Database = {
           account_id?: string | null
           ape_id?: string | null
           avatar_skin_id?: string | null
+          avatar_url?: string | null
           balance_pitecoin?: number
           best_streak?: number
           created_at?: string | null

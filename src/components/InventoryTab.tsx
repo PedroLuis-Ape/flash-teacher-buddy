@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, User } from "lucide-react";
 import { toast } from "sonner";
 import { ApeGrid } from "@/components/ape/ApeGrid";
-import { getUserInventory, equipSkin, getEquippedSkins, type InventoryItem } from "@/lib/storeEngine";
+import { getUserInventory, equipSkin, equipAvatarAsPhoto, getEquippedSkins, type InventoryItem } from "@/lib/storeEngine";
 
 // Extended inventory item with enriched data
 interface EnrichedInventoryItem extends InventoryItem {
@@ -19,6 +19,7 @@ export function InventoryTab() {
   const [inventory, setInventory] = useState<EnrichedInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [equipping, setEquipping] = useState<string | null>(null);
+  const [settingPhoto, setSettingPhoto] = useState<string | null>(null);
   const [equippedAvatar, setEquippedAvatar] = useState<string | null>(null);
   const [equippedMascot, setEquippedMascot] = useState<string | null>(null);
 
@@ -86,6 +87,34 @@ export function InventoryTab() {
     }
   };
 
+  const handleSetAsPhoto = async (skinId: string, avatarUrl: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    if (!avatarUrl) {
+      toast.error("Avatar sem imagem válida");
+      return;
+    }
+
+    setSettingPhoto(skinId);
+    try {
+      const result = await equipAvatarAsPhoto(session.user.id, skinId, avatarUrl);
+
+      if (result.success) {
+        toast.success(result.message);
+        // Reload inventory to reflect changes
+        loadInventory();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error setting photo:", error);
+      toast.error("Erro ao definir foto de perfil");
+    } finally {
+      setSettingPhoto(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-6">
@@ -145,6 +174,7 @@ export function InventoryTab() {
           const isAvatarEquipped = equippedAvatar === item.skin_id;
           const isMascotEquipped = equippedMascot === item.skin_id;
           const isEquipping = equipping === item.skin_id;
+          const isSettingPhoto = settingPhoto === item.skin_id;
 
           return (
             <Card key={item.id} className="overflow-hidden">
@@ -162,6 +192,29 @@ export function InventoryTab() {
                   <h3 className="font-semibold text-sm line-clamp-1">{item.name}</h3>
                   <p className="text-xs text-muted-foreground capitalize">{item.rarity}</p>
                 </div>
+                
+                {/* Show profile photo button ONLY for avatars (items with avatar_url) */}
+                {item.avatar_url && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="w-full h-9 gap-2"
+                    onClick={() => handleSetAsPhoto(item.skin_id, item.avatar_url)}
+                    disabled={isSettingPhoto}
+                  >
+                    {isSettingPhoto ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Definindo...
+                      </>
+                    ) : (
+                      <>
+                        <User className="h-3 w-3" />
+                        Equipar como Foto de Perfil
+                      </>
+                    )}
+                  </Button>
+                )}
                 
                 <div className="flex gap-2">
                   <Button
