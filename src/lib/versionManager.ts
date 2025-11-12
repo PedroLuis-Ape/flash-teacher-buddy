@@ -1,5 +1,6 @@
 // Sistema de versionamento para forçar recarregamento limpo
-export const APP_VERSION = "1.0.1"; // Incrementar quando houver atualizações
+export const APP_VERSION = "1.0.1"; // Lucy - Incrementar quando houver atualizações
+export const VERSION_NAME = "Lucy";
 const VERSION_KEY = "app_version";
 
 export function checkAndClearCache(): boolean {
