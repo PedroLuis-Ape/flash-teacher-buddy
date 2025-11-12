@@ -52,6 +52,7 @@ serve(async (req) => {
       );
     }
 
+    // Buscar atribuições
     const { data: atribuicoes, error: atribuicoesError } = await supabaseClient
       .from('atribuicoes')
       .select('*')
@@ -66,8 +67,37 @@ serve(async (req) => {
       );
     }
 
+    // Buscar total de alunos na turma
+    const { count: totalAlunos } = await supabaseClient
+      .from('turma_membros')
+      .select('*', { count: 'exact', head: true })
+      .eq('turma_id', turma_id)
+      .eq('ativo', true);
+
+    // Para cada atribuição, buscar estatísticas de progresso
+    const atribuicoesComProgresso = await Promise.all(
+      (atribuicoes || []).map(async (atrib) => {
+        const { data: statusData } = await supabaseClient
+          .from('atribuicoes_status')
+          .select('status, aluno_id')
+          .eq('atribuicao_id', atrib.id);
+
+        const stats = {
+          total_alunos: totalAlunos || 0,
+          concluidas: (statusData || []).filter(s => s.status === 'concluida').length,
+          em_andamento: (statusData || []).filter(s => s.status === 'em_andamento').length,
+          pendentes: (totalAlunos || 0) - (statusData || []).length,
+        };
+
+        return {
+          ...atrib,
+          progresso: stats,
+        };
+      })
+    );
+
     return new Response(
-      JSON.stringify({ atribuicoes: atribuicoes || [] }),
+      JSON.stringify({ atribuicoes: atribuicoesComProgresso }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
