@@ -28,28 +28,32 @@ export default function MyTeachers() {
     queryFn: async () => {
       if (!currentUserId) throw new Error('Não autenticado');
 
-      const { data, error } = await supabase
+      const { data: subs, error: subsError } = await supabase
         .from('subscriptions')
-        .select(`
-          teacher_id,
-          created_at,
-          profiles:teacher_id (
-            id,
-            first_name,
-            user_tag,
-            avatar_skin_id
-          )
-        `)
+        .select('teacher_id, created_at')
         .eq('student_id', currentUserId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (subsError) throw subsError;
+      if (!subs || subs.length === 0) return [];
 
-      return data.map((sub: any) => ({
+      const teacherIds = subs.map((s: any) => s.teacher_id).filter(Boolean);
+
+      const { data: profiles, error: profError } = await supabase
+        .from('profiles')
+        .select('id, first_name, user_tag, avatar_skin_id')
+        .in('id', teacherIds);
+
+      if (profError) throw profError;
+
+      const profilesById: Record<string, any> = {};
+      (profiles || []).forEach((p: any) => { profilesById[p.id] = p; });
+
+      return subs.map((sub: any) => ({
         id: sub.teacher_id,
-        name: sub.profiles?.first_name || 'Professor',
-        user_tag: sub.profiles?.user_tag || '',
-        avatar_skin_id: sub.profiles?.avatar_skin_id,
+        name: profilesById[sub.teacher_id]?.first_name || 'Professor',
+        user_tag: profilesById[sub.teacher_id]?.user_tag || '',
+        avatar_skin_id: profilesById[sub.teacher_id]?.avatar_skin_id,
         subscribed_at: sub.created_at,
       }));
     },
