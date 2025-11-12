@@ -436,6 +436,38 @@ export type Database = {
           },
         ]
       }
+      dms: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          id: string
+          teacher_id: string
+          turma_id: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          id?: string
+          teacher_id: string
+          turma_id: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          id?: string
+          teacher_id?: string
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dms_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equip_logs: {
         Row: {
           created_at: string
@@ -920,6 +952,103 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mensagens: {
+        Row: {
+          anexos: Json | null
+          created_at: string
+          deleted: boolean
+          edited_at: string | null
+          id: string
+          sender_id: string
+          texto: string
+          thread_chave: string
+          thread_tipo: Database["public"]["Enums"]["thread_tipo"]
+          turma_id: string
+        }
+        Insert: {
+          anexos?: Json | null
+          created_at?: string
+          deleted?: boolean
+          edited_at?: string | null
+          id?: string
+          sender_id: string
+          texto: string
+          thread_chave: string
+          thread_tipo: Database["public"]["Enums"]["thread_tipo"]
+          turma_id: string
+        }
+        Update: {
+          anexos?: Json | null
+          created_at?: string
+          deleted?: boolean
+          edited_at?: string | null
+          id?: string
+          sender_id?: string
+          texto?: string
+          thread_chave?: string
+          thread_tipo?: Database["public"]["Enums"]["thread_tipo"]
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensagens_leituras: {
+        Row: {
+          id: string
+          lido_em: string
+          mensagem_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          lido_em?: string
+          mensagem_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          lido_em?: string
+          mensagem_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_leituras_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "mensagens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_rate_limits: {
+        Row: {
+          message_count: number
+          thread_key: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          message_count?: number
+          thread_key: string
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          message_count?: number
+          thread_key?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -1679,6 +1808,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_thread: {
+        Args: {
+          _thread_chave: string
+          _thread_tipo: Database["public"]["Enums"]["thread_tipo"]
+          _turma_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      check_message_rate_limit: {
+        Args: { _thread_key: string; _user_id: string }
+        Returns: boolean
+      }
       claim_gift_atomic: {
         Args: { p_gift_id: string; p_user_id: string }
         Returns: Json
@@ -1850,6 +1992,7 @@ export type Database = {
       app_role: "owner" | "student" | "developer_admin"
       atribuicao_fonte_tipo: "lista" | "pasta" | "cardset"
       atribuicao_status: "pendente" | "em_andamento" | "concluida"
+      thread_tipo: "turma" | "atribuicao" | "dm"
       turma_role: "aluno" | "professor_assistente"
       user_type: "professor" | "aluno"
     }
@@ -1982,6 +2125,7 @@ export const Constants = {
       app_role: ["owner", "student", "developer_admin"],
       atribuicao_fonte_tipo: ["lista", "pasta", "cardset"],
       atribuicao_status: ["pendente", "em_andamento", "concluida"],
+      thread_tipo: ["turma", "atribuicao", "dm"],
       turma_role: ["aluno", "professor_assistente"],
       user_type: ["professor", "aluno"],
     },
