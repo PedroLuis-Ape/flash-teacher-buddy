@@ -35,7 +35,13 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: authHeader },
+          headers: { 
+            Authorization: authHeader,
+            apikey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          },
+        },
+        auth: {
+          persistSession: false,
         },
       }
     );
