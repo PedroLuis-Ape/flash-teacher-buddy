@@ -1085,6 +1085,39 @@ export type Database = {
           },
         ]
       }
+      notificacoes: {
+        Row: {
+          created_at: string
+          id: string
+          lida: boolean
+          mensagem: string
+          metadata: Json | null
+          recipient_id: string
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lida?: boolean
+          mensagem: string
+          metadata?: Json | null
+          recipient_id: string
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lida?: boolean
+          mensagem?: string
+          metadata?: Json | null
+          recipient_id?: string
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1824,6 +1857,16 @@ export type Database = {
       claim_gift_atomic: {
         Args: { p_gift_id: string; p_user_id: string }
         Returns: Json
+      }
+      create_notification: {
+        Args: {
+          p_mensagem: string
+          p_metadata?: Json
+          p_recipient_id: string
+          p_tipo: string
+          p_titulo: string
+        }
+        Returns: string
       }
       equip_skin_atomic: {
         Args: {

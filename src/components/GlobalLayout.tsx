@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { CurrencyHeader } from "./CurrencyHeader";
 import { PresentBoxBadge } from "./PresentBoxBadge";
+import { NotificationBell } from "./NotificationBell";
 import { AdminButton } from "./AdminButton";
 import { ApeTabBar } from "./ape/ApeTabBar";
 import { GiftNotificationModal } from "./GiftNotificationModal";
@@ -57,8 +58,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center justify-between gap-4 px-4">
               <AdminButton />
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <CurrencyHeader />
+                {FEATURE_FLAGS.classes_enabled && <NotificationBell />}
                 {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
               </div>
             </div>
