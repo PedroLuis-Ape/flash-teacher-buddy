@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, UserPlus, FileText, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,8 +21,22 @@ export default function MeusAlunos() {
   const [showAddToClassDialog, setShowAddToClassDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
+  const [authReady, setAuthReady] = useState(false);
 
-  const { data: studentsData, isLoading } = useStudentsList(searchQuery);
+  // Check auth on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/auth', { replace: true });
+        return;
+      }
+      setAuthReady(true);
+    };
+    checkAuth();
+  }, [navigate]);
+
+  const { data: studentsData, isLoading } = useStudentsList(authReady ? searchQuery : undefined);
   const { data: turmasData } = useTurmasMine();
   const addToClass = useAddStudentsToClass();
   const assignToStudents = useAssignToStudents();
@@ -97,7 +111,7 @@ export default function MeusAlunos() {
     }
   };
 
-  if (isLoading) {
+  if (!authReady || isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
