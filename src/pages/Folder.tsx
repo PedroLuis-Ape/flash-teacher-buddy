@@ -315,11 +315,11 @@ const Folder = () => {
 
           <TabsContent value="lists">
             {isOwner && (
-              <div className="mb-6 flex flex-wrap gap-3">
+              <div className="mb-4 flex flex-wrap gap-2">
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="lg">
-                      <ListPlus className="mr-2 h-5 w-5" />
+                    <Button size="sm">
+                      <ListPlus className="mr-1.5 h-4 w-4" />
                       Nova Lista
                     </Button>
                   </DialogTrigger>
@@ -361,9 +361,9 @@ const Folder = () => {
 
                 <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="secondary" size="lg">
-                      <Share2 className="mr-2 h-5 w-5" />
-                      Compartilhar Pasta
+                    <Button variant="secondary" size="sm">
+                      <Share2 className="mr-1.5 h-4 w-4" />
+                      Compartilhar
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -404,12 +404,12 @@ const Folder = () => {
             )}
 
             {loading ? (
-              <p className="text-center text-muted-foreground">Carregando...</p>
+              <p className="text-center text-sm text-muted-foreground py-4">Carregando...</p>
             ) : lists.length === 0 ? (
-              <Card className="text-center p-12">
+              <Card className="text-center p-8">
                 <CardHeader>
-                  <CardTitle>Nenhuma lista ainda</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg">Nenhuma lista ainda</CardTitle>
+                  <CardDescription className="text-sm">
                     {isOwner
                       ? "Crie sua primeira lista de flashcards"
                       : "Esta pasta ainda não possui listas"}
@@ -417,69 +417,71 @@ const Folder = () => {
                 </CardHeader>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-2">
                 {lists.map((list) => (
-                  <Card
+                  <button
                     key={list.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}
+                    className="w-full text-left"
                   >
-                    <div onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <FileText className="h-8 w-8 text-primary" />
-                          {isOwner && (
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditList(list);
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
-                                      Excluir
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          )}
+                    <Card className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-primary" />
                         </div>
-                        <CardTitle className="mt-4">{list.title}</CardTitle>
-                        {list.description && (
-                          <CardDescription>{list.description}</CardDescription>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm truncate leading-tight">
+                            {list.title}
+                          </h3>
+                          <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+                            {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
+                          </p>
+                        </div>
+
+                        {isOwner && (
+                          <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditList(list);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                >
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         )}
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <CreditCard className="h-4 w-4" />
-                          <span>{list.card_count || 0} cards</span>
-                        </div>
                       </CardContent>
-                    </div>
-                  </Card>
+                    </Card>
+                  </button>
                 ))}
               </div>
             )}

@@ -128,47 +128,40 @@ const GamesHub = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-8"> {/* PATCH: wrap no mobile */}
-          <Button variant="ghost" onClick={() => {
-            const onPortal = isPortalPath(location.pathname);
-            if (collection) {
-              navigate(`/collection/${collection.id}`);
-            } else if (list) {
-              if (onPortal && list.folder_id) {
-                navigate(`/portal/folder/${list.folder_id}`);
-              } else {
-                navigate(onPortal ? "/portal" : `/list/${list.id}`);
-              }
+      <div className="container mx-auto px-4 py-6">
+        <Button variant="ghost" size="sm" onClick={() => {
+          const onPortal = isPortalPath(location.pathname);
+          if (collection) {
+            navigate(`/collection/${collection.id}`);
+          } else if (list) {
+            if (onPortal && list.folder_id) {
+              navigate(`/portal/folder/${list.folder_id}`);
             } else {
-              navigate(onPortal ? "/portal" : "/folders");
+              navigate(onPortal ? "/portal" : `/list/${list.id}`);
             }
-          }}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-        </div>
+          } else {
+            navigate(onPortal ? "/portal" : "/folders");
+          }
+        }} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar
+        </Button>
 
         {(collection || list) && (
-          <div className="mb-12 text-center">
-            <h1 className="text-4xl font-bold mb-2">Hub de Jogos</h1>
-            <p className="text-xl text-muted-foreground">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold">Hub de jogos</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               {isListRoute ? list?.title : collection?.name}
             </p>
-            {(isListRoute ? list?.description : collection?.description) && (
-              <p className="text-muted-foreground mt-2">
-                {isListRoute ? list?.description : collection?.description}
-              </p>
-            )}
           </div>
         )}
 
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="grid md:grid-cols-2 gap-6">
+        <div className="max-w-3xl mx-auto space-y-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium mb-2 block">Direção</label>
+              <label className="text-xs font-medium mb-1.5 block">Direção</label>
               <Select value={direction} onValueChange={(v: any) => setDirection(v)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,9 +173,9 @@ const GamesHub = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Ordem</label>
+              <label className="text-xs font-medium mb-1.5 block">Ordem</label>
               <Select value={order} onValueChange={(v: any) => setOrder(v)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -193,81 +186,56 @@ const GamesHub = () => {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <Card
-              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
               onClick={() => startGame("flip")}
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <RotateCcw className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold">Virar Cartas</h3>
-                <p className="text-sm text-muted-foreground">
-                  Veja a frente e tente lembrar o verso antes de revelar
-                </p>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <RotateCcw className="h-5 w-5 text-primary" />
               </div>
-            </Card>
+              <span className="text-sm font-semibold">Virar Cartas</span>
+            </button>
 
-            <Card
-              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+            <button
               onClick={() => startGame("write")}
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Pencil className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold">Praticar Escrita</h3>
-                <p className="text-sm text-muted-foreground">
-                  Digite as traduções e receba correção em tempo real
-                </p>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Pencil className="h-5 w-5 text-primary" />
               </div>
-            </Card>
+              <span className="text-sm font-semibold">Escrever</span>
+            </button>
 
-            <Card
-              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+            <button
               onClick={() => startGame("multiple")}
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="text-3xl">🎯</span>
-                </div>
-                <h3 className="text-xl font-semibold">Múltipla Escolha</h3>
-                <p className="text-sm text-muted-foreground">
-                  Escolha a tradução correta entre 4 opções
-                </p>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <ListOrdered className="h-5 w-5 text-primary" />
               </div>
-            </Card>
+              <span className="text-sm font-semibold">Múltipla Escolha</span>
+            </button>
 
-            <Card
-              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+            <button
               onClick={() => startGame("unscramble")}
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <ListOrdered className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold">Desembaralhar</h3>
-                <p className="text-sm text-muted-foreground">
-                  Organize as palavras na ordem correta
-                </p>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Layers3 className="h-5 w-5 text-primary" />
               </div>
-            </Card>
+              <span className="text-sm font-semibold">Desembaralhar</span>
+            </button>
 
-            <Card
-              className="p-6 hover:shadow-lg transition-all cursor-pointer group"
+            <button
               onClick={() => startGame("mixed")}
+              className="col-span-2 flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
-              <div className="text-center space-y-4">
-                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Layers3 className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-semibold">Estudar (Misto)</h3>
-                <p className="text-sm text-muted-foreground">
-                  Alterna entre todos os modos de estudo
-                </p>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <RotateCcw className="h-5 w-5 text-primary" />
               </div>
-            </Card>
+              <span className="text-sm font-semibold">Estudo Misto</span>
+            </button>
           </div>
         </div>
       </div>
