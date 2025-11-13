@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Volume2, RotateCcw, Check } from "lucide-react";
-import { speakText, pickLang } from "@/lib/speech";
+import { pickLang } from "@/lib/speech";
+import { useTTS } from "@/hooks/useTTS";
 import { SpeechRateControl } from "./SpeechRateControl";
 
 interface UnscrambleStudyViewProps {
@@ -33,6 +34,7 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const { speak } = useTTS();
 
   const question = direction === "pt-en" ? front : back;
   const correctSentence = direction === "pt-en" ? back : front;
@@ -90,7 +92,7 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
 
   const handlePlayAudio = async () => {
     const lang = pickLang(direction, question);
-    await speakText(question, lang);
+    await speak(question, lang);
   };
 
   return (

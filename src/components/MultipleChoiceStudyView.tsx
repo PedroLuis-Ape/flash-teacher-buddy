@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Volume2 } from "lucide-react";
-import { speakText, pickLang } from "@/lib/speech";
+import { pickLang } from "@/lib/speech";
+import { useTTS } from "@/hooks/useTTS";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl } from "./SpeechRateControl";
@@ -35,6 +36,7 @@ export const MultipleChoiceStudyView = ({
   const [showFeedback, setShowFeedback] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
+  const { speak } = useTTS();
   
   const isPtToEn = direction === "pt-en";
 
@@ -123,7 +125,7 @@ export const MultipleChoiceStudyView = ({
                 className="flex-shrink-0"
                 onClick={async () => {
                   const lang = pickLang(direction, prompt);
-                  await speakText(prompt, lang);
+                  await speak(prompt, lang);
                 }}
               >
                 <Volume2 className="h-5 w-5" />
