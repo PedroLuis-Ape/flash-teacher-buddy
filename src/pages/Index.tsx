@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, Play, TrendingUp, Users, Layers, ChevronRight, Crown, Lock } from "lucide-react";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -85,6 +86,43 @@ const Index = () => {
     };
     return labels[mode] || mode;
   };
+
+  // Group lists by category (extract from title)
+  const categorizeLists = () => {
+    const categories: Record<string, typeof recents> = {};
+    const recentStudied: typeof recents = [];
+    
+    recents.forEach((list, index) => {
+      // First 3 are "recent studied"
+      if (index < 3) {
+        recentStudied.push(list);
+      }
+      
+      // Try to extract category from title (before "-" or first word)
+      let category = "Outras Listas";
+      
+      if (list.title.includes("Verbo")) {
+        category = "Verbos";
+      } else if (list.title.includes("Presente") || list.title.includes("Present")) {
+        category = "Tempos Verbais";
+      } else if (list.title.includes("Passado") || list.title.includes("Past")) {
+        category = "Tempos Verbais";
+      } else if (list.title.includes("Futuro") || list.title.includes("Future")) {
+        category = "Tempos Verbais";
+      } else if (list.folder_name) {
+        category = list.folder_name;
+      }
+      
+      if (!categories[category]) {
+        categories[category] = [];
+      }
+      categories[category].push(list);
+    });
+    
+    return { recentStudied, categories };
+  };
+
+  const { recentStudied, categories } = categorizeLists();
 
   // Defensive progress math
   const total = Math.max(0, Number(last?.total) || 0);
@@ -300,8 +338,8 @@ const Index = () => {
           </Card>
         )}
 
-        {/* Recent Lists */}
-        <div className="space-y-4">
+        {/* Recent Lists - New Carousel Layout */}
+        <div className="space-y-6">
           <ApeSectionTitle
             action={
               <Button 
@@ -321,8 +359,8 @@ const Index = () => {
 
           {loading ? (
             <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-xl" />
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full rounded-xl" />
               ))}
             </div>
           ) : !hasData ? (
@@ -349,16 +387,119 @@ const Index = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {recents.map((list) => (
-                <ApeCardList
-                  key={list.id}
-                  title={list.title}
-                  subtitle={list.folder_name}
-                  cardCount={list.count}
-                  badge={list.is_own ? undefined : "Compartilhado"}
-                  onClick={() => navigate(`/list/${list.id}`)}
-                />
+            <div className="space-y-6">
+              {/* Recent Studied Section */}
+              {recentStudied.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground px-1">
+                    📚 Últimas Estudadas
+                  </h3>
+                  <Carousel
+                    opts={{
+                      align: "start",
+                      loop: false,
+                    }}
+                    className="w-full"
+                  >
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                      {recentStudied.map((list) => (
+                        <CarouselItem key={list.id} className="pl-2 md:pl-4 basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3">
+                          <Card 
+                            className="h-full hover:shadow-lg transition-all cursor-pointer border-border"
+                            onClick={() => navigate(`/list/${list.id}`)}
+                          >
+                            <CardContent className="p-4 flex flex-col gap-2">
+                              <div className="flex items-start gap-3">
+                                <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                  <BookOpen className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-sm line-clamp-1 mb-1">
+                                    {list.title}
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground line-clamp-1">
+                                    {list.count} {list.count === 1 ? 'card' : 'cards'}
+                                    {list.folder_name && ` • ${list.folder_name}`}
+                                  </p>
+                                </div>
+                              </div>
+                              {!list.is_own && (
+                                <div className="flex">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/50 text-secondary-foreground">
+                                    Compartilhado
+                                  </span>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    {recentStudied.length > 2 && (
+                      <>
+                        <CarouselPrevious className="hidden sm:flex -left-4" />
+                        <CarouselNext className="hidden sm:flex -right-4" />
+                      </>
+                    )}
+                  </Carousel>
+                </div>
+              )}
+
+              {/* Categories Sections */}
+              {Object.entries(categories).map(([categoryName, lists]) => (
+                <div key={categoryName} className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground px-1">
+                    {categoryName}
+                  </h3>
+                  <Carousel
+                    opts={{
+                      align: "start",
+                      loop: false,
+                    }}
+                    className="w-full"
+                  >
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                      {lists.map((list) => (
+                        <CarouselItem key={list.id} className="pl-2 md:pl-4 basis-[85%] sm:basis-[70%] md:basis-1/2 lg:basis-1/3">
+                          <Card 
+                            className="h-full hover:shadow-lg transition-all cursor-pointer border-border"
+                            onClick={() => navigate(`/list/${list.id}`)}
+                          >
+                            <CardContent className="p-4 flex flex-col gap-2">
+                              <div className="flex items-start gap-3">
+                                <div className="shrink-0 w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                                  <BookOpen className="h-5 w-5 text-secondary-foreground" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-sm line-clamp-1 mb-1">
+                                    {list.title}
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground line-clamp-1">
+                                    {list.count} {list.count === 1 ? 'card' : 'cards'}
+                                    {list.folder_name && ` • ${list.folder_name}`}
+                                  </p>
+                                </div>
+                              </div>
+                              {!list.is_own && (
+                                <div className="flex">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/50 text-secondary-foreground">
+                                    Compartilhado
+                                  </span>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    {lists.length > 2 && (
+                      <>
+                        <CarouselPrevious className="hidden sm:flex -left-4" />
+                        <CarouselNext className="hidden sm:flex -right-4" />
+                      </>
+                    )}
+                  </Carousel>
+                </div>
               ))}
             </div>
           )}
