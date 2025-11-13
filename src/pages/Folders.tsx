@@ -178,78 +178,75 @@ const Folders = () => {
 
   // Tab: Folders (Pastas)
   const foldersTab = (
-    <div className="p-4 space-y-4">
-      <ApeSectionTitle
-        action={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <FolderPlus className="h-4 w-4 mr-2" />
-                Nova Pasta
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nova Pasta</DialogTitle>
-                <DialogDescription>
-                  Crie uma pasta para organizar suas listas de estudo
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Título</Label>
-                  <Input
-                    id="title"
-                    value={newFolder.title}
-                    onChange={(e) => setNewFolder({ ...newFolder, title: e.target.value })}
-                    placeholder="Ex: Inglês Básico"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Descrição (opcional)</Label>
-                  <Textarea
-                    id="description"
-                    value={newFolder.description}
-                    onChange={(e) => setNewFolder({ ...newFolder, description: e.target.value })}
-                    placeholder="Descreva o conteúdo desta pasta..."
-                  />
-                </div>
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between py-1">
+        <h2 className="text-lg font-semibold">Minhas pastas</h2>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="h-8">
+              <FolderPlus className="h-3 w-3 mr-1.5" />
+              Nova pasta
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova Pasta</DialogTitle>
+              <DialogDescription>
+                Crie uma pasta para organizar suas listas de estudo
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Título</Label>
+                <Input
+                  id="title"
+                  value={newFolder.title}
+                  onChange={(e) => setNewFolder({ ...newFolder, title: e.target.value })}
+                  placeholder="Ex: Inglês Básico"
+                />
               </div>
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setDialogOpen(false)}
-                  disabled={isCreating}
-                  className="min-h-[44px]"
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={createFolder}
-                  disabled={isCreating}
-                  className="min-h-[44px]"
-                >
-                  {isCreating ? 'Criando...' : 'Criar Pasta'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        }
-      >
-        Minhas Pastas
-      </ApeSectionTitle>
+              <div>
+                <Label htmlFor="description">Descrição (opcional)</Label>
+                <Textarea
+                  id="description"
+                  value={newFolder.description}
+                  onChange={(e) => setNewFolder({ ...newFolder, description: e.target.value })}
+                  placeholder="Descreva o conteúdo desta pasta..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setDialogOpen(false)}
+                disabled={isCreating}
+                className="min-h-[44px]"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={createFolder}
+                disabled={isCreating}
+                className="min-h-[44px]"
+              >
+                {isCreating ? 'Criando...' : 'Criar Pasta'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="text-center py-4 text-sm text-muted-foreground">
           Carregando...
         </div>
       ) : folders.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>Nenhuma pasta ainda</p>
-          <p className="text-sm mt-2">Crie sua primeira pasta de estudos</p>
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm">Nenhuma pasta ainda</p>
+          <p className="text-xs mt-1">Crie sua primeira pasta de estudos</p>
         </div>
       ) : (
-        <ApeGrid>
+        <div className="space-y-2">
           {folders.map((folder) => (
             <ApeCardFolder
               key={folder.id}
@@ -259,49 +256,51 @@ const Folders = () => {
               onClick={() => navigate(`/folder/${folder.id}`)}
             />
           ))}
-        </ApeGrid>
+        </div>
       )}
     </div>
   );
 
   // Tab: Teachers (Professores)
   const teachersTab = (
-    <div className="p-4 space-y-4">
-      <ApeSectionTitle
-        action={
-          <Button size="sm" variant="outline" onClick={() => navigate("/my-teachers")}>
-            Gerenciar
-          </Button>
-        }
-      >
-        Meus Professores
-      </ApeSectionTitle>
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between py-1">
+        <h2 className="text-lg font-semibold">Meus professores</h2>
+        <Button size="sm" variant="outline" className="h-8" onClick={() => navigate("/my-teachers")}>
+          Gerenciar
+        </Button>
+      </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="text-center py-4 text-sm text-muted-foreground">
           Carregando...
         </div>
       ) : teachers.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>Você ainda não segue nenhum professor</p>
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm">Você ainda não segue nenhum professor</p>
           <Button 
-            className="mt-4" 
+            size="sm"
+            variant="outline"
+            className="mt-3" 
             onClick={() => navigate("/my-teachers")}
           >
             Buscar Professores
           </Button>
         </div>
       ) : (
-        <ApeGrid>
+        <div className="space-y-2">
           {teachers.map((teacher) => (
             <ApeCardProfessor
               key={teacher.id}
               name={teacher.first_name || teacher.email}
               email={teacher.email}
+              folderCount={teacher.folder_count}
+              listCount={teacher.list_count}
+              cardCount={teacher.card_count}
               onClick={() => navigate(`/teacher/${teacher.id}/folders`)}
             />
           ))}
-        </ApeGrid>
+        </div>
       )}
     </div>
   );
