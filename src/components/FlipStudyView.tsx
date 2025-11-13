@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2 } from "lucide-react";
-import { speakText, pickLang } from "@/lib/speech";
+import { pickLang } from "@/lib/speech";
+import { useTTS } from "@/hooks/useTTS";
 import { SpeechRateControl } from "./SpeechRateControl";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,7 @@ export const FlipStudyView = ({
   direction,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
+  const { speak } = useTTS();
   
   const handleKnew = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -45,13 +47,13 @@ export const FlipStudyView = ({
     if (!isFlipped) {
       setIsFlipped(true);
       const lang = pickLang(direction, hideText);
-      await speakText(hideText, lang);
+      await speak(hideText, lang);
     }
   };
 
   const handlePlayAgain = async () => {
     const lang = pickLang(direction, hideText);
-    await speakText(hideText, lang);
+    await speak(hideText, lang);
   };
 
   useEffect(() => {
