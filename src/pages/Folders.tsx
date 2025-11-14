@@ -9,11 +9,12 @@ import { ApeGrid } from "@/components/ape/ApeGrid";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FolderPlus } from "lucide-react";
+import { FolderPlus, Trash2 } from "lucide-react";
 
 interface FolderType {
   id: string;
@@ -45,6 +46,8 @@ const Folders = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newFolder, setNewFolder] = useState({ title: "", description: "", visibility: "private" });
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -139,6 +142,29 @@ const Folders = () => {
   };
 
   const [isCreating, setIsCreating] = useState(false);
+
+  const deleteFolder = async () => {
+    if (!folderToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from("folders")
+        .delete()
+        .eq("id", folderToDelete);
+
+      if (error) throw error;
+
+      toast.success("✅ Pasta excluída com sucesso!");
+      setFolderToDelete(null);
+      loadData();
+    } catch (error: any) {
+      console.error("Error deleting folder:", error);
+      toast.error("❌ Erro ao excluir pasta");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const createFolder = async () => {
     if (!newFolder.title.trim()) {
@@ -248,13 +274,27 @@ const Folders = () => {
       ) : (
         <div className="space-y-2">
           {folders.map((folder) => (
-            <ApeCardFolder
-              key={folder.id}
-              title={folder.title}
-              listCount={folder.list_count}
-              cardCount={folder.card_count}
-              onClick={() => navigate(`/folder/${folder.id}`)}
-            />
+            <div key={folder.id} className="flex items-center gap-2">
+              <div className="flex-1">
+                <ApeCardFolder
+                  title={folder.title}
+                  listCount={folder.list_count}
+                  cardCount={folder.card_count}
+                  onClick={() => navigate(`/folder/${folder.id}`)}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFolderToDelete(folder.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           ))}
         </div>
       )}
@@ -314,6 +354,27 @@ const Folders = () => {
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Biblioteca" />
       <ApeTabs tabs={tabs} defaultValue="folders" />
+      
+      <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pasta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Todas as listas e cards dentro desta pasta também serão excluídos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteFolder}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
