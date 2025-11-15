@@ -39,6 +39,7 @@ const MeusAlunos = lazy(() => import("./pages/MeusAlunos"));
 const AlunoProfile = lazy(() => import("./pages/AlunoProfile"));
 const ProfessorProfile = lazy(() => import("./pages/ProfessorProfile"));
 const MyTeachers = lazy(() => import("./pages/MyTeachers"));
+const PainelProfessor = lazy(() => import("./pages/PainelProfessor"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -93,6 +94,7 @@ const App = () => (
                 <Route path="/professor/alunos/:alunoId" element={<AlunoProfile />} />
                 <Route path="/professores/:professorId" element={<ProfessorProfile />} />
                 <Route path="/my-teachers" element={<MyTeachers />} />
+                <Route path="/painel-professor" element={<PainelProfessor />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </GlobalLayout>
