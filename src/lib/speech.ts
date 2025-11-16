@@ -1,10 +1,47 @@
 // Text-to-Speech utilities using native Web Speech API
 
 /**
- * Remove parênteses do texto (anotações não devem ser faladas)
+ * Limpa o texto para TTS:
+ * - Remove parênteses e conteúdo entre eles (anotações pedagógicas)
+ * - Remove emojis e símbolos não textuais
+ * - Remove colchetes e escolhe a primeira opção
+ * - Remove espaços múltiplos
+ */
+function cleanTextForTTS(text: string): string {
+  let cleaned = text;
+  
+  // 1. Remove parênteses e conteúdo (anotações pedagógicas)
+  cleaned = cleaned.replace(/\([^)]*\)/g, '');
+  
+  // 2. Remove emojis (todos os ranges Unicode de emojis)
+  cleaned = cleaned.replace(/[\u{1F600}-\u{1F64F}]/gu, ''); // Emoticons
+  cleaned = cleaned.replace(/[\u{1F300}-\u{1F5FF}]/gu, ''); // Misc Symbols and Pictographs
+  cleaned = cleaned.replace(/[\u{1F680}-\u{1F6FF}]/gu, ''); // Transport and Map
+  cleaned = cleaned.replace(/[\u{1F700}-\u{1F77F}]/gu, ''); // Alchemical Symbols
+  cleaned = cleaned.replace(/[\u{1F780}-\u{1F7FF}]/gu, ''); // Geometric Shapes Extended
+  cleaned = cleaned.replace(/[\u{1F800}-\u{1F8FF}]/gu, ''); // Supplemental Arrows-C
+  cleaned = cleaned.replace(/[\u{1F900}-\u{1F9FF}]/gu, ''); // Supplemental Symbols and Pictographs
+  cleaned = cleaned.replace(/[\u{1FA00}-\u{1FA6F}]/gu, ''); // Chess Symbols
+  cleaned = cleaned.replace(/[\u{1FA70}-\u{1FAFF}]/gu, ''); // Symbols and Pictographs Extended-A
+  cleaned = cleaned.replace(/[\u{2600}-\u{26FF}]/gu, '');   // Misc symbols
+  cleaned = cleaned.replace(/[\u{2700}-\u{27BF}]/gu, '');   // Dingbats
+  cleaned = cleaned.replace(/[\u{FE00}-\u{FE0F}]/gu, '');   // Variation Selectors
+  cleaned = cleaned.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, ''); // Regional Indicator Symbols
+  
+  // 3. Trata colchetes com alternativas [opção1 / opção2] - escolhe a primeira
+  cleaned = cleaned.replace(/\[([^\]\/]+)(?:\/[^\]]+)*\]/g, '$1');
+  
+  // 4. Remove espaços múltiplos e trim
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
+/**
+ * @deprecated Use cleanTextForTTS instead
  */
 function stripParentheses(text: string): string {
-  return text.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+  return cleanTextForTTS(text);
 }
 
 /**
@@ -41,8 +78,14 @@ export async function speakText(
   deckLang?: string,
   cardLang?: string
 ): Promise<void> {
-  // Clean text: remove parentheses (annotations)
-  const cleanText = stripParentheses(text);
+  // Clean text: remove parentheses, emojis, brackets, etc.
+  const cleanText = cleanTextForTTS(text);
+  
+  // Skip if text is empty after cleaning
+  if (!cleanText) {
+    console.debug('[TTS]', 'Text is empty after cleaning, skipping TTS');
+    return;
+  }
   
   // Auto-detect language if not explicitly set
   const detectedLang = detectLanguage(cleanText, deckLang, cardLang);
@@ -59,7 +102,16 @@ export async function speakText(
   return new Promise<void>((resolve) => {
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = finalLang;
-    utterance.rate = Number(localStorage.getItem("speechRate") || "1");
+    
+    // Rate: slightly slower for clarity (0.9 default, but respect user preference)
+    const userRate = localStorage.getItem("speechRate");
+    utterance.rate = userRate ? Number(userRate) : 0.9;
+    
+    // Pitch: natural/neutral
+    utterance.pitch = 1.0;
+    
+    // Volume: maximum
+    utterance.volume = 1.0;
 
     const preferredVoice = localStorage.getItem("speechVoice");
     const voices = synth.getVoices();
