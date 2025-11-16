@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, UserPlus, FileText, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Search, UserPlus, FileText, MessageCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function MeusAlunos() {
   const navigate = useNavigate();
@@ -43,6 +44,10 @@ export default function MeusAlunos() {
 
   const students = studentsData?.students || [];
   const turmas = turmasData?.turmas || [];
+
+  if (!authReady || isLoading) {
+    return <LoadingSpinner message="Carregando alunos..." />;
+  }
 
   const toggleStudent = (studentId: string) => {
     const newSelected = new Set(selectedStudents);
@@ -110,14 +115,6 @@ export default function MeusAlunos() {
       toast.error('Erro ao abrir conversa');
     }
   };
-
-  if (!authReady || isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -258,7 +255,14 @@ export default function MeusAlunos() {
                 Cancelar
               </Button>
               <Button onClick={handleAddToClass} disabled={addToClass.isPending}>
-                {addToClass.isPending ? 'Adicionando...' : 'Adicionar'}
+                {addToClass.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Adicionando...
+                  </>
+                ) : (
+                  'Adicionar'
+                )}
               </Button>
             </div>
           </div>
