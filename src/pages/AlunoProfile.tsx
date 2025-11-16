@@ -5,32 +5,36 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useStudentOverview } from '@/hooks/useMeusAlunos';
 import { Badge } from '@/components/ui/badge';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
 export default function AlunoProfile() {
   const { alunoId } = useParams();
   const navigate = useNavigate();
-  const { data, isLoading } = useStudentOverview(alunoId || null);
+  const { data, isLoading, error, refetch } = useStudentOverview(alunoId || null);
 
   if (isLoading) {
+    return <LoadingSpinner message="Carregando perfil do aluno..." />;
+  }
+
+  if (error) {
     return (
-      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
+      <ErrorMessage
+        title="Erro ao carregar aluno"
+        message="Não foi possível carregar o perfil deste aluno."
+        onRetry={() => refetch()}
+        onGoBack={() => navigate('/professor/alunos')}
+      />
     );
   }
 
   if (!data || !data.student) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-4xl mx-auto">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/professor/alunos')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Card className="p-8 text-center mt-4">
-            <p className="text-muted-foreground">Aluno não encontrado.</p>
-          </Card>
-        </div>
-      </div>
+      <ErrorMessage
+        title="Aluno não encontrado"
+        message="Este aluno não existe ou não está disponível."
+        onGoBack={() => navigate('/professor/alunos')}
+      />
     );
   }
 

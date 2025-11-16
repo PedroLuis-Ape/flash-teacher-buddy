@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus, UserCheck, FolderOpen } from 'lucide-react';
+import { ArrowLeft, UserPlus, UserCheck, FolderOpen, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,6 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ErrorMessage } from '@/components/ErrorMessage';
 
 export default function ProfessorProfile() {
   const { professorId } = useParams();
@@ -28,7 +30,7 @@ export default function ProfessorProfile() {
   }, [navigate]);
 
   // Fetch professor profile
-  const { data: professor, isLoading: loadingProfile } = useQuery({
+  const { data: professor, isLoading: loadingProfile, error: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ['professor', professorId],
     queryFn: async () => {
       if (!professorId) throw new Error('Professor ID required');
@@ -38,7 +40,7 @@ export default function ProfessorProfile() {
         .select('id, first_name, user_tag, public_access_enabled, avatar_skin_id')
         .eq('id', professorId)
         .eq('public_access_enabled', true)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (!data) throw new Error('Professor não encontrado');
@@ -46,6 +48,7 @@ export default function ProfessorProfile() {
       return data;
     },
     enabled: !!professorId && !!currentUserId,
+    retry: 1,
   });
 
   // Check if subscribed
@@ -137,25 +140,27 @@ export default function ProfessorProfile() {
   const isLoading = loadingProfile || loadingSubscription;
 
   if (isLoading) {
+    return <LoadingSpinner message="Carregando perfil do professor..." />;
+  }
+
+  if (profileError) {
     return (
-      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
+      <ErrorMessage
+        title="Erro ao carregar professor"
+        message="Não foi possível carregar o perfil deste professor."
+        onRetry={() => refetchProfile()}
+        onGoBack={() => navigate(-1)}
+      />
     );
   }
 
   if (!professor) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-4xl mx-auto">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Card className="p-8 text-center mt-4">
-            <p className="text-muted-foreground">Professor não encontrado.</p>
-          </Card>
-        </div>
-      </div>
+      <ErrorMessage
+        title="Professor não encontrado"
+        message="Este professor não existe ou não está disponível."
+        onGoBack={() => navigate('/search')}
+      />
     );
   }
 
@@ -194,16 +199,34 @@ export default function ProfessorProfile() {
                 onClick={() => unsubscribeMutation.mutate()}
                 disabled={unsubscribeMutation.isPending}
               >
-                <UserCheck className="h-4 w-4 mr-2" />
-                Seguindo
+                {unsubscribeMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Seguindo
+                  </>
+                )}
               </Button>
             ) : (
               <Button
                 onClick={() => subscribeMutation.mutate()}
                 disabled={subscribeMutation.isPending}
               >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Seguir
+                {subscribeMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Seguir
+                  </>
+                )}
               </Button>
             )}
           </div>

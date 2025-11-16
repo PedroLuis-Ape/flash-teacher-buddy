@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function MyTeachers() {
   const navigate = useNavigate();
@@ -61,11 +62,7 @@ export default function MyTeachers() {
   });
 
   if (!currentUserId || isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Carregando professores..." />;
   }
 
   return (

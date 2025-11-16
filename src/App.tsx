@@ -7,7 +7,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
 import { EconomyProvider } from "@/contexts/EconomyContext";
+import { LoadingProvider } from "@/contexts/LoadingContext";
 import { GlobalLayout } from "@/components/GlobalLayout";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { InstallPWA } from "@/components/InstallPWA";
 
 const Index = lazy(() => import("./pages/Index"));
@@ -46,15 +49,17 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <EconomyProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Suspense fallback={<div className="p-8 text-muted-foreground">Carregando…</div>}>
-          <BrowserRouter>
-            <SessionWatcher />
-            <EconomyInitializer />
-            <GlobalLayout>
+    <LoadingProvider>
+      <EconomyProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <LoadingOverlay />
+          <Suspense fallback={<LoadingSpinner message="Carregando página..." />}>
+            <BrowserRouter>
+              <SessionWatcher />
+              <EconomyInitializer />
+              <GlobalLayout>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -103,6 +108,7 @@ const App = () => (
         </Suspense>
       </TooltipProvider>
     </EconomyProvider>
+  </LoadingProvider>
   </QueryClientProvider>
 );
 
