@@ -3,6 +3,9 @@ project_id = "ymahldldyxvwjeruaxpr"
 [functions.tts]
 verify_jwt = false
 
+[functions.elevenlabs-tts]
+verify_jwt = false
+
 [functions.ping]
 verify_jwt = false
 
