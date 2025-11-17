@@ -1,4 +1,9 @@
-// Text-to-Speech utilities using native Web Speech API
+// Text-to-Speech utilities with ElevenLabs integration for English
+
+import { supabase } from '@/integrations/supabase/client';
+
+// Cache for audio to avoid repeated API calls in the same session
+const audioCache = new Map<string, string>();
 
 /**
  * Limpa o texto para TTS:
@@ -72,6 +77,112 @@ function detectLanguage(
   return asciiRatio > 0.6 ? "en-US" : "pt-BR";
 }
 
+/**
+ * Call ElevenLabs TTS API for English text
+ * Returns audio URL on success, null on failure
+ */
+async function callElevenLabsTTS(text: string): Promise<string | null> {
+  try {
+    const cacheKey = `elevenlabs:${text}`;
+    
+    // Check cache first
+    if (audioCache.has(cacheKey)) {
+      console.log('[TTS] Using cached ElevenLabs audio');
+      return audioCache.get(cacheKey)!;
+    }
+
+    console.log('[TTS] Calling ElevenLabs API for:', text.substring(0, 50));
+    
+    const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
+      body: { text },
+    });
+
+    if (error) {
+      console.error('[TTS] ElevenLabs API error:', error);
+      return null;
+    }
+
+    // Convert response to audio blob
+    const audioBlob = new Blob([data], { type: 'audio/mpeg' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    
+    // Cache the result (limit cache size to avoid memory issues)
+    if (audioCache.size > 50) {
+      const firstKey = audioCache.keys().next().value;
+      const oldUrl = audioCache.get(firstKey);
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      audioCache.delete(firstKey);
+    }
+    audioCache.set(cacheKey, audioUrl);
+    
+    return audioUrl;
+  } catch (error) {
+    console.error('[TTS] Error calling ElevenLabs:', error);
+    return null;
+  }
+}
+
+/**
+ * Play audio from URL
+ */
+function playAudioUrl(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio(url);
+    
+    audio.onended = () => {
+      console.log('[TTS] Audio playback completed');
+      resolve();
+    };
+    
+    audio.onerror = (error) => {
+      console.error('[TTS] Audio playback error:', error);
+      reject(error);
+    };
+    
+    audio.play().catch((error) => {
+      console.error('[TTS] Failed to start audio:', error);
+      reject(error);
+    });
+  });
+}
+
+/**
+ * Fallback to browser TTS
+ */
+function speakWithBrowserTTS(text: string, lang: "pt-BR" | "en-US"): Promise<void> {
+  const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+  
+  if (!synth) {
+    console.warn('[TTS] Speech synthesis not supported');
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve) => {
+    synth.cancel(); // Cancel any ongoing speech
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.rate = 0.9; // Slightly slower for clarity
+    utterance.pitch = 1.0; // Natural pitch
+    utterance.volume = 1.0; // Maximum volume
+    
+    utterance.onend = () => {
+      console.log('[TTS] Browser TTS completed');
+      resolve();
+    };
+    
+    utterance.onerror = (error) => {
+      console.error('[TTS] Browser TTS error:', error);
+      resolve(); // Resolve anyway to not block the app
+    };
+    
+    synth.speak(utterance);
+  });
+}
+
+/**
+ * Main TTS function - uses ElevenLabs for English, browser TTS for Portuguese
+ */
 export async function speakText(
   text: string, 
   lang: "pt-BR" | "en-US",
@@ -83,7 +194,7 @@ export async function speakText(
   
   // Skip if text is empty after cleaning
   if (!cleanText) {
-    console.debug('[TTS]', 'Text is empty after cleaning, skipping TTS');
+    console.debug('[TTS] Text is empty after cleaning, skipping TTS');
     return;
   }
   
@@ -91,82 +202,49 @@ export async function speakText(
   const detectedLang = detectLanguage(cleanText, deckLang, cardLang);
   const finalLang = lang || detectedLang;
   
-  const label = `[TTS] (${finalLang})`;
-  const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+  console.log(`[TTS] Language: ${finalLang}, Text: "${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}"`);
   
-  if (!synth) {
-    console.warn(label, "Speech synthesis not supported");
-    return;
-  }
-
-  return new Promise<void>((resolve) => {
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = finalLang;
-    
-    // Rate: slightly slower for clarity (0.9 default, but respect user preference)
-    const userRate = localStorage.getItem("speechRate");
-    utterance.rate = userRate ? Number(userRate) : 0.9;
-    
-    // Pitch: natural/neutral
-    utterance.pitch = 1.0;
-    
-    // Volume: maximum
-    utterance.volume = 1.0;
-
-    const preferredVoice = localStorage.getItem("speechVoice");
-    const voices = synth.getVoices();
-
-    if (preferredVoice) {
-      const voice = voices.find(v => v.name === preferredVoice);
-      if (voice) utterance.voice = voice;
-    } else {
-      const langVoices = voices.filter(v => v.lang?.startsWith(finalLang.split('-')[0]));
-      if (langVoices.length > 0) utterance.voice = langVoices[0];
-    }
-
-    utterance.onstart = () => console.debug(label, "Web Speech playback started");
-    utterance.onend = () => {
-      console.debug(label, "Web Speech playback ended");
-      resolve();
-    };
-    utterance.onerror = (e) => {
-      console.error(label, "Web Speech error", e);
-      resolve();
-    };
-
+  // For English, try ElevenLabs first, fallback to browser TTS
+  if (finalLang === 'en-US') {
     try {
-      synth.cancel(); // cancel any ongoing speech
-      synth.speak(utterance);
-    } catch (e) {
-      console.error(label, "Failed to speak via Web Speech", e);
-      resolve();
+      const audioUrl = await callElevenLabsTTS(cleanText);
+      
+      if (audioUrl) {
+        console.log('[TTS] Using ElevenLabs for English');
+        await playAudioUrl(audioUrl);
+        return;
+      } else {
+        console.log('[TTS] ElevenLabs failed, falling back to browser TTS');
+      }
+    } catch (error) {
+      console.warn('[TTS] ElevenLabs playback error, falling back to browser TTS:', error);
     }
-  });
+  }
+  
+  // Fallback to browser TTS (for Portuguese or if ElevenLabs fails)
+  console.log('[TTS] Using browser TTS');
+  await speakWithBrowserTTS(cleanText, finalLang);
 }
 
+/**
+ * Pick language based on direction and text
+ * Used by study components to determine which language to speak
+ */
 export function pickLang(
   direction: "pt-en" | "en-pt" | "any",
   text: string
 ): "pt-BR" | "en-US" {
-  // direction pt-en = front is PT, back is EN → speak EN
-  // direction en-pt = front is EN, back is PT → speak PT
-  if (direction === "pt-en") return "en-US";
-  if (direction === "en-pt") return "pt-BR";
-  
-  // Auto-detect based on accents
-  return /[áéíóúâêîôûãõç]/i.test(text) ? "pt-BR" : "en-US";
+  if (direction === "pt-en") {
+    // PT -> EN means the back/hidden side is English
+    return "en-US";
+  } else if (direction === "en-pt") {
+    // EN -> PT means the back/hidden side is Portuguese
+    return "pt-BR";
+  } else {
+    // "any" or fallback: auto-detect
+    return detectLanguage(text);
+  }
 }
 
-export function getAvailableVoices() {
-  const synth = window.speechSynthesis;
-  if (!synth) return [];
-  
-  return synth.getVoices();
-}
-
-// Load voices on page load
-if (typeof window !== 'undefined' && window.speechSynthesis) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
-}
+// Export for use in other modules
+export { cleanTextForTTS, stripParentheses, detectLanguage };
