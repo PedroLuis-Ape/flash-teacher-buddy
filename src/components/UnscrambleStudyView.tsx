@@ -40,7 +40,12 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
   const correctSentence = direction === "pt-en" ? back : front;
 
   useEffect(() => {
-    const words = correctSentence.split(/\s+/);
+    // Remove palavras que contêm parênteses (são apenas notas/explicações)
+    const cleanSentence = correctSentence.split(/\s+/)
+      .filter(word => !word.includes("(") && !word.includes(")"))
+      .join(" ");
+    
+    const words = cleanSentence.split(/\s+/);
     const wordItems: WordItem[] = words.map((word, index) => ({
       word,
       id: `${word}-${index}-${Math.random()}`
@@ -64,7 +69,12 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
   };
 
   const handleReset = () => {
-    const words = correctSentence.split(/\s+/);
+    // Remove palavras que contêm parênteses (são apenas notas/explicações)
+    const cleanSentence = correctSentence.split(/\s+/)
+      .filter(word => !word.includes("(") && !word.includes(")"))
+      .join(" ");
+    
+    const words = cleanSentence.split(/\s+/);
     const wordItems: WordItem[] = words.map((word, index) => ({
       word,
       id: `${word}-${index}-${Math.random()}`
@@ -76,8 +86,13 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
   };
 
   const handleSubmit = () => {
+    // Remove palavras com parênteses da frase correta antes de comparar
+    const cleanCorrectSentence = correctSentence.split(/\s+/)
+      .filter(word => !word.includes("(") && !word.includes(")"))
+      .join(" ");
+    
     const userAnswer = selectedWords.map(item => item.word).join(" ").toLowerCase().trim();
-    const correct = userAnswer === correctSentence.toLowerCase().trim();
+    const correct = userAnswer === cleanCorrectSentence.toLowerCase().trim();
     setIsCorrect(correct);
     setSubmitted(true);
   };
@@ -180,7 +195,9 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
           </p>
           {!isCorrect && (
             <p className="text-center mt-2 text-muted-foreground">
-              Resposta correta: <span className="font-semibold">{correctSentence}</span>
+              Resposta correta: <span className="font-semibold">
+                {correctSentence.split(/\s+/).filter(word => !word.includes("(") && !word.includes(")")).join(" ")}
+              </span>
             </p>
           )}
           <div className="flex justify-center mt-4">
