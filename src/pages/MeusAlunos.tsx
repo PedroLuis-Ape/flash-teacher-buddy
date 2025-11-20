@@ -118,12 +118,12 @@ export default function MeusAlunos() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 z-10 bg-background border-b p-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+      <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
+        <div className="max-w-4xl mx-auto p-4 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Meus Alunos</h1>
+          <h1 className="text-2xl font-bold truncate">Meus Alunos</h1>
         </div>
       </div>
 
@@ -131,27 +131,28 @@ export default function MeusAlunos() {
         {/* Search and Actions */}
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Buscar por nome ou APE ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-10 min-h-[44px]"
             />
           </div>
         </div>
 
         {selectedStudents.size > 0 && (
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
+          <Card className="p-4 border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {selectedStudents.size} aluno(s) selecionado(s)
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setShowAddToClassDialog(true)}
+                  className="min-h-[40px]"
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Adicionar à Turma
@@ -160,6 +161,7 @@ export default function MeusAlunos() {
                   size="sm"
                   variant="outline"
                   onClick={() => setShowAssignDialog(true)}
+                  className="min-h-[40px]"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Atribuir Atividade
@@ -171,12 +173,12 @@ export default function MeusAlunos() {
 
         {/* Students List */}
         {students.length === 0 ? (
-          <Card className="p-8 text-center">
+          <Card className="p-8 text-center border-border">
             <p className="text-muted-foreground">Nenhum aluno encontrado.</p>
           </Card>
         ) : (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-2 px-1">
               <Checkbox
                 checked={selectedStudents.size === students.length && students.length > 0}
                 onCheckedChange={selectAll}
@@ -185,28 +187,30 @@ export default function MeusAlunos() {
             </div>
 
             {students.map((student: any) => (
-              <Card key={student.aluno_id} className="p-4">
+              <Card key={student.aluno_id} className="p-4 border-border hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-4">
                   <Checkbox
                     checked={selectedStudents.has(student.aluno_id)}
                     onCheckedChange={() => toggleStudent(student.aluno_id)}
+                    className="shrink-0"
                   />
 
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-12 w-12 shrink-0">
                     <AvatarImage src={student.avatar_url} />
-                    <AvatarFallback>{student.nome[0]?.toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="text-base">{student.nome[0]?.toUpperCase()}</AvatarFallback>
                   </Avatar>
 
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{student.nome}</h3>
-                    <p className="text-sm text-muted-foreground">{student.ape_id}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base truncate">{student.nome}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{student.ape_id}</p>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 shrink-0">
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => navigate(`/professor/alunos/${student.aluno_id}`)}
+                      className="min-h-[36px]"
                     >
                       Ver Perfil
                     </Button>

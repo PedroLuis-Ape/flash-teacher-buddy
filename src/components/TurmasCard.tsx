@@ -33,20 +33,22 @@ export function TurmasCard() {
 
   return (
     <Card
-      className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
+      className="p-6 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
       onClick={() => navigate('/turmas')}
     >
       <div className="flex items-center gap-4">
-        {isTeacher ? (
-          <Users className="h-8 w-8 text-primary" />
-        ) : (
-          <BookOpen className="h-8 w-8 text-primary" />
-        )}
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold">
+        <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+          {isTeacher ? (
+            <Users className="h-6 w-6 text-primary" />
+          ) : (
+            <BookOpen className="h-6 w-6 text-primary" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold truncate">
             {isTeacher ? 'Minhas Turmas' : 'Turmas'}
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground truncate">
             {isTeacher
               ? 'Gerencie turmas e atribuições'
               : 'Veja suas turmas e atribuições'}

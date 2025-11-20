@@ -67,23 +67,26 @@ export default function MyTeachers() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 z-10 bg-background border-b p-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+      <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
+        <div className="max-w-4xl mx-auto p-4 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Meus Professores</h1>
+          <h1 className="text-2xl font-bold truncate">Meus Professores</h1>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto p-4 space-y-4">
         {teachers.length === 0 ? (
-          <Card className="p-8 text-center">
-            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground mb-4">
+          <Card className="p-8 text-center border-border">
+            <Users className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground mb-6 text-base">
               Você ainda não segue nenhum professor
             </p>
-            <Button onClick={() => navigate('/search')}>
+            <Button 
+              onClick={() => navigate('/search')}
+              className="min-h-[44px] px-6"
+            >
               <Search className="h-4 w-4 mr-2" />
               Buscar Professores
             </Button>
@@ -92,18 +95,18 @@ export default function MyTeachers() {
           teachers.map((teacher) => (
             <Card
               key={teacher.id}
-              className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate(`/professores/${teacher.id}`)}
             >
               <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback>
+                <Avatar className="h-14 w-14 shrink-0">
+                  <AvatarFallback className="text-lg">
                     {teacher.name?.[0]?.toUpperCase() || 'P'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <h3 className="font-semibold">{teacher.name}</h3>
-                  <p className="text-sm text-muted-foreground">{teacher.user_tag}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base truncate">{teacher.name}</h3>
+                  <p className="text-sm text-muted-foreground truncate">{teacher.user_tag}</p>
                 </div>
               </div>
             </Card>

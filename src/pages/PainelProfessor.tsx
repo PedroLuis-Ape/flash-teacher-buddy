@@ -7,13 +7,13 @@ import { BookOpen } from "lucide-react";
 
 const PainelProfessor = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <ApeAppBar title="Painel do Professor" />
       
-      <div className="p-4 space-y-6">
-        <div>
+      <div className="max-w-4xl mx-auto p-4 space-y-8">
+        <div className="space-y-2">
           <ApeSectionTitle>Gestão de Ensino</ApeSectionTitle>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-sm text-muted-foreground">
             Gerencie seus alunos, turmas e atribuições
           </p>
         </div>
@@ -23,23 +23,23 @@ const PainelProfessor = () => {
           <MinhasTurmasCard />
         </div>
 
-        <div>
+        <div className="space-y-4">
           <ApeSectionTitle>Recursos</ApeSectionTitle>
-          <div className="space-y-3 mt-3">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <BookOpen className="h-5 w-5 text-primary" />
-                  <div>
-                    <h3 className="font-semibold text-sm">Criar Conteúdo</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Crie listas e pastas para seus alunos
-                    </p>
-                  </div>
+          <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer border-border">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <BookOpen className="h-6 w-6 text-primary" />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base truncate">Criar Conteúdo</h3>
+                  <p className="text-sm text-muted-foreground truncate">
+                    Crie listas e pastas para seus alunos
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
