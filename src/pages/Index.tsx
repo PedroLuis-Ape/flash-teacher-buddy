@@ -103,28 +103,28 @@ const Index = () => {
   const isTeacher = profile?.is_teacher || false;
 
   return (
-    <div className="min-h-screen bg-background pb-4">
+    <div className="min-h-screen bg-background pb-24">
       <ApeAppBar title="Início" />
 
-      <div className="space-y-6 px-4 pt-4">
+      <div className="max-w-4xl mx-auto space-y-6 px-4 pt-4">
         {/* Profile Header */}
         <Card 
-          className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+          className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
           onClick={() => navigate("/profile")}
         >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-14 w-14 shrink-0">
                 <AvatarImage src={profileData.avatarUrl || undefined} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h2 className="text-lg font-bold">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold truncate">
                   Olá, {profileData.firstName || "Usuário"}
                 </h2>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Continue aprendendo!
                 </p>
               </div>
@@ -134,49 +134,49 @@ const Index = () => {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-4">
+          <Card className="p-4 border-border">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">PTS Semanais</span>
             </div>
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-8 w-16" />
             ) : (
               <p className="text-2xl font-bold">{pts_weekly}</p>
             )}
           </Card>
 
-          <Card className="p-4">
+          <Card className="p-4 border-border">
             <div className="flex items-center gap-2 mb-2">
               <Crown className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Nível</span>
             </div>
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-8 w-16" />
             ) : (
               <p className="text-2xl font-bold">{level}</p>
             )}
           </Card>
 
-          <Card className="p-4">
+          <Card className="p-4 border-border">
             <div className="flex items-center gap-2 mb-2">
               <Play className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Sequência</span>
             </div>
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-8 w-16" />
             ) : (
               <p className="text-2xl font-bold">{current_streak}</p>
             )}
           </Card>
 
-          <Card className="p-4">
+          <Card className="p-4 border-border">
             <div className="flex items-center gap-2 mb-2">
               <BookOpen className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Listas</span>
             </div>
             {loading ? (
-              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-8 w-16" />
             ) : (
               <p className="text-2xl font-bold">{stats.total_lists}</p>
             )}
@@ -186,18 +186,20 @@ const Index = () => {
         {/* Painel do Professor (apenas para professores) */}
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
-            className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
             onClick={() => navigate('/painel-professor')}
           >
-            <div className="flex items-center gap-3">
-              <Users className="h-6 w-6 text-primary" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-base">Painel do Professor</h3>
-                <p className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base truncate">Painel do Professor</h3>
+                <p className="text-sm text-muted-foreground truncate">
                   Gerencie alunos, turmas e atribuições
                 </p>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
             </div>
           </Card>
         )}
@@ -207,18 +209,18 @@ const Index = () => {
 
         {/* Continue Studying Card */}
         {last && (
-          <Card className="overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Play className="h-5 w-5 text-primary" />
+          <Card className="overflow-hidden border-border">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Play className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground mb-1">Voltar para onde parou</p>
-                  <h3 className="font-semibold text-sm mb-2 truncate">{last.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-1">Voltar para onde parou</p>
+                  <h3 className="font-semibold text-base mb-3 truncate">{last.title}</h3>
                   <div className="space-y-2">
-                    <Progress value={pct} className="h-1.5" />
-                    <div className="flex items-center justify-between text-xs">
+                    <Progress value={pct} className="h-2" />
+                    <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
                         {last.reviewed} de {last.total} cards
                       </span>
@@ -226,31 +228,31 @@ const Index = () => {
                     </div>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => navigate(`/list/${last.id}/games?mode=${last.mode || "flip"}`)}
-                  className="shrink-0"
-                >
-                  Continuar
-                </Button>
               </div>
+              <Button
+                onClick={() => navigate(`/list/${last.id}/games?mode=${last.mode || "flip"}`)}
+                className="w-full mt-4 min-h-[44px]"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Continuar
+              </Button>
             </CardContent>
           </Card>
         )}
 
         {/* Modo Reino Coming Soon */}
         <Card className="overflow-hidden border-2 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Crown className="h-5 w-5 text-primary" />
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Crown className="h-6 w-6 text-primary" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-sm">Modo Reino</h3>
-                  <Lock className="h-3 w-3 text-muted-foreground" />
+                  <h3 className="font-semibold text-base truncate">Modo Reino</h3>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground truncate">
                   Sistema de progressão gamificado • Em breve
                 </p>
               </div>
@@ -266,7 +268,7 @@ const Index = () => {
               variant="ghost"
               size="sm"
               onClick={() => navigate("/folders")}
-              className="h-8 px-2 text-primary hover:text-primary"
+              className="min-h-[36px] px-3 text-primary hover:text-primary"
             >
               Ver todas
               <ChevronRight className="h-4 w-4 ml-1" />
@@ -274,14 +276,14 @@ const Index = () => {
           </div>
 
           {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
+            <div className="space-y-3">
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
             </div>
           ) : myLists.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground mb-2">Últimas estudadas</p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground mb-2">Últimas estudadas</p>
               {myLists.map((list) => (
                 <ApeCardList
                   key={list.id}
@@ -293,13 +295,16 @@ const Index = () => {
               ))}
             </div>
           ) : (
-            <Card className="p-6 text-center">
-              <BookOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-              <h3 className="font-semibold mb-2">Nenhuma lista encontrada</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+            <Card className="p-8 text-center border-border">
+              <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-semibold text-base mb-2">Nenhuma lista encontrada</h3>
+              <p className="text-sm text-muted-foreground mb-6">
                 Comece criando sua primeira lista de estudos
               </p>
-              <Button onClick={() => navigate("/folders")}>
+              <Button 
+                onClick={() => navigate("/folders")}
+                className="min-h-[44px]"
+              >
                 Criar minha primeira lista
               </Button>
             </Card>
@@ -307,18 +312,20 @@ const Index = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <ApeSectionTitle>Atalhos</ApeSectionTitle>
           <div className="grid grid-cols-2 gap-3">
             <Card
-              className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/store")}
             >
-              <div className="flex flex-col items-center text-center gap-2">
-                <Store className="h-6 w-6 text-primary" />
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Store className="h-6 w-6 text-primary" />
+                </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Loja</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <h3 className="font-semibold text-base">Loja</h3>
+                  <p className="text-sm text-muted-foreground">
                     Mascotes e avatares
                   </p>
                 </div>
@@ -326,14 +333,16 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/search")}
             >
-              <div className="flex flex-col items-center text-center gap-2">
-                <SearchIcon className="h-6 w-6 text-primary" />
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <SearchIcon className="h-6 w-6 text-primary" />
+                </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Buscar</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <h3 className="font-semibold text-base">Buscar</h3>
+                  <p className="text-sm text-muted-foreground">
                     Encontre professores
                   </p>
                 </div>

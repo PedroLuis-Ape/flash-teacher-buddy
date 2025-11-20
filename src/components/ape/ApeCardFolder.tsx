@@ -23,24 +23,24 @@ export function ApeCardFolder({
       onClick={onClick}
       disabled={isLocked}
       className={cn(
-        "flex items-center gap-2.5 w-full h-12 px-3 rounded-lg",
-        "bg-card hover:bg-accent transition-colors",
+        "flex items-center gap-3 w-full min-h-[56px] px-4 rounded-xl",
+        "bg-card hover:bg-accent/80 transition-all duration-200",
         "border border-border",
-        "text-left",
+        "text-left shadow-sm hover:shadow-md",
         isLocked && "opacity-50 cursor-not-allowed",
         className
       )}
     >
-      <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+      <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
         {isLocked ? (
-          <Lock className="h-4 w-4 text-primary" />
+          <Lock className="h-5 w-5 text-primary" />
         ) : (
-          <Folder className="h-4 w-4 text-primary" />
+          <Folder className="h-5 w-5 text-primary" />
         )}
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm truncate leading-tight">
+        <h3 className="font-semibold text-base truncate leading-tight">
           {title}
         </h3>
         {(listCount !== undefined || cardCount !== undefined) && (
