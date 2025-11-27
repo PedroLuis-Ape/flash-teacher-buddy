@@ -33,12 +33,12 @@ export function MinhasTurmasCard() {
       onClick={() => navigate('/turmas')}
     >
       <div className="flex items-center gap-4">
-        <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+        <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
           <BookOpen className="h-6 w-6 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold truncate">Minhas Turmas</h3>
-          <p className="text-sm text-muted-foreground truncate">
+          <h3 className="text-lg font-semibold truncate leading-tight">Minhas Turmas</h3>
+          <p className="text-sm text-muted-foreground truncate leading-tight mt-0.5">
             Crie e gerencie suas turmas
           </p>
         </div>

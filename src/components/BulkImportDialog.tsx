@@ -134,18 +134,18 @@ export const BulkImportDialog = ({
               <Alert>
                 <AlertDescription className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                     <span>{stats.valid} válidos</span>
                   </div>
                   {stats.incomplete > 0 && (
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertCircle className="h-4 w-4 text-warning" />
                       <span>{stats.incomplete} incompletos (serão ignorados)</span>
                     </div>
                   )}
                   {stats.duplicates > 0 && (
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertCircle className="h-4 w-4 text-primary" />
                       <span>{stats.duplicates} duplicados (removidos)</span>
                     </div>
                   )}
