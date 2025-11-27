@@ -3,16 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface CreateFlashcardFormProps {
-  onAdd: (term: string, translation: string) => void;
+  onAdd: (term: string, translation: string, hint?: string) => void;
 }
 
 export const CreateFlashcardForm = ({ onAdd }: CreateFlashcardFormProps) => {
   const [term, setTerm] = useState("");
   const [translation, setTranslation] = useState("");
+  const [hint, setHint] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,9 +24,10 @@ export const CreateFlashcardForm = ({ onAdd }: CreateFlashcardFormProps) => {
       return;
     }
 
-    onAdd(term, translation);
+    onAdd(term, translation, hint.trim() || undefined);
     setTerm("");
     setTranslation("");
+    setHint("");
     toast.success("Flashcard criado com sucesso!");
   };
 
@@ -54,6 +57,21 @@ export const CreateFlashcardForm = ({ onAdd }: CreateFlashcardFormProps) => {
             onChange={(e) => setTranslation(e.target.value)}
             placeholder="Type the word in English..."
             className="bg-background"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="hint" className="text-foreground flex items-center gap-2">
+            Descrição / Dica 
+            <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+          </Label>
+          <Textarea
+            id="hint"
+            value={hint}
+            onChange={(e) => setHint(e.target.value)}
+            placeholder="Adicione uma explicação, observação ou dica para este card..."
+            className="bg-background resize-none"
+            rows={2}
           />
         </div>
 

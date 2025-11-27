@@ -5,12 +5,14 @@ import { RotateCcw, Volume2 } from "lucide-react";
 import { pickLang } from "@/lib/speech";
 import { useTTS } from "@/hooks/useTTS";
 import { SpeechRateControl } from "./SpeechRateControl";
+import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FlipStudyViewProps {
   front: string;
   back: string;
+  hint?: string | null;
   onKnew: () => void;
   onDidntKnow: () => void;
   direction: "pt-en" | "en-pt" | "any";
@@ -19,6 +21,7 @@ interface FlipStudyViewProps {
 export const FlipStudyView = ({
   front,
   back,
+  hint,
   onKnew,
   onDidntKnow,
   direction,
@@ -73,7 +76,8 @@ export const FlipStudyView = ({
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto">
-      <div className="w-full flex justify-end mb-2">
+      <div className="w-full flex justify-between items-center mb-2">
+        <HintButton hint={hint} />
         <SpeechRateControl />
       </div>
       <div

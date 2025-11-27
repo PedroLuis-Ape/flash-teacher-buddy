@@ -5,10 +5,12 @@ import { Volume2, RotateCcw, Check } from "lucide-react";
 import { pickLang } from "@/lib/speech";
 import { useTTS } from "@/hooks/useTTS";
 import { SpeechRateControl } from "./SpeechRateControl";
+import { HintButton } from "./HintButton";
 
 interface UnscrambleStudyViewProps {
   front: string;
   back: string;
+  hint?: string | null;
   direction: "pt-en" | "en-pt" | "any";
   onCorrect: () => void;
   onIncorrect: () => void;
@@ -29,7 +31,7 @@ interface WordItem {
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+export const UnscrambleStudyView = ({ front, back, hint, direction, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -112,7 +114,8 @@ export const UnscrambleStudyView = ({ front, back, direction, onCorrect, onIncor
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto p-4">
-      <Card className="w-full p-6 bg-card">
+      <Card className="w-full p-6 bg-card relative">
+        <HintButton hint={hint} className="absolute top-4 right-4" />
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Organize as palavras:</h3>
           <div className="flex items-center gap-2">
