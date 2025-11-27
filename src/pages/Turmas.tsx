@@ -61,7 +61,7 @@ export default function Turmas() {
             </TabsList>
 
             <TabsContent value="professor" className="space-y-4 mt-4">
-              <Button onClick={() => navigate('/turmas/professor')} className="w-full">
+              <Button onClick={() => navigate('/turmas/professor')} className="w-full min-h-[48px]">
                 <Plus className="h-4 w-4 mr-2" />
                 Criar Nova Turma
               </Button>
@@ -78,7 +78,7 @@ export default function Turmas() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="absolute top-4 right-4 opacity-70 hover:opacity-100"
+                      className="absolute top-4 right-4 opacity-70 hover:opacity-100 h-10 w-10"
                       onClick={() => navigate(`/turmas/${turma.id}`)}
                     >
                       <Pencil className="h-4 w-4" />

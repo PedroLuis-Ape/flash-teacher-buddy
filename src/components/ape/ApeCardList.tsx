@@ -25,20 +25,20 @@ export function ApeCardList({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 w-full min-h-[60px] px-4 py-3 rounded-xl",
+        "flex items-center gap-3 w-full min-h-[64px] px-4 py-3 rounded-xl",
         "bg-card hover:bg-accent/80 transition-all duration-200",
         "border border-border",
         "text-left shadow-sm hover:shadow-md",
         className
       )}
     >
-      <div className="shrink-0 w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center">
+      <div className="shrink-0 w-11 h-11 rounded-lg bg-secondary/20 flex items-center justify-center">
         <FileText className="h-5 w-5 text-secondary-foreground" />
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-base truncate">
+          <h3 className="font-semibold text-base truncate leading-tight">
             {title}
           </h3>
           {badge && (

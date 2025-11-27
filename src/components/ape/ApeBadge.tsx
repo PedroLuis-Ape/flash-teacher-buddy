@@ -26,8 +26,8 @@ export function ApeBadge({
         variant === "default" && "bg-muted text-muted-foreground",
         variant === "primary" && "bg-primary/10 text-primary",
         variant === "secondary" && "bg-secondary text-secondary-foreground",
-        variant === "success" && "bg-green-500/10 text-green-600 dark:text-green-400",
-        variant === "warning" && "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+        variant === "success" && "bg-success/10 text-success",
+        variant === "warning" && "bg-warning/10 text-warning",
         className
       )}
     >

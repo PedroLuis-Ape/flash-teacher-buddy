@@ -198,8 +198,8 @@ export const WriteStudyView = ({
         )}
 
         {feedback === "almost" && (
-          <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950 animate-fade-in">
-            <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+          <Alert className="border-warning bg-warning/10 animate-fade-in">
+            <AlertDescription className="text-warning-foreground">
               <div className="flex items-start gap-4">
                 <img 
                   src={pitecoHappy} 

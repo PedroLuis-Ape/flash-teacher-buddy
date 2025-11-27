@@ -209,8 +209,8 @@ const Folders = () => {
         <h2 className="text-lg font-semibold">Minhas pastas</h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="h-8">
-              <FolderPlus className="h-3 w-3 mr-1.5" />
+            <Button size="sm" className="min-h-[40px]">
+              <FolderPlus className="h-4 w-4 mr-2" />
               Nova pasta
             </Button>
           </DialogTrigger>
@@ -286,7 +286,7 @@ const Folders = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="h-12 w-12 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={(e) => {
                   e.stopPropagation();
                   setFolderToDelete(folder.id);
@@ -306,7 +306,7 @@ const Folders = () => {
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between py-1">
         <h2 className="text-lg font-semibold">Meus professores</h2>
-        <Button size="sm" variant="outline" className="h-8" onClick={() => navigate("/my-teachers")}>
+        <Button size="sm" variant="outline" className="min-h-[40px]" onClick={() => navigate("/my-teachers")}>
           Gerenciar
         </Button>
       </div>
@@ -321,7 +321,7 @@ const Folders = () => {
           <Button 
             size="sm"
             variant="outline"
-            className="mt-3" 
+            className="mt-3 min-h-[40px]" 
             onClick={() => navigate("/my-teachers")}
           >
             Buscar Professores

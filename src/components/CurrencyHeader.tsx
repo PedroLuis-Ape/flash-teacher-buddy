@@ -51,7 +51,7 @@ export function CurrencyHeader() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Badge variant="outline" className="gap-1.5 cursor-help min-h-[44px] px-3">
-            <Trophy className="h-4 w-4 text-yellow-500" aria-hidden="true" />
+            <Trophy className="h-4 w-4 text-warning" aria-hidden="true" />
             <span className="font-semibold">{pts_weekly} PTS</span>
           </Badge>
         </TooltipTrigger>

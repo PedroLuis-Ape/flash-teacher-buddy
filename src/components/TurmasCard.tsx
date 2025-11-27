@@ -37,7 +37,7 @@ export function TurmasCard() {
       onClick={() => navigate('/turmas')}
     >
       <div className="flex items-center gap-4">
-        <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+        <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
           {isTeacher ? (
             <Users className="h-6 w-6 text-primary" />
           ) : (
@@ -45,10 +45,10 @@ export function TurmasCard() {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold truncate">
+          <h3 className="text-lg font-semibold truncate leading-tight">
             {isTeacher ? 'Minhas Turmas' : 'Turmas'}
           </h3>
-          <p className="text-sm text-muted-foreground truncate">
+          <p className="text-sm text-muted-foreground truncate leading-tight mt-0.5">
             {isTeacher
               ? 'Gerencie turmas e atribuições'
               : 'Veja suas turmas e atribuições'}

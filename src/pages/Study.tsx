@@ -223,11 +223,11 @@ const Study = () => {
                 <div className="text-sm text-muted-foreground">Acertos</div>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-red-600">{errorCount}</div>
+                <div className="text-3xl font-bold text-destructive">{errorCount}</div>
                 <div className="text-sm text-muted-foreground">Erros</div>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-yellow-600">{skippedCount}</div>
+                <div className="text-3xl font-bold text-warning">{skippedCount}</div>
                 <div className="text-sm text-muted-foreground">Pulados</div>
               </div>
             </div>
@@ -272,9 +272,9 @@ const Study = () => {
             </Button>
 
             <div className="flex gap-4 text-sm">
-              <span className="text-green-600 font-medium">✓ {correctCount}</span>
-              <span className="text-red-600 font-medium">✗ {errorCount}</span>
-              <span className="text-yellow-600 font-medium">⊘ {skippedCount}</span>
+              <span className="text-success font-medium">✓ {correctCount}</span>
+              <span className="text-destructive font-medium">✗ {errorCount}</span>
+              <span className="text-warning font-medium">⊘ {skippedCount}</span>
             </div>
           </div>
 

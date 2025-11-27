@@ -25,9 +25,9 @@ export default function TurmasAluno() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'concluida':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+        return <CheckCircle2 className="h-5 w-5 text-success" />;
       case 'em_andamento':
-        return <Clock className="h-5 w-5 text-yellow-500" />;
+        return <Clock className="h-5 w-5 text-warning" />;
       default:
         return <Circle className="h-5 w-5 text-muted-foreground" />;
     }
