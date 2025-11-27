@@ -12,10 +12,12 @@ import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl } from "./SpeechRateControl";
+import { HintButton } from "./HintButton";
 
 interface WriteStudyViewProps {
   front: string;
   back: string;
+  hint?: string | null;
   acceptedAnswersEn?: string[];
   acceptedAnswersPt?: string[];
   direction: "pt-en" | "en-pt" | "any";
@@ -27,6 +29,7 @@ interface WriteStudyViewProps {
 export const WriteStudyView = ({
   front,
   back,
+  hint,
   acceptedAnswersEn = [],
   acceptedAnswersPt = [],
   direction,
@@ -115,7 +118,8 @@ export const WriteStudyView = ({
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
-      <Card className="p-8 bg-gradient-to-br from-card to-muted/20">
+      <Card className="p-8 bg-gradient-to-br from-card to-muted/20 relative">
+        <HintButton hint={hint} className="absolute top-4 right-4" />
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex items-center justify-center gap-3 mb-8">

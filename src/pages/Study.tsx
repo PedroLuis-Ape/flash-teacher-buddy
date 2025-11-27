@@ -28,6 +28,7 @@ interface Flashcard {
   id: string;
   term: string;
   translation: string;
+  hint?: string | null;
   accepted_answers_en?: string[];
   accepted_answers_pt?: string[];
 }
@@ -294,6 +295,7 @@ const Study = () => {
             <FlipStudyView
               front={currentCard.term}
               back={currentCard.translation}
+              hint={currentCard.hint}
               direction={resolvedDirection}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
@@ -303,6 +305,7 @@ const Study = () => {
             <WriteStudyView
               front={currentCard.term}
               back={currentCard.translation}
+              hint={currentCard.hint}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               direction={resolvedDirection}
@@ -324,6 +327,7 @@ const Study = () => {
             <UnscrambleStudyView
               front={currentCard.term}
               back={currentCard.translation}
+              hint={currentCard.hint}
               direction={resolvedDirection}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}

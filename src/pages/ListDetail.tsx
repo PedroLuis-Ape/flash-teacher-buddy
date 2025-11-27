@@ -101,7 +101,7 @@ const ListDetail = () => {
   });
 
 
-  const handleAddFlashcard = async (term: string, translation: string) => {
+  const handleAddFlashcard = async (term: string, translation: string, hint?: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -113,6 +113,7 @@ const ListDetail = () => {
           user_id: session.user.id,
           term,
           translation,
+          hint: hint || null,
         });
 
       if (error) throw error;
@@ -306,6 +307,11 @@ const ListDetail = () => {
                     <div className="flex-1">
                       <p className="font-semibold text-lg mb-2">{flashcard.term}</p>
                       <p className="text-muted-foreground">{flashcard.translation}</p>
+                      {flashcard.hint && (
+                        <p className="text-sm text-muted-foreground mt-2 italic">
+                          💡 {flashcard.hint}
+                        </p>
+                      )}
                     </div>
                     {isOwner && (
                       <Button

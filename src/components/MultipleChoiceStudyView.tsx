@@ -8,6 +8,7 @@ import { useTTS } from "@/hooks/useTTS";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl } from "./SpeechRateControl";
+import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,6 +16,7 @@ interface MultipleChoiceStudyViewProps {
   currentCard: {
     term: string;
     translation: string;
+    hint?: string | null;
   };
   allCards: {
     term: string;
@@ -112,7 +114,8 @@ export const MultipleChoiceStudyView = ({
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
-      <Card className="p-8 bg-gradient-to-br from-card to-muted/20">
+      <Card className="p-8 bg-gradient-to-br from-card to-muted/20 relative">
+        <HintButton hint={currentCard.hint} className="absolute top-4 right-4" />
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
