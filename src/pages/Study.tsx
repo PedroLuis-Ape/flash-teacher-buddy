@@ -19,6 +19,7 @@ import { FlipStudyView } from "@/components/FlipStudyView";
 import { WriteStudyView } from "@/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/components/MultipleChoiceStudyView";
 import { UnscrambleStudyView } from "@/components/UnscrambleStudyView";
+import { StudyVideoButton } from "@/components/StudyVideoButton";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
 import { ArrowLeft, Trophy, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,11 @@ interface Flashcard {
   hint?: string | null;
   accepted_answers_en?: string[];
   accepted_answers_pt?: string[];
+}
+
+interface VideoInfo {
+  videoId: string;
+  title: string | null;
 }
 
 const Study = () => {
@@ -55,6 +61,8 @@ const Study = () => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [listTitle, setListTitle] = useState<string | null>(null);
+  const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
 
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
@@ -159,6 +167,37 @@ const Study = () => {
 
     const orderedData = order === "random" ? shuffleArray([...data]) : data;
     setFlashcards(orderedData);
+
+    // Load list info and video if this is a list route
+    if (isListRoute) {
+      const { data: listData } = await supabase
+        .from("lists")
+        .select("title, folder_id")
+        .eq("id", resolvedId)
+        .maybeSingle();
+      
+      if (listData) {
+        setListTitle(listData.title);
+        
+        // Load first video from the folder
+        const { data: videoData } = await supabase
+          .from("videos")
+          .select("video_id, title")
+          .eq("folder_id", listData.folder_id)
+          .eq("is_published", true)
+          .order("order_index", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (videoData) {
+          setVideoInfo({
+            videoId: videoData.video_id,
+            title: videoData.title
+          });
+        }
+      }
+    }
+
     setLoading(false);
   };
 
@@ -266,16 +305,25 @@ const Study = () => {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-4xl">
         <div className="mb-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2"> {/* PATCH: wrap no mobile */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="ghost" onClick={() => setShowExitDialog(true)}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Sair
             </Button>
 
-            <div className="flex gap-4 text-sm">
-              <span className="text-success font-medium">✓ {correctCount}</span>
-              <span className="text-destructive font-medium">✗ {errorCount}</span>
-              <span className="text-warning font-medium">⊘ {skippedCount}</span>
+            <div className="flex items-center gap-4">
+              {/* Video button */}
+              <StudyVideoButton
+                videoId={videoInfo?.videoId || null}
+                videoTitle={videoInfo?.title}
+                listTitle={listTitle}
+              />
+              
+              <div className="flex gap-4 text-sm">
+                <span className="text-success font-medium">✓ {correctCount}</span>
+                <span className="text-destructive font-medium">✗ {errorCount}</span>
+                <span className="text-warning font-medium">⊘ {skippedCount}</span>
+              </div>
             </div>
           </div>
 
