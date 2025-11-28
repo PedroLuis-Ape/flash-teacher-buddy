@@ -5,9 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb } from "lucide-react";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -38,6 +39,7 @@ const ListDetail = () => {
   const { id } = useParams();
   const [isOwner, setIsOwner] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["list", id],
@@ -138,12 +140,12 @@ const ListDetail = () => {
     }
   };
 
-  const handleUpdateFlashcard = async (id: string, term: string, translation: string) => {
+  const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string) => {
     try {
       const { error } = await supabase
         .from("flashcards")
-        .update({ term, translation })
-        .eq("id", id);
+        .update({ term, translation, hint: hint || null })
+        .eq("id", flashcardId);
 
       if (error) throw error;
       toast.success("Flashcard atualizado!");
@@ -213,7 +215,7 @@ const ListDetail = () => {
             Voltar
           </Button>
           
-          <div className="flex flex-wrap items-center justify-between gap-2"> {/* PATCH: wrap no mobile */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm text-muted-foreground mb-1">{folder.title}</p>
               <h1 className="text-3xl font-bold">{list.title}</h1>
@@ -237,7 +239,7 @@ const ListDetail = () => {
 
         {isOwner && (
           <Card className="p-4 mb-6">
-            <div className="flex flex-wrap items-center justify-between gap-2"> {/* PATCH: wrap no mobile */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <Switch
                   id="share-mode"
@@ -302,25 +304,37 @@ const ListDetail = () => {
           ) : (
             <div className="space-y-4">
               {flashcards.map((flashcard) => (
-                <Card key={flashcard.id} className="p-6">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <p className="font-semibold text-lg mb-2">{flashcard.term}</p>
-                      <p className="text-muted-foreground">{flashcard.translation}</p>
+                <Card key={flashcard.id} className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
+                      <p className="text-muted-foreground break-words">{flashcard.translation}</p>
                       {flashcard.hint && (
-                        <p className="text-sm text-muted-foreground mt-2 italic">
-                          💡 {flashcard.hint}
-                        </p>
+                        <div className="flex items-start gap-1.5 mt-2 text-sm text-muted-foreground">
+                          <Lightbulb className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                          <span className="italic break-words">{flashcard.hint}</span>
+                        </div>
                       )}
                     </div>
                     {isOwner && (
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleDeleteFlashcard(flashcard.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingFlashcard(flashcard)}
+                          className="h-9 w-9"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteFlashcard(flashcard.id)}
+                          className="h-9 w-9 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </Card>
@@ -329,6 +343,14 @@ const ListDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <EditFlashcardDialog
+        flashcard={editingFlashcard}
+        isOpen={!!editingFlashcard}
+        onClose={() => setEditingFlashcard(null)}
+        onSave={handleUpdateFlashcard}
+      />
     </div>
   );
 };
