@@ -68,7 +68,7 @@ export function ApeAppBar({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/pesquisar')}
+            onClick={() => navigate('/search')}
             aria-label="Pesquisar usuários"
             title="Pesquisar"
             className="h-10 w-10"
