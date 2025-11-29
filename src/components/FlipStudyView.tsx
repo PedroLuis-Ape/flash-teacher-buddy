@@ -112,82 +112,79 @@ export const FlipStudyView = ({
         <SpeechRateControl />
       </div>
       
-      {/* Card container with navigation */}
-      <div className="w-full flex items-center gap-2">
-        {/* Previous button */}
+      {/* Flip card */}
+      <div
+        className="flip-card w-full h-80 cursor-pointer"
+        onClick={() => !isFlipped && handleFlip()}
+      >
+        <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
+          {/* Front side */}
+          <div className="flip-card-front">
+            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20">
+              <p className="text-sm text-muted-foreground mb-2">{showLabel}</p>
+              <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
+                {showText}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePlayFront();
+                }}
+                className="mt-4"
+              >
+                <Volume2 className="mr-2 h-4 w-4" />
+                Ouvir
+              </Button>
+              <p className="text-sm text-muted-foreground mt-4">
+                Clique para revelar
+              </p>
+            </Card>
+          </div>
+          
+          {/* Back side */}
+          <div className="flip-card-back">
+            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10">
+              <p className="text-sm text-muted-foreground mb-2">{hideLabel}</p>
+              <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
+                {hideText}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePlayAgain();
+                }}
+                className="mt-4"
+              >
+                <Volume2 className="mr-2 h-4 w-4" />
+                Ouvir novamente
+              </Button>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation arrows below card */}
+      <div className="flex items-center justify-center gap-8">
         <Button
           variant="ghost"
           size="icon"
           onClick={onPrevious}
           disabled={!canGoPrevious}
-          className="shrink-0 h-12 w-12"
+          className="h-12 w-12"
           title="Card anterior (←)"
         >
           <ChevronLeft className="h-6 w-6" />
         </Button>
-
-        {/* Flip card */}
-        <div
-          className="flip-card flex-1 h-80 cursor-pointer"
-          onClick={() => !isFlipped && handleFlip()}
-        >
-          <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
-            {/* Front side */}
-            <div className="flip-card-front">
-              <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20">
-                <p className="text-sm text-muted-foreground mb-2">{showLabel}</p>
-                <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                  {showText}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayFront();
-                  }}
-                  className="mt-4"
-                >
-                  <Volume2 className="mr-2 h-4 w-4" />
-                  Ouvir
-                </Button>
-                <p className="text-sm text-muted-foreground mt-4">
-                  Clique para revelar
-                </p>
-              </Card>
-            </div>
-            
-            {/* Back side */}
-            <div className="flip-card-back">
-              <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10">
-                <p className="text-sm text-muted-foreground mb-2">{hideLabel}</p>
-                <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                  {hideText}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayAgain();
-                  }}
-                  className="mt-4"
-                >
-                  <Volume2 className="mr-2 h-4 w-4" />
-                  Ouvir novamente
-                </Button>
-              </Card>
-            </div>
-          </div>
-        </div>
-
-        {/* Next button */}
         <Button
           variant="ghost"
           size="icon"
           onClick={onNext}
           disabled={!canGoNext}
-          className="shrink-0 h-12 w-12"
+          className="h-12 w-12"
           title="Próximo card (→)"
         >
           <ChevronRight className="h-6 w-6" />
