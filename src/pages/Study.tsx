@@ -15,6 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FlipStudyView } from "@/components/FlipStudyView";
 import { WriteStudyView } from "@/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/components/MultipleChoiceStudyView";
@@ -43,7 +50,7 @@ const Study = () => {
   const { id, collectionId } = useParams();
   const resolvedId = (id as string) || (collectionId as string) || "";
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Normalizar mode, dir/direction e order
   const rawMode = (searchParams.get("mode") || "flip").toLowerCase();
@@ -53,7 +60,7 @@ const Study = () => {
 
   const rawDir = (searchParams.get("dir") || searchParams.get("direction") || "any").toLowerCase();
   const validDirs = new Set(["pt-en","en-pt","any"]);
-  const dirParam = validDirs.has(rawDir) ? (rawDir as "pt-en"|"en-pt"|"any") : "any";
+  const initialDir = validDirs.has(rawDir) ? (rawDir as "pt-en"|"en-pt"|"any") : "any";
 
   const rawOrder = (searchParams.get("order") || "random").toLowerCase();
   const order = rawOrder === "asc" ? "asc" : "random";
@@ -63,6 +70,9 @@ const Study = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [listTitle, setListTitle] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
+  
+  // Direction state for flip mode selector
+  const [flipDirection, setFlipDirection] = useState<"pt-en" | "en-pt" | "any">(initialDir);
 
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
@@ -76,14 +86,21 @@ const Study = () => {
     results,
     isFinished,
     isLoading: studyLoading,
+    totalCards,
     recordResult,
     goToNext,
     goToPrevious,
+    navigateNext,
+    navigatePrevious,
+    canGoPrevious,
+    canGoNext,
   } = useStudyEngine(listId, flashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble");
   
-  // Direção estável por card
+  // Direção estável por card - use flipDirection for flip mode
   const decideDirection = (idx: number): "pt-en" | "en-pt" => {
-    if (dirParam !== "any") return dirParam;
+    const dir = normalizedMode === "flip" ? flipDirection : initialDir;
+    if (dir !== "any") return dir;
+    // For "any", alternate deterministically based on card index
     return idx % 2 === 0 ? "pt-en" : "en-pt";
   };
   
@@ -232,6 +249,10 @@ const Study = () => {
     safeGoBack(navigate, fallback);
   };
 
+  const handleDirectionChange = (value: string) => {
+    setFlipDirection(value as "pt-en" | "en-pt" | "any");
+  };
+
   if (loading || studyLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -273,7 +294,7 @@ const Study = () => {
             </div>
 
             <div className="text-muted-foreground">
-              Tempo: {minutes}m {seconds}s
+              Total: {totalCards} cards
             </div>
 
             {errorCount > 0 && (
@@ -312,6 +333,20 @@ const Study = () => {
             </Button>
 
             <div className="flex items-center gap-4">
+              {/* Direction selector for flip mode */}
+              {effectiveMode === "flip" && (
+                <Select value={flipDirection} onValueChange={handleDirectionChange}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en-pt">EN → PT</SelectItem>
+                    <SelectItem value="pt-en">PT → EN</SelectItem>
+                    <SelectItem value="any">Misto</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              
               {/* Video button */}
               <StudyVideoButton
                 videoId={videoInfo?.videoId || null}
@@ -330,7 +365,7 @@ const Study = () => {
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>
-                {currentIndex + 1} / {flashcards.length}
+                {currentIndex + 1} / {totalCards}
               </span>
               <span>{Math.round(progress)}%</span>
             </div>
@@ -347,6 +382,10 @@ const Study = () => {
               direction={resolvedDirection}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
+              onNext={navigateNext}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
+              canGoNext={canGoNext}
             />
           )}
           {effectiveMode === "write" && (
@@ -384,7 +423,8 @@ const Study = () => {
           )}
         </div>
 
-        {currentIndex > 0 && (
+        {/* Previous card button (only for non-flip modes) */}
+        {effectiveMode !== "flip" && currentIndex > 0 && (
           <div className="flex justify-center">
             <Button variant="ghost" onClick={goToPrevious}>
               <ArrowLeft className="mr-2 h-4 w-4" />

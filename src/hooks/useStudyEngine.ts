@@ -28,13 +28,14 @@ interface FlashcardWithProgress {
   lastReviewed: string | null;
 }
 
-// Limite de cards por sessão
+// Limite de cards por sessão (apenas para modos que não são flip)
 const MAX_CARDS_PER_SESSION = 10;
 
 export function useStudyEngine(
   listId: string | undefined,
   flashcards: { id: string; term: string; translation: string }[],
-  mode: "flip" | "multiple-choice" | "write" | "unscramble"
+  mode: "flip" | "multiple-choice" | "write" | "unscramble",
+  unlimitedMode: boolean = false // When true, use all cards
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -44,6 +45,10 @@ export function useStudyEngine(
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // In flip mode, always use all cards (no session limit)
+  const isFlipMode = mode === "flip";
+  const useAllCards = isFlipMode || unlimitedMode;
 
   const correctCount = results.filter((r) => r.correct && !r.skipped).length;
   const errorCount = results.filter((r) => !r.correct && !r.skipped).length;
@@ -63,10 +68,15 @@ export function useStudyEngine(
       if (!user) {
         // Modo não autenticado (portal público) - usar lógica simples
         setIsAuthenticated(false);
-        const shuffledIds = flashcards
+        let shuffledIds = flashcards
           .map(f => f.id)
-          .sort(() => Math.random() - 0.5)
-          .slice(0, MAX_CARDS_PER_SESSION);
+          .sort(() => Math.random() - 0.5);
+        
+        // Only limit for non-flip modes
+        if (!useAllCards) {
+          shuffledIds = shuffledIds.slice(0, MAX_CARDS_PER_SESSION);
+        }
+        
         setCardsOrder(shuffledIds);
         setCurrentIndex(0);
         setIsLoading(false);
@@ -80,66 +90,83 @@ export function useStudyEngine(
         return;
       }
 
-      // Verificar se existe sessão não completa
-      const { data: existingSession } = await supabase
-        .from('study_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('list_id', listId)
-        .eq('mode', mode)
-        .eq('completed', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existingSession) {
-        // Continuar sessão existente
-        setSessionId(existingSession.id);
-        setCurrentIndex(existingSession.current_index);
-        setCardsOrder(existingSession.cards_order as string[]);
-        toast.success("Continuando de onde você parou!");
-      } else {
-        // Criar nova sessão com flashcards priorizados (limitado)
-        const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards);
-        
-        const { data: newSession, error } = await supabase
+      // Verificar se existe sessão não completa (only for non-flip modes)
+      if (!useAllCards) {
+        const { data: existingSession } = await supabase
           .from('study_sessions')
-          .insert({
-            user_id: user.id,
-            list_id: listId,
-            mode,
-            current_index: 0,
-            cards_order: orderedCards,
-            completed: false
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('list_id', listId)
+          .eq('mode', mode)
+          .eq('completed', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        if (error) throw error;
+        if (existingSession) {
+          // Continuar sessão existente
+          setSessionId(existingSession.id);
+          setCurrentIndex(existingSession.current_index);
+          setCardsOrder(existingSession.cards_order as string[]);
+          toast.success("Continuando de onde você parou!");
+          setIsLoading(false);
+          return;
+        }
+      }
 
-        setSessionId(newSession.id);
+      // Criar nova sessão com flashcards priorizados
+      const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, useAllCards);
+      
+      // For flip mode, don't create a DB session (just use all cards)
+      if (useAllCards) {
         setCardsOrder(orderedCards);
         setCurrentIndex(0);
+        setIsLoading(false);
+        return;
       }
+      
+      const { data: newSession, error } = await supabase
+        .from('study_sessions')
+        .insert({
+          user_id: user.id,
+          list_id: listId,
+          mode,
+          current_index: 0,
+          cards_order: orderedCards,
+          completed: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSessionId(newSession.id);
+      setCardsOrder(orderedCards);
+      setCurrentIndex(0);
     } catch (error) {
       console.error('Erro ao inicializar sessão:', error);
       // Fallback: usar flashcards diretamente
-      const shuffledIds = flashcards
+      let shuffledIds = flashcards
         .map(f => f.id)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, MAX_CARDS_PER_SESSION);
+        .sort(() => Math.random() - 0.5);
+      
+      if (!useAllCards) {
+        shuffledIds = shuffledIds.slice(0, MAX_CARDS_PER_SESSION);
+      }
+      
       setCardsOrder(shuffledIds);
       setCurrentIndex(0);
     } finally {
       setIsLoading(false);
     }
-  }, [listId, flashcards, mode]);
+  }, [listId, flashcards, mode, useAllCards]);
 
-  // Priorizar flashcards com mais erros (limitado a MAX_CARDS_PER_SESSION)
+  // Priorizar flashcards com mais erros
   const getPrioritizedFlashcards = async (
     userId: string,
     listId: string,
-    cards: { id: string }[]
+    cards: { id: string }[],
+    useAll: boolean
   ): Promise<string[]> => {
     try {
       const { data: progressData } = await supabase
@@ -165,14 +192,21 @@ export function useStudyEngine(
         return Math.random() - 0.5;
       });
 
-      // Limitar a MAX_CARDS_PER_SESSION
+      // If useAll is true, return all cards; otherwise limit
+      if (useAll) {
+        return cardsWithProgress.map(c => c.id);
+      }
       return cardsWithProgress.slice(0, MAX_CARDS_PER_SESSION).map(c => c.id);
     } catch (error) {
       console.error('Erro ao priorizar flashcards:', error);
-      return cards
+      let ids = cards
         .map(c => c.id)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, MAX_CARDS_PER_SESSION);
+        .sort(() => Math.random() - 0.5);
+      
+      if (!useAll) {
+        ids = ids.slice(0, MAX_CARDS_PER_SESSION);
+      }
+      return ids;
     }
   };
 
@@ -273,6 +307,22 @@ export function useStudyEngine(
     }
   }, [currentIndex]);
 
+  // Navigate without recording result (for arrow navigation in flip mode)
+  const navigateNext = useCallback(() => {
+    if (currentIndex < cardsOrder.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      setIsFinished(true);
+      completeSession();
+    }
+  }, [currentIndex, cardsOrder.length]);
+
+  const navigatePrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+    }
+  }, [currentIndex]);
+
   const completeSession = async () => {
     if (!isAuthenticated) return;
 
@@ -302,7 +352,7 @@ export function useStudyEngine(
     initializeSession();
   }, [initializeSession]);
 
-  // Salvar progresso a cada mudança de índice
+  // Salvar progresso a cada mudança de índice (only for non-flip modes with session)
   useEffect(() => {
     if (!isLoading && sessionId) {
       saveProgress();
@@ -324,9 +374,14 @@ export function useStudyEngine(
     isLoading,
     currentCard,
     cardsOrder,
+    totalCards: cardsOrder.length,
     recordResult,
     goToNext,
     goToPrevious,
+    navigateNext,
+    navigatePrevious,
     setCurrentIndex,
+    canGoPrevious: currentIndex > 0,
+    canGoNext: currentIndex < cardsOrder.length - 1,
   };
 }

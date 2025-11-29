@@ -20,7 +20,7 @@ export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
       onClick={onClose}
     >
       <Card 
-        className={`relative max-w-md w-full p-6 animate-fade-in ${hasHint ? 'border-warning/50' : 'border-muted'}`}
+        className={`relative w-full max-w-md max-h-[70vh] p-6 animate-fade-in ${hasHint ? 'border-warning/50' : 'border-muted'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <Button
@@ -33,16 +33,23 @@ export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
         </Button>
         
         <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-full ${hasHint ? 'bg-warning/20' : 'bg-muted'}`}>
+          <div className={`p-2 rounded-full shrink-0 ${hasHint ? 'bg-warning/20' : 'bg-muted'}`}>
             <Lightbulb className={`h-5 w-5 ${hasHint ? 'text-warning' : 'text-muted-foreground'}`} />
           </div>
-          <div className="flex-1 pt-1">
+          <div className="flex-1 pt-1 min-w-0">
             <h3 className={`font-semibold mb-2 ${hasHint ? 'text-warning' : 'text-muted-foreground'}`}>
               {hasHint ? 'Dica' : 'Sem dica'}
             </h3>
-            <p className="text-foreground leading-relaxed max-h-[300px] overflow-y-auto">
+            {/* 
+              IMPORTANT: Use white-space: pre-wrap to preserve line breaks 
+              as written by the teacher in the hint field
+            */}
+            <div 
+              className="text-foreground leading-relaxed max-h-[50vh] overflow-y-auto pr-2"
+              style={{ whiteSpace: 'pre-wrap' }}
+            >
               {displayText}
-            </p>
+            </div>
           </div>
         </div>
       </Card>
