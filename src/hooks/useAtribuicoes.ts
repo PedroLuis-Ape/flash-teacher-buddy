@@ -106,3 +106,27 @@ export function useUpdateAtribuicaoStatus() {
     },
   });
 }
+
+export function useDeleteAtribuicao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (atribuicao_id: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data, error } = await supabase.functions.invoke('atribuicoes-delete', {
+        body: { atribuicao_id },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atribuicoes'] });
+    },
+  });
+}

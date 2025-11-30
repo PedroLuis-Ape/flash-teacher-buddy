@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAtribuicoesByTurma, useCreateAtribuicao } from '@/hooks/useAtribuicoes';
+import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao } from '@/hooks/useAtribuicoes';
 import { useChatMessages, useSendMessage } from '@/hooks/useMensagens';
 import { ChatComposer } from '@/components/ChatComposer';
 import { MessageBubble } from '@/components/MessageBubble';
@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useUpdateTurma, useDeleteTurma, useEnrollAluno } from '@/hooks/useTurmas';
+import { useUpdateTurma, useDeleteTurma, useEnrollAluno, useRemoveTurmaMember } from '@/hooks/useTurmas';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -44,6 +44,8 @@ export default function TurmaDetail() {
   const deleteTurma = useDeleteTurma();
   const enrollAluno = useEnrollAluno();
   const createAtribuicao = useCreateAtribuicao();
+  const deleteAtribuicao = useDeleteAtribuicao();
+  const removeMember = useRemoveTurmaMember();
 
   const { data: turmaData, isLoading: turmaLoading } = useQuery({
     queryKey: ['turma', turmaId],
@@ -270,7 +272,7 @@ export default function TurmaDetail() {
       <div className="sticky top-0 z-10 bg-background border-b p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/turmas/professor')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
@@ -582,13 +584,51 @@ export default function TurmaDetail() {
               atribuicoes.map((atrib: any) => (
                 <Card
                   key={atrib.id}
-                  className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => navigate(`/turmas/${turmaId}/atribuicoes/${atrib.id}`)}
+                  className="p-4 hover:shadow-lg transition-shadow"
                 >
-                  <h3 className="font-semibold">{atrib.titulo}</h3>
-                  {atrib.descricao && (
-                    <p className="text-sm text-muted-foreground mt-1">{atrib.descricao}</p>
-                  )}
+                  <div className="flex items-start justify-between">
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => navigate(`/turmas/${turmaId}/atribuicoes/${atrib.id}`)}
+                    >
+                      <h3 className="font-semibold">{atrib.titulo}</h3>
+                      {atrib.descricao && (
+                        <p className="text-sm text-muted-foreground mt-1">{atrib.descricao}</p>
+                      )}
+                    </div>
+                    {isOwner && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Deletar atribuição</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja deletar "{atrib.titulo}"? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={async () => {
+                                try {
+                                  await deleteAtribuicao.mutateAsync(atrib.id);
+                                  toast.success('✅ Atribuição deletada!');
+                                } catch (error) {
+                                  toast.error('❌ Erro ao deletar atribuição');
+                                }
+                              }}
+                            >
+                              Deletar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 mt-2">
                     <Badge variant="outline">{atrib.fonte_tipo}</Badge>
                     <span className="text-sm text-muted-foreground">
@@ -626,9 +666,46 @@ export default function TurmaDetail() {
                           APE ID: {membro.profiles?.ape_id || 'N/A'}
                         </p>
                       </div>
-                      <Badge variant={membro.role === 'aluno' ? 'secondary' : 'default'}>
-                        {membro.role}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={membro.role === 'aluno' ? 'secondary' : 'default'}>
+                          {membro.role}
+                        </Badge>
+                        {isOwner && membro.role === 'aluno' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remover aluno</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja remover {membro.profiles?.first_name || 'este aluno'} da turma?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={async () => {
+                                    try {
+                                      await removeMember.mutateAsync({
+                                        turma_id: turmaId!,
+                                        user_id: membro.user_id
+                                      });
+                                      toast.success('✅ Aluno removido!');
+                                    } catch (error) {
+                                      toast.error('❌ Erro ao remover aluno');
+                                    }
+                                  }}
+                                >
+                                  Remover
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
