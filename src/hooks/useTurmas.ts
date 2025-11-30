@@ -142,3 +142,28 @@ export function useDeleteTurma() {
     },
   });
 }
+
+export function useRemoveTurmaMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ turma_id, user_id }: { turma_id: string; user_id: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data, error } = await supabase.functions.invoke('turmas-remove-member', {
+        body: { turma_id, user_id },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['turmas'] });
+      queryClient.invalidateQueries({ queryKey: ['turma'] });
+    },
+  });
+}

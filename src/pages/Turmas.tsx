@@ -73,13 +73,17 @@ export default function Turmas() {
                 turmasProfessor.map((turma: any) => (
                   <Card
                     key={turma.id}
-                    className="p-6 relative group hover:shadow-lg transition-shadow"
+                    className="p-6 relative group hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => navigate(`/turmas/${turma.id}`)}
                   >
                     <Button
                       size="icon"
                       variant="ghost"
                       className="absolute top-4 right-4 opacity-70 hover:opacity-100 h-10 w-10"
-                      onClick={() => navigate(`/turmas/${turma.id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/turmas/${turma.id}`);
+                      }}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
