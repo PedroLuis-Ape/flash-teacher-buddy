@@ -54,7 +54,97 @@ serve(async (req) => {
       );
     }
 
-    // Create atribuição
+    let finalFonteId = fonte_id;
+
+    // DEEP COPY RULE: If fonte_tipo is 'lista', create a copy of the list and its flashcards
+    if (fonte_tipo === 'lista') {
+      console.log('Deep copy: Creating copy of list', fonte_id);
+      
+      // Fetch the original list
+      const { data: originalList, error: listError } = await supabaseClient
+        .from('lists')
+        .select('*')
+        .eq('id', fonte_id)
+        .single();
+
+      if (listError || !originalList) {
+        console.error('Error fetching original list:', listError);
+        return new Response(
+          JSON.stringify({ error: 'Lista original não encontrada' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Create a NEW list linked to the class
+      const { data: newList, error: newListError } = await supabaseClient
+        .from('lists')
+        .insert({
+          folder_id: originalList.folder_id,
+          owner_id: user.id,
+          title: `[Atribuição] ${originalList.title}`,
+          description: originalList.description,
+          lang: originalList.lang,
+          visibility: 'private',
+          class_id: turma_id,
+        })
+        .select()
+        .single();
+
+      if (newListError || !newList) {
+        console.error('Error creating new list:', newListError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao criar cópia da lista' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Deep copy: Created new list', newList.id);
+
+      // Fetch all flashcards from the original list
+      const { data: originalCards, error: cardsError } = await supabaseClient
+        .from('flashcards')
+        .select('*')
+        .eq('list_id', fonte_id);
+
+      if (cardsError) {
+        console.error('Error fetching original flashcards:', cardsError);
+        // Continue anyway - list might be empty
+      }
+
+      // Copy flashcards to the new list
+      if (originalCards && originalCards.length > 0) {
+        const copiedCards = originalCards.map(card => ({
+          list_id: newList.id,
+          user_id: user.id,
+          term: card.term,
+          translation: card.translation,
+          hint: card.hint,
+          audio_url: card.audio_url,
+          lang: card.lang,
+          display_text: card.display_text,
+          eval_text: card.eval_text,
+          accepted_answers_en: card.accepted_answers_en,
+          accepted_answers_pt: card.accepted_answers_pt,
+          note_text: card.note_text,
+        }));
+
+        const { error: insertCardsError } = await supabaseClient
+          .from('flashcards')
+          .insert(copiedCards);
+
+        if (insertCardsError) {
+          console.error('Error copying flashcards:', insertCardsError);
+          // Log but don't fail - the list was created successfully
+        } else {
+          console.log('Deep copy: Copied', copiedCards.length, 'flashcards');
+        }
+      }
+
+      // Use the NEW list ID as fonte_id
+      finalFonteId = newList.id;
+    }
+
+    // Create atribuição with the (potentially new) fonte_id
     const { data: atribuicao, error: insertError } = await supabaseClient
       .from('atribuicoes')
       .insert({
@@ -62,7 +152,7 @@ serve(async (req) => {
         titulo: titulo.trim(),
         descricao: descricao?.trim() || null,
         fonte_tipo,
-        fonte_id,
+        fonte_id: finalFonteId,
         data_limite: data_limite || null,
         pontos_vale: pontos_vale || 50,
       })
