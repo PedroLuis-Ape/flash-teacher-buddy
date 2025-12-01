@@ -28,7 +28,8 @@ import { MultipleChoiceStudyView } from "@/components/MultipleChoiceStudyView";
 import { UnscrambleStudyView } from "@/components/UnscrambleStudyView";
 import { StudyVideoButton } from "@/components/StudyVideoButton";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
-import { ArrowLeft, Trophy, RefreshCcw } from "lucide-react";
+import { useFavorites } from "@/hooks/useFavorites";
+import { ArrowLeft, Trophy, RefreshCcw, Star } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 
@@ -64,15 +65,21 @@ const Study = () => {
 
   const rawOrder = (searchParams.get("order") || "random").toLowerCase();
   const order = rawOrder === "asc" ? "asc" : "random";
+  
+  const favoritesOnly = searchParams.get("favorites") === "true";
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [listTitle, setListTitle] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
+  const [userId, setUserId] = useState<string | undefined>();
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<"pt-en" | "en-pt" | "any">(initialDir);
+  
+  // Fetch favorites for filtering
+  const { data: favorites = [] } = useFavorites(userId);
 
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
@@ -124,7 +131,7 @@ const Study = () => {
 
   useEffect(() => {
     loadFlashcards();
-  }, [resolvedId]);
+  }, [resolvedId, favorites, favoritesOnly]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -147,6 +154,7 @@ const Study = () => {
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
     
     const { data: { session } } = await supabase.auth.getSession();
+    setUserId(session?.user?.id);
     
     // Se for lista sem sessão, usar RPC público
     if (isListRoute && !session) {
@@ -192,7 +200,18 @@ const Study = () => {
       return;
     }
 
-    const orderedData = order === "random" ? shuffleArray([...data]) : data;
+    // Filter by favorites if enabled
+    let filteredData = data;
+    if (favoritesOnly && favorites.length > 0) {
+      filteredData = data.filter(card => favorites.includes(card.id));
+      if (filteredData.length === 0) {
+        toast.error("Nenhum flashcard favorito encontrado nesta lista");
+        navigate(isListRoute ? `/list/${resolvedId}` : `/collection/${resolvedId}`);
+        return;
+      }
+    }
+
+    const orderedData = order === "random" ? shuffleArray([...filteredData]) : filteredData;
     setFlashcards(orderedData);
 
     // Load list info and video if this is a list route

@@ -634,6 +634,9 @@ export default function TurmaDetail() {
                     <span className="text-sm text-muted-foreground">
                       {atrib.pontos_vale} pontos
                     </span>
+                    <span className="text-sm text-muted-foreground">
+                      {atrib.card_count ?? 0} cards
+                    </span>
                     {atrib.progresso && (
                       <span className="text-sm text-muted-foreground ml-auto">
                         ✓ {atrib.progresso.concluidas} / {atrib.progresso.total_alunos}

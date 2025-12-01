@@ -62,13 +62,13 @@ export const FlipStudyView = ({
     
     // Play audio for the side being revealed
     if (newFlippedState) {
-      // Revealing back side
+      // Revealing back side (translation/answer)
       const lang = direction === "pt-en" ? "en-US" : "pt-BR";
-      await speak(hideText, lang);
+      speak(hideText, lang);
     } else {
-      // Revealing front side
+      // Revealing front side (question)
       const lang = direction === "pt-en" ? "pt-BR" : "en-US";
-      await speak(showText, lang);
+      speak(showText, lang);
     }
   };
 

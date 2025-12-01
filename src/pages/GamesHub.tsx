@@ -10,9 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star } from "lucide-react";
 import { toast } from "sonner";
 import { isPortalPath, buildBasePath } from "@/lib/utils";
+import { useFavorites, useFavoritesCount } from "@/hooks/useFavorites";
 
 interface Collection {
   id: string;
@@ -35,9 +38,22 @@ const GamesHub = () => {
   const [list, setList] = useState<List | null>(null);
   const [direction, setDirection] = useState<"pt-en" | "en-pt" | "any">("any");
   const [order, setOrder] = useState<"random" | "sequential">("random");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | undefined>();
 
   const isListRoute = location.pathname.includes("/list/");
+  
+  // Fetch user ID for favorites count
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    };
+    fetchUser();
+  }, []);
+  
+  const { data: favoritesCount = 0 } = useFavoritesCount(userId);
 
   useEffect(() => {
     if (isListRoute) {
@@ -115,7 +131,8 @@ const GamesHub = () => {
   const startGame = (mode: "flip" | "write" | "mixed" | "multiple" | "unscramble") => {
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
-    navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}`);
+    const favParam = favoritesOnly ? "&favorites=true" : "";
+    navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}${favParam}`);
   };
 
   if (loading) {
@@ -185,6 +202,26 @@ const GamesHub = () => {
               </Select>
             </div>
           </div>
+
+          {/* Favorites filter */}
+          {userId && favoritesCount > 0 && (
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-yellow-500" />
+                <Label htmlFor="favorites-only" className="cursor-pointer">
+                  <span className="font-medium">Estudar apenas favoritos</span>
+                  <p className="text-xs text-muted-foreground">
+                    {favoritesCount} cards marcados como favorito
+                  </p>
+                </Label>
+              </div>
+              <Switch
+                id="favorites-only"
+                checked={favoritesOnly}
+                onCheckedChange={setFavoritesOnly}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button
