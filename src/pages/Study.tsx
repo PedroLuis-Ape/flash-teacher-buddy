@@ -94,6 +94,16 @@ const Study = () => {
     navigatePrevious,
     canGoPrevious,
     canGoNext,
+    // Spaced repetition features
+    roundNumber,
+    roundCorrect,
+    roundErrors,
+    hasMoreRounds,
+    isGameComplete,
+    startNextRound,
+    resetSession,
+    unseenCardsCount,
+    missedCardsCount,
   } = useStudyEngine(listId, flashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble");
   
   // Direção estável por card - use flipDirection for flip mode
@@ -264,9 +274,8 @@ const Study = () => {
   const currentCard = flashcards[currentIndex];
 
   if (isFinished) {
-    const duration = 60; // Simplified for now
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
+    const isFlipMode = normalizedMode === "flip";
+    const showNextRound = !isFlipMode && hasMoreRounds && !isGameComplete;
 
     return (
       <div className="min-h-screen bg-background py-12 px-4">
@@ -276,15 +285,17 @@ const Study = () => {
               <Trophy className="h-10 w-10 text-primary" />
             </div>
 
-            <h1 className="text-3xl font-bold">Sessão Concluída!</h1>
+            <h1 className="text-3xl font-bold">
+              {isGameComplete ? "Parabéns! Todos os cards dominados! 🎉" : `Rodada ${roundNumber} Concluída!`}
+            </h1>
 
             <div className="grid grid-cols-3 gap-4 py-6">
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-green-600">{correctCount}</div>
+                <div className="text-3xl font-bold text-green-600">{isFlipMode ? correctCount : roundCorrect}</div>
                 <div className="text-sm text-muted-foreground">Acertos</div>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-destructive">{errorCount}</div>
+                <div className="text-3xl font-bold text-destructive">{isFlipMode ? errorCount : roundErrors}</div>
                 <div className="text-sm text-muted-foreground">Erros</div>
               </div>
               <div className="space-y-2">
@@ -293,27 +304,43 @@ const Study = () => {
               </div>
             </div>
 
+            {!isFlipMode && !isGameComplete && (
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>Cards restantes: {unseenCardsCount}</p>
+                <p>Cards para revisar: {missedCardsCount}</p>
+              </div>
+            )}
+
             <div className="text-muted-foreground">
-              Total: {totalCards} cards
+              Total desta rodada: {totalCards} cards
             </div>
 
-            {errorCount > 0 && (
+            {showNextRound && (
               <Alert>
                 <AlertDescription>
-                  Você errou {errorCount} {errorCount === 1 ? "item" : "itens"}. Quer revisar?
+                  {missedCardsCount > 0 
+                    ? `Você errou ${missedCardsCount} cards. Eles aparecerão na próxima rodada!`
+                    : `Continue para estudar os ${unseenCardsCount} cards restantes.`
+                  }
                 </AlertDescription>
               </Alert>
             )}
 
-            <div className="flex gap-4 justify-center pt-4">
-              {errorCount > 0 && (
+            <div className="flex flex-wrap gap-4 justify-center pt-4">
+              {showNextRound && (
+                <Button variant="default" size="lg" onClick={startNextRound}>
+                  <RefreshCcw className="mr-2 h-5 w-5" />
+                  Próxima Rodada
+                </Button>
+              )}
+              {isFlipMode && errorCount > 0 && (
                 <Button variant="secondary" size="lg" onClick={handleReviewErrors}>
                   <RefreshCcw className="mr-2 h-5 w-5" />
                   Rever apenas os errados
                 </Button>
               )}
-              <Button size="lg" onClick={handleExit}>
-                Voltar
+              <Button variant={showNextRound ? "outline" : "default"} size="lg" onClick={handleExit}>
+                Voltar à Lista
               </Button>
             </div>
           </Card>

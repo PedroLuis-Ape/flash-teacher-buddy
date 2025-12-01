@@ -57,11 +57,18 @@ export const FlipStudyView = ({
   }, [front, back]);
 
   const handleFlip = async () => {
-    if (!isFlipped) {
-      setIsFlipped(true);
-      // Determine correct language for TTS based on what's being revealed
+    const newFlippedState = !isFlipped;
+    setIsFlipped(newFlippedState);
+    
+    // Play audio for the side being revealed
+    if (newFlippedState) {
+      // Revealing back side
       const lang = direction === "pt-en" ? "en-US" : "pt-BR";
       await speak(hideText, lang);
+    } else {
+      // Revealing front side
+      const lang = direction === "pt-en" ? "pt-BR" : "en-US";
+      await speak(showText, lang);
     }
   };
 
@@ -112,10 +119,10 @@ export const FlipStudyView = ({
         <SpeechRateControl />
       </div>
       
-      {/* Flip card */}
+      {/* Flip card - can be flipped infinitely */}
       <div
         className="flip-card w-full h-80 cursor-pointer"
-        onClick={() => !isFlipped && handleFlip()}
+        onClick={handleFlip}
       >
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           {/* Front side */}
