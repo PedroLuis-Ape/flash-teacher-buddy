@@ -74,7 +74,7 @@ serve(async (req) => {
       .eq('turma_id', turma_id)
       .eq('ativo', true);
 
-    // Para cada atribuição, buscar estatísticas de progresso
+    // Para cada atribuição, buscar estatísticas de progresso e contagem de cards
     const atribuicoesComProgresso = await Promise.all(
       (atribuicoes || []).map(async (atrib) => {
         const { data: statusData } = await supabaseClient
@@ -89,9 +89,35 @@ serve(async (req) => {
           pendentes: (totalAlunos || 0) - (statusData || []).length,
         };
 
+        // Get card count based on fonte_tipo
+        let cardCount = 0;
+        if (atrib.fonte_tipo === 'lista') {
+          const { count } = await supabaseClient
+            .from('flashcards')
+            .select('*', { count: 'exact', head: true })
+            .eq('list_id', atrib.fonte_id);
+          cardCount = count || 0;
+        } else if (atrib.fonte_tipo === 'pasta') {
+          // Get all lists in the folder, then count flashcards
+          const { data: lists } = await supabaseClient
+            .from('lists')
+            .select('id')
+            .eq('folder_id', atrib.fonte_id);
+          
+          if (lists && lists.length > 0) {
+            const listIds = lists.map(l => l.id);
+            const { count } = await supabaseClient
+              .from('flashcards')
+              .select('*', { count: 'exact', head: true })
+              .in('list_id', listIds);
+            cardCount = count || 0;
+          }
+        }
+
         return {
           ...atrib,
           progresso: stats,
+          card_count: cardCount,
         };
       })
     );

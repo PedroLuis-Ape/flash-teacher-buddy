@@ -44,14 +44,24 @@ serve(async (req) => {
     // Buscar a atribuição para verificar a turma
     const { data: atribuicao, error: atribError } = await supabaseClient
       .from('atribuicoes')
-      .select('id, turma_id')
+      .select('id, turma_id, fonte_tipo, fonte_id')
       .eq('id', atribuicao_id)
-      .single();
+      .maybeSingle();
 
-    if (atribError || !atribuicao) {
+    // If assignment doesn't exist, return success (idempotent delete)
+    if (!atribuicao) {
+      console.log('Atribuição já não existe:', atribuicao_id);
       return new Response(
-        JSON.stringify({ error: 'Atribuição não encontrada' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, message: 'Atribuição já foi deletada' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (atribError) {
+      console.error('Error fetching atribuicao:', atribError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao buscar atribuição' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -70,10 +80,59 @@ serve(async (req) => {
     }
 
     // Deletar status de atribuições dos alunos primeiro
-    await supabaseClient
+    const { error: statusDeleteError } = await supabaseClient
       .from('atribuicoes_status')
       .delete()
       .eq('atribuicao_id', atribuicao_id);
+
+    if (statusDeleteError) {
+      console.error('Error deleting atribuicao status:', statusDeleteError);
+      // Continue anyway - might not have any status entries
+    }
+
+    // Also delete the copied content (list or folder with class_id)
+    if (atribuicao.fonte_tipo === 'lista' && atribuicao.fonte_id) {
+      // Delete flashcards first, then the list
+      await supabaseClient
+        .from('flashcards')
+        .delete()
+        .eq('list_id', atribuicao.fonte_id);
+      
+      await supabaseClient
+        .from('lists')
+        .delete()
+        .eq('id', atribuicao.fonte_id);
+        
+      console.log('Deleted copied list and flashcards:', atribuicao.fonte_id);
+    } else if (atribuicao.fonte_tipo === 'pasta' && atribuicao.fonte_id) {
+      // Get all lists in the folder
+      const { data: lists } = await supabaseClient
+        .from('lists')
+        .select('id')
+        .eq('folder_id', atribuicao.fonte_id);
+
+      // Delete flashcards and lists
+      if (lists && lists.length > 0) {
+        for (const list of lists) {
+          await supabaseClient
+            .from('flashcards')
+            .delete()
+            .eq('list_id', list.id);
+        }
+        await supabaseClient
+          .from('lists')
+          .delete()
+          .eq('folder_id', atribuicao.fonte_id);
+      }
+
+      // Delete the folder
+      await supabaseClient
+        .from('folders')
+        .delete()
+        .eq('id', atribuicao.fonte_id);
+        
+      console.log('Deleted copied folder with lists:', atribuicao.fonte_id);
+    }
 
     // Deletar a atribuição
     const { error: deleteError } = await supabaseClient

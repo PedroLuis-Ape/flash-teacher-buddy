@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, Star } from "lucide-react";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { useFavorites } from "@/hooks/useFavorites";
 
 interface ListType {
   id: string;
@@ -40,6 +42,19 @@ const ListDetail = () => {
   const [isOwner, setIsOwner] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
+  const [userId, setUserId] = useState<string | undefined>();
+
+  // Fetch current user ID for favorites
+  useQuery({
+    queryKey: ['current-user-id'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+      return user?.id;
+    },
+  });
+
+  const { data: favorites = [] } = useFavorites(userId);
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["list", id],
@@ -316,26 +331,35 @@ const ListDetail = () => {
                         </div>
                       )}
                     </div>
-                    {isOwner && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingFlashcard(flashcard)}
-                          className="h-9 w-9"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteFlashcard(flashcard.id)}
-                          className="h-9 w-9 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {userId && (
+                        <FavoriteButton
+                          flashcardId={flashcard.id}
+                          isFavorite={favorites.includes(flashcard.id)}
+                          size="sm"
+                        />
+                      )}
+                      {isOwner && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingFlashcard(flashcard)}
+                            className="h-9 w-9"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteFlashcard(flashcard.id)}
+                            className="h-9 w-9 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </Card>
               ))}
