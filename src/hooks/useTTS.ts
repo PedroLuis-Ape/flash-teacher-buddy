@@ -1,43 +1,24 @@
 import { useEffect, useRef } from "react";
-import { speakText } from "@/lib/speech";
+import { audioService, PlayOptions } from "@/lib/AudioService";
 
 /**
  * Hook para gerenciar TTS com cleanup automático
- * Garante que a fala seja interrompida quando o componente desmonta
+ * Agora usa o AudioService com Web Speech API
  */
 export function useTTS() {
-  const synthRef = useRef<SpeechSynthesis | null>(null);
-
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      synthRef.current = window.speechSynthesis;
-    }
-
     // Cleanup: interromper fala ao desmontar
     return () => {
-      if (synthRef.current) {
-        synthRef.current.cancel();
-      }
+      audioService.stop();
     };
   }, []);
 
-  const speak = async (
-    text: string,
-    lang: "pt-BR" | "en-US",
-    deckLang?: string,
-    cardLang?: string
-  ) => {
-    // Cancel any ongoing speech before starting new one
-    if (synthRef.current) {
-      synthRef.current.cancel();
-    }
-    return speakText(text, lang, deckLang, cardLang);
+  const speak = (text: string, options?: PlayOptions) => {
+    audioService.playSmartAudio(text, options);
   };
 
   const stop = () => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-    }
+    audioService.stop();
   };
 
   return { speak, stop };

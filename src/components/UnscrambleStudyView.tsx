@@ -107,9 +107,9 @@ export const UnscrambleStudyView = ({ front, back, hint, direction, onCorrect, o
     }
   };
 
-  const handlePlayAudio = async () => {
-    const lang = pickLang(direction, question);
-    await speak(question, lang);
+  const handlePlayAudio = () => {
+    const side = direction === "pt-en" ? 'front' : 'back';
+    speak(question, { side });
   };
 
   return (

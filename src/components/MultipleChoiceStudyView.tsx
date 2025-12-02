@@ -126,9 +126,9 @@ export const MultipleChoiceStudyView = ({
                 variant="ghost"
                 size="sm"
                 className="flex-shrink-0"
-                onClick={async () => {
-                  const lang = pickLang(direction, prompt);
-                  await speak(prompt, lang);
+                onClick={() => {
+                  const side = direction === "pt-en" ? 'front' : 'back';
+                  speak(prompt, { side });
                 }}
               >
                 <Volume2 className="h-5 w-5" />

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { FolderPlus, Trash2 } from "lucide-react";
+import { useInstitution } from "@/contexts/InstitutionContext";
 
 interface FolderType {
   id: string;
@@ -48,11 +49,12 @@ const Folders = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { selectedInstitution } = useInstitution();
 
   useEffect(() => {
     checkAuth();
     loadData();
-  }, []);
+  }, [selectedInstitution]); // Reload when institution changes
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -78,8 +80,8 @@ const Folders = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Load folders
-      const { data: foldersData, error: foldersError } = await supabase
+      // Build query with institution filter
+      let foldersQuery = supabase
         .from("folders")
         .select(`
           id, 
@@ -87,10 +89,22 @@ const Folders = () => {
           description, 
           visibility, 
           owner_id,
+          institution_id,
           lists(id, flashcards(id))
         `)
         .eq("owner_id", session.user.id)
-        .order("created_at", { ascending: false });
+        .is("class_id", null); // Only personal folders (not class folders)
+
+      // Apply institution filter
+      if (selectedInstitution) {
+        foldersQuery = foldersQuery.eq("institution_id", selectedInstitution.id);
+      } else {
+        foldersQuery = foldersQuery.is("institution_id", null);
+      }
+
+      foldersQuery = foldersQuery.order("created_at", { ascending: false });
+
+      const { data: foldersData, error: foldersError } = await foldersQuery;
 
       if (foldersError) throw foldersError;
 
@@ -185,7 +199,8 @@ const Folders = () => {
           owner_id: session.user.id,
           title: newFolder.title,
           description: newFolder.description,
-          visibility: newFolder.visibility
+          visibility: newFolder.visibility,
+          institution_id: selectedInstitution?.id || null,
         });
 
       if (error) throw error;
