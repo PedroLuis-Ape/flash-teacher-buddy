@@ -56,32 +56,32 @@ export const FlipStudyView = ({
     setIsFlipped(false);
   }, [front, back]);
 
-  const handleFlip = async () => {
+  const handleFlip = () => {
     const newFlippedState = !isFlipped;
     setIsFlipped(newFlippedState);
     
     // Play audio for the side being revealed
     if (newFlippedState) {
       // Revealing back side (translation/answer)
-      const lang = direction === "pt-en" ? "en-US" : "pt-BR";
-      speak(hideText, lang);
+      const langOverride = direction === "pt-en" ? "en-US" : "pt-BR";
+      speak(hideText, { langOverride });
     } else {
       // Revealing front side (question)
-      const lang = direction === "pt-en" ? "pt-BR" : "en-US";
-      speak(showText, lang);
+      const langOverride = direction === "pt-en" ? "pt-BR" : "en-US";
+      speak(showText, { langOverride });
     }
   };
 
-  const handlePlayAgain = async () => {
+  const handlePlayAgain = () => {
     // Play audio for the revealed side with correct language
-    const lang = direction === "pt-en" ? "en-US" : "pt-BR";
-    await speak(hideText, lang);
+    const langOverride = direction === "pt-en" ? "en-US" : "pt-BR";
+    speak(hideText, { langOverride });
   };
 
-  const handlePlayFront = async () => {
+  const handlePlayFront = () => {
     // Play audio for the front side with correct language
-    const lang = direction === "pt-en" ? "pt-BR" : "en-US";
-    await speak(showText, lang);
+    const langOverride = direction === "pt-en" ? "pt-BR" : "en-US";
+    speak(showText, { langOverride });
   };
 
   // Keyboard navigation

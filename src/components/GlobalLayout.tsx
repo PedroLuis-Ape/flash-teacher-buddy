@@ -13,6 +13,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEconomy } from "@/contexts/EconomyContext";
 import { APP_VERSION } from "@/lib/versionManager";
 import { Badge } from "@/components/ui/badge";
+import { AppSidebar } from "./AppSidebar";
+import { InstitutionProvider } from "@/contexts/InstitutionContext";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -52,33 +54,38 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   }
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen flex flex-col">
-        {FEATURE_FLAGS.currency_header_enabled && user && (
-          <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-14 items-center justify-between gap-4 px-4">
-              <AdminButton />
-              <div className="flex items-center gap-2">
-                <CurrencyHeader />
-                {FEATURE_FLAGS.classes_enabled && <NotificationBell />}
-                {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
+    <InstitutionProvider>
+      <TooltipProvider>
+        <div className="min-h-screen flex flex-col">
+          {FEATURE_FLAGS.currency_header_enabled && user && (
+            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="container flex h-14 items-center justify-between gap-4 px-4">
+                <div className="flex items-center gap-2">
+                  <AppSidebar />
+                  <AdminButton />
+                </div>
+                <div className="flex items-center gap-2">
+                  <CurrencyHeader />
+                  {FEATURE_FLAGS.classes_enabled && <NotificationBell />}
+                  {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
+                </div>
               </div>
-            </div>
-          </header>
-        )}
-        <main className="flex-1 pb-16">
-          {children}
-        </main>
-        {user && <ApeTabBar />}
-        {user && <GiftNotificationModal />}
-        
-        {/* Version Badge */}
-        <div className="fixed bottom-20 right-4 z-40">
-          <Badge variant="secondary" className="opacity-50 hover:opacity-100 transition-opacity text-xs">
-            v{APP_VERSION}
-          </Badge>
+            </header>
+          )}
+          <main className="flex-1 pb-16">
+            {children}
+          </main>
+          {user && <ApeTabBar />}
+          {user && <GiftNotificationModal />}
+          
+          {/* Version Badge */}
+          <div className="fixed bottom-20 right-4 z-40">
+            <Badge variant="secondary" className="opacity-50 hover:opacity-100 transition-opacity text-xs">
+              v{APP_VERSION}
+            </Badge>
+          </div>
         </div>
-      </div>
-    </TooltipProvider>
+      </TooltipProvider>
+    </InstitutionProvider>
   );
 }

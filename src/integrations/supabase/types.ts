@@ -660,6 +660,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          institution_id: string | null
           owner_id: string
           title: string
           updated_at: string
@@ -670,6 +671,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          institution_id?: string | null
           owner_id: string
           title: string
           updated_at?: string
@@ -680,12 +682,21 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          institution_id?: string | null
           owner_id?: string
           title?: string
           updated_at?: string
           visibility?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "folders_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gift_offers: {
         Row: {
@@ -758,6 +769,39 @@ export type Database = {
           operation_id?: string
           payload?: Json | null
           sku?: string
+        }
+        Relationships: []
+      }
+      institutions: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -910,6 +954,7 @@ export type Database = {
           description: string | null
           folder_id: string
           id: string
+          institution_id: string | null
           lang: string | null
           order_index: number
           owner_id: string
@@ -923,6 +968,7 @@ export type Database = {
           description?: string | null
           folder_id: string
           id?: string
+          institution_id?: string | null
           lang?: string | null
           order_index?: number
           owner_id: string
@@ -936,6 +982,7 @@ export type Database = {
           description?: string | null
           folder_id?: string
           id?: string
+          institution_id?: string | null
           lang?: string | null
           order_index?: number
           owner_id?: string
@@ -949,6 +996,13 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lists_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
             referencedColumns: ["id"]
           },
         ]
@@ -1705,6 +1759,7 @@ export type Database = {
           created_at: string
           descricao: string | null
           id: string
+          institution_id: string | null
           nome: string
           owner_teacher_id: string
           updated_at: string
@@ -1714,6 +1769,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          institution_id?: string | null
           nome: string
           owner_teacher_id: string
           updated_at?: string
@@ -1723,11 +1779,20 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          institution_id?: string | null
           nome?: string
           owner_teacher_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "turmas_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_favorites: {
         Row: {
@@ -1959,6 +2024,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          institution_id: string | null
           owner_id: string
           title: string
           updated_at: string
@@ -1978,6 +2044,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          institution_id: string | null
           owner_id: string
           title: string
           updated_at: string
@@ -1998,6 +2065,7 @@ export type Database = {
           description: string | null
           folder_id: string
           id: string
+          institution_id: string | null
           lang: string | null
           order_index: number
           owner_id: string

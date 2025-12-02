@@ -6,13 +6,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, Eye, SkipForward, Volume2 } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
-import { pickLang } from "@/lib/speech";
 import { useTTS } from "@/hooks/useTTS";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
+import { toast } from "sonner";
 
 interface WriteStudyViewProps {
   front: string;
@@ -64,11 +64,13 @@ export const WriteStudyView = ({
     setHintLevel(0);
     setCurrentHint("");
     setRevealed(false);
-    inputRef.current?.focus();
+    setShake(false);
+    // Auto-focus with slight delay to ensure DOM is ready
+    setTimeout(() => inputRef.current?.focus(), 100);
   }, [front, back]);
 
   const handleSubmit = () => {
-    // Preserva o texto original digitado pelo usuário (NÃO normaliza para exibição)
+    // Preserva o texto original digitado pelo usuário
     const userOriginalAnswer = answer.trim();
     
     if (!userOriginalAnswer) {
@@ -77,20 +79,27 @@ export const WriteStudyView = ({
       return;
     }
 
-    // Usa normalização APENAS para comparação, não para exibição
+    // Check exact match first (case and space insensitive)
     const result = isAcceptableAnswer(userOriginalAnswer, acceptedAnswers);
 
     if (result.isCorrect) {
       setFeedback("correct");
+      // Play success sound
+      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGi77eeeTRALUKfj8LdjHAU5kdj+');
+      audio.volume = 0.3;
+      audio.play().catch(() => {});
     } else {
-      // Verifica se está quase correto (1 caractere de diferença)
-      // A função isAlmostCorrect já faz a normalização internamente
+      // Verifica se está quase correto (typo tolerance via Levenshtein)
       const almostCorrect = acceptedAnswers.some(accepted => 
         isAlmostCorrect(userOriginalAnswer, accepted)
       );
       
       if (almostCorrect) {
         setFeedback("almost");
+        // Show typo warning
+        toast.warning(`Correto! (Atenção ao erro de digitação: "${correctAnswer}")`, {
+          duration: 3000,
+        });
       } else {
         setFeedback("incorrect");
       }
@@ -126,12 +135,12 @@ export const WriteStudyView = ({
             <p className="text-3xl font-semibold">{prompt}</p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
-              <Button
+            <Button
                 variant="ghost"
                 size="sm"
-                onClick={async () => {
-                  const lang = pickLang(direction, prompt);
-                  await speak(prompt, lang);
+                onClick={() => {
+                  const side = direction === "pt-en" ? 'front' : 'back';
+                  speak(prompt, { side });
                 }}
               >
                 <Volume2 className="h-5 w-5" />
@@ -159,17 +168,22 @@ export const WriteStudyView = ({
           onKeyPress={handleKeyPress}
           placeholder="Digite sua resposta..."
           disabled={feedback !== null}
-          className={`text-lg h-14 ${
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck="false"
+          className={`text-lg h-14 transition-all duration-300 ${
             shake ? "animate-[shake_0.5s_ease-in-out]" : ""
           } ${
             feedback === "correct"
-              ? "border-green-500 bg-green-50 dark:bg-green-950"
+              ? "border-green-500 border-2 bg-green-50 dark:bg-green-950"
               : feedback === "almost"
-              ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950"
+              ? "border-yellow-500 border-2 bg-yellow-50 dark:bg-yellow-950"
               : feedback === "incorrect"
-              ? "border-red-500 bg-red-50 dark:bg-red-950"
+              ? "border-red-500 border-2 bg-red-50 dark:bg-red-950"
               : ""
           }`}
+          style={{ fontSize: '1.125rem' }}
         />
 
         {feedback === "correct" && (
@@ -270,22 +284,22 @@ export const WriteStudyView = ({
       </div>
 
       {feedback === null && (
-        <div className="flex gap-3 flex-wrap">
-          <Button variant="outline" onClick={onSkip}>
+        <div className="flex gap-3 flex-wrap sticky bottom-4 bg-background/95 backdrop-blur-sm p-2 rounded-lg shadow-lg z-10">
+          <Button variant="outline" onClick={onSkip} className="min-h-[44px]">
             <SkipForward className="mr-2 h-4 w-4" />
             Pular
           </Button>
-          <Button variant="secondary" onClick={handleHint} disabled={revealed}>
+          <Button variant="secondary" onClick={handleHint} disabled={revealed} className="min-h-[44px]">
             <Lightbulb className="mr-2 h-4 w-4" />
             Dica {hintLevel > 0 && `(${hintLevel}/3)`}
           </Button>
           {revealed && (
-            <Button variant="ghost" disabled>
+            <Button variant="ghost" disabled className="min-h-[44px]">
               <Eye className="mr-2 h-4 w-4" />
               Revelado
             </Button>
           )}
-          <Button onClick={handleSubmit} className="ml-auto">
+          <Button onClick={handleSubmit} className="ml-auto min-h-[44px]" size="lg">
             Corrigir
           </Button>
         </div>
