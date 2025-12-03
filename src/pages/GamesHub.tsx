@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -15,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star } from "lucide-react";
 import { toast } from "sonner";
 import { isPortalPath, buildBasePath } from "@/lib/utils";
-import { useFavorites, useFavoritesCount } from "@/hooks/useFavorites";
+import { useFavoritesCount } from "@/hooks/useFavorites";
 
 interface Collection {
   id: string;
@@ -135,6 +134,28 @@ const GamesHub = () => {
     navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}${favParam}`);
   };
 
+  // FIX: Safe back navigation to avoid infinite loop
+  const handleBack = () => {
+    const onPortal = isPortalPath(location.pathname);
+    
+    // Check if we have valid history to go back
+    if (window.history.state?.idx > 0) {
+      navigate(-1);
+    } else if (collection) {
+      navigate(`/collection/${collection.id}`);
+    } else if (list) {
+      if (onPortal && list.folder_id) {
+        navigate(`/portal/folder/${list.folder_id}`);
+      } else if (list.folder_id) {
+        navigate(`/folder/${list.folder_id}`);
+      } else {
+        navigate(onPortal ? "/portal" : "/folders");
+      }
+    } else {
+      navigate(onPortal ? "/portal" : "/folders");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -146,20 +167,7 @@ const GamesHub = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6">
-        <Button variant="ghost" size="sm" onClick={() => {
-          const onPortal = isPortalPath(location.pathname);
-          if (collection) {
-            navigate(`/collection/${collection.id}`);
-          } else if (list) {
-            if (onPortal && list.folder_id) {
-              navigate(`/portal/folder/${list.folder_id}`);
-            } else {
-              navigate(onPortal ? "/portal" : `/list/${list.id}`);
-            }
-          } else {
-            navigate(onPortal ? "/portal" : "/folders");
-          }
-        }} className="mb-4">
+        <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
@@ -223,10 +231,11 @@ const GamesHub = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          {/* FIX: Mobile-friendly button layout */}
+          <div className="flex flex-row flex-wrap gap-3 justify-center w-full pt-2">
             <button
               onClick={() => startGame("flip")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <RotateCcw className="h-5 w-5 text-primary" />
@@ -236,7 +245,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("write")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Pencil className="h-5 w-5 text-primary" />
@@ -246,7 +255,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("multiple")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <ListOrdered className="h-5 w-5 text-primary" />
@@ -256,7 +265,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("unscramble")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Layers3 className="h-5 w-5 text-primary" />
@@ -266,7 +275,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("mixed")}
-              className="col-span-2 flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <RotateCcw className="h-5 w-5 text-primary" />

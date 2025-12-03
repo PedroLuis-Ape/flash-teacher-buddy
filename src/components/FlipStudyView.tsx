@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { pickLang } from "@/lib/speech";
+import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
 import { SpeechRateControl } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
+import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 
 interface FlipStudyViewProps {
   front: string;
   back: string;
   hint?: string | null;
+  flashcardId?: string;
   onKnew: () => void;
   onDidntKnow: () => void;
   onNext?: () => void;
@@ -26,6 +28,7 @@ export const FlipStudyView = ({
   front,
   back,
   hint,
+  flashcardId,
   onKnew,
   onDidntKnow,
   onNext,
@@ -35,7 +38,21 @@ export const FlipStudyView = ({
   direction,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
+  const toggleFavorite = useToggleFavorite();
+  const { data: favorites = [] } = useFavorites(userId);
+  
+  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
+
+  // Fetch user ID for favorites
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    };
+    fetchUser();
+  }, []);
   
   const handleKnew = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -43,6 +60,11 @@ export const FlipStudyView = ({
       await awardPoints(session.user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'flashcard_correct');
     }
     onKnew();
+  };
+
+  const handleToggleFavorite = () => {
+    if (!flashcardId || !userId) return;
+    toggleFavorite.mutate({ flashcardId, isFavorite });
   };
 
   // Determine which text is shown first based on direction
@@ -116,7 +138,25 @@ export const FlipStudyView = ({
       {/* Controls row */}
       <div className="w-full flex justify-between items-center mb-2">
         <HintButton hint={hint} />
-        <SpeechRateControl />
+        <div className="flex items-center gap-2">
+          {/* Favorite button in-game */}
+          {userId && flashcardId && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleFavorite}
+              disabled={toggleFavorite.isPending}
+              className={cn(
+                "transition-colors",
+                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
+              )}
+              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            >
+              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+            </Button>
+          )}
+          <SpeechRateControl />
+        </div>
       </div>
       
       {/* Flip card - can be flipped infinitely */}
@@ -200,12 +240,22 @@ export const FlipStudyView = ({
 
       {/* Action buttons - only show after flip */}
       {isFlipped && (
-        <div className="flex gap-4 animate-fade-in">
-          <Button variant="destructive" size="lg" onClick={onDidntKnow}>
+        <div className="flex flex-row flex-wrap gap-3 justify-center w-full animate-fade-in">
+          <Button 
+            variant="destructive" 
+            size="lg" 
+            onClick={onDidntKnow}
+            className="flex-1 min-w-[140px]"
+          >
             <RotateCcw className="mr-2 h-5 w-5" />
             Não Sabia
           </Button>
-          <Button variant="default" size="lg" onClick={handleKnew}>
+          <Button 
+            variant="default" 
+            size="lg" 
+            onClick={handleKnew}
+            className="flex-1 min-w-[140px]"
+          >
             <Check className="mr-2 h-5 w-5" />
             Sabia
           </Button>

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, Star } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, Star, FolderPlus } from "lucide-react";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
@@ -38,11 +38,13 @@ interface Flashcard {
 
 const ListDetail = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams();
   const [isOwner, setIsOwner] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   const [userId, setUserId] = useState<string | undefined>();
+  const [isCloning, setIsCloning] = useState(false);
 
   // Fetch current user ID for favorites
   useQuery({
@@ -203,6 +205,85 @@ const ListDetail = () => {
     toast.success("Link copiado para a área de transferência!");
   };
 
+  // NEW: Clone list to user's account
+  const handleCloneList = async () => {
+    if (!list || !userId || isOwner) return;
+    
+    setIsCloning(true);
+    try {
+      // First, get user's default folder or create one
+      let { data: userFolders } = await supabase
+        .from("folders")
+        .select("id")
+        .eq("owner_id", userId)
+        .limit(1);
+      
+      let targetFolderId: string;
+      
+      if (!userFolders || userFolders.length === 0) {
+        // Create a default folder
+        const { data: newFolder, error: folderError } = await supabase
+          .from("folders")
+          .insert({
+            owner_id: userId,
+            title: "Minhas Pastas",
+            visibility: "private"
+          })
+          .select("id")
+          .single();
+        
+        if (folderError) throw folderError;
+        targetFolderId = newFolder.id;
+      } else {
+        targetFolderId = userFolders[0].id;
+      }
+      
+      // Create the cloned list
+      const { data: clonedList, error: listError } = await supabase
+        .from("lists")
+        .insert({
+          owner_id: userId,
+          folder_id: targetFolderId,
+          title: `${list.title} (Cópia)`,
+          description: list.description,
+          visibility: "private"
+        })
+        .select("id")
+        .single();
+      
+      if (listError) throw listError;
+      
+      // Clone all flashcards
+      if (flashcards.length > 0) {
+        const clonedCards = flashcards.map(card => ({
+          user_id: userId,
+          list_id: clonedList.id,
+          term: card.term,
+          translation: card.translation,
+          hint: card.hint || null,
+        }));
+        
+        const { error: cardsError } = await supabase
+          .from("flashcards")
+          .insert(clonedCards);
+        
+        if (cardsError) throw cardsError;
+      }
+      
+      toast.success(`Lista clonada com ${flashcards.length} cards!`);
+      queryClient.invalidateQueries({ queryKey: ["lists"] });
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      
+      // Navigate to the cloned list
+      navigate(`/list/${clonedList.id}`);
+    } catch (error: any) {
+      console.error("Clone error:", error);
+      toast.error("Erro ao clonar lista: " + error.message);
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
   const loading = listLoading || flashcardsLoading || folderLoading;
 
   if (loading) {
@@ -238,7 +319,18 @@ const ListDetail = () => {
                 <p className="text-muted-foreground mt-2">{list.description}</p>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Clone button for non-owners */}
+              {!isOwner && userId && (
+                <Button
+                  variant="outline"
+                  onClick={handleCloneList}
+                  disabled={isCloning}
+                >
+                  <FolderPlus className="mr-2 h-4 w-4" />
+                  {isCloning ? "Clonando..." : "Clonar para minha conta"}
+                </Button>
+              )}
               {flashcards.length > 0 && (
                 <Button
                   size="lg"
@@ -319,7 +411,7 @@ const ListDetail = () => {
           ) : (
             <div className="space-y-4">
               {flashcards.map((flashcard) => (
-                <Card key={flashcard.id} className="p-4 sm:p-6">
+                <Card key={flashcard.id} className="p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
