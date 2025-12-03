@@ -9,8 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useChatMessages, useSendMessage } from '@/hooks/useMensagens';
 import { ChatComposer } from '@/components/ChatComposer';
 import { MessageBubble } from '@/components/MessageBubble';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { safeFormatDate } from '@/lib/dateUtils';
 
 export default function AtribuicaoDetail() {
   const { turmaId, atribuicaoId } = useParams<{ turmaId: string; atribuicaoId: string }>();
@@ -74,7 +73,12 @@ export default function AtribuicaoDetail() {
     });
   };
 
+  // FIX: Use fonte_id (the actual copied content ID) for navigation
   const handleOpenContent = () => {
+    if (!atribuicao.fonte_id) {
+      return;
+    }
+    
     if (atribuicao.fonte_tipo === 'lista') {
       navigate(`/list/${atribuicao.fonte_id}`);
     } else if (atribuicao.fonte_tipo === 'pasta') {
@@ -89,10 +93,10 @@ export default function AtribuicaoDetail() {
           <Button variant="ghost" size="icon" onClick={() => navigate(`/turmas/${turmaId}`)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold">{atribuicao.titulo}</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold truncate">{atribuicao.titulo}</h1>
           </div>
-          <Button onClick={handleOpenContent}>
+          <Button onClick={handleOpenContent} className="shrink-0">
             <ExternalLink className="h-4 w-4 mr-2" />
             Abrir Conteúdo
           </Button>
@@ -100,7 +104,11 @@ export default function AtribuicaoDetail() {
       </div>
 
       <div className="max-w-4xl mx-auto p-4 space-y-4">
-        <Card className="p-6">
+        {/* IMPROVED: Make entire card clickable on mobile */}
+        <Card 
+          className="p-6 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={handleOpenContent}
+        >
           <div className="space-y-4">
             {atribuicao.descricao && (
               <div>
@@ -124,7 +132,7 @@ export default function AtribuicaoDetail() {
                 <div>
                   <p className="text-sm text-muted-foreground">Prazo</p>
                   <p className="font-semibold">
-                    {format(new Date(atribuicao.data_limite), 'dd MMM yyyy', { locale: ptBR })}
+                    {safeFormatDate(atribuicao.data_limite)}
                   </p>
                 </div>
               )}

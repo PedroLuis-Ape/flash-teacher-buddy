@@ -689,8 +689,14 @@ export default function TurmaDetail() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction 
+                        <AlertDialogAction 
                                   onClick={async () => {
+                                    // OPTIMISTIC UPDATE: Remove from UI immediately
+                                    const previousMembros = turma.turma_membros;
+                                    turma.turma_membros = turma.turma_membros.filter(
+                                      (m: any) => m.user_id !== membro.user_id
+                                    );
+                                    
                                     try {
                                       await removeMember.mutateAsync({
                                         turma_id: turmaId!,
@@ -698,6 +704,8 @@ export default function TurmaDetail() {
                                       });
                                       toast.success('✅ Aluno removido!');
                                     } catch (error) {
+                                      // Rollback on error
+                                      turma.turma_membros = previousMembros;
                                       toast.error('❌ Erro ao remover aluno');
                                     }
                                   }}

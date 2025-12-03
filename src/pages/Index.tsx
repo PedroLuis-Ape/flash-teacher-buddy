@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useEconomy } from "@/contexts/EconomyContext";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
@@ -13,13 +14,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { last, recents, stats, loading } = useHomeData();
+  const { last, recents, stats, loading, refetch } = useHomeData();
   const { pts_weekly, level, current_streak } = useEconomy();
+  const { selectedInstitution } = useInstitution();
   const [profileData, setProfileData] = useState<{
     firstName: string;
     avatarUrl: string | null;
@@ -29,6 +31,11 @@ const Index = () => {
     checkAuth();
     loadProfileData();
   }, []);
+
+  // Refetch when institution changes
+  useEffect(() => {
+    refetch();
+  }, [selectedInstitution?.id, refetch]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -101,6 +108,7 @@ const Index = () => {
     .slice(0, 2);
 
   const isTeacher = profile?.is_teacher || false;
+  const isHubEmpty = myLists.length === 0 && selectedInstitution;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -207,6 +215,27 @@ const Index = () => {
         {/* Turmas Card (apenas para alunos) */}
         {!isTeacher && <TurmasCard />}
 
+        {/* NEW: Meus Professores Card (apenas para alunos) */}
+        {!isTeacher && (
+          <Card
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+            onClick={() => navigate('/my-teachers')}
+          >
+            <div className="flex items-center gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <GraduationCap className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base truncate">Meus Professores</h3>
+                <p className="text-sm text-muted-foreground truncate">
+                  Veja os professores que você segue
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+            </div>
+          </Card>
+        )}
+
         {/* Continue Studying Card */}
         {last && (
           <Card className="overflow-hidden border-border">
@@ -281,6 +310,24 @@ const Index = () => {
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
             </div>
+          ) : isHubEmpty ? (
+            // Empty state for selected hub
+            <Card className="p-8 text-center border-border">
+              <FolderPlus className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-semibold text-base mb-2">
+                Nenhuma lista em "{selectedInstitution?.name}"
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Crie sua primeira lista neste hub ou mude para outro hub no menu lateral.
+              </p>
+              <Button 
+                onClick={() => navigate("/folders")}
+                className="min-h-[44px]"
+              >
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Criar lista neste hub
+              </Button>
+            </Card>
           ) : myLists.length > 0 ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground mb-2">Últimas estudadas</p>

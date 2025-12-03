@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useInstitution } from "@/contexts/InstitutionContext";
 
 interface LastSession {
   id: string;
@@ -36,10 +37,12 @@ interface HomeData {
   stats: Stats;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
-export function useHomeData() {
-  const [data, setData] = useState<HomeData>({
+export function useHomeData(): HomeData {
+  const { selectedInstitution } = useInstitution();
+  const [data, setData] = useState<Omit<HomeData, 'refetch'>>({
     last: null,
     recents: [],
     teachers: [],
@@ -48,12 +51,10 @@ export function useHomeData() {
     error: null,
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
+      setData(prev => ({ ...prev, loading: true }));
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         setData({ 
@@ -68,6 +69,7 @@ export function useHomeData() {
       }
 
       const userId = session.user.id;
+      const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel
       const [sessionResult, ownListsResult, subscriptionsResult] = await Promise.all([
@@ -90,18 +92,26 @@ export function useHomeData() {
           .limit(1)
           .maybeSingle(),
 
-        // Own lists
-        supabase
-          .from("lists")
-          .select(`
-            id,
-            title,
-            flashcards(id),
-            folders(title)
-          `)
-          .eq("owner_id", userId)
-          .order("updated_at", { ascending: false })
-          .limit(10),
+        // Own lists - filter by institution if selected
+        (() => {
+          let query = supabase
+            .from("lists")
+            .select(`
+              id,
+              title,
+              flashcards(id),
+              folders(title)
+            `)
+            .eq("owner_id", userId)
+            .order("updated_at", { ascending: false })
+            .limit(10);
+          
+          if (institutionId) {
+            query = query.eq("institution_id", institutionId);
+          }
+          
+          return query;
+        })(),
 
         // Subscriptions (teachers)
         supabase
@@ -116,7 +126,7 @@ export function useHomeData() {
       // Fetch shared lists from teachers if any
       let sharedLists: any[] = [];
       if (teacherIds.length > 0) {
-        const { data: sharedData } = await supabase
+        let sharedQuery = supabase
           .from("lists")
           .select(`
             id,
@@ -129,6 +139,11 @@ export function useHomeData() {
           .order("updated_at", { ascending: false })
           .limit(10);
         
+        if (institutionId) {
+          sharedQuery = sharedQuery.eq("institution_id", institutionId);
+        }
+        
+        const { data: sharedData } = await sharedQuery;
         sharedLists = sharedData || [];
       }
 
@@ -141,14 +156,20 @@ export function useHomeData() {
           .in("id", teacherIds);
 
         if (teacherProfiles) {
-          // Count folders per teacher
+          // Count folders per teacher - filter by institution if selected
           teachersInfo = await Promise.all(
             teacherProfiles.map(async (teacher) => {
-              const { count } = await supabase
+              let folderQuery = supabase
                 .from("folders")
                 .select("*", { count: "exact", head: true })
                 .eq("owner_id", teacher.id)
                 .eq("visibility", "class");
+              
+              if (institutionId) {
+                folderQuery = folderQuery.eq("institution_id", institutionId);
+              }
+              
+              const { count } = await folderQuery;
 
               return {
                 id: teacher.id,
@@ -222,7 +243,11 @@ export function useHomeData() {
         error: "Erro ao carregar dados",
       });
     }
-  };
+  }, [selectedInstitution?.id]);
 
-  return data;
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  return { ...data, refetch: loadData };
 }
