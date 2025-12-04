@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,10 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function AppSidebar() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newInstitution, setNewInstitution] = useState({
@@ -26,7 +30,7 @@ export function AppSidebar() {
 
   const handleCreate = async () => {
     if (!newInstitution.name.trim()) {
-      toast.error("Digite um nome para o hub");
+      toast.error(`❌ ${t('sidebar.enterHubName')}`);
       return;
     }
 
@@ -44,13 +48,13 @@ export function AppSidebar() {
 
       if (error) throw error;
 
-      toast.success("✅ Hub criado com sucesso!");
+      toast.success(`✅ ${t('sidebar.hubCreatedSuccess')}`);
       setCreateDialogOpen(false);
       setNewInstitution({ name: "", description: "", color: "#6366f1" });
       await refreshInstitutions();
     } catch (error: any) {
       console.error("Error creating institution:", error);
-      toast.error("❌ Erro ao criar hub");
+      toast.error(`❌ ${t('sidebar.hubCreateError')}`);
     } finally {
       setIsCreating(false);
     }
@@ -64,51 +68,53 @@ export function AppSidebar() {
             <MoreVertical className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+        <SheetContent side="left" className="w-[300px] sm:w-[400px] flex flex-col">
           <SheetHeader>
-            <SheetTitle>Menu</SheetTitle>
+            <SheetTitle>{t('sidebar.menu')}</SheetTitle>
           </SheetHeader>
           
-          <div className="mt-6 space-y-6">
+          <div className="mt-6 space-y-6 flex-1">
             {/* Institutions Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Hubs / Instituições
+                  {t('sidebar.hubs')}
                 </h3>
                 <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline">
                       <Plus className="h-4 w-4 mr-1" />
-                      Novo
+                      {t('sidebar.newHub')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Criar Novo Hub</DialogTitle>
+                      <DialogTitle>{t('sidebar.createNewHub')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="name">Nome *</Label>
+                        <Label htmlFor="name">{t('sidebar.hubName')} *</Label>
                         <Input
                           id="name"
                           value={newInstitution.name}
                           onChange={(e) => setNewInstitution({ ...newInstitution, name: e.target.value })}
-                          placeholder="Ex: Chinês, Alemão, Inglês Kids..."
+                          placeholder={t('sidebar.hubNamePlaceholder')}
                         />
                       </div>
                       <div>
-                        <Label htmlFor="description">Descrição (opcional)</Label>
+                        <Label htmlFor="description">
+                          {t('sidebar.hubDescription')} ({t('common.optional')})
+                        </Label>
                         <Textarea
                           id="description"
                           value={newInstitution.description}
                           onChange={(e) => setNewInstitution({ ...newInstitution, description: e.target.value })}
-                          placeholder="Descreva o propósito deste hub..."
+                          placeholder={t('sidebar.hubDescriptionPlaceholder')}
                         />
                       </div>
                       <div>
-                        <Label htmlFor="color">Cor</Label>
+                        <Label htmlFor="color">{t('sidebar.hubColor')}</Label>
                         <Input
                           id="color"
                           type="color"
@@ -119,10 +125,10 @@ export function AppSidebar() {
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isCreating}>
-                        Cancelar
+                        {t('common.cancel')}
                       </Button>
                       <Button onClick={handleCreate} disabled={isCreating}>
-                        {isCreating ? "Criando..." : "Criar Hub"}
+                        {isCreating ? t('sidebar.creating') : t('sidebar.createHub')}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -139,7 +145,7 @@ export function AppSidebar() {
                   >
                     <div className="flex items-center gap-2 w-full">
                       <div className="w-3 h-3 rounded-full bg-muted" />
-                      <span className="flex-1 text-left">Todos (sem filtro)</span>
+                      <span className="flex-1 text-left">{t('sidebar.allNoFilter')}</span>
                       {selectedInstitution === null && <Check className="h-4 w-4" />}
                     </div>
                   </Button>
@@ -166,9 +172,18 @@ export function AppSidebar() {
 
               {institutions.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum hub criado ainda
+                  {t('sidebar.noHubsYet')}
                 </p>
               )}
+            </div>
+          </div>
+
+          {/* Footer with Language Switcher */}
+          <div className="mt-auto pt-4">
+            <Separator className="mb-4" />
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">{t('language.title')}</Label>
+              <LanguageSwitcher />
             </div>
           </div>
         </SheetContent>

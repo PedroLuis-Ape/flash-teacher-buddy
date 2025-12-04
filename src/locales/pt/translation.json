@@ -1,0 +1,93 @@
+{
+  "common": {
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Deletar",
+    "edit": "Editar",
+    "create": "Criar",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "search": "Buscar",
+    "noResults": "Nenhum resultado encontrado",
+    "error": "Erro",
+    "success": "Sucesso",
+    "optional": "opcional"
+  },
+  "sidebar": {
+    "menu": "Menu",
+    "hubs": "Hubs / Instituições",
+    "newHub": "Novo",
+    "createNewHub": "Criar Novo Hub",
+    "hubName": "Nome",
+    "hubNamePlaceholder": "Ex: Chinês, Alemão, Inglês Kids...",
+    "hubDescription": "Descrição",
+    "hubDescriptionPlaceholder": "Descreva o propósito deste hub...",
+    "hubColor": "Cor",
+    "creating": "Criando...",
+    "createHub": "Criar Hub",
+    "allNoFilter": "Todos (sem filtro)",
+    "noHubsYet": "Nenhum hub criado ainda",
+    "enterHubName": "Digite um nome para o hub",
+    "hubCreatedSuccess": "Hub criado com sucesso!",
+    "hubCreateError": "Erro ao criar hub"
+  },
+  "language": {
+    "title": "Idioma",
+    "portuguese": "Português",
+    "english": "English"
+  },
+  "nav": {
+    "home": "Início",
+    "folders": "Minhas Pastas",
+    "classes": "Turmas",
+    "myClasses": "Minhas Turmas",
+    "myTeachers": "Meus Professores",
+    "professorPanel": "Painel do Professor",
+    "store": "Loja",
+    "profile": "Perfil",
+    "logout": "Sair"
+  },
+  "home": {
+    "welcome": "Bem-vindo",
+    "weeklyPts": "PTS Semanais",
+    "level": "Nível",
+    "streak": "Sequência",
+    "recentLists": "Listas Recentes",
+    "noLists": "Nenhuma lista ainda",
+    "createFirst": "Crie sua primeira lista de flashcards",
+    "emptyHub": "Este hub está vazio",
+    "emptyHubDescription": "Comece criando pastas e listas para organizar seu conteúdo"
+  },
+  "flashcards": {
+    "term": "Termo",
+    "translation": "Tradução",
+    "hint": "Dica",
+    "addFlashcard": "Adicionar Flashcard",
+    "noFlashcards": "Nenhum flashcard ainda",
+    "study": "Estudar",
+    "cards": "cards",
+    "correct": "Correto",
+    "incorrect": "Incorreto",
+    "flip": "Virar"
+  },
+  "classes": {
+    "assignments": "Atribuições",
+    "members": "Pessoas",
+    "chat": "Chat",
+    "noAssignments": "Nenhuma atribuição ainda",
+    "createAssignment": "Criar Atribuição",
+    "points": "pontos",
+    "addStudent": "Adicionar Aluno",
+    "noMembers": "Nenhum membro ainda",
+    "noMessages": "Nenhuma mensagem ainda",
+    "beFirst": "Seja o primeiro a enviar uma mensagem!"
+  },
+  "dates": {
+    "notAvailable": "Data n/d"
+  }
+}

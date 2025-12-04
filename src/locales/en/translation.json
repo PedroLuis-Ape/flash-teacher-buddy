@@ -1,0 +1,93 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "add": "Add",
+    "remove": "Remove",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "noResults": "No results found",
+    "error": "Error",
+    "success": "Success",
+    "optional": "optional"
+  },
+  "sidebar": {
+    "menu": "Menu",
+    "hubs": "Hubs / Institutions",
+    "newHub": "New",
+    "createNewHub": "Create New Hub",
+    "hubName": "Name",
+    "hubNamePlaceholder": "E.g.: Chinese, German, Kids English...",
+    "hubDescription": "Description",
+    "hubDescriptionPlaceholder": "Describe the purpose of this hub...",
+    "hubColor": "Color",
+    "creating": "Creating...",
+    "createHub": "Create Hub",
+    "allNoFilter": "All (no filter)",
+    "noHubsYet": "No hubs created yet",
+    "enterHubName": "Enter a name for the hub",
+    "hubCreatedSuccess": "Hub created successfully!",
+    "hubCreateError": "Error creating hub"
+  },
+  "language": {
+    "title": "Language",
+    "portuguese": "Português",
+    "english": "English"
+  },
+  "nav": {
+    "home": "Home",
+    "folders": "My Folders",
+    "classes": "Classes",
+    "myClasses": "My Classes",
+    "myTeachers": "My Teachers",
+    "professorPanel": "Teacher Panel",
+    "store": "Store",
+    "profile": "Profile",
+    "logout": "Sign Out"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "weeklyPts": "Weekly PTS",
+    "level": "Level",
+    "streak": "Streak",
+    "recentLists": "Recent Lists",
+    "noLists": "No lists yet",
+    "createFirst": "Create your first flashcard list",
+    "emptyHub": "This hub is empty",
+    "emptyHubDescription": "Start by creating folders and lists to organize your content"
+  },
+  "flashcards": {
+    "term": "Term",
+    "translation": "Translation",
+    "hint": "Hint",
+    "addFlashcard": "Add Flashcard",
+    "noFlashcards": "No flashcards yet",
+    "study": "Study",
+    "cards": "cards",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "flip": "Flip"
+  },
+  "classes": {
+    "assignments": "Assignments",
+    "members": "Members",
+    "chat": "Chat",
+    "noAssignments": "No assignments yet",
+    "createAssignment": "Create Assignment",
+    "points": "points",
+    "addStudent": "Add Student",
+    "noMembers": "No members yet",
+    "noMessages": "No messages yet",
+    "beFirst": "Be the first to send a message!"
+  },
+  "dates": {
+    "notAvailable": "Date n/a"
+  }
+}
