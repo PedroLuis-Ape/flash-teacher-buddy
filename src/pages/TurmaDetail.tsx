@@ -584,13 +584,18 @@ export default function TurmaDetail() {
               atribuicoes.map((atrib: any) => (
                 <Card
                   key={atrib.id}
-                  className="p-4 hover:shadow-lg transition-shadow"
+                  className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => {
+                    // Navigate directly to content (skip intermediate screen)
+                    if (atrib.fonte_tipo === 'lista') {
+                      navigate(`/list/${atrib.fonte_id}/games`);
+                    } else if (atrib.fonte_tipo === 'pasta') {
+                      navigate(`/folder/${atrib.fonte_id}`);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between">
-                    <div 
-                      className="flex-1 cursor-pointer"
-                      onClick={() => navigate(`/turmas/${turmaId}/atribuicoes/${atrib.id}`)}
-                    >
+                    <div className="flex-1">
                       <h3 className="font-semibold">{atrib.titulo}</h3>
                       {atrib.descricao && (
                         <p className="text-sm text-muted-foreground mt-1">{atrib.descricao}</p>
@@ -599,7 +604,12 @@ export default function TurmaDetail() {
                     {isOwner && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>

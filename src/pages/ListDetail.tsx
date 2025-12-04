@@ -304,7 +304,7 @@ const ListDetail = () => {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(isOwner ? `/folder/${list.folder_id}` : `/portal/folder/${list.folder_id}`)}
+            onClick={() => navigate(-1)}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -346,7 +346,7 @@ const ListDetail = () => {
 
         {isOwner && (
           <Card className="p-4 mb-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-3">
                 <Switch
                   id="share-mode"
@@ -368,27 +368,17 @@ const ListDetail = () => {
                   </p>
                 </Label>
               </div>
-              {folder.visibility === 'class' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyShareLink}
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copiar Link
-                </Button>
-              )}
-            </div>
-          </Card>
-        )}
-
-        <div className="space-y-8">
-          {isOwner && (
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <CreateFlashcardForm onAdd={handleAddFlashcard} />
-              </div>
-              <div className="flex items-start">
+              <div className="flex items-center gap-2 flex-wrap">
+                {folder.visibility === 'class' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyShareLink}
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copiar Link
+                  </Button>
+                )}
                 <BulkImportDialog
                   collectionId={id!}
                   existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
@@ -396,6 +386,12 @@ const ListDetail = () => {
                 />
               </div>
             </div>
+          </Card>
+        )}
+
+        <div className="space-y-8">
+          {isOwner && (
+            <CreateFlashcardForm onAdd={handleAddFlashcard} />
           )}
 
           {loading ? (
