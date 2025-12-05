@@ -63,10 +63,10 @@ serve(async (req) => {
       );
     }
 
-    // Remover o membro (soft delete - marcar como inativo)
+    // Remover o membro (Hard Delete)
     const { error: removeError } = await supabaseClient
       .from('turma_membros')
-      .update({ ativo: false })
+      .delete()
       .eq('turma_id', turma_id)
       .eq('user_id', user_id);
 
