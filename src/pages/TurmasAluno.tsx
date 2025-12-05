@@ -115,21 +115,19 @@ export default function TurmasAluno() {
                       )}
                     </div>
                   </div>
-                  {atribuicao.status !== 'concluida' && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        // Navigate to the source content
-                        if (atribuicao.fonte_tipo === 'lista') {
-                          navigate(`/list/${atribuicao.fonte_id}`);
-                        } else if (atribuicao.fonte_tipo === 'pasta') {
-                          navigate(`/folder/${atribuicao.fonte_id}`);
-                        }
-                      }}
-                    >
-                      Abrir
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      // Navigate directly to study/games (skip intermediate)
+                      if (atribuicao.fonte_tipo === 'lista') {
+                        navigate(`/list/${atribuicao.fonte_id}/games`);
+                      } else if (atribuicao.fonte_tipo === 'pasta') {
+                        navigate(`/folder/${atribuicao.fonte_id}`);
+                      }
+                    }}
+                  >
+                    {atribuicao.status === 'concluida' ? 'Revisar' : 'Estudar'}
+                  </Button>
                 </div>
               </Card>
             ))
