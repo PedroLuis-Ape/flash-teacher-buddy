@@ -68,37 +68,28 @@ serve(async (req) => {
       );
     }
 
-    // Check if already member
-    const { data: existing } = await supabaseClient
-      .from('turma_membros')
-      .select('id')
-      .eq('turma_id', turma_id)
-      .eq('user_id', targetProfile.id)
-      .single();
-
-    if (existing) {
-      return new Response(
-        JSON.stringify({ error: 'Usuário já é membro desta turma' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Insert member
+    // Upsert member (Create or Reactivate)
     const { data: member, error: memberError } = await supabaseClient
       .from('turma_membros')
-      .insert({
-        turma_id,
-        user_id: targetProfile.id,
-        role: 'aluno',
-        ativo: true,
-      })
+      .upsert(
+        {
+          turma_id,
+          user_id: targetProfile.id,
+          role: 'aluno',
+          ativo: true,
+        },
+        { 
+          onConflict: 'turma_id,user_id',
+          ignoreDuplicates: false 
+        } 
+      )
       .select()
       .single();
 
     if (memberError) {
       console.error('Error enrolling member:', memberError);
       return new Response(
-        JSON.stringify({ error: 'Erro ao matricular aluno' }),
+        JSON.stringify({ error: 'Erro ao matricular aluno: ' + memberError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
