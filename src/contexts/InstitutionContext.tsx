@@ -17,6 +17,7 @@ interface InstitutionContextType {
   institutions: Institution[];
   setSelectedInstitution: (institution: Institution | null) => void;
   refreshInstitutions: () => Promise<void>;
+  deleteInstitution: (id: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -63,6 +64,35 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteInstitution = async (id: string) => {
+    try {
+      // 1. Move all folders from this hub to "General" (null)
+      const { error: updateError } = await supabase
+        .from("folders")
+        .update({ institution_id: null })
+        .eq("institution_id", id);
+
+      if (updateError) throw updateError;
+
+      // 2. Delete the institution
+      const { error: deleteError } = await supabase
+        .from("institutions")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) throw deleteError;
+
+      // Update local state
+      setInstitutions((prev) => prev.filter((i) => i.id !== id));
+      if (selectedInstitution?.id === id) {
+        setSelectedInstitution(null);
+      }
+    } catch (error) {
+      console.error("Error deleting institution:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     refreshInstitutions();
   }, []);
@@ -83,6 +113,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         institutions,
         setSelectedInstitution,
         refreshInstitutions,
+        deleteInstitution,
         loading,
       }}
     >

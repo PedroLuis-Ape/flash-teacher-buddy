@@ -34,7 +34,11 @@
     "noHubsYet": "No hubs created yet",
     "enterHubName": "Enter a name for the hub",
     "hubCreatedSuccess": "Hub created successfully!",
-    "hubCreateError": "Error creating hub"
+    "hubCreateError": "Error creating hub",
+    "deleteHubTitle": "Delete Hub?",
+    "deleteHubDescription": "Folders in this hub will be moved to 'General'. This action cannot be undone.",
+    "hubDeletedSuccess": "Hub deleted! Folders moved to General.",
+    "hubDeleteError": "Error deleting hub"
   },
   "language": {
     "title": "Language",

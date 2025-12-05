@@ -42,6 +42,9 @@ const Folder = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [allowPublicPortal, setAllowPublicPortal] = useState(true);
   const [sharing, setSharing] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
 
   useEffect(() => {
     loadFolder();
@@ -57,8 +60,13 @@ const Folder = () => {
           .from("folders")
           .select("*")
           .eq("id", id)
-          .single();
+          .maybeSingle();
         if (error) throw error;
+        if (!data) {
+          toast.error("Pasta não encontrada ou sem permissão");
+          navigate("/folders");
+          return;
+        }
         setFolder(data);
         setIsOwner(session.user.id === data.owner_id);
       } else {
@@ -141,6 +149,28 @@ const Folder = () => {
       toast.error("Erro ao carregar listas: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveTitle = async () => {
+    if (!editTitle.trim() || !folder) return;
+    
+    setIsSavingTitle(true);
+    try {
+      const { error } = await supabase
+        .from("folders")
+        .update({ title: editTitle.trim() })
+        .eq("id", folder.id);
+      
+      if (error) throw error;
+      
+      setFolder({ ...folder, title: editTitle.trim() });
+      setIsEditingTitle(false);
+      toast.success("Título atualizado!");
+    } catch (error: any) {
+      toast.error("Erro ao atualizar: " + error.message);
+    } finally {
+      setIsSavingTitle(false);
     }
   };
 
@@ -301,7 +331,44 @@ const Folder = () => {
             Voltar
           </Button>
           
-          <h1 className="text-3xl font-bold">{folder.title}</h1>
+          <div className="flex items-center gap-3">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2 flex-1">
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="text-2xl font-bold h-12"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveTitle();
+                    if (e.key === 'Escape') setIsEditingTitle(false);
+                  }}
+                />
+                <Button onClick={handleSaveTitle} disabled={isSavingTitle} size="sm">
+                  {isSavingTitle ? "..." : "Salvar"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsEditingTitle(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold">{folder.title}</h1>
+                {isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setEditTitle(folder.title);
+                      setIsEditingTitle(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
           {folder.description && (
             <p className="text-muted-foreground mt-2">{folder.description}</p>
           )}

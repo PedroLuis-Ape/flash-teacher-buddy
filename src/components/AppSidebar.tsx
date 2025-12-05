@@ -4,8 +4,9 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Building2, Plus, X, Check } from "lucide-react";
+import { MoreVertical, Building2, Plus, X, Check, Trash2 } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +27,16 @@ export function AppSidebar() {
   });
   const [isCreating, setIsCreating] = useState(false);
 
-  const { selectedInstitution, institutions, setSelectedInstitution, refreshInstitutions } = useInstitution();
+  const { selectedInstitution, institutions, setSelectedInstitution, refreshInstitutions, deleteInstitution } = useInstitution();
+
+  const handleDeleteInstitution = async (id: string) => {
+    try {
+      await deleteInstitution(id);
+      toast.success(`✅ ${t('sidebar.hubDeletedSuccess')}`);
+    } catch (error) {
+      toast.error(`❌ ${t('sidebar.hubDeleteError')}`);
+    }
+  };
 
   const handleCreate = async () => {
     if (!newInstitution.name.trim()) {
@@ -151,21 +161,50 @@ export function AppSidebar() {
                   </Button>
 
                   {institutions.map((institution) => (
-                    <Button
-                      key={institution.id}
-                      variant={selectedInstitution?.id === institution.id ? "secondary" : "ghost"}
-                      className="w-full justify-start"
-                      onClick={() => setSelectedInstitution(institution)}
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: institution.color }}
-                        />
-                        <span className="flex-1 text-left truncate">{institution.name}</span>
-                        {selectedInstitution?.id === institution.id && <Check className="h-4 w-4" />}
-                      </div>
-                    </Button>
+                    <div key={institution.id} className="flex items-center gap-1 group">
+                      <Button
+                        variant={selectedInstitution?.id === institution.id ? "secondary" : "ghost"}
+                        className="flex-1 justify-start"
+                        onClick={() => setSelectedInstitution(institution)}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <div
+                            className="w-3 h-3 rounded-full shrink-0"
+                            style={{ backgroundColor: institution.color }}
+                          />
+                          <span className="flex-1 text-left truncate">{institution.name}</span>
+                          {selectedInstitution?.id === institution.id && <Check className="h-4 w-4 shrink-0" />}
+                        </div>
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t('sidebar.deleteHubTitle')}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t('sidebar.deleteHubDescription')}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteInstitution(institution.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {t('common.delete')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   ))}
                 </div>
               </ScrollArea>

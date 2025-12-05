@@ -34,7 +34,11 @@
     "noHubsYet": "Nenhum hub criado ainda",
     "enterHubName": "Digite um nome para o hub",
     "hubCreatedSuccess": "Hub criado com sucesso!",
-    "hubCreateError": "Erro ao criar hub"
+    "hubCreateError": "Erro ao criar hub",
+    "deleteHubTitle": "Excluir Hub?",
+    "deleteHubDescription": "As pastas deste hub serão movidas para 'Geral'. Esta ação não pode ser desfeita.",
+    "hubDeletedSuccess": "Hub excluído! Pastas movidas para Geral.",
+    "hubDeleteError": "Erro ao excluir hub"
   },
   "language": {
     "title": "Idioma",
