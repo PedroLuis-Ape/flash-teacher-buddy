@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Volume2 } from "lucide-react";
-import { pickLang } from "@/lib/speech";
+import { Volume2, Star } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
@@ -11,9 +10,12 @@ import { SpeechRateControl } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
+import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
+    id?: string;
     term: string;
     translation: string;
     hint?: string | null;
@@ -38,14 +40,40 @@ export const MultipleChoiceStudyView = ({
   const [showFeedback, setShowFeedback] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
+  const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
+  const toggleFavorite = useToggleFavorite();
+  const { data: favorites = [] } = useFavorites(userId);
   
+  const isFavorite = currentCard.id ? favorites.includes(currentCard.id) : false;
   const isPtToEn = direction === "pt-en";
 
   const prompt = isPtToEn ? currentCard.term : currentCard.translation;
   const correctAnswer = isPtToEn ? currentCard.translation : currentCard.term;
   const promptLabel = isPtToEn ? "Português" : "English";
   const answerLabel = isPtToEn ? "English" : "Português";
+  const promptLang = isPtToEn ? "pt-BR" : "en-US";
+
+  // Fetch user ID for favorites
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    };
+    fetchUser();
+  }, []);
+
+  // Autoplay audio when card changes
+  useEffect(() => {
+    if (prompt) {
+      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
+    }
+  }, [currentCard.id, prompt]);
+
+  const handleToggleFavorite = () => {
+    if (!currentCard.id || !userId) return;
+    toggleFavorite.mutate({ flashcardId: currentCard.id, isFavorite });
+  };
 
   useEffect(() => {
     // Gerar 3 alternativas incorretas
@@ -115,7 +143,24 @@ export const MultipleChoiceStudyView = ({
   return (
     <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
       <Card className="p-8 bg-gradient-to-br from-card to-muted/20 relative">
-        <HintButton hint={currentCard.hint} className="absolute top-4 right-4" />
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          {userId && currentCard.id && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleFavorite}
+              disabled={toggleFavorite.isPending}
+              className={cn(
+                "transition-colors",
+                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
+              )}
+              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            >
+              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+            </Button>
+          )}
+          <HintButton hint={currentCard.hint} />
+        </div>
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
@@ -127,8 +172,7 @@ export const MultipleChoiceStudyView = ({
                 size="sm"
                 className="flex-shrink-0"
                 onClick={() => {
-                  const side = direction === "pt-en" ? 'front' : 'back';
-                  speak(prompt, { side });
+                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
                 }}
               >
                 <Volume2 className="h-5 w-5" />

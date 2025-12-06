@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Volume2, RotateCcw, Check } from "lucide-react";
-import { pickLang } from "@/lib/speech";
+import { Volume2, RotateCcw, Check, Star } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
 import { SpeechRateControl } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
+import { supabase } from "@/integrations/supabase/client";
+import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 
 interface UnscrambleStudyViewProps {
   front: string;
   back: string;
   hint?: string | null;
+  flashcardId?: string;
   direction: "pt-en" | "en-pt" | "any";
   onCorrect: () => void;
   onIncorrect: () => void;
@@ -31,15 +34,42 @@ interface WordItem {
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, hint, direction, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
+  const toggleFavorite = useToggleFavorite();
+  const { data: favorites = [] } = useFavorites(userId);
+  
+  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
   const question = direction === "pt-en" ? front : back;
   const correctSentence = direction === "pt-en" ? back : front;
+  const questionLang = direction === "pt-en" ? "pt-BR" : "en-US";
+
+  // Fetch user ID for favorites
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    };
+    fetchUser();
+  }, []);
+
+  // Autoplay audio when card changes
+  useEffect(() => {
+    if (question) {
+      speak(question, { langOverride: questionLang as "pt-BR" | "en-US" });
+    }
+  }, [front, back, question]);
+
+  const handleToggleFavorite = () => {
+    if (!flashcardId || !userId) return;
+    toggleFavorite.mutate({ flashcardId, isFavorite });
+  };
 
   useEffect(() => {
     // Remove palavras que contêm parênteses (são apenas notas/explicações)
@@ -108,14 +138,30 @@ export const UnscrambleStudyView = ({ front, back, hint, direction, onCorrect, o
   };
 
   const handlePlayAudio = () => {
-    const side = direction === "pt-en" ? 'front' : 'back';
-    speak(question, { side });
+    speak(question, { langOverride: questionLang as "pt-BR" | "en-US" });
   };
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto p-4">
       <Card className="w-full p-6 bg-card relative">
-        <HintButton hint={hint} className="absolute top-4 right-4" />
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          {userId && flashcardId && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleFavorite}
+              disabled={toggleFavorite.isPending}
+              className={cn(
+                "transition-colors",
+                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
+              )}
+              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            >
+              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+            </Button>
+          )}
+          <HintButton hint={hint} />
+        </div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Organize as palavras:</h3>
           <div className="flex items-center gap-2">

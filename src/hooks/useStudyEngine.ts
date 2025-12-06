@@ -158,10 +158,51 @@ export function useStudyEngine(
         return;
       }
 
-      // For flip mode, try to restore progress from localStorage
+      // For flip mode, check for existing session in Supabase first, then localStorage
       if (isFlipMode) {
+        // Try to restore from Supabase first
+        const { data: existingSession } = await supabase
+          .from('study_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('list_id', listId)
+          .eq('mode', mode)
+          .eq('completed', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingSession) {
+          setSessionId(existingSession.id);
+          setCurrentIndex(existingSession.current_index);
+          setCardsOrder(existingSession.cards_order as string[]);
+          toast.success("Continuando de onde você parou!");
+          setIsLoading(false);
+          return;
+        }
+
+        // Fallback to localStorage if no Supabase session
         const savedProgress = loadFlipProgress();
         const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, true);
+        
+        // Create new session in Supabase for flip mode
+        const { data: newSession, error } = await supabase
+          .from('study_sessions')
+          .insert({
+            user_id: user.id,
+            list_id: listId,
+            mode,
+            current_index: savedProgress?.index || 0,
+            cards_order: orderedCards,
+            completed: false
+          })
+          .select()
+          .single();
+
+        if (!error && newSession) {
+          setSessionId(newSession.id);
+        }
+        
         setCardsOrder(orderedCards);
         
         if (savedProgress && savedProgress.index < orderedCards.length) {
