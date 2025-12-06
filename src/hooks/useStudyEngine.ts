@@ -506,6 +506,28 @@ export function useStudyEngine(
           .eq('id', sessionId);
       }
 
+      // Update the parent list's updated_at to move it to the top of "Recentes"
+      if (listId) {
+        await supabase
+          .from('lists')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', listId);
+
+        // Also update the parent folder's updated_at
+        const { data: listData } = await supabase
+          .from('lists')
+          .select('folder_id')
+          .eq('id', listId)
+          .single();
+
+        if (listData?.folder_id) {
+          await supabase
+            .from('folders')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', listData.folder_id);
+        }
+      }
+
       // Clear flip mode progress
       if (isFlipMode && listId) {
         localStorage.removeItem(`flip-progress-${listId}`);

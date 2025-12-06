@@ -61,21 +61,39 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é owner da turma
-    const { data: classData, error: classError } = await supabase
-      .from('classes')
-      .select('owner_id')
+    // Verificar se é owner da turma (check both classes and turmas tables for compatibility)
+    let isOwner = false;
+    
+    // First try turmas table (new system)
+    const { data: turmaData, error: turmaError } = await supabase
+      .from('turmas')
+      .select('owner_teacher_id')
       .eq('id', class_id)
-      .single();
+      .maybeSingle();
 
-    if (classError || !classData) {
+    if (turmaData) {
+      isOwner = turmaData.owner_teacher_id === user.id;
+    } else {
+      // Fallback to classes table (legacy)
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('owner_id')
+        .eq('id', class_id)
+        .maybeSingle();
+
+      if (classData) {
+        isOwner = classData.owner_id === user.id;
+      }
+    }
+
+    if (!turmaData && !isOwner) {
       return new Response(
         JSON.stringify({ error: 'Turma não encontrada' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (classData.owner_id !== user.id) {
+    if (!isOwner) {
       return new Response(
         JSON.stringify({ error: 'Você não tem permissão nesta turma.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -103,17 +121,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Criar notificações para todos os membros (exceto autor)
-    const { data: members } = await supabase
-      .from('class_members')
+    // Criar notificações para todos os membros (check both turma_membros and class_members)
+    let memberIds: string[] = [];
+
+    // First try turma_membros (new system)
+    const { data: turmaMembros } = await supabase
+      .from('turma_membros')
       .select('user_id')
-      .eq('class_id', class_id)
-      .eq('status', 'active')
+      .eq('turma_id', class_id)
+      .eq('ativo', true)
       .neq('user_id', user.id);
 
-    if (members && members.length > 0) {
-      const notifications = members.map((m) => ({
-        user_id: m.user_id,
+    if (turmaMembros && turmaMembros.length > 0) {
+      memberIds = turmaMembros.map(m => m.user_id);
+    } else {
+      // Fallback to class_members (legacy)
+      const { data: classMembers } = await supabase
+        .from('class_members')
+        .select('user_id')
+        .eq('class_id', class_id)
+        .eq('status', 'active')
+        .neq('user_id', user.id);
+
+      if (classMembers) {
+        memberIds = classMembers.map(m => m.user_id);
+      }
+    }
+
+    if (memberIds.length > 0) {
+      const notifications = memberIds.map((userId) => ({
+        user_id: userId,
         type: 'announcement',
         ref_type: 'announcement',
         ref_id: announcement.id,

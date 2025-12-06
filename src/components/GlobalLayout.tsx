@@ -8,6 +8,7 @@ import { NotificationBell } from "./NotificationBell";
 import { AdminButton } from "./AdminButton";
 import { ApeTabBar } from "./ape/ApeTabBar";
 import { GiftNotificationModal } from "./GiftNotificationModal";
+import { AnnouncementModal } from "./AnnouncementModal";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEconomy } from "@/contexts/EconomyContext";
@@ -77,6 +78,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           </main>
           {user && <ApeTabBar />}
           {user && <GiftNotificationModal />}
+          {user && FEATURE_FLAGS.classes_enabled && <AnnouncementModal />}
           
           {/* Version Badge */}
           <div className="fixed bottom-20 right-4 z-40">
