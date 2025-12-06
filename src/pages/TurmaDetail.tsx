@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useUpdateTurma, useDeleteTurma, useEnrollAluno, useRemoveTurmaMember } from '@/hooks/useTurmas';
+import { useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -39,6 +40,11 @@ export default function TurmaDetail() {
   const [atribFonteTipo, setAtribFonteTipo] = useState<'lista' | 'pasta'>('pasta');
   const [atribFonteId, setAtribFonteId] = useState('');
   const [atribPontos, setAtribPontos] = useState('50');
+
+  // Announcement dialog state
+  const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
+  const [announcementTitulo, setAnnouncementTitulo] = useState('');
+  const [announcementMensagem, setAnnouncementMensagem] = useState('');
   
   const updateTurma = useUpdateTurma();
   const deleteTurma = useDeleteTurma();
@@ -46,6 +52,7 @@ export default function TurmaDetail() {
   const createAtribuicao = useCreateAtribuicao();
   const deleteAtribuicao = useDeleteAtribuicao();
   const removeMember = useRemoveTurmaMember();
+  const createAnnouncement = useCreateAnnouncement();
 
   const { data: turmaData, isLoading: turmaLoading } = useQuery({
     queryKey: ['turma', turmaId],
@@ -100,19 +107,21 @@ export default function TurmaDetail() {
     queryFn: async () => {
       if (!turmaData?.turma?.owner_teacher_id) return { pastas: [], listas: [] };
 
+      // Order folders alphabetically (title ASC) for teaching sequence
       const { data: pastas } = await supabase
         .from('folders')
         .select('id, title, description')
         .eq('owner_id', turmaData.turma.owner_teacher_id)
         .eq('visibility', 'class')
-        .order('created_at', { ascending: false });
+        .order('title', { ascending: true });
 
+      // Order lists alphabetically (title ASC) for teaching sequence
       const { data: listas } = await supabase
         .from('lists')
         .select('id, title, description, folder_id')
         .eq('owner_id', turmaData.turma.owner_teacher_id)
         .eq('visibility', 'class')
-        .order('created_at', { ascending: false });
+        .order('title', { ascending: true });
 
       return {
         pastas: pastas || [],
@@ -267,6 +276,28 @@ export default function TurmaDetail() {
     }
   };
 
+  const handleCreateAnnouncement = async () => {
+    if (!turmaId || !announcementTitulo.trim() || !announcementMensagem.trim()) {
+      toast.error('❌ Preencha todos os campos');
+      return;
+    }
+
+    try {
+      await createAnnouncement.mutateAsync({
+        class_id: turmaId,
+        title: announcementTitulo,
+        body: announcementMensagem,
+      });
+      toast.success('✅ Aviso enviado para todos os alunos!');
+      setAnnouncementDialogOpen(false);
+      setAnnouncementTitulo('');
+      setAnnouncementMensagem('');
+    } catch (error: any) {
+      toast.error(`❌ ${error.message || 'Erro ao criar aviso'}`);
+    }
+  };
+
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-10 bg-background border-b p-4">
@@ -283,6 +314,10 @@ export default function TurmaDetail() {
             </div>
             {isOwner && (
               <div className="flex gap-2">
+                <Button variant="default" size="sm" onClick={() => setAnnouncementDialogOpen(true)}>
+                  <Megaphone className="h-4 w-4 mr-2" />
+                  Aviso
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleOpenEdit}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Editar
@@ -314,6 +349,55 @@ export default function TurmaDetail() {
           </div>
         </div>
       </div>
+
+      {/* Announcement Dialog */}
+      <Dialog open={announcementDialogOpen} onOpenChange={setAnnouncementDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-primary" />
+              Criar Aviso da Turma
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="announcement-titulo">Título *</Label>
+              <Input
+                id="announcement-titulo"
+                value={announcementTitulo}
+                onChange={(e) => setAnnouncementTitulo(e.target.value)}
+                placeholder="Ex: Prova na próxima semana"
+                maxLength={200}
+              />
+            </div>
+            <div>
+              <Label htmlFor="announcement-mensagem">Mensagem *</Label>
+              <Textarea
+                id="announcement-mensagem"
+                value={announcementMensagem}
+                onChange={(e) => setAnnouncementMensagem(e.target.value)}
+                placeholder="Digite a mensagem que todos os alunos verão..."
+                rows={5}
+                maxLength={5000}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Este aviso aparecerá como um pop-up para todos os alunos da turma.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAnnouncementDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleCreateAnnouncement} 
+              disabled={createAnnouncement.isPending || !announcementTitulo.trim() || !announcementMensagem.trim()}
+            >
+              {createAnnouncement.isPending ? 'Enviando...' : 'Enviar Aviso'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

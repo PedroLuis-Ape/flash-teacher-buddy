@@ -92,7 +92,7 @@ export function useHomeData(): HomeData {
           .limit(1)
           .maybeSingle(),
 
-        // Own lists - filter by institution if selected
+        // Own lists - filter by institution if selected, order by updated_at DESC (most recent)
         (() => {
           let query = supabase
             .from("lists")

@@ -102,7 +102,8 @@ const Folders = () => {
         foldersQuery = foldersQuery.is("institution_id", null);
       }
 
-      foldersQuery = foldersQuery.order("created_at", { ascending: false });
+      // Order by updated_at DESC (most recent first) for personal library
+      foldersQuery = foldersQuery.order("updated_at", { ascending: false });
 
       const { data: foldersData, error: foldersError } = await foldersQuery;
 
