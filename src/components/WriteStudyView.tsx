@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lightbulb, Eye, SkipForward, Volume2 } from "lucide-react";
+import { Lightbulb, Eye, SkipForward, Volume2, Star } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
 import { useTTS } from "@/hooks/useTTS";
@@ -13,11 +13,15 @@ import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 
 interface WriteStudyViewProps {
   front: string;
   back: string;
   hint?: string | null;
+  flashcardId?: string;
   acceptedAnswersEn?: string[];
   acceptedAnswersPt?: string[];
   direction: "pt-en" | "en-pt" | "any";
@@ -30,6 +34,7 @@ export const WriteStudyView = ({
   front,
   back,
   hint,
+  flashcardId,
   acceptedAnswersEn = [],
   acceptedAnswersPt = [],
   direction,
@@ -43,20 +48,47 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>();
   const [isPtToEn] = useState(() => 
     direction === "pt-en" || (direction === "any" && Math.random() > 0.5)
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const { speak } = useTTS();
+  const toggleFavorite = useToggleFavorite();
+  const { data: favorites = [] } = useFavorites(userId);
+  
+  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
   const prompt = isPtToEn ? front : back;
   const correctAnswer = isPtToEn ? back : front;
   const promptLabel = isPtToEn ? "Português" : "English";
   const answerLabel = isPtToEn ? "English" : "Português";
+  const promptLang = isPtToEn ? "pt-BR" : "en-US";
   const acceptedAnswers = [
     correctAnswer,
     ...(isPtToEn ? acceptedAnswersEn : acceptedAnswersPt),
   ];
+
+  // Fetch user ID for favorites
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    };
+    fetchUser();
+  }, []);
+
+  // Autoplay audio when card changes
+  useEffect(() => {
+    if (prompt) {
+      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
+    }
+  }, [front, back, prompt]);
+
+  const handleToggleFavorite = () => {
+    if (!flashcardId || !userId) return;
+    toggleFavorite.mutate({ flashcardId, isFavorite });
+  };
 
   useEffect(() => {
     setAnswer("");
@@ -128,19 +160,35 @@ export const WriteStudyView = ({
   return (
     <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
       <Card className="p-8 bg-gradient-to-br from-card to-muted/20 relative">
-        <HintButton hint={hint} className="absolute top-4 right-4" />
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          {userId && flashcardId && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleFavorite}
+              disabled={toggleFavorite.isPending}
+              className={cn(
+                "transition-colors",
+                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
+              )}
+              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            >
+              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+            </Button>
+          )}
+          <HintButton hint={hint} />
+        </div>
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex items-center justify-center gap-3 mb-8">
             <p className="text-3xl font-semibold">{prompt}</p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
-            <Button
+              <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  const side = direction === "pt-en" ? 'front' : 'back';
-                  speak(prompt, { side });
+                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
                 }}
               >
                 <Volume2 className="h-5 w-5" />
