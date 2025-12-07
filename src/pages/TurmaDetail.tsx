@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { naturalSort } from '@/lib/sorting';
 import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao } from '@/hooks/useAtribuicoes';
+import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao, useUpdateAtribuicao } from '@/hooks/useAtribuicoes';
 import { useChatMessages, useSendMessage } from '@/hooks/useMensagens';
 import { ChatComposer } from '@/components/ChatComposer';
 import { MessageBubble } from '@/components/MessageBubble';
@@ -41,6 +42,13 @@ export default function TurmaDetail() {
   const [atribFonteId, setAtribFonteId] = useState('');
   const [atribPontos, setAtribPontos] = useState('50');
 
+  // Edit atribuição state
+  const [editAtribDialogOpen, setEditAtribDialogOpen] = useState(false);
+  const [editAtribId, setEditAtribId] = useState<string | null>(null);
+  const [editAtribTitulo, setEditAtribTitulo] = useState('');
+  const [editAtribDescricao, setEditAtribDescricao] = useState('');
+  const [editAtribPontos, setEditAtribPontos] = useState('50');
+
   // Announcement dialog state
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
   const [announcementTitulo, setAnnouncementTitulo] = useState('');
@@ -51,6 +59,7 @@ export default function TurmaDetail() {
   const enrollAluno = useEnrollAluno();
   const createAtribuicao = useCreateAtribuicao();
   const deleteAtribuicao = useDeleteAtribuicao();
+  const updateAtribuicao = useUpdateAtribuicao();
   const removeMember = useRemoveTurmaMember();
   const createAnnouncement = useCreateAnnouncement();
 
@@ -178,7 +187,8 @@ export default function TurmaDetail() {
     );
   }
 
-  const atribuicoes = atribuicoesData?.atribuicoes || [];
+  // Apply natural sort to atribuições for correct ordering (1, 2, 10 not 1, 10, 2)
+  const atribuicoes = naturalSort(atribuicoesData?.atribuicoes || [], (a: any) => a.titulo);
   const messages = chatData?.messages || [];
   const membros = turma.turma_membros || [];
 
@@ -297,6 +307,34 @@ export default function TurmaDetail() {
     }
   };
 
+  const handleOpenEditAtrib = (atrib: any) => {
+    setEditAtribId(atrib.id);
+    setEditAtribTitulo(atrib.titulo);
+    setEditAtribDescricao(atrib.descricao || '');
+    setEditAtribPontos(String(atrib.pontos_vale || 50));
+    setEditAtribDialogOpen(true);
+  };
+
+  const handleUpdateAtribuicao = async () => {
+    if (!editAtribId || !editAtribTitulo.trim()) {
+      toast.error('❌ Título é obrigatório');
+      return;
+    }
+
+    try {
+      await updateAtribuicao.mutateAsync({
+        atribuicao_id: editAtribId,
+        titulo: editAtribTitulo,
+        descricao: editAtribDescricao,
+        pontos_vale: parseInt(editAtribPontos) || 50,
+      });
+      toast.success('✅ Atribuição atualizada!');
+      setEditAtribDialogOpen(false);
+      setEditAtribId(null);
+    } catch (error: any) {
+      toast.error(`❌ ${error.message || 'Erro ao atualizar atribuição'}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -636,6 +674,55 @@ export default function TurmaDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Atribuição Dialog */}
+      <Dialog open={editAtribDialogOpen} onOpenChange={setEditAtribDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Atribuição</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-atrib-titulo">Título *</Label>
+              <Input
+                id="edit-atrib-titulo"
+                value={editAtribTitulo}
+                onChange={(e) => setEditAtribTitulo(e.target.value)}
+                placeholder="Ex: Estudar verbos irregulares"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-atrib-descricao">Descrição</Label>
+              <Textarea
+                id="edit-atrib-descricao"
+                value={editAtribDescricao}
+                onChange={(e) => setEditAtribDescricao(e.target.value)}
+                placeholder="Instruções para os alunos..."
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-atrib-pontos">Pontos *</Label>
+              <Input
+                id="edit-atrib-pontos"
+                type="number"
+                value={editAtribPontos}
+                onChange={(e) => setEditAtribPontos(e.target.value)}
+                placeholder="50"
+                min="1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditAtribDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateAtribuicao} disabled={updateAtribuicao.isPending}>
+              {updateAtribuicao.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="max-w-4xl mx-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
@@ -686,41 +773,54 @@ export default function TurmaDetail() {
                       )}
                     </div>
                     {isOwner && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Deletar atribuição</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja deletar "{atrib.titulo}"? Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={async () => {
-                                try {
-                                  await deleteAtribuicao.mutateAsync(atrib.id);
-                                  toast.success('✅ Atribuição deletada!');
-                                } catch (error) {
-                                  toast.error('❌ Erro ao deletar atribuição');
-                                }
-                              }}
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditAtrib(atrib);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              Deletar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Deletar atribuição</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja deletar "{atrib.titulo}"? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={async () => {
+                                  try {
+                                    await deleteAtribuicao.mutateAsync(atrib.id);
+                                    toast.success('✅ Atribuição deletada!');
+                                  } catch (error) {
+                                    toast.error('❌ Erro ao deletar atribuição');
+                                  }
+                                }}
+                              >
+                                Deletar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-2">
