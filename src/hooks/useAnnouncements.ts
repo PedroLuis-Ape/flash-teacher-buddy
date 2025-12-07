@@ -21,25 +21,24 @@ export function useCreateAnnouncement() {
         throw new Error('A mensagem é obrigatória');
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
-
+      // The Supabase SDK automatically includes auth headers when using invoke()
+      // DO NOT manually set Authorization headers as it can cause issues
       const { data, error } = await supabase.functions.invoke('announcements-create', {
         body: { 
           class_id, 
-          turma_id: class_id, // Include both for backend compatibility
-          title, 
-          body, 
+          title: title.trim(), 
+          body: body.trim(), 
           pinned 
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
         },
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        console.error('Announcement error:', error);
+        throw new Error(error.message || 'Erro ao criar aviso');
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
       return data;
     },
     onSuccess: () => {

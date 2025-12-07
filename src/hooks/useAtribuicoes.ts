@@ -130,3 +130,39 @@ export function useDeleteAtribuicao() {
     },
   });
 }
+
+export function useUpdateAtribuicao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      atribuicao_id: string;
+      titulo?: string;
+      descricao?: string;
+      pontos_vale?: number;
+      data_limite?: string | null;
+    }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      // Direct Supabase update since we have RLS policies
+      const { data, error } = await supabase
+        .from('atribuicoes')
+        .update({
+          titulo: payload.titulo,
+          descricao: payload.descricao,
+          pontos_vale: payload.pontos_vale,
+          data_limite: payload.data_limite,
+        })
+        .eq('id', payload.atribuicao_id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atribuicoes'] });
+    },
+  });
+}
