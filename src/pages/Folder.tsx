@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { VideoList } from "@/components/VideoList";
+import { naturalSort } from "@/lib/sorting";
 
 interface ListType {
   id: string;
@@ -485,7 +486,7 @@ const Folder = () => {
               </Card>
             ) : (
               <div className="space-y-2">
-                {lists.map((list) => (
+                {naturalSort(lists, (list) => list.title).map((list) => (
                   <button
                     key={list.id}
                     onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}

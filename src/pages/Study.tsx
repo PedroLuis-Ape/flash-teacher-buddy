@@ -27,8 +27,9 @@ import { WriteStudyView } from "@/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/components/MultipleChoiceStudyView";
 import { UnscrambleStudyView } from "@/components/UnscrambleStudyView";
 import { StudyVideoButton } from "@/components/StudyVideoButton";
+import { GameSettingsModal, GameSettings } from "@/components/GameSettingsModal";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
-import { useFavorites } from "@/hooks/useFavorites";
+import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { ArrowLeft, Trophy, RefreshCcw, Star } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
@@ -80,6 +81,7 @@ const Study = () => {
   
   // Fetch favorites for filtering
   const { data: favorites = [] } = useFavorites(userId);
+  const toggleFavorite = useToggleFavorite();
 
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
@@ -109,9 +111,12 @@ const Study = () => {
     isGameComplete,
     startNextRound,
     resetSession,
+    restartSession,
+    gameSettings,
+    setGameSettings,
     unseenCardsCount,
     missedCardsCount,
-  } = useStudyEngine(listId, flashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble");
+  } = useStudyEngine(listId, flashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
   
   // Direção estável por card - use flipDirection for flip mode
   const decideDirection = (idx: number): "pt-en" | "en-pt" => {
@@ -282,6 +287,23 @@ const Study = () => {
     setFlipDirection(value as "pt-en" | "en-pt" | "any");
   };
 
+  const handleSettingsChange = (newSettings: GameSettings) => {
+    setGameSettings(newSettings);
+  };
+
+  const handleRestartWithSettings = () => {
+    restartSession(gameSettings);
+  };
+
+  const handleToggleFavorite = () => {
+    const card = flashcards[currentIndex];
+    if (!card?.id || !userId) return;
+    toggleFavorite.mutate({ 
+      flashcardId: card.id, 
+      isFavorite: favorites.includes(card.id) 
+    });
+  };
+
   if (loading || studyLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -378,11 +400,18 @@ const Study = () => {
               Sair
             </Button>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Game Settings Modal */}
+              <GameSettingsModal
+                settings={gameSettings}
+                onSettingsChange={handleSettingsChange}
+                onRestart={handleRestartWithSettings}
+              />
+              
               {/* Direction selector for flip mode */}
               {effectiveMode === "flip" && (
                 <Select value={flipDirection} onValueChange={handleDirectionChange}>
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-[110px] sm:w-[140px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -400,7 +429,7 @@ const Study = () => {
                 listTitle={listTitle}
               />
               
-              <div className="flex gap-4 text-sm">
+              <div className="hidden sm:flex gap-4 text-sm">
                 <span className="text-success font-medium">✓ {correctCount}</span>
                 <span className="text-destructive font-medium">✗ {errorCount}</span>
                 <span className="text-warning font-medium">⊘ {skippedCount}</span>
@@ -417,14 +446,22 @@ const Study = () => {
             </div>
             <Progress value={progress} />
           </div>
+
+          {/* Mobile score display */}
+          <div className="flex sm:hidden justify-center gap-6 text-sm py-2">
+            <span className="text-success font-medium">✓ {correctCount}</span>
+            <span className="text-destructive font-medium">✗ {errorCount}</span>
+            <span className="text-warning font-medium">⊘ {skippedCount}</span>
+          </div>
         </div>
 
         <div className="mb-6">
-          {effectiveMode === "flip" && (
+          {effectiveMode === "flip" && currentCard && (
             <FlipStudyView
               front={currentCard.term}
               back={currentCard.translation}
               hint={currentCard.hint}
+              flashcardId={currentCard.id}
               direction={resolvedDirection}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
@@ -434,11 +471,12 @@ const Study = () => {
               canGoNext={canGoNext}
             />
           )}
-          {effectiveMode === "write" && (
+          {effectiveMode === "write" && currentCard && (
             <WriteStudyView
               front={currentCard.term}
               back={currentCard.translation}
               hint={currentCard.hint}
+              flashcardId={currentCard.id}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               direction={resolvedDirection}
@@ -447,7 +485,7 @@ const Study = () => {
               onSkip={() => handleNext(false, true)}
             />
           )}
-          {effectiveMode === "multiple-choice" && (
+          {effectiveMode === "multiple-choice" && currentCard && (
             <MultipleChoiceStudyView
               currentCard={currentCard}
               allCards={flashcards}
@@ -456,11 +494,12 @@ const Study = () => {
               onIncorrect={() => handleNext(false)}
             />
           )}
-          {effectiveMode === "unscramble" && (
+          {effectiveMode === "unscramble" && currentCard && (
             <UnscrambleStudyView
               front={currentCard.term}
               back={currentCard.translation}
               hint={currentCard.hint}
+              flashcardId={currentCard.id}
               direction={resolvedDirection}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}

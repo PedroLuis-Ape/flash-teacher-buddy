@@ -13,13 +13,28 @@ export function useCreateAnnouncement() {
 
   return useMutation({
     mutationFn: async ({ class_id, title, body, pinned = false }: CreateAnnouncementParams) => {
+      // Validation
+      if (!title.trim()) {
+        throw new Error('O título é obrigatório');
+      }
+      if (!body.trim()) {
+        throw new Error('A mensagem é obrigatória');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
       const { data, error } = await supabase.functions.invoke('announcements-create', {
-        body: { class_id, title, body, pinned },
+        body: { 
+          class_id, 
+          turma_id: class_id, // Include both for backend compatibility
+          title, 
+          body, 
+          pinned 
+        },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
         },
       });
 

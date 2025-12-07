@@ -20,6 +20,11 @@ export interface StudySession {
   endTime?: number;
 }
 
+export interface GameSettings {
+  mode: 'sequential' | 'random';
+  subset: 'all' | 'favorites';
+}
+
 interface FlashcardWithProgress {
   id: string;
   term: string;
@@ -35,7 +40,8 @@ export function useStudyEngine(
   listId: string | undefined,
   flashcards: { id: string; term: string; translation: string }[],
   mode: "flip" | "multiple-choice" | "write" | "unscramble",
-  unlimitedMode: boolean = false
+  unlimitedMode: boolean = false,
+  favoriteIds: string[] = []
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -45,6 +51,12 @@ export function useStudyEngine(
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Game settings state
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    mode: 'random',
+    subset: 'all'
+  });
 
   // Spaced Repetition Lite state
   const [unseenCards, setUnseenCards] = useState<string[]>([]);
@@ -553,6 +565,49 @@ export function useStudyEngine(
     initializeSession();
   }, [listId, isFlipMode, flashcards, initializeSession]);
 
+  // Restart session with new settings
+  const restartSession = useCallback((newSettings?: Partial<GameSettings>) => {
+    const settings = { ...gameSettings, ...newSettings };
+    setGameSettings(settings);
+
+    // Get base cards
+    let baseCards = [...flashcards];
+
+    // Filter by favorites if selected
+    if (settings.subset === 'favorites' && favoriteIds.length > 0) {
+      baseCards = baseCards.filter(card => favoriteIds.includes(card.id));
+    }
+
+    if (baseCards.length === 0) {
+      toast.error('Nenhum card encontrado com os filtros selecionados');
+      return;
+    }
+
+    // Get card IDs
+    let cardIds = baseCards.map(f => f.id);
+
+    // Apply ordering
+    if (settings.mode === 'random') {
+      cardIds = cardIds.sort(() => Math.random() - 0.5);
+    }
+
+    // Reset state
+    if (listId && isFlipMode) {
+      localStorage.removeItem(`flip-progress-${listId}`);
+    }
+
+    setCardsOrder(cardIds);
+    setCurrentIndex(0);
+    setResults([]);
+    setRoundResults([]);
+    setMissedCards([]);
+    setUnseenCards(cardIds.slice(BATCH_SIZE));
+    setRoundNumber(1);
+    setIsFinished(false);
+
+    toast.success('Jogo reiniciado!');
+  }, [gameSettings, flashcards, favoriteIds, listId, isFlipMode]);
+
   // Initialize session on mount
   useEffect(() => {
     initializeSession();
@@ -609,6 +664,9 @@ export function useStudyEngine(
     isGameComplete,
     startNextRound,
     resetSession,
+    restartSession,
+    gameSettings,
+    setGameSettings,
     unseenCardsCount: unseenCards.length,
     missedCardsCount: missedCards.length,
   };
