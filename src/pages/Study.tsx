@@ -301,8 +301,7 @@ const Study = () => {
     if (!card?.id || !userId) return;
     toggleFavorite.mutate({ 
       flashcardId: card.id, 
-      isFavorite: favorites.includes(card.id),
-      userId: userId
+      isFavorite: favorites.includes(card.id)
     });
   };
 
