@@ -24,16 +24,17 @@ export function useToggleFavorite() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ flashcardId, isFavorite }: { flashcardId: string; isFavorite: boolean }) => {
+    mutationFn: async ({ flashcardId, isFavorite, userId }: { flashcardId: string; isFavorite: boolean; userId?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
+      const effectiveUserId = userId || user?.id;
+      if (!effectiveUserId) throw new Error('Não autenticado');
       
       if (isFavorite) {
         // Remove from favorites
         const { error } = await supabase
           .from('user_favorites')
           .delete()
-          .eq('user_id', user.id)
+          .eq('user_id', effectiveUserId)
           .eq('flashcard_id', flashcardId);
         
         if (error) throw error;
@@ -41,20 +42,48 @@ export function useToggleFavorite() {
         // Add to favorites
         const { error } = await supabase
           .from('user_favorites')
-          .insert({ user_id: user.id, flashcard_id: flashcardId });
+          .insert({ user_id: effectiveUserId, flashcard_id: flashcardId });
         
         if (error) throw error;
       }
       
-      return { flashcardId, isFavorite: !isFavorite };
+      return { flashcardId, isFavorite: !isFavorite, userId: effectiveUserId };
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      toast.success(data.isFavorite ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos');
+    // Optimistic update to prevent screen flicker
+    onMutate: async ({ flashcardId, isFavorite, userId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['favorites'] });
+      
+      // Snapshot the previous value
+      const previousFavorites = queryClient.getQueryData<string[]>(['favorites', userId]);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData<string[]>(['favorites', userId], (old = []) => {
+        if (isFavorite) {
+          // Removing: filter out the flashcard
+          return old.filter(id => id !== flashcardId);
+        } else {
+          // Adding: append the flashcard
+          return [...old, flashcardId];
+        }
+      });
+      
+      return { previousFavorites, userId };
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previousFavorites !== undefined) {
+        queryClient.setQueryData(['favorites', context.userId], context.previousFavorites);
+      }
       console.error('Error toggling favorite:', error);
       toast.error('Erro ao atualizar favorito');
+    },
+    onSuccess: (data) => {
+      toast.success(data.isFavorite ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos');
+    },
+    onSettled: (_data, _error, variables) => {
+      // Refetch after mutation settles to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['favorites', variables.userId] });
     },
   });
 }

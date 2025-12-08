@@ -136,7 +136,8 @@ const Study = () => {
 
   useEffect(() => {
     loadFlashcards();
-  }, [resolvedId, favorites, favoritesOnly]);
+    // Note: favorites removed from deps to prevent reload on toggle
+  }, [resolvedId, favoritesOnly]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -300,7 +301,8 @@ const Study = () => {
     if (!card?.id || !userId) return;
     toggleFavorite.mutate({ 
       flashcardId: card.id, 
-      isFavorite: favorites.includes(card.id) 
+      isFavorite: favorites.includes(card.id),
+      userId: userId
     });
   };
 

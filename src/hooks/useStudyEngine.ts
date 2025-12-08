@@ -147,6 +147,17 @@ export function useStudyEngine(
       
       if (!user) {
         setIsAuthenticated(false);
+        
+        // For flip mode without auth: use EXACT order from flashcards (already ordered by Study.tsx)
+        if (isFlipMode) {
+          const orderedIds = flashcards.map(f => f.id);
+          setCardsOrder(orderedIds);
+          setCurrentIndex(0);
+          setIsLoading(false);
+          return;
+        }
+        
+        // For quiz modes without auth: shuffle and batch
         let shuffledIds = flashcards
           .map(f => f.id)
           .sort(() => Math.random() - 0.5);
@@ -170,9 +181,9 @@ export function useStudyEngine(
         return;
       }
 
-      // For flip mode, check for existing session in Supabase first, then localStorage
+      // For flip mode: use EXACT order from flashcards (Study.tsx already applied random/sequential)
       if (isFlipMode) {
-        // Try to restore from Supabase first
+        // Try to restore from Supabase first (for session continuity)
         const { data: existingSession } = await supabase
           .from('study_sessions')
           .select('*')
@@ -195,7 +206,10 @@ export function useStudyEngine(
 
         // Fallback to localStorage if no Supabase session
         const savedProgress = loadFlipProgress();
-        const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, true);
+        
+        // CRITICAL FIX: Use the exact order from flashcards passed by Study.tsx
+        // Study.tsx already applied random/sequential ordering before passing here
+        const orderedCards = flashcards.map(f => f.id);
         
         // Create new session in Supabase for flip mode
         const { data: newSession, error } = await supabase
