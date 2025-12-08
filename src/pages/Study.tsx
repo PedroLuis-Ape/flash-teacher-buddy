@@ -30,7 +30,7 @@ import { StudyVideoButton } from "@/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/components/GameSettingsModal";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
-import { ArrowLeft, Trophy, RefreshCcw, Star } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 
@@ -369,19 +369,41 @@ const Study = () => {
             )}
 
             <div className="flex flex-wrap gap-4 justify-center pt-4">
+              {/* Se houver próxima rodada, botão de avançar como principal */}
               {showNextRound && (
                 <Button variant="default" size="lg" onClick={startNextRound}>
                   <RefreshCcw className="mr-2 h-5 w-5" />
                   Próxima Rodada
                 </Button>
               )}
+              
+              {/* Se NÃO houver próxima rodada (jogo zerado), botão grande de Reiniciar */}
+              {!showNextRound && (
+                <Button 
+                  variant="default" 
+                  size="lg" 
+                  onClick={handleRestartWithSettings}
+                  className="w-full sm:w-auto min-w-[220px] text-lg font-bold shadow-lg animate-in fade-in zoom-in duration-300"
+                >
+                  <RotateCcw className="mr-2 h-6 w-6" />
+                  Jogar Novamente
+                </Button>
+              )}
+              
+              {/* Botão de rever erros (secundário) */}
               {isFlipMode && errorCount > 0 && (
                 <Button variant="secondary" size="lg" onClick={handleReviewErrors}>
                   <RefreshCcw className="mr-2 h-5 w-5" />
                   Rever apenas os errados
                 </Button>
               )}
-              <Button variant={showNextRound ? "outline" : "default"} size="lg" onClick={handleExit}>
+              
+              {/* Botão voltar - menos destaque quando há ação principal */}
+              <Button 
+                variant={showNextRound || !showNextRound ? "outline" : "default"} 
+                size="lg" 
+                onClick={handleExit}
+              >
                 Voltar à Lista
               </Button>
             </div>
