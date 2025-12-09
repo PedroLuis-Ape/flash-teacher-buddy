@@ -1,5 +1,6 @@
 import { Folder, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 interface ApeCardFolderProps {
   title: string;
@@ -18,15 +19,18 @@ export function ApeCardFolder({
   onClick,
   className
 }: ApeCardFolderProps) {
+  const revealRef = useScrollReveal<HTMLButtonElement>();
+
   return (
     <button
+      ref={revealRef}
       onClick={onClick}
       disabled={isLocked}
       className={cn(
-        "flex items-center gap-3 w-full min-h-[64px] px-4 py-3 rounded-xl",
-        "bg-card hover:bg-accent/80 transition-all duration-200",
+        "scroll-reveal card-3d flex items-center gap-3 w-full min-h-[64px] px-4 py-3 rounded-xl",
+        "bg-card transition-all duration-200",
         "border border-border",
-        "text-left shadow-sm hover:shadow-md",
+        "text-left shadow-sm",
         isLocked && "opacity-50 cursor-not-allowed",
         className
       )}

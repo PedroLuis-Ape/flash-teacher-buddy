@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 export function TurmasCard() {
   const navigate = useNavigate();
@@ -31,9 +32,12 @@ export function TurmasCard() {
   // Don't show for teachers (they have separate cards)
   if (isTeacher) return null;
 
+  const revealRef = useScrollReveal<HTMLDivElement>();
+
   return (
     <Card
-      className="p-6 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+      ref={revealRef}
+      className="scroll-reveal card-3d p-6 cursor-pointer transition-all duration-200 border-border"
       onClick={() => navigate('/turmas')}
     >
       <div className="flex items-center gap-4">

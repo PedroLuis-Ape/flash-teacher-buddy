@@ -4,6 +4,7 @@ import { BookOpen, Trash2, Gamepad2, Share2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 interface CollectionCardProps {
   id: string;
@@ -28,6 +29,7 @@ export const CollectionCard = ({
 }: CollectionCardProps) => {
   const navigate = useNavigate();
   const isPublic = visibility === "public";
+  const revealRef = useScrollReveal<HTMLDivElement>();
 
   const handleDelete = async () => {
     const { error } = await supabase.from("collections").delete().eq("id", id);
@@ -59,7 +61,7 @@ export const CollectionCard = ({
   };
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-card to-muted/10 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-all duration-300">
+    <Card ref={revealRef} className="scroll-reveal card-3d p-6 bg-gradient-to-br from-card to-muted/10 shadow-[var(--shadow-card)] transition-all duration-300">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-primary" />
