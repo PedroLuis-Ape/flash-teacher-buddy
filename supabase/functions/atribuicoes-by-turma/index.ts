@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Client para autenticação
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -22,7 +23,7 @@ serve(async (req) => {
       }
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
     
     if (authError || !user) {
       return new Response(
@@ -31,17 +32,14 @@ serve(async (req) => {
       );
     }
 
-    // Read body first (for POST requests from invoke)
+    // Read body
     let bodyData: any = {};
     if (req.method === 'POST') {
       try {
         bodyData = await req.json();
-      } catch (_) {
-        // ignore parse errors
-      }
+      } catch (_) {}
     }
 
-    // Get params from body or querystring
     const url = new URL(req.url);
     const turma_id = bodyData?.turma_id || url.searchParams.get('turma_id');
 
@@ -52,8 +50,43 @@ serve(async (req) => {
       );
     }
 
-    // Buscar atribuições
-    const { data: atribuicoes, error: atribuicoesError } = await supabaseClient
+    console.log('[atribuicoes-by-turma] User:', user.id, 'Turma:', turma_id);
+
+    // Client ADMIN para bypassar RLS
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // 1. Verificar se o usuário é membro ou dono da turma
+    const { data: turma } = await adminClient
+      .from('turmas')
+      .select('owner_teacher_id')
+      .eq('id', turma_id)
+      .single();
+
+    const isOwner = turma?.owner_teacher_id === user.id;
+
+    if (!isOwner) {
+      const { data: membership } = await adminClient
+        .from('turma_membros')
+        .select('id')
+        .eq('turma_id', turma_id)
+        .eq('user_id', user.id)
+        .eq('ativo', true)
+        .single();
+
+      if (!membership) {
+        console.log('[atribuicoes-by-turma] Acesso negado - não é membro');
+        return new Response(
+          JSON.stringify({ error: 'Você não tem acesso a esta turma' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // 2. Buscar atribuições
+    const { data: atribuicoes, error: atribuicoesError } = await adminClient
       .from('atribuicoes')
       .select('*')
       .eq('turma_id', turma_id)
@@ -67,17 +100,38 @@ serve(async (req) => {
       );
     }
 
-    // Buscar total de alunos na turma
-    const { count: totalAlunos } = await supabaseClient
+    // 3. Buscar total de alunos na turma
+    const { count: totalAlunos } = await adminClient
       .from('turma_membros')
       .select('*', { count: 'exact', head: true })
       .eq('turma_id', turma_id)
       .eq('ativo', true);
 
-    // Para cada atribuição, buscar estatísticas de progresso e contagem de cards
+    // 4. Buscar status do usuário atual para cada atribuição (se for aluno)
+    const atribuicaoIds = (atribuicoes || []).map(a => a.id);
+    
+    let meuStatusMap: Record<string, { status: string; progresso: number }> = {};
+    
+    if (!isOwner && atribuicaoIds.length > 0) {
+      const { data: meusStatus } = await adminClient
+        .from('atribuicoes_status')
+        .select('atribuicao_id, status, progresso')
+        .eq('aluno_id', user.id)
+        .in('atribuicao_id', atribuicaoIds);
+      
+      for (const s of (meusStatus || [])) {
+        meuStatusMap[s.atribuicao_id] = {
+          status: s.status,
+          progresso: s.progresso || 0
+        };
+      }
+    }
+
+    // 5. Para cada atribuição, buscar estatísticas e contagem de cards
     const atribuicoesComProgresso = await Promise.all(
       (atribuicoes || []).map(async (atrib) => {
-        const { data: statusData } = await supabaseClient
+        // Stats para professor
+        const { data: statusData } = await adminClient
           .from('atribuicoes_status')
           .select('status, aluno_id')
           .eq('atribuicao_id', atrib.id);
@@ -89,24 +143,23 @@ serve(async (req) => {
           pendentes: (totalAlunos || 0) - (statusData || []).length,
         };
 
-        // Get card count based on fonte_tipo
+        // Card count
         let cardCount = 0;
         if (atrib.fonte_tipo === 'lista') {
-          const { count } = await supabaseClient
+          const { count } = await adminClient
             .from('flashcards')
             .select('*', { count: 'exact', head: true })
             .eq('list_id', atrib.fonte_id);
           cardCount = count || 0;
         } else if (atrib.fonte_tipo === 'pasta') {
-          // Get all lists in the folder, then count flashcards
-          const { data: lists } = await supabaseClient
+          const { data: lists } = await adminClient
             .from('lists')
             .select('id')
             .eq('folder_id', atrib.fonte_id);
           
           if (lists && lists.length > 0) {
             const listIds = lists.map(l => l.id);
-            const { count } = await supabaseClient
+            const { count } = await adminClient
               .from('flashcards')
               .select('*', { count: 'exact', head: true })
               .in('list_id', listIds);
@@ -114,13 +167,20 @@ serve(async (req) => {
           }
         }
 
+        // Meu status (para alunos)
+        const meuStatus = meuStatusMap[atrib.id] || { status: 'pendente', progresso: 0 };
+
         return {
           ...atrib,
           progresso: stats,
           card_count: cardCount,
+          meu_status: meuStatus.status,
+          meu_progresso: meuStatus.progresso,
         };
       })
     );
+
+    console.log('[atribuicoes-by-turma] Returning', atribuicoesComProgresso.length, 'atribuições');
 
     return new Response(
       JSON.stringify({ atribuicoes: atribuicoesComProgresso }),

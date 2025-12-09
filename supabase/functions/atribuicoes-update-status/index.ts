@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
+    // Client para autenticação
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -22,7 +23,7 @@ serve(async (req) => {
       }
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
     
     if (authError || !user) {
       return new Response(
@@ -40,53 +41,102 @@ serve(async (req) => {
       );
     }
 
-    // Update status
-    const { data: updatedStatus, error: updateError } = await supabaseClient
+    console.log('[atribuicoes-update-status] User:', user.id, 'Atribuição:', atribuicao_id, 'Status:', status);
+
+    // Client ADMIN para bypassar RLS
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // SEGURANÇA: FORÇAR aluno_id = user.id (do token JWT)
+    // Nunca confiar em aluno_id vindo do body!
+    const aluno_id = user.id;
+
+    // Verificar se o registro de status já existe
+    const { data: existingStatus } = await adminClient
       .from('atribuicoes_status')
-      .update({
-        status,
-        progresso: progresso ?? 0,
-        updated_at: new Date().toISOString(),
-      })
+      .select('id')
       .eq('atribuicao_id', atribuicao_id)
-      .eq('aluno_id', user.id)
-      .select()
+      .eq('aluno_id', aluno_id)
       .single();
 
-    if (updateError) {
-      console.error('Error updating status:', updateError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao atualizar status' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    let updatedStatus;
+
+    if (existingStatus) {
+      // Update existing
+      const { data, error } = await adminClient
+        .from('atribuicoes_status')
+        .update({
+          status,
+          progresso: progresso ?? 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingStatus.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating status:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao atualizar status' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      updatedStatus = data;
+    } else {
+      // Insert new
+      const { data, error } = await adminClient
+        .from('atribuicoes_status')
+        .insert({
+          atribuicao_id,
+          aluno_id,
+          status,
+          progresso: progresso ?? 0,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error inserting status:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao criar status' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      updatedStatus = data;
     }
 
-    // If status is concluida, award points
+    // Se status é 'concluida', dar pontos ao aluno
     if (status === 'concluida') {
-      const { data: atribuicao } = await supabaseClient
+      const { data: atribuicao } = await adminClient
         .from('atribuicoes')
         .select('pontos_vale')
         .eq('id', atribuicao_id)
         .single();
 
       if (atribuicao && atribuicao.pontos_vale > 0) {
-        const { data: profile } = await supabaseClient
+        const { data: profile } = await adminClient
           .from('profiles')
           .select('pts_weekly, xp_total')
-          .eq('id', user.id)
+          .eq('id', aluno_id)
           .single();
 
         if (profile) {
-          await supabaseClient
+          await adminClient
             .from('profiles')
             .update({
               pts_weekly: (profile.pts_weekly || 0) + atribuicao.pontos_vale,
               xp_total: (profile.xp_total || 0) + atribuicao.pontos_vale,
             })
-            .eq('id', user.id);
+            .eq('id', aluno_id);
+
+          console.log('[atribuicoes-update-status] Awarded', atribuicao.pontos_vale, 'points');
         }
       }
     }
+
+    console.log('[atribuicoes-update-status] Success');
 
     return new Response(
       JSON.stringify({ status: updatedStatus }),
