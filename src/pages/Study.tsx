@@ -26,6 +26,7 @@ import { FlipStudyView } from "@/components/FlipStudyView";
 import { WriteStudyView } from "@/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/components/MultipleChoiceStudyView";
 import { UnscrambleStudyView } from "@/components/UnscrambleStudyView";
+import { PronunciationStudyView } from "@/components/PronunciationStudyView";
 import { StudyVideoButton } from "@/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/components/GameSettingsModal";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
@@ -56,7 +57,7 @@ const Study = () => {
   
   // Normalizar mode, dir/direction e order
   const rawMode = (searchParams.get("mode") || "flip").toLowerCase();
-  const validModes = new Set(["flip","write","multiple","multiple-choice","unscramble","mixed"]);
+  const validModes = new Set(["flip","write","multiple","multiple-choice","unscramble","mixed","pronunciation"]);
   const mode = validModes.has(rawMode) ? rawMode : "flip";
   const normalizedMode = mode === "multiple" ? "multiple-choice" : mode;
 
@@ -128,11 +129,12 @@ const Study = () => {
   
   const resolvedDirection = decideDirection(currentIndex);
   
-  // Mixed mode determinístico
+  // Mixed mode determinístico (não inclui pronunciation no ciclo automático)
   const modesCycle = ["flip","write","multiple-choice","unscramble"] as const;
   const mixedModeFor = (idx: number) => modesCycle[idx % modesCycle.length];
   
   const effectiveMode = normalizedMode === "mixed" ? mixedModeFor(currentIndex) : normalizedMode;
+  const isPronunciationMode = effectiveMode === "pronunciation";
 
   useEffect(() => {
     loadFlashcards();
@@ -527,6 +529,13 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
+            />
+          )}
+          {effectiveMode === "pronunciation" && currentCard && (
+            <PronunciationStudyView
+              front={currentCard.term}
+              back={currentCard.translation}
+              onNext={() => handleNext(true)}
             />
           )}
         </div>
