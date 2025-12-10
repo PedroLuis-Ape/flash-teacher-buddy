@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star } from "lucide-react";
+import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { isPortalPath, buildBasePath } from "@/lib/utils";
 import { useFavoritesCount } from "@/hooks/useFavorites";
@@ -127,7 +127,7 @@ const GamesHub = () => {
     setLoading(false);
   };
 
-  const startGame = (mode: "flip" | "write" | "mixed" | "multiple" | "unscramble") => {
+  const startGame = (mode: "flip" | "write" | "mixed" | "multiple" | "unscramble" | "pronunciation") => {
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
     const favParam = favoritesOnly ? "&favorites=true" : "";
@@ -281,6 +281,16 @@ const GamesHub = () => {
                 <RotateCcw className="h-5 w-5 text-primary" />
               </div>
               <span className="text-sm font-semibold">Estudo Misto</span>
+            </button>
+
+            <button
+              onClick={() => startGame("pronunciation")}
+              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors border-orange-500/30 bg-orange-500/5"
+            >
+              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Mic className="h-5 w-5 text-orange-500" />
+              </div>
+              <span className="text-sm font-semibold">Prática de Pronúncia</span>
             </button>
           </div>
         </div>
