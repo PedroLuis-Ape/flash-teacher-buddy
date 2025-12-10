@@ -107,9 +107,9 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
           {front}
         </h2>
 
-        {/* PORTUGUÊS - LEGENDA */}
-        <p className="text-lg text-muted-foreground mb-6 font-medium">
-          {back}
+        {/* PORTUGUÊS - SUTIL/ESCONDIDO */}
+        <p className="text-xs text-muted-foreground/50 mb-6 italic">
+          ({back})
         </p>
 
         {/* Botão de ouvir pronúncia correta */}
@@ -179,12 +179,13 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
       {/* Botões de ação */}
       <div className="w-full flex justify-between pt-4">
         <Button
-          variant="ghost"
+          variant="outline"
           onClick={resetTranscript}
           disabled={!transcript && !error}
+          className="gap-2"
         >
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Limpar
+          <RotateCcw className="h-4 w-4" />
+          Tentar Novamente
         </Button>
         <Button size="lg" onClick={handleNext}>
           Próximo
