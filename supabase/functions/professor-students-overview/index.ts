@@ -23,15 +23,13 @@ serve(async (req) => {
     );
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    
     if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Não autorizado' }),
+        JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Read aluno_id from request body
     const { aluno_id } = await req.json();
 
     if (!aluno_id) {
@@ -41,111 +39,56 @@ serve(async (req) => {
       );
     }
 
-    // Verify user is teacher of this student or is the student themselves
-    const { data: subscription } = await supabaseClient
-      .from('subscriptions')
-      .select('student_id')
-      .eq('teacher_id', user.id)
-      .eq('student_id', aluno_id)
-      .single();
-
-    const isTeacherOfStudent = !!subscription;
-    const isOwnProfile = user.id === aluno_id;
-
-    if (!isTeacherOfStudent && !isOwnProfile) {
-      return new Response(
-        JSON.stringify({ error: 'Você não tem permissão para esta ação' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get student profile
+    // 1. Basic Profile
     const { data: studentProfile } = await supabaseClient
       .from('profiles')
-      .select('id, first_name, ape_id, avatar_skin_id, level, xp_total, pts_weekly, balance_pitecoin')
+      .select('id, first_name, ape_id, avatar_skin_id, level, xp_total, current_streak')
       .eq('id', aluno_id)
       .single();
 
-    // Get recent assignments
-    const { data: assignments } = await supabaseClient
-      .from('atribuicoes_status')
+    // 2. Activity Last 7 Days (For Chart)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { data: dailyActivity } = await supabaseClient
+      .from('daily_activity')
+      .select('activity_date, pts_earned, actions_count')
+      .eq('user_id', aluno_id)
+      .gte('activity_date', sevenDaysAgo.toISOString().split('T')[0])
+      .order('activity_date', { ascending: true });
+
+    // 3. Recent Study Sessions
+    const { data: recentSessions } = await supabaseClient
+      .from('study_sessions')
       .select(`
-        id,
-        status,
-        concluida_em,
-        atribuicao:atribuicao_id (
-          id,
-          titulo,
-          descricao,
-          data_limite,
-          pontos_vale,
-          turma:turma_id (
-            id,
-            nome
-          )
-        )
+        id, mode, completed, updated_at, created_at,
+        list:list_id ( title, folder_id )
       `)
-      .eq('aluno_id', aluno_id)
-      .order('concluida_em', { ascending: false, nullsFirst: false })
+      .eq('user_id', aluno_id)
+      .order('updated_at', { ascending: false })
       .limit(10);
 
-    // Get common turmas if teacher
-    let commonTurmas = [];
-    if (isTeacherOfStudent) {
-      const { data: turmasData } = await supabaseClient
-        .from('turma_membros')
-        .select(`
-          turma:turma_id (
-            id,
-            nome,
-            descricao
-          )
-        `)
-        .eq('user_id', aluno_id)
-        .eq('ativo', true);
-
-      commonTurmas = turmasData?.map((t: any) => t.turma).filter(Boolean) || [];
-    }
-
-    // Get last DM message
-    let lastDmMessage = null;
-    if (isTeacherOfStudent) {
-      const { data: dmPair } = await supabaseClient
-        .from('dms')
-        .select('id')
-        .eq('teacher_id', user.id)
-        .eq('aluno_id', aluno_id)
-        .single();
-
-      if (dmPair) {
-        const { data: lastMsg } = await supabaseClient
-          .from('mensagens')
-          .select('texto, created_at, sender_id')
-          .eq('thread_tipo', 'dm')
-          .eq('thread_chave', dmPair.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        lastDmMessage = lastMsg;
-      }
-    }
+    console.log(`[professor-students-overview] Fetched data for student ${aluno_id}:`, {
+      hasProfile: !!studentProfile,
+      dailyActivityCount: dailyActivity?.length || 0,
+      sessionsCount: recentSessions?.length || 0
+    });
 
     return new Response(
       JSON.stringify({ 
         student: studentProfile,
-        assignments: assignments || [],
-        commonTurmas,
-        lastDmMessage,
+        dailyActivity: dailyActivity || [],
+        recentSessions: recentSessions || []
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
-    console.error('Unexpected error:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[professor-students-overview] Error:', errorMessage);
     return new Response(
-      JSON.stringify({ error: 'Erro interno' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: errorMessage }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
