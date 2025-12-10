@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { naturalSort } from '@/lib/sorting';
-import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone } from 'lucide-react';
+import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
@@ -22,7 +22,7 @@ import { useUpdateTurma, useDeleteTurma, useEnrollAluno, useRemoveTurmaMember } 
 import { useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
+import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
 export default function TurmaDetail() {
   const { turmaId } = useParams<{ turmaId: string }>();
   const navigate = useNavigate();
@@ -53,6 +53,10 @@ export default function TurmaDetail() {
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
   const [announcementTitulo, setAnnouncementTitulo] = useState('');
   const [announcementMensagem, setAnnouncementMensagem] = useState('');
+
+  // Student analytics state
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   
   const updateTurma = useUpdateTurma();
   const deleteTurma = useDeleteTurma();
@@ -863,11 +867,24 @@ export default function TurmaDetail() {
                           APE ID: {membro.profiles?.ape_id || 'N/A'}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                         <Badge variant={membro.role === 'aluno' ? 'secondary' : 'default'}>
                           {membro.role}
                         </Badge>
                         {isOwner && membro.role === 'aluno' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Ver desempenho"
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => {
+                                setSelectedStudentId(membro.user_id);
+                                setAnalyticsOpen(true);
+                              }}
+                            >
+                              <BarChart2 className="h-4 w-4" />
+                            </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
@@ -909,6 +926,7 @@ export default function TurmaDetail() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          </>
                         )}
                       </div>
                     </div>
@@ -945,6 +963,16 @@ export default function TurmaDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Student Analytics Modal */}
+      <StudentAnalyticsModal
+        studentId={selectedStudentId}
+        isOpen={analyticsOpen}
+        onClose={() => {
+          setAnalyticsOpen(false);
+          setSelectedStudentId(null);
+        }}
+      />
     </div>
   );
 }

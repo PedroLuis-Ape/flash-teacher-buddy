@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, Star, FolderPlus } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, Star, FolderPlus, Mic } from "lucide-react";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
@@ -332,13 +332,23 @@ const ListDetail = () => {
                 </Button>
               )}
               {flashcards.length > 0 && (
-                <Button
-                  size="lg"
-                  onClick={() => navigate(isOwner ? `/list/${id}/games` : `/portal/list/${id}/games`)}
-                >
-                  <Play className="mr-2 h-5 w-5" />
-                  Estudar
-                </Button>
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate(`/list/${id}/study?mode=pronunciation`)}
+                    className="gap-2"
+                  >
+                    <Mic className="h-4 w-4" />
+                    Prática de Pronúncia
+                  </Button>
+                  <Button
+                    size="lg"
+                    onClick={() => navigate(isOwner ? `/list/${id}/games` : `/portal/list/${id}/games`)}
+                  >
+                    <Play className="mr-2 h-5 w-5" />
+                    Estudar
+                  </Button>
+                </>
               )}
             </div>
           </div>
