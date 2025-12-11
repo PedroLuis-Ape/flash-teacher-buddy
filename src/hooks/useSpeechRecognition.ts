@@ -10,9 +10,35 @@ interface UseSpeechRecognitionReturn {
   transcript: string;
   error: string | null;
   isSupported: boolean;
+  browserName: string | null;
   startListening: () => void;
   stopListening: () => void;
   resetTranscript: () => void;
+}
+
+/**
+ * Detect browser name for compatibility warnings
+ */
+function detectBrowser(): string {
+  const ua = navigator.userAgent;
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+  if (ua.includes('Edg')) return 'Edge';
+  if (ua.includes('Chrome')) return 'Chrome';
+  if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera';
+  return 'Unknown';
+}
+
+/**
+ * Check if Web Speech API is available
+ */
+function checkSpeechRecognitionSupport(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  const SpeechRecognition =
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  
+  return !!SpeechRecognition;
 }
 
 /**
@@ -28,29 +54,37 @@ export function useSpeechRecognition({
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(true);
+  const [browserName, setBrowserName] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isListeningRef = useRef(false);
 
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    // Detect browser
+    const browser = detectBrowser();
+    setBrowserName(browser);
     
-    if (!SpeechRecognition) {
-      setIsSupported(false);
-      console.warn('[useSpeechRecognition] Web Speech API not supported');
+    // Check support
+    const supported = checkSpeechRecognitionSupport();
+    setIsSupported(supported);
+    
+    if (!supported) {
+      console.warn(`[useSpeechRecognition] Web Speech API not supported on ${browser}`);
       return;
     }
 
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
     const recognition = new SpeechRecognition();
-    recognition.lang = lang; // CRÍTICO: força idioma
+    recognition.lang = 'en-US'; // CRITICAL: Always force English
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      console.log('[useSpeechRecognition] Started listening in:', lang);
+      console.log('[useSpeechRecognition] Started listening in: en-US');
       setIsListening(true);
       isListeningRef.current = true;
       setError(null);
@@ -121,8 +155,13 @@ export function useSpeechRecognition({
   }, [lang]);
 
   const startListening = useCallback(() => {
-    if (!recognitionRef.current || !isSupported) {
-      console.warn('[useSpeechRecognition] Cannot start - not supported or not initialized');
+    if (!isSupported) {
+      console.warn('[useSpeechRecognition] Cannot start - not supported');
+      return;
+    }
+    
+    if (!recognitionRef.current) {
+      console.warn('[useSpeechRecognition] Cannot start - not initialized');
       return;
     }
     
@@ -136,10 +175,8 @@ export function useSpeechRecognition({
     
     try {
       // CRITICAL: Force English (en-US) every single time before starting
-      if (recognitionRef.current.lang !== 'en-US') {
-        recognitionRef.current.lang = 'en-US';
-        console.log('[useSpeechRecognition] Forcing language to en-US');
-      }
+      recognitionRef.current.lang = 'en-US';
+      console.log('[useSpeechRecognition] Forcing language to en-US');
       
       recognitionRef.current.start();
       
@@ -190,6 +227,7 @@ export function useSpeechRecognition({
     transcript,
     error,
     isSupported,
+    browserName,
     startListening,
     stopListening,
     resetTranscript,

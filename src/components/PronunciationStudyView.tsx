@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Volume2, ArrowRight, RotateCcw } from "lucide-react";
+import { Mic, MicOff, Volume2, ArrowRight, RotateCcw, AlertTriangle, Chrome } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTTS } from "@/hooks/useTTS";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     transcript,
     error,
     isSupported,
+    browserName,
     startListening,
     stopListening,
     resetTranscript,
@@ -65,32 +66,64 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
         handleNext();
       } else if (e.key === " " && e.target === document.body) {
         e.preventDefault();
-        handleMicToggle();
+        if (isSupported) {
+          handleMicToggle();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isListening]);
+  }, [isListening, isSupported]);
 
-  // Browser não suportado
+  // Browser não suportado - UI amigável
   if (!isSupported) {
     return (
-      <Card className="p-8 text-center">
-        <div className="space-y-4">
-          <div className="text-destructive text-lg font-semibold">
-            Navegador não suportado
-          </div>
-          <p className="text-muted-foreground">
-            Seu navegador não suporta reconhecimento de voz.
-            <br />
-            Use o Google Chrome para melhor experiência.
+      <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
+        <Card className="w-full p-8 flex flex-col items-center border-2 border-amber-500/50 bg-amber-50/10">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+          <h3 className="text-xl font-semibold text-foreground mb-2">
+            Reconhecimento de Voz Não Suportado
+          </h3>
+          <p className="text-muted-foreground text-center mb-4">
+            {browserName === 'Firefox' || browserName === 'Safari' ? (
+              <>
+                O <span className="font-semibold">{browserName}</span> não suporta a API de reconhecimento de voz.
+                <br />
+                Para usar a prática de pronúncia, recomendamos usar o{" "}
+                <span className="font-semibold text-primary">Google Chrome</span> ou{" "}
+                <span className="font-semibold text-primary">Microsoft Edge</span>.
+              </>
+            ) : (
+              <>
+                Seu navegador não suporta reconhecimento de voz.
+                <br />
+                Use o Google Chrome ou Microsoft Edge para melhor experiência.
+              </>
+            )}
           </p>
-          <Button onClick={onNext}>
-            Pular <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </Card>
+          
+          {/* Card com a palavra atual mesmo sem mic */}
+          <div className="w-full p-4 rounded-lg bg-card border mb-4 text-center">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+              Palavra atual
+            </p>
+            <h2 className="text-2xl font-bold text-primary mb-1">{front}</h2>
+            <p className="text-xs text-muted-foreground/60 italic">({back})</p>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handlePlayPronunciation} className="gap-2">
+              <Volume2 className="w-4 h-4" />
+              Ouvir Pronúncia
+            </Button>
+            <Button onClick={onNext} className="gap-2">
+              Pular Card
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </Card>
+      </div>
     );
   }
 
