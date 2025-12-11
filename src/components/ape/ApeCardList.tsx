@@ -40,9 +40,9 @@ export function ApeCardList({
         <FileText className="h-5 w-5 text-secondary-foreground" />
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-base truncate leading-tight">
+          <h3 className="font-semibold text-base truncate leading-tight flex-1 min-w-0" title={title}>
             {title}
           </h3>
           {badge && (
@@ -52,7 +52,7 @@ export function ApeCardList({
           )}
         </div>
         {(subtitle || cardCount !== undefined || language) && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground truncate">
             {[
               subtitle,
               cardCount !== undefined && `${cardCount} ${cardCount === 1 ? 'card' : 'cards'}`,

@@ -167,6 +167,20 @@ All colors MUST be HSL.
     20%, 40%, 60%, 80% { transform: translateX(10px); }
   }
 
+  /* Marquee Animation for Scrolling Titles */
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .animate-marquee {
+    animation: marquee 8s linear infinite;
+  }
+
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+
   /* Scroll Reveal Animation */
   .scroll-reveal {
     opacity: 0;

@@ -135,9 +135,15 @@ export function useSpeechRecognition({
     setError(null);
     
     try {
+      // CRITICAL: Force English (en-US) every single time before starting
+      if (recognitionRef.current.lang !== 'en-US') {
+        recognitionRef.current.lang = 'en-US';
+        console.log('[useSpeechRecognition] Forcing language to en-US');
+      }
+      
       recognitionRef.current.start();
       
-      // Timeout de segurança: parar após X segundos de silêncio
+      // Timeout de segurança: parar após X segundos
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
