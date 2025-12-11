@@ -213,3 +213,16 @@ All colors MUST be HSL.
     box-shadow: var(--shadow-hover);
   }
 }
+
+/* Safe area support for iOS notch and Android cutouts */
+@supports(padding: max(0px)) {
+  body {
+    padding-left: min(0vmin, env(safe-area-inset-left));
+    padding-right: min(0vmin, env(safe-area-inset-right));
+  }
+  
+  /* Prevent font-size inflation on iOS landscape */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
