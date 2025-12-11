@@ -43,12 +43,12 @@ export function ApeCardFolder({
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-base truncate leading-tight">
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <h3 className="font-semibold text-base truncate leading-tight" title={title}>
           {title}
         </h3>
         {(listCount !== undefined || cardCount !== undefined) && (
-          <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+          <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
             {[
               listCount !== undefined && `${listCount} ${listCount === 1 ? 'lista' : 'listas'}`,
               cardCount !== undefined && `${cardCount} ${cardCount === 1 ? 'card' : 'cards'}`

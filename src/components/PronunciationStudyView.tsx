@@ -147,7 +147,7 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
             isListening ? "text-destructive" : "text-muted-foreground"
           )}
         >
-          {isListening ? "Ouvindo..." : "Toque para falar"}
+          {isListening ? "Speak in English..." : "Toque para falar"}
         </span>
       </div>
 

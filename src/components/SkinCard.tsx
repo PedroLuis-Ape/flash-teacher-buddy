@@ -51,17 +51,15 @@ export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="p-4 space-y-3">
-          <CardTitle className="text-lg line-clamp-2 min-h-[3.5rem] flex items-center">
+        <CardContent className="p-4 flex flex-col h-[120px]">
+          <CardTitle className="text-base line-clamp-2 text-center mb-auto">
             {skin.name}
           </CardTitle>
-          <div className="flex items-center justify-between gap-2 pt-2 border-t">
-            <div className="flex items-center gap-2">
-              <img src={pitecoinIcon} alt="PITECOIN" className="w-6 h-6" />
-              <span className="text-lg font-bold">
-                {skin.price_pitecoin === 0 ? 'GRÁTIS' : `₱${skin.price_pitecoin}`}
-              </span>
-            </div>
+          <div className="flex items-center justify-center gap-2 pt-3 border-t mt-3">
+            <img src={pitecoinIcon} alt="PITECOIN" className="w-5 h-5 shrink-0" />
+            <span className="text-base font-bold">
+              {skin.price_pitecoin === 0 ? 'GRÁTIS' : `₱${skin.price_pitecoin}`}
+            </span>
           </div>
         </CardContent>
       </Card>
