@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 
 type AnnouncementMode = 'general' | 'direct_assignment';
 
@@ -58,6 +60,16 @@ export function useCreateAnnouncement() {
 
       if (error) {
         console.error('Announcement error:', error);
+        
+        // Check specifically for 401 authentication errors
+        if (error instanceof FunctionsHttpError && error.context?.status === 401) {
+          console.error('Erro 401: Usuário não autenticado ou sessão expirada.');
+          toast.error('Sessão expirada', {
+            description: 'Por favor, faça login novamente.',
+          });
+          throw new Error('Sua sessão expirou. Por favor, faça login novamente para criar o aviso.');
+        }
+        
         throw new Error(error.message || 'Erro ao criar aviso');
       }
       if (data?.error) {
