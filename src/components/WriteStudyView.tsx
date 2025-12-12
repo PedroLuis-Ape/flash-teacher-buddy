@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
+import { playCorrect, playWrong } from "@/lib/sfx";
 
 interface WriteStudyViewProps {
   front: string;
@@ -116,10 +117,7 @@ export const WriteStudyView = ({
 
     if (result.isCorrect) {
       setFeedback("correct");
-      // Play success sound
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGi77eeeTRALUKfj8LdjHAU5kdj+');
-      audio.volume = 0.3;
-      audio.play().catch(() => {});
+      playCorrect();
     } else {
       // Verifica se está quase correto (typo tolerance via Levenshtein)
       const almostCorrect = acceptedAnswers.some(accepted => 
@@ -128,12 +126,14 @@ export const WriteStudyView = ({
       
       if (almostCorrect) {
         setFeedback("almost");
+        playCorrect(); // Almost correct also plays success sound
         // Show typo warning
         toast.warning(`Correto! (Atenção ao erro de digitação: "${correctAnswer}")`, {
           duration: 3000,
         });
       } else {
         setFeedback("incorrect");
+        playWrong();
       }
     }
   };

@@ -56,13 +56,20 @@ export function DMList({ turmaId, isOwner, membros, teacherId, teacherName, auto
 
   // Auto-open specific recipient when coming from notification
   useEffect(() => {
-    if (autoOpenRecipientId && recipients.length > 0 && currentUser && !selectedRecipient) {
+    if (autoOpenRecipientId && currentUser && !selectedRecipient) {
+      // First try to find in existing recipients list
       const recipientToOpen = recipients.find(r => r.id === autoOpenRecipientId);
       if (recipientToOpen) {
         setSelectedRecipient(recipientToOpen);
+      } else if (autoOpenRecipientId === teacherId && teacherName) {
+        // If the sender is the teacher (student receiving notification), use teacher info
+        setSelectedRecipient({ id: teacherId, name: teacherName });
+      } else if (recipients.length === 0 && !isOwner && teacherId && teacherName) {
+        // For students when recipients hasn't loaded yet but we have teacher info
+        setSelectedRecipient({ id: teacherId, name: teacherName });
       }
     }
-  }, [autoOpenRecipientId, recipients, currentUser, selectedRecipient]);
+  }, [autoOpenRecipientId, recipients, currentUser, selectedRecipient, teacherId, teacherName, isOwner]);
 
   if (selectedRecipient && currentUser) {
     return (

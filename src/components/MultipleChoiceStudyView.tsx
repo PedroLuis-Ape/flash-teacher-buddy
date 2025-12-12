@@ -12,6 +12,7 @@ import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
+import { playCorrect, playWrong } from "@/lib/sfx";
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
@@ -106,12 +107,15 @@ export const MultipleChoiceStudyView = ({
     setSelectedOption(index);
     setShowFeedback(true);
 
-    // Award points if correct
+    // Award points and play sound if correct
     if (index === correctIndex) {
+      playCorrect();
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         await awardPoints(session.user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'flashcard_correct');
       }
+    } else {
+      playWrong();
     }
 
     // Dar feedback visual antes de avançar

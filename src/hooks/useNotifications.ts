@@ -178,7 +178,8 @@ export function useNotifications() {
       // Navigate to turma page (assignment detail removed)
       navigate(`/turmas/${metadata.turma_id}`);
     } else if (notification.tipo === 'mensagem_recebida' && metadata.turma_id) {
-      navigate(`/turmas/${metadata.turma_id}`);
+      // Old message notification format - also navigate to DM
+      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&sender=${metadata.sender_id}`);
     } else if (notification.tipo === 'aluno_inscrito') {
       navigate('/professor/alunos');
     } else if (notification.tipo === 'aviso' && metadata.turma_id) {
