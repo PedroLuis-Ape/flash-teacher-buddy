@@ -1,3 +1,10 @@
+/**
+ * APE – Apprentice Practice & Enhancement
+ * © 2025 Pedro Luis de Oliveira Silva. Todos os direitos reservados.
+ * Este software é de uso exclusivo do autor e de seus alunos autorizados.
+ * É proibida a cópia, redistribuição ou utilização comercial sem autorização por escrito.
+ */
+
 import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -44,6 +51,7 @@ const AlunoProfile = lazy(() => import("./pages/AlunoProfile"));
 const ProfessorProfile = lazy(() => import("./pages/ProfessorProfile"));
 const MyTeachers = lazy(() => import("./pages/MyTeachers"));
 const PainelProfessor = lazy(() => import("./pages/PainelProfessor"));
+const About = lazy(() => import("./pages/About"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -102,6 +110,7 @@ const App = () => (
                 <Route path="/professores/:professorId" element={<ProfessorProfile />} />
                 <Route path="/my-teachers" element={<MyTeachers />} />
                 <Route path="/painel-professor" element={<PainelProfessor />} />
+                <Route path="/about" element={<About />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </PageTransition>
