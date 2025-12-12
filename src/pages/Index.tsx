@@ -14,7 +14,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX } from "lucide-react";
+import { useSoundSettings } from "@/hooks/useSoundSettings";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
@@ -22,6 +26,7 @@ const Index = () => {
   const { last, recents, stats, loading, refetch } = useHomeData();
   const { pts_weekly, level, current_streak } = useEconomy();
   const { selectedInstitution } = useInstitution();
+  const { soundEnabled, toggleSound } = useSoundSettings();
   const [profileData, setProfileData] = useState<{
     firstName: string;
     avatarUrl: string | null;
@@ -136,6 +141,36 @@ const Index = () => {
                   Continue aprendendo!
                 </p>
               </div>
+              {/* Settings Popover */}
+              <Popover>
+                <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="shrink-0">
+                    <Settings className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="end" onClick={(e) => e.stopPropagation()}>
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-sm">Configurações</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {soundEnabled ? (
+                          <Volume2 className="h-4 w-4 text-primary" />
+                        ) : (
+                          <VolumeX className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <Label htmlFor="sound-toggle" className="text-sm">
+                          Sons do jogo
+                        </Label>
+                      </div>
+                      <Switch
+                        id="sound-toggle"
+                        checked={soundEnabled}
+                        onCheckedChange={toggleSound}
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </CardContent>
         </Card>
