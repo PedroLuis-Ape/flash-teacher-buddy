@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,9 @@ const Study = () => {
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
 
+  // Memoize flashcards to prevent unstable references triggering re-init
+  const stableFlashcards = useMemo(() => flashcards, [JSON.stringify(flashcards.map(f => f.id))]);
+
   const {
     currentIndex,
     progress,
@@ -117,7 +120,7 @@ const Study = () => {
     setGameSettings,
     unseenCardsCount,
     missedCardsCount,
-  } = useStudyEngine(listId, flashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
+  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
   
   // Direção estável por card - use flipDirection for flip mode
   const decideDirection = (idx: number): "pt-en" | "en-pt" => {

@@ -49,12 +49,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     return () => subscription.unsubscribe();
   }, []);
   
-  // Refresh HUD on route change
+  // Refresh HUD ONLY on initial user login (not on every navigation)
   useEffect(() => {
     if (user) {
       refreshBalance();
     }
-  }, [location.pathname, user, refreshBalance]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Activity heartbeat - tracks when user is active
   useActivityHeartbeat(user?.id);

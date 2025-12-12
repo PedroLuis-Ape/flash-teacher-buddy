@@ -22,7 +22,7 @@ export function useChatMessages(turmaId: string | null, threadTipo: string, thre
       return data;
     },
     enabled: FEATURE_FLAGS.class_comms_enabled && !!turmaId && !!threadChave,
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 30000, // Poll every 30 seconds (Realtime handles instant updates)
   });
 }
 
