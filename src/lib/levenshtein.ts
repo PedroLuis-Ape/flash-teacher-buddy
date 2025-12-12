@@ -50,6 +50,36 @@ export function levenshteinDistance(str1: string, str2: string): number {
 }
 
 /**
+ * Calcula a similaridade entre duas strings (0 a 1)
+ * 1 = idêntico, 0 = completamente diferente
+ */
+export function similarity(str1: string, str2: string): number {
+  if (!str1 && !str2) return 1;
+  if (!str1 || !str2) return 0;
+  
+  const maxLen = Math.max(str1.length, str2.length);
+  if (maxLen === 0) return 1;
+  
+  const distance = levenshteinDistance(str1, str2);
+  return 1 - distance / maxLen;
+}
+
+/**
+ * Normaliza texto para comparação de pronúncia
+ * Remove pontuação, acentos e normaliza espaços
+ */
+export function normalizeForSpeech(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/[.,!?;:'"()[\]{}]/g, "") // Remove pontuação
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Verifica se a resposta está quase correta (1 caractere de diferença)
  * Aplica normalização completa antes da comparação
  */
@@ -71,5 +101,42 @@ export function isAlmostCorrect(userAnswer: string, correctAnswer: string): bool
   
   const distance = levenshteinDistance(normalizedUser, normalizedCorrect);
   return distance === 1;
+}
+
+/**
+ * Avalia pronúncia comparando múltiplas alternativas com o texto esperado
+ * Retorna: 'correct' (>=80%), 'almost' (50-79%), 'incorrect' (<50%)
+ */
+export function evaluatePronunciation(
+  alternatives: string[],
+  expected: string
+): { result: 'correct' | 'almost' | 'incorrect'; bestScore: number; bestMatch: string } {
+  if (!alternatives.length || !expected) {
+    return { result: 'incorrect', bestScore: 0, bestMatch: '' };
+  }
+
+  const normalizedExpected = normalizeForSpeech(expected);
+  
+  let bestScore = 0;
+  let bestMatch = '';
+
+  for (const alt of alternatives) {
+    const normalizedAlt = normalizeForSpeech(alt);
+    const score = similarity(normalizedAlt, normalizedExpected);
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = alt;
+    }
+  }
+
+  // Determine result based on score
+  if (bestScore >= 0.80) {
+    return { result: 'correct', bestScore, bestMatch };
+  } else if (bestScore >= 0.50) {
+    return { result: 'almost', bestScore, bestMatch };
+  } else {
+    return { result: 'incorrect', bestScore, bestMatch };
+  }
 }
 

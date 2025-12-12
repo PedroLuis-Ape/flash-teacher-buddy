@@ -14,11 +14,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
 import { useSoundSettings } from "@/hooks/useSoundSettings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
@@ -26,7 +27,7 @@ const Index = () => {
   const { last, recents, stats, loading, refetch } = useHomeData();
   const { pts_weekly, level, current_streak } = useEconomy();
   const { selectedInstitution } = useInstitution();
-  const { soundEnabled, toggleSound } = useSoundSettings();
+  const { soundEnabled, toggleSound, notificationsEnabled, toggleNotifications } = useSoundSettings();
   const [profileData, setProfileData] = useState<{
     firstName: string;
     avatarUrl: string | null;
@@ -151,6 +152,8 @@ const Index = () => {
                 <PopoverContent className="w-64" align="end" onClick={(e) => e.stopPropagation()}>
                   <div className="space-y-4">
                     <h4 className="font-medium text-sm">Configurações</h4>
+                    
+                    {/* Sound Toggle */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {soundEnabled ? (
@@ -166,6 +169,27 @@ const Index = () => {
                         id="sound-toggle"
                         checked={soundEnabled}
                         onCheckedChange={toggleSound}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    {/* Notifications Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {notificationsEnabled ? (
+                          <Bell className="h-4 w-4 text-primary" />
+                        ) : (
+                          <BellOff className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <Label htmlFor="notifications-toggle" className="text-sm">
+                          Notificações
+                        </Label>
+                      </div>
+                      <Switch
+                        id="notifications-toggle"
+                        checked={notificationsEnabled}
+                        onCheckedChange={toggleNotifications}
                       />
                     </div>
                   </div>
