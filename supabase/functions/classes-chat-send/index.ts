@@ -86,10 +86,7 @@ serve(async (req) => {
         texto: sanitizedText,
         anexos: anexos || null,
       })
-      .select(`
-        *,
-        profiles:sender_id(first_name, avatar_skin_id)
-      `)
+      .select('*')
       .single();
 
     if (insertError) {
@@ -100,8 +97,20 @@ serve(async (req) => {
       );
     }
 
+    // Fetch sender profile separately (no FK in mensagens)
+    const { data: senderProfile } = await supabaseClient
+      .from('profiles')
+      .select('first_name, avatar_skin_id')
+      .eq('id', user.id)
+      .single();
+
+    const messageWithSender = {
+      ...message,
+      sender: senderProfile || { first_name: 'Usuário', avatar_skin_id: null }
+    };
+
     return new Response(
-      JSON.stringify({ message }),
+      JSON.stringify({ message: messageWithSender }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
