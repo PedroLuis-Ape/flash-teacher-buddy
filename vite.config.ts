@@ -1,3 +1,8 @@
+/**
+ * APE – Apprentice Practice & Enhancement
+ * © 2025 Pedro Luis de Oliveira Silva. Todos os direitos reservados.
+ */
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -10,6 +15,17 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  build: {
+    // Production build settings - minify and no sourcemaps
+    minify: mode === 'production' ? 'esbuild' : false,
+    sourcemap: mode === 'production' ? false : true,
+    rollupOptions: {
+      output: {
+        // Mangle/obfuscate variable names in production
+        manualChunks: undefined,
+      },
+    },
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
@@ -17,9 +33,9 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'icons/*.png'],
       manifest: {
-        name: 'APE • Piteco',
-        short_name: 'Piteco',
-        description: 'Aprenda com o Piteco — exercícios, loja e recompensas.',
+        name: 'APE – Apprentice Practice & Enhancement',
+        short_name: 'APE',
+        description: 'Aplicativo educacional de prática guiada de idiomas por Pedro Luis de Oliveira Silva.',
         theme_color: '#FFD700',
         background_color: '#4B0082',
         display: 'standalone',
