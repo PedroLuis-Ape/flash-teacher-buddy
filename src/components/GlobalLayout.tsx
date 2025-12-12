@@ -83,12 +83,16 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
               </div>
             </header>
           )}
-          <main className="flex-1 pb-16">
+          <main className="flex-1">
             {children}
           </main>
           
           {/* Global Footer - hidden on study pages and for non-logged users */}
-          {user && !isFullScreenPage && <GlobalFooter />}
+          {user && !isFullScreenPage && (
+            <div className="pb-20">
+              <GlobalFooter />
+            </div>
+          )}
           
           {user && <ApeTabBar />}
           {user && <GiftNotificationModal />}
