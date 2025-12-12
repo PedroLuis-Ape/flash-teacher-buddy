@@ -28,7 +28,7 @@ export function useStudentsList(q?: string) {
 
       const { data: profiles, error: profError } = await supabase
         .from('profiles')
-        .select('id, first_name, ape_id, avatar_skin_id')
+        .select('id, first_name, ape_id, avatar_skin_id, last_active_at')
         .in('id', studentIds);
 
       if (profError) throw profError;
@@ -41,6 +41,7 @@ export function useStudentsList(q?: string) {
         nome: profilesById[sub.student_id]?.first_name || 'Sem nome',
         ape_id: profilesById[sub.student_id]?.ape_id || '',
         avatar_skin_id: profilesById[sub.student_id]?.avatar_skin_id,
+        last_active_at: profilesById[sub.student_id]?.last_active_at,
         desde_em: sub.created_at,
         status: 'ativo',
         origem: 'follow',

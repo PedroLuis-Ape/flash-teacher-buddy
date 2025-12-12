@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "./AppSidebar";
 import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalFooter } from "./GlobalFooter";
+import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -54,6 +55,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
       refreshBalance();
     }
   }, [location.pathname, user, refreshBalance]);
+
+  // Activity heartbeat - tracks when user is active
+  useActivityHeartbeat(user?.id);
   
   // Don't show header/tabbar on auth pages
   const isAuthPage = location.pathname === '/auth';

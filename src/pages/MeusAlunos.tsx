@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, UserPlus, FileText, MessageCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { isOnline, formatLastSeen } from '@/lib/activityStatus';
+import { cn } from '@/lib/utils';
 
 export default function MeusAlunos() {
   const navigate = useNavigate();
@@ -23,6 +26,7 @@ export default function MeusAlunos() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
   const [authReady, setAuthReady] = useState(false);
+  const [localStudents, setLocalStudents] = useState<any[]>([]);
 
   // Check auth on mount
   useEffect(() => {
@@ -42,8 +46,51 @@ export default function MeusAlunos() {
   const addToClass = useAddStudentsToClass();
   const assignToStudents = useAssignToStudents();
 
-  const students = studentsData?.students || [];
+  const students = localStudents.length > 0 ? localStudents : (studentsData?.students || []);
   const turmas = turmasData?.turmas || [];
+
+  // Sync local state with fetched data
+  useEffect(() => {
+    if (studentsData?.students) {
+      setLocalStudents(studentsData.students);
+    }
+  }, [studentsData]);
+
+  // Realtime subscription for online status updates
+  useEffect(() => {
+    if (!authReady || students.length === 0) return;
+
+    const studentIds = students.map((s: any) => s.aluno_id);
+
+    const channel = supabase
+      .channel('online-status-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+        },
+        (payload) => {
+          const updatedId = payload.new?.id;
+          if (updatedId && studentIds.includes(updatedId)) {
+            setLocalStudents((prev) =>
+              prev.map((s) =>
+                s.aluno_id === updatedId
+                  ? { ...s, last_active_at: payload.new.last_active_at }
+                  : s
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authReady, students.length]);
+
 
   if (!authReady || isLoading) {
     return <LoadingSpinner message="Carregando alunos..." />;
@@ -195,10 +242,40 @@ export default function MeusAlunos() {
                     className="shrink-0"
                   />
 
-                  <Avatar className="h-12 w-12 shrink-0">
-                    <AvatarImage src={student.avatar_url} />
-                    <AvatarFallback className="text-base">{student.nome[0]?.toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                  <div className="relative shrink-0">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={student.avatar_url} />
+                      <AvatarFallback className="text-base">{student.nome[0]?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    {/* Online status indicator */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={cn(
+                            "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
+                            isOnline(student.last_active_at)
+                              ? "bg-green-500"
+                              : "bg-gray-400"
+                          )}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        {isOnline(student.last_active_at)
+                          ? "Online agora"
+                          : `Visto ${formatLastSeen(student.last_active_at)}`}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base truncate">{student.nome}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground truncate">{student.ape_id}</span>
+                      <span className="text-xs text-muted-foreground/60">
+                        • {formatLastSeen(student.last_active_at)}
+                      </span>
+                    </div>
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-base truncate">{student.nome}</h3>
