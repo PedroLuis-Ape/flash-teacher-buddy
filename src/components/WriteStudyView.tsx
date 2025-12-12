@@ -79,13 +79,7 @@ export const WriteStudyView = ({
     fetchUser();
   }, []);
 
-  // Autoplay audio when card changes
-  useEffect(() => {
-    if (prompt) {
-      const rate = getSpeechRate();
-      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
-    }
-  }, [front, back, prompt]);
+  // TTS removed from autoplay - only plays on button click
 
   const handleToggleFavorite = () => {
     if (!flashcardId || !userId) return;

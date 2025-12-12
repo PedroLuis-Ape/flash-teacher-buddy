@@ -64,13 +64,7 @@ export const MultipleChoiceStudyView = ({
     fetchUser();
   }, []);
 
-  // Autoplay audio when card changes (uses current rate setting)
-  useEffect(() => {
-    if (prompt) {
-      const rate = getSpeechRate();
-      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
-    }
-  }, [currentCard.id, prompt]);
+  // TTS removed from autoplay - only plays on button click
 
   const handleToggleFavorite = () => {
     if (!currentCard.id || !userId) return;

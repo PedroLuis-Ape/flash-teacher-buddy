@@ -60,13 +60,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
     fetchUser();
   }, []);
 
-  // Autoplay audio when card changes
-  useEffect(() => {
-    if (question) {
-      const rate = getSpeechRate();
-      speak(question, { langOverride: questionLang as "pt-BR" | "en-US", rate });
-    }
-  }, [front, back, question]);
+  // TTS removed from autoplay - only plays on button click
 
   const handleToggleFavorite = () => {
     if (!flashcardId || !userId) return;
