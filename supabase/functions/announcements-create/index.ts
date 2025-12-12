@@ -168,18 +168,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get assignment title if in direct_assignment mode
+    // Get assignment details if in direct_assignment mode
     let assignmentTitle = '';
+    let fonteId = '';
+    let fonteTipo = '';
+    
     if (mode === 'direct_assignment' && assignment_id) {
       const { data: atribData } = await supabaseAdmin
         .from('atribuicoes')
-        .select('titulo')
+        .select('titulo, fonte_id, fonte_tipo')
         .eq('id', assignment_id)
         .single();
       
       if (atribData) {
         assignmentTitle = atribData.titulo;
-        console.log('[announcements-create] Assignment found:', assignmentTitle);
+        fonteId = atribData.fonte_id;
+        fonteTipo = atribData.fonte_tipo;
+        console.log('[announcements-create] Assignment found:', { 
+          title: assignmentTitle, 
+          fonte_id: fonteId, 
+          fonte_tipo: fonteTipo 
+        });
       }
     }
 
@@ -252,6 +261,8 @@ Deno.serve(async (req) => {
           ...(mode === 'direct_assignment' && {
             assignment_id: assignment_id,
             assignment_title: assignmentTitle,
+            fonte_id: fonteId,
+            fonte_tipo: fonteTipo,
           }),
         },
       }));

@@ -16,6 +16,8 @@ interface AnnouncementData {
     turma_id?: string;
     assignment_id?: string;
     assignment_title?: string;
+    fonte_id?: string;
+    fonte_tipo?: 'lista' | 'pasta' | 'cardset';
   };
 }
 
@@ -145,11 +147,19 @@ export function AnnouncementModal() {
   };
 
   const handleGoToAssignment = async () => {
-    if (announcement?.metadata?.turma_id && announcement?.metadata?.assignment_id) {
-      await handleDismiss();
-      navigate(`/turmas/${announcement.metadata.turma_id}/atribuicoes/${announcement.metadata.assignment_id}`);
-    } else {
-      await handleDismiss();
+    await handleDismiss();
+    
+    // Navigate directly to content
+    const fonteId = announcement?.metadata?.fonte_id;
+    const fonteTipo = announcement?.metadata?.fonte_tipo;
+    
+    if (fonteId && fonteTipo === 'lista') {
+      navigate(`/list/${fonteId}/games`);
+    } else if (fonteId && fonteTipo === 'pasta') {
+      navigate(`/folder/${fonteId}`);
+    } else if (announcement?.metadata?.turma_id) {
+      // Fallback to turma if fonte info not available
+      navigate(`/turmas/${announcement.metadata.turma_id}`);
     }
   };
 
