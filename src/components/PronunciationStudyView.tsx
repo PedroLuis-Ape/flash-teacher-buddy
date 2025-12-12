@@ -1,26 +1,17 @@
 import { useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle } from "lucide-react";
+import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { usePronunciation } from "@/hooks/usePronunciation";
 import { useTTS } from "@/hooks/useTTS";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
+import { evaluatePronunciation } from "@/lib/levenshtein";
 
 interface PronunciationStudyViewProps {
   front: string;
   back: string;
   onNext: () => void;
-}
-
-function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z\s']/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 export function PronunciationStudyView({ front, back, onNext }: PronunciationStudyViewProps) {
@@ -33,6 +24,7 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
   const {
     isListening,
     transcript,
+    alternatives,
     error,
     isSupported,
     startListening,
@@ -66,22 +58,22 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     onNext();
   };
 
-  // Compare transcript against ENGLISH text only and play sound
-  const result = useMemo(() => {
-    if (!transcript) return null;
-    const expected = normalize(englishText);
-    const said = normalize(transcript);
-    const isCorrect = expected === said;
+  // Evaluate pronunciation using fuzzy matching with all alternatives
+  const evaluation = useMemo(() => {
+    if (!transcript || alternatives.length === 0) return null;
     
-    // Play sound effect when result is determined
-    if (isCorrect) {
+    const result = evaluatePronunciation(alternatives, englishText);
+    
+    // Play sound effect based on result
+    if (result.result === 'correct') {
       playCorrect();
-    } else {
+    } else if (result.result === 'incorrect') {
       playWrong();
     }
+    // 'almost' doesn't play any sound - it's a neutral feedback
     
-    return { isCorrect };
-  }, [englishText, transcript]);
+    return result;
+  }, [englishText, transcript, alternatives]);
 
   if (!isSupported) {
     return (
@@ -97,6 +89,60 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
       </div>
     );
   }
+
+  const getResultStyles = () => {
+    if (!evaluation) return "bg-muted/20 border-dashed border-muted";
+    
+    switch (evaluation.result) {
+      case 'correct':
+        return "bg-green-50/50 border-green-400 dark:bg-green-900/20 dark:border-green-600";
+      case 'almost':
+        return "bg-amber-50/50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600";
+      case 'incorrect':
+        return "bg-red-50/50 border-red-400 dark:bg-red-900/20 dark:border-red-600";
+    }
+  };
+
+  const getResultIcon = () => {
+    if (!evaluation) return null;
+    
+    switch (evaluation.result) {
+      case 'correct':
+        return <CheckCircle2 className="w-5 h-5" />;
+      case 'almost':
+        return <AlertCircle className="w-5 h-5" />;
+      case 'incorrect':
+        return <XCircle className="w-5 h-5" />;
+    }
+  };
+
+  const getResultText = () => {
+    if (!evaluation) return null;
+    
+    const percentage = Math.round(evaluation.bestScore * 100);
+    
+    switch (evaluation.result) {
+      case 'correct':
+        return `Correto! (${percentage}%)`;
+      case 'almost':
+        return `Quase lá! (${percentage}%)`;
+      case 'incorrect':
+        return `Incorreto (${percentage}%)`;
+    }
+  };
+
+  const getResultColor = () => {
+    if (!evaluation) return "";
+    
+    switch (evaluation.result) {
+      case 'correct':
+        return "text-green-600 dark:text-green-400";
+      case 'almost':
+        return "text-amber-600 dark:text-amber-400";
+      case 'incorrect':
+        return "text-red-600 dark:text-red-400";
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
@@ -158,9 +204,7 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
       <div
         className={cn(
           "w-full p-6 rounded-xl border-2 text-center transition-all duration-500 min-h-[120px] flex flex-col justify-center items-center",
-          result?.isCorrect === true && "bg-green-50/50 border-green-400 dark:bg-green-900/20 dark:border-green-600",
-          result?.isCorrect === false && "bg-red-50/50 border-red-400 dark:bg-red-900/20 dark:border-red-600",
-          !result && "bg-muted/20 border-dashed border-muted"
+          getResultStyles()
         )}
       >
         {error ? (
@@ -173,18 +217,16 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
             <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">
               Reconhecido
             </p>
-            <p className="text-2xl font-medium italic text-foreground">
+            <p className={cn(
+              "text-2xl font-medium italic",
+              getResultColor() || "text-foreground"
+            )}>
               "{transcript}"
             </p>
-            {result?.isCorrect ? (
-              <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400 mt-2">
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="font-semibold">Correto!</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2 text-red-600 dark:text-red-400 mt-2">
-                <XCircle className="w-5 h-5" />
-                <span className="font-semibold">Incorreto</span>
+            {evaluation && (
+              <div className={cn("flex items-center justify-center gap-2 mt-2", getResultColor())}>
+                {getResultIcon()}
+                <span className="font-semibold">{getResultText()}</span>
               </div>
             )}
           </div>
