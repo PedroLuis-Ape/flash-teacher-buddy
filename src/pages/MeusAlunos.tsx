@@ -119,7 +119,7 @@ export default function MeusAlunos() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
-        <div className="max-w-4xl mx-auto p-4 flex items-center gap-3">
+        <div className="max-w-6xl mx-auto p-4 lg:px-8 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -127,7 +127,7 @@ export default function MeusAlunos() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
+      <div className="max-w-6xl mx-auto p-4 lg:px-8 space-y-4">
         {/* Search and Actions */}
         <div className="flex gap-2">
           <div className="relative flex-1">

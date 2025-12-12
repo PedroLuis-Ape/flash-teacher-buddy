@@ -114,7 +114,7 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-24">
       <ApeAppBar title="Início" />
 
-      <div className="max-w-4xl mx-auto space-y-6 px-4 pt-4">
+      <div className="max-w-6xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
         {/* Profile Header */}
         <Card 
           className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 border-border"

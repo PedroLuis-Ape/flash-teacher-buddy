@@ -181,7 +181,7 @@ const GamesHub = () => {
           </div>
         )}
 
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="max-w-5xl mx-auto space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium mb-1.5 block">Direção</label>

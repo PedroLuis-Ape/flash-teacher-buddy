@@ -10,7 +10,7 @@ const PainelProfessor = () => {
     <div className="min-h-screen bg-background pb-24">
       <ApeAppBar title="Painel do Professor" />
       
-      <div className="max-w-4xl mx-auto p-4 space-y-8">
+      <div className="max-w-6xl mx-auto p-4 lg:px-8 space-y-8">
         <div className="space-y-2">
           <ApeSectionTitle>Gestão de Ensino</ApeSectionTitle>
           <p className="text-sm text-muted-foreground">

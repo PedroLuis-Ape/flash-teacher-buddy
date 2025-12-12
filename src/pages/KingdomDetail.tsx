@@ -179,8 +179,8 @@ export default function KingdomDetail() {
   }, {} as Record<string, Activity[]>);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-24">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 lg:px-8 pb-24">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button
