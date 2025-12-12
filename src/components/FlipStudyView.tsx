@@ -9,6 +9,7 @@ import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
+import { playCorrect, playWrong, playNext } from "@/lib/sfx";
 
 interface FlipStudyViewProps {
   front: string;
@@ -55,11 +56,17 @@ export const FlipStudyView = ({
   }, []);
   
   const handleKnew = async () => {
+    playCorrect();
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       await awardPoints(session.user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'flashcard_correct');
     }
     onKnew();
+  };
+
+  const handleDidntKnow = () => {
+    playWrong();
+    onDidntKnow();
   };
 
   const handleToggleFavorite = () => {
@@ -244,7 +251,7 @@ export const FlipStudyView = ({
           <Button 
             variant="destructive" 
             size="lg" 
-            onClick={onDidntKnow}
+            onClick={handleDidntKnow}
             className="flex-1 min-w-[140px]"
           >
             <RotateCcw className="mr-2 h-5 w-5" />

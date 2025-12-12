@@ -6,11 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, Send, User } from 'lucide-react';
+import { ArrowLeft, Send, User, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface DMPanelProps {
   turmaId: string;
@@ -27,6 +38,7 @@ interface Message {
   texto: string;
   created_at: string;
   sender_name?: string;
+  deleted?: boolean;
 }
 
 export function DMPanel({ 
@@ -91,12 +103,12 @@ export function DMPanel({
           id,
           sender_id,
           texto,
-          created_at
+          created_at,
+          deleted
         `)
         .eq('turma_id', turmaId)
         .eq('thread_tipo', 'dm')
         .eq('thread_chave', dmId)
-        .eq('deleted', false)
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -131,6 +143,19 @@ export function DMPanel({
           refetch();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'mensagens',
+          filter: `thread_chave=eq.${dmId}`,
+        },
+        (payload) => {
+          console.log('[DM Realtime] Message updated:', payload);
+          refetch();
+        }
+      )
       .subscribe((status) => {
         console.log('[DM Realtime] Subscription status:', status);
       });
@@ -148,7 +173,7 @@ export function DMPanel({
     }
   }, [messages]);
 
-  // Send message mutation
+  // Send message mutation - uses dm-send which creates proper notifications
   const sendMessage = useMutation({
     mutationFn: async (texto: string) => {
       if (!dmId) throw new Error('DM thread not found');
@@ -156,11 +181,10 @@ export function DMPanel({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase.functions.invoke('classes-chat-send', {
+      const { data, error } = await supabase.functions.invoke('dm-send', {
         body: {
           turma_id: turmaId,
-          thread_tipo: 'dm',
-          thread_chave: dmId,
+          dm_id: dmId,
           texto,
         },
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -176,6 +200,27 @@ export function DMPanel({
     },
     onError: (error: any) => {
       toast.error(error.message || 'Erro ao enviar mensagem');
+    },
+  });
+
+  // Delete message mutation (soft delete)
+  const deleteMessage = useMutation({
+    mutationFn: async (messageId: string) => {
+      const { error } = await supabase
+        .from('mensagens')
+        .update({ deleted: true })
+        .eq('id', messageId)
+        .eq('sender_id', currentUserId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['dm-messages', turmaId, dmId] });
+      toast.success('Mensagem apagada');
+    },
+    onError: () => {
+      toast.error('Erro ao apagar mensagem');
     },
   });
 
@@ -233,6 +278,8 @@ export function DMPanel({
           <div className="space-y-3">
             {messages.map((msg) => {
               const isOwn = msg.sender_id === currentUserId;
+              const isDeleted = msg.deleted;
+              
               return (
                 <div
                   key={msg.id}
@@ -243,13 +290,53 @@ export function DMPanel({
                 >
                   <div
                     className={cn(
-                      'max-w-[80%] rounded-2xl px-4 py-2',
+                      'max-w-[80%] rounded-2xl px-4 py-2 relative group',
                       isOwn
                         ? 'bg-primary text-primary-foreground rounded-br-md'
-                        : 'bg-muted rounded-bl-md'
+                        : 'bg-muted rounded-bl-md',
+                      isDeleted && 'opacity-60 italic'
                     )}
                   >
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.texto}</p>
+                    {isDeleted ? (
+                      <p className="text-sm">🚫 Mensagem apagada</p>
+                    ) : (
+                      <>
+                        <p className="text-sm whitespace-pre-wrap break-words">{msg.texto}</p>
+                        {isOwn && !isDeleted && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "absolute -left-10 top-1/2 -translate-y-1/2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity",
+                                  "hover:bg-destructive/10 hover:text-destructive"
+                                )}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Apagar mensagem?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação não pode ser desfeita. A mensagem será marcada como apagada.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMessage.mutate(msg.id)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Apagar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </>
+                    )}
                     <p
                       className={cn(
                         'text-[10px] mt-1',

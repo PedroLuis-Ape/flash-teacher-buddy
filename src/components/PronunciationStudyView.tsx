@@ -5,6 +5,7 @@ import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle
 import { usePronunciation } from "@/hooks/usePronunciation";
 import { useTTS } from "@/hooks/useTTS";
 import { cn } from "@/lib/utils";
+import { playCorrect, playWrong } from "@/lib/sfx";
 
 interface PronunciationStudyViewProps {
   front: string;
@@ -65,12 +66,21 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     onNext();
   };
 
-  // Compare transcript against ENGLISH text only
+  // Compare transcript against ENGLISH text only and play sound
   const result = useMemo(() => {
     if (!transcript) return null;
     const expected = normalize(englishText);
     const said = normalize(transcript);
-    return { isCorrect: expected === said };
+    const isCorrect = expected === said;
+    
+    // Play sound effect when result is determined
+    if (isCorrect) {
+      playCorrect();
+    } else {
+      playWrong();
+    }
+    
+    return { isCorrect };
   }, [englishText, transcript]);
 
   if (!isSupported) {

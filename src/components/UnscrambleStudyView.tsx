@@ -8,6 +8,7 @@ import { HintButton } from "./HintButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
+import { playCorrect, playWrong } from "@/lib/sfx";
 
 interface UnscrambleStudyViewProps {
   front: string;
@@ -127,6 +128,13 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
     const correct = userAnswer === cleanCorrectSentence.toLowerCase().trim();
     setIsCorrect(correct);
     setSubmitted(true);
+    
+    // Play sound effect
+    if (correct) {
+      playCorrect();
+    } else {
+      playWrong();
+    }
   };
 
   const handleNext = () => {
