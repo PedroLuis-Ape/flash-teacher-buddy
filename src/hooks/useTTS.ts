@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 export interface PlayOptions {
   langOverride?: string;
-  rate?: number;
+  rate?: number; // Default 0.5 for pronunciation practice
 }
 
 /**
@@ -90,17 +90,18 @@ export function useTTS() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = englishVoice;
       utterance.lang = englishVoice.lang;
-      utterance.rate = options?.rate || 0.9;
+      // Default 0.5 for pronunciation practice (slower = clearer)
+      utterance.rate = options?.rate ?? 0.5;
       utterance.pitch = 1;
       utterance.volume = 1;
 
-      console.log('[useTTS] Using English voice:', englishVoice.name, englishVoice.lang);
+      console.log('[useTTS] Using English voice:', englishVoice.name, englishVoice.lang, 'rate:', utterance.rate);
       window.speechSynthesis.speak(utterance);
     } else {
       // Non-English: use default behavior
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = targetLang;
-      utterance.rate = options?.rate || 0.9;
+      utterance.rate = options?.rate ?? 0.5;
       window.speechSynthesis.speak(utterance);
     }
   }, [voices]);
