@@ -1,17 +1,15 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { naturalSort } from '@/lib/sorting';
 import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MesaAvisos } from '@/components/MesaAvisos';
+import { DMList } from '@/components/DMList';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao, useUpdateAtribuicao } from '@/hooks/useAtribuicoes';
-import { useChatMessages, useSendMessage } from '@/hooks/useMensagens';
-import { ChatComposer } from '@/components/ChatComposer';
-import { MessageBubble } from '@/components/MessageBubble';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -24,11 +22,21 @@ import { useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
+
 export default function TurmaDetail() {
   const { turmaId } = useParams<{ turmaId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('atribuicoes');
-  
+  const [searchParams] = useSearchParams();
+  // Handle tab from URL params (for DM navigation from notifications)
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'atribuicoes');
+
+  // Update tab when URL changes
+  useEffect(() => {
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editNome, setEditNome] = useState('');
   const [editDescricao, setEditDescricao] = useState('');
@@ -107,8 +115,6 @@ export default function TurmaDetail() {
   });
 
   const { data: atribuicoesData } = useAtribuicoesByTurma(turmaId || null);
-  const { data: chatData } = useChatMessages(turmaId || null, 'turma', turmaId || '');
-  const sendMessage = useSendMessage();
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
@@ -197,18 +203,7 @@ export default function TurmaDetail() {
 
   // Apply natural sort to atribuições for correct ordering (1, 2, 10 not 1, 10, 2)
   const atribuicoes = naturalSort(atribuicoesData?.atribuicoes || [], (a: any) => a.titulo);
-  const messages = chatData?.messages || [];
   const membros = turma.turma_membros || [];
-
-  const handleSendMessage = async (texto: string) => {
-    if (!turmaId) return;
-    await sendMessage.mutateAsync({
-      turma_id: turmaId,
-      thread_tipo: 'turma',
-      thread_chave: turmaId,
-      texto,
-    });
-  };
 
   const handleOpenEdit = () => {
     setEditNome(turma?.nome || '');
@@ -900,9 +895,9 @@ export default function TurmaDetail() {
               <UsersIcon className="h-4 w-4 mr-2" />
               Pessoas
             </TabsTrigger>
-            <TabsTrigger value="chat">
+            <TabsTrigger value="mensagens">
               <MessageSquare className="h-4 w-4 mr-2" />
-              Chat
+              Mensagens
             </TabsTrigger>
           </TabsList>
 
@@ -1102,30 +1097,14 @@ export default function TurmaDetail() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="chat" className="mt-4">
-            <Card className="h-[500px] flex flex-col">
-              <ScrollArea className="flex-1 p-4">
-                {messages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">Nenhuma mensagem ainda.</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Seja o primeiro a enviar uma mensagem!
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col-reverse">
-                    {messages.map((msg: any) => (
-                      <MessageBubble
-                        key={msg.id}
-                        message={msg}
-                        isOwn={msg.sender_id === currentUser?.id}
-                      />
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-              <ChatComposer onSend={handleSendMessage} />
-            </Card>
+          <TabsContent value="mensagens" className="mt-4">
+            <DMList 
+              turmaId={turmaId || ''} 
+              isOwner={isOwner} 
+              membros={membros}
+              teacherId={turma.owner_teacher_id}
+              teacherName="Professor"
+            />
           </TabsContent>
         </Tabs>
       </div>
