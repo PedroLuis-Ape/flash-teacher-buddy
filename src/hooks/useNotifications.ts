@@ -174,8 +174,9 @@ export function useNotifications() {
     // Navigate based on notification type
     const metadata = notification.metadata || {};
     
-    if (notification.tipo === 'atribuicao_concluida' && metadata.turma_id && metadata.atribuicao_id) {
-      navigate(`/turmas/${metadata.turma_id}/atribuicoes/${metadata.atribuicao_id}`);
+    if (notification.tipo === 'atribuicao_concluida' && metadata.turma_id) {
+      // Navigate to turma page (assignment detail removed)
+      navigate(`/turmas/${metadata.turma_id}`);
     } else if (notification.tipo === 'mensagem_recebida' && metadata.turma_id) {
       navigate(`/turmas/${metadata.turma_id}`);
     } else if (notification.tipo === 'aluno_inscrito') {
@@ -183,9 +184,19 @@ export function useNotifications() {
     } else if (notification.tipo === 'aviso' && metadata.turma_id) {
       // General announcement - navigate to turma
       navigate(`/turmas/${metadata.turma_id}`);
-    } else if (notification.tipo === 'aviso_atribuicao' && metadata.turma_id && metadata.assignment_id) {
-      // Direct assignment - navigate to the specific assignment
-      navigate(`/turmas/${metadata.turma_id}/atribuicoes/${metadata.assignment_id}`);
+    } else if (notification.tipo === 'aviso_atribuicao') {
+      // Direct assignment - navigate directly to content
+      const fonteId = metadata.fonte_id;
+      const fonteTipo = metadata.fonte_tipo;
+      
+      if (fonteId && fonteTipo === 'lista') {
+        navigate(`/list/${fonteId}/games`);
+      } else if (fonteId && fonteTipo === 'pasta') {
+        navigate(`/folder/${fonteId}`);
+      } else if (metadata.turma_id) {
+        // Fallback to turma if fonte info not available
+        navigate(`/turmas/${metadata.turma_id}`);
+      }
     }
   }, [navigate, markAsReadMutation]);
 

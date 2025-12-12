@@ -51,8 +51,17 @@ export function MesaAvisos({ turmaId, isOwner }: MesaAvisosProps) {
   };
 
   const handleGoToAssignment = (aviso: Aviso) => {
-    if (aviso.metadata?.turma_id && aviso.metadata?.assignment_id) {
-      navigate(`/turmas/${aviso.metadata.turma_id}/atribuicoes/${aviso.metadata.assignment_id}`);
+    // Navigate directly to content
+    const fonteId = aviso.metadata?.fonte_id;
+    const fonteTipo = aviso.metadata?.fonte_tipo;
+    
+    if (fonteId && fonteTipo === 'lista') {
+      navigate(`/list/${fonteId}/games`);
+    } else if (fonteId && fonteTipo === 'pasta') {
+      navigate(`/folder/${fonteId}`);
+    } else if (aviso.metadata?.turma_id) {
+      // Fallback to turma if fonte info not available
+      navigate(`/turmas/${aviso.metadata.turma_id}`);
     }
   };
 
@@ -62,9 +71,9 @@ export function MesaAvisos({ turmaId, isOwner }: MesaAvisosProps) {
       await handleMarkAsRead(aviso);
     }
 
-    // Se for aviso de atribuição COM assignment_id → vai direto para a atividade
-    if (aviso.tipo === 'aviso_atribuicao' && aviso.metadata?.assignment_id) {
-      navigate(`/turmas/${aviso.metadata.turma_id}/atribuicoes/${aviso.metadata.assignment_id}`);
+    // Se for aviso de atribuição → vai direto para o conteúdo
+    if (aviso.tipo === 'aviso_atribuicao') {
+      handleGoToAssignment(aviso);
       return;
     }
 

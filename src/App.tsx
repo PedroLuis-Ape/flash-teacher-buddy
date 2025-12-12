@@ -35,7 +35,6 @@ const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminGifts = lazy(() => import("./pages/admin/AdminGifts"));
 const Turmas = lazy(() => import("./pages/Turmas"));
 const TurmaDetail = lazy(() => import("./pages/TurmaDetail"));
-const AtribuicaoDetail = lazy(() => import("./pages/AtribuicaoDetail"));
 const TurmasProfessor = lazy(() => import("./pages/TurmasProfessor"));
 const TurmasAluno = lazy(() => import("./pages/TurmasAluno"));
 const MeusAlunos = lazy(() => import("./pages/MeusAlunos"));
@@ -94,7 +93,6 @@ const App = () => (
                 <Route path="/turmas/professor" element={<TurmasProfessor />} />
                 <Route path="/turmas/aluno" element={<TurmasAluno />} />
                 <Route path="/turmas/:turmaId" element={<TurmaDetail />} />
-                <Route path="/turmas/:turmaId/atribuicoes/:atribuicaoId" element={<AtribuicaoDetail />} />
                 <Route path="/professor/alunos" element={<MeusAlunos />} />
                 <Route path="/professor/alunos/:alunoId" element={<AlunoProfile />} />
                 <Route path="/professores/:professorId" element={<ProfessorProfile />} />

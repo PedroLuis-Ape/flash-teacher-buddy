@@ -15,6 +15,8 @@ export interface Aviso {
     turma_id?: string;
     assignment_id?: string;
     assignment_title?: string;
+    fonte_id?: string;
+    fonte_tipo?: 'lista' | 'pasta' | 'cardset';
   } | null;
   // Professor view: count of recipients
   recipient_count?: number;
