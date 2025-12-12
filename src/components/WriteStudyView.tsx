@@ -10,7 +10,7 @@ import { useTTS } from "@/hooks/useTTS";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
-import { SpeechRateControl } from "./SpeechRateControl";
+import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,7 +82,8 @@ export const WriteStudyView = ({
   // Autoplay audio when card changes
   useEffect(() => {
     if (prompt) {
-      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
+      const rate = getSpeechRate();
+      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
     }
   }, [front, back, prompt]);
 
@@ -188,7 +189,8 @@ export const WriteStudyView = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
+                  const rate = getSpeechRate();
+                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
                 }}
               >
                 <Volume2 className="h-5 w-5" />

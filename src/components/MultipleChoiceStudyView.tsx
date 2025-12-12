@@ -6,7 +6,7 @@ import { Volume2, Star } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
-import { SpeechRateControl } from "./SpeechRateControl";
+import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,10 +64,11 @@ export const MultipleChoiceStudyView = ({
     fetchUser();
   }, []);
 
-  // Autoplay audio when card changes
+  // Autoplay audio when card changes (uses current rate setting)
   useEffect(() => {
     if (prompt) {
-      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
+      const rate = getSpeechRate();
+      speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
     }
   }, [currentCard.id, prompt]);
 
@@ -176,7 +177,8 @@ export const MultipleChoiceStudyView = ({
                 size="sm"
                 className="flex-shrink-0"
                 onClick={() => {
-                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US" });
+                  const rate = getSpeechRate();
+                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
                 }}
               >
                 <Volume2 className="h-5 w-5" />

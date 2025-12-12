@@ -2,13 +2,24 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Gauge } from "lucide-react";
 
+const SPEECH_RATE_KEY = "speechRate";
+
+/**
+ * Get the current speech rate from localStorage
+ * Returns 1 (normal) or 0.5 (slow)
+ */
+export function getSpeechRate(): number {
+  if (typeof window === 'undefined') return 1;
+  return Number(localStorage.getItem(SPEECH_RATE_KEY) || "1");
+}
+
 export function SpeechRateControl() {
-  const [rate, setRate] = useState(() => {
-    return Number(localStorage.getItem("speechRate") || "1");
-  });
+  const [rate, setRate] = useState(() => getSpeechRate());
 
   useEffect(() => {
-    localStorage.setItem("speechRate", rate.toString());
+    localStorage.setItem(SPEECH_RATE_KEY, rate.toString());
+    // Dispatch event so other components can react
+    window.dispatchEvent(new CustomEvent('speechRateChanged', { detail: rate }));
   }, [rate]);
 
   const toggleRate = () => {
