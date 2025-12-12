@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeTabs } from "@/components/ape/ApeTabs";
 import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
+import { ApeCardList } from "@/components/ape/ApeCardList";
 import { ApeCardProfessor } from "@/components/ape/ApeCardProfessor";
 import { ApeGrid } from "@/components/ape/ApeGrid";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
@@ -30,6 +31,15 @@ interface FolderType {
   teacher_name?: string;
 }
 
+interface ListType {
+  id: string;
+  title: string;
+  description: string | null;
+  folder_id: string;
+  folder_title?: string;
+  card_count?: number;
+}
+
 interface TeacherType {
   id: string;
   first_name: string;
@@ -43,6 +53,7 @@ interface TeacherType {
 const Folders = () => {
   const navigate = useNavigate();
   const [folders, setFolders] = useState<FolderType[]>([]);
+  const [lists, setLists] = useState<ListType[]>([]);
   const [teachers, setTeachers] = useState<TeacherType[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -55,6 +66,7 @@ const Folders = () => {
   
   // Favorites
   const { data: folderFavorites = [] } = useFavorites(userId, 'folder');
+  const { data: listFavorites = [] } = useFavorites(userId, 'list');
   const toggleFavorite = useToggleFavorite();
 
   useEffect(() => {
@@ -126,6 +138,42 @@ const Folders = () => {
       }));
 
       setFolders(processedFolders);
+
+      // Load lists for favorites tab
+      let listsQuery = supabase
+        .from("lists")
+        .select(`
+          id,
+          title,
+          description,
+          folder_id,
+          folders!inner(title, owner_id, institution_id, class_id),
+          flashcards(id)
+        `)
+        .eq("folders.owner_id", session.user.id)
+        .is("folders.class_id", null);
+
+      if (selectedInstitution) {
+        listsQuery = listsQuery.eq("folders.institution_id", selectedInstitution.id);
+      } else {
+        listsQuery = listsQuery.is("folders.institution_id", null);
+      }
+
+      const { data: listsData, error: listsError } = await listsQuery;
+
+      if (listsError) {
+        console.error("Error loading lists:", listsError);
+      } else {
+        const processedLists = (listsData || []).map((list: any) => ({
+          id: list.id,
+          title: list.title,
+          description: list.description,
+          folder_id: list.folder_id,
+          folder_title: list.folders?.title,
+          card_count: list.flashcards?.length || 0,
+        }));
+        setLists(processedLists);
+      }
 
       // Load teachers (subscriptions)
       const { data: subscriptions, error: subsError } = await supabase
@@ -383,8 +431,101 @@ const Folders = () => {
     </div>
   );
 
+  // Computed favorites
+  const favoritedFolders = folders.filter(f => folderFavorites.includes(f.id));
+  const favoritedLists = lists.filter(l => listFavorites.includes(l.id));
+  const totalFavorites = favoritedFolders.length + favoritedLists.length;
+
+  // Tab: Favorites (Favoritas)
+  const favoritesTab = (
+    <div className="p-4 space-y-6">
+      {loading ? (
+        <div className="text-center py-4 text-sm text-muted-foreground">
+          Carregando...
+        </div>
+      ) : totalFavorites === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <Star className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Nenhum favorito ainda</p>
+          <p className="text-xs mt-1">Toque na estrela em pastas ou listas para favoritar</p>
+        </div>
+      ) : (
+        <>
+          {/* Favorited Folders */}
+          {favoritedFolders.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Pastas favoritas
+              </h3>
+              <div className="space-y-2">
+                {favoritedFolders.map((folder) => (
+                  <div key={folder.id} className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <ApeCardFolder
+                        title={folder.title}
+                        listCount={folder.list_count}
+                        cardCount={folder.card_count}
+                        onClick={() => navigate(`/folder/${folder.id}`)}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0 rounded-xl text-yellow-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: true });
+                      }}
+                    >
+                      <Star className="h-4 w-4 fill-current" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Favorited Lists */}
+          {favoritedLists.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Listas favoritas
+              </h3>
+              <div className="space-y-2">
+                {favoritedLists.map((list) => (
+                  <div key={list.id} className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <ApeCardList
+                        title={list.title}
+                        subtitle={list.folder_title}
+                        cardCount={list.card_count}
+                        onClick={() => navigate(`/list/${list.id}`)}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0 rounded-xl text-yellow-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite.mutate({ resourceId: list.id, resourceType: 'list', isFavorite: true });
+                      }}
+                    >
+                      <Star className="h-4 w-4 fill-current" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   const tabs = [
     { value: "folders", label: "Pastas", count: folders.length, content: foldersTab },
+    { value: "favorites", label: "Favoritas", count: totalFavorites, content: favoritesTab },
     { value: "teachers", label: "Professores", count: teachers.length, content: teachersTab },
   ];
 
