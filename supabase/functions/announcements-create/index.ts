@@ -36,35 +36,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 1. Cliente USUÁRIO (respeita RLS): Para verificar quem é o professor e criar o anúncio
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
+    // Extract the token from the Authorization header
+    const token = authHeader.replace('Bearer ', '');
 
-    // 2. Cliente ADMIN (Service Role): Para inserir notificações para os alunos (ignora RLS)
+    // Cliente ADMIN para todas as operações (usa Service Role para ignorar RLS)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get user from token
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    console.log('[announcements-create] User lookup:', { userId: user?.id, error: authError?.message });
+    // Verificar o token JWT diretamente usando o Admin client
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    console.log('[announcements-create] User lookup:', { 
+      userId: user?.id, 
+      email: user?.email,
+      error: authError?.message 
+    });
     
     if (authError || !user) {
-      console.error('[announcements-create] Tentativa de acesso sem usuário autenticado:', {
+      console.error('[announcements-create] Token inválido ou expirado:', {
         error: authError?.message,
         hasUser: !!user,
-        headerPresent: !!authHeader,
       });
       return new Response(
-        JSON.stringify({ error: 'Não autorizado' }),
+        JSON.stringify({ error: 'Sessão expirada. Faça login novamente.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -80,7 +76,13 @@ Deno.serve(async (req) => {
       assignment_id 
     } = payload;
 
-    console.log('[announcements-create] Payload:', { class_id, title, mode, target_student_ids_count: target_student_ids.length, assignment_id });
+    console.log('[announcements-create] Payload:', { 
+      class_id, 
+      title, 
+      mode, 
+      target_student_ids_count: target_student_ids.length, 
+      assignment_id 
+    });
 
     // Validar inputs
     if (!class_id || !title?.trim() || !body?.trim()) {
@@ -120,12 +122,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verificar se é owner da turma (usando cliente do usuário para segurança)
+    // Verificar se é owner da turma (usando Admin client)
     let isOwner = false;
     let turmaNome = '';
     
     // First try turmas table (new system)
-    const { data: turmaData } = await supabaseClient
+    const { data: turmaData } = await supabaseAdmin
       .from('turmas')
       .select('owner_teacher_id, nome')
       .eq('id', class_id)
@@ -137,7 +139,7 @@ Deno.serve(async (req) => {
       console.log('[announcements-create] Turma found:', { nome: turmaNome, isOwner });
     } else {
       // Fallback to classes table (legacy)
-      const { data: classData } = await supabaseClient
+      const { data: classData } = await supabaseAdmin
         .from('classes')
         .select('owner_id, name')
         .eq('id', class_id)
@@ -169,7 +171,7 @@ Deno.serve(async (req) => {
     // Get assignment title if in direct_assignment mode
     let assignmentTitle = '';
     if (mode === 'direct_assignment' && assignment_id) {
-      const { data: atribData } = await supabaseClient
+      const { data: atribData } = await supabaseAdmin
         .from('atribuicoes')
         .select('titulo')
         .eq('id', assignment_id)
@@ -181,8 +183,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Criar anúncio (usando cliente do usuário - autor é o professor)
-    const { data: announcement, error: insertError } = await supabaseClient
+    // Criar anúncio (usando Admin client)
+    const { data: announcement, error: insertError } = await supabaseAdmin
       .from('announcements')
       .insert({
         class_id,
@@ -213,7 +215,6 @@ Deno.serve(async (req) => {
       console.log('[announcements-create] Direct assignment mode - recipients:', recipientIds.length);
     } else {
       // General mode: all students in the turma
-      // Usamos supabaseAdmin aqui para garantir que vemos todos os alunos
       const { data: turmaMembros, error: membrosError } = await supabaseAdmin
         .from('turma_membros')
         .select('user_id')
@@ -248,8 +249,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // *** CORREÇÃO PRINCIPAL: Usar supabaseAdmin para inserir notificações ***
-    // O professor não tem permissão RLS para inserir notificações para outros usuários
+    // Criar notificações usando supabaseAdmin
     if (recipientIds.length > 0) {
       const notificationType = mode === 'direct_assignment' ? 'aviso_atribuicao' : 'aviso';
       
@@ -271,18 +271,16 @@ Deno.serve(async (req) => {
         },
       }));
 
-      console.log('[announcements-create] Inserting notifications via ADMIN client...');
+      console.log('[announcements-create] Inserting notifications...');
       
-      // *** USA SUPABASE ADMIN PARA IGNORAR RLS ***
       const { error: notifError } = await supabaseAdmin
         .from('notificacoes')
         .insert(notifications);
       
       if (notifError) {
-        console.error('[announcements-create] CRITICAL: Error inserting notifications:', notifError);
-        // Não falha a requisição, apenas loga o erro
+        console.error('[announcements-create] Error inserting notifications:', notifError);
       } else {
-        console.log(`[announcements-create] SUCCESS: Created ${notifications.length} notifications via Admin`);
+        console.log(`[announcements-create] SUCCESS: Created ${notifications.length} notifications`);
       }
     } else {
       console.log('[announcements-create] No recipients found for notifications');
