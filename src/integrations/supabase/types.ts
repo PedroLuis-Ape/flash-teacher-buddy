@@ -1293,6 +1293,7 @@ export type Database = {
           id: string
           is_primary: boolean | null
           is_teacher: boolean | null
+          last_active_at: string | null
           last_conversion: string | null
           last_daily_reward: string | null
           level: number
@@ -1320,6 +1321,7 @@ export type Database = {
           id: string
           is_primary?: boolean | null
           is_teacher?: boolean | null
+          last_active_at?: string | null
           last_conversion?: string | null
           last_daily_reward?: string | null
           level?: number
@@ -1347,6 +1349,7 @@ export type Database = {
           id?: string
           is_primary?: boolean | null
           is_teacher?: boolean | null
+          last_active_at?: string | null
           last_conversion?: string | null
           last_daily_reward?: string | null
           level?: number
