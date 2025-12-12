@@ -88,19 +88,7 @@ export const FlipStudyView = ({
   const handleFlip = () => {
     const newFlippedState = !isFlipped;
     setIsFlipped(newFlippedState);
-    
-    const rate = getSpeechRate();
-    
-    // Play audio for the side being revealed
-    if (newFlippedState) {
-      // Revealing back side (translation/answer)
-      const langOverride = direction === "pt-en" ? "en-US" : "pt-BR";
-      speak(hideText, { langOverride, rate });
-    } else {
-      // Revealing front side (question)
-      const langOverride = direction === "pt-en" ? "pt-BR" : "en-US";
-      speak(showText, { langOverride, rate });
-    }
+    // TTS removed from auto-flip - only plays on button click
   };
 
   const handlePlayAgain = () => {
