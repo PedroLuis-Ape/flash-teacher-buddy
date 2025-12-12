@@ -59,7 +59,7 @@ export function ApeTabs({
         <TabsContent 
           key={tab.value} 
           value={tab.value}
-          className="mt-0"
+          className="mt-0 max-w-6xl mx-auto"
         >
           {tab.content}
         </TabsContent>

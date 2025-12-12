@@ -205,7 +205,7 @@ export default function Search() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-10 bg-background border-b p-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
+        <div className="max-w-6xl mx-auto p-4 lg:px-8 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -213,7 +213,7 @@ export default function Search() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-6xl mx-auto p-4 lg:px-8">
         <Card className="mb-6">
           <CardContent className="pt-6 space-y-4">
             <div className="flex flex-col sm:flex-row gap-3">
