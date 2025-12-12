@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PitecoMascot } from "@/components/PitecoMascot";
 import { PitecoLogo } from "@/components/PitecoLogo";
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { Download, Chrome } from "lucide-react";
 import { APP_VERSION } from "@/lib/versionManager";
+import { Separator } from "@/components/ui/separator";
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{
@@ -171,6 +172,24 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+      // Redirect happens automatically
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao conectar com Google");
+      setLoading(false);
+    }
+  };
+
   const handleDownload = async () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
@@ -231,7 +250,29 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center">
-            <form onSubmit={handleAuth} className="space-y-4 mt-4 w-full max-w-md">
+            {/* Google Sign In Button - Show only for login */}
+            {!isSignUp && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full max-w-md gap-2 min-h-[48px]"
+                >
+                  <Chrome className="h-5 w-5" />
+                  Continuar com Google
+                </Button>
+                
+                <div className="flex items-center gap-4 w-full max-w-md my-4">
+                  <Separator className="flex-1" />
+                  <span className="text-xs text-muted-foreground">ou</span>
+                  <Separator className="flex-1" />
+                </div>
+              </>
+            )}
+
+            <form onSubmit={handleAuth} className="space-y-4 w-full max-w-md">
               {isSignUp && <>
                   <div className="space-y-2">
                     <Label htmlFor="firstName">Nome</Label>

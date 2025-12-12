@@ -14,6 +14,7 @@ import { LogOut, User, Camera, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { equipAvatarAsPhoto } from "@/lib/storeEngine";
+import { GoogleAccountSection } from "@/components/GoogleAccountSection";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -236,6 +237,9 @@ const Profile = () => {
           </div>
         )}
       </Card>
+
+      {/* Google Account Section */}
+      <GoogleAccountSection />
 
       <div className="space-y-3">
         <Button
