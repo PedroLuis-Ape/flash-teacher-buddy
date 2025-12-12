@@ -29,6 +29,7 @@ export default function TurmaDetail() {
   const [searchParams] = useSearchParams();
   // Handle tab from URL params (for DM navigation from notifications)
   const tabFromUrl = searchParams.get('tab');
+  const senderFromUrl = searchParams.get('sender'); // For auto-opening DM with specific sender
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'atribuicoes');
 
   // Update tab when URL changes
@@ -110,7 +111,23 @@ export default function TurmaDetail() {
 
       const isOwner = turmaWithMembros?.owner_teacher_id === user.id;
 
-      return { turma: turmaWithMembros, isOwner };
+      // Fetch teacher profile for the teacher's name
+      let teacherName = 'Professor';
+      if (turmaWithMembros?.owner_teacher_id) {
+        const { data: teacherProfile } = await supabase
+          .from('profiles')
+          .select('first_name, ape_id')
+          .eq('id', turmaWithMembros.owner_teacher_id)
+          .single();
+        
+        if (teacherProfile?.ape_id) {
+          teacherName = teacherProfile.ape_id;
+        } else if (teacherProfile?.first_name) {
+          teacherName = teacherProfile.first_name;
+        }
+      }
+
+      return { turma: turmaWithMembros, isOwner, teacherName };
     },
   });
 
@@ -1103,7 +1120,8 @@ export default function TurmaDetail() {
               isOwner={isOwner} 
               membros={membros}
               teacherId={turma.owner_teacher_id}
-              teacherName="Professor"
+              teacherName={turmaData?.teacherName || 'Professor'}
+              autoOpenRecipientId={senderFromUrl || undefined}
             />
           </TabsContent>
         </Tabs>

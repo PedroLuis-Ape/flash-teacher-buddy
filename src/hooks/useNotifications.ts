@@ -198,8 +198,8 @@ export function useNotifications() {
         navigate(`/turmas/${metadata.turma_id}`);
       }
     } else if (notification.tipo === 'dm' && metadata.turma_id) {
-      // Direct message - navigate to turma with DM tab open
-      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&dm=${metadata.dm_id}`);
+      // Direct message - navigate to turma with DM tab open and sender param for auto-open
+      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&sender=${metadata.sender_id}`);
     }
   }, [navigate, markAsReadMutation]);
 
