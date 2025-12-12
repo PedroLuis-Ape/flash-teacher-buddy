@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Volume2, RotateCcw, Check, Star } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
-import { SpeechRateControl } from "./SpeechRateControl";
+import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
@@ -63,7 +63,8 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
   // Autoplay audio when card changes
   useEffect(() => {
     if (question) {
-      speak(question, { langOverride: questionLang as "pt-BR" | "en-US" });
+      const rate = getSpeechRate();
+      speak(question, { langOverride: questionLang as "pt-BR" | "en-US", rate });
     }
   }, [front, back, question]);
 
@@ -146,7 +147,8 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
   };
 
   const handlePlayAudio = () => {
-    speak(question, { langOverride: questionLang as "pt-BR" | "en-US" });
+    const rate = getSpeechRate();
+    speak(question, { langOverride: questionLang as "pt-BR" | "en-US", rate });
   };
 
   return (

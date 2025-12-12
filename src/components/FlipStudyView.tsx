@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
 import { useTTS } from "@/hooks/useTTS";
-import { SpeechRateControl } from "./SpeechRateControl";
+import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,28 +89,32 @@ export const FlipStudyView = ({
     const newFlippedState = !isFlipped;
     setIsFlipped(newFlippedState);
     
+    const rate = getSpeechRate();
+    
     // Play audio for the side being revealed
     if (newFlippedState) {
       // Revealing back side (translation/answer)
       const langOverride = direction === "pt-en" ? "en-US" : "pt-BR";
-      speak(hideText, { langOverride });
+      speak(hideText, { langOverride, rate });
     } else {
       // Revealing front side (question)
       const langOverride = direction === "pt-en" ? "pt-BR" : "en-US";
-      speak(showText, { langOverride });
+      speak(showText, { langOverride, rate });
     }
   };
 
   const handlePlayAgain = () => {
     // Play audio for the revealed side with correct language
     const langOverride = direction === "pt-en" ? "en-US" : "pt-BR";
-    speak(hideText, { langOverride });
+    const rate = getSpeechRate();
+    speak(hideText, { langOverride, rate });
   };
 
   const handlePlayFront = () => {
     // Play audio for the front side with correct language
     const langOverride = direction === "pt-en" ? "pt-BR" : "en-US";
-    speak(showText, { langOverride });
+    const rate = getSpeechRate();
+    speak(showText, { langOverride, rate });
   };
 
   // Keyboard navigation
