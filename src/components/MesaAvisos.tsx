@@ -56,11 +56,20 @@ export function MesaAvisos({ turmaId, isOwner }: MesaAvisosProps) {
     }
   };
 
-  const openDetail = async (aviso: Aviso) => {
-    setSelectedAviso(aviso);
+  const handleAvisoClick = async (aviso: Aviso) => {
+    // Marca como lido se for aluno
     if (!aviso.lida && !isOwner) {
       await handleMarkAsRead(aviso);
     }
+
+    // Se for aviso de atribuição COM assignment_id → vai direto para a atividade
+    if (aviso.tipo === 'aviso_atribuicao' && aviso.metadata?.assignment_id) {
+      navigate(`/turmas/${aviso.metadata.turma_id}/atribuicoes/${aviso.metadata.assignment_id}`);
+      return;
+    }
+
+    // Se for aviso geral → abre o Dialog com detalhes
+    setSelectedAviso(aviso);
   };
 
   if (isLoading) {
@@ -117,7 +126,7 @@ export function MesaAvisos({ turmaId, isOwner }: MesaAvisosProps) {
                   'transition-all cursor-pointer hover:shadow-md',
                   !aviso.lida && !isOwner && 'border-l-4 border-l-primary bg-primary/5'
                 )}
-                onClick={() => openDetail(aviso)}
+                onClick={() => handleAvisoClick(aviso)}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
