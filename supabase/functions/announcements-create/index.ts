@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     console.log('Auth header present:', !!authHeader);
     
     if (!authHeader) {
-      console.error('No authorization header');
+      console.error('[announcements-create] Tentativa de acesso SEM header Authorization');
       return new Response(
         JSON.stringify({ error: 'Token de autorização não fornecido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,7 +52,11 @@ Deno.serve(async (req) => {
     console.log('User lookup result:', { userId: user?.id, error: authError?.message });
     
     if (authError || !user) {
-      console.error('Auth error:', authError?.message || 'No user found');
+      console.error('[announcements-create] Tentativa de acesso sem usuário autenticado:', {
+        error: authError?.message,
+        hasUser: !!user,
+        headerPresent: !!authHeader,
+      });
       return new Response(
         JSON.stringify({ error: 'Não autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
