@@ -1,23 +1,12 @@
 // Sound effects utility for the study games
 // Lightweight, non-blocking audio playback
 
-let audioContext: AudioContext | null = null;
-
-function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
-  
-  if (!audioContext) {
-    try {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    } catch (e) {
-      console.warn('AudioContext not supported');
-      return null;
-    }
-  }
-  return audioContext;
-}
+import { isSoundEnabled } from '@/hooks/useSoundSettings';
 
 function playSound(src: string): void {
+  // Check if sound is enabled before playing
+  if (!isSoundEnabled()) return;
+  
   try {
     const audio = new Audio(src);
     audio.volume = 0.5;
