@@ -2,38 +2,46 @@ import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 
 export interface PlayOptions {
-  langOverride?: string;
-  rate?: number; // Default 0.5 for pronunciation practice
+  langOverride?: "en-US" | "pt-BR";
+  rate?: number;   // 0.5 = lento, 1.0 = normal
+  pitch?: number;  // default 1
 }
 
 /**
- * Find the best English voice available
+ * Pick the best voice for a given language
+ * Prioritizes natural-sounding voices over robotic ones
  */
-function findEnglishVoice(voices: SpeechSynthesisVoice[], langOverride?: string): SpeechSynthesisVoice | null {
-  const target = langOverride || "en-US";
-  
-  // First: exact match
-  let voice = voices.find(v => v.lang === target);
+function pickVoice(lang: "en-US" | "pt-BR", voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  if (!voices || voices.length === 0) return null;
+
+  const prefix = lang.split("-")[0]; // "en" or "pt"
+
+  // Priority 1: Exact match
+  let voice = voices.find(v => v.lang === lang);
   if (voice) return voice;
-  
-  // Second: any en-US
-  voice = voices.find(v => v.lang === "en-US");
+
+  // Priority 2: Any voice with the same language prefix
+  voice = voices.find(v => v.lang.toLowerCase().startsWith(prefix));
   if (voice) return voice;
-  
-  // Third: en-GB
-  voice = voices.find(v => v.lang === "en-GB");
-  if (voice) return voice;
-  
-  // Fourth: any voice starting with 'en'
-  voice = voices.find(v => v.lang.toLowerCase().startsWith("en"));
-  if (voice) return voice;
-  
+
+  // For English, try common fallbacks
+  if (prefix === "en") {
+    voice = voices.find(v => v.lang === "en-GB");
+    if (voice) return voice;
+  }
+
+  // For Portuguese, try pt-PT as fallback
+  if (prefix === "pt") {
+    voice = voices.find(v => v.lang === "pt-PT");
+    if (voice) return voice;
+  }
+
   return null;
 }
 
 /**
- * Hook para gerenciar TTS com seleção explícita de voz em inglês
- * Forces English voice for pronunciation practice
+ * Hook para gerenciar TTS com seleção de voz natural
+ * Suporta inglês e português com controle de velocidade
  */
 export function useTTS() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -51,10 +59,10 @@ export function useTTS() {
       }
     };
 
-    // Try immediately
+    // Try immediately (some browsers have voices ready)
     loadVoices();
 
-    // Also listen for async loading (Chrome Android)
+    // Also listen for async loading (Chrome, Android)
     window.speechSynthesis.onvoiceschanged = loadVoices;
 
     // Cleanup
@@ -71,39 +79,45 @@ export function useTTS() {
       return;
     }
 
-    // Cancel any ongoing speech
+    // Cancel any ongoing speech first
     window.speechSynthesis.cancel();
 
+    // Get voices - use cached or fetch fresh
     const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
-    const targetLang = options?.langOverride || "en-US";
+    
+    // Determine language - default to en-US for study mode
+    const lang = options?.langOverride ?? "en-US";
+    
+    // Find the best voice for this language
+    const voice = pickVoice(lang, currentVoices);
 
-    // For English, find an English voice
-    if (targetLang.startsWith("en")) {
-      const englishVoice = findEnglishVoice(currentVoices, targetLang);
-      
-      if (!englishVoice) {
-        console.warn('[useTTS] English voice not found');
-        toast.warning("English voice not found on this device");
-        return;
-      }
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = englishVoice;
-      utterance.lang = englishVoice.lang;
-      // Default 0.5 for pronunciation practice (slower = clearer)
-      utterance.rate = options?.rate ?? 0.5;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
-      console.log('[useTTS] Using English voice:', englishVoice.name, englishVoice.lang, 'rate:', utterance.rate);
-      window.speechSynthesis.speak(utterance);
+    // Create utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Apply voice if found
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+      console.log('[useTTS] Using voice:', voice.name, voice.lang);
     } else {
-      // Non-English: use default behavior
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = targetLang;
-      utterance.rate = options?.rate ?? 0.5;
-      window.speechSynthesis.speak(utterance);
+      utterance.lang = lang;
+      console.warn('[useTTS] No voice found for', lang, '- using default');
     }
+
+    // Apply rate - DEFAULT 1.0 (normal speed)
+    // Use 0.5 for slow pronunciation practice
+    utterance.rate = options?.rate ?? 1.0;
+    
+    // Apply pitch - default 1.0
+    utterance.pitch = options?.pitch ?? 1.0;
+    
+    // Full volume
+    utterance.volume = 1;
+
+    console.log('[useTTS] Speaking:', text.substring(0, 30) + '...', 'lang:', utterance.lang, 'rate:', utterance.rate);
+
+    // Speak!
+    window.speechSynthesis.speak(utterance);
   }, [voices]);
 
   const stop = useCallback(() => {

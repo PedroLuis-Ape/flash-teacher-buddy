@@ -45,8 +45,8 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
 
   const handlePlayPronunciation = () => {
     stopTTS();
-    // Uses default rate of 0.5 from useTTS
-    speak(englishText, { langOverride: "en-US" });
+    // Slow rate (0.5) for pronunciation practice - clearer to hear
+    speak(englishText, { langOverride: "en-US", rate: 0.5 });
   };
 
   const handleMicToggle = () => {
