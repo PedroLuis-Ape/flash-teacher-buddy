@@ -311,44 +311,47 @@ const ListDetail = () => {
             Voltar
           </Button>
           
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground mb-1">{folder.title}</p>
-              <h1 className="text-3xl font-bold">{list.title}</h1>
+              <p className="text-sm text-muted-foreground mb-1 truncate">{folder.title}</p>
+              <h1 className="text-2xl md:text-3xl font-bold truncate">{list.title}</h1>
               {list.description && (
-                <p className="text-muted-foreground mt-2">{list.description}</p>
+                <p className="text-muted-foreground mt-2 text-sm line-clamp-2">{list.description}</p>
               )}
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
+            
+            {/* Action buttons - stacked on mobile, inline on desktop */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {flashcards.length > 0 && (
+                <>
+                  <Button
+                    onClick={() => navigate(isOwner ? `/list/${id}/games` : `/portal/list/${id}/games`)}
+                    className="ape-action-btn order-1"
+                  >
+                    <Play className="h-5 w-5 shrink-0" />
+                    Estudar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate(`/list/${id}/study?mode=pronunciation`)}
+                    className="ape-action-btn order-2"
+                  >
+                    <Mic className="h-5 w-5 shrink-0" />
+                    Prática de Pronúncia
+                  </Button>
+                </>
+              )}
               {/* Clone button for non-owners */}
               {!isOwner && userId && (
                 <Button
                   variant="outline"
                   onClick={handleCloneList}
                   disabled={isCloning}
+                  className="ape-action-btn order-3"
                 >
-                  <FolderPlus className="mr-2 h-4 w-4" />
-                  {isCloning ? "Clonando..." : "Clonar para minha conta"}
+                  <FolderPlus className="h-5 w-5 shrink-0" />
+                  {isCloning ? "Clonando..." : "Clonar"}
                 </Button>
-              )}
-              {flashcards.length > 0 && (
-                <>
-                  <Button
-                    variant="secondary"
-                    onClick={() => navigate(`/list/${id}/study?mode=pronunciation`)}
-                    className="gap-2"
-                  >
-                    <Mic className="h-4 w-4" />
-                    Prática de Pronúncia
-                  </Button>
-                  <Button
-                    size="lg"
-                    onClick={() => navigate(isOwner ? `/list/${id}/games` : `/portal/list/${id}/games`)}
-                  >
-                    <Play className="mr-2 h-5 w-5" />
-                    Estudar
-                  </Button>
-                </>
               )}
             </div>
           </div>

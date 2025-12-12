@@ -27,7 +27,7 @@ export function ApeCardFolder({
       onClick={onClick}
       disabled={isLocked}
       className={cn(
-        "scroll-reveal card-3d flex items-center gap-3 w-full min-h-[64px] px-4 py-3 rounded-xl",
+        "scroll-reveal card-3d ape-card-row rounded-xl",
         "bg-card transition-all duration-200",
         "border border-border",
         "text-left shadow-sm",
@@ -43,8 +43,8 @@ export function ApeCardFolder({
         )}
       </div>
 
-      <div className="flex-1 min-w-0 overflow-hidden">
-        <h3 className="font-semibold text-base truncate leading-tight" title={title}>
+      <div className="flex-1 min-w-0">
+        <h3 className="ape-card-title" title={title}>
           {title}
         </h3>
         {(listCount !== undefined || cardCount !== undefined) && (

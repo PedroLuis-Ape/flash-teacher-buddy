@@ -5,16 +5,31 @@
 @layer components {
   /* Button spacing tokens */
   .ape-button-stack {
-    @apply space-y-3 md:space-y-4;
+    @apply flex flex-col gap-3 w-full;
   }
   
   .ape-button {
-    @apply min-h-[44px] px-4 rounded-xl;
+    @apply min-h-[48px] px-4 rounded-xl w-full justify-center;
+  }
+  
+  /* Action buttons - consistent sizing */
+  .ape-action-btn {
+    @apply min-h-[48px] px-4 py-3 rounded-xl w-full flex items-center justify-center gap-2 text-base font-medium;
   }
   
   /* Card internal spacing */
   .ape-card-content {
     @apply p-4;
+  }
+  
+  /* Card title - single line with ellipsis */
+  .ape-card-title {
+    @apply font-semibold text-base truncate leading-tight;
+  }
+  
+  /* Consistent card layout */
+  .ape-card-row {
+    @apply flex items-center gap-3 w-full min-h-[64px] px-4 py-3;
   }
 }
 
