@@ -108,9 +108,11 @@ export function DMList({ turmaId, isOwner, membros, teacherId, teacherName }: DM
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{recipient.name}</p>
+                <p className="font-semibold truncate">
+                  {isOwner ? recipient.name : `Professor @${recipient.name}`}
+                </p>
                 <p className="text-sm text-muted-foreground">
-                  {isOwner ? 'Aluno' : 'Professor'}
+                  {isOwner ? 'Aluno' : 'Clique para conversar'}
                 </p>
               </div>
               <Button variant="ghost" size="icon">

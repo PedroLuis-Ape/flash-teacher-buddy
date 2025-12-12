@@ -219,9 +219,9 @@ export function AnnouncementModal() {
           </div>
           
           <div className="text-center space-y-2">
-            <DialogDescription className="text-sm text-muted-foreground">
+          <DialogDescription className="text-sm text-muted-foreground">
               {isDM 
-                ? `Mensagem de ${senderName || 'Professor'} - ${turmaNome}`
+                ? `Mensagem de Professor @${senderName || 'Professor'} - ${turmaNome}`
                 : isAssignment 
                 ? `Nova atividade atribuída - ${turmaNome}`
                 : `Comunicado de ${turmaNome}`}
