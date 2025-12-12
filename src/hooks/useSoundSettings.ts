@@ -28,16 +28,31 @@ export function useSoundSettings() {
 
   const toggleNotifications = useCallback(async () => {
     if (!notificationsEnabled) {
-      // Trying to enable - request permission
+      // Trying to enable - FORCE permission request
       if ('Notification' in window) {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          setNotificationsEnabled(true);
-        } else {
-          // Permission denied - keep disabled
-          console.log('[Settings] Notification permission denied');
+        try {
+          const permission = await Notification.requestPermission();
+          console.log('[Settings] Notification permission result:', permission);
+          
+          if (permission === 'granted') {
+            setNotificationsEnabled(true);
+            // Show a test notification
+            new Notification('Notificações ativadas!', {
+              body: 'Você receberá alertas de novas mensagens.',
+              icon: '/favicon.png'
+            });
+          } else {
+            // Permission denied or dismissed - FORCE toggle back to OFF
+            console.log('[Settings] Notification permission denied/dismissed');
+            setNotificationsEnabled(false);
+          }
+        } catch (error) {
+          console.error('[Settings] Notification permission error:', error);
           setNotificationsEnabled(false);
         }
+      } else {
+        console.warn('[Settings] Notifications not supported in this browser');
+        setNotificationsEnabled(false);
       }
     } else {
       // Disabling

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
@@ -33,14 +33,19 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
   } = usePronunciation({ lang: "en-US" });
 
   const { speak, stop: stopTTS } = useTTS();
+  
+  // Track if we've already played sound for this transcript
+  const lastSoundPlayedForRef = useRef<string>('');
 
   useEffect(() => {
     resetTranscript();
     stopTTS();
+    lastSoundPlayedForRef.current = '';
   }, [englishText, resetTranscript, stopTTS]);
 
   const handlePlayPronunciation = () => {
     stopTTS();
+    // Uses default rate of 0.5 from useTTS
     speak(englishText, { langOverride: "en-US" });
   };
 
@@ -58,22 +63,27 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     onNext();
   };
 
-  // Evaluate pronunciation using fuzzy matching with all alternatives
+  // Evaluate pronunciation using fuzzy matching
   const evaluation = useMemo(() => {
     if (!transcript || alternatives.length === 0) return null;
+    return evaluatePronunciation(alternatives, englishText);
+  }, [englishText, transcript, alternatives]);
+
+  // Play sound effect in useEffect (NOT in useMemo to avoid issues)
+  useEffect(() => {
+    if (!evaluation || !transcript) return;
     
-    const result = evaluatePronunciation(alternatives, englishText);
+    // Only play sound once per unique transcript
+    if (lastSoundPlayedForRef.current === transcript) return;
+    lastSoundPlayedForRef.current = transcript;
     
-    // Play sound effect based on result
-    if (result.result === 'correct') {
+    if (evaluation.result === 'correct') {
       playCorrect();
-    } else if (result.result === 'incorrect') {
+    } else if (evaluation.result === 'incorrect') {
       playWrong();
     }
     // 'almost' doesn't play any sound - it's a neutral feedback
-    
-    return result;
-  }, [englishText, transcript, alternatives]);
+  }, [evaluation, transcript]);
 
   if (!isSupported) {
     return (

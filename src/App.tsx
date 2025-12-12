@@ -12,6 +12,8 @@ import { GlobalLayout } from "@/components/GlobalLayout";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { InstallPWA } from "@/components/InstallPWA";
+import { PageTransition } from "@/components/PageTransition";
+import { BrowserCheck } from "@/components/BrowserCheck";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -54,11 +56,13 @@ const App = () => (
           <Toaster />
           <Sonner />
           <LoadingOverlay />
-          <Suspense fallback={<LoadingSpinner message="Carregando página..." />}>
+          <Suspense fallback={<LoadingSpinner message="Carregando página..." variant="skeleton" />}>
             <BrowserRouter>
               <SessionWatcher />
               <EconomyInitializer />
+              <BrowserCheck />
               <GlobalLayout>
+              <PageTransition>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -100,6 +104,7 @@ const App = () => (
                 <Route path="/painel-professor" element={<PainelProfessor />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </PageTransition>
             </GlobalLayout>
             <InstallPWA />
           </BrowserRouter>
