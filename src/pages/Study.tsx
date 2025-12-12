@@ -81,7 +81,7 @@ const Study = () => {
   const [flipDirection, setFlipDirection] = useState<"pt-en" | "en-pt" | "any">(initialDir);
   
   // Fetch favorites for filtering
-  const { data: favorites = [] } = useFavorites(userId);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   const toggleFavorite = useToggleFavorite();
 
   const isListRoute = window.location.pathname.includes("/list/");
@@ -305,7 +305,8 @@ const Study = () => {
     const card = flashcards[currentIndex];
     if (!card?.id || !userId) return;
     toggleFavorite.mutate({ 
-      flashcardId: card.id, 
+      resourceId: card.id, 
+      resourceType: 'flashcard',
       isFavorite: favorites.includes(card.id)
     });
   };
