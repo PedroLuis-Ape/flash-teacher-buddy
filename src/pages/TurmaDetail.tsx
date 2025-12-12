@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { naturalSort } from '@/lib/sorting';
-import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MesaAvisos } from '@/components/MesaAvisos';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -886,10 +887,14 @@ export default function TurmaDetail() {
 
       <div className="max-w-4xl mx-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="atribuicoes">
               <BookOpen className="h-4 w-4 mr-2" />
               Atribuições
+            </TabsTrigger>
+            <TabsTrigger value="avisos">
+              <Megaphone className="h-4 w-4 mr-2" />
+              Avisos
             </TabsTrigger>
             <TabsTrigger value="pessoas">
               <UsersIcon className="h-4 w-4 mr-2" />
@@ -1001,6 +1006,10 @@ export default function TurmaDetail() {
                 </Card>
               ))
             )}
+          </TabsContent>
+
+          <TabsContent value="avisos" className="mt-4">
+            <MesaAvisos turmaId={turmaId || ''} isOwner={isOwner} />
           </TabsContent>
 
           <TabsContent value="pessoas" className="space-y-4 mt-4">
