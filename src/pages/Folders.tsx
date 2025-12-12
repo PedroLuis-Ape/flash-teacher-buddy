@@ -291,7 +291,7 @@ const Folders = () => {
         <div className="space-y-2">
           {folders.map((folder) => (
             <div key={folder.id} className="flex items-center gap-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <ApeCardFolder
                   title={folder.title}
                   listCount={folder.list_count}
@@ -302,7 +302,7 @@ const Folders = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-12 w-12 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="h-11 w-11 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
                 onClick={(e) => {
                   e.stopPropagation();
                   setFolderToDelete(folder.id);

@@ -29,7 +29,7 @@ export function ApeCardList({
       ref={revealRef}
       onClick={onClick}
       className={cn(
-        "scroll-reveal card-3d flex items-center gap-3 w-full min-h-[64px] px-4 py-3 rounded-xl",
+        "scroll-reveal card-3d ape-card-row rounded-xl",
         "bg-card transition-all duration-200",
         "border border-border",
         "text-left shadow-sm",
@@ -40,9 +40,9 @@ export function ApeCardList({
         <FileText className="h-5 w-5 text-secondary-foreground" />
       </div>
 
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-base truncate leading-tight flex-1 min-w-0" title={title}>
+          <h3 className="ape-card-title flex-1 min-w-0" title={title}>
             {title}
           </h3>
           {badge && (
