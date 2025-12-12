@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -24,9 +24,10 @@ interface DMListProps {
   }>;
   teacherId?: string;
   teacherName?: string;
+  autoOpenRecipientId?: string;
 }
 
-export function DMList({ turmaId, isOwner, membros, teacherId, teacherName }: DMListProps) {
+export function DMList({ turmaId, isOwner, membros, teacherId, teacherName, autoOpenRecipientId }: DMListProps) {
   const [selectedRecipient, setSelectedRecipient] = useState<{
     id: string;
     name: string;
@@ -52,6 +53,16 @@ export function DMList({ turmaId, isOwner, membros, teacherId, teacherName }: DM
     : teacherId && teacherName
     ? [{ id: teacherId, name: teacherName }]
     : [];
+
+  // Auto-open specific recipient when coming from notification
+  useEffect(() => {
+    if (autoOpenRecipientId && recipients.length > 0 && currentUser && !selectedRecipient) {
+      const recipientToOpen = recipients.find(r => r.id === autoOpenRecipientId);
+      if (recipientToOpen) {
+        setSelectedRecipient(recipientToOpen);
+      }
+    }
+  }, [autoOpenRecipientId, recipients, currentUser, selectedRecipient]);
 
   if (selectedRecipient && currentUser) {
     return (
