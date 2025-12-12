@@ -183,28 +183,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Criar anúncio (usando Admin client)
-    const { data: announcement, error: insertError } = await supabaseAdmin
-      .from('announcements')
-      .insert({
-        class_id,
-        author_id: user.id,
-        title: title.trim(),
-        body: body.trim(),
-        pinned,
-      })
-      .select()
-      .single();
+    // Para o sistema de turmas, vamos criar as notificações diretamente
+    // A tabela 'announcements' tem FK para 'classes' (sistema legado), não para 'turmas'
+    // Geramos um ID único para o anúncio no metadata
+    const announcementId = crypto.randomUUID();
+    console.log('[announcements-create] Generated announcement ID:', announcementId);
 
-    if (insertError) {
-      console.error('[announcements-create] Error inserting announcement:', insertError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao criar anúncio' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('[announcements-create] Announcement created:', announcement.id);
+    console.log('[announcements-create] Announcement ID generated:', announcementId);
 
     // Determine recipient list based on mode
     let recipientIds: string[] = [];
@@ -260,7 +245,7 @@ Deno.serve(async (req) => {
         mensagem: title.trim(),
         lida: false,
         metadata: {
-          announcement_id: announcement.id,
+          announcement_id: announcementId,
           full_body: body.trim(),
           turma_nome: turmaNome,
           turma_id: class_id,
@@ -294,7 +279,7 @@ Deno.serve(async (req) => {
           : recipientIds.length > 0 
             ? `Aviso enviado para ${recipientIds.length} alunos!`
             : 'Aviso criado (nenhum aluno na turma)',
-        announcement,
+        announcement_id: announcementId,
         recipients_count: recipientIds.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
