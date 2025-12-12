@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 
 export interface PlayOptions {
@@ -7,22 +7,47 @@ export interface PlayOptions {
 }
 
 /**
+ * Find the best English voice available
+ */
+function findEnglishVoice(voices: SpeechSynthesisVoice[], langOverride?: string): SpeechSynthesisVoice | null {
+  const target = langOverride || "en-US";
+  
+  // First: exact match
+  let voice = voices.find(v => v.lang === target);
+  if (voice) return voice;
+  
+  // Second: any en-US
+  voice = voices.find(v => v.lang === "en-US");
+  if (voice) return voice;
+  
+  // Third: en-GB
+  voice = voices.find(v => v.lang === "en-GB");
+  if (voice) return voice;
+  
+  // Fourth: any voice starting with 'en'
+  voice = voices.find(v => v.lang.toLowerCase().startsWith("en"));
+  if (voice) return voice;
+  
+  return null;
+}
+
+/**
  * Hook para gerenciar TTS com seleção explícita de voz em inglês
- * Handles async voice loading (especially on Chrome Android)
+ * Forces English voice for pronunciation practice
  */
 export function useTTS() {
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
-    // Load voices - they load asynchronously on some browsers
     const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
+      const loadedVoices = window.speechSynthesis.getVoices();
+      if (loadedVoices.length > 0) {
+        setVoices(loadedVoices);
         setVoicesLoaded(true);
-        console.log('[useTTS] Voices loaded:', voices.length);
+        console.log('[useTTS] Voices loaded:', loadedVoices.length);
       }
     };
 
@@ -32,35 +57,12 @@ export function useTTS() {
     // Also listen for async loading (Chrome Android)
     window.speechSynthesis.onvoiceschanged = loadVoices;
 
-    // Cleanup: interromper fala ao desmontar
+    // Cleanup
     return () => {
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
     };
-  }, []);
-
-  /**
-   * Encontra a melhor voz em inglês disponível
-   */
-  const findEnglishVoice = useCallback((): SpeechSynthesisVoice | null => {
-    if (!window.speechSynthesis) return null;
-    
-    const voices = window.speechSynthesis.getVoices();
-    
-    // Primeiro: buscar exatamente 'en-US'
-    let voice = voices.find(v => v.lang === 'en-US');
-    if (voice) return voice;
-    
-    // Segundo: buscar 'en-GB'
-    voice = voices.find(v => v.lang === 'en-GB');
-    if (voice) return voice;
-    
-    // Terceiro: buscar qualquer voz que comece com 'en'
-    voice = voices.find(v => v.lang.startsWith('en'));
-    if (voice) return voice;
-    
-    return null;
   }, []);
 
   const speak = useCallback((text: string, options?: PlayOptions) => {
@@ -69,64 +71,39 @@ export function useTTS() {
       return;
     }
 
-    // Cancelar qualquer fala em andamento
+    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utterance;
+    const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
+    const targetLang = options?.langOverride || "en-US";
 
-    // Configurações
-    const targetLang = options?.langOverride || 'en-US';
-    utterance.lang = targetLang;
-    utterance.rate = options?.rate || 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    // Se for inglês, buscar voz explicitamente
-    if (targetLang.startsWith('en')) {
-      const trySpeak = () => {
-        const englishVoice = findEnglishVoice();
-        
-        if (englishVoice) {
-          utterance.voice = englishVoice;
-          console.log('[useTTS] Using English voice:', englishVoice.name, englishVoice.lang);
-        } else {
-          console.warn('[useTTS] No English voice found, using default with lang override');
-          // Still use the utterance without a specific voice - browser will try to match lang
-        }
-        
-        window.speechSynthesis.speak(utterance);
-      };
-
-      // Vozes podem não estar carregadas ainda
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length === 0) {
-        // Aguardar carregamento das vozes (with timeout)
-        let resolved = false;
-        
-        const voiceHandler = () => {
-          if (resolved) return;
-          resolved = true;
-          trySpeak();
-        };
-        
-        window.speechSynthesis.onvoiceschanged = voiceHandler;
-        
-        // Fallback: tentar após um delay curto
-        setTimeout(() => {
-          if (!resolved) {
-            resolved = true;
-            trySpeak();
-          }
-        }, 150);
-      } else {
-        trySpeak();
+    // For English, find an English voice
+    if (targetLang.startsWith("en")) {
+      const englishVoice = findEnglishVoice(currentVoices, targetLang);
+      
+      if (!englishVoice) {
+        console.warn('[useTTS] English voice not found');
+        toast.warning("English voice not found on this device");
+        return;
       }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = englishVoice;
+      utterance.lang = englishVoice.lang;
+      utterance.rate = options?.rate || 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      console.log('[useTTS] Using English voice:', englishVoice.name, englishVoice.lang);
+      window.speechSynthesis.speak(utterance);
     } else {
-      // Para português ou outros idiomas, usar comportamento padrão
+      // Non-English: use default behavior
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = targetLang;
+      utterance.rate = options?.rate || 0.9;
       window.speechSynthesis.speak(utterance);
     }
-  }, [findEnglishVoice]);
+  }, [voices]);
 
   const stop = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
