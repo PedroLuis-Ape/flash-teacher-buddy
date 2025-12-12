@@ -36,12 +36,14 @@ const Index = () => {
   useEffect(() => {
     checkAuth();
     loadProfileData();
+    // Refetch home data when coming back to this page
+    refetch();
   }, []);
 
   // Refetch when institution changes
   useEffect(() => {
     refetch();
-  }, [selectedInstitution?.id, refetch]);
+  }, [selectedInstitution?.id]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();

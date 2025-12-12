@@ -1809,6 +1809,27 @@ export type Database = {
       user_favorites: {
         Row: {
           created_at: string
+          resource_id: string
+          resource_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          resource_id: string
+          resource_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          resource_id?: string
+          resource_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_favorites_old: {
+        Row: {
+          created_at: string
           flashcard_id: string
           id: string
           user_id: string
@@ -1863,6 +1884,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_list_activity: {
+        Row: {
+          last_opened_at: string | null
+          last_studied_at: string | null
+          list_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_opened_at?: string | null
+          last_studied_at?: string | null
+          list_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_opened_at?: string | null
+          last_studied_at?: string | null
+          list_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

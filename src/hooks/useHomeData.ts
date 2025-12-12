@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInstitution } from "@/contexts/InstitutionContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface LastSession {
   id: string;
@@ -16,6 +17,7 @@ interface RecentList {
   count: number;
   folder_name?: string;
   is_own: boolean;
+  last_activity?: string | null;
 }
 
 interface TeacherInfo {
@@ -42,6 +44,7 @@ interface HomeData {
 
 export function useHomeData(): HomeData {
   const { selectedInstitution } = useInstitution();
+  const queryClient = useQueryClient();
   const [data, setData] = useState<Omit<HomeData, 'refetch'>>({
     last: null,
     recents: [],
@@ -72,7 +75,7 @@ export function useHomeData(): HomeData {
       const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel
-      const [sessionResult, ownListsResult, subscriptionsResult] = await Promise.all([
+      const [sessionResult, ownListsResult, subscriptionsResult, activityResult] = await Promise.all([
         // Last study session
         supabase
           .from("study_sessions")
@@ -92,19 +95,20 @@ export function useHomeData(): HomeData {
           .limit(1)
           .maybeSingle(),
 
-        // Own lists - filter by institution if selected, order by updated_at DESC (most recent)
+        // Own lists
         (() => {
           let query = supabase
             .from("lists")
             .select(`
               id,
               title,
+              updated_at,
               flashcards(id),
               folders(title)
             `)
             .eq("owner_id", userId)
             .order("updated_at", { ascending: false })
-            .limit(10);
+            .limit(20);
           
           if (institutionId) {
             query = query.eq("institution_id", institutionId);
@@ -118,6 +122,12 @@ export function useHomeData(): HomeData {
           .from("subscriptions")
           .select("teacher_id")
           .eq("student_id", userId),
+
+        // User list activity - for ordering by last_studied_at
+        supabase
+          .from("user_list_activity")
+          .select("list_id, last_studied_at, last_opened_at")
+          .eq("user_id", userId)
       ]);
 
       // Get teacher IDs
@@ -131,6 +141,7 @@ export function useHomeData(): HomeData {
           .select(`
             id,
             title,
+            updated_at,
             flashcards(id),
             folders(title, owner_id)
           `)
@@ -156,7 +167,6 @@ export function useHomeData(): HomeData {
           .in("id", teacherIds);
 
         if (teacherProfiles) {
-          // Count folders per teacher - filter by institution if selected
           teachersInfo = await Promise.all(
             teacherProfiles.map(async (teacher) => {
               let folderQuery = supabase
@@ -195,25 +205,47 @@ export function useHomeData(): HomeData {
         };
       }
 
-      // Combine and sort all lists
-      const ownListsMapped = (ownListsResult.data || []).map((list: any) => ({
-        id: list.id,
-        title: list.title || "Sem título",
-        count: list.flashcards?.length || 0,
-        folder_name: list.folders?.title || "Minhas Listas",
-        is_own: true,
-      }));
+      // Build activity map for ordering
+      const activityMap = new Map<string, { studied: string | null; opened: string | null }>();
+      (activityResult.data || []).forEach((a: any) => {
+        activityMap.set(a.list_id, {
+          studied: a.last_studied_at,
+          opened: a.last_opened_at
+        });
+      });
 
-      const sharedListsMapped = sharedLists.map((list: any) => ({
-        id: list.id,
-        title: list.title || "Sem título",
-        count: list.flashcards?.length || 0,
-        folder_name: list.folders?.title || "Compartilhado",
-        is_own: false,
-      }));
+      // Combine and sort all lists by activity
+      const ownListsMapped = (ownListsResult.data || []).map((list: any) => {
+        const activity = activityMap.get(list.id);
+        return {
+          id: list.id,
+          title: list.title || "Sem título",
+          count: list.flashcards?.length || 0,
+          folder_name: list.folders?.title || "Minhas Listas",
+          is_own: true,
+          last_activity: activity?.studied || activity?.opened || list.updated_at,
+        };
+      });
 
+      const sharedListsMapped = sharedLists.map((list: any) => {
+        const activity = activityMap.get(list.id);
+        return {
+          id: list.id,
+          title: list.title || "Sem título",
+          count: list.flashcards?.length || 0,
+          folder_name: list.folders?.title || "Compartilhado",
+          is_own: false,
+          last_activity: activity?.studied || activity?.opened || list.updated_at,
+        };
+      });
+
+      // Sort by last_activity (most recent first)
       const allLists = [...ownListsMapped, ...sharedListsMapped]
-        .sort((a, b) => b.count - a.count)
+        .sort((a, b) => {
+          const dateA = a.last_activity ? new Date(a.last_activity).getTime() : 0;
+          const dateB = b.last_activity ? new Date(b.last_activity).getTime() : 0;
+          return dateB - dateA;
+        })
         .slice(0, 8);
 
       // Calculate stats
@@ -249,5 +281,11 @@ export function useHomeData(): HomeData {
     loadData();
   }, [loadData]);
 
-  return { ...data, refetch: loadData };
+  // Also invalidate cache when refetching
+  const refetch = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['home-data'] });
+    loadData();
+  }, [loadData, queryClient]);
+
+  return { ...data, refetch };
 }

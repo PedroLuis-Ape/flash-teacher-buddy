@@ -1,22 +1,29 @@
 import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useToggleFavorite } from '@/hooks/useFavorites';
+import { useToggleFavorite, FavoriteResourceType } from '@/hooks/useFavorites';
 
 interface FavoriteButtonProps {
-  flashcardId: string;
+  resourceId: string;
+  resourceType?: FavoriteResourceType;
   isFavorite: boolean;
   size?: 'sm' | 'default';
   className?: string;
 }
 
-export function FavoriteButton({ flashcardId, isFavorite, size = 'default', className }: FavoriteButtonProps) {
+export function FavoriteButton({ 
+  resourceId, 
+  resourceType = 'flashcard', 
+  isFavorite, 
+  size = 'default', 
+  className 
+}: FavoriteButtonProps) {
   const toggleFavorite = useToggleFavorite();
   
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    toggleFavorite.mutate({ flashcardId, isFavorite });
+    toggleFavorite.mutate({ resourceId, resourceType, isFavorite });
   };
   
   return (

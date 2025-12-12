@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FolderPlus, Trash2 } from "lucide-react";
+import { FolderPlus, Trash2, Star } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
+import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 
 interface FolderType {
   id: string;
@@ -49,7 +50,12 @@ const Folders = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>();
   const { selectedInstitution } = useInstitution();
+  
+  // Favorites
+  const { data: folderFavorites = [] } = useFavorites(userId, 'folder');
+  const toggleFavorite = useToggleFavorite();
 
   useEffect(() => {
     checkAuth();
@@ -62,6 +68,8 @@ const Folders = () => {
       navigate("/auth", { replace: true });
       return;
     }
+    
+    setUserId(session.user.id);
 
     const { data: roleData } = await supabase
       .from("user_roles")
@@ -289,29 +297,43 @@ const Folders = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {folders.map((folder) => (
-            <div key={folder.id} className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <ApeCardFolder
-                  title={folder.title}
-                  listCount={folder.list_count}
-                  cardCount={folder.card_count}
-                  onClick={() => navigate(`/folder/${folder.id}`)}
-                />
+          {folders.map((folder) => {
+            const isFav = folderFavorites.includes(folder.id);
+            return (
+              <div key={folder.id} className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <ApeCardFolder
+                    title={folder.title}
+                    listCount={folder.list_count}
+                    cardCount={folder.card_count}
+                    onClick={() => navigate(`/folder/${folder.id}`)}
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });
+                  }}
+                >
+                  <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFolderToDelete(folder.id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-11 w-11 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFolderToDelete(folder.id);
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

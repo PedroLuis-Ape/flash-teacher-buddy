@@ -42,7 +42,7 @@ export const FlipStudyView = ({
   const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
   const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   
   const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
@@ -71,7 +71,7 @@ export const FlipStudyView = ({
 
   const handleToggleFavorite = () => {
     if (!flashcardId || !userId) return;
-    toggleFavorite.mutate({ flashcardId, isFavorite });
+    toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
   };
 
   // Determine which text is shown first based on direction

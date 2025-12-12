@@ -56,7 +56,7 @@ const ListDetail = () => {
     },
   });
 
-  const { data: favorites = [] } = useFavorites(userId);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["list", id],
@@ -435,7 +435,8 @@ const ListDetail = () => {
                     <div className="flex items-center gap-1 shrink-0">
                       {userId && (
                         <FavoriteButton
-                          flashcardId={flashcard.id}
+                          resourceId={flashcard.id}
+                          resourceType="flashcard"
                           isFavorite={favorites.includes(flashcard.id)}
                           size="sm"
                         />

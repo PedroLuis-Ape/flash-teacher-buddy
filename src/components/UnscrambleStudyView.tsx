@@ -43,7 +43,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
   const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
   const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   
   const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
@@ -64,7 +64,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
 
   const handleToggleFavorite = () => {
     if (!flashcardId || !userId) return;
-    toggleFavorite.mutate({ flashcardId, isFavorite });
+    toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
   };
 
   useEffect(() => {

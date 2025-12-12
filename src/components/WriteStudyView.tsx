@@ -56,7 +56,7 @@ export const WriteStudyView = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const { speak } = useTTS();
   const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   
   const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
@@ -83,7 +83,7 @@ export const WriteStudyView = ({
 
   const handleToggleFavorite = () => {
     if (!flashcardId || !userId) return;
-    toggleFavorite.mutate({ flashcardId, isFavorite });
+    toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
   };
 
   useEffect(() => {

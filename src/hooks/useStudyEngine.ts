@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { useListActivity } from "@/hooks/useListActivity";
 
 export interface StudyResult {
   flashcardId: string;
@@ -70,6 +71,9 @@ export function useStudyEngine(
 
   const isFlipMode = mode === "flip";
   const useAllCards = isFlipMode || unlimitedMode;
+
+  // List activity tracking
+  const { trackListOpened, trackListStudied } = useListActivity();
 
   // Create stable signature from flashcard IDs to detect meaningful changes
   const cardsSignature = useMemo(() => 
@@ -199,6 +203,9 @@ export function useStudyEngine(
         setIsLoading(false);
         return;
       }
+
+      // Track that the user opened this list
+      trackListOpened(listId);
 
       // For flip mode: use EXACT order from flashcards (Study.tsx already applied random/sequential)
       if (isFlipMode) {
@@ -451,7 +458,10 @@ export function useStudyEngine(
       setMissedCards(prev => prev.filter(id => id !== flashcardId));
     }
 
-    if (!isAuthenticated || !listId || skipped) return;
+      if (!isAuthenticated || !listId || skipped) return;
+
+      // Track study activity (debounced by the hook)
+      trackListStudied(listId);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();

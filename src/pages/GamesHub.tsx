@@ -52,7 +52,7 @@ const GamesHub = () => {
     fetchUser();
   }, []);
   
-  const { data: favoritesCount = 0 } = useFavoritesCount(userId);
+  const { data: favoritesCount = 0 } = useFavoritesCount(userId, 'flashcard');
 
   useEffect(() => {
     if (isListRoute) {

@@ -44,7 +44,7 @@ export const MultipleChoiceStudyView = ({
   const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
   const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   
   const isFavorite = currentCard.id ? favorites.includes(currentCard.id) : false;
   const isPtToEn = direction === "pt-en";
@@ -68,7 +68,7 @@ export const MultipleChoiceStudyView = ({
 
   const handleToggleFavorite = () => {
     if (!currentCard.id || !userId) return;
-    toggleFavorite.mutate({ flashcardId: currentCard.id, isFavorite });
+    toggleFavorite.mutate({ resourceId: currentCard.id, resourceType: 'flashcard', isFavorite });
   };
 
   useEffect(() => {
