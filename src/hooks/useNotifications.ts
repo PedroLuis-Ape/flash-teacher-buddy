@@ -204,13 +204,22 @@ export function useNotifications() {
     }
   }, [navigate, markAsReadMutation]);
 
-  // Set up realtime subscription
+  // Refs for stable handler references in realtime subscription
+  const handlersRef = useRef({ playAlertSound, showBrowserNotification, handleNotificationClick });
   useEffect(() => {
+    handlersRef.current = { playAlertSound, showBrowserNotification, handleNotificationClick };
+  }, [playAlertSound, showBrowserNotification, handleNotificationClick]);
+
+  // Set up realtime subscription - stable deps to prevent reconnects
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let mounted = true;
+
     const setupRealtimeSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !mounted) return;
 
-      const channel = supabase
+      channel = supabase
         .channel('notifications-changes')
         .on(
           'postgres_changes',
@@ -224,44 +233,42 @@ export function useNotifications() {
             const newNotification = payload.new as Notification;
             console.log('New notification received:', newNotification);
             
-            // Only process after initial load
-            if (isInitialized) {
-              // Play alert sound
-              playAlertSound();
-              
-              // Show browser notification
-              showBrowserNotification(newNotification);
-              
-              // Show toast notification
-              const isAssignmentNotification = newNotification.tipo === 'aviso_atribuicao';
-              const isDMNotification = newNotification.tipo === 'dm';
-              
-              sonnerToast(newNotification.titulo, {
-                description: newNotification.mensagem,
-                duration: 8000,
-                action: (isAssignmentNotification || isDMNotification) ? {
-                  label: isDMNotification ? 'Abrir Conversa' : 'Abrir Atribuição',
-                  onClick: () => handleNotificationClick(newNotification),
-                } : undefined,
-              });
-            }
+            // Use refs for stable handlers
+            handlersRef.current.playAlertSound();
+            handlersRef.current.showBrowserNotification(newNotification);
+            
+            const isAssignmentNotification = newNotification.tipo === 'aviso_atribuicao';
+            const isDMNotification = newNotification.tipo === 'dm';
+            
+            sonnerToast(newNotification.titulo, {
+              description: newNotification.mensagem,
+              duration: 8000,
+              action: (isAssignmentNotification || isDMNotification) ? {
+                label: isDMNotification ? 'Abrir Conversa' : 'Abrir Atribuição',
+                onClick: () => handlersRef.current.handleNotificationClick(newNotification),
+              } : undefined,
+            });
 
-            // Invalidate queries to refetch
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
           }
         )
         .subscribe();
 
-      // Mark as initialized after a short delay to avoid showing toasts for existing notifications
-      setTimeout(() => setIsInitialized(true), 1000);
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      // Mark as initialized
+      setTimeout(() => {
+        if (mounted) setIsInitialized(true);
+      }, 1000);
     };
 
     setupRealtimeSubscription();
-  }, [queryClient, isInitialized, playAlertSound, showBrowserNotification, handleNotificationClick]);
+
+    return () => {
+      mounted = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [queryClient]); // Minimal stable deps
 
   return {
     notifications,

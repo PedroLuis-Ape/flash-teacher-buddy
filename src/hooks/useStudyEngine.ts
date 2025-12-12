@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
@@ -51,6 +51,10 @@ export function useStudyEngine(
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Refs for preventing duplicate init and debouncing saves
+  const lastInitSignatureRef = useRef<string>("");
+  const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Game settings state
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -66,6 +70,12 @@ export function useStudyEngine(
 
   const isFlipMode = mode === "flip";
   const useAllCards = isFlipMode || unlimitedMode;
+
+  // Create stable signature from flashcard IDs to detect meaningful changes
+  const cardsSignature = useMemo(() => 
+    flashcards.map(c => c.id).sort().join("|"), 
+    [flashcards]
+  );
 
   const correctCount = results.filter((r) => r.correct && !r.skipped).length;
   const errorCount = results.filter((r) => !r.correct && !r.skipped).length;
@@ -135,12 +145,21 @@ export function useStudyEngine(
     }
   }, [listId, isFlipMode, currentIndex, results]);
 
-  // Initialize session
+  // Initialize session - guards against duplicate calls
   const initializeSession = useCallback(async () => {
+    // Skip if already initialized with same signature
+    const initKey = `${listId}|${mode}|${cardsSignature}`;
+    if (lastInitSignatureRef.current === initKey) {
+      return;
+    }
+    
     if (flashcards.length === 0) {
       setIsLoading(false);
       return;
     }
+    
+    // Mark as initializing with this signature
+    lastInitSignatureRef.current = initKey;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -311,7 +330,13 @@ export function useStudyEngine(
     } finally {
       setIsLoading(false);
     }
-  }, [listId, flashcards, mode, useAllCards, isFlipMode, loadFlipProgress]);
+  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress]);
+  
+  // Store flashcards in a ref for stable access
+  const flashcardsRef = useRef(flashcards);
+  useEffect(() => {
+    flashcardsRef.current = flashcards;
+  }, [flashcards]);
 
   // Prioritize flashcards with more errors
   const getPrioritizedFlashcards = async (
@@ -360,24 +385,32 @@ export function useStudyEngine(
     }
   };
 
-  // Save progress automatically
+  // Save progress with debounce to reduce DB writes
   const saveProgress = useCallback(async () => {
-    if (!sessionId || !listId) return;
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      await supabase
-        .from('study_sessions')
-        .update({
-          current_index: currentIndex,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', sessionId);
-    } catch (error) {
-      console.error('Erro ao salvar progresso:', error);
+    // Clear any pending save
+    if (saveProgressTimeoutRef.current) {
+      clearTimeout(saveProgressTimeoutRef.current);
     }
+    
+    // Debounce by 500ms
+    saveProgressTimeoutRef.current = setTimeout(async () => {
+      if (!sessionId || !listId) return;
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        await supabase
+          .from('study_sessions')
+          .update({
+            current_index: currentIndex,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sessionId);
+      } catch (error) {
+        console.error('Erro ao salvar progresso:', error);
+      }
+    }, 500);
   }, [sessionId, currentIndex, listId]);
 
   // Record result and update flashcard progress
@@ -625,7 +658,7 @@ export function useStudyEngine(
   // Initialize session on mount
   useEffect(() => {
     initializeSession();
-  }, [initializeSession]);
+  }, [listId, cardsSignature, mode]); // Only reinit on meaningful changes
 
   // Save progress on index change
   useEffect(() => {

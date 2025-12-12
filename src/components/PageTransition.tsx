@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 interface PageTransitionProps {
@@ -7,19 +6,12 @@ interface PageTransitionProps {
 }
 
 /**
- * Lightweight page transition - no blocking, instant content display.
- * Uses CSS animation for subtle fade-in only (respects reduced motion).
+ * Lightweight page wrapper - NO key-based remount.
+ * Just applies subtle animation class without forcing DOM teardown.
  */
 export function PageTransition({ children }: PageTransitionProps) {
-  const location = useLocation();
-
   return (
-    <div
-      key={location.pathname}
-      className={cn(
-        "animate-fade-in motion-reduce:animate-none"
-      )}
-    >
+    <div className={cn("animate-fade-in motion-reduce:animate-none")}>
       {children}
     </div>
   );
