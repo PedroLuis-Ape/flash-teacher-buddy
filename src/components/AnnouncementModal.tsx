@@ -5,41 +5,37 @@ import { supabase } from '@/integrations/supabase/client';
 import { Megaphone, BookOpen, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-interface Announcement {
+interface AnnouncementData {
   id: string;
   titulo: string;
   mensagem: string;
-  created_at: string;
-  turma_nome?: string;
-  turma_id?: string;
-  tipo: string;
+  tipo: 'aviso' | 'aviso_atribuicao';
   metadata?: {
     full_body?: string;
     turma_nome?: string;
     turma_id?: string;
     assignment_id?: string;
     assignment_title?: string;
-    announcement_id?: string;
   };
 }
 
 const LAST_SEEN_KEY = 'last-announcement-seen';
 
 export function AnnouncementModal() {
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Check for unread announcements on mount
   const checkForNewAnnouncements = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get last seen notification ID from localStorage
       const lastSeenId = localStorage.getItem(LAST_SEEN_KEY);
 
       // Query for unread announcements (aviso or aviso_atribuicao) from notificacoes table
-      const { data: notifications } = await supabase
+      const { data: notifications, error } = await supabase
         .from('notificacoes')
         .select('*')
         .eq('recipient_id', user.id)
@@ -48,10 +44,15 @@ export function AnnouncementModal() {
         .order('created_at', { ascending: false })
         .limit(1);
 
+      if (error) {
+        console.error('Error fetching announcements:', error);
+        return;
+      }
+
       if (notifications && notifications.length > 0) {
         const notif = notifications[0];
 
-        // Check if we've already seen this notification
+        // Check if we've already seen this notification in this session
         if (lastSeenId && notif.id <= lastSeenId) return;
 
         const metadata = notif.metadata as Record<string, any> | null;
@@ -60,10 +61,7 @@ export function AnnouncementModal() {
           id: notif.id,
           titulo: notif.titulo,
           mensagem: notif.mensagem,
-          created_at: notif.created_at,
-          turma_nome: metadata?.turma_nome || 'Turma',
-          turma_id: metadata?.turma_id,
-          tipo: notif.tipo,
+          tipo: notif.tipo as 'aviso' | 'aviso_atribuicao',
           metadata: metadata || undefined,
         });
         setIsOpen(true);
@@ -83,8 +81,10 @@ export function AnnouncementModal() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      console.log('[AnnouncementModal] Setting up realtime for user:', user.id);
+
       const channel = supabase
-        .channel('announcement-modal-changes')
+        .channel('announcement-popup-monitor')
         .on(
           'postgres_changes',
           {
@@ -94,29 +94,30 @@ export function AnnouncementModal() {
             filter: `recipient_id=eq.${user.id}`,
           },
           (payload) => {
-            const newNotification = payload.new as any;
+            const notif = payload.new as any;
+            console.log('[AnnouncementModal] Received notification:', notif.tipo);
             
             // Only show modal for announcement types
-            if (newNotification.tipo === 'aviso' || newNotification.tipo === 'aviso_atribuicao') {
-              const metadata = newNotification.metadata as Record<string, any> | null;
+            if (notif.tipo === 'aviso' || notif.tipo === 'aviso_atribuicao') {
+              const metadata = notif.metadata as Record<string, any> | null;
               
               setAnnouncement({
-                id: newNotification.id,
-                titulo: newNotification.titulo,
-                mensagem: newNotification.mensagem,
-                created_at: newNotification.created_at,
-                turma_nome: metadata?.turma_nome || 'Turma',
-                turma_id: metadata?.turma_id,
-                tipo: newNotification.tipo,
+                id: notif.id,
+                titulo: notif.titulo,
+                mensagem: notif.mensagem,
+                tipo: notif.tipo,
                 metadata: metadata || undefined,
               });
               setIsOpen(true);
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('[AnnouncementModal] Subscription status:', status);
+        });
 
       return () => {
+        console.log('[AnnouncementModal] Cleaning up realtime subscription');
         supabase.removeChannel(channel);
       };
     };
@@ -126,6 +127,7 @@ export function AnnouncementModal() {
 
   const handleDismiss = async () => {
     if (announcement) {
+      // Save last seen ID
       localStorage.setItem(LAST_SEEN_KEY, announcement.id);
       
       // Mark notification as read
@@ -142,83 +144,111 @@ export function AnnouncementModal() {
     setAnnouncement(null);
   };
 
-  const handleOpenAssignment = () => {
+  const handleGoToAssignment = async () => {
     if (announcement?.metadata?.turma_id && announcement?.metadata?.assignment_id) {
-      handleDismiss();
+      await handleDismiss();
       navigate(`/turmas/${announcement.metadata.turma_id}/atribuicoes/${announcement.metadata.assignment_id}`);
+    } else {
+      await handleDismiss();
     }
   };
 
   if (!announcement) return null;
 
-  const isAssignmentNotification = announcement.tipo === 'aviso_atribuicao';
+  const isAssignment = announcement.tipo === 'aviso_atribuicao';
   const fullBody = announcement.metadata?.full_body || announcement.mensagem;
+  const assignmentTitle = announcement.metadata?.assignment_title;
+  const turmaNome = announcement.metadata?.turma_nome || 'Turma';
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // MODAL BLOQUEANTE: não permite fechar pelo overlay ou ESC
+        // Só fecha via botões explícitos
+        if (!open) return;
+      }}
+    >
       <DialogContent 
-        className="sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
-              isAssignmentNotification 
-                ? 'bg-amber-500/10' 
+        <DialogHeader className="space-y-4 pt-2">
+          <div className="flex items-center justify-center">
+            <div className={`h-16 w-16 rounded-full flex items-center justify-center ${
+              isAssignment 
+                ? 'bg-amber-100 dark:bg-amber-900/30' 
                 : 'bg-primary/10'
             }`}>
-              {isAssignmentNotification ? (
-                <BookOpen className="h-6 w-6 text-amber-500" />
+              {isAssignment ? (
+                <BookOpen className="h-8 w-8 text-amber-600 dark:text-amber-400" />
               ) : (
-                <Megaphone className="h-6 w-6 text-primary" />
+                <Megaphone className="h-8 w-8 text-primary" />
               )}
             </div>
-            <div>
-              <DialogDescription className="text-sm text-muted-foreground">
-                {isAssignmentNotification 
-                  ? `Aviso sobre atribuição - ${announcement.turma_nome}`
-                  : `Aviso de ${announcement.turma_nome}`}
-              </DialogDescription>
-              <DialogTitle className="text-xl font-bold">
-                {announcement.titulo}
-              </DialogTitle>
-            </div>
+          </div>
+          
+          <div className="text-center space-y-2">
+            <DialogDescription className="text-sm text-muted-foreground">
+              {isAssignment 
+                ? `Nova atividade atribuída - ${turmaNome}`
+                : `Comunicado de ${turmaNome}`}
+            </DialogDescription>
+            <DialogTitle className="text-2xl font-bold">
+              {announcement.titulo}
+            </DialogTitle>
           </div>
         </DialogHeader>
 
-        <div className="py-6">
-          <p className="text-base leading-relaxed whitespace-pre-wrap">
+        <div className="py-4 space-y-4">
+          <div className="bg-muted/30 p-4 rounded-lg border text-base leading-relaxed max-h-[250px] overflow-y-auto whitespace-pre-wrap">
             {fullBody}
-          </p>
+          </div>
           
-          {isAssignmentNotification && announcement.metadata?.assignment_title && (
-            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
-                📚 Atribuição: {announcement.metadata.assignment_title}
-              </p>
+          {isAssignment && assignmentTitle && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
+              <BookOpen className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div>
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
+                  Atividade Vinculada
+                </p>
+                <p className="font-semibold text-amber-900 dark:text-amber-100">
+                  {assignmentTitle}
+                </p>
+              </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          {isAssignmentNotification && announcement.metadata?.assignment_id && (
+        <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:justify-center pt-2">
+          {isAssignment ? (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={handleDismiss}
+                className="w-full sm:w-auto min-w-[120px]"
+              >
+                Ver depois
+              </Button>
+              <Button 
+                onClick={handleGoToAssignment}
+                className="w-full sm:w-auto min-w-[180px] font-bold bg-amber-600 hover:bg-amber-700 text-white"
+                size="lg"
+              >
+                Ir para atividade
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            </>
+          ) : (
             <Button 
-              variant="outline"
-              onClick={handleOpenAssignment}
-              className="w-full sm:w-auto"
+              onClick={handleDismiss} 
+              className="w-full sm:w-[200px] min-h-[48px] text-base font-semibold"
+              size="lg"
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Abrir Atribuição
+              Entendi
             </Button>
           )}
-          <Button 
-            onClick={handleDismiss} 
-            className="w-full sm:w-auto min-h-[48px] text-base font-semibold"
-            size="lg"
-          >
-            Entendi
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
