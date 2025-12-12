@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square } from "lucide-react";
+import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle } from "lucide-react";
 import { usePronunciation } from "@/hooks/usePronunciation";
 import { useTTS } from "@/hooks/useTTS";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,23 @@ interface PronunciationStudyViewProps {
   onNext: () => void;
 }
 
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s']/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function PronunciationStudyView({ front, back, onNext }: PronunciationStudyViewProps) {
+  // CRITICAL: In pronunciation mode, we practice speaking ENGLISH
+  // front = Portuguese (term), back = English (translation) based on flashcard structure
+  // We SWAP them here: englishText is what we practice, portugueseText is just a hint
+  const englishText = back;      // The phrase user must speak (ENGLISH)
+  const portugueseText = front;  // Just a visual hint (Portuguese)
+
   const {
     isListening,
     transcript,
@@ -28,11 +44,11 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
   useEffect(() => {
     resetTranscript();
     stopTTS();
-  }, [front, resetTranscript, stopTTS]);
+  }, [englishText, resetTranscript, stopTTS]);
 
   const handlePlayPronunciation = () => {
     stopTTS();
-    speak(front, { langOverride: "en-US" });
+    speak(englishText, { langOverride: "en-US" });
   };
 
   const handleMicToggle = () => {
@@ -48,6 +64,14 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     stopTTS();
     onNext();
   };
+
+  // Compare transcript against ENGLISH text only
+  const result = useMemo(() => {
+    if (!transcript) return null;
+    const expected = normalize(englishText);
+    const said = normalize(transcript);
+    return { isCorrect: expected === said };
+  }, [englishText, transcript]);
 
   if (!isSupported) {
     return (
@@ -71,12 +95,14 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
           Fale em Inglês
         </p>
 
+        {/* ENGLISH phrase - BIG */}
         <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
-          {front}
+          {englishText}
         </h2>
 
+        {/* Portuguese translation - small hint */}
         <p className="text-sm text-muted-foreground/60 mb-8 italic">
-          "{back}"
+          "{portugueseText}"
         </p>
 
         <Button
@@ -122,9 +148,9 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
       <div
         className={cn(
           "w-full p-6 rounded-xl border-2 text-center transition-all duration-500 min-h-[120px] flex flex-col justify-center items-center",
-          transcript
-            ? "bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-800"
-            : "bg-muted/20 border-dashed border-muted"
+          result?.isCorrect === true && "bg-green-50/50 border-green-400 dark:bg-green-900/20 dark:border-green-600",
+          result?.isCorrect === false && "bg-red-50/50 border-red-400 dark:bg-red-900/20 dark:border-red-600",
+          !result && "bg-muted/20 border-dashed border-muted"
         )}
       >
         {error ? (
@@ -140,6 +166,17 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
             <p className="text-2xl font-medium italic text-foreground">
               "{transcript}"
             </p>
+            {result?.isCorrect ? (
+              <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400 mt-2">
+                <CheckCircle2 className="w-5 h-5" />
+                <span className="font-semibold">Correto!</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 text-red-600 dark:text-red-400 mt-2">
+                <XCircle className="w-5 h-5" />
+                <span className="font-semibold">Incorreto</span>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-muted-foreground/40 italic">
