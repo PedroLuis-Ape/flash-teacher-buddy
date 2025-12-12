@@ -11,7 +11,7 @@ const ALERT_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-p
 export interface Notification {
   id: string;
   recipient_id: string;
-  tipo: 'atribuicao_concluida' | 'mensagem_recebida' | 'aluno_inscrito' | 'aviso' | 'aviso_atribuicao';
+  tipo: 'atribuicao_concluida' | 'mensagem_recebida' | 'aluno_inscrito' | 'aviso' | 'aviso_atribuicao' | 'dm';
   titulo: string;
   mensagem: string;
   lida: boolean;
@@ -197,6 +197,9 @@ export function useNotifications() {
         // Fallback to turma if fonte info not available
         navigate(`/turmas/${metadata.turma_id}`);
       }
+    } else if (notification.tipo === 'dm' && metadata.turma_id) {
+      // Direct message - navigate to turma with DM tab open
+      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&dm=${metadata.dm_id}`);
     }
   }, [navigate, markAsReadMutation]);
 
@@ -230,12 +233,13 @@ export function useNotifications() {
               
               // Show toast notification
               const isAssignmentNotification = newNotification.tipo === 'aviso_atribuicao';
+              const isDMNotification = newNotification.tipo === 'dm';
               
               sonnerToast(newNotification.titulo, {
                 description: newNotification.mensagem,
                 duration: 8000,
-                action: isAssignmentNotification && newNotification.metadata?.assignment_id ? {
-                  label: 'Abrir Atribuição',
+                action: (isAssignmentNotification || isDMNotification) ? {
+                  label: isDMNotification ? 'Abrir Conversa' : 'Abrir Atribuição',
                   onClick: () => handleNotificationClick(newNotification),
                 } : undefined,
               });

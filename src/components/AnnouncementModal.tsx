@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Megaphone, BookOpen, ExternalLink } from 'lucide-react';
+import { Megaphone, BookOpen, ExternalLink, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AnnouncementData {
   id: string;
   titulo: string;
   mensagem: string;
-  tipo: 'aviso' | 'aviso_atribuicao';
+  tipo: 'aviso' | 'aviso_atribuicao' | 'dm';
   metadata?: {
     full_body?: string;
     turma_nome?: string;
@@ -18,6 +18,11 @@ interface AnnouncementData {
     assignment_title?: string;
     fonte_id?: string;
     fonte_tipo?: 'lista' | 'pasta' | 'cardset';
+    // DM specific
+    dm_id?: string;
+    sender_id?: string;
+    sender_name?: string;
+    is_teacher_sending?: boolean;
   };
 }
 
@@ -99,8 +104,8 @@ export function AnnouncementModal() {
             const notif = payload.new as any;
             console.log('[AnnouncementModal] Received notification:', notif.tipo);
             
-            // Only show modal for announcement types
-            if (notif.tipo === 'aviso' || notif.tipo === 'aviso_atribuicao') {
+            // Only show modal for announcement types and DM
+            if (notif.tipo === 'aviso' || notif.tipo === 'aviso_atribuicao' || notif.tipo === 'dm') {
               const metadata = notif.metadata as Record<string, any> | null;
               
               setAnnouncement({
@@ -163,12 +168,22 @@ export function AnnouncementModal() {
     }
   };
 
+  const handleOpenDM = async () => {
+    await handleDismiss();
+    
+    if (announcement?.metadata?.turma_id && announcement?.metadata?.dm_id) {
+      navigate(`/turmas/${announcement.metadata.turma_id}?tab=mensagens&dm=${announcement.metadata.dm_id}`);
+    }
+  };
+
   if (!announcement) return null;
 
   const isAssignment = announcement.tipo === 'aviso_atribuicao';
+  const isDM = announcement.tipo === 'dm';
   const fullBody = announcement.metadata?.full_body || announcement.mensagem;
   const assignmentTitle = announcement.metadata?.assignment_title;
   const turmaNome = announcement.metadata?.turma_nome || 'Turma';
+  const senderName = announcement.metadata?.sender_name;
 
   return (
     <Dialog 
@@ -187,11 +202,15 @@ export function AnnouncementModal() {
         <DialogHeader className="space-y-4 pt-2">
           <div className="flex items-center justify-center">
             <div className={`h-16 w-16 rounded-full flex items-center justify-center ${
-              isAssignment 
+              isDM
+                ? 'bg-blue-100 dark:bg-blue-900/30'
+                : isAssignment 
                 ? 'bg-amber-100 dark:bg-amber-900/30' 
                 : 'bg-primary/10'
             }`}>
-              {isAssignment ? (
+              {isDM ? (
+                <MessageSquare className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              ) : isAssignment ? (
                 <BookOpen className="h-8 w-8 text-amber-600 dark:text-amber-400" />
               ) : (
                 <Megaphone className="h-8 w-8 text-primary" />
@@ -201,7 +220,9 @@ export function AnnouncementModal() {
           
           <div className="text-center space-y-2">
             <DialogDescription className="text-sm text-muted-foreground">
-              {isAssignment 
+              {isDM 
+                ? `Mensagem de ${senderName || 'Professor'} - ${turmaNome}`
+                : isAssignment 
                 ? `Nova atividade atribuída - ${turmaNome}`
                 : `Comunicado de ${turmaNome}`}
             </DialogDescription>
@@ -232,7 +253,25 @@ export function AnnouncementModal() {
         </div>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:justify-center pt-2">
-          {isAssignment ? (
+          {isDM ? (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={handleDismiss}
+                className="w-full sm:w-auto min-w-[120px]"
+              >
+                Ver depois
+              </Button>
+              <Button 
+                onClick={handleOpenDM}
+                className="w-full sm:w-auto min-w-[180px] font-bold bg-blue-600 hover:bg-blue-700 text-white"
+                size="lg"
+              >
+                Abrir Conversa
+                <MessageSquare className="ml-2 h-4 w-4" />
+              </Button>
+            </>
+          ) : isAssignment ? (
             <>
               <Button 
                 variant="outline" 
