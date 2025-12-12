@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { toast as sonnerToast } from 'sonner';
+
+// Alert sound URL
+const ALERT_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
 
 export interface Notification {
   id: string;
   recipient_id: string;
-  tipo: 'atribuicao_concluida' | 'mensagem_recebida' | 'aluno_inscrito';
+  tipo: 'atribuicao_concluida' | 'mensagem_recebida' | 'aluno_inscrito' | 'aviso' | 'aviso_atribuicao';
   titulo: string;
   mensagem: string;
   lida: boolean;
@@ -20,6 +24,87 @@ export function useNotifications() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastSoundPlayedRef = useRef<number>(0);
+
+  // Initialize audio element
+  useEffect(() => {
+    audioRef.current = new Audio(ALERT_SOUND_URL);
+    audioRef.current.volume = 0.5;
+    
+    // Check notification permission
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    } else {
+      setNotificationPermission('unsupported');
+    }
+  }, []);
+
+  // Play alert sound with debounce
+  const playAlertSound = useCallback(() => {
+    const now = Date.now();
+    // Debounce: don't play if last sound was less than 2 seconds ago
+    if (now - lastSoundPlayedRef.current < 2000) return;
+    
+    lastSoundPlayedRef.current = now;
+    
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(err => {
+        console.log('Could not play notification sound:', err);
+      });
+    }
+  }, []);
+
+  // Request notification permission
+  const requestNotificationPermission = useCallback(async () => {
+    if (!('Notification' in window)) {
+      sonnerToast.error('Seu navegador não suporta notificações nativas.');
+      return 'unsupported';
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      
+      if (permission === 'granted') {
+        sonnerToast.success('Notificações ativadas!');
+      } else if (permission === 'denied') {
+        sonnerToast.error('Permissão de notificações negada.');
+      }
+      
+      return permission;
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      return 'denied';
+    }
+  }, []);
+
+  // Show browser notification
+  const showBrowserNotification = useCallback((notification: Notification) => {
+    if (notificationPermission !== 'granted') return;
+
+    try {
+      const browserNotif = new window.Notification(notification.titulo, {
+        body: notification.mensagem,
+        icon: '/favicon.png',
+        tag: notification.id, // Prevent duplicate notifications
+        data: {
+          assignment_id: notification.metadata?.assignment_id,
+          turma_id: notification.metadata?.turma_id,
+        },
+      });
+
+      browserNotif.onclick = () => {
+        window.focus();
+        handleNotificationClick(notification);
+        browserNotif.close();
+      };
+    } catch (error) {
+      console.error('Error showing browser notification:', error);
+    }
+  }, [notificationPermission]);
 
   // Fetch notifications
   const { data: notifications = [], isLoading } = useQuery({
@@ -80,7 +165,7 @@ export function useNotifications() {
   });
 
   // Handle notification click
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = useCallback((notification: Notification) => {
     // Mark as read
     if (!notification.lida) {
       markAsReadMutation.mutate(notification.id);
@@ -95,8 +180,14 @@ export function useNotifications() {
       navigate(`/turmas/${metadata.turma_id}`);
     } else if (notification.tipo === 'aluno_inscrito') {
       navigate('/professor/alunos');
+    } else if (notification.tipo === 'aviso' && metadata.turma_id) {
+      // General announcement - navigate to turma
+      navigate(`/turmas/${metadata.turma_id}`);
+    } else if (notification.tipo === 'aviso_atribuicao' && metadata.turma_id && metadata.assignment_id) {
+      // Direct assignment - navigate to the specific assignment
+      navigate(`/turmas/${metadata.turma_id}/atribuicoes/${metadata.assignment_id}`);
     }
-  };
+  }, [navigate, markAsReadMutation]);
 
   // Set up realtime subscription
   useEffect(() => {
@@ -116,13 +207,26 @@ export function useNotifications() {
           },
           (payload) => {
             const newNotification = payload.new as Notification;
+            console.log('New notification received:', newNotification);
             
-            // Show toast for new notification (only if not the initial load)
+            // Only process after initial load
             if (isInitialized) {
-              toast({
-                title: newNotification.titulo,
+              // Play alert sound
+              playAlertSound();
+              
+              // Show browser notification
+              showBrowserNotification(newNotification);
+              
+              // Show toast notification
+              const isAssignmentNotification = newNotification.tipo === 'aviso_atribuicao';
+              
+              sonnerToast(newNotification.titulo, {
                 description: newNotification.mensagem,
-                duration: 5000,
+                duration: 8000,
+                action: isAssignmentNotification && newNotification.metadata?.assignment_id ? {
+                  label: 'Abrir Atribuição',
+                  onClick: () => handleNotificationClick(newNotification),
+                } : undefined,
               });
             }
 
@@ -141,7 +245,7 @@ export function useNotifications() {
     };
 
     setupRealtimeSubscription();
-  }, [queryClient, toast, isInitialized]);
+  }, [queryClient, isInitialized, playAlertSound, showBrowserNotification, handleNotificationClick]);
 
   return {
     notifications,
@@ -150,5 +254,7 @@ export function useNotifications() {
     markAsRead: markAsReadMutation.mutate,
     markAllAsRead: markAllAsReadMutation.mutate,
     handleNotificationClick,
+    notificationPermission,
+    requestNotificationPermission,
   };
 }

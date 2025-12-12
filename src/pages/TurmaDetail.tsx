@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { naturalSort } from '@/lib/sorting';
-import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2 } from 'lucide-react';
+import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
@@ -53,6 +53,9 @@ export default function TurmaDetail() {
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
   const [announcementTitulo, setAnnouncementTitulo] = useState('');
   const [announcementMensagem, setAnnouncementMensagem] = useState('');
+  const [announcementMode, setAnnouncementMode] = useState<'general' | 'direct_assignment'>('general');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState('');
 
   // Student analytics state
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -296,20 +299,45 @@ export default function TurmaDetail() {
       return;
     }
 
+    // Additional validation for direct_assignment mode
+    if (announcementMode === 'direct_assignment') {
+      if (selectedStudentIds.length === 0) {
+        toast.error('❌ Selecione pelo menos um aluno');
+        return;
+      }
+      if (!selectedAssignmentId) {
+        toast.error('❌ Selecione uma atribuição');
+        return;
+      }
+    }
+
     try {
       await createAnnouncement.mutateAsync({
         class_id: turmaId,
         title: announcementTitulo,
         body: announcementMensagem,
+        mode: announcementMode,
+        target_student_ids: announcementMode === 'direct_assignment' ? selectedStudentIds : undefined,
+        assignment_id: announcementMode === 'direct_assignment' ? selectedAssignmentId : undefined,
       });
-      toast.success('✅ Aviso enviado para todos os alunos!');
+      
+      const successMessage = announcementMode === 'direct_assignment'
+        ? `✅ Aviso enviado para ${selectedStudentIds.length} aluno(s)!`
+        : '✅ Aviso enviado para todos os alunos!';
+      toast.success(successMessage);
+      
+      // Reset form
       setAnnouncementDialogOpen(false);
       setAnnouncementTitulo('');
       setAnnouncementMensagem('');
+      setAnnouncementMode('general');
+      setSelectedStudentIds([]);
+      setSelectedAssignmentId('');
     } catch (error: any) {
       toast.error(`❌ ${error.message || 'Erro ao criar aviso'}`);
     }
   };
+
 
   const handleOpenEditAtrib = (atrib: any) => {
     setEditAtribId(atrib.id);
@@ -393,15 +421,49 @@ export default function TurmaDetail() {
       </div>
 
       {/* Announcement Dialog */}
-      <Dialog open={announcementDialogOpen} onOpenChange={setAnnouncementDialogOpen}>
-        <DialogContent>
+      <Dialog open={announcementDialogOpen} onOpenChange={(open) => {
+        setAnnouncementDialogOpen(open);
+        if (!open) {
+          // Reset form when closing
+          setAnnouncementTitulo('');
+          setAnnouncementMensagem('');
+          setAnnouncementMode('general');
+          setSelectedStudentIds([]);
+          setSelectedAssignmentId('');
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="h-5 w-5 text-primary" />
               Criar Aviso da Turma
             </DialogTitle>
           </DialogHeader>
+          
           <div className="space-y-4">
+            {/* Mode selector */}
+            <div className="flex gap-2 p-1 bg-muted rounded-lg">
+              <Button
+                variant={announcementMode === 'general' ? 'default' : 'ghost'}
+                className="flex-1"
+                size="sm"
+                onClick={() => setAnnouncementMode('general')}
+              >
+                <UsersIcon className="h-4 w-4 mr-2" />
+                Aviso Geral
+              </Button>
+              <Button
+                variant={announcementMode === 'direct_assignment' ? 'default' : 'ghost'}
+                className="flex-1"
+                size="sm"
+                onClick={() => setAnnouncementMode('direct_assignment')}
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Atribuição Direta
+              </Button>
+            </div>
+            
+            {/* Title */}
             <div>
               <Label htmlFor="announcement-titulo">Título *</Label>
               <Input
@@ -412,30 +474,125 @@ export default function TurmaDetail() {
                 maxLength={200}
               />
             </div>
+            
+            {/* Message */}
             <div>
               <Label htmlFor="announcement-mensagem">Mensagem *</Label>
               <Textarea
                 id="announcement-mensagem"
                 value={announcementMensagem}
                 onChange={(e) => setAnnouncementMensagem(e.target.value)}
-                placeholder="Digite a mensagem que todos os alunos verão..."
-                rows={5}
+                placeholder="Digite a mensagem..."
+                rows={4}
                 maxLength={5000}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Este aviso aparecerá como um pop-up para todos os alunos da turma.
-              </p>
             </div>
+            
+            {/* Mode-specific content */}
+            {announcementMode === 'general' ? (
+              <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <UsersIcon className="h-4 w-4" />
+                  Este aviso será enviado para <strong>todos os {membros.length} alunos</strong> da turma.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Student selection */}
+                <div>
+                  <Label className="mb-2 block">Selecionar Alunos *</Label>
+                  {membros.length > 0 ? (
+                    <ScrollArea className="h-[150px] border rounded-lg p-2">
+                      <div className="space-y-1">
+                        {membros.map((membro: any) => {
+                          const profile = membro.profiles;
+                          const isSelected = selectedStudentIds.includes(membro.user_id);
+                          return (
+                            <div
+                              key={membro.user_id}
+                              className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
+                                isSelected ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted'
+                              }`}
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedStudentIds(prev => prev.filter(id => id !== membro.user_id));
+                                } else {
+                                  setSelectedStudentIds(prev => [...prev, membro.user_id]);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                                  isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground'
+                                }`}>
+                                  {isSelected && <CheckCircle2 className="h-3 w-3" />}
+                                </div>
+                                <span className="font-medium">{profile?.first_name || 'Aluno'}</span>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {profile?.ape_id || 'N/A'}
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <p className="text-sm text-muted-foreground p-4 border rounded-lg">
+                      Nenhum aluno matriculado na turma.
+                    </p>
+                  )}
+                  {selectedStudentIds.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedStudentIds.length} aluno(s) selecionado(s)
+                    </p>
+                  )}
+                </div>
+                
+                {/* Assignment selection */}
+                <div>
+                  <Label htmlFor="announcement-atribuicao">Atribuição Vinculada *</Label>
+                  <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma atribuição" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {atribuicoes && atribuicoes.length > 0 ? (
+                        atribuicoes.map((atrib: any) => (
+                          <SelectItem key={atrib.id} value={atrib.id}>
+                            {atrib.titulo}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          Nenhuma atribuição disponível
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
           </div>
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setAnnouncementDialogOpen(false)}>
               Cancelar
             </Button>
             <Button 
               onClick={handleCreateAnnouncement} 
-              disabled={createAnnouncement.isPending || !announcementTitulo.trim() || !announcementMensagem.trim()}
+              disabled={
+                createAnnouncement.isPending || 
+                !announcementTitulo.trim() || 
+                !announcementMensagem.trim() ||
+                (announcementMode === 'direct_assignment' && (selectedStudentIds.length === 0 || !selectedAssignmentId))
+              }
             >
-              {createAnnouncement.isPending ? 'Enviando...' : 'Enviar Aviso'}
+              {createAnnouncement.isPending 
+                ? 'Enviando...' 
+                : announcementMode === 'general' 
+                  ? 'Enviar Aviso Geral' 
+                  : `Enviar para ${selectedStudentIds.length} aluno(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>

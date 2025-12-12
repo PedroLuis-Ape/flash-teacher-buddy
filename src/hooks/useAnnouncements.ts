@@ -1,18 +1,31 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+type AnnouncementMode = 'general' | 'direct_assignment';
+
 interface CreateAnnouncementParams {
   class_id: string;
   title: string;
   body: string;
   pinned?: boolean;
+  mode?: AnnouncementMode;
+  target_student_ids?: string[];
+  assignment_id?: string;
 }
 
 export function useCreateAnnouncement() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ class_id, title, body, pinned = false }: CreateAnnouncementParams) => {
+    mutationFn: async ({ 
+      class_id, 
+      title, 
+      body, 
+      pinned = false,
+      mode = 'general',
+      target_student_ids,
+      assignment_id,
+    }: CreateAnnouncementParams) => {
       // Validation
       if (!title.trim()) {
         throw new Error('O título é obrigatório');
@@ -21,14 +34,25 @@ export function useCreateAnnouncement() {
         throw new Error('A mensagem é obrigatória');
       }
 
+      if (mode === 'direct_assignment') {
+        if (!target_student_ids || target_student_ids.length === 0) {
+          throw new Error('Selecione pelo menos um aluno');
+        }
+        if (!assignment_id) {
+          throw new Error('Selecione uma atribuição');
+        }
+      }
+
       // The Supabase SDK automatically includes auth headers when using invoke()
-      // DO NOT manually set Authorization headers as it can cause issues
       const { data, error } = await supabase.functions.invoke('announcements-create', {
         body: { 
           class_id, 
           title: title.trim(), 
           body: body.trim(), 
-          pinned 
+          pinned,
+          mode,
+          target_student_ids,
+          assignment_id,
         },
       });
 
@@ -44,6 +68,7 @@ export function useCreateAnnouncement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
       queryClient.invalidateQueries({ queryKey: ['turma'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }
