@@ -1290,6 +1290,9 @@ export type Database = {
           current_streak: number
           email: string | null
           first_name: string | null
+          google_connect_prompt_dont_show: boolean | null
+          google_connect_prompt_version_seen: number | null
+          google_connected_at: string | null
           id: string
           is_primary: boolean | null
           is_teacher: boolean | null
@@ -1318,6 +1321,9 @@ export type Database = {
           current_streak?: number
           email?: string | null
           first_name?: string | null
+          google_connect_prompt_dont_show?: boolean | null
+          google_connect_prompt_version_seen?: number | null
+          google_connected_at?: string | null
           id: string
           is_primary?: boolean | null
           is_teacher?: boolean | null
@@ -1346,6 +1352,9 @@ export type Database = {
           current_streak?: number
           email?: string | null
           first_name?: string | null
+          google_connect_prompt_dont_show?: boolean | null
+          google_connect_prompt_version_seen?: number | null
+          google_connected_at?: string | null
           id?: string
           is_primary?: boolean | null
           is_teacher?: boolean | null

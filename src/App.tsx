@@ -21,6 +21,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { PageTransition } from "@/components/PageTransition";
 import { BrowserCheck } from "@/components/BrowserCheck";
+import { GoogleConnectPrompt } from "@/components/GoogleConnectPrompt";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -53,6 +54,7 @@ const MyTeachers = lazy(() => import("./pages/MyTeachers"));
 const PainelProfessor = lazy(() => import("./pages/PainelProfessor"));
 const About = lazy(() => import("./pages/About"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 
 const queryClient = new QueryClient();
 
@@ -69,11 +71,13 @@ const App = () => (
               <SessionWatcher />
               <EconomyInitializer />
               <BrowserCheck />
+              <GoogleConnectPrompt />
               <GlobalLayout>
               <PageTransition>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/folders" element={<Folders />} />
                 <Route path="/search" element={<Search />} />
