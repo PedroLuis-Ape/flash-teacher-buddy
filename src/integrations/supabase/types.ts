@@ -2040,6 +2040,24 @@ export type Database = {
         Args: { p_pts: number; p_user_id: string }
         Returns: Json
       }
+      get_lists_with_card_counts: {
+        Args: { _folder_id: string }
+        Returns: {
+          card_count: number
+          class_id: string
+          created_at: string
+          description: string
+          folder_id: string
+          id: string
+          institution_id: string
+          lang: string
+          order_index: number
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
+      }
       get_portal_counts: {
         Args: { _folder_id: string }
         Returns: {
@@ -2137,8 +2155,35 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_portal_lists_with_counts: {
+        Args: { _folder_id: string }
+        Returns: {
+          card_count: number
+          class_id: string
+          created_at: string
+          description: string
+          folder_id: string
+          id: string
+          institution_id: string
+          lang: string
+          order_index: number
+          owner_id: string
+          title: string
+          updated_at: string
+          visibility: string
+        }[]
+      }
       get_public_profile: { Args: { p_public_id: string }; Returns: Json }
       get_rarity_fallback_price: { Args: { p_rarity: string }; Returns: number }
+      get_subscribed_teachers_with_stats: {
+        Args: { _student_id: string }
+        Returns: {
+          avatar_url: string
+          first_name: string
+          folder_count: number
+          teacher_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

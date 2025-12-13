@@ -53,9 +53,12 @@ export function useStudyEngine(
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
-  // Refs for preventing duplicate init and debouncing saves
+  // Refs for preventing duplicate init, debouncing saves, and batching progress
   const lastInitSignatureRef = useRef<string>("");
   const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressBufferRef = useRef<Map<string, { correct: boolean; timestamp: number }>>(new Map());
+  const flushProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFlushRef = useRef<number>(0);
 
   // Game settings state
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -420,7 +423,103 @@ export function useStudyEngine(
     }, 500);
   }, [sessionId, currentIndex, listId]);
 
-  // Record result and update flashcard progress
+  // Flush buffered progress to database
+  const flushProgressBuffer = useCallback(async () => {
+    if (progressBufferRef.current.size === 0) return;
+    if (!listId) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const entries = Array.from(progressBufferRef.current.entries());
+      progressBufferRef.current.clear();
+      lastFlushRef.current = Date.now();
+
+      // Fetch existing progress for all cards in batch
+      const flashcardIds = entries.map(([id]) => id);
+      const { data: existingProgress } = await supabase
+        .from('flashcard_progress')
+        .select('id, flashcard_id, correct_count, incorrect_count')
+        .eq('user_id', user.id)
+        .in('flashcard_id', flashcardIds);
+
+      const existingMap = new Map(
+        (existingProgress || []).map(p => [p.flashcard_id, p])
+      );
+
+      const toUpdate: any[] = [];
+      const toInsert: any[] = [];
+
+      for (const [flashcardId, { correct }] of entries) {
+        const existing = existingMap.get(flashcardId);
+        if (existing) {
+          toUpdate.push({
+            id: existing.id,
+            correct_count: correct ? existing.correct_count + 1 : existing.correct_count,
+            incorrect_count: !correct ? existing.incorrect_count + 1 : existing.incorrect_count,
+            last_reviewed: new Date().toISOString()
+          });
+        } else {
+          toInsert.push({
+            user_id: user.id,
+            flashcard_id: flashcardId,
+            list_id: listId,
+            correct_count: correct ? 1 : 0,
+            incorrect_count: !correct ? 1 : 0,
+            last_reviewed: new Date().toISOString()
+          });
+        }
+      }
+
+      // Batch update existing records
+      if (toUpdate.length > 0) {
+        for (const record of toUpdate) {
+          await supabase
+            .from('flashcard_progress')
+            .update({
+              correct_count: record.correct_count,
+              incorrect_count: record.incorrect_count,
+              last_reviewed: record.last_reviewed
+            })
+            .eq('id', record.id);
+        }
+      }
+
+      // Batch insert new records
+      if (toInsert.length > 0) {
+        await supabase
+          .from('flashcard_progress')
+          .insert(toInsert);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar progresso em batch:', error);
+    }
+  }, [listId]);
+
+  // Schedule flush with debounce (every 5 seconds or 10 cards)
+  const scheduleFlush = useCallback(() => {
+    const FLUSH_INTERVAL_MS = 5000; // 5 seconds
+    const FLUSH_CARD_THRESHOLD = 10;
+
+    // Clear existing timeout
+    if (flushProgressTimeoutRef.current) {
+      clearTimeout(flushProgressTimeoutRef.current);
+    }
+
+    // Flush immediately if buffer is large enough
+    if (progressBufferRef.current.size >= FLUSH_CARD_THRESHOLD) {
+      flushProgressBuffer();
+      return;
+    }
+
+    // Otherwise schedule a flush
+    flushProgressTimeoutRef.current = setTimeout(() => {
+      flushProgressBuffer();
+    }, FLUSH_INTERVAL_MS);
+  }, [flushProgressBuffer]);
+
+  // Record result and buffer flashcard progress for batch save
   const recordResult = useCallback(async (flashcardId: string, correct: boolean, skipped: boolean = false) => {
     // Update results
     setResults((prev) => {
@@ -458,53 +557,25 @@ export function useStudyEngine(
       setMissedCards(prev => prev.filter(id => id !== flashcardId));
     }
 
-      if (!isAuthenticated || !listId || skipped) return;
+    if (!isAuthenticated || !listId || skipped) return;
 
-      // Track study activity (debounced by the hook)
-      trackListStudied(listId);
+    // Track study activity (debounced by the hook)
+    trackListStudied(listId);
 
+    // Award points immediately (important for feedback)
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Award points for correct answer
-      if (correct && FEATURE_FLAGS.economy_enabled) {
+      if (user && correct && FEATURE_FLAGS.economy_enabled) {
         await awardPoints(user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta');
       }
-
-      // Fetch existing progress
-      const { data: existingProgress } = await supabase
-        .from('flashcard_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('flashcard_id', flashcardId)
-        .maybeSingle();
-
-      if (existingProgress) {
-        await supabase
-          .from('flashcard_progress')
-          .update({
-            correct_count: correct ? existingProgress.correct_count + 1 : existingProgress.correct_count,
-            incorrect_count: !correct ? existingProgress.incorrect_count + 1 : existingProgress.incorrect_count,
-            last_reviewed: new Date().toISOString()
-          })
-          .eq('id', existingProgress.id);
-      } else {
-        await supabase
-          .from('flashcard_progress')
-          .insert({
-            user_id: user.id,
-            flashcard_id: flashcardId,
-            list_id: listId,
-            correct_count: correct ? 1 : 0,
-            incorrect_count: !correct ? 1 : 0,
-            last_reviewed: new Date().toISOString()
-          });
-      }
     } catch (error) {
-      console.error('Erro ao registrar resultado:', error);
+      console.error('Erro ao atribuir pontos:', error);
     }
-  }, [listId, isAuthenticated, isFlipMode]);
+
+    // Buffer the progress update instead of writing immediately
+    progressBufferRef.current.set(flashcardId, { correct, timestamp: Date.now() });
+    scheduleFlush();
+  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush]);
 
   const goToNext = useCallback(() => {
     if (currentIndex < cardsOrder.length - 1) {
@@ -558,8 +629,11 @@ export function useStudyEngine(
     }
   }, [generateNextRound, isGameComplete, roundNumber]);
 
-  const completeSession = async () => {
+  const completeSession = useCallback(async () => {
     if (!isAuthenticated) return;
+
+    // Flush any pending progress updates before completing
+    await flushProgressBuffer();
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -606,7 +680,7 @@ export function useStudyEngine(
     } catch (error) {
       console.error('Erro ao completar sessão:', error);
     }
-  };
+  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode]);
 
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
@@ -683,6 +757,20 @@ export function useStudyEngine(
       saveFlipProgress();
     }
   }, [currentIndex, results, isLoading, isFlipMode, saveFlipProgress]);
+
+  // Cleanup: flush progress buffer on unmount
+  useEffect(() => {
+    return () => {
+      // Clear scheduled flush
+      if (flushProgressTimeoutRef.current) {
+        clearTimeout(flushProgressTimeoutRef.current);
+      }
+      // Flush any remaining buffered progress
+      if (progressBufferRef.current.size > 0) {
+        flushProgressBuffer();
+      }
+    };
+  }, [flushProgressBuffer]);
 
   const currentCard = cardsOrder[currentIndex] 
     ? flashcards.find(f => f.id === cardsOrder[currentIndex])
