@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useListActivity } from "@/hooks/useListActivity";
+import { updateGoalProgress } from "@/hooks/useGoals";
 
 export interface StudyResult {
   flashcardId: string;
@@ -647,6 +648,24 @@ export function useStudyEngine(
           .from('study_sessions')
           .update({ completed: true })
           .eq('id', sessionId);
+
+        // === UPDATE GOAL PROGRESS ===
+        // Check if this completed session counts toward any active goals
+        if (user && listId) {
+          try {
+            const result = await updateGoalProgress(user.id, sessionId, listId, mode);
+            if (result.updated) {
+              if (result.goalCompleted) {
+                toast.success("🎯 Meta concluída! Parabéns!");
+              } else if (result.stepInfo) {
+                toast.info(`Meta atualizada: Etapa (${result.stepInfo})`);
+              }
+            }
+          } catch (goalError) {
+            console.error('Erro ao atualizar progresso de metas:', goalError);
+            // Non-blocking: don't fail session completion if goal update fails
+          }
+        }
       }
 
       // Update the parent list's updated_at to move it to the top of "Recentes"
@@ -680,7 +699,7 @@ export function useStudyEngine(
     } catch (error) {
       console.error('Erro ao completar sessão:', error);
     }
-  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode]);
+  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode]);
 
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
