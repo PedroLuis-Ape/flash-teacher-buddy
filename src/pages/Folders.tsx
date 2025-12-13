@@ -500,6 +500,7 @@ const Folders = () => {
                         subtitle={list.folder_title}
                         cardCount={list.card_count}
                         onClick={() => navigate(`/list/${list.id}`)}
+                        onPlayClick={() => navigate(`/list/${list.id}/games`)}
                       />
                     </div>
                     <Button
