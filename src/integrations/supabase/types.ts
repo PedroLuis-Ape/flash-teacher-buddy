@@ -1926,11 +1926,13 @@ export type Database = {
         Row: {
           created_at: string
           current_count: number
+          folder_id: string | null
           goal_id: string
           id: string
-          list_id: string
+          list_id: string | null
           mode: string | null
           order_index: number
+          step_type: string
           target_count: number
           updated_at: string
           user_id: string
@@ -1938,11 +1940,13 @@ export type Database = {
         Insert: {
           created_at?: string
           current_count?: number
+          folder_id?: string | null
           goal_id: string
           id?: string
-          list_id: string
+          list_id?: string | null
           mode?: string | null
           order_index?: number
+          step_type?: string
           target_count?: number
           updated_at?: string
           user_id: string
@@ -1950,11 +1954,13 @@ export type Database = {
         Update: {
           created_at?: string
           current_count?: number
+          folder_id?: string | null
           goal_id?: string
           id?: string
-          list_id?: string
+          list_id?: string | null
           mode?: string | null
           order_index?: number
+          step_type?: string
           target_count?: number
           updated_at?: string
           user_id?: string

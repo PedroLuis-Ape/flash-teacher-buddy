@@ -12,7 +12,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Plus, Trash2, Target, ChevronRight, Loader2 } from "lucide-react";
+import { Plus, Trash2, Target, ChevronRight, Loader2, Folder, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGoals } from "@/hooks/useGoals";
 import { toast } from "sonner";
@@ -24,9 +24,16 @@ interface ListOption {
   folder_title: string;
 }
 
+interface FolderOption {
+  id: string;
+  title: string;
+}
+
 interface StepDraft {
   id: string;
+  step_type: 'list' | 'folder';
   list_id: string;
+  folder_id: string;
   mode: string | null;
   target_count: number;
 }
@@ -56,21 +63,22 @@ export default function GoalNew() {
   const [title, setTitle] = useState("");
   const [dueDays, setDueDays] = useState<string>("none");
   const [steps, setSteps] = useState<StepDraft[]>([
-    { id: crypto.randomUUID(), list_id: '', mode: 'free', target_count: 1 }
+    { id: crypto.randomUUID(), step_type: 'list', list_id: '', folder_id: '', mode: 'free', target_count: 1 }
   ]);
   const [lists, setLists] = useState<ListOption[]>([]);
-  const [isLoadingLists, setIsLoadingLists] = useState(true);
+  const [folders, setFolders] = useState<FolderOption[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch user's lists
+  // Fetch user's lists and folders
   useEffect(() => {
-    async function fetchLists() {
+    async function fetchData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
         // Fetch lists with folder info
-        const { data: listsData, error } = await supabase
+        const { data: listsData, error: listsError } = await supabase
           .from('lists')
           .select(`
             id,
@@ -80,7 +88,7 @@ export default function GoalNew() {
           .eq('owner_id', user.id)
           .order('updated_at', { ascending: false });
 
-        if (error) throw error;
+        if (listsError) throw listsError;
 
         const formattedLists = (listsData || []).map(l => ({
           id: l.id,
@@ -89,21 +97,34 @@ export default function GoalNew() {
         }));
 
         setLists(formattedLists);
+
+        // Fetch folders
+        const { data: foldersData, error: foldersError } = await supabase
+          .from('folders')
+          .select('id, title')
+          .eq('owner_id', user.id)
+          .order('updated_at', { ascending: false });
+
+        if (foldersError) throw foldersError;
+
+        setFolders(foldersData || []);
       } catch (error) {
-        console.error('Error fetching lists:', error);
-        toast.error('Erro ao carregar listas');
+        console.error('Error fetching data:', error);
+        toast.error('Erro ao carregar dados');
       } finally {
-        setIsLoadingLists(false);
+        setIsLoadingData(false);
       }
     }
 
-    fetchLists();
+    fetchData();
   }, []);
 
   const addStep = () => {
     setSteps([...steps, { 
       id: crypto.randomUUID(), 
+      step_type: 'list',
       list_id: '', 
+      folder_id: '',
       mode: 'free', 
       target_count: 1 
     }]);
@@ -118,9 +139,22 @@ export default function GoalNew() {
   };
 
   const updateStep = (id: string, field: keyof StepDraft, value: any) => {
-    setSteps(steps.map(s => 
-      s.id === id ? { ...s, [field]: value } : s
-    ));
+    setSteps(steps.map(s => {
+      if (s.id !== id) return s;
+      
+      // Se mudar o tipo, limpar o ID correspondente
+      if (field === 'step_type') {
+        return { 
+          ...s, 
+          step_type: value as 'list' | 'folder',
+          list_id: '',
+          folder_id: '',
+          mode: value === 'folder' ? null : 'free' // Pasta sempre modo livre
+        };
+      }
+      
+      return { ...s, [field]: value };
+    }));
   };
 
   const handleSubmit = async () => {
@@ -130,9 +164,13 @@ export default function GoalNew() {
       return;
     }
 
-    const validSteps = steps.filter(s => s.list_id);
+    const validSteps = steps.filter(s => 
+      (s.step_type === 'list' && s.list_id) || 
+      (s.step_type === 'folder' && s.folder_id)
+    );
+    
     if (validSteps.length === 0) {
-      toast.error('Adicione pelo menos uma etapa com lista');
+      toast.error('Adicione pelo menos uma etapa válida');
       return;
     }
 
@@ -143,8 +181,10 @@ export default function GoalNew() {
         title: title.trim(),
         due_days: dueDays !== 'none' ? parseInt(dueDays) : null,
         steps: validSteps.map(s => ({
-          list_id: s.list_id,
-          mode: s.mode === 'free' ? null : s.mode,
+          step_type: s.step_type,
+          list_id: s.step_type === 'list' ? s.list_id : null,
+          folder_id: s.step_type === 'folder' ? s.folder_id : null,
+          mode: s.step_type === 'folder' ? null : (s.mode === 'free' ? null : s.mode),
           target_count: s.target_count
         }))
       });
@@ -212,14 +252,14 @@ export default function GoalNew() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isLoadingLists ? (
+            {isLoadingData ? (
               <div className="flex items-center justify-center py-8 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Carregando listas...
+                Carregando...
               </div>
-            ) : lists.length === 0 ? (
+            ) : lists.length === 0 && folders.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <p>Você ainda não tem listas.</p>
+                <p>Você ainda não tem listas ou pastas.</p>
                 <Button 
                   variant="link" 
                   onClick={() => navigate('/folders')}
@@ -247,40 +287,89 @@ export default function GoalNew() {
                   </div>
 
                   <div className="grid gap-3">
-                    {/* List select */}
+                    {/* Step type selector */}
                     <div>
-                      <Label className="text-xs">Lista *</Label>
-                      <Select 
-                        value={step.list_id} 
-                        onValueChange={(v) => updateStep(step.id, 'list_id', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Escolher lista" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lists.map(list => (
-                            <SelectItem key={list.id} value={list.id}>
-                              <div className="flex flex-col items-start">
-                                <span>{list.title}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {list.folder_title}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label className="text-xs">Tipo</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Button
+                          type="button"
+                          variant={step.step_type === 'list' ? 'default' : 'outline'}
+                          size="sm"
+                          className="flex-1 gap-1"
+                          onClick={() => updateStep(step.id, 'step_type', 'list')}
+                        >
+                          <List className="h-3 w-3" />
+                          Lista
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={step.step_type === 'folder' ? 'default' : 'outline'}
+                          size="sm"
+                          className="flex-1 gap-1"
+                          onClick={() => updateStep(step.id, 'step_type', 'folder')}
+                        >
+                          <Folder className="h-3 w-3" />
+                          Pasta
+                        </Button>
+                      </div>
                     </div>
 
+                    {/* List/Folder select based on type */}
+                    {step.step_type === 'list' ? (
+                      <div>
+                        <Label className="text-xs">Lista *</Label>
+                        <Select 
+                          value={step.list_id} 
+                          onValueChange={(v) => updateStep(step.id, 'list_id', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolher lista" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {lists.map(list => (
+                              <SelectItem key={list.id} value={list.id}>
+                                <div className="flex flex-col items-start">
+                                  <span>{list.title}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {list.folder_title}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div>
+                        <Label className="text-xs">Pasta *</Label>
+                        <Select 
+                          value={step.folder_id} 
+                          onValueChange={(v) => updateStep(step.id, 'folder_id', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolher pasta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {folders.map(folder => (
+                              <SelectItem key={folder.id} value={folder.id}>
+                                {folder.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Mode */}
+                      {/* Mode - só para lista */}
                       <div>
                         <Label className="text-xs">Modo</Label>
                         <Select 
-                          value={step.mode || 'free'} 
+                          value={step.step_type === 'folder' ? 'free' : (step.mode || 'free')}
                           onValueChange={(v) => updateStep(step.id, 'mode', v)}
+                          disabled={step.step_type === 'folder'}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={cn(step.step_type === 'folder' && 'opacity-50')}>
                             <SelectValue placeholder="Modo livre" />
                           </SelectTrigger>
                           <SelectContent>
@@ -291,6 +380,11 @@ export default function GoalNew() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {step.step_type === 'folder' && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Pastas usam modo livre
+                          </p>
+                        )}
                       </div>
 
                       {/* Repetitions */}
@@ -307,6 +401,7 @@ export default function GoalNew() {
                             <SelectItem value="1">1 vez</SelectItem>
                             <SelectItem value="2">2 vezes</SelectItem>
                             <SelectItem value="3">3 vezes</SelectItem>
+                            <SelectItem value="5">5 vezes</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -325,7 +420,7 @@ export default function GoalNew() {
           <Button 
             className="w-full gap-2" 
             onClick={handleSubmit}
-            disabled={isSubmitting || !title.trim() || steps.every(s => !s.list_id)}
+            disabled={isSubmitting || !title.trim() || steps.every(s => !s.list_id && !s.folder_id)}
           >
             {isSubmitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -69,6 +69,10 @@ const Study = () => {
   const order = rawOrder === "asc" ? "asc" : "random";
   
   const favoritesOnly = searchParams.get("favorites") === "true";
+  
+  // Goal context - para "Voltar para Metas"
+  const fromGoalId = searchParams.get("from_goal");
+  const fromStepId = searchParams.get("from_step");
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -404,9 +408,20 @@ const Study = () => {
                 </Button>
               )}
               
-              {/* Botão voltar - menos destaque quando há ação principal */}
+              {/* Botão "Voltar para Metas" se veio de uma meta */}
+              {fromGoalId && (
+                <Button 
+                  variant="secondary" 
+                  size="lg" 
+                  onClick={() => navigate('/goals')}
+                >
+                  ← Voltar para Metas
+                </Button>
+              )}
+              
+              {/* Botão voltar à lista */}
               <Button 
-                variant={showNextRound || !showNextRound ? "outline" : "default"} 
+                variant="outline" 
                 size="lg" 
                 onClick={handleExit}
               >
