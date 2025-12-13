@@ -32,7 +32,7 @@ interface StepDraft {
 }
 
 const MODES = [
-  { value: '', label: 'Modo livre (qualquer)' },
+  { value: 'free', label: 'Modo livre (qualquer)' },
   { value: 'flip', label: 'Virar Cartas' },
   { value: 'write', label: 'Escrever' },
   { value: 'multiple-choice', label: 'Múltipla Escolha' },
@@ -42,7 +42,7 @@ const MODES = [
 ];
 
 const DUE_OPTIONS = [
-  { value: '', label: 'Sem prazo' },
+  { value: 'none', label: 'Sem prazo' },
   { value: '3', label: '3 dias' },
   { value: '7', label: '1 semana' },
   { value: '14', label: '2 semanas' },
@@ -54,9 +54,9 @@ export default function GoalNew() {
   const { createGoal } = useGoals();
 
   const [title, setTitle] = useState("");
-  const [dueDays, setDueDays] = useState<string>("");
+  const [dueDays, setDueDays] = useState<string>("none");
   const [steps, setSteps] = useState<StepDraft[]>([
-    { id: crypto.randomUUID(), list_id: '', mode: null, target_count: 1 }
+    { id: crypto.randomUUID(), list_id: '', mode: 'free', target_count: 1 }
   ]);
   const [lists, setLists] = useState<ListOption[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(true);
@@ -104,7 +104,7 @@ export default function GoalNew() {
     setSteps([...steps, { 
       id: crypto.randomUUID(), 
       list_id: '', 
-      mode: null, 
+      mode: 'free', 
       target_count: 1 
     }]);
   };
@@ -141,10 +141,10 @@ export default function GoalNew() {
 
       const goalId = await createGoal({
         title: title.trim(),
-        due_days: dueDays ? parseInt(dueDays) : null,
+        due_days: dueDays !== 'none' ? parseInt(dueDays) : null,
         steps: validSteps.map(s => ({
           list_id: s.list_id,
-          mode: s.mode || null,
+          mode: s.mode === 'free' ? null : s.mode,
           target_count: s.target_count
         }))
       });
@@ -277,8 +277,8 @@ export default function GoalNew() {
                       <div>
                         <Label className="text-xs">Modo</Label>
                         <Select 
-                          value={step.mode || ''} 
-                          onValueChange={(v) => updateStep(step.id, 'mode', v || null)}
+                          value={step.mode || 'free'} 
+                          onValueChange={(v) => updateStep(step.id, 'mode', v)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Modo livre" />
