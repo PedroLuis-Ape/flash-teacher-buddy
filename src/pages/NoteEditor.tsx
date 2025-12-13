@@ -166,7 +166,7 @@ export default function NoteEditor() {
         onBack={handleBack}
       />
 
-      <div className="container max-w-2xl mx-auto p-4 flex-1 flex flex-col gap-4 pb-24">
+      <div className="container max-w-2xl mx-auto p-4 flex-1 flex flex-col gap-4 pb-40">
         <Input
           placeholder="Título da nota"
           value={title}
@@ -181,8 +181,8 @@ export default function NoteEditor() {
         />
       </div>
 
-      {/* Barra de ações fixa no rodapé */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-3">
+      {/* Barra de ações fixa acima da TabBar */}
+      <div className="fixed bottom-16 left-0 right-0 bg-background border-t border-border p-3 z-40">
         <div className="container max-w-2xl mx-auto flex items-center justify-between">
           <AlertDialog>
             <AlertDialogTrigger asChild>
