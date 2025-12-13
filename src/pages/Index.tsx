@@ -398,7 +398,8 @@ const Index = () => {
                   title={list.title}
                   cardCount={list.count}
                   badge={list.folder_name}
-                  onClick={() => navigate(`/list/${list.id}/games`)}
+                  onClick={() => navigate(`/list/${list.id}`)}
+                  onPlayClick={() => navigate(`/list/${list.id}/games`)}
                 />
               ))}
             </div>

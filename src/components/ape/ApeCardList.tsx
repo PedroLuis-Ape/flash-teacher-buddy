@@ -1,6 +1,7 @@
-import { FileText } from "lucide-react";
+import { FileText, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 interface ApeCardListProps {
@@ -10,6 +11,7 @@ interface ApeCardListProps {
   language?: string;
   badge?: string;
   onClick?: () => void;
+  onPlayClick?: () => void;
   className?: string;
   /** Disable scroll reveal animation for performance in large lists */
   disableAnimation?: boolean;
@@ -22,6 +24,7 @@ export function ApeCardList({
   language,
   badge,
   onClick,
+  onPlayClick,
   className,
   disableAnimation = false
 }: ApeCardListProps) {
@@ -66,6 +69,20 @@ export function ApeCardList({
           </p>
         )}
       </div>
+
+      {onPlayClick && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPlayClick();
+          }}
+        >
+          <Play className="h-4 w-4" />
+        </Button>
+      )}
     </button>
   );
 }

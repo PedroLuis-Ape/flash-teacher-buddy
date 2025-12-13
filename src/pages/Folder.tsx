@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2 } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2, Play } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
@@ -522,6 +522,19 @@ const Folder = () => {
                             {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
                           </p>
                         </div>
+
+                        {/* Play Button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 hover:bg-primary/10 hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/list/${list.id}/games`);
+                          }}
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
 
                         {isOwner && (
                           <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
