@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Building2, Plus, X, Check, Trash2 } from "lucide-react";
+import { MoreVertical, Building2, Plus, X, Check, Trash2, StickyNote, Target, ChevronRight } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -18,6 +19,7 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function AppSidebar() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newInstitution, setNewInstitution] = useState({
@@ -84,6 +86,43 @@ export function AppSidebar() {
           </SheetHeader>
           
           <div className="mt-6 space-y-6 flex-1">
+            {/* Navigation Section */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {t('sidebar.navigation', 'Navegação')}
+              </h3>
+              <Button
+                variant="ghost"
+                className="w-full justify-between"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/notes');
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <StickyNote className="h-4 w-4" />
+                  <span>{t('sidebar.myNotes', 'Minhas Notas')}</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-between"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/goals');
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <Target className="h-4 w-4" />
+                  <span>{t('sidebar.myGoals', 'Minhas Metas')}</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+
+            <Separator />
+
             {/* Institutions Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
