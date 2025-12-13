@@ -164,45 +164,9 @@ export default function NoteEditor() {
         title={hasChanges ? "Nota *" : "Nota"}
         showBack
         onBack={handleBack}
-        rightContent={
-          <div className="flex items-center gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-destructive">
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Apagar nota?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. A nota será permanentemente removida.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Apagar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <Button
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              className="gap-1"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
-        }
       />
 
-      <div className="container max-w-2xl mx-auto p-4 flex-1 flex flex-col gap-4">
+      <div className="container max-w-2xl mx-auto p-4 flex-1 flex flex-col gap-4 pb-24">
         <Input
           placeholder="Título da nota"
           value={title}
@@ -215,6 +179,46 @@ export default function NoteEditor() {
           onChange={(e) => setContent(e.target.value)}
           className="flex-1 min-h-[300px] resize-none"
         />
+      </div>
+
+      {/* Barra de ações fixa no rodapé */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-3">
+        <div className="container max-w-2xl mx-auto flex items-center justify-between">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-destructive border-destructive/50">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Apagar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Apagar nota?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. A nota será permanentemente removida.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Apagar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Button
+            onClick={handleSave}
+            disabled={!hasChanges || saving}
+            size="sm"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
       </div>
     </div>
   );
