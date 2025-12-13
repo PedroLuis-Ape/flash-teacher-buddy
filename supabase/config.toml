@@ -1,10 +1,10 @@
 project_id = "ymahldldyxvwjeruaxpr"
 
 [functions.tts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.elevenlabs-tts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ping]
 verify_jwt = false
