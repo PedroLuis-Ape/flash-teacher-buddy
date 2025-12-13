@@ -1,10 +1,11 @@
-import { Home, BookOpen, Library, Store, User } from "lucide-react";
+import { Home, BookOpen, Library, Store, User, StickyNote } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/" },
   { id: "library", label: "Biblioteca", icon: Library, path: "/folders" },
+  { id: "notes", label: "Notas", icon: StickyNote, path: "/notes" },
   { id: "store", label: "Loja", icon: Store, path: "/store" },
   { id: "profile", label: "Perfil", icon: User, path: "/profile" },
 ];
