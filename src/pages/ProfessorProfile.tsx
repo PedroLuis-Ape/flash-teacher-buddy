@@ -76,11 +76,13 @@ export default function ProfessorProfile() {
     queryFn: async () => {
       if (!professorId) return 0;
 
+      // Exclude assignment copies - only count original public folders
       const { count, error } = await supabase
         .from('folders')
         .select('id', { count: 'exact', head: true })
         .eq('owner_id', professorId)
-        .eq('visibility', 'class');
+        .eq('visibility', 'class')
+        .is('class_id', null);
 
       if (error) throw error;
       return count || 0;

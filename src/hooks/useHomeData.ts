@@ -95,7 +95,7 @@ export function useHomeData(): HomeData {
           .limit(1)
           .maybeSingle(),
 
-        // Own lists
+        // Own lists (exclude assignment copies - class_id IS NULL)
         (() => {
           let query = supabase
             .from("lists")
@@ -107,6 +107,7 @@ export function useHomeData(): HomeData {
               folders(title)
             `)
             .eq("owner_id", userId)
+            .is("class_id", null)
             .order("updated_at", { ascending: false })
             .limit(20);
           
