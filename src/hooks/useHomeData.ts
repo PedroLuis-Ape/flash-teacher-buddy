@@ -158,36 +158,20 @@ export function useHomeData(): HomeData {
         sharedLists = sharedData || [];
       }
 
-      // Get teacher profiles
+      // Get teacher profiles with folder counts using RPC (eliminates N+1)
       let teachersInfo: TeacherInfo[] = [];
       if (teacherIds.length > 0) {
-        const { data: teacherProfiles } = await supabase
-          .from("profiles")
-          .select("id, first_name")
-          .in("id", teacherIds);
-
-        if (teacherProfiles) {
-          teachersInfo = await Promise.all(
-            teacherProfiles.map(async (teacher) => {
-              let folderQuery = supabase
-                .from("folders")
-                .select("*", { count: "exact", head: true })
-                .eq("owner_id", teacher.id)
-                .eq("visibility", "class");
-              
-              if (institutionId) {
-                folderQuery = folderQuery.eq("institution_id", institutionId);
-              }
-              
-              const { count } = await folderQuery;
-
-              return {
-                id: teacher.id,
-                name: teacher.first_name || "Professor",
-                folder_count: count || 0,
-              };
-            })
-          );
+        const { data: teacherData, error: teacherError } = await supabase.rpc(
+          'get_subscribed_teachers_with_stats',
+          { _student_id: userId }
+        );
+        
+        if (!teacherError && teacherData) {
+          teachersInfo = (teacherData as any[]).map((t: any) => ({
+            id: t.teacher_id,
+            name: t.first_name || "Professor",
+            folder_count: Number(t.folder_count) || 0,
+          }));
         }
       }
 

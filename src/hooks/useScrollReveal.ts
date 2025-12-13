@@ -4,15 +4,20 @@ interface UseScrollRevealOptions {
   threshold?: number;
   rootMargin?: string;
   once?: boolean;
+  /** Disable the observer entirely for performance optimization */
+  disabled?: boolean;
 }
 
 export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
   options: UseScrollRevealOptions = {}
 ) {
-  const { threshold = 0.1, rootMargin = '0px 0px -50px 0px', once = true } = options;
+  const { threshold = 0.1, rootMargin = '0px 0px -50px 0px', once = true, disabled = false } = options;
   const ref = useRef<T>(null);
 
   useEffect(() => {
+    // Skip observer creation if disabled
+    if (disabled) return;
+    
     const element = ref.current;
     if (!element) return;
 
@@ -37,7 +42,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
     return () => {
       observer.disconnect();
     };
-  }, [threshold, rootMargin, once]);
+  }, [threshold, rootMargin, once, disabled]);
 
   return ref;
 }

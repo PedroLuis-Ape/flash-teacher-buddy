@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -104,48 +104,26 @@ const Folder = () => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      let listsData: any[] = [];
       
+      // Use RPC to get lists with card counts in a single query (eliminates N+1)
       if (session) {
-        const { data, error } = await supabase
-          .from("lists")
-          .select("*")
-          .eq("folder_id", id)
-          .order("order_index", { ascending: true });
+        const { data, error } = await supabase.rpc('get_lists_with_card_counts', { 
+          _folder_id: id 
+        });
         if (error) throw error;
-        listsData = data || [];
+        setLists((data as any[]) || []);
       } else {
-        // Acesso público via portal
-        const { data, error } = await supabase.rpc('get_portal_lists', { _folder_id: id });
+        // Public portal access - use RPC with counts
+        const { data, error } = await supabase.rpc('get_portal_lists_with_counts', { 
+          _folder_id: id 
+        });
         
         if (error) {
-          console.error("Erro RPC get_portal_lists:", error);
+          console.error("Erro RPC get_portal_lists_with_counts:", error);
         }
         
-        listsData = (data as any[]) || [];
-        console.log(`${listsData.length} listas carregadas via portal`);
+        setLists((data as any[]) || []);
       }
-
-      // Carregar contagem de cards para cada lista
-      const listsWithCounts = await Promise.all(
-        (listsData || []).map(async (list: any) => {
-          if (session) {
-            const { count } = await supabase
-              .from("flashcards")
-              .select("*", { count: "exact", head: true })
-              .eq("list_id", list.id);
-            return { ...list, card_count: count || 0 };
-          } else {
-            // Para acesso público, usar RPC para contar flashcards
-            const { data: flashcards } = await supabase.rpc('get_portal_flashcards', { 
-              _list_id: list.id 
-            });
-            return { ...list, card_count: flashcards?.length || 0 };
-          }
-        })
-      );
-
-      setLists(listsWithCounts);
     } catch (error: any) {
       toast.error("Erro ao carregar listas: " + error.message);
     } finally {
@@ -307,6 +285,9 @@ const Folder = () => {
       toast.error("Erro ao excluir lista: " + error.message);
     }
   };
+
+  // Memoize sorted lists to avoid re-sorting on every render
+  const sortedLists = useMemo(() => naturalSort(lists, (list) => list.title), [lists]);
 
   if (!folder) {
     return (
@@ -486,7 +467,7 @@ const Folder = () => {
               </Card>
             ) : (
               <div className="space-y-2">
-                {naturalSort(lists, (list) => list.title).map((list) => (
+                {sortedLists.map((list) => (
                   <button
                     key={list.id}
                     onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}

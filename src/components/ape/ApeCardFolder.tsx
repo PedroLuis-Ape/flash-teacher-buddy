@@ -9,6 +9,8 @@ interface ApeCardFolderProps {
   isLocked?: boolean;
   onClick?: () => void;
   className?: string;
+  /** Disable scroll reveal animation for performance in large lists */
+  disableAnimation?: boolean;
 }
 
 export function ApeCardFolder({
@@ -17,20 +19,23 @@ export function ApeCardFolder({
   cardCount,
   isLocked = false,
   onClick,
-  className
+  className,
+  disableAnimation = false
 }: ApeCardFolderProps) {
-  const revealRef = useScrollReveal<HTMLButtonElement>();
+  const revealRef = useScrollReveal<HTMLButtonElement>({ disabled: disableAnimation });
 
   return (
     <button
-      ref={revealRef}
+      ref={disableAnimation ? undefined : revealRef}
       onClick={onClick}
       disabled={isLocked}
       className={cn(
-        "scroll-reveal card-3d ape-card-row rounded-xl",
+        "card-3d ape-card-row rounded-xl",
         "bg-card transition-all duration-200",
         "border border-border",
         "text-left shadow-sm",
+        !disableAnimation && "scroll-reveal",
+        disableAnimation && "opacity-100 translate-y-0",
         isLocked && "opacity-50 cursor-not-allowed",
         className
       )}
