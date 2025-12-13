@@ -47,21 +47,7 @@ export default function Notes() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ApeAppBar
-        title="Minhas Notas"
-        showBack
-        rightContent={
-          <Button
-            size="sm"
-            onClick={handleCreateNote}
-            disabled={creating}
-            className="gap-1"
-          >
-            <Plus className="h-4 w-4" />
-            Nova
-          </Button>
-        }
-      />
+      <ApeAppBar title="Minhas Notas" showBack />
 
       <div className="container max-w-2xl mx-auto p-4 space-y-3">
         {notes.length === 0 ? (
@@ -77,31 +63,43 @@ export default function Notes() {
             </Button>
           </Card>
         ) : (
-          notes.map((note) => (
-            <Card
-              key={note.id}
-              className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() => navigate(`/notes/${note.id}`)}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium truncate">
-                    {note.title || "Sem título"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {getPreview(note.content)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(note.updated_at), {
-                      addSuffix: true,
-                      locale: ptBR,
-                    })}
-                  </p>
+          <>
+            {notes.map((note) => (
+              <Card
+                key={note.id}
+                className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`/notes/${note.id}`)}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium truncate">
+                      {note.title || "Sem título"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {getPreview(note.content)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDistanceToNow(new Date(note.updated_at), {
+                        addSuffix: true,
+                        locale: ptBR,
+                      })}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-              </div>
-            </Card>
-          ))
+              </Card>
+            ))}
+
+            {/* FAB para criar nova nota */}
+            <Button
+              onClick={handleCreateNote}
+              disabled={creating}
+              className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+              size="icon"
+            >
+              <Plus className="h-6 w-6" />
+            </Button>
+          </>
         )}
       </div>
     </div>
