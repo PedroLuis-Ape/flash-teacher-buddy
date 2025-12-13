@@ -34,15 +34,26 @@ export function SessionWatcher() {
       gotInitialSession = true;
       maybeSetReady();
       
-      // Configurar refresh automático do token a cada 50 minutos (tokens expiram em 1h)
+      // Configurar refresh automático do token a cada 10 minutos (mais frequente para evitar expiração)
       if (session) {
         refreshInterval = setInterval(async () => {
-          const { error } = await supabase.auth.refreshSession();
-          if (error) {
-            console.error('[SessionWatcher] Token refresh failed:', error);
+          try {
+            const { error } = await supabase.auth.refreshSession();
+            if (error) {
+              console.error('[SessionWatcher] Token refresh failed:', error);
+              // Não redireciona para /auth aqui - apenas loga o erro
+              // O Supabase client vai tentar de novo automaticamente
+            }
+          } catch (e) {
+            console.error('[SessionWatcher] Token refresh exception:', e);
           }
-        }, 50 * 60 * 1000); // 50 minutos
+        }, 10 * 60 * 1000); // 10 minutos
       }
+    }).catch(err => {
+      // Erro ao obter sessão inicial - não derrubar a aplicação
+      console.error('[SessionWatcher] getSession error:', err);
+      gotInitialSession = true;
+      maybeSetReady();
     });
 
     // 2) Listener único de auth

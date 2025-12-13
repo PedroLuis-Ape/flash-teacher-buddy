@@ -1883,6 +1883,125 @@ export type Database = {
           },
         ]
       }
+      user_goal_step_completions: {
+        Row: {
+          created_at: string
+          id: string
+          step_id: string
+          study_session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          step_id: string
+          study_session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          step_id?: string
+          study_session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_goal_step_completions_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "user_goal_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_goal_step_completions_study_session_id_fkey"
+            columns: ["study_session_id"]
+            isOneToOne: false
+            referencedRelation: "study_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_goal_steps: {
+        Row: {
+          created_at: string
+          current_count: number
+          goal_id: string
+          id: string
+          list_id: string
+          mode: string | null
+          order_index: number
+          target_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_count?: number
+          goal_id: string
+          id?: string
+          list_id: string
+          mode?: string | null
+          order_index?: number
+          target_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_count?: number
+          goal_id?: string
+          id?: string
+          list_id?: string
+          mode?: string | null
+          order_index?: number
+          target_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_goal_steps_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "user_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_goals: {
+        Row: {
+          created_at: string
+          due_at: string | null
+          id: string
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          start_at?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          start_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_inventory: {
         Row: {
           acquired_at: string
