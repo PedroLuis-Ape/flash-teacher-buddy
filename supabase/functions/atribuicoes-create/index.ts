@@ -166,7 +166,7 @@ async function deepCopyList(
       title: newFolderId ? originalList.title : `[Atribuição] ${originalList.title}`,
       description: originalList.description,
       lang: originalList.lang,
-      visibility: 'private',
+      visibility: 'class',
       class_id: turmaId,
     })
     .select()
@@ -248,7 +248,7 @@ async function deepCopyFolder(
       owner_id: userId,
       title: `[Atribuição] ${originalFolder.title}`,
       description: originalFolder.description,
-      visibility: 'private',
+      visibility: 'class',
       class_id: turmaId,
     })
     .select()

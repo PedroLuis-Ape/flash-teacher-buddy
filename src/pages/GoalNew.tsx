@@ -77,7 +77,7 @@ export default function GoalNew() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Fetch lists with folder info
+        // Fetch lists with folder info (exclude assignment copies - class_id IS NULL)
         const { data: listsData, error: listsError } = await supabase
           .from('lists')
           .select(`
@@ -86,6 +86,7 @@ export default function GoalNew() {
             folders!inner(title)
           `)
           .eq('owner_id', user.id)
+          .is('class_id', null)
           .order('updated_at', { ascending: false });
 
         if (listsError) throw listsError;
@@ -98,11 +99,12 @@ export default function GoalNew() {
 
         setLists(formattedLists);
 
-        // Fetch folders
+        // Fetch folders (exclude assignment copies - class_id IS NULL)
         const { data: foldersData, error: foldersError } = await supabase
           .from('folders')
           .select('id, title')
           .eq('owner_id', user.id)
+          .is('class_id', null)
           .order('updated_at', { ascending: false });
 
         if (foldersError) throw foldersError;
