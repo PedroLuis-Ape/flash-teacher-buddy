@@ -61,14 +61,13 @@ export function SessionWatcher() {
         }
       }
 
-      // Fluxo de logout explícito: limpar e ir imediatamente para /auth
+      // Fluxo de logout explícito: limpar apenas dados de sessão, não localStorage inteiro
       if (event === 'SIGNED_OUT') {
         try {
-          // Sinaliza logout em progresso (mantemos em sessionStorage)
+          // Sinaliza logout em progresso
           sessionStorage.setItem('logoutInProgress', String(Date.now()));
-          // Limpa estados locais/persistência do app
-          localStorage.clear();
-          // Remover chaves conhecidas de sessão sem limpar tudo
+          // NÃO limpar localStorage.clear() - isso remove a sessão persistida!
+          // Apenas limpar chaves específicas do app se necessário
           sessionStorage.removeItem('returnTo');
           sessionStorage.setItem('authReady', '0');
         } catch (e) {

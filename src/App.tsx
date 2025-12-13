@@ -51,6 +51,8 @@ const ProfessorProfile = lazy(() => import("./pages/ProfessorProfile"));
 const MyTeachers = lazy(() => import("./pages/MyTeachers"));
 const PainelProfessor = lazy(() => import("./pages/PainelProfessor"));
 const About = lazy(() => import("./pages/About"));
+const Notes = lazy(() => import("./pages/Notes"));
+const NoteEditor = lazy(() => import("./pages/NoteEditor"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 
@@ -120,6 +122,8 @@ const App = () => (
                   <Route path="/my-teachers" element={<MyTeachers />} />
                   <Route path="/painel-professor" element={<PainelProfessor />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/notes" element={<Notes />} />
+                  <Route path="/notes/:id" element={<NoteEditor />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageTransition>

@@ -12,6 +12,8 @@ interface ApeAppBarProps {
   title?: string;
   showBack?: boolean;
   backPath?: string;
+  onBack?: () => void;
+  rightContent?: ReactNode;
   children?: ReactNode;
   className?: string;
   compact?: boolean;
@@ -21,6 +23,8 @@ export function ApeAppBar({
   title, 
   showBack = false, 
   backPath,
+  onBack,
+  rightContent,
   children,
   className,
   compact = false
@@ -28,7 +32,9 @@ export function ApeAppBar({
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (backPath) {
+    if (onBack) {
+      onBack();
+    } else if (backPath) {
       navigate(backPath);
     } else {
       navigate(-1);
@@ -65,6 +71,7 @@ export function ApeAppBar({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {rightContent}
           <Button
             variant="ghost"
             size="icon"
