@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  ExternalLink
+  Folder
 } from "lucide-react";
 import { useGoals, Goal, GoalStep } from "@/hooks/useGoals";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -60,9 +60,19 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
   const [isExpanded, setIsExpanded] = useState(goal.status === 'active');
 
   const steps = goal.steps || [];
+  const sortedSteps = [...steps].sort((a, b) => a.order_index - b.order_index);
   const completedSteps = steps.filter(s => s.current_count >= s.target_count).length;
   const totalSteps = steps.length;
   const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
+
+  // Próxima etapa pendente (DETERMINÍSTICA por order_index) - FREIO #1
+  const nextPendingStep = sortedSteps.find(s => s.current_count < s.target_count);
+  const hasAnyProgress = sortedSteps.some(s => s.current_count > 0);
+  const allCompleted = sortedSteps.every(s => s.current_count >= s.target_count);
+
+  // CTA Label e Estado
+  const ctaLabel = allCompleted ? 'Concluída ✓' : hasAnyProgress ? 'Continuar' : 'Iniciar';
+  const isCtaDisabled = allCompleted || goal.status !== 'active';
 
   // Calculate days remaining
   let daysRemaining: number | null = null;
@@ -87,10 +97,22 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
   const { label: statusLabel, variant: statusVariant, icon: StatusIcon } = statusConfig[goal.status];
 
   const handleGoToStep = (step: GoalStep) => {
-    if (step.mode) {
-      navigate(`/list/${step.list_id}?mode=${step.mode}`);
+    const baseParams = `from_goal=${goal.id}&from_step=${step.id}`;
+    
+    if (step.step_type === 'folder') {
+      // Folder: abrir em "modo meta"
+      navigate(`/folder/${step.folder_id}?${baseParams}&meta_mode=true`);
     } else {
-      navigate(`/list/${step.list_id}`);
+      // Lista: abrir estudo diretamente
+      let url = `/list/${step.list_id}?${baseParams}`;
+      if (step.mode) url += `&mode=${step.mode}`;
+      navigate(url);
+    }
+  };
+
+  const handleMainCta = () => {
+    if (nextPendingStep) {
+      handleGoToStep(nextPendingStep);
     }
   };
 
@@ -135,14 +157,34 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
             </div>
             <Progress value={progressPercent} className="h-2" />
           </div>
+
+          {/* CTA Principal - NOVO */}
+          {goal.status === 'active' && (
+            <Button
+              className="w-full mt-3 gap-2"
+              size="lg"
+              onClick={handleMainCta}
+              disabled={isCtaDisabled}
+            >
+              {allCompleted ? (
+                <CheckCircle2 className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5" />
+              )}
+              {ctaLabel}
+            </Button>
+          )}
         </CardHeader>
 
         <CollapsibleContent>
           <CardContent className="pt-2 space-y-3">
             {/* Steps list */}
             <div className="space-y-2">
-              {steps.map((step, index) => {
+              {sortedSteps.map((step, index) => {
                 const stepCompleted = step.current_count >= step.target_count;
+                const isFolder = step.step_type === 'folder';
+                const stepTitle = isFolder ? step.folder_title : step.list_title;
+                
                 return (
                   <div 
                     key={step.id}
@@ -158,7 +200,10 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
                       {stepCompleted ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{step.list_title}</p>
+                      <div className="flex items-center gap-1.5">
+                        {isFolder && <Folder className="h-3 w-3 text-muted-foreground shrink-0" />}
+                        <p className="text-sm font-medium truncate">{stepTitle}</p>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {step.mode ? MODE_LABELS[step.mode] || step.mode : 'Modo livre'}
                         {' • '}
@@ -171,8 +216,9 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
                         size="icon"
                         onClick={() => handleGoToStep(step)}
                         className="shrink-0"
+                        title="Jogar"
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <Play className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -236,7 +282,13 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
 
 export default function Goals() {
   const navigate = useNavigate();
-  const { goals, isLoading, updateGoalStatus, deleteGoal } = useGoals();
+  const location = useLocation();
+  const { goals, isLoading, fetchGoals, updateGoalStatus, deleteGoal } = useGoals();
+
+  // FREIO #4: Refetch ao voltar para a tela (fallback)
+  useEffect(() => {
+    fetchGoals();
+  }, [location.key, fetchGoals]);
 
   const activeGoals = goals.filter(g => g.status === 'active');
   const pausedGoals = goals.filter(g => g.status === 'paused');
