@@ -75,7 +75,7 @@ export function useHomeData(): HomeData {
       const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel
-      const [sessionResult, ownListsResult, subscriptionsResult, activityResult] = await Promise.all([
+      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult] = await Promise.all([
         // Last study session
         supabase
           .from("study_sessions")
@@ -117,7 +117,7 @@ export function useHomeData(): HomeData {
           return query;
         })(),
 
-        // Subscriptions (teachers)
+        // Subscriptions (teachers) - legacy method
         supabase
           .from("subscriptions")
           .select("teacher_id")
@@ -127,15 +127,30 @@ export function useHomeData(): HomeData {
         supabase
           .from("user_list_activity")
           .select("list_id, last_studied_at, last_opened_at")
+          .eq("user_id", userId),
+          
+        // Get teachers from turma_membros (primary method for students)
+        supabase
+          .from("turma_membros")
+          .select("turma_id, turmas(owner_teacher_id, nome)")
           .eq("user_id", userId)
+          .eq("ativo", true)
       ]);
 
-      // Get teacher IDs
-      const teacherIds = (subscriptionsResult.data || []).map(s => s.teacher_id);
+      // Get teacher IDs from subscriptions
+      const subscriptionTeacherIds = (subscriptionsResult.data || []).map(s => s.teacher_id);
+      
+      // Get teacher IDs from turma_membros
+      const turmaTeacherIds = (turmaTeachersResult.data || [])
+        .map((m: any) => m.turmas?.owner_teacher_id)
+        .filter(Boolean);
+      
+      // Combine and dedupe teacher IDs
+      const allTeacherIds = [...new Set([...subscriptionTeacherIds, ...turmaTeacherIds])];
 
       // Fetch shared lists from teachers if any
       let sharedLists: any[] = [];
-      if (teacherIds.length > 0) {
+      if (allTeacherIds.length > 0) {
         let sharedQuery = supabase
           .from("lists")
           .select(`
@@ -145,7 +160,7 @@ export function useHomeData(): HomeData {
             flashcards(id),
             folders(title, owner_id)
           `)
-          .in("owner_id", teacherIds)
+          .in("owner_id", allTeacherIds)
           .eq("visibility", "class")
           .order("updated_at", { ascending: false })
           .limit(10);
@@ -158,9 +173,11 @@ export function useHomeData(): HomeData {
         sharedLists = sharedData || [];
       }
 
-      // Get teacher profiles with folder counts using RPC (eliminates N+1)
+      // Get teacher profiles with folder counts
       let teachersInfo: TeacherInfo[] = [];
-      if (teacherIds.length > 0) {
+      
+      // First try RPC (for subscriptions)
+      if (subscriptionTeacherIds.length > 0) {
         const { data: teacherData, error: teacherError } = await supabase.rpc(
           'get_subscribed_teachers_with_stats',
           { _student_id: userId }
@@ -172,6 +189,35 @@ export function useHomeData(): HomeData {
             name: t.first_name || "Professor",
             folder_count: Number(t.folder_count) || 0,
           }));
+        }
+      }
+      
+      // Add teachers from turmas that aren't already in the list
+      const existingTeacherIds = new Set(teachersInfo.map(t => t.id));
+      const missingTurmaTeacherIds = turmaTeacherIds.filter((id: string) => !existingTeacherIds.has(id));
+      
+      if (missingTurmaTeacherIds.length > 0) {
+        // Fetch profiles for turma teachers
+        const { data: turmaTeacherProfiles } = await supabase
+          .from("profiles")
+          .select("id, first_name")
+          .in("id", missingTurmaTeacherIds);
+        
+        // Count folders for each
+        if (turmaTeacherProfiles) {
+          for (const profile of turmaTeacherProfiles) {
+            const { count } = await supabase
+              .from("folders")
+              .select("*", { count: "exact", head: true })
+              .eq("owner_id", profile.id)
+              .eq("visibility", "class");
+            
+            teachersInfo.push({
+              id: profile.id,
+              name: profile.first_name || "Professor",
+              folder_count: count || 0,
+            });
+          }
         }
       }
 
@@ -243,7 +289,7 @@ export function useHomeData(): HomeData {
         stats: {
           total_lists: totalOwnLists,
           total_cards: totalOwnCards,
-          teachers_count: teacherIds.length,
+          teachers_count: allTeacherIds.length,
         },
         loading: false,
         error: null,

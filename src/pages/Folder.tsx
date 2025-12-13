@@ -57,19 +57,54 @@ const Folder = () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
-        const { data, error } = await supabase
+        // First try direct query (works for owners due to RLS)
+        const { data: directData, error: directError } = await supabase
           .from("folders")
           .select("*")
           .eq("id", id)
           .maybeSingle();
-        if (error) throw error;
-        if (!data) {
-          toast.error("Pasta não encontrada ou sem permissão");
-          navigate("/folders");
-          return;
+        
+        if (directData) {
+          // Got folder directly (user is owner)
+          setFolder(directData);
+          setIsOwner(session.user.id === directData.owner_id);
+        } else {
+          // If RLS blocked or not owner, use edge function for student access
+          console.log("[Folder] Direct query failed, trying edge function for student access");
+          
+          const { data: edgeFnData, error: edgeFnError } = await supabase.functions.invoke('get-folder-full', {
+            body: { folder_id: id }
+          });
+          
+          if (edgeFnError) {
+            console.error("[Folder] Edge function error:", edgeFnError);
+            toast.error("Pasta não encontrada ou sem permissão");
+            navigate("/folders");
+            return;
+          }
+          
+          if (!edgeFnData?.folder) {
+            console.log("[Folder] No folder returned from edge function");
+            toast.error("Pasta não encontrada ou sem permissão");
+            navigate("/folders");
+            return;
+          }
+          
+          console.log("[Folder] Loaded via edge function:", edgeFnData.folder.title);
+          setFolder(edgeFnData.folder);
+          setIsOwner(session.user.id === edgeFnData.folder.owner_id);
+          
+          // Also set lists if returned by edge function
+          if (edgeFnData.lists) {
+            setLists(edgeFnData.lists.map((l: any) => ({
+              id: l.id,
+              title: l.title,
+              description: l.description,
+              card_count: l.cards_count || 0,
+            })));
+            setLoading(false);
+          }
         }
-        setFolder(data);
-        setIsOwner(session.user.id === data.owner_id);
       } else {
         // Acesso público via portal
         const { data, error } = await supabase.rpc('get_portal_folder', { _id: id });
