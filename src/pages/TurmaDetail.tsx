@@ -22,6 +22,7 @@ import { useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
+import { TurmaActivityPanel } from '@/components/TurmaActivityPanel';
 
 export default function TurmaDetail() {
   const { turmaId } = useParams<{ turmaId: string }>();
@@ -1025,6 +1026,11 @@ export default function TurmaDetail() {
           </TabsContent>
 
           <TabsContent value="pessoas" className="space-y-4 mt-4">
+            {/* Activity Panel - Only for owner */}
+            {isOwner && turmaId && (
+              <TurmaActivityPanel turmaId={turmaId} membros={membros} />
+            )}
+
             {isOwner && (
               <Button className="w-full" onClick={() => setEnrollDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />

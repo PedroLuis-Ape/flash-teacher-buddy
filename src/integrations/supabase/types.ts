@@ -1792,6 +1792,57 @@ export type Database = {
           },
         ]
       }
+      turma_student_activity: {
+        Row: {
+          created_at: string
+          id: string
+          last_activity_at: string
+          list_id: string | null
+          mode: string | null
+          progress_pct: number | null
+          student_id: string
+          turma_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_activity_at?: string
+          list_id?: string | null
+          mode?: string | null
+          progress_pct?: number | null
+          student_id: string
+          turma_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_activity_at?: string
+          list_id?: string | null
+          mode?: string | null
+          progress_pct?: number | null
+          student_id?: string
+          turma_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turma_student_activity_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_student_activity_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       turmas: {
         Row: {
           ativo: boolean
