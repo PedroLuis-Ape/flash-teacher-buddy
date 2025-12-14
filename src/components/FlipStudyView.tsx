@@ -9,7 +9,8 @@ import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
-import { playCorrect, playWrong, playNext } from "@/lib/sfx";
+import { playCorrect, playWrong } from "@/lib/sfx";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FlipStudyViewProps {
   front: string;
@@ -23,6 +24,7 @@ interface FlipStudyViewProps {
   canGoPrevious?: boolean;
   canGoNext?: boolean;
   direction: "pt-en" | "en-pt" | "any";
+  fastMode?: boolean;
 }
 
 export const FlipStudyView = ({
@@ -37,6 +39,7 @@ export const FlipStudyView = ({
   canGoPrevious = true,
   canGoNext = true,
   direction,
+  fastMode = false,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [userId, setUserId] = useState<string | undefined>();
@@ -75,10 +78,13 @@ export const FlipStudyView = ({
   };
 
   // Determine which text is shown first based on direction
-  const showText = direction === "pt-en" ? front : back;
-  const hideText = direction === "pt-en" ? back : front;
-  const showLabel = direction === "pt-en" ? "Português" : "English";
-  const hideLabel = direction === "pt-en" ? "English" : "Português";
+  // Top side (question) and Bottom side (answer)
+  const topText = direction === "pt-en" ? front : back;
+  const bottomText = direction === "pt-en" ? back : front;
+  const topLabel = direction === "pt-en" ? "Português" : "English";
+  const bottomLabel = direction === "pt-en" ? "English" : "Português";
+  const topLang = direction === "pt-en" ? "pt-BR" : "en-US";
+  const bottomLang = direction === "pt-en" ? "en-US" : "pt-BR";
 
   // Reset flip state when card changes
   useEffect(() => {
@@ -86,35 +92,38 @@ export const FlipStudyView = ({
   }, [front, back]);
 
   const handleFlip = () => {
-    const newFlippedState = !isFlipped;
-    setIsFlipped(newFlippedState);
-    // TTS removed from auto-flip - only plays on button click
+    if (fastMode) return; // No flip in fast mode
+    setIsFlipped(!isFlipped);
   };
 
-  const handlePlayAgain = () => {
-    // Play audio for the revealed side with correct language
-    const langOverride = direction === "pt-en" ? "en-US" : "pt-BR";
+  const handlePlayTop = () => {
     const rate = getSpeechRate();
-    speak(hideText, { langOverride, rate });
+    speak(topText, { langOverride: topLang, rate });
   };
 
-  const handlePlayFront = () => {
-    // Play audio for the front side with correct language
-    const langOverride = direction === "pt-en" ? "pt-BR" : "en-US";
+  const handlePlayBottom = () => {
     const rate = getSpeechRate();
-    speak(showText, { langOverride, rate });
+    speak(bottomText, { langOverride: bottomLang, rate });
   };
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Space: flip or mark as known
-      if (e.key === " " && !isFlipped) {
-        e.preventDefault();
-        handleFlip();
-      } else if (e.key === " " && isFlipped) {
-        e.preventDefault();
-        handleKnew();
+      if (fastMode) {
+        // Fast mode: Space advances, no flip
+        if (e.key === " ") {
+          e.preventDefault();
+          handleKnew();
+        }
+      } else {
+        // Normal mode: Space flips or confirms
+        if (e.key === " " && !isFlipped) {
+          e.preventDefault();
+          handleFlip();
+        } else if (e.key === " " && isFlipped) {
+          e.preventDefault();
+          handleKnew();
+        }
       }
       
       // Arrow keys for navigation
@@ -130,8 +139,133 @@ export const FlipStudyView = ({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isFlipped, direction, hideText, onNext, onPrevious, canGoNext, canGoPrevious]);
+  }, [isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious]);
 
+  // Fast Mode UI - two stacked panels
+  if (fastMode) {
+    return (
+      <div className="flex flex-col items-center gap-4 w-full max-w-2xl mx-auto">
+        {/* Controls row */}
+        <div className="w-full flex justify-between items-center mb-2">
+          <HintButton hint={hint} />
+          <div className="flex items-center gap-2">
+            {userId && flashcardId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleToggleFavorite}
+                disabled={toggleFavorite.isPending}
+                className={cn(
+                  "transition-colors",
+                  isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
+                )}
+                title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+              >
+                <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+              </Button>
+            )}
+            <SpeechRateControl />
+          </div>
+        </div>
+
+        {/* Fast Mode Card - Two panels stacked */}
+        <Card className="w-full overflow-hidden">
+          {/* Top panel (question/origin) */}
+          <div className="border-b border-border bg-gradient-to-br from-card to-muted/20 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{topLabel}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePlayTop}
+                className="h-8 px-2"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <ScrollArea className="max-h-24 sm:max-h-32">
+              <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
+                {topText}
+              </p>
+            </ScrollArea>
+          </div>
+
+          {/* Bottom panel (answer/destination) */}
+          <div className="bg-gradient-to-br from-primary/5 to-accent/10 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{bottomLabel}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePlayBottom}
+                className="h-8 px-2"
+              >
+                <Volume2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <ScrollArea className="max-h-24 sm:max-h-32">
+              <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
+                {bottomText}
+              </p>
+            </ScrollArea>
+          </div>
+        </Card>
+
+        {/* Navigation arrows */}
+        <div className="flex items-center justify-center gap-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onPrevious}
+            disabled={!canGoPrevious}
+            className="h-12 w-12"
+            title="Card anterior (←)"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onNext}
+            disabled={!canGoNext}
+            className="h-12 w-12"
+            title="Próximo card (→)"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </Button>
+        </div>
+
+        {/* Action buttons - always visible in fast mode */}
+        <div className="flex flex-row flex-wrap gap-3 justify-center w-full">
+          <Button 
+            variant="destructive" 
+            size="lg" 
+            onClick={handleDidntKnow}
+            className="flex-1 min-w-[140px]"
+          >
+            <RotateCcw className="mr-2 h-5 w-5" />
+            Não Sabia
+          </Button>
+          <Button 
+            variant="default" 
+            size="lg" 
+            onClick={handleKnew}
+            className="flex-1 min-w-[140px]"
+          >
+            <Check className="mr-2 h-5 w-5" />
+            Sabia
+          </Button>
+        </div>
+        
+        {/* Instructions */}
+        <p className="text-xs text-muted-foreground text-center">
+          Use ← → para navegar • Espaço para avançar
+        </p>
+      </div>
+    );
+  }
+
+  // Normal Flip Mode UI
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto">
       {/* Controls row */}
@@ -167,16 +301,16 @@ export const FlipStudyView = ({
           {/* Front side */}
           <div className="flip-card-front">
             <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20">
-              <p className="text-sm text-muted-foreground mb-2">{showLabel}</p>
+              <p className="text-sm text-muted-foreground mb-2">{topLabel}</p>
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {showText}
+                {topText}
               </p>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handlePlayFront();
+                  handlePlayTop();
                 }}
                 className="mt-4"
               >
@@ -192,16 +326,16 @@ export const FlipStudyView = ({
           {/* Back side */}
           <div className="flip-card-back">
             <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10">
-              <p className="text-sm text-muted-foreground mb-2">{hideLabel}</p>
+              <p className="text-sm text-muted-foreground mb-2">{bottomLabel}</p>
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {hideText}
+                {bottomText}
               </p>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handlePlayAgain();
+                  handlePlayBottom();
                 }}
                 className="mt-4"
               >

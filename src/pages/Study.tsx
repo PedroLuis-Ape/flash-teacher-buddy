@@ -450,6 +450,7 @@ const Study = () => {
                 settings={gameSettings}
                 onSettingsChange={handleSettingsChange}
                 onRestart={handleRestartWithSettings}
+                showFastMode={effectiveMode === "flip"}
               />
               
               {/* Direction selector for flip mode */}
@@ -507,6 +508,7 @@ const Study = () => {
               hint={currentCard.hint}
               flashcardId={currentCard.id}
               direction={resolvedDirection}
+              fastMode={gameSettings.fastMode}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}

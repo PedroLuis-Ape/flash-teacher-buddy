@@ -26,6 +26,7 @@ export interface StudySession {
 export interface GameSettings {
   mode: 'sequential' | 'random';
   subset: 'all' | 'favorites';
+  fastMode?: boolean;
 }
 
 interface FlashcardWithProgress {
