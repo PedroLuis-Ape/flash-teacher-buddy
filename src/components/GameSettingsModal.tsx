@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, RefreshCw } from "lucide-react";
+import { Settings, RefreshCw, Zap } from "lucide-react";
 
 export interface GameSettings {
   mode: 'sequential' | 'random';
   subset: 'all' | 'favorites';
+  fastMode?: boolean;
 }
 
 interface GameSettingsModalProps {
@@ -15,15 +16,29 @@ interface GameSettingsModalProps {
   onSettingsChange: (settings: GameSettings) => void;
   onRestart: () => void;
   disabled?: boolean;
+  showFastMode?: boolean;
 }
+
+const FAST_MODE_STORAGE_KEY = 'piteco_flip_fast_mode';
 
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ 
   settings, 
   onSettingsChange, 
   onRestart,
-  disabled = false 
+  disabled = false,
+  showFastMode = false 
 }) => {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
+
+  // Load fast mode preference from localStorage on mount
+  useEffect(() => {
+    if (showFastMode) {
+      const stored = localStorage.getItem(FAST_MODE_STORAGE_KEY);
+      if (stored !== null && settings.fastMode === undefined) {
+        onSettingsChange({ ...settings, fastMode: stored === 'true' });
+      }
+    }
+  }, [showFastMode]);
 
   const handleRestart = () => {
     onRestart();
@@ -41,6 +56,14 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     onSettingsChange({
       ...settings,
       subset: checked ? 'favorites' : 'all'
+    });
+  };
+
+  const handleFastModeChange = (checked: boolean) => {
+    localStorage.setItem(FAST_MODE_STORAGE_KEY, String(checked));
+    onSettingsChange({
+      ...settings,
+      fastMode: checked
     });
   };
 
@@ -83,6 +106,23 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               onCheckedChange={handleSubsetChange}
             />
           </div>
+
+          {showFastMode && (
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-yellow-500" />
+                  <Label htmlFor="fast-mode" className="font-medium">Fast Mode</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">Mostra os dois lados ao mesmo tempo</p>
+              </div>
+              <Switch 
+                id="fast-mode"
+                checked={settings.fastMode ?? false}
+                onCheckedChange={handleFastModeChange}
+              />
+            </div>
+          )}
           
           <Button onClick={handleRestart} className="w-full" variant="default">
             <RefreshCw className="mr-2 h-4 w-4" />
