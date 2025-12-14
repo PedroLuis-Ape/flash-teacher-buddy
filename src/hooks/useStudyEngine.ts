@@ -5,6 +5,7 @@ import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useListActivity } from "@/hooks/useListActivity";
 import { updateGoalProgress } from "@/hooks/useGoals";
+import { useTurmaActivity } from "@/hooks/useTurmaActivity";
 
 export interface StudyResult {
   flashcardId: string;
@@ -78,6 +79,9 @@ export function useStudyEngine(
 
   // List activity tracking
   const { trackListOpened, trackListStudied } = useListActivity();
+
+  // Turma activity tracking (for professor dashboard)
+  const { initTurmaTracking, updateTurmaActivity, flushActivity } = useTurmaActivity();
 
   // Create stable signature from flashcard IDs to detect meaningful changes
   const cardsSignature = useMemo(() => 
@@ -210,6 +214,9 @@ export function useStudyEngine(
 
       // Track that the user opened this list
       trackListOpened(listId);
+
+      // Initialize turma activity tracking (discovers turma_id from list)
+      await initTurmaTracking(listId);
 
       // For flip mode: use EXACT order from flashcards (Study.tsx already applied random/sequential)
       if (isFlipMode) {
@@ -576,7 +583,15 @@ export function useStudyEngine(
     // Buffer the progress update instead of writing immediately
     progressBufferRef.current.set(flashcardId, { correct, timestamp: Date.now() });
     scheduleFlush();
-  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush]);
+
+    // Update turma activity (debounced internally)
+    updateTurmaActivity({
+      listId,
+      mode,
+      totalCards: cardsOrder.length,
+      currentIndex
+    });
+  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, mode, cardsOrder.length, currentIndex]);
 
   const goToNext = useCallback(() => {
     if (currentIndex < cardsOrder.length - 1) {
@@ -781,7 +796,7 @@ export function useStudyEngine(
     }
   }, [currentIndex, results, isLoading, isFlipMode, saveFlipProgress]);
 
-  // Cleanup: flush progress buffer on unmount
+  // Cleanup: flush progress buffer and turma activity on unmount
   useEffect(() => {
     return () => {
       // Clear scheduled flush
@@ -792,8 +807,10 @@ export function useStudyEngine(
       if (progressBufferRef.current.size > 0) {
         flushProgressBuffer();
       }
+      // Flush turma activity
+      flushActivity();
     };
-  }, [flushProgressBuffer]);
+  }, [flushProgressBuffer, flushActivity]);
 
   const currentCard = cardsOrder[currentIndex] 
     ? flashcards.find(f => f.id === cardsOrder[currentIndex])
