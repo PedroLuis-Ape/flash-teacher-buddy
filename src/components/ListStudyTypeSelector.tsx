@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -62,14 +61,28 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
     }
   }, []);
 
-  const handleStudyTypeChange = (type: "language" | "general") => {
-    onChange({
-      ...value,
-      studyType: type,
-      ttsEnabled: type === "language",
-      labelsA: type === "general" ? "Frente" : "",
-      labelsB: type === "general" ? "Verso" : "",
-    });
+  const isLanguageMode = value.studyType === "language";
+
+  const handleToggleMode = (checked: boolean) => {
+    if (checked) {
+      // Switch to language mode
+      onChange({
+        ...value,
+        studyType: "language",
+        ttsEnabled: true,
+        labelsA: getLanguageName(value.langA || "en"),
+        labelsB: getLanguageName(value.langB || "pt"),
+      });
+    } else {
+      // Switch to general mode
+      onChange({
+        ...value,
+        studyType: "general",
+        ttsEnabled: false,
+        labelsA: "Frente",
+        labelsB: "Verso",
+      });
+    }
   };
 
   const handleLangAChange = (code: string) => {
@@ -134,46 +147,30 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
   };
 
   return (
-    <div className="space-y-6">
-      {/* Study Type Selection */}
-      <div className="space-y-3">
-        <Label className="text-base font-semibold">Tipo de Estudo</Label>
-        <RadioGroup
-          value={value.studyType}
-          onValueChange={(v) => handleStudyTypeChange(v as "language" | "general")}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-        >
-          <div className="flex items-start space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent/50 transition-colors">
-            <RadioGroupItem value="language" id="language" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="language" className="font-medium cursor-pointer flex items-center gap-2">
-                <Volume2 className="h-4 w-4 text-primary" />
-                Idiomas
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Para aprender vocabulário e frases. Inclui áudio (TTS).
-              </p>
-            </div>
+    <div className="space-y-4">
+      {/* Main Toggle */}
+      <div className="flex items-start justify-between gap-4 p-4 border rounded-lg bg-muted/30">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Volume2 className="h-4 w-4 text-primary" />
+            <Label htmlFor="language-mode-toggle" className="font-medium cursor-pointer">
+              Modo Idiomas (A/B + áudio)
+            </Label>
           </div>
-          <div className="flex items-start space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-accent/50 transition-colors">
-            <RadioGroupItem value="general" id="general" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="general" className="font-medium cursor-pointer flex items-center gap-2">
-                <Beaker className="h-4 w-4 text-muted-foreground" />
-                Estudo Geral
-                <Badge variant="secondary" className="text-xs">Beta</Badge>
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Ciências, matemática, etc. Sem áudio por enquanto.
-              </p>
-            </div>
-          </div>
-        </RadioGroup>
+          <p className="text-sm text-muted-foreground">
+            Ative para estudar idiomas com áudio. Desative para Estudo Geral (Beta).
+          </p>
+        </div>
+        <Switch
+          id="language-mode-toggle"
+          checked={isLanguageMode}
+          onCheckedChange={handleToggleMode}
+        />
       </div>
 
       {/* Language Mode Options */}
-      {value.studyType === "language" && (
-        <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+      {isLanguageMode && (
+        <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
           <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-end">
             {/* Language A */}
             <div className="space-y-2">
@@ -292,9 +289,14 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
         </div>
       )}
 
-      {/* General Mode Options */}
-      {value.studyType === "general" && (
-        <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+      {/* General Mode Badge */}
+      {!isLanguageMode && (
+        <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+          <div className="flex items-center gap-2">
+            <Beaker className="h-4 w-4 text-muted-foreground" />
+            <Badge variant="secondary">Estudo Geral (Beta)</Badge>
+          </div>
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm">Label do Lado A</Label>

@@ -164,8 +164,8 @@ export const BulkImportDialog = ({
             </Label>
             <p className="text-sm text-muted-foreground">
               Formatos aceitos:<br />
-              • <code>English / Português</code><br />
-              • <code>English / Português (observação) [dica detalhada]</code><br />
+              • <code>Lado A / Lado B</code><br />
+              • <code>Lado A / Lado B (observação) [dica detalhada]</code><br />
               • Frases únicas (auto-detecta idioma)
             </p>
             <Textarea
