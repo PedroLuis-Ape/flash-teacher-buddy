@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2, Play } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
+import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/components/ListStudyTypeSelector";
 
 interface ListType {
   id: string;
@@ -40,6 +42,7 @@ const Folder = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<ListType | null>(null);
   const [newList, setNewList] = useState({ title: "", description: "" });
+  const [newListStudySettings, setNewListStudySettings] = useState<ListStudySettings>(getDefaultListStudySettings());
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [allowPublicPortal, setAllowPublicPortal] = useState(true);
   const [sharing, setSharing] = useState(false);
@@ -243,6 +246,8 @@ const Folder = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      const studyDbColumns = settingsToDbColumns(newListStudySettings);
+
       const { data: createdList, error } = await supabase
         .from("lists")
         .insert({
@@ -251,6 +256,7 @@ const Folder = () => {
           description: newList.description,
           owner_id: session.user.id,
           order_index: lists.length,
+          ...studyDbColumns,
         })
         .select()
         .single();
@@ -260,6 +266,7 @@ const Folder = () => {
       toast.success("Lista criada! Edite o conteúdo abaixo.");
       setDialogOpen(false);
       setNewList({ title: "", description: "" });
+      setNewListStudySettings(getDefaultListStudySettings());
       
       // Navegar automaticamente para a lista criada
       if (createdList) {
@@ -407,7 +414,7 @@ const Folder = () => {
                       Nova Lista
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-lg max-h-[90vh]">
                     <DialogHeader>
                       <DialogTitle>Criar Nova Lista</DialogTitle>
                       <DialogDescription>
@@ -415,28 +422,36 @@ const Folder = () => {
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCreateList}>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="title">Título</Label>
-                          <Input
-                            id="title"
-                            value={newList.title}
-                            onChange={(e) => setNewList({ ...newList, title: e.target.value })}
-                            placeholder="Ex: Verbos Irregulares"
-                            required
+                      <ScrollArea className="max-h-[60vh] pr-4">
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="title">Título</Label>
+                            <Input
+                              id="title"
+                              value={newList.title}
+                              onChange={(e) => setNewList({ ...newList, title: e.target.value })}
+                              placeholder="Ex: Verbos Irregulares"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="description">Descrição (opcional)</Label>
+                            <Textarea
+                              id="description"
+                              value={newList.description}
+                              onChange={(e) => setNewList({ ...newList, description: e.target.value })}
+                              placeholder="Descreva o conteúdo desta lista..."
+                            />
+                          </div>
+                          
+                          {/* Study Type Selector */}
+                          <ListStudyTypeSelector
+                            value={newListStudySettings}
+                            onChange={setNewListStudySettings}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="description">Descrição (opcional)</Label>
-                          <Textarea
-                            id="description"
-                            value={newList.description}
-                            onChange={(e) => setNewList({ ...newList, description: e.target.value })}
-                            placeholder="Descreva o conteúdo desta lista..."
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
+                      </ScrollArea>
+                      <DialogFooter className="mt-4">
                         <Button type="submit">Criar Lista</Button>
                       </DialogFooter>
                     </form>
