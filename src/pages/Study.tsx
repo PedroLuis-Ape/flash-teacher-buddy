@@ -49,6 +49,24 @@ interface VideoInfo {
   title: string | null;
 }
 
+interface ListSettings {
+  studyType: "language" | "general";
+  langA: string;
+  langB: string;
+  labelsA: string;
+  labelsB: string;
+  ttsEnabled: boolean;
+}
+
+const getDefaultListSettings = (): ListSettings => ({
+  studyType: "language",
+  langA: "en",
+  langB: "pt",
+  labelsA: "English",
+  labelsB: "Português",
+  ttsEnabled: true,
+});
+
 const Study = () => {
   const { id, collectionId } = useParams();
   const resolvedId = (id as string) || (collectionId as string) || "";
@@ -80,6 +98,7 @@ const Study = () => {
   const [listTitle, setListTitle] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [userId, setUserId] = useState<string | undefined>();
+  const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<"pt-en" | "en-pt" | "any">(initialDir);
@@ -233,12 +252,28 @@ const Study = () => {
     if (isListRoute) {
       const { data: listData } = await supabase
         .from("lists")
-        .select("title, folder_id")
+        .select("title, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
         .eq("id", resolvedId)
         .maybeSingle();
       
       if (listData) {
         setListTitle(listData.title);
+        
+        // Set list settings from DB (with fallbacks for old data)
+        const studyType = (listData.study_type === "general" ? "general" : "language") as "language" | "general";
+        const langA = listData.lang_a || "en";
+        const langB = listData.lang_b || "pt";
+        const defaultLabelA = studyType === "general" ? "Frente" : (langA === "en" ? "English" : langA === "pt" ? "Português" : langA.toUpperCase());
+        const defaultLabelB = studyType === "general" ? "Verso" : (langB === "pt" ? "Português" : langB === "en" ? "English" : langB.toUpperCase());
+        
+        setListSettings({
+          studyType,
+          langA,
+          langB,
+          labelsA: listData.labels_a || defaultLabelA,
+          labelsB: listData.labels_b || defaultLabelB,
+          ttsEnabled: listData.tts_enabled ?? (studyType === "language"),
+        });
         
         // Load first video from the folder
         const { data: videoData } = await supabase
@@ -509,6 +544,9 @@ const Study = () => {
               flashcardId={currentCard.id}
               direction={resolvedDirection}
               fastMode={gameSettings.fastMode}
+              ttsEnabled={listSettings.ttsEnabled}
+              labelA={listSettings.labelsA}
+              labelB={listSettings.labelsB}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}

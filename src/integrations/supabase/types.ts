@@ -955,10 +955,16 @@ export type Database = {
           folder_id: string
           id: string
           institution_id: string | null
+          labels_a: string | null
+          labels_b: string | null
           lang: string | null
+          lang_a: string | null
+          lang_b: string | null
           order_index: number
           owner_id: string
+          study_type: string
           title: string
+          tts_enabled: boolean
           updated_at: string
           visibility: string
         }
@@ -969,10 +975,16 @@ export type Database = {
           folder_id: string
           id?: string
           institution_id?: string | null
+          labels_a?: string | null
+          labels_b?: string | null
           lang?: string | null
+          lang_a?: string | null
+          lang_b?: string | null
           order_index?: number
           owner_id: string
+          study_type?: string
           title: string
+          tts_enabled?: boolean
           updated_at?: string
           visibility?: string
         }
@@ -983,10 +995,16 @@ export type Database = {
           folder_id?: string
           id?: string
           institution_id?: string | null
+          labels_a?: string | null
+          labels_b?: string | null
           lang?: string | null
+          lang_a?: string | null
+          lang_b?: string | null
           order_index?: number
           owner_id?: string
+          study_type?: string
           title?: string
+          tts_enabled?: boolean
           updated_at?: string
           visibility?: string
         }
@@ -2344,10 +2362,16 @@ export type Database = {
           folder_id: string
           id: string
           institution_id: string | null
+          labels_a: string | null
+          labels_b: string | null
           lang: string | null
+          lang_a: string | null
+          lang_b: string | null
           order_index: number
           owner_id: string
+          study_type: string
           title: string
+          tts_enabled: boolean
           updated_at: string
           visibility: string
         }[]

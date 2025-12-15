@@ -25,6 +25,9 @@ interface FlipStudyViewProps {
   canGoNext?: boolean;
   direction: "pt-en" | "en-pt" | "any";
   fastMode?: boolean;
+  ttsEnabled?: boolean;
+  labelA?: string;
+  labelB?: string;
 }
 
 export const FlipStudyView = ({
@@ -40,6 +43,9 @@ export const FlipStudyView = ({
   canGoNext = true,
   direction,
   fastMode = false,
+  ttsEnabled = true,
+  labelA,
+  labelB,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [userId, setUserId] = useState<string | undefined>();
@@ -81,8 +87,8 @@ export const FlipStudyView = ({
   // Top side (question) and Bottom side (answer)
   const topText = direction === "pt-en" ? front : back;
   const bottomText = direction === "pt-en" ? back : front;
-  const topLabel = direction === "pt-en" ? "Português" : "English";
-  const bottomLabel = direction === "pt-en" ? "English" : "Português";
+  const topLabel = labelA && labelB ? (direction === "pt-en" ? labelA : labelB) : (direction === "pt-en" ? "Português" : "English");
+  const bottomLabel = labelA && labelB ? (direction === "pt-en" ? labelB : labelA) : (direction === "pt-en" ? "English" : "Português");
   const topLang = direction === "pt-en" ? "pt-BR" : "en-US";
   const bottomLang = direction === "pt-en" ? "en-US" : "pt-BR";
 
@@ -174,14 +180,16 @@ export const FlipStudyView = ({
           <div className="border-b border-border bg-gradient-to-br from-card to-muted/20 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">{topLabel}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePlayTop}
-                className="h-8 px-2"
-              >
-                <Volume2 className="h-4 w-4" />
-              </Button>
+              {ttsEnabled && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePlayTop}
+                  className="h-8 px-2"
+                >
+                  <Volume2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
@@ -194,14 +202,16 @@ export const FlipStudyView = ({
           <div className="bg-gradient-to-br from-primary/5 to-accent/10 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">{bottomLabel}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePlayBottom}
-                className="h-8 px-2"
-              >
-                <Volume2 className="h-4 w-4" />
-              </Button>
+              {ttsEnabled && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePlayBottom}
+                  className="h-8 px-2"
+                >
+                  <Volume2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
