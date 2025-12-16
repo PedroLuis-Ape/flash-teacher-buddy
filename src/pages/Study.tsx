@@ -31,7 +31,7 @@ import { StudyVideoButton } from "@/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/components/GameSettingsModal";
 import { useStudyEngine } from "@/hooks/useStudyEngine";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 
@@ -143,6 +143,8 @@ const Study = () => {
     setGameSettings,
     unseenCardsCount,
     missedCardsCount,
+    // Manual session completion
+    completeSession,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
   
   // Direção estável por card - use flipDirection for flip mode
@@ -365,7 +367,7 @@ const Study = () => {
     const showNextRound = !isFlipMode && hasMoreRounds && !isGameComplete;
 
     return (
-      <div className="min-h-screen bg-background py-12 px-4">
+      <div className="min-h-screen bg-background py-12 px-4 pb-32 md:pb-12">
         <div className="container mx-auto max-w-2xl">
           <Card className="p-8 text-center space-y-6">
             <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -413,40 +415,51 @@ const Study = () => {
               </Alert>
             )}
 
-            <div className="flex flex-wrap gap-4 justify-center pt-4">
-              {/* Se houver próxima rodada, botão de avançar como principal */}
+            {/* Desktop buttons */}
+            <div className="hidden md:flex flex-wrap gap-4 justify-center pt-4">
+              {/* CONCLUIR SESSÃO - Botão principal para registrar meta */}
+              <Button 
+                variant="default" 
+                size="lg" 
+                onClick={completeSession}
+                className="w-full sm:w-auto min-w-[220px] text-lg font-bold shadow-lg bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="mr-2 h-6 w-6" />
+                CONCLUIR SESSÃO
+              </Button>
+
+              {/* Se houver próxima rodada, botão de avançar */}
               {showNextRound && (
-                <Button variant="default" size="lg" onClick={startNextRound}>
+                <Button variant="secondary" size="lg" onClick={startNextRound}>
                   <RefreshCcw className="mr-2 h-5 w-5" />
                   Próxima Rodada
                 </Button>
               )}
               
-              {/* Se NÃO houver próxima rodada (jogo zerado), botão grande de Reiniciar */}
+              {/* Reiniciar */}
               {!showNextRound && (
                 <Button 
-                  variant="default" 
+                  variant="secondary" 
                   size="lg" 
                   onClick={handleRestartWithSettings}
-                  className="w-full sm:w-auto min-w-[220px] text-lg font-bold shadow-lg animate-in fade-in zoom-in duration-300"
                 >
-                  <RotateCcw className="mr-2 h-6 w-6" />
+                  <RotateCcw className="mr-2 h-5 w-5" />
                   Jogar Novamente
                 </Button>
               )}
               
-              {/* Botão de rever erros (secundário) */}
+              {/* Botão de rever erros */}
               {isFlipMode && errorCount > 0 && (
-                <Button variant="secondary" size="lg" onClick={handleReviewErrors}>
+                <Button variant="outline" size="lg" onClick={handleReviewErrors}>
                   <RefreshCcw className="mr-2 h-5 w-5" />
-                  Rever apenas os errados
+                  Rever errados
                 </Button>
               )}
               
-              {/* Botão "Voltar para Metas" se veio de uma meta */}
+              {/* Botão "Voltar para Metas" */}
               {fromGoalId && (
                 <Button 
-                  variant="secondary" 
+                  variant="outline" 
                   size="lg" 
                   onClick={() => navigate('/goals')}
                 >
@@ -456,14 +469,56 @@ const Study = () => {
               
               {/* Botão voltar à lista */}
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="lg" 
                 onClick={handleExit}
               >
                 Voltar à Lista
               </Button>
             </div>
+
+            {/* Mobile: Secondary buttons only (main button is sticky) */}
+            <div className="flex md:hidden flex-wrap gap-3 justify-center pt-4">
+              {showNextRound && (
+                <Button variant="secondary" size="sm" onClick={startNextRound}>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Próxima Rodada
+                </Button>
+              )}
+              {!showNextRound && (
+                <Button variant="secondary" size="sm" onClick={handleRestartWithSettings}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Jogar Novamente
+                </Button>
+              )}
+              {isFlipMode && errorCount > 0 && (
+                <Button variant="outline" size="sm" onClick={handleReviewErrors}>
+                  Rever errados
+                </Button>
+              )}
+              {fromGoalId && (
+                <Button variant="outline" size="sm" onClick={() => navigate('/goals')}>
+                  ← Metas
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={handleExit}>
+                Voltar
+              </Button>
+            </div>
           </Card>
+        </div>
+
+        {/* Mobile: Sticky bottom button for completing session */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:hidden">
+          <Button 
+            variant="default" 
+            size="lg" 
+            onClick={completeSession}
+            className="w-full text-lg font-bold shadow-lg bg-green-600 hover:bg-green-700 min-h-[56px]"
+          >
+            <CheckCircle className="mr-2 h-6 w-6" />
+            CONCLUIR SESSÃO
+          </Button>
         </div>
       </div>
     );

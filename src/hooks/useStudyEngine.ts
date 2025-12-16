@@ -598,13 +598,10 @@ export function useStudyEngine(
     if (currentIndex < cardsOrder.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
+      // NO AUTO-COMPLETE: Just set isFinished, let user click "Concluir" manually
       setIsFinished(true);
-      if (isFlipMode) {
-        completeSession();
-      }
-      // For quiz modes, don't auto-complete - let user decide to continue or exit
     }
-  }, [currentIndex, cardsOrder.length, isFlipMode]);
+  }, [currentIndex, cardsOrder.length]);
 
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
@@ -617,12 +614,10 @@ export function useStudyEngine(
     if (currentIndex < cardsOrder.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
+      // NO AUTO-COMPLETE: Just set isFinished
       setIsFinished(true);
-      if (isFlipMode) {
-        completeSession();
-      }
     }
-  }, [currentIndex, cardsOrder.length, isFlipMode]);
+  }, [currentIndex, cardsOrder.length]);
 
   const navigatePrevious = useCallback(() => {
     if (currentIndex > 0) {
@@ -855,5 +850,7 @@ export function useStudyEngine(
     setGameSettings,
     unseenCardsCount: unseenCards.length,
     missedCardsCount: missedCards.length,
+    // Manual session completion export
+    completeSession,
   };
 }

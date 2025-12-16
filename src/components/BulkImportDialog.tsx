@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, CheckCircle2, AlertCircle, Copy, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Upload, CheckCircle2, AlertCircle, Copy, Lightbulb, ChevronDown, ChevronUp, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { parsePastedFlashcards, deduplicateFlashcards, FlashcardPair, AI_HELPER_PROMPT } from "@/lib/bulkImport";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,12 +21,16 @@ interface BulkImportDialogProps {
   collectionId: string;
   existingCards: { term: string; translation: string }[];
   onImported: () => void;
+  labelA?: string;
+  labelB?: string;
 }
 
 export const BulkImportDialog = ({
   collectionId,
   existingCards,
   onImported,
+  labelA = "Lado A",
+  labelB = "Lado B",
 }: BulkImportDialogProps) => {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -33,6 +38,7 @@ export const BulkImportDialog = ({
   const [stats, setStats] = useState({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0 });
   const [loading, setLoading] = useState(false);
   const [showAIHelper, setShowAIHelper] = useState(false);
+  const [invertAB, setInvertAB] = useState(false);
 
   const handleParse = () => {
     if (!input.trim()) {
@@ -69,11 +75,12 @@ export const BulkImportDialog = ({
       return;
     }
 
+    // Apply swap logic: if invertAB is true, swap term and translation
     const flashcards = validPairs.map(pair => ({
       list_id: collectionId,
       user_id: user.id,
-      term: pair.pt!,
-      translation: pair.en!,
+      term: invertAB ? pair.en! : pair.pt!,
+      translation: invertAB ? pair.pt! : pair.en!,
       hint: pair.detailedHint || null,
       accepted_answers_en: [],
       accepted_answers_pt: pair.shortObservation ? [pair.shortObservation] : [],
@@ -88,6 +95,7 @@ export const BulkImportDialog = ({
       toast.success(`${validPairs.length} flashcards importados!`);
       setInput("");
       setPreview([]);
+      setInvertAB(false);
       setOpen(false);
       onImported();
     }
@@ -164,8 +172,8 @@ export const BulkImportDialog = ({
             </Label>
             <p className="text-sm text-muted-foreground">
               Formatos aceitos:<br />
-              • <code>Lado A / Lado B</code><br />
-              • <code>Lado A / Lado B (observação) [dica detalhada]</code><br />
+              • <code>{labelA} / {labelB}</code><br />
+              • <code>{labelA} / {labelB} (observação) [dica detalhada]</code><br />
               • Frases únicas (auto-detecta idioma)
             </p>
             <Textarea
@@ -186,6 +194,29 @@ Hello / Olá`}
 
           {preview.length > 0 && (
             <>
+              {/* Invert A/B Switch */}
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="invert-ab" className="text-sm font-medium cursor-pointer">
+                      Inverter Lados (A ↔ B)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {invertAB 
+                        ? `${labelB} → termo, ${labelA} → tradução`
+                        : `${labelA} → termo, ${labelB} → tradução`
+                      }
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="invert-ab"
+                  checked={invertAB}
+                  onCheckedChange={setInvertAB}
+                />
+              </div>
+
               <Alert>
                 <AlertDescription className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -214,19 +245,28 @@ Hello / Olá`}
               </Alert>
 
               <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
-                <h4 className="font-semibold mb-2 text-sm">Pré-visualização:</h4>
+                <h4 className="font-semibold mb-2 text-sm">
+                  Pré-visualização ({invertAB ? "Invertido" : "Normal"}):
+                </h4>
                 <ul className="space-y-2 text-sm">
-                  {preview.slice(0, 20).map((pair, idx) => (
-                    <li key={idx} className={`${!pair.en || !pair.pt ? "text-muted-foreground" : ""}`}>
-                      <div>{pair.pt || "?"} → {pair.en || "?"}</div>
-                      {pair.detailedHint && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Lightbulb className="h-3 w-3" />
-                          <span className="truncate">{pair.detailedHint.substring(0, 50)}...</span>
+                  {preview.slice(0, 20).map((pair, idx) => {
+                    const termText = invertAB ? pair.en : pair.pt;
+                    const transText = invertAB ? pair.pt : pair.en;
+                    return (
+                      <li key={idx} className={`${!pair.en || !pair.pt ? "text-muted-foreground" : ""}`}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 md:gap-2">
+                          <span className="font-medium break-words">{termText || "?"}</span>
+                          <span className="text-muted-foreground break-words">→ {transText || "?"}</span>
                         </div>
-                      )}
-                    </li>
-                  ))}
+                        {pair.detailedHint && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <Lightbulb className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{pair.detailedHint.substring(0, 50)}...</span>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                   {preview.length > 20 && (
                     <li className="text-muted-foreground italic">
                       ...e mais {preview.length - 20}
