@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
-import { toast } from "sonner";
 
 export interface PlayOptions {
   langOverride?: string; // ISO code like "en-US", "pt-BR", "es", "fr", etc.
-  rate?: number;   // 0.5 = lento, 1.0 = normal
+  rate?: number;   // 0.5 = slow, 1.0 = normal
   pitch?: number;  // default 1
 }
 
-// Map short ISO codes to BCP-47 codes for browser TTS fallback
+// Map short ISO codes to BCP-47 codes
 const ISO_TO_BCP47: Record<string, string> = {
   "en": "en-US",
   "pt": "pt-BR",
@@ -22,170 +21,217 @@ const ISO_TO_BCP47: Record<string, string> = {
 };
 
 /**
- * Pick the best voice for a given language
- * Prioritizes natural-sounding voices over robotic ones
+ * Clean text for TTS - remove markdown, emojis, brackets, etc.
  */
-function pickVoice(lang: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-  if (!voices || voices.length === 0) return null;
-
-  const prefix = lang.split("-")[0]; // "en" or "pt"
-
-  // Priority 1: Exact match
-  let voice = voices.find(v => v.lang === lang);
-  if (voice) return voice;
-
-  // Priority 2: Any voice with the same language prefix
-  voice = voices.find(v => v.lang.toLowerCase().startsWith(prefix));
-  if (voice) return voice;
-
-  // For English, try common fallbacks
-  if (prefix === "en") {
-    voice = voices.find(v => v.lang === "en-GB");
-    if (voice) return voice;
-  }
-
-  // For Portuguese, try pt-PT as fallback
-  if (prefix === "pt") {
-    voice = voices.find(v => v.lang === "pt-PT");
-    if (voice) return voice;
-  }
-
-  return null;
+function cleanTextForTTS(text: string): string {
+  return text
+    // Remove markdown formatting
+    .replace(/[*_~`#]/g, '')
+    // Remove brackets and their content
+    .replace(/\[.*?\]/g, '')
+    // Remove parentheses content (often pronunciation guides)
+    .replace(/\(.*?\)/g, '')
+    // Remove emojis
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
+    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '')
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')
+    // Remove extra whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
- * Hook para gerenciar TTS com seleção de voz natural
- * Suporta múltiplos idiomas com controle de velocidade
- * Falls back to browser TTS if ElevenLabs fails
+ * Smart Voice Selection Algorithm
+ * Priority: Google > Microsoft/Natural > Exact locale > Prefix match
+ */
+function pickVoice(langCode: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  if (!voices || voices.length === 0) return null;
+
+  // Normalize language code
+  const normalizedLang = langCode.toLowerCase();
+  const prefix = normalizedLang.split("-")[0]; // "en" from "en-US"
+  const fullLocale = ISO_TO_BCP47[prefix] || langCode;
+
+  // Filter voices that match our language
+  const matchingVoices = voices.filter(v => {
+    const voiceLang = v.lang.toLowerCase();
+    return voiceLang === normalizedLang || 
+           voiceLang === fullLocale.toLowerCase() ||
+           voiceLang.startsWith(prefix + "-") ||
+           voiceLang.startsWith(prefix);
+  });
+
+  if (matchingVoices.length === 0) {
+    console.warn(`[TTS] No voices found for language: ${langCode}`);
+    return null;
+  }
+
+  const voiceName = (v: SpeechSynthesisVoice) => v.name.toLowerCase();
+
+  // Tier 1: Google voices (highest quality on Chrome)
+  const googleVoice = matchingVoices.find(v => 
+    voiceName(v).includes('google')
+  );
+  if (googleVoice) {
+    console.log(`[TTS] Selected TIER 1 (Google) voice for ${langCode}: ${googleVoice.name}`);
+    return googleVoice;
+  }
+
+  // Tier 2: Microsoft or Natural voices (high quality)
+  const premiumVoice = matchingVoices.find(v => 
+    voiceName(v).includes('microsoft') || 
+    voiceName(v).includes('natural') ||
+    voiceName(v).includes('neural') ||
+    voiceName(v).includes('enhanced')
+  );
+  if (premiumVoice) {
+    console.log(`[TTS] Selected TIER 2 (Premium) voice for ${langCode}: ${premiumVoice.name}`);
+    return premiumVoice;
+  }
+
+  // Tier 3: Apple voices (good quality on Safari/iOS)
+  const appleVoice = matchingVoices.find(v => 
+    voiceName(v).includes('samantha') || 
+    voiceName(v).includes('alex') ||
+    voiceName(v).includes('victoria') ||
+    voiceName(v).includes('luciana') || // Portuguese
+    voiceName(v).includes('mónica') ||  // Spanish
+    voiceName(v).includes('thomas') ||  // French
+    voiceName(v).includes('anna')       // German
+  );
+  if (appleVoice) {
+    console.log(`[TTS] Selected TIER 3 (Apple) voice for ${langCode}: ${appleVoice.name}`);
+    return appleVoice;
+  }
+
+  // Tier 4: Exact locale match
+  const exactMatch = matchingVoices.find(v => 
+    v.lang.toLowerCase() === fullLocale.toLowerCase()
+  );
+  if (exactMatch) {
+    console.log(`[TTS] Selected TIER 4 (Exact locale) voice for ${langCode}: ${exactMatch.name}`);
+    return exactMatch;
+  }
+
+  // Tier 5: Any matching voice (fallback)
+  const fallback = matchingVoices[0];
+  console.log(`[TTS] Selected TIER 5 (Fallback) voice for ${langCode}: ${fallback.name}`);
+  return fallback;
+}
+
+/**
+ * High-quality Browser TTS Hook
+ * Smart voice selection with Google/Microsoft/Apple priority
  */
 export function useTTS() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      console.warn('[TTS] Web Speech API not supported');
+      return;
+    }
 
     const loadVoices = () => {
       const loadedVoices = window.speechSynthesis.getVoices();
       if (loadedVoices.length > 0) {
         setVoices(loadedVoices);
         setVoicesLoaded(true);
-        console.log('[useTTS] Browser voices loaded:', loadedVoices.length);
+        console.log('[TTS] Voices loaded:', loadedVoices.length, 'voices available');
+        
+        // Log available premium voices for debugging
+        const premiumVoices = loadedVoices.filter(v => 
+          v.name.toLowerCase().includes('google') ||
+          v.name.toLowerCase().includes('microsoft') ||
+          v.name.toLowerCase().includes('natural')
+        );
+        if (premiumVoices.length > 0) {
+          console.log('[TTS] Premium voices found:', premiumVoices.map(v => v.name).join(', '));
+        }
       }
     };
 
     // Try immediately (some browsers have voices ready)
     loadVoices();
 
-    // Also listen for async loading (Chrome, Android)
+    // CRITICAL for mobile: Listen for async voice loading
     window.speechSynthesis.onvoiceschanged = loadVoices;
 
     // Cleanup
     return () => {
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
+        window.speechSynthesis.onvoiceschanged = null;
       }
     };
   }, []);
 
   /**
-   * Browser-based TTS fallback
+   * Main speak function with smart voice selection
    */
-  const speakWithBrowser = useCallback((text: string, options?: PlayOptions) => {
+  const speak = useCallback((text: string, options?: PlayOptions) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
-      console.warn('[useTTS] Web Speech API not supported');
+      console.warn('[TTS] Web Speech API not supported');
       return;
     }
 
-    // Cancel any ongoing speech first
-    window.speechSynthesis.cancel();
-
-    // Get voices - use cached or fetch fresh
-    const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
-    
-    // Determine language - convert short codes to BCP-47
-    let lang = options?.langOverride ?? "en-US";
-    if (lang.length === 2) {
-      lang = ISO_TO_BCP47[lang] || `${lang}-${lang.toUpperCase()}`;
-    }
-    
-    // Find the best voice for this language
-    const voice = pickVoice(lang, currentVoices);
-
-    // Create utterance
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Apply voice if found
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-      console.log('[useTTS] Browser voice:', voice.name, voice.lang);
-    } else {
-      utterance.lang = lang;
-      console.warn('[useTTS] No browser voice for', lang, '- using default');
-    }
-
-    // Apply rate - DEFAULT 1.0 (normal speed)
-    utterance.rate = options?.rate ?? 1.0;
-    utterance.pitch = options?.pitch ?? 1.0;
-    utterance.volume = 1;
-
-    console.log('[useTTS] Browser speaking:', text.substring(0, 30) + '...', 'lang:', utterance.lang);
-
-    // Speak!
-    window.speechSynthesis.speak(utterance);
-  }, [voices]);
-
-  /**
-   * Main speak function - tries ElevenLabs first, falls back to browser TTS
-   */
-  const speak = useCallback(async (text: string, options?: PlayOptions) => {
-    // Cancel any ongoing browser speech
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    // Determine language
-    let lang = options?.langOverride ?? "en-US";
-    
-    // Try ElevenLabs first for better quality
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      if (supabaseUrl && supabaseKey) {
-        const response = await fetch(`${supabaseUrl}/functions/v1/elevenlabs-tts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({ text, lang }),
-        });
+      // Cancel any ongoing speech first
+      window.speechSynthesis.cancel();
 
-        if (response.ok) {
-          const audioBlob = await response.blob();
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
-          
-          // Apply rate (note: HTML5 audio playbackRate)
-          audio.playbackRate = options?.rate ?? 1.0;
-          
-          audio.onended = () => URL.revokeObjectURL(audioUrl);
-          await audio.play();
-          console.log('[useTTS] ElevenLabs playback started for:', text.substring(0, 30));
-          return;
-        }
-        
-        console.warn('[useTTS] ElevenLabs failed, falling back to browser TTS');
+      // Clean text for better TTS
+      const cleanedText = cleanTextForTTS(text);
+      if (!cleanedText) {
+        console.warn('[TTS] No text to speak after cleaning');
+        return;
       }
-    } catch (error) {
-      console.warn('[useTTS] ElevenLabs error, falling back to browser TTS:', error);
-    }
 
-    // Fallback to browser TTS
-    speakWithBrowser(text, options);
-  }, [speakWithBrowser]);
+      // Get voices - use cached or fetch fresh
+      const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
+      
+      // Determine language
+      let lang = options?.langOverride ?? "en-US";
+      if (lang.length === 2) {
+        lang = ISO_TO_BCP47[lang] || `${lang}-${lang.toUpperCase()}`;
+      }
+      
+      // Find the best voice using smart algorithm
+      const voice = pickVoice(lang, currentVoices);
+
+      // Create utterance
+      const utterance = new SpeechSynthesisUtterance(cleanedText);
+      
+      // Apply voice if found
+      if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang;
+      } else {
+        utterance.lang = lang;
+        console.warn('[TTS] No voice found for', lang, '- using browser default');
+      }
+
+      // Apply rate and pitch - DEFAULT 1.0 (normal speed)
+      utterance.rate = options?.rate ?? 1.0;
+      utterance.pitch = options?.pitch ?? 1.0;
+      utterance.volume = 1;
+
+      // Error handling
+      utterance.onerror = (event) => {
+        console.error('[TTS] Speech error:', event.error);
+      };
+
+      console.log('[TTS] Speaking:', cleanedText.substring(0, 40) + (cleanedText.length > 40 ? '...' : ''));
+
+      // Speak!
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error('[TTS] Error:', error);
+    }
+  }, [voices]);
 
   const stop = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -193,5 +239,5 @@ export function useTTS() {
     }
   }, []);
 
-  return { speak, stop, voicesLoaded, speakWithBrowser };
+  return { speak, stop, voicesLoaded };
 }
