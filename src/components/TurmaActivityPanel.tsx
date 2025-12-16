@@ -151,12 +151,7 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
           <Activity className="h-4 w-4" />
           Atividade dos Alunos
         </h3>
-        {realtimeEnabled && (
-          <Badge variant="outline" className="text-xs text-green-600 border-green-300">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
-            Ao vivo
-          </Badge>
-        )}
+        {/* Removed "Ao vivo" badge as requested */}
       </div>
 
       <ScrollArea className="max-h-[400px]">
