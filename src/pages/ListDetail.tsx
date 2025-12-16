@@ -64,7 +64,7 @@ const ListDetail = () => {
       const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase
         .from("lists")
-        .select("*")
+        .select("*, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
         .eq("id", id)
         .maybeSingle();
       
@@ -72,7 +72,7 @@ const ListDetail = () => {
       if (data) {
         setIsOwner(session?.user?.id === data.owner_id);
       }
-      return data as ListType | null;
+      return data as (ListType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string; labels_b?: string; tts_enabled?: boolean }) | null;
     },
     staleTime: 60_000,
   });
@@ -396,6 +396,8 @@ const ListDetail = () => {
                   collectionId={id!}
                   existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
                   onImported={loadFlashcards}
+                  labelA={list?.labels_a || (list?.lang_a === 'en' ? 'English' : list?.lang_a === 'pt' ? 'Português' : 'Lado A')}
+                  labelB={list?.labels_b || (list?.lang_b === 'pt' ? 'Português' : list?.lang_b === 'en' ? 'English' : 'Lado B')}
                 />
               </div>
             </div>

@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2, Play } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2, Play, CheckSquare, Square, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
@@ -49,6 +49,11 @@ const Folder = () => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [isSavingTitle, setIsSavingTitle] = useState(false);
+  // Bulk selection state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   useEffect(() => {
     loadFolder();
@@ -328,6 +333,53 @@ const Folder = () => {
     }
   };
 
+  // Toggle list selection
+  const toggleListSelection = (listId: string) => {
+    setSelectedLists(prev => {
+      const next = new Set(prev);
+      if (next.has(listId)) {
+        next.delete(listId);
+      } else {
+        next.add(listId);
+      }
+      return next;
+    });
+  };
+
+  // Select/deselect all
+  const toggleSelectAll = () => {
+    if (selectedLists.size === lists.length) {
+      setSelectedLists(new Set());
+    } else {
+      setSelectedLists(new Set(lists.map(l => l.id)));
+    }
+  };
+
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedLists.size === 0) return;
+    
+    setIsBulkDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("lists")
+        .delete()
+        .in("id", Array.from(selectedLists));
+      
+      if (error) throw error;
+      
+      toast.success(`${selectedLists.size} lista(s) excluída(s)!`);
+      setSelectedLists(new Set());
+      setSelectionMode(false);
+      setShowBulkDeleteDialog(false);
+      loadLists();
+    } catch (error: any) {
+      toast.error("Erro ao excluir: " + error.message);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   // Memoize sorted lists to avoid re-sorting on every render
   const sortedLists = useMemo(() => naturalSort(lists, (list) => list.title), [lists]);
 
@@ -499,6 +551,64 @@ const Folder = () => {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+
+                {/* Selection Mode Toggle */}
+                {lists.length > 0 && (
+                  <Button 
+                    variant={selectionMode ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => {
+                      setSelectionMode(!selectionMode);
+                      setSelectedLists(new Set());
+                    }}
+                  >
+                    {selectionMode ? (
+                      <>
+                        <X className="mr-1.5 h-4 w-4" />
+                        Cancelar
+                      </>
+                    ) : (
+                      <>
+                        <CheckSquare className="mr-1.5 h-4 w-4" />
+                        Selecionar
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Selection Actions Bar */}
+            {selectionMode && selectedLists.size > 0 && (
+              <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t z-50 md:relative md:mb-4 md:p-3 md:rounded-lg md:border">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={toggleSelectAll}>
+                      {selectedLists.size === lists.length ? (
+                        <>
+                          <Square className="mr-1.5 h-4 w-4" />
+                          Desmarcar
+                        </>
+                      ) : (
+                        <>
+                          <CheckSquare className="mr-1.5 h-4 w-4" />
+                          Todos
+                        </>
+                      )}
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedLists.size} selecionado(s)
+                    </span>
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => setShowBulkDeleteDialog(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-4 w-4" />
+                    Apagar ({selectedLists.size})
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -516,85 +626,115 @@ const Folder = () => {
                 </CardHeader>
               </Card>
             ) : (
-              <div className="space-y-2">
-                {sortedLists.map((list) => (
-                  <button
-                    key={list.id}
-                    onClick={() => navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`)}
-                    className="w-full text-left"
-                  >
-                    <Card className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-3 flex items-center gap-3">
-                        <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
-                          <FileText className="h-4 w-4 text-primary" />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm truncate leading-tight">
-                            {list.title}
-                          </h3>
-                          <p className="text-xs text-muted-foreground leading-tight mt-0.5">
-                            {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
-                          </p>
-                        </div>
+              <div className={`space-y-2 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
+                {sortedLists.map((list) => {
+                  const isSelected = selectedLists.has(list.id);
+                  return (
+                    <div
+                      key={list.id}
+                      onClick={() => {
+                        if (selectionMode) {
+                          toggleListSelection(list.id);
+                        } else {
+                          navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`);
+                        }
+                      }}
+                      className={`w-full text-left cursor-pointer ${isSelected ? 'ring-2 ring-primary rounded-lg' : ''}`}
+                    >
+                      <Card className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-3 flex items-center gap-3">
+                          {/* Selection checkbox */}
+                          {selectionMode && (
+                            <div 
+                              className="shrink-0" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleListSelection(list.id);
+                              }}
+                            >
+                              {isSelected ? (
+                                <CheckSquare className="h-5 w-5 text-primary" />
+                              ) : (
+                                <Square className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </div>
+                          )}
+                          
+                          {!selectionMode && (
+                            <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                              <FileText className="h-4 w-4 text-primary" />
+                            </div>
+                          )}
+                          
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm truncate leading-tight">
+                              {list.title}
+                            </h3>
+                            <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+                              {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
+                            </p>
+                          </div>
 
-                        {/* Play Button */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 hover:bg-primary/10 hover:text-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/list/${list.id}/games`);
-                          }}
-                        >
-                          <Play className="h-4 w-4" />
-                        </Button>
-
-                        {isOwner && (
-                          <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {/* Play Button - hidden in selection mode */}
+                          {!selectionMode && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-8 w-8 shrink-0 hover:bg-primary/10 hover:text-primary"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleEditList(list);
+                                navigate(`/list/${list.id}/games`);
                               }}
                             >
-                              <Pencil className="h-3 w-3" />
+                              <Play className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <Trash2 className="h-3 w-3 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
-                                    Excluir
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </button>
-                ))}
+                          )}
+
+                          {isOwner && !selectionMode && (
+                            <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditList(list);
+                                }}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
+                                      Excluir
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -642,6 +782,28 @@ const Folder = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir {selectedLists.size} lista(s)?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Todos os flashcards das listas selecionadas também serão excluídos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isBulkDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isBulkDeleting ? 'Excluindo...' : `Excluir ${selectedLists.size} lista(s)`}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
