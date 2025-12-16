@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FolderPlus, Trash2, Star } from "lucide-react";
+import { FolderPlus, Trash2, Star, CheckSquare, Square, X } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 
@@ -62,6 +62,12 @@ const Folders = () => {
   const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [userId, setUserId] = useState<string | undefined>();
+  
+  // Bulk selection state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  
   const { selectedInstitution } = useInstitution();
   
   // Favorites
@@ -237,6 +243,47 @@ const Folders = () => {
     }
   };
 
+  // Toggle folder selection
+  const toggleFolderSelection = (folderId: string) => {
+    setSelectedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
+  // Bulk delete folders
+  const bulkDeleteFolders = async () => {
+    if (selectedFolders.size === 0) return;
+
+    try {
+      setIsDeleting(true);
+      const idsToDelete = Array.from(selectedFolders);
+      
+      const { error } = await supabase
+        .from("folders")
+        .delete()
+        .in("id", idsToDelete);
+
+      if (error) throw error;
+
+      toast.success(`✅ ${idsToDelete.length} pasta(s) excluída(s)!`);
+      setSelectedFolders(new Set());
+      setSelectMode(false);
+      setShowBulkDeleteDialog(false);
+      loadData();
+    } catch (error: any) {
+      console.error("Error deleting folders:", error);
+      toast.error("❌ Erro ao excluir pastas");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const createFolder = async () => {
     if (!newFolder.title.trim()) {
       toast.error("Digite um título para a pasta");
@@ -277,22 +324,46 @@ const Folders = () => {
   // Tab: Folders (Pastas)
   const foldersTab = (
     <div className="p-4 space-y-3">
-      <div className="flex items-center justify-between py-1">
+      <div className="flex items-center justify-between gap-2 py-1">
         <h2 className="text-lg font-semibold">Minhas pastas</h2>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="min-h-[40px]">
-              <FolderPlus className="h-4 w-4 mr-2" />
-              Nova pasta
+        <div className="flex items-center gap-2">
+          {folders.length > 0 && (
+            <Button 
+              size="sm" 
+              variant={selectMode ? "secondary" : "outline"}
+              className="min-h-[40px]"
+              onClick={() => {
+                setSelectMode(!selectMode);
+                if (selectMode) setSelectedFolders(new Set());
+              }}
+            >
+              {selectMode ? (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Selecionar
+                </>
+              )}
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nova Pasta</DialogTitle>
-              <DialogDescription>
-                Crie uma pasta para organizar suas listas de estudo
-              </DialogDescription>
-            </DialogHeader>
+          )}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="min-h-[40px]">
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Nova pasta
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Nova Pasta</DialogTitle>
+                <DialogDescription>
+                  Crie uma pasta para organizar suas listas de estudo
+                </DialogDescription>
+              </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="title">Título</Label>
@@ -332,8 +403,8 @@ const Folders = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
-
       {loading ? (
         <div className="text-center py-4 text-sm text-muted-foreground">
           Carregando...
@@ -347,43 +418,108 @@ const Folders = () => {
         <div className="space-y-2">
           {folders.map((folder) => {
             const isFav = folderFavorites.includes(folder.id);
+            const isSelected = selectedFolders.has(folder.id);
             return (
               <div key={folder.id} className="flex items-center gap-2">
-                <div className="flex-1 min-w-0">
+                {selectMode && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 shrink-0"
+                    onClick={() => toggleFolderSelection(folder.id)}
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Square className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                )}
+                <div 
+                  className={`flex-1 min-w-0 ${selectMode ? 'cursor-pointer' : ''}`}
+                  onClick={() => {
+                    if (selectMode) {
+                      toggleFolderSelection(folder.id);
+                    } else {
+                      navigate(`/folder/${folder.id}`);
+                    }
+                  }}
+                >
                   <ApeCardFolder
                     title={folder.title}
                     listCount={folder.list_count}
                     cardCount={folder.card_count}
-                    onClick={() => navigate(`/folder/${folder.id}`)}
+                    onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}
                   />
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });
-                  }}
-                >
-                  <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFolderToDelete(folder.id);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!selectMode && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });
+                      }}
+                    >
+                      <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFolderToDelete(folder.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Sticky bulk action bar for mobile */}
+      {selectMode && selectedFolders.size > 0 && (
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:static md:mt-4 md:p-0 md:bg-transparent md:border-0">
+          <Button 
+            variant="destructive" 
+            className="w-full min-h-[48px]"
+            onClick={() => setShowBulkDeleteDialog(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Apagar ({selectedFolders.size})
+          </Button>
+        </div>
+      )}
+
+      {/* Bulk delete confirmation dialog */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedFolders.size} pasta(s)? Esta ação não pode ser desfeita.
+              Todas as listas e flashcards dentro dessas pastas também serão excluídos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={bulkDeleteFolders}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 

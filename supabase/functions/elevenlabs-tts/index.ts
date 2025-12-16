@@ -5,8 +5,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Default voice for English - Aria (clear, natural female voice)
-const DEFAULT_EN_VOICE_ID = "9BWtsMINqrJLrRacOk9x";
+// Multilingual voice mappings - these voices work well with eleven_multilingual_v2
+const VOICE_MAPPING: Record<string, string> = {
+  // English voices
+  "en": "EXAVITQu4vr4xnSDxMaL",      // Sarah - clear female
+  "en-US": "EXAVITQu4vr4xnSDxMaL",
+  "en-GB": "IKne3meq5aSn9XLyUdCD",   // Charlie - British male
+  // Portuguese
+  "pt": "TX3LPaxmHKxFdv7VOQHJ",      // Liam - works well with Portuguese
+  "pt-BR": "TX3LPaxmHKxFdv7VOQHJ",
+  "pt-PT": "TX3LPaxmHKxFdv7VOQHJ",
+  // Spanish
+  "es": "pFZP5JQG7iQjIQuC4Bku",      // Lily - works well with Spanish
+  "es-ES": "pFZP5JQG7iQjIQuC4Bku",
+  "es-MX": "pFZP5JQG7iQjIQuC4Bku",
+  // French
+  "fr": "XrExE9yKIg1WjnnlVkGX",      // Matilda - works well with French
+  "fr-FR": "XrExE9yKIg1WjnnlVkGX",
+  // German
+  "de": "onwK4e9ZLuTAKqWW03F9",      // Daniel - works well with German
+  "de-DE": "onwK4e9ZLuTAKqWW03F9",
+  // Italian
+  "it": "cgSgspJ2msm6clMCkdW9",      // Jessica - works well with Italian
+  "it-IT": "cgSgspJ2msm6clMCkdW9",
+};
+
+// Default fallback voice (multilingual capable)
+const DEFAULT_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Sarah
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,7 +39,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice_id } = await req.json();
+    const { text, voice_id, lang } = await req.json();
 
     if (!text || typeof text !== "string" || text.trim().length === 0) {
       console.error("[ElevenLabs TTS] Invalid text input");
@@ -39,10 +64,18 @@ serve(async (req) => {
       );
     }
 
-    const voiceId = voice_id || DEFAULT_EN_VOICE_ID;
-    console.log(`[ElevenLabs TTS] Generating audio for: "${text.substring(0, 50)}..." with voice: ${voiceId}`);
+    // Resolve voice ID: explicit voice_id > language mapping > default
+    let resolvedVoiceId = voice_id;
+    if (!resolvedVoiceId && lang) {
+      resolvedVoiceId = VOICE_MAPPING[lang] || VOICE_MAPPING[lang.split('-')[0]];
+    }
+    if (!resolvedVoiceId) {
+      resolvedVoiceId = DEFAULT_VOICE_ID;
+    }
 
-    const elevenLabsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+    console.log(`[ElevenLabs TTS] Generating audio for: "${text.substring(0, 50)}..." with voice: ${resolvedVoiceId}, lang: ${lang || 'auto'}`);
+
+    const elevenLabsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}`;
     
     const response = await fetch(elevenLabsUrl, {
       method: "POST",
@@ -53,7 +86,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         text: text.trim(),
-        model_id: "eleven_turbo_v2",
+        model_id: "eleven_multilingual_v2",
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
