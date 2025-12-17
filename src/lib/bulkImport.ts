@@ -12,44 +12,56 @@ export type FlashcardPair = {
 };
 
 /**
- * Normalize multi-line input by joining lines that have unclosed brackets
- * This handles hints that span multiple lines
+ * Normalize multi-line input by joining lines that belong to the same card.
+ * Handles cases where [ ] or ( ) start on a new line or contain line breaks.
  */
 function normalizeInputLines(input: string): string[] {
   const rawLines = input.split(/\r?\n/);
-  const result: string[] = [];
-  let buffer = '';
-  let bracketDepth = 0;
+  const mergedLines: string[] = [];
+  let currentBuffer = '';
+  let openBrackets = 0; // Balance of [ ]
+  let openParens = 0;   // Balance of ( )
 
   for (const line of rawLines) {
     const trimmed = line.trim();
-    if (!trimmed && bracketDepth === 0) continue;
+    if (!trimmed) continue;
 
-    // Count brackets in this line
-    for (const char of trimmed) {
-      if (char === '[') bracketDepth++;
-      if (char === ']') bracketDepth = Math.max(0, bracketDepth - 1);
-    }
+    // Count opening/closing delimiters in this line
+    const bracketsDelta = (trimmed.match(/\[/g) || []).length - (trimmed.match(/\]/g) || []).length;
+    const parensDelta = (trimmed.match(/\(/g) || []).length - (trimmed.match(/\)/g) || []).length;
 
-    if (buffer) {
-      buffer += ' ' + trimmed;
+    // CONTINUATION LOGIC:
+    // A line is continuation of the previous if:
+    // 1. We're inside an open block (brackets > 0 or parens > 0)
+    // 2. OR the line starts with [ or ( (indicating metadata of the previous card)
+    const isContinuation = 
+      openBrackets > 0 || 
+      openParens > 0 || 
+      trimmed.startsWith('[') || 
+      trimmed.startsWith('(');
+
+    if (isContinuation && currentBuffer) {
+      // Join with \n to preserve formatting inside hints
+      currentBuffer += '\n' + trimmed;
     } else {
-      buffer = trimmed;
+      // Not continuation: save previous buffer and start new one
+      if (currentBuffer) {
+        mergedLines.push(currentBuffer);
+      }
+      currentBuffer = trimmed;
     }
 
-    // If all brackets are closed, emit the line
-    if (bracketDepth === 0 && buffer) {
-      result.push(buffer);
-      buffer = '';
-    }
+    // Update balance of open delimiters
+    openBrackets += bracketsDelta;
+    openParens += parensDelta;
   }
 
-  // Emit any remaining buffer
-  if (buffer) {
-    result.push(buffer);
+  // Push the last buffer
+  if (currentBuffer) {
+    mergedLines.push(currentBuffer);
   }
 
-  return result;
+  return mergedLines;
 }
 
 /**

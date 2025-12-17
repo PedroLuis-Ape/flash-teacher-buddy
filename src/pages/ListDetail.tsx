@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, Star, FolderPlus, Mic } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square } from "lucide-react";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
@@ -13,6 +13,18 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ListType {
   id: string;
@@ -45,6 +57,8 @@ const ListDetail = () => {
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   const [userId, setUserId] = useState<string | undefined>();
   const [isCloning, setIsCloning] = useState(false);
+  const [selectedCards, setSelectedCards] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch current user ID for favorites
   useQuery({
@@ -154,6 +168,43 @@ const ListDetail = () => {
       loadFlashcards();
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCards.length === 0) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("flashcards")
+        .delete()
+        .in("id", selectedCards);
+
+      if (error) throw error;
+      toast.success(`${selectedCards.length} cards excluídos!`);
+      setSelectedCards([]);
+      loadFlashcards();
+    } catch (error: any) {
+      toast.error("Erro ao excluir: " + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const toggleCardSelection = (cardId: string) => {
+    setSelectedCards(prev => 
+      prev.includes(cardId) 
+        ? prev.filter(id => id !== cardId)
+        : [...prev, cardId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedCards.length === flashcards.length) {
+      setSelectedCards([]);
+    } else {
+      setSelectedCards(flashcards.map(f => f.id));
     }
   };
 
@@ -425,9 +476,68 @@ const ListDetail = () => {
             </Card>
           ) : (
             <div className="space-y-4">
+              {/* Bulk selection controls */}
+              {isOwner && flashcards.length > 0 && (
+                <div className="flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleSelectAll}
+                    className="gap-2"
+                  >
+                    {selectedCards.length === flashcards.length ? (
+                      <CheckSquare className="h-4 w-4" />
+                    ) : (
+                      <Square className="h-4 w-4" />
+                    )}
+                    {selectedCards.length === flashcards.length ? "Desmarcar Todos" : "Selecionar Todos"}
+                  </Button>
+                  
+                  {selectedCards.length > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={isDeleting}
+                          className="gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Excluir ({selectedCards.length})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir {selectedCards.length} cards? Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              )}
+
               {flashcards.map((flashcard) => (
-                <Card key={flashcard.id} className="p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between gap-3">
+                <Card key={flashcard.id} className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${selectedCards.includes(flashcard.id) ? 'ring-2 ring-primary' : ''}`}>
+                  <div className="flex items-start gap-3">
+                    {/* Checkbox for selection */}
+                    {isOwner && (
+                      <div className="pt-1">
+                        <Checkbox
+                          checked={selectedCards.includes(flashcard.id)}
+                          onCheckedChange={() => toggleCardSelection(flashcard.id)}
+                        />
+                      </div>
+                    )}
+                    
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
                       <p className="text-muted-foreground break-words">{flashcard.translation}</p>
