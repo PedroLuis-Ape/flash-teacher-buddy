@@ -9,9 +9,15 @@ import { toast } from "sonner";
 
 interface CreateFlashcardFormProps {
   onAdd: (term: string, translation: string, hint?: string) => void;
+  labelA?: string;
+  labelB?: string;
 }
 
-export const CreateFlashcardForm = ({ onAdd }: CreateFlashcardFormProps) => {
+export const CreateFlashcardForm = ({ 
+  onAdd,
+  labelA = "Lado A (Termo)",
+  labelB = "Lado B (Tradução)",
+}: CreateFlashcardFormProps) => {
   const [term, setTerm] = useState("");
   const [translation, setTranslation] = useState("");
   const [hint, setHint] = useState("");
@@ -36,26 +42,26 @@ export const CreateFlashcardForm = ({ onAdd }: CreateFlashcardFormProps) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="term" className="text-foreground">
-            Português
+            {labelA}
           </Label>
           <Input
             id="term"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
-            placeholder="Digite a palavra em português..."
+            placeholder={`Digite o conteúdo para ${labelA}...`}
             className="bg-background"
           />
         </div>
         
         <div className="space-y-2">
           <Label htmlFor="translation" className="text-foreground">
-            English
+            {labelB}
           </Label>
           <Input
             id="translation"
             value={translation}
             onChange={(e) => setTranslation(e.target.value)}
-            placeholder="Type the word in English..."
+            placeholder={`Digite o conteúdo para ${labelB}...`}
             className="bg-background"
           />
         </div>

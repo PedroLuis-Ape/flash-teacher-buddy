@@ -320,13 +320,13 @@ const ListDetail = () => {
               )}
             </div>
             
-            {/* Action buttons - stacked on mobile, inline on desktop */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Action buttons - grid on mobile, flex on desktop */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3">
               {flashcards.length > 0 && (
                 <>
                   <Button
                     onClick={() => navigate(isOwner ? `/list/${id}/games` : `/portal/list/${id}/games`)}
-                    className="ape-action-btn order-1"
+                    className="ape-action-btn col-span-1"
                   >
                     <Play className="h-5 w-5 shrink-0" />
                     Estudar
@@ -334,10 +334,10 @@ const ListDetail = () => {
                   <Button
                     variant="secondary"
                     onClick={() => navigate(`/list/${id}/study?mode=pronunciation`)}
-                    className="ape-action-btn order-2"
+                    className="ape-action-btn col-span-1"
                   >
                     <Mic className="h-5 w-5 shrink-0" />
-                    Prática de Pronúncia
+                    Pronúncia
                   </Button>
                 </>
               )}
@@ -347,7 +347,7 @@ const ListDetail = () => {
                   variant="outline"
                   onClick={handleCloneList}
                   disabled={isCloning}
-                  className="ape-action-btn order-3"
+                  className="ape-action-btn col-span-2 sm:col-span-1"
                 >
                   <FolderPlus className="h-5 w-5 shrink-0" />
                   {isCloning ? "Clonando..." : "Clonar"}
@@ -406,7 +406,11 @@ const ListDetail = () => {
 
         <div className="space-y-8">
           {isOwner && (
-            <CreateFlashcardForm onAdd={handleAddFlashcard} />
+            <CreateFlashcardForm 
+              onAdd={handleAddFlashcard}
+              labelA={list?.labels_a || (list?.lang_a === 'en' ? 'English' : list?.lang_a === 'pt' ? 'Português' : 'Lado A')}
+              labelB={list?.labels_b || (list?.lang_b === 'pt' ? 'Português' : list?.lang_b === 'en' ? 'English' : 'Lado B')}
+            />
           )}
 
           {loading ? (

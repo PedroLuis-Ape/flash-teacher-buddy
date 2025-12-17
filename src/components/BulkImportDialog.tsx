@@ -49,8 +49,8 @@ export const BulkImportDialog = ({
     const parsed = parsePastedFlashcards(input);
     const deduplicated = deduplicateFlashcards(parsed, existingCards);
 
-    const valid = deduplicated.filter(p => p.en && p.pt).length;
-    const incomplete = deduplicated.filter(p => !p.en || !p.pt).length;
+    const valid = deduplicated.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
+    const incomplete = deduplicated.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
     const duplicates = parsed.length - deduplicated.length;
     const withHints = deduplicated.filter(p => p.detailedHint).length;
 
@@ -59,7 +59,7 @@ export const BulkImportDialog = ({
   };
 
   const handleImport = async () => {
-    const validPairs = preview.filter(p => p.en && p.pt);
+    const validPairs = preview.filter(p => (p.sideA && p.sideB) || (p.en && p.pt));
     
     if (validPairs.length === 0) {
       toast.error("Nenhum par válido para importar");
@@ -76,15 +76,20 @@ export const BulkImportDialog = ({
     }
 
     // Apply swap logic: if invertAB is true, swap term and translation
-    const flashcards = validPairs.map(pair => ({
-      list_id: collectionId,
-      user_id: user.id,
-      term: invertAB ? pair.en! : pair.pt!,
-      translation: invertAB ? pair.pt! : pair.en!,
-      hint: pair.detailedHint || null,
-      accepted_answers_en: [],
-      accepted_answers_pt: pair.shortObservation ? [pair.shortObservation] : [],
-    }));
+    // Use sideA/sideB (new format) with fallback to en/pt (legacy)
+    const flashcards = validPairs.map(pair => {
+      const termValue = pair.sideA || pair.en || '';
+      const transValue = pair.sideB || pair.pt || '';
+      return {
+        list_id: collectionId,
+        user_id: user.id,
+        term: invertAB ? transValue : termValue,
+        translation: invertAB ? termValue : transValue,
+        hint: pair.detailedHint || null,
+        accepted_answers_en: [],
+        accepted_answers_pt: pair.shortObservation ? [pair.shortObservation] : [],
+      };
+    });
 
     const { error } = await supabase.from("flashcards").insert(flashcards);
 
@@ -250,13 +255,17 @@ Hello / Olá`}
                 </h4>
                 <ul className="space-y-2 text-sm">
                   {preview.slice(0, 20).map((pair, idx) => {
-                    const termText = invertAB ? pair.en : pair.pt;
-                    const transText = invertAB ? pair.pt : pair.en;
+                    // Use sideA/sideB with fallback to en/pt
+                    const sideAVal = pair.sideA || pair.en || '?';
+                    const sideBVal = pair.sideB || pair.pt || '?';
+                    const termText = invertAB ? sideBVal : sideAVal;
+                    const transText = invertAB ? sideAVal : sideBVal;
+                    const isValid = (pair.sideA && pair.sideB) || (pair.en && pair.pt);
                     return (
-                      <li key={idx} className={`${!pair.en || !pair.pt ? "text-muted-foreground" : ""}`}>
+                      <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""}`}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-1 md:gap-2">
-                          <span className="font-medium break-words">{termText || "?"}</span>
-                          <span className="text-muted-foreground break-words">→ {transText || "?"}</span>
+                          <span className="font-medium break-words">{termText}</span>
+                          <span className="text-muted-foreground break-words">→ {transText}</span>
                         </div>
                         {pair.detailedHint && (
                           <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
