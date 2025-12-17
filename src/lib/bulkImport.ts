@@ -1,119 +1,130 @@
-// Bulk import utilities for flashcards
-// Format: TERM / DEFINITION (short observation) [detailed hint]
+// Bulk import utilities for flashcards - Language Agnostic
+// Format: SIDE_A / SIDE_B (short observation) [detailed hint]
 
 export type FlashcardPair = {
-  en?: string;
-  pt?: string;
+  sideA: string;
+  sideB?: string;
   shortObservation?: string;
   detailedHint?: string;
+  // Legacy support
+  en?: string;
+  pt?: string;
 };
 
-function guessLang(s: string): "en" | "pt" {
-  const t = ` ${s.toLowerCase()} `;
-  
-  // Check for Portuguese accents
-  if (/[áéíóúâêîôûãõç]/.test(t)) return "pt";
-  
-  // Check for common English words
-  const enHits = [
-    " the ", " a ", " an ", " to ", " of ", " in ", 
-    " on ", " for ", " with ", " is ", " are "
-  ].filter(w => t.includes(w)).length;
-  
-  return enHits >= 1 ? "en" : "pt";
-}
-
 /**
- * Extract content from parentheses (short observation)
- * Returns the extracted text and the remaining string
+ * Normalize multi-line input by joining lines that have unclosed brackets
+ * This handles hints that span multiple lines
  */
-function extractParentheses(text: string): { extracted: string; remaining: string } {
-  const matches: string[] = [];
-  let remaining = text;
-  
-  // Extract all (content) matches
-  const regex = /\(([^)]+)\)/g;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    matches.push(match[1].trim());
+function normalizeInputLines(input: string): string[] {
+  const rawLines = input.split(/\r?\n/);
+  const result: string[] = [];
+  let buffer = '';
+  let bracketDepth = 0;
+
+  for (const line of rawLines) {
+    const trimmed = line.trim();
+    if (!trimmed && bracketDepth === 0) continue;
+
+    // Count brackets in this line
+    for (const char of trimmed) {
+      if (char === '[') bracketDepth++;
+      if (char === ']') bracketDepth = Math.max(0, bracketDepth - 1);
+    }
+
+    if (buffer) {
+      buffer += ' ' + trimmed;
+    } else {
+      buffer = trimmed;
+    }
+
+    // If all brackets are closed, emit the line
+    if (bracketDepth === 0 && buffer) {
+      result.push(buffer);
+      buffer = '';
+    }
   }
-  
-  // Remove parentheses from text
-  remaining = text.replace(regex, '').trim();
-  
-  return {
-    extracted: matches.join(' ').trim(),
-    remaining
-  };
+
+  // Emit any remaining buffer
+  if (buffer) {
+    result.push(buffer);
+  }
+
+  return result;
 }
 
 /**
- * Extract content from brackets [detailed hint]
+ * Extract content from brackets [detailed hint] - parsing from right to left
  * Returns the extracted text and the remaining string
  */
 function extractBrackets(text: string): { extracted: string; remaining: string } {
-  const matches: string[] = [];
-  let remaining = text;
+  // Find the last [...] pattern
+  const lastOpenBracket = text.lastIndexOf('[');
+  const lastCloseBracket = text.lastIndexOf(']');
   
-  // Extract all [content] matches
-  const regex = /\[([^\]]+)\]/g;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    matches.push(match[1].trim());
+  if (lastOpenBracket !== -1 && lastCloseBracket > lastOpenBracket) {
+    const extracted = text.substring(lastOpenBracket + 1, lastCloseBracket).trim();
+    const remaining = (text.substring(0, lastOpenBracket) + text.substring(lastCloseBracket + 1)).trim();
+    return { extracted, remaining };
   }
   
-  // Remove brackets from text
-  remaining = text.replace(regex, '').trim();
+  return { extracted: '', remaining: text };
+}
+
+/**
+ * Extract content from parentheses (short observation) - parsing from right to left
+ * Returns the extracted text and the remaining string
+ */
+function extractParentheses(text: string): { extracted: string; remaining: string } {
+  // Find the last (...) pattern that's NOT part of a word
+  // e.g., "I am happy (very)" should extract "very", but "I am (happy)" too
+  const lastOpenParen = text.lastIndexOf('(');
+  const lastCloseParen = text.lastIndexOf(')');
   
-  return {
-    extracted: matches.join('\n').trim(),
-    remaining
-  };
+  if (lastOpenParen !== -1 && lastCloseParen > lastOpenParen) {
+    const extracted = text.substring(lastOpenParen + 1, lastCloseParen).trim();
+    const remaining = (text.substring(0, lastOpenParen) + text.substring(lastCloseParen + 1)).trim();
+    return { extracted, remaining };
+  }
+  
+  return { extracted: '', remaining: text };
 }
 
 export function parsePastedFlashcards(input: string): FlashcardPair[] {
-  return input
-    .split(/\r?\n/)
-    .map(l => l.trim())
+  const lines = normalizeInputLines(input);
+  
+  return lines
     .filter(Boolean)
     .map(line => {
       // Try to split by " / " separator
       const slashIndex = line.indexOf('/');
       
       if (slashIndex > 0) {
-        const frontRaw = line.substring(0, slashIndex).trim();
-        let backRaw = line.substring(slashIndex + 1).trim();
+        const sideA = line.substring(0, slashIndex).trim();
+        let rest = line.substring(slashIndex + 1).trim();
         
-        // Extract brackets [detailed hint] first (before parentheses)
-        const { extracted: detailedHint, remaining: afterBrackets } = extractBrackets(backRaw);
+        // Parse from right to left:
+        // 1. First extract brackets [detailed hint]
+        const { extracted: detailedHint, remaining: afterBrackets } = extractBrackets(rest);
         
-        // Extract parentheses (short observation)
-        const { extracted: shortObservation, remaining: backText } = extractParentheses(afterBrackets);
+        // 2. Then extract parentheses (short observation)
+        const { extracted: shortObservation, remaining: sideB } = extractParentheses(afterBrackets);
         
-        const langFront = guessLang(frontRaw);
-        const langBack = guessLang(backText);
-        
-        // Assign based on detected language
-        if (langFront === "en" || langBack === "pt") {
-          return { 
-            en: frontRaw, 
-            pt: backText,
-            shortObservation: shortObservation || undefined,
-            detailedHint: detailedHint || undefined
-          };
-        } else {
-          return { 
-            en: backText, 
-            pt: frontRaw,
-            shortObservation: shortObservation || undefined,
-            detailedHint: detailedHint || undefined
-          };
-        }
+        return { 
+          sideA,
+          sideB: sideB.trim() || undefined,
+          shortObservation: shortObservation || undefined,
+          detailedHint: detailedHint || undefined,
+          // Legacy compatibility - map to en/pt for existing code
+          en: sideA,
+          pt: sideB.trim() || undefined,
+        };
       }
       
-      // Single text, try to detect language
-      const lang = guessLang(line);
-      return lang === "en" ? { en: line } : { pt: line };
+      // Single text without separator
+      return { 
+        sideA: line,
+        en: line,
+      };
     });
 }
 
@@ -131,9 +142,12 @@ export function deduplicateFlashcards(
   
   // Filter out duplicates
   return pairs.filter(pair => {
-    if (!pair.en || !pair.pt) return true; // Keep incomplete for review
+    const a = pair.sideA || pair.en;
+    const b = pair.sideB || pair.pt;
     
-    const key = `${pair.en.toLowerCase().trim()}|${pair.pt.toLowerCase().trim()}`;
+    if (!a || !b) return true; // Keep incomplete for review
+    
+    const key = `${a.toLowerCase().trim()}|${b.toLowerCase().trim()}`;
     if (seen.has(key)) return false;
     
     seen.add(key);
@@ -142,15 +156,15 @@ export function deduplicateFlashcards(
 }
 
 // AI Helper prompt for generating cards in the correct format
-export const AI_HELPER_PROMPT = `Você é uma IA que vai criar cards de estudo para o aplicativo APE (flashcards de inglês).
+export const AI_HELPER_PROMPT = `Você é uma IA que vai criar cards de estudo para um aplicativo de flashcards.
 
 Gere uma lista de cards seguindo EXATAMENTE este formato, com UM card por linha:
 
-INGLÊS / PORTUGUÊS (observação curta opcional) [descrição detalhada opcional]
+LADO A / LADO B (observação curta opcional) [descrição detalhada opcional]
 
 Regras importantes:
-- Tudo antes da barra \`/\` é o termo em inglês (frase ou palavra).
-- Tudo depois da barra \`/\` é a tradução principal em português.
+- Tudo antes da barra \`/\` é o Lado A (pergunta/termo fonte).
+- Tudo depois da barra \`/\` é o Lado B (resposta/tradução).
 - O que estiver entre parênteses \`( )\` é APENAS uma observação curta opcional (ex.: outra tradução possível, um comentário rápido).
   - Essa observação NÃO deve ser tratada como parte da resposta que o aluno precisa digitar.
 - O que estiver entre colchetes \`[ ]\` é uma descrição detalhada opcional, mais longa, para aparecer como dica na lâmpada.

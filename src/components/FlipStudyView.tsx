@@ -28,6 +28,8 @@ interface FlipStudyViewProps {
   ttsEnabled?: boolean;
   labelA?: string;
   labelB?: string;
+  langA?: string;
+  langB?: string;
 }
 
 export const FlipStudyView = ({
@@ -46,6 +48,8 @@ export const FlipStudyView = ({
   ttsEnabled = true,
   labelA,
   labelB,
+  langA = "en",
+  langB = "pt",
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [userId, setUserId] = useState<string | undefined>();
@@ -84,13 +88,16 @@ export const FlipStudyView = ({
   };
 
   // Determine which text is shown first based on direction
-  // Top side (question) and Bottom side (answer)
+  // direction "pt-en" means: show front (term) first, then back (translation)
+  // direction "en-pt" means: show back (translation) first, then front (term)
   const topText = direction === "pt-en" ? front : back;
   const bottomText = direction === "pt-en" ? back : front;
-  const topLabel = labelA && labelB ? (direction === "pt-en" ? labelA : labelB) : (direction === "pt-en" ? "Português" : "English");
-  const bottomLabel = labelA && labelB ? (direction === "pt-en" ? labelB : labelA) : (direction === "pt-en" ? "English" : "Português");
-  const topLang = direction === "pt-en" ? "pt-BR" : "en-US";
-  const bottomLang = direction === "pt-en" ? "en-US" : "pt-BR";
+  const topLabel = labelA && labelB ? (direction === "pt-en" ? labelA : labelB) : (direction === "pt-en" ? "Lado A" : "Lado B");
+  const bottomLabel = labelA && labelB ? (direction === "pt-en" ? labelB : labelA) : (direction === "pt-en" ? "Lado B" : "Lado A");
+  
+  // Use actual language codes for TTS instead of hardcoded pt-BR/en-US
+  const topLang = direction === "pt-en" ? langA : langB;
+  const bottomLang = direction === "pt-en" ? langB : langA;
 
   // Reset flip state when card changes
   useEffect(() => {

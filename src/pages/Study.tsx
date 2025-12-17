@@ -550,8 +550,8 @@ const Study = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en-pt">EN → PT</SelectItem>
-                    <SelectItem value="pt-en">PT → EN</SelectItem>
+                    <SelectItem value="en-pt">{listSettings.labelsA} → {listSettings.labelsB}</SelectItem>
+                    <SelectItem value="pt-en">{listSettings.labelsB} → {listSettings.labelsA}</SelectItem>
                     <SelectItem value="any">Misto</SelectItem>
                   </SelectContent>
                 </Select>
@@ -602,6 +602,8 @@ const Study = () => {
               ttsEnabled={listSettings.ttsEnabled}
               labelA={listSettings.labelsA}
               labelB={listSettings.labelsB}
+              langA={listSettings.langA}
+              langB={listSettings.langB}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}
