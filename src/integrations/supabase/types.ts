@@ -229,6 +229,126 @@ export type Database = {
           },
         ]
       }
+      class_goal_assignments: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          goal_id: string
+          id: string
+          reviewed_at: string | null
+          reviewer_notes: string | null
+          status: Database["public"]["Enums"]["class_goal_assignment_status"]
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          goal_id: string
+          id?: string
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          status?: Database["public"]["Enums"]["class_goal_assignment_status"]
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          goal_id?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          status?: Database["public"]["Enums"]["class_goal_assignment_status"]
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_goal_assignments_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "class_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_goal_targets: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          percent_required: number
+          target_id: string
+          target_type: Database["public"]["Enums"]["class_goal_target_type"]
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          percent_required?: number
+          target_id: string
+          target_type: Database["public"]["Enums"]["class_goal_target_type"]
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          percent_required?: number
+          target_id?: string
+          target_type?: Database["public"]["Enums"]["class_goal_target_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_goal_targets_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "class_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_goals: {
+        Row: {
+          created_at: string
+          created_by: string
+          descricao: string | null
+          due_at: string | null
+          id: string
+          titulo: string
+          turma_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          descricao?: string | null
+          due_at?: string | null
+          id?: string
+          titulo: string
+          turma_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          descricao?: string | null
+          due_at?: string | null
+          id?: string
+          titulo?: string
+          turma_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_goals_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_members: {
         Row: {
           class_id: string
@@ -2464,6 +2584,12 @@ export type Database = {
       app_role: "owner" | "student" | "developer_admin"
       atribuicao_fonte_tipo: "lista" | "pasta" | "cardset"
       atribuicao_status: "pendente" | "em_andamento" | "concluida"
+      class_goal_assignment_status:
+        | "assigned"
+        | "submitted"
+        | "approved"
+        | "needs_revision"
+      class_goal_target_type: "folder" | "list"
       thread_tipo: "turma" | "atribuicao" | "dm"
       turma_role: "aluno" | "professor_assistente"
       user_type: "professor" | "aluno"
@@ -2597,6 +2723,13 @@ export const Constants = {
       app_role: ["owner", "student", "developer_admin"],
       atribuicao_fonte_tipo: ["lista", "pasta", "cardset"],
       atribuicao_status: ["pendente", "em_andamento", "concluida"],
+      class_goal_assignment_status: [
+        "assigned",
+        "submitted",
+        "approved",
+        "needs_revision",
+      ],
+      class_goal_target_type: ["folder", "list"],
       thread_tipo: ["turma", "atribuicao", "dm"],
       turma_role: ["aluno", "professor_assistente"],
       user_type: ["professor", "aluno"],

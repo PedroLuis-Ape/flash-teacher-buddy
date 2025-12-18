@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download } from "lucide-react";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +61,9 @@ const ListDetail = () => {
   const [isCloning, setIsCloning] = useState(false);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportText, setExportText] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch current user ID for favorites
   useQuery({
@@ -335,6 +340,57 @@ const ListDetail = () => {
     }
   };
 
+  // Export all flashcards with pagination for 1000+ items
+  const handleExport = async () => {
+    if (!id) return;
+    
+    setIsExporting(true);
+    setExportDialogOpen(true);
+    setExportText("Carregando...");
+
+    try {
+      let allCards: { term: string; translation: string }[] = [];
+      let offset = 0;
+      const pageSize = 1000;
+
+      // Paginate to get ALL cards (beyond 1000 limit)
+      while (true) {
+        const { data, error } = await supabase
+          .from("flashcards")
+          .select("term, translation")
+          .eq("list_id", id)
+          .order("created_at", { ascending: true })
+          .range(offset, offset + pageSize - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+
+        allCards = [...allCards, ...data];
+        if (data.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      // Format: remove internal line breaks to keep one card per line
+      const formatted = allCards.map(card => {
+        const term = (card.term || "").replace(/[\r\n]+/g, " ").trim();
+        const translation = (card.translation || "").replace(/[\r\n]+/g, " ").trim();
+        return `${term} / ${translation}`;
+      }).join("\n");
+
+      setExportText(formatted || "Nenhum card encontrado");
+    } catch (error: any) {
+      console.error("Export error:", error);
+      setExportText("Erro ao exportar: " + error.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleCopyExport = () => {
+    navigator.clipboard.writeText(exportText);
+    toast.success("Copiado para a área de transferência!");
+  };
+
   const loading = listLoading || flashcardsLoading || folderLoading;
 
   if (loading) {
@@ -450,10 +506,48 @@ const ListDetail = () => {
                   labelA={list?.labels_a || (list?.lang_a === 'en' ? 'English' : list?.lang_a === 'pt' ? 'Português' : 'Lado A')}
                   labelB={list?.labels_b || (list?.lang_b === 'pt' ? 'Português' : list?.lang_b === 'en' ? 'English' : 'Lado B')}
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExport}
+                  disabled={flashcards.length === 0}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar
+                </Button>
               </div>
             </div>
           </Card>
         )}
+
+        {/* Export Dialog */}
+        <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5" />
+                Exportar Lista ({flashcards.length} cards)
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                value={exportText}
+                readOnly
+                className="min-h-[300px] font-mono text-sm"
+                placeholder="Carregando..."
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
+                  Fechar
+                </Button>
+                <Button onClick={handleCopyExport} disabled={isExporting || !exportText}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copiar Tudo
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="space-y-8">
           {isOwner && (
