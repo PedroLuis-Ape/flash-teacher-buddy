@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { naturalSort } from '@/lib/sorting';
-import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell } from 'lucide-react';
+import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MesaAvisos } from '@/components/MesaAvisos';
@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
 import { TurmaActivityPanel } from '@/components/TurmaActivityPanel';
+import { ClassGoalsTab } from '@/components/ClassGoalsTab';
 
 export default function TurmaDetail() {
   const { turmaId } = useParams<{ turmaId: string }>();
@@ -900,22 +901,26 @@ export default function TurmaDetail() {
 
       <div className="max-w-6xl mx-auto p-4 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="atribuicoes">
               <BookOpen className="h-4 w-4 mr-2" />
-              Atribuições
+              <span className="hidden sm:inline">Atribuições</span>
+            </TabsTrigger>
+            <TabsTrigger value="metas">
+              <Target className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Metas</span>
             </TabsTrigger>
             <TabsTrigger value="avisos">
               <Megaphone className="h-4 w-4 mr-2" />
-              Avisos
+              <span className="hidden sm:inline">Avisos</span>
             </TabsTrigger>
             <TabsTrigger value="pessoas">
               <UsersIcon className="h-4 w-4 mr-2" />
-              Pessoas
+              <span className="hidden sm:inline">Pessoas</span>
             </TabsTrigger>
             <TabsTrigger value="mensagens">
               <MessageSquare className="h-4 w-4 mr-2" />
-              Mensagens
+              <span className="hidden sm:inline">Mensagens</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1019,6 +1024,10 @@ export default function TurmaDetail() {
                 </Card>
               ))
             )}
+          </TabsContent>
+
+          <TabsContent value="metas" className="mt-4">
+            <ClassGoalsTab turmaId={turmaId || ''} isOwner={isOwner} membros={membros} />
           </TabsContent>
 
           <TabsContent value="avisos" className="mt-4">
