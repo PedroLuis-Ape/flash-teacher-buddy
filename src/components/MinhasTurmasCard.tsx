@@ -8,6 +8,7 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 export function MinhasTurmasCard() {
   const navigate = useNavigate();
+  const revealRef = useScrollReveal<HTMLDivElement>();
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -27,8 +28,6 @@ export function MinhasTurmasCard() {
 
   // Only show for teachers with feature enabled
   if (!FEATURE_FLAGS.classes_enabled || !profile?.is_teacher) return null;
-
-  const revealRef = useScrollReveal<HTMLDivElement>();
 
   return (
     <Card
