@@ -2579,6 +2579,7 @@ export type Database = {
         }
         Returns: Json
       }
+      swap_list_sides: { Args: { _list_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "owner" | "student" | "developer_admin"

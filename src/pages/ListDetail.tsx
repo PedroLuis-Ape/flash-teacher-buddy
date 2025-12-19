@@ -5,7 +5,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
@@ -64,6 +70,8 @@ const ListDetail = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportText, setExportText] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
+  const [isSwapping, setIsSwapping] = useState(false);
 
   // Fetch current user ID for favorites
   useQuery({
@@ -391,6 +399,37 @@ const ListDetail = () => {
     toast.success("Copiado para a área de transferência!");
   };
 
+  // Swap A/B sides using atomic RPC
+  const handleSwapSides = async () => {
+    if (!id) return;
+    
+    setIsSwapping(true);
+    try {
+      const { data, error } = await supabase.rpc('swap_list_sides', {
+        _list_id: id
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; message?: string; error?: string };
+      
+      if (result.success) {
+        toast.success(result.message || "A/B invertidos com sucesso!");
+        // Invalidate and refetch both list and flashcards
+        queryClient.invalidateQueries({ queryKey: ["list", id] });
+        queryClient.invalidateQueries({ queryKey: ["flashcards", id] });
+        setSwapDialogOpen(false);
+      } else {
+        toast.error(result.message || "Erro ao inverter A/B");
+      }
+    } catch (error: any) {
+      console.error("Swap error:", error);
+      toast.error("Erro ao inverter A/B: " + error.message);
+    } finally {
+      setIsSwapping(false);
+    }
+  };
+
   const loading = listLoading || flashcardsLoading || folderLoading;
 
   if (loading) {
@@ -515,6 +554,21 @@ const ListDetail = () => {
                   <Download className="mr-2 h-4 w-4" />
                   Exportar
                 </Button>
+                
+                {/* More actions dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setSwapDialogOpen(true)}>
+                      <ArrowLeftRight className="mr-2 h-4 w-4" />
+                      Inverter A/B
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </Card>
@@ -548,6 +602,33 @@ const ListDetail = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Swap A/B Confirmation Dialog */}
+        <AlertDialog open={swapDialogOpen} onOpenChange={setSwapDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <ArrowLeftRight className="h-5 w-5" />
+                Inverter A/B
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Isso vai inverter o lado A e B de <strong>todos os {flashcards.length} cards</strong> desta lista 
+                e trocar os idiomas/labels A ↔ B.
+                <br /><br />
+                Você pode desfazer invertendo novamente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isSwapping}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleSwapSides} 
+                disabled={isSwapping}
+              >
+                {isSwapping ? "Invertendo..." : "Inverter agora"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="space-y-8">
           {isOwner && (
