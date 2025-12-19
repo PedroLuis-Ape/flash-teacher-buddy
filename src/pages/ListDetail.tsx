@@ -40,12 +40,14 @@ interface ListType {
   description: string | null;
   folder_id: string;
   owner_id: string;
+  class_id?: string | null;
 }
 
 interface FolderType {
   id: string;
   title: string;
   visibility: string;
+  class_id?: string | null;
 }
 
 interface Flashcard {
@@ -61,6 +63,7 @@ const ListDetail = () => {
   const queryClient = useQueryClient();
   const { id } = useParams();
   const [isOwner, setIsOwner] = useState(false);
+  const [canEdit, setCanEdit] = useState(false); // True if owner OR turma owner
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   const [userId, setUserId] = useState<string | undefined>();
@@ -91,15 +94,30 @@ const ListDetail = () => {
       const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase
         .from("lists")
-        .select("*, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+        .select("*, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, class_id")
         .eq("id", id)
         .maybeSingle();
       
       if (error) throw error;
-      if (data) {
-        setIsOwner(session?.user?.id === data.owner_id);
+      if (data && session) {
+        const isDirectOwner = session.user.id === data.owner_id;
+        setIsOwner(isDirectOwner);
+        
+        // Check if user is turma owner (if list is linked to a turma via class_id)
+        if (data.class_id && !isDirectOwner) {
+          const { data: turmaData } = await supabase
+            .from("turmas")
+            .select("owner_teacher_id")
+            .eq("id", data.class_id)
+            .maybeSingle();
+          
+          const isTurmaOwner = turmaData?.owner_teacher_id === session.user.id;
+          setCanEdit(isDirectOwner || isTurmaOwner);
+        } else {
+          setCanEdit(isDirectOwner);
+        }
       }
-      return data as (ListType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string; labels_b?: string; tts_enabled?: boolean }) | null;
+      return data as (ListType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string; labels_b?: string; tts_enabled?: boolean; class_id?: string | null }) | null;
     },
     staleTime: 60_000,
   });
@@ -488,7 +506,7 @@ const ListDetail = () => {
                 </>
               )}
               {/* Clone button for non-owners */}
-              {!isOwner && userId && (
+              {!canEdit && userId && (
                 <Button
                   variant="outline"
                   onClick={handleCloneList}
@@ -503,7 +521,7 @@ const ListDetail = () => {
           </div>
         </div>
 
-        {isOwner && (
+        {canEdit && (
           <Card className="p-4 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -631,7 +649,7 @@ const ListDetail = () => {
         </AlertDialog>
 
         <div className="space-y-8">
-          {isOwner && (
+          {canEdit && (
             <CreateFlashcardForm 
               onAdd={handleAddFlashcard}
               labelA={list?.labels_a || (list?.lang_a === 'en' ? 'English' : list?.lang_a === 'pt' ? 'Português' : 'Lado A')}
@@ -644,7 +662,7 @@ const ListDetail = () => {
           ) : flashcards.length === 0 ? (
             <Card className="text-center p-12">
               <p className="text-muted-foreground">
-                {isOwner
+                {canEdit
                   ? "Nenhum flashcard ainda. Adicione o primeiro!"
                   : "Esta lista ainda não possui flashcards."}
               </p>
@@ -652,7 +670,7 @@ const ListDetail = () => {
           ) : (
             <div className="space-y-4">
               {/* Bulk selection controls */}
-              {isOwner && flashcards.length > 0 && (
+              {canEdit && flashcards.length > 0 && (
                 <div className="flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
                   <Button
                     variant="ghost"
@@ -704,7 +722,7 @@ const ListDetail = () => {
                 <Card key={flashcard.id} className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${selectedCards.includes(flashcard.id) ? 'ring-2 ring-primary' : ''}`}>
                   <div className="flex items-start gap-3">
                     {/* Checkbox for selection */}
-                    {isOwner && (
+                    {canEdit && (
                       <div className="pt-1">
                         <Checkbox
                           checked={selectedCards.includes(flashcard.id)}
@@ -732,7 +750,7 @@ const ListDetail = () => {
                           size="sm"
                         />
                       )}
-                      {isOwner && (
+                      {canEdit && (
                         <>
                           <Button
                             variant="ghost"
