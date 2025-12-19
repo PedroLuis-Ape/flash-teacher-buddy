@@ -29,6 +29,7 @@ interface FolderType {
   title: string;
   description: string | null;
   owner_id: string;
+  class_id?: string | null;
 }
 
 const Folder = () => {
@@ -38,6 +39,7 @@ const Folder = () => {
   const [lists, setLists] = useState<ListType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [canEdit, setCanEdit] = useState(false); // True if owner OR turma owner
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<ListType | null>(null);
@@ -68,14 +70,29 @@ const Folder = () => {
         // First try direct query (works for owners due to RLS)
         const { data: directData, error: directError } = await supabase
           .from("folders")
-          .select("*")
+          .select("*, class_id")
           .eq("id", id)
           .maybeSingle();
         
         if (directData) {
-          // Got folder directly (user is owner)
+          // Got folder directly (user is owner or has RLS access)
           setFolder(directData);
-          setIsOwner(session.user.id === directData.owner_id);
+          const isDirectOwner = session.user.id === directData.owner_id;
+          setIsOwner(isDirectOwner);
+          
+          // Check if user is turma owner (if folder is linked to a turma via class_id)
+          if (directData.class_id && !isDirectOwner) {
+            const { data: turmaData } = await supabase
+              .from("turmas")
+              .select("owner_teacher_id")
+              .eq("id", directData.class_id)
+              .maybeSingle();
+            
+            const isTurmaOwner = turmaData?.owner_teacher_id === session.user.id;
+            setCanEdit(isDirectOwner || isTurmaOwner);
+          } else {
+            setCanEdit(isDirectOwner);
+          }
         } else {
           // If RLS blocked or not owner, use edge function for student access
           console.log("[Folder] Direct query failed, trying edge function for student access");
@@ -101,6 +118,7 @@ const Folder = () => {
           console.log("[Folder] Loaded via edge function:", edgeFnData.folder.title);
           setFolder(edgeFnData.folder);
           setIsOwner(session.user.id === edgeFnData.folder.owner_id);
+          setCanEdit(session.user.id === edgeFnData.folder.owner_id);
           
           // Also set lists if returned by edge function
           if (edgeFnData.lists) {
@@ -430,7 +448,7 @@ const Folder = () => {
             ) : (
               <>
                 <h1 className="text-3xl font-bold">{folder.title}</h1>
-                {isOwner && (
+                {canEdit && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -457,7 +475,7 @@ const Folder = () => {
           </TabsList>
 
           <TabsContent value="lists">
-            {isOwner && (
+            {canEdit && (
               <div className="mb-4 flex flex-wrap gap-2">
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
@@ -619,7 +637,7 @@ const Folder = () => {
                 <CardHeader>
                   <CardTitle className="text-lg">Nenhuma lista ainda</CardTitle>
                   <CardDescription className="text-sm">
-                    {isOwner
+                    {canEdit
                       ? "Crie sua primeira lista de flashcards"
                       : "Esta pasta ainda não possui listas"}
                   </CardDescription>
@@ -690,7 +708,7 @@ const Folder = () => {
                             </Button>
                           )}
 
-                          {isOwner && !selectionMode && (
+                          {canEdit && !selectionMode && (
                             <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                               <Button
                                 variant="ghost"
