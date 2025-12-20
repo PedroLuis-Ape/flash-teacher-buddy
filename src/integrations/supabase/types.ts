@@ -781,8 +781,14 @@ export type Database = {
           description: string | null
           id: string
           institution_id: string | null
+          labels_a: string | null
+          labels_b: string | null
+          lang_a: string | null
+          lang_b: string | null
           owner_id: string
+          study_type: string
           title: string
+          tts_enabled: boolean
           updated_at: string
           visibility: string
         }
@@ -792,8 +798,14 @@ export type Database = {
           description?: string | null
           id?: string
           institution_id?: string | null
+          labels_a?: string | null
+          labels_b?: string | null
+          lang_a?: string | null
+          lang_b?: string | null
           owner_id: string
+          study_type?: string
           title: string
+          tts_enabled?: boolean
           updated_at?: string
           visibility?: string
         }
@@ -803,8 +815,14 @@ export type Database = {
           description?: string | null
           id?: string
           institution_id?: string | null
+          labels_a?: string | null
+          labels_b?: string | null
+          lang_a?: string | null
+          lang_b?: string | null
           owner_id?: string
+          study_type?: string
           title?: string
+          tts_enabled?: boolean
           updated_at?: string
           visibility?: string
         }
@@ -2441,8 +2459,14 @@ export type Database = {
           description: string | null
           id: string
           institution_id: string | null
+          labels_a: string | null
+          labels_b: string | null
+          lang_a: string | null
+          lang_b: string | null
           owner_id: string
+          study_type: string
           title: string
+          tts_enabled: boolean
           updated_at: string
           visibility: string
         }
@@ -2461,8 +2485,14 @@ export type Database = {
           description: string | null
           id: string
           institution_id: string | null
+          labels_a: string | null
+          labels_b: string | null
+          lang_a: string | null
+          lang_b: string | null
           owner_id: string
+          study_type: string
           title: string
+          tts_enabled: boolean
           updated_at: string
           visibility: string
         }[]

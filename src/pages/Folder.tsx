@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2, Play, CheckSquare, Square, X } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
@@ -30,6 +30,13 @@ interface FolderType {
   description: string | null;
   owner_id: string;
   class_id?: string | null;
+  // Language settings (inherited by new lists)
+  study_type?: string;
+  lang_a?: string;
+  lang_b?: string;
+  labels_a?: string | null;
+  labels_b?: string | null;
+  tts_enabled?: boolean;
 }
 
 const Folder = () => {
@@ -45,6 +52,10 @@ const Folder = () => {
   const [editingList, setEditingList] = useState<ListType | null>(null);
   const [newList, setNewList] = useState({ title: "", description: "" });
   const [newListStudySettings, setNewListStudySettings] = useState<ListStudySettings>(getDefaultListStudySettings());
+  // Folder language settings dialog
+  const [folderSettingsOpen, setFolderSettingsOpen] = useState(false);
+  const [folderSettings, setFolderSettings] = useState<ListStudySettings>(getDefaultListStudySettings());
+  const [isSavingFolderSettings, setIsSavingFolderSettings] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [allowPublicPortal, setAllowPublicPortal] = useState(true);
   const [sharing, setSharing] = useState(false);
@@ -255,6 +266,75 @@ const Folder = () => {
     } finally {
       setSharing(false);
     }
+  };
+
+  // Open folder settings dialog with current folder settings
+  const handleOpenFolderSettings = () => {
+    if (!folder) return;
+    setFolderSettings({
+      studyType: (folder.study_type === "general" ? "general" : "language") as "language" | "general",
+      langA: folder.lang_a || "en",
+      langB: folder.lang_b || "pt",
+      labelsA: folder.labels_a || (folder.study_type === "general" ? "Frente" : "English"),
+      labelsB: folder.labels_b || (folder.study_type === "general" ? "Verso" : "Português"),
+      ttsEnabled: folder.tts_enabled ?? true,
+    });
+    setFolderSettingsOpen(true);
+  };
+
+  // Save folder settings
+  const handleSaveFolderSettings = async () => {
+    if (!folder) return;
+    
+    setIsSavingFolderSettings(true);
+    try {
+      const { error } = await supabase
+        .from("folders")
+        .update({
+          study_type: folderSettings.studyType,
+          lang_a: folderSettings.langA,
+          lang_b: folderSettings.langB,
+          labels_a: folderSettings.labelsA,
+          labels_b: folderSettings.labelsB,
+          tts_enabled: folderSettings.ttsEnabled,
+        })
+        .eq("id", folder.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setFolder({
+        ...folder,
+        study_type: folderSettings.studyType,
+        lang_a: folderSettings.langA,
+        lang_b: folderSettings.langB,
+        labels_a: folderSettings.labelsA,
+        labels_b: folderSettings.labelsB,
+        tts_enabled: folderSettings.ttsEnabled,
+      });
+      
+      toast.success("Idiomas da pasta atualizados!");
+      setFolderSettingsOpen(false);
+    } catch (error: any) {
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setIsSavingFolderSettings(false);
+    }
+  };
+
+  // When dialog opens for new list, inherit folder settings
+  const handleOpenNewListDialog = () => {
+    if (folder) {
+      setNewListStudySettings({
+        studyType: (folder.study_type === "general" ? "general" : "language") as "language" | "general",
+        langA: folder.lang_a || "en",
+        langB: folder.lang_b || "pt",
+        labelsA: folder.labels_a || (folder.study_type === "general" ? "Frente" : "English"),
+        labelsB: folder.labels_b || (folder.study_type === "general" ? "Verso" : "Português"),
+        ttsEnabled: folder.tts_enabled ?? true,
+      });
+    }
+    setDialogOpen(true);
   };
 
   const handleCreateList = async (e: React.FormEvent) => {
@@ -477,9 +557,15 @@ const Folder = () => {
           <TabsContent value="lists">
             {canEdit && (
               <div className="mb-4 flex flex-wrap gap-2">
+                {/* Folder language settings button */}
+                <Button variant="outline" size="sm" onClick={handleOpenFolderSettings}>
+                  <Settings className="mr-1.5 h-4 w-4" />
+                  Idiomas
+                </Button>
+                
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm">
+                    <Button size="sm" onClick={handleOpenNewListDialog}>
                       <ListPlus className="mr-1.5 h-4 w-4" />
                       Nova Lista
                     </Button>
@@ -822,6 +908,37 @@ const Folder = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Folder Language Settings Dialog */}
+        <Dialog open={folderSettingsOpen} onOpenChange={setFolderSettingsOpen}>
+          <DialogContent className="max-w-lg max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Idiomas da Pasta
+              </DialogTitle>
+              <DialogDescription>
+                Defina o idioma padrão para novas listas criadas nesta pasta.
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="py-4">
+                <ListStudyTypeSelector
+                  value={folderSettings}
+                  onChange={setFolderSettings}
+                />
+              </div>
+            </ScrollArea>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setFolderSettingsOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveFolderSettings} disabled={isSavingFolderSettings}>
+                {isSavingFolderSettings ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

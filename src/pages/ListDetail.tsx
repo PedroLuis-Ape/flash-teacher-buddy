@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,9 @@ import { Label } from "@/components/ui/label";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ListStudyTypeSelector, ListStudySettings, listRowToSettings, settingsToDbColumns } from "@/components/ListStudyTypeSelector";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -75,6 +77,10 @@ const ListDetail = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
+  // List settings dialog
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Fetch current user ID for favorites
   useQuery({
@@ -448,6 +454,44 @@ const ListDetail = () => {
     }
   };
 
+  // Open settings dialog with current list settings
+  const handleOpenSettings = () => {
+    if (!list) return;
+    setListSettings(listRowToSettings({
+      study_type: list.study_type,
+      lang_a: list.lang_a,
+      lang_b: list.lang_b,
+      labels_a: list.labels_a,
+      labels_b: list.labels_b,
+      tts_enabled: list.tts_enabled,
+    }));
+    setSettingsDialogOpen(true);
+  };
+
+  // Save list settings
+  const handleSaveSettings = async () => {
+    if (!list || !listSettings) return;
+    
+    setIsSavingSettings(true);
+    try {
+      const dbColumns = settingsToDbColumns(listSettings);
+      const { error } = await supabase
+        .from("lists")
+        .update(dbColumns)
+        .eq("id", list.id);
+      
+      if (error) throw error;
+      
+      toast.success("Configurações salvas!");
+      setSettingsDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["list", id] });
+    } catch (error: any) {
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
   const loading = listLoading || flashcardsLoading || folderLoading;
 
   if (loading) {
@@ -581,6 +625,10 @@ const ListDetail = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleOpenSettings}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configurações A/B
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setSwapDialogOpen(true)}>
                       <ArrowLeftRight className="mr-2 h-4 w-4" />
                       Inverter A/B
@@ -786,6 +834,39 @@ const ListDetail = () => {
         onClose={() => setEditingFlashcard(null)}
         onSave={handleUpdateFlashcard}
       />
+
+      {/* List Settings Dialog */}
+      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configurações da Lista
+            </DialogTitle>
+            <DialogDescription>
+              Altere os idiomas e configurações de estudo desta lista.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="py-4">
+              {listSettings && (
+                <ListStudyTypeSelector
+                  value={listSettings}
+                  onChange={setListSettings}
+                />
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettingsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
+              {isSavingSettings ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
