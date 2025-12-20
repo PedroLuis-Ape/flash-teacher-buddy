@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { cleanTextForTTS } from "@/lib/speech";
 
 export interface PlayOptions {
   langOverride?: string; // ISO code like "en-US", "pt-BR", "es", "fr", etc.
@@ -19,29 +20,6 @@ const ISO_TO_BCP47: Record<string, string> = {
   "ko": "ko-KR",
   "ru": "ru-RU",
 };
-
-/**
- * Clean text for TTS - remove markdown, emojis, brackets, etc.
- */
-function cleanTextForTTS(text: string): string {
-  return text
-    // Remove markdown formatting
-    .replace(/[*_~`#]/g, '')
-    // Remove brackets and their content
-    .replace(/\[.*?\]/g, '')
-    // Remove parentheses content (often pronunciation guides)
-    .replace(/\(.*?\)/g, '')
-    // Remove emojis
-    .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
-    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
-    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
-    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '')
-    .replace(/[\u{2600}-\u{26FF}]/gu, '')
-    .replace(/[\u{2700}-\u{27BF}]/gu, '')
-    // Remove extra whitespace
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 /**
  * Smart Voice Selection Algorithm

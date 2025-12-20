@@ -16,6 +16,8 @@ interface UnscrambleStudyViewProps {
   hint?: string | null;
   flashcardId?: string;
   direction: "pt-en" | "en-pt" | "any";
+  langA?: string; // ISO code e.g. "en", "fr"
+  langB?: string; // ISO code e.g. "pt", "de"
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -35,7 +37,7 @@ interface WordItem {
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction, langA = "en", langB = "pt", onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -49,7 +51,17 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
 
   const question = direction === "pt-en" ? front : back;
   const correctSentence = direction === "pt-en" ? back : front;
-  const questionLang = direction === "pt-en" ? "pt-BR" : "en-US";
+  
+  // Dynamic TTS language - map short codes to BCP-47
+  const toBCP47 = (code: string): string => {
+    const map: Record<string, string> = {
+      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
+      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
+      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
+    };
+    return map[code] || code;
+  };
+  const questionLang = direction === "pt-en" ? toBCP47(langA) : toBCP47(langB);
 
   // Fetch user ID for favorites
   useEffect(() => {

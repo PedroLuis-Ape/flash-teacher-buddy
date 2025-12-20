@@ -166,8 +166,8 @@ const Study = () => {
 
   useEffect(() => {
     loadFlashcards();
-    // Note: favorites removed from deps to prevent reload on toggle
-  }, [resolvedId, favoritesOnly]);
+    // FIXED: Added order and initialDir to deps for proper reload on URL param changes
+  }, [resolvedId, favoritesOnly, order, initialDir]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -320,8 +320,10 @@ const Study = () => {
     const errorCards = flashcards.filter((card) => errorIds.includes(card.id));
     
     if (errorCards.length > 0) {
-      setFlashcards(shuffleArray(errorCards));
-      window.location.reload();
+      // FIXED: Update flashcards state and reset session instead of full page reload
+      const shuffledErrorCards = shuffleArray(errorCards);
+      setFlashcards(shuffledErrorCards);
+      resetSession();
     }
   };
 
@@ -621,6 +623,8 @@ const Study = () => {
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               direction={resolvedDirection}
+              langA={listSettings.langA}
+              langB={listSettings.langB}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -631,6 +635,8 @@ const Study = () => {
               currentCard={currentCard}
               allCards={flashcards}
               direction={resolvedDirection}
+              langA={listSettings.langA}
+              langB={listSettings.langB}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
@@ -642,6 +648,8 @@ const Study = () => {
               hint={currentCard.hint}
               flashcardId={currentCard.id}
               direction={resolvedDirection}
+              langA={listSettings.langA}
+              langB={listSettings.langB}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}

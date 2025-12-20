@@ -26,6 +26,8 @@ interface MultipleChoiceStudyViewProps {
     translation: string;
   }[];
   direction: "pt-en" | "en-pt" | "any";
+  langA?: string; // ISO code e.g. "en", "fr"
+  langB?: string; // ISO code e.g. "pt", "de"
   onCorrect: () => void;
   onIncorrect: () => void;
 }
@@ -34,6 +36,8 @@ export const MultipleChoiceStudyView = ({
   currentCard,
   allCards,
   direction,
+  langA = "en",
+  langB = "pt",
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
@@ -51,9 +55,30 @@ export const MultipleChoiceStudyView = ({
 
   const prompt = isPtToEn ? currentCard.term : currentCard.translation;
   const correctAnswer = isPtToEn ? currentCard.translation : currentCard.term;
-  const promptLabel = isPtToEn ? "Português" : "English";
-  const answerLabel = isPtToEn ? "English" : "Português";
-  const promptLang = isPtToEn ? "pt-BR" : "en-US";
+  
+  // Dynamic labels based on langA/langB props
+  const getLangLabel = (code: string): string => {
+    const labels: Record<string, string> = {
+      "en": "English", "pt": "Português", "es": "Español", "fr": "Français",
+      "de": "Deutsch", "it": "Italiano", "ja": "日本語", "zh": "中文",
+      "ko": "한국어", "ru": "Русский", "ar": "العربية", "hi": "हिन्दी"
+    };
+    return labels[code] || code.toUpperCase();
+  };
+  
+  const promptLabel = isPtToEn ? getLangLabel(langA) : getLangLabel(langB);
+  const answerLabel = isPtToEn ? getLangLabel(langB) : getLangLabel(langA);
+  
+  // Dynamic TTS language - map short codes to BCP-47
+  const toBCP47 = (code: string): string => {
+    const map: Record<string, string> = {
+      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
+      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
+      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
+    };
+    return map[code] || code;
+  };
+  const promptLang = isPtToEn ? toBCP47(langA) : toBCP47(langB);
 
   // Fetch user ID for favorites
   useEffect(() => {
