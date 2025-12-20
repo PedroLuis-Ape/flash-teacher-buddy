@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,8 @@ interface WriteStudyViewProps {
   acceptedAnswersEn?: string[];
   acceptedAnswersPt?: string[];
   direction: "pt-en" | "en-pt" | "any";
+  langA?: string; // ISO code e.g. "en", "fr"
+  langB?: string; // ISO code e.g. "pt", "de"
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -39,6 +41,8 @@ export const WriteStudyView = ({
   acceptedAnswersEn = [],
   acceptedAnswersPt = [],
   direction,
+  langA = "en",
+  langB = "pt",
   onCorrect,
   onIncorrect,
   onSkip,
@@ -50,9 +54,17 @@ export const WriteStudyView = ({
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
   const [userId, setUserId] = useState<string | undefined>();
-  const [isPtToEn] = useState(() => 
-    direction === "pt-en" || (direction === "any" && Math.random() > 0.5)
-  );
+  
+  // FIXED: Derive isPtToEn from direction prop so it updates per card in mixed mode
+  // Use useMemo with stable random per card based on flashcardId
+  const isPtToEn = useMemo(() => {
+    if (direction === "pt-en") return true;
+    if (direction === "en-pt") return false;
+    // For "any" mode, use flashcardId to determine direction deterministically
+    const hash = (flashcardId || front).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return hash % 2 === 0;
+  }, [direction, flashcardId, front]);
+  
   const inputRef = useRef<HTMLInputElement>(null);
   const { speak } = useTTS();
   const toggleFavorite = useToggleFavorite();
@@ -62,9 +74,31 @@ export const WriteStudyView = ({
 
   const prompt = isPtToEn ? front : back;
   const correctAnswer = isPtToEn ? back : front;
-  const promptLabel = isPtToEn ? "Português" : "English";
-  const answerLabel = isPtToEn ? "English" : "Português";
-  const promptLang = isPtToEn ? "pt-BR" : "en-US";
+  
+  // Dynamic labels based on langA/langB props
+  const getLangLabel = (code: string): string => {
+    const labels: Record<string, string> = {
+      "en": "English", "pt": "Português", "es": "Español", "fr": "Français",
+      "de": "Deutsch", "it": "Italiano", "ja": "日本語", "zh": "中文",
+      "ko": "한국어", "ru": "Русский", "ar": "العربية", "hi": "हिन्दी"
+    };
+    return labels[code] || code.toUpperCase();
+  };
+  
+  const promptLabel = isPtToEn ? getLangLabel(langA) : getLangLabel(langB);
+  const answerLabel = isPtToEn ? getLangLabel(langB) : getLangLabel(langA);
+  
+  // Dynamic TTS language - map short codes to BCP-47
+  const toBCP47 = (code: string): string => {
+    const map: Record<string, string> = {
+      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
+      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
+      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
+    };
+    return map[code] || code;
+  };
+  const promptLang = isPtToEn ? toBCP47(langA) : toBCP47(langB);
+  
   const acceptedAnswers = [
     correctAnswer,
     ...(isPtToEn ? acceptedAnswersEn : acceptedAnswersPt),
