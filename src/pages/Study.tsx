@@ -595,6 +595,7 @@ const Study = () => {
         <div className="mb-6">
           {effectiveMode === "flip" && currentCard && (
             <FlipStudyView
+              key={currentCard.id}
               front={currentCard.term}
               back={currentCard.translation}
               hint={currentCard.hint}
@@ -616,6 +617,7 @@ const Study = () => {
           )}
           {effectiveMode === "write" && currentCard && (
             <WriteStudyView
+              key={currentCard.id}
               front={currentCard.term}
               back={currentCard.translation}
               hint={currentCard.hint}
@@ -632,6 +634,7 @@ const Study = () => {
           )}
           {effectiveMode === "multiple-choice" && currentCard && (
             <MultipleChoiceStudyView
+              key={currentCard.id}
               currentCard={currentCard}
               allCards={flashcards}
               direction={resolvedDirection}
@@ -643,6 +646,7 @@ const Study = () => {
           )}
           {effectiveMode === "unscramble" && currentCard && (
             <UnscrambleStudyView
+              key={currentCard.id}
               front={currentCard.term}
               back={currentCard.translation}
               hint={currentCard.hint}
@@ -657,6 +661,7 @@ const Study = () => {
           )}
           {effectiveMode === "pronunciation" && currentCard && (
             <PronunciationStudyView
+              key={currentCard.id}
               front={currentCard.term}
               back={currentCard.translation}
               onNext={() => handleNext(true)}
