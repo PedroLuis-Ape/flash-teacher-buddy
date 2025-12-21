@@ -68,7 +68,15 @@ const Folder = () => {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
+  // Reset permission states when id changes, THEN load data
   useEffect(() => {
+    // CRITICAL: Reset permission states first to avoid stale canEdit
+    setCanEdit(false);
+    setIsOwner(false);
+    setFolder(null);
+    setLists([]);
+    setLoading(true);
+    
     loadFolder();
     loadLists();
   }, [id]);
