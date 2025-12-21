@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Volume2, RotateCcw, Check, Star } from "lucide-react";
@@ -49,8 +49,17 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
   
   const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
-  const question = direction === "pt-en" ? front : back;
-  const correctSentence = direction === "pt-en" ? back : front;
+  // FIXED: Derive isPtToEn dynamically per card (handles "any" mode)
+  const isPtToEn = useMemo(() => {
+    if (direction === "pt-en") return true;
+    if (direction === "en-pt") return false;
+    // For "any" mode, use flashcardId to determine direction deterministically
+    const hash = (flashcardId || front).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return hash % 2 === 0;
+  }, [direction, flashcardId, front]);
+
+  const question = isPtToEn ? front : back;
+  const correctSentence = isPtToEn ? back : front;
   
   // Dynamic TTS language - map short codes to BCP-47
   const toBCP47 = (code: string): string => {
@@ -61,7 +70,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
     };
     return map[code] || code;
   };
-  const questionLang = direction === "pt-en" ? toBCP47(langA) : toBCP47(langB);
+  const questionLang = isPtToEn ? toBCP47(langA) : toBCP47(langB);
 
   // Fetch user ID for favorites
   useEffect(() => {

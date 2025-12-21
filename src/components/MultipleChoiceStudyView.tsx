@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -51,7 +51,15 @@ export const MultipleChoiceStudyView = ({
   const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   
   const isFavorite = currentCard.id ? favorites.includes(currentCard.id) : false;
-  const isPtToEn = direction === "pt-en";
+  
+  // FIXED: Derive isPtToEn dynamically per card (handles "any" mode)
+  const isPtToEn = useMemo(() => {
+    if (direction === "pt-en") return true;
+    if (direction === "en-pt") return false;
+    // For "any" mode, use card id to determine direction deterministically
+    const hash = (currentCard.id || currentCard.term).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return hash % 2 === 0;
+  }, [direction, currentCard.id, currentCard.term]);
 
   const prompt = isPtToEn ? currentCard.term : currentCard.translation;
   const correctAnswer = isPtToEn ? currentCard.translation : currentCard.term;
