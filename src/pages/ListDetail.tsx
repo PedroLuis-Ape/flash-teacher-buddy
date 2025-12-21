@@ -64,11 +64,8 @@ const ListDetail = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { id } = useParams();
-  const [isOwner, setIsOwner] = useState(false);
-  const [canEdit, setCanEdit] = useState(false); // True if owner OR turma owner
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
-  const [userId, setUserId] = useState<string | undefined>();
   const [isCloning, setIsCloning] = useState(false);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -82,22 +79,22 @@ const ListDetail = () => {
   const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
-  // Fetch current user ID for favorites
-  useQuery({
-    queryKey: ['current-user-id'],
+  // Fetch current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id);
-      return user?.id;
+      return user;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  const userId = currentUser?.id;
   const { data: favorites = [] } = useFavorites(userId, 'flashcard');
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["list", id],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase
         .from("lists")
         .select("*, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, class_id")
@@ -105,28 +102,31 @@ const ListDetail = () => {
         .maybeSingle();
       
       if (error) throw error;
-      if (data && session) {
-        const isDirectOwner = session.user.id === data.owner_id;
-        setIsOwner(isDirectOwner);
-        
-        // Check if user is turma owner (if list is linked to a turma via class_id)
-        if (data.class_id && !isDirectOwner) {
-          const { data: turmaData } = await supabase
-            .from("turmas")
-            .select("owner_teacher_id")
-            .eq("id", data.class_id)
-            .maybeSingle();
-          
-          const isTurmaOwner = turmaData?.owner_teacher_id === session.user.id;
-          setCanEdit(isDirectOwner || isTurmaOwner);
-        } else {
-          setCanEdit(isDirectOwner);
-        }
-      }
       return data as (ListType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string; labels_b?: string; tts_enabled?: boolean; class_id?: string | null }) | null;
     },
     staleTime: 60_000,
   });
+
+  // Query to check if user is turma owner (only if list has class_id)
+  const { data: turmaOwnerData } = useQuery({
+    queryKey: ["turma-owner-check", list?.class_id, userId],
+    queryFn: async () => {
+      if (!list?.class_id || !userId) return null;
+      const { data } = await supabase
+        .from("turmas")
+        .select("owner_teacher_id")
+        .eq("id", list.class_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!list?.class_id && !!userId,
+    staleTime: 60_000,
+  });
+
+  // DERIVED STATE: Calculate isOwner and canEdit from data (not side effects!)
+  const isOwner = !!(userId && list?.owner_id === userId);
+  const isTurmaOwner = !!(turmaOwnerData?.owner_teacher_id === userId);
+  const canEdit = isOwner || isTurmaOwner;
 
   const { data: folder, isLoading: folderLoading } = useQuery({
     queryKey: ["folder", list?.folder_id],
