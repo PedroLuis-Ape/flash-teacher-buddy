@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FolderPlus, Trash2, Star, CheckSquare, Square, X } from "lucide-react";
+import { FolderPlus, Trash2, Star, CheckSquare, Square, X, FolderInput } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 
@@ -68,7 +69,13 @@ const Folders = () => {
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   
-  const { selectedInstitution } = useInstitution();
+  // Move folder state
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [foldersToMove, setFoldersToMove] = useState<string[]>([]);
+  const [moveDestination, setMoveDestination] = useState<string>("general");
+  const [isMoving, setIsMoving] = useState(false);
+  
+  const { selectedInstitution, institutions } = useInstitution();
   
   // Favorites
   const { data: folderFavorites = [] } = useFavorites(userId, 'folder');
@@ -219,6 +226,54 @@ const Folders = () => {
   };
 
   const [isCreating, setIsCreating] = useState(false);
+
+  // Move folders handler
+  const handleMoveFolders = async () => {
+    if (foldersToMove.length === 0) return;
+
+    try {
+      setIsMoving(true);
+      const destinationId = moveDestination === "general" ? null : moveDestination;
+
+      const { error } = await supabase
+        .from("folders")
+        .update({ institution_id: destinationId })
+        .in("id", foldersToMove);
+
+      if (error) throw error;
+
+      const destName = moveDestination === "general" 
+        ? "Biblioteca Geral" 
+        : institutions.find(i => i.id === moveDestination)?.name || "destino";
+
+      toast.success(`✅ ${foldersToMove.length} pasta(s) movida(s) para ${destName}!`);
+      setMoveDialogOpen(false);
+      setFoldersToMove([]);
+      setMoveDestination("general");
+      setSelectedFolders(new Set());
+      setSelectMode(false);
+      loadData();
+    } catch (error: any) {
+      console.error("Error moving folders:", error);
+      toast.error("❌ Erro ao mover pastas");
+    } finally {
+      setIsMoving(false);
+    }
+  };
+
+  // Open move dialog for single folder
+  const openMoveDialogForFolder = (folderId: string) => {
+    setFoldersToMove([folderId]);
+    setMoveDestination("general");
+    setMoveDialogOpen(true);
+  };
+
+  // Open move dialog for bulk selection
+  const openMoveDialogForBulk = () => {
+    setFoldersToMove(Array.from(selectedFolders));
+    setMoveDestination("general");
+    setMoveDialogOpen(true);
+  };
 
   const deleteFolder = async () => {
     if (!folderToDelete) return;
@@ -457,6 +512,18 @@ const Folders = () => {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-11 w-11 shrink-0 rounded-xl text-muted-foreground hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMoveDialogForFolder(folder.id);
+                      }}
+                      title="Mover pasta"
+                    >
+                      <FolderInput className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -487,16 +554,71 @@ const Folders = () => {
       {/* Sticky bulk action bar for mobile */}
       {selectMode && selectedFolders.size > 0 && (
         <div className="fixed bottom-20 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:static md:mt-4 md:p-0 md:bg-transparent md:border-0">
-          <Button 
-            variant="destructive" 
-            className="w-full min-h-[48px]"
-            onClick={() => setShowBulkDeleteDialog(true)}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Apagar ({selectedFolders.size})
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="flex-1 min-h-[48px]"
+              onClick={openMoveDialogForBulk}
+            >
+              <FolderInput className="h-4 w-4 mr-2" />
+              Mover ({selectedFolders.size})
+            </Button>
+            <Button 
+              variant="destructive" 
+              className="flex-1 min-h-[48px]"
+              onClick={() => setShowBulkDeleteDialog(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Apagar ({selectedFolders.size})
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Move folder dialog */}
+      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mover {foldersToMove.length > 1 ? `${foldersToMove.length} pastas` : 'pasta'}</DialogTitle>
+            <DialogDescription>
+              Selecione o destino para {foldersToMove.length > 1 ? 'estas pastas' : 'esta pasta'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="destination">Destino</Label>
+            <Select value={moveDestination} onValueChange={setMoveDestination}>
+              <SelectTrigger className="w-full mt-2">
+                <SelectValue placeholder="Selecione o destino" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="general">📚 Biblioteca Geral</SelectItem>
+                {institutions.map((inst) => (
+                  <SelectItem key={inst.id} value={inst.id}>
+                    🏫 {inst.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setMoveDialogOpen(false)}
+              disabled={isMoving}
+              className="min-h-[44px]"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleMoveFolders}
+              disabled={isMoving}
+              className="min-h-[44px]"
+            >
+              {isMoving ? 'Movendo...' : 'Mover'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk delete confirmation dialog */}
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
