@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,11 +12,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, CreditCard, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
 import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/components/ListStudyTypeSelector";
+import { useFolderText } from "@/hooks/useFolderText";
 
 interface ListType {
   id: string;
@@ -47,6 +50,7 @@ const Folder = () => {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [canEdit, setCanEdit] = useState(false); // True if owner OR turma owner
+  const [isClassContext, setIsClassContext] = useState(false); // True if folder is linked to a class
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<ListType | null>(null);
@@ -67,15 +71,36 @@ const Folder = () => {
   const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  // Text tab state
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [editTextTitle, setEditTextTitle] = useState("");
+  const [editTextContent, setEditTextContent] = useState("");
+  
+  // Folder text hook
+  const { folderText, isLoading: textLoading, saveText, isSaving: isSavingText, deleteText } = useFolderText(id);
+  
+  // Fetch current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user-folder'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const userId = currentUser?.id;
 
   // Reset permission states when id changes, THEN load data
   useEffect(() => {
     // CRITICAL: Reset permission states first to avoid stale canEdit
     setCanEdit(false);
     setIsOwner(false);
+    setIsClassContext(false);
     setFolder(null);
     setLists([]);
     setLoading(true);
+    setIsEditingText(false);
     
     loadFolder();
     loadLists();
@@ -98,9 +123,10 @@ const Folder = () => {
           setFolder(directData);
           const isDirectOwner = session.user.id === directData.owner_id;
           setIsOwner(isDirectOwner);
+          setIsClassContext(!!directData.class_id);
           
           // Check if user is turma owner (if folder is linked to a turma via class_id)
-          if (directData.class_id && !isDirectOwner) {
+          if (directData.class_id) {
             const { data: turmaData } = await supabase
               .from("turmas")
               .select("owner_teacher_id")
@@ -486,6 +512,68 @@ const Folder = () => {
     }
   };
 
+  // Copy all vocabulary terms from all lists in this folder
+  const handleCopyVocabulary = async () => {
+    try {
+      // Fetch all flashcards from all lists in this folder
+      const { data: flashcards, error } = await supabase
+        .from("flashcards")
+        .select("term, list_id")
+        .in("list_id", lists.map(l => l.id));
+      
+      if (error) throw error;
+      
+      if (!flashcards || flashcards.length === 0) {
+        toast.error("Nenhum termo encontrado nas listas");
+        return;
+      }
+      
+      // Get unique terms
+      const uniqueTerms = [...new Set(flashcards.map(f => f.term))];
+      const vocabulary = uniqueTerms.join(", ");
+      
+      await navigator.clipboard.writeText(vocabulary);
+      toast.success(`${uniqueTerms.length} termos copiados!`);
+    } catch (error: any) {
+      toast.error("Erro ao copiar: " + error.message);
+    }
+  };
+
+  // Copy pre-formatted AI prompt for story generation
+  const handleCopyAIPrompt = async () => {
+    try {
+      // Fetch all flashcards from all lists in this folder
+      const { data: flashcards, error } = await supabase
+        .from("flashcards")
+        .select("term, list_id")
+        .in("list_id", lists.map(l => l.id));
+      
+      if (error) throw error;
+      
+      if (!flashcards || flashcards.length === 0) {
+        toast.error("Nenhum termo encontrado nas listas");
+        return;
+      }
+      
+      // Get unique terms
+      const uniqueTerms = [...new Set(flashcards.map(f => f.term))];
+      const vocabulary = uniqueTerms.join(", ");
+      
+      // Detect language from folder settings
+      const langLabel = folder?.lang_a === "en" ? "Inglês" 
+        : folder?.lang_a === "pt" ? "Português"
+        : folder?.lang_a === "es" ? "Espanhol"
+        : folder?.lang_a || "Inglês";
+      
+      const prompt = `Crie uma história curta em ${langLabel} usando as seguintes palavras: ${vocabulary}. O texto deve ser adequado para nível iniciante.`;
+      
+      await navigator.clipboard.writeText(prompt);
+      toast.success("Prompt copiado! Cole em uma IA como ChatGPT ou Gemini.");
+    } catch (error: any) {
+      toast.error("Erro ao copiar: " + error.message);
+    }
+  };
+
   // Memoize sorted lists to avoid re-sorting on every render
   const sortedLists = useMemo(() => naturalSort(lists, (list) => list.title), [lists]);
 
@@ -559,6 +647,10 @@ const Folder = () => {
         <Tabs defaultValue="lists" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="lists">Listas</TabsTrigger>
+            <TabsTrigger value="texto">
+              <BookOpen className="mr-1.5 h-4 w-4" />
+              Texto
+            </TabsTrigger>
             <TabsTrigger value="videos">Vídeos</TabsTrigger>
           </TabsList>
 
@@ -848,6 +940,155 @@ const Folder = () => {
                   );
                 })}
               </div>
+            )}
+          </TabsContent>
+
+          {/* TEXT TAB */}
+          <TabsContent value="texto">
+            {textLoading ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">Carregando...</p>
+              </Card>
+            ) : isEditingText ? (
+              // EDIT MODE
+              <Card className="p-4 space-y-4">
+                {isClassContext && canEdit && (
+                  <div className="flex items-center gap-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 text-sm">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    Esta alteração afetará todos os alunos da turma.
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="text-title">Título</Label>
+                  <Input
+                    id="text-title"
+                    value={editTextTitle}
+                    onChange={(e) => setEditTextTitle(e.target.value)}
+                    placeholder="Ex: História com vocabulário"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="text-content">Conteúdo</Label>
+                  <Textarea
+                    id="text-content"
+                    value={editTextContent}
+                    onChange={(e) => setEditTextContent(e.target.value)}
+                    placeholder="Digite ou cole seu texto aqui..."
+                    className="min-h-[300px] font-mono text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    onClick={() => {
+                      saveText({ title: editTextTitle || "Texto", content: editTextContent });
+                      setIsEditingText(false);
+                    }}
+                    disabled={isSavingText}
+                  >
+                    {isSavingText ? "Salvando..." : "Salvar"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsEditingText(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </Card>
+            ) : folderText?.content ? (
+              // VIEW MODE with content
+              <Card className="p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">{folderText.title || "Texto"}</h3>
+                  {canEdit && (
+                    <div className="flex gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // Collect all unique terms from lists
+                                const allTerms = lists.flatMap(list => list.title);
+                                // This will get terms from flashcards via API
+                                handleCopyVocabulary();
+                              }}
+                            >
+                              <Copy className="mr-1.5 h-4 w-4" />
+                              Copiar Vocabulário
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copia todos os termos das listas</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditTextTitle(folderText.title || "Texto");
+                          setEditTextContent(folderText.content || "");
+                          setIsEditingText(true);
+                        }}
+                      >
+                        <Pencil className="mr-1.5 h-4 w-4" />
+                        Editar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed bg-transparent p-0 m-0">
+                    {folderText.content}
+                  </pre>
+                </div>
+              </Card>
+            ) : (
+              // EMPTY STATE
+              <Card className="p-8 text-center space-y-4">
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold">Nenhum texto ainda</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {canEdit
+                      ? "Adicione textos de leitura baseados no vocabulário das listas"
+                      : "Esta pasta ainda não possui textos de apoio"}
+                  </p>
+                </div>
+                {canEdit && (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <Button
+                      onClick={() => {
+                        setEditTextTitle("Texto");
+                        setEditTextContent("");
+                        setIsEditingText(true);
+                      }}
+                    >
+                      <Pencil className="mr-1.5 h-4 w-4" />
+                      Criar Texto
+                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" onClick={handleCopyVocabulary}>
+                            <Copy className="mr-1.5 h-4 w-4" />
+                            Copiar Vocabulário
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copia todos os termos das listas</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" onClick={handleCopyAIPrompt}>
+                            <Sparkles className="mr-1.5 h-4 w-4" />
+                            Copiar Prompt para IA
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copia um prompt para gerar história com IA</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                )}
+              </Card>
             )}
           </TabsContent>
 
