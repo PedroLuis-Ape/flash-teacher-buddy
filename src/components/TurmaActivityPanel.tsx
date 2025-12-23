@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Activity, Clock, BookOpen, Loader2 } from 'lucide-react';
+import { Activity, Clock, BookOpen, Loader2, Users, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TurmaActivityPanelProps {
   turmaId: string;
@@ -30,7 +36,6 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
   const { data: activities, isLoading } = useQuery({
     queryKey: ['turma-activity', turmaId],
     queryFn: async () => {
-      // Buscar atividades da turma
       const { data: activityData, error } = await supabase
         .from('turma_student_activity' as any)
         .select('*')
@@ -42,7 +47,6 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
         return [];
       }
 
-      // Buscar títulos das listas
       const listIds = (activityData || [])
         .map((a: any) => a.list_id)
         .filter(Boolean);
@@ -65,7 +69,7 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
         list_title: a.list_id ? listTitles[a.list_id] || 'Lista' : null
       }));
     },
-    refetchInterval: 15000, // Fallback: refetch a cada 15s
+    refetchInterval: 15000,
     refetchOnWindowFocus: true,
   });
 
@@ -85,7 +89,6 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
         },
         (payload) => {
           console.log('[TurmaActivityPanel] Realtime event:', payload);
-          // Invalidar query para refetch
           queryClient.invalidateQueries({ queryKey: ['turma-activity', turmaId] });
         }
       )
@@ -109,7 +112,7 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
   // Determinar status visual
   const getActivityStatus = (activity: StudentActivity | undefined) => {
     if (!activity?.last_activity_at) {
-      return { label: 'Sem atividade', variant: 'secondary' as const, isActive: false };
+      return { label: 'Sem atividade', variant: 'secondary' as const, isActive: false, category: 'none' as const };
     }
 
     const lastActivity = new Date(activity.last_activity_at);
@@ -117,21 +120,59 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
     const diffMinutes = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
 
     if (diffMinutes <= 2) {
-      return { label: 'Estudando agora', variant: 'default' as const, isActive: true };
+      return { label: 'Estudando agora', variant: 'default' as const, isActive: true, category: 'active' as const };
     } else if (diffMinutes <= 15) {
-      return { label: `Há ${Math.round(diffMinutes)} min`, variant: 'outline' as const, isActive: false };
+      return { label: `Há ${Math.round(diffMinutes)} min`, variant: 'outline' as const, isActive: false, category: 'recent' as const };
     } else if (diffMinutes <= 60 * 24) {
       return { 
         label: formatDistanceToNow(lastActivity, { addSuffix: true, locale: ptBR }), 
         variant: 'secondary' as const, 
-        isActive: false 
+        isActive: false,
+        category: 'today' as const
       };
     } else if (diffMinutes <= 60 * 24 * 7) {
-      return { label: 'Inativo há dias', variant: 'secondary' as const, isActive: false };
+      return { label: 'Inativo há dias', variant: 'secondary' as const, isActive: false, category: 'inactive' as const };
     } else {
-      return { label: 'Inativo há 7+ dias', variant: 'destructive' as const, isActive: false };
+      return { label: 'Inativo há 7+ dias', variant: 'destructive' as const, isActive: false, category: 'inactive' as const };
     }
   };
+
+  // Calcular resumo geral
+  const summary = useMemo(() => {
+    const total = membros.length;
+    let activeNow = 0;
+    let practicedToday = 0;
+    let neverPracticed = 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    membros.forEach((membro) => {
+      const activity = activityMap.get(membro.user_id);
+      if (!activity?.last_activity_at) {
+        neverPracticed++;
+        return;
+      }
+
+      const lastActivity = new Date(activity.last_activity_at);
+      const diffMinutes = (new Date().getTime() - lastActivity.getTime()) / (1000 * 60);
+
+      if (diffMinutes <= 2) {
+        activeNow++;
+        practicedToday++;
+      } else if (lastActivity >= today) {
+        practicedToday++;
+      }
+    });
+
+    return {
+      total,
+      activeNow,
+      practicedToday,
+      neverPracticed,
+      inactive: total - practicedToday
+    };
+  }, [membros, activityMap]);
 
   if (isLoading) {
     return (
@@ -151,66 +192,137 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
           <Activity className="h-4 w-4" />
           Atividade dos Alunos
         </h3>
-        {/* Removed "Ao vivo" badge as requested */}
       </div>
 
-      <ScrollArea className="max-h-[400px]">
-        <div className="space-y-3">
+      {/* Resumo Geral */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <div>
+            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="font-semibold">{summary.total}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <div>
+            <p className="text-xs text-muted-foreground">Ativos agora</p>
+            <p className="font-semibold text-green-600">{summary.activeNow}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <div>
+            <p className="text-xs text-muted-foreground">Praticaram hoje</p>
+            <p className="font-semibold text-primary">{summary.practicedToday}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <div>
+            <p className="text-xs text-muted-foreground">Sem prática</p>
+            <p className="font-semibold text-destructive">{summary.inactive}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de alunos com scroll fixo */}
+      <ScrollArea className="h-[350px]">
+        <div className="space-y-2 pr-4">
           {membros.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">
               Nenhum aluno na turma.
             </p>
           ) : (
-            membros.map((membro) => {
-              const activity = activityMap.get(membro.user_id);
-              const status = getActivityStatus(activity);
+            <TooltipProvider delayDuration={300}>
+              {membros.map((membro) => {
+                const activity = activityMap.get(membro.user_id);
+                const status = getActivityStatus(activity);
 
-              return (
-                <div
-                  key={membro.user_id}
-                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                    status.isActive ? 'bg-primary/5 border-primary/30' : 'border-border'
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">
-                      {membro.profiles?.first_name || 'Aluno'}
-                    </p>
-                    {activity?.list_title && status.isActive && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        <BookOpen className="h-3 w-3" />
-                        <span className="truncate">{activity.list_title}</span>
-                        {activity.mode && (
-                          <Badge variant="secondary" className="text-[10px] ml-1">
-                            {activity.mode}
+                return (
+                  <Tooltip key={membro.user_id}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors hover:bg-accent/50 ${
+                          status.isActive ? 'bg-primary/5 border-primary/30' : 'border-border'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate text-sm">
+                            {membro.profiles?.first_name || 'Aluno'}
+                          </p>
+                          {membro.profiles?.ape_id && (
+                            <p className="text-xs text-muted-foreground">
+                              @{membro.profiles.ape_id}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 shrink-0">
+                          {activity?.progress_pct !== undefined && status.isActive && (
+                            <span className="text-xs font-mono text-primary">
+                              {activity.progress_pct}%
+                            </span>
+                          )}
+                          <Badge variant={status.variant} className="text-xs whitespace-nowrap">
+                            {status.isActive && (
+                              <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
+                            )}
+                            {status.label}
                           </Badge>
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs">
+                      <div className="space-y-2 text-sm">
+                        <p className="font-semibold">
+                          {membro.profiles?.first_name || 'Aluno'}
+                          {membro.profiles?.ape_id && (
+                            <span className="text-muted-foreground font-normal ml-1">
+                              @{membro.profiles.ape_id}
+                            </span>
+                          )}
+                        </p>
+                        
+                        {activity ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                Última atividade: {format(new Date(activity.last_activity_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            </div>
+                            {activity.list_title && (
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="h-3 w-3" />
+                                <span>Lista: {activity.list_title}</span>
+                              </div>
+                            )}
+                            {activity.mode && (
+                              <div className="flex items-center gap-2">
+                                <Activity className="h-3 w-3" />
+                                <span>Modo: {activity.mode}</span>
+                              </div>
+                            )}
+                            {activity.progress_pct !== undefined && (
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-3 w-3" />
+                                <span>Progresso: {activity.progress_pct}%</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-muted-foreground flex items-center gap-2">
+                            <XCircle className="h-3 w-3" />
+                            Nenhuma atividade registrada
+                          </p>
                         )}
-                      </p>
-                    )}
-                    {activity?.last_activity_at && !status.isActive && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        <Clock className="h-3 w-3" />
-                        Última atividade: {formatDistanceToNow(new Date(activity.last_activity_at), { addSuffix: true, locale: ptBR })}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2 shrink-0">
-                    {activity?.progress_pct !== undefined && status.isActive && (
-                      <span className="text-xs font-mono text-primary">
-                        {activity.progress_pct}%
-                      </span>
-                    )}
-                    <Badge variant={status.variant} className="text-xs whitespace-nowrap">
-                      {status.isActive && (
-                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
-                      )}
-                      {status.label}
-                    </Badge>
-                  </div>
-                </div>
-              );
-            })
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </TooltipProvider>
           )}
         </div>
       </ScrollArea>
