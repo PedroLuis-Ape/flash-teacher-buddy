@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Building2, Plus, X, Check, Trash2, StickyNote, Target, ChevronRight } from "lucide-react";
+import { 
+  Menu, Building2, Plus, X, Check, Trash2, StickyNote, Target, ChevronRight,
+  Home, Library, Store, User, GraduationCap, Search
+} from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -16,10 +19,12 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newInstitution, setNewInstitution] = useState({
@@ -76,8 +81,8 @@ export function AppSidebar() {
     <>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-10 w-10">
-            <MoreVertical className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="h-10 w-10 hover:bg-accent">
+            <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-[300px] sm:w-[400px] flex flex-col">
@@ -85,39 +90,89 @@ export function AppSidebar() {
             <SheetTitle>{t('sidebar.menu')}</SheetTitle>
           </SheetHeader>
           
-          <div className="mt-6 space-y-6 flex-1">
-            {/* Navigation Section */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t('sidebar.navigation', 'Navegação')}
+          <div className="mt-6 space-y-4 flex-1 overflow-y-auto">
+            {/* Main Navigation Section */}
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
+                {t('sidebar.mainNav', 'Principal')}
+              </h3>
+              {[
+                { icon: Home, label: t('tabbar.home', 'Início'), path: '/' },
+                { icon: Library, label: t('tabbar.library', 'Biblioteca'), path: '/folders' },
+                { icon: Target, label: t('tabbar.goals', 'Metas'), path: '/goals' },
+                { icon: Store, label: t('tabbar.store', 'Loja'), path: '/store' },
+                { icon: User, label: t('tabbar.profile', 'Perfil'), path: '/profile' },
+              ].map((item) => {
+                const isActive = location.pathname === item.path || 
+                  (item.path !== '/' && location.pathname.startsWith(item.path));
+                return (
+                  <Button
+                    key={item.path}
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 transition-all",
+                      isActive && "bg-primary/10 text-primary font-medium"
+                    )}
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate(item.path);
+                    }}
+                  >
+                    <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
+                    <span>{item.label}</span>
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Separator />
+
+            {/* Tools Section */}
+            <div className="space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
+                {t('sidebar.tools', 'Ferramentas')}
               </h3>
               <Button
-                variant="ghost"
-                className="w-full justify-between"
+                variant={location.pathname === '/notes' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname === '/notes' && "bg-primary/10 text-primary font-medium"
+                )}
                 onClick={() => {
                   setIsOpen(false);
                   navigate('/notes');
                 }}
               >
-                <div className="flex items-center gap-3">
-                  <StickyNote className="h-4 w-4" />
-                  <span>{t('sidebar.myNotes', 'Minhas Notas')}</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <StickyNote className="h-4 w-4" />
+                <span>{t('sidebar.myNotes', 'Minhas Notas')}</span>
               </Button>
               <Button
-                variant="ghost"
-                className="w-full justify-between"
+                variant={location.pathname === '/search' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname === '/search' && "bg-primary/10 text-primary font-medium"
+                )}
                 onClick={() => {
                   setIsOpen(false);
-                  navigate('/goals');
+                  navigate('/search');
                 }}
               >
-                <div className="flex items-center gap-3">
-                  <Target className="h-4 w-4" />
-                  <span>{t('sidebar.myGoals', 'Minhas Metas')}</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <Search className="h-4 w-4" />
+                <span>{t('sidebar.search', 'Buscar')}</span>
+              </Button>
+              <Button
+                variant={location.pathname.startsWith('/turmas') ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname.startsWith('/turmas') && "bg-primary/10 text-primary font-medium"
+                )}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/turmas');
+                }}
+              >
+                <GraduationCap className="h-4 w-4" />
+                <span>{t('sidebar.classes', 'Turmas')}</span>
               </Button>
             </div>
 
