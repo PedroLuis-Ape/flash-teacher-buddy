@@ -25,6 +25,7 @@ import { AppSidebar } from "./AppSidebar";
 import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalFooter } from "./GlobalFooter";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -59,6 +60,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
 
   // Activity heartbeat - tracks when user is active
   useActivityHeartbeat(user?.id);
+  
+  // Swipe navigation - enabled on mobile
+  useSwipeNavigation({ enabled: !!user });
   
   // Don't show header/tabbar on auth pages
   const isAuthPage = location.pathname === '/auth';

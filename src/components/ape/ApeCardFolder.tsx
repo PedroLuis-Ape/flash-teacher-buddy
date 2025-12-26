@@ -30,21 +30,23 @@ export function ApeCardFolder({
       onClick={onClick}
       disabled={isLocked}
       className={cn(
-        "card-3d ape-card-row rounded-xl",
+        "group card-3d ape-card-row rounded-xl",
         "bg-card transition-all duration-200",
         "border border-border",
         "text-left shadow-sm",
+        "hover:shadow-md hover:border-primary/30 hover:translate-y-[-2px]",
+        "active:scale-[0.98] active:shadow-sm active:translate-y-0",
         !disableAnimation && "scroll-reveal",
         disableAnimation && "opacity-100 translate-y-0",
-        isLocked && "opacity-50 cursor-not-allowed",
+        isLocked && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-sm",
         className
       )}
     >
-      <div className="shrink-0 w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center">
+      <div className="shrink-0 w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center transition-all duration-200 group-hover:bg-primary/20 group-hover:scale-105">
         {isLocked ? (
-          <Lock className="h-5 w-5 text-primary" />
+          <Lock className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
         ) : (
-          <Folder className="h-5 w-5 text-primary" />
+          <Folder className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
         )}
       </div>
 
