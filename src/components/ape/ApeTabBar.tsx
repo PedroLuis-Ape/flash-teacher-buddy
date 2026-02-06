@@ -65,8 +65,9 @@ export function ApeTabBar() {
                 active && "scale-110"
               )}>
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
+                {/* Optimized glow: static opacity instead of animate-pulse for performance */}
                 {active && (
-                  <div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
+                  <div className="absolute inset-0 bg-primary/15 blur-sm rounded-full" />
                 )}
               </div>
               <span className={cn(

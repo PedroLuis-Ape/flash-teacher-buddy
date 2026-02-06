@@ -84,7 +84,7 @@ const Index = () => {
         });
       }
     } catch (error) {
-      console.error("[Index] Error loading profile:", error);
+      // Profile loading error - handled silently
     }
   };
 

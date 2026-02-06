@@ -39,7 +39,8 @@ export function ApeCardList({
         "bg-card transition-all duration-200",
         "border border-border",
         "text-left shadow-sm",
-        "hover:shadow-md hover:border-secondary/50 hover:translate-y-[-2px]",
+        // Use md: prefix for hover styles to avoid sticky hover on touch devices
+        "md:hover:shadow-md md:hover:border-secondary/50 md:hover:translate-y-[-2px]",
         "active:scale-[0.98] active:shadow-sm active:translate-y-0",
         !disableAnimation && "scroll-reveal",
         disableAnimation && "opacity-100 translate-y-0",

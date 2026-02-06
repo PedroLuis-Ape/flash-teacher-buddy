@@ -39,7 +39,7 @@ const Profile = () => {
         return;
       }
 
-      console.log('[Profile] Loading profile for user:', session.user.id);
+      // Profile loading started
 
       // Force fresh data from server (no cache)
       const { data: profile, error: profileError } = await supabase
@@ -49,11 +49,11 @@ const Profile = () => {
         .single();
 
       if (profileError) {
-        console.error('[Profile] Error loading profile:', profileError);
+        // Profile loading error - handled silently
         return;
       }
 
-      console.log('[Profile] Profile data:', profile);
+      // Profile data loaded successfully
 
       if (profile) {
         setFirstName(profile.first_name || "");

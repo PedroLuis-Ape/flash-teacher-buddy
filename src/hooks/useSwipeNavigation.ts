@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 const SWIPE_THRESHOLD = 100;
 const SWIPE_VELOCITY_THRESHOLD = 0.3;
+const EDGE_ZONE_WIDTH = 30; // Only accept swipes starting within 30px from edges
 
 // Main navigation routes for swipe navigation
 const mainRoutes = [
@@ -13,6 +14,15 @@ const mainRoutes = [
   "/profile",
 ];
 
+// Elements/selectors that should prevent swipe navigation
+const SCROLL_CONTAINER_SELECTORS = [
+  '.swiper',
+  '[data-radix-scroll-area-viewport]',
+  '.overflow-x-auto',
+  '.overflow-x-scroll',
+  '[data-no-swipe]',
+];
+
 interface UseSwipeNavigationOptions {
   enabled?: boolean;
 }
@@ -21,6 +31,7 @@ export function useSwipeNavigation({ enabled = true }: UseSwipeNavigationOptions
   const navigate = useNavigate();
   const location = useLocation();
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
+  const touchMoved = useRef(false);
 
   const getCurrentRouteIndex = useCallback(() => {
     const currentPath = location.pathname;
@@ -39,20 +50,58 @@ export function useSwipeNavigation({ enabled = true }: UseSwipeNavigationOptions
     return -1;
   }, [location.pathname]);
 
+  const isInsideScrollContainer = useCallback((element: EventTarget | null): boolean => {
+    if (!element || !(element instanceof Element)) return false;
+    
+    // Check if element or any parent matches scroll container selectors
+    for (const selector of SCROLL_CONTAINER_SELECTORS) {
+      if (element.closest(selector)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
 
     const handleTouchStart = (e: TouchEvent) => {
+      // Ignore if touch started inside a horizontal scroll container
+      if (isInsideScrollContainer(e.target)) {
+        touchStart.current = null;
+        return;
+      }
+
       const touch = e.touches[0];
+      const screenWidth = window.innerWidth;
+      
+      // Only register swipes that start near edges (for edge swipe gesture)
+      const isNearLeftEdge = touch.clientX < EDGE_ZONE_WIDTH;
+      const isNearRightEdge = touch.clientX > screenWidth - EDGE_ZONE_WIDTH;
+      
+      if (!isNearLeftEdge && !isNearRightEdge) {
+        touchStart.current = null;
+        return;
+      }
+
       touchStart.current = {
         x: touch.clientX,
         y: touch.clientY,
         time: Date.now(),
       };
+      touchMoved.current = false;
+    };
+
+    const handleTouchMove = () => {
+      touchMoved.current = true;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (!touchStart.current) return;
+      if (!touchStart.current || !touchMoved.current) {
+        touchStart.current = null;
+        return;
+      }
 
       const touch = e.changedTouches[0];
       const deltaX = touch.clientX - touchStart.current.x;
@@ -87,13 +136,15 @@ export function useSwipeNavigation({ enabled = true }: UseSwipeNavigationOptions
     };
 
     document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchmove", handleTouchMove, { passive: true });
     document.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
       document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
       document.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [enabled, navigate, getCurrentRouteIndex]);
+  }, [enabled, navigate, getCurrentRouteIndex, isInsideScrollContainer]);
 
   return { currentRouteIndex: getCurrentRouteIndex() };
 }
