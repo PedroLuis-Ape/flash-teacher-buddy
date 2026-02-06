@@ -19,6 +19,7 @@ import { FolderPlus, Trash2, Star, CheckSquare, Square, X, FolderInput } from "l
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
+import { SkeletonGrid } from "@/components/ui/skeleton-card";
 
 interface FolderType {
   id: string;
@@ -461,9 +462,7 @@ const Folders = () => {
         </div>
       </div>
       {loading ? (
-        <div className="text-center py-4 text-sm text-muted-foreground">
-          Carregando...
-        </div>
+        <SkeletonGrid count={5} variant="folder" />
       ) : folders.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p className="text-sm">Nenhuma pasta ainda</p>

@@ -98,7 +98,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           
           {/* Global Footer - hidden on study pages and for non-logged users */}
           {user && !isFullScreenPage && (
-            <div className="pb-20">
+            <div className="pb-24 md:pb-20">
               <GlobalFooter />
             </div>
           )}

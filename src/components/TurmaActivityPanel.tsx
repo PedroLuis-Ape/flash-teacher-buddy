@@ -43,7 +43,7 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
         .order('last_activity_at', { ascending: false });
 
       if (error) {
-        console.error('[TurmaActivityPanel] Error fetching activity:', error);
+        // Activity fetch error - handled silently
         return [];
       }
 
@@ -88,7 +88,7 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
           filter: `turma_id=eq.${turmaId}`
         },
         (payload) => {
-          console.log('[TurmaActivityPanel] Realtime event:', payload);
+          // Realtime event received - refreshing data
           queryClient.invalidateQueries({ queryKey: ['turma-activity', turmaId] });
         }
       )
@@ -226,8 +226,8 @@ export function TurmaActivityPanel({ turmaId, membros }: TurmaActivityPanelProps
         </div>
       </div>
 
-      {/* Lista de alunos com scroll fixo */}
-      <ScrollArea className="h-[350px]">
+      {/* Lista de alunos com scroll - uses max-h for iOS compatibility */}
+      <ScrollArea className="max-h-[350px]" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="space-y-2 pr-4">
           {membros.length === 0 ? (
             <p className="text-center text-muted-foreground py-4">

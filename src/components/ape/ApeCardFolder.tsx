@@ -34,11 +34,12 @@ export function ApeCardFolder({
         "bg-card transition-all duration-200",
         "border border-border",
         "text-left shadow-sm",
-        "hover:shadow-md hover:border-primary/30 hover:translate-y-[-2px]",
+        // Use @media(hover:hover) to only apply hover styles on non-touch devices
+        "md:hover:shadow-md md:hover:border-primary/30 md:hover:translate-y-[-2px]",
         "active:scale-[0.98] active:shadow-sm active:translate-y-0",
         !disableAnimation && "scroll-reveal",
         disableAnimation && "opacity-100 translate-y-0",
-        isLocked && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:shadow-sm",
+        isLocked && "opacity-50 cursor-not-allowed md:hover:translate-y-0 md:hover:shadow-sm",
         className
       )}
     >

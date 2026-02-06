@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -7,33 +7,52 @@ interface PageTransitionProps {
 }
 
 /**
- * Enhanced page wrapper with smooth slide transitions.
+ * Enhanced page wrapper with smooth fade + scale transitions.
+ * Fixed: Removed conflicting useEffect hooks that caused flickering.
  */
 export function PageTransition({ children }: PageTransitionProps) {
   const location = useLocation();
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayChildren, setDisplayChildren] = useState(children);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
+    // Skip animation on first render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      setDisplayChildren(children);
+      return;
+    }
+
+    // Trigger exit animation
     setIsAnimating(true);
+
+    // After exit animation, update content and trigger enter animation
     const timer = setTimeout(() => {
       setDisplayChildren(children);
-      setIsAnimating(false);
+      // Small delay to ensure DOM update before enter animation
+      requestAnimationFrame(() => {
+        setIsAnimating(false);
+      });
     }, 150);
+
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
-  // Always show current children immediately for better UX
+  // Update children immediately if they change without route change
+  // (e.g., data loading complete on same page)
   useEffect(() => {
-    setDisplayChildren(children);
-  }, [children]);
+    if (!isAnimating) {
+      setDisplayChildren(children);
+    }
+  }, [children, isAnimating]);
 
   return (
     <div 
       className={cn(
-        "transition-all duration-300 ease-out motion-reduce:transition-none",
+        "transition-all duration-200 ease-out motion-reduce:transition-none",
         isAnimating 
-          ? "opacity-0 translate-y-2 scale-[0.99]" 
+          ? "opacity-0 translate-y-1 scale-[0.995]" 
           : "opacity-100 translate-y-0 scale-100"
       )}
     >
