@@ -3,7 +3,7 @@ import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useStudentOverview } from '@/hooks/useMeusAlunos';
+import { useStudentOverview } from '@/features/classroom/hooks/useMeusAlunos';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ErrorMessage } from '@/components/ErrorMessage';

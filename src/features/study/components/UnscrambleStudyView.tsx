@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { Button } from "./ui/button";
-import { Card } from "./ui/card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Volume2, RotateCcw, Check, Star } from "lucide-react";
-import { useTTS } from "@/hooks/useTTS";
+import { useTTS } from "@/features/study/hooks/useTTS";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { supabase } from "@/integrations/supabase/client";

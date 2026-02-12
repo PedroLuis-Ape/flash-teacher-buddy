@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeTabs } from "@/components/ape/ApeTabs";
-import { DeckTab } from "@/components/DeckTab";
+import { DeckTab } from "@/features/study/components/DeckTab";
 import { HistoryTab } from "@/components/HistoryTab";
 import { StatisticsTab } from "@/components/StatisticsTab";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { LogOut, User, Camera, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { equipAvatarAsPhoto } from "@/lib/storeEngine";
-import { GoogleAccountSection } from "@/components/GoogleAccountSection";
+import { GoogleAccountSection } from "@/features/auth/components/GoogleAccountSection";
 
 const Profile = () => {
   const navigate = useNavigate();

@@ -17,12 +17,12 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { FavoriteButton } from "@/components/FavoriteButton";
+import { FavoriteButton } from "@/features/study/components/FavoriteButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ListStudyTypeSelector, ListStudySettings, listRowToSettings, settingsToDbColumns } from "@/components/ListStudyTypeSelector";
+import { ListStudyTypeSelector, ListStudySettings, listRowToSettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,

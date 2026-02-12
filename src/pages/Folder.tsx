@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
-import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/components/ListStudyTypeSelector";
+import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { useFolderText } from "@/hooks/useFolderText";
 
 interface ListType {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeGrid } from "@/components/ape/ApeGrid";
-import { SkinCard } from "@/components/SkinCard";
+import { SkinCard } from "@/features/store/components/SkinCard";
 import { ExchangeTab } from "@/components/ExchangeTab";
 import { InventoryTab } from "@/components/InventoryTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

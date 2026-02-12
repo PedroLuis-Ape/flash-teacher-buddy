@@ -3,7 +3,7 @@ import { ArrowLeft, Plus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useTurmasMine, useTurmasAsAluno } from '@/hooks/useTurmas';
+import { useTurmasMine, useTurmasAsAluno } from '@/features/classroom/hooks/useTurmas';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 

@@ -57,12 +57,12 @@ function detectLanguage(
   text: string,
   deckLang?: string,
   cardLang?: string
-): "pt-BR" | "en-US" {
+): string {
   // 1) Use card language if specified
-  if (cardLang === "pt-BR" || cardLang === "en-US") return cardLang;
+  if (cardLang) return cardLang;
   
   // 2) Use deck language if specified
-  if (deckLang === "pt-BR" || deckLang === "en-US") return deckLang;
+  if (deckLang) return deckLang;
   
   // 3) Auto-detect: check for Portuguese-specific characters
   const ptChars = /[áéíóúâêîôûãõç]/i;
@@ -149,7 +149,7 @@ function playAudioUrl(url: string): Promise<void> {
 /**
  * Fallback to browser TTS
  */
-function speakWithBrowserTTS(text: string, lang: "pt-BR" | "en-US"): Promise<void> {
+function speakWithBrowserTTS(text: string, lang: string): Promise<void> {
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
   
   if (!synth) {
@@ -185,7 +185,7 @@ function speakWithBrowserTTS(text: string, lang: "pt-BR" | "en-US"): Promise<voi
  */
 export async function speakText(
   text: string, 
-  lang: "pt-BR" | "en-US",
+  lang: string,
   deckLang?: string,
   cardLang?: string
 ): Promise<void> {
@@ -221,7 +221,7 @@ export async function speakText(
     }
   }
   
-  // Fallback to browser TTS (for Portuguese or if ElevenLabs fails)
+  // Fallback to browser TTS (for any language, or if ElevenLabs fails)
   console.log('[TTS] Using browser TTS');
   await speakWithBrowserTTS(cleanText, finalLang);
 }
@@ -231,15 +231,18 @@ export async function speakText(
  * Used by study components to determine which language to speak
  */
 export function pickLang(
-  direction: "pt-en" | "en-pt" | "any",
-  text: string
-): "pt-BR" | "en-US" {
-  if (direction === "pt-en") {
-    // PT -> EN means the back/hidden side is English
-    return "en-US";
-  } else if (direction === "en-pt") {
-    // EN -> PT means the back/hidden side is Portuguese
-    return "pt-BR";
+  direction: "pt-en" | "en-pt" | "any" | string,
+  text: string,
+  langA?: string,
+  langB?: string
+): string {
+  const resolvedA = langA || "en-US";
+  const resolvedB = langB || "pt-BR";
+  
+  if (direction === "pt-en" || direction === "forward") {
+    return resolvedA;
+  } else if (direction === "en-pt" || direction === "backward") {
+    return resolvedB;
   } else {
     // "any" or fallback: auto-detect
     return detectLanguage(text);

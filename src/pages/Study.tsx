@@ -22,14 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FlipStudyView } from "@/components/FlipStudyView";
-import { WriteStudyView } from "@/components/WriteStudyView";
-import { MultipleChoiceStudyView } from "@/components/MultipleChoiceStudyView";
-import { UnscrambleStudyView } from "@/components/UnscrambleStudyView";
-import { PronunciationStudyView } from "@/components/PronunciationStudyView";
-import { StudyVideoButton } from "@/components/StudyVideoButton";
-import { GameSettingsModal, GameSettings } from "@/components/GameSettingsModal";
-import { useStudyEngine } from "@/hooks/useStudyEngine";
+import { FlipStudyView } from "@/features/study/components/FlipStudyView";
+import { WriteStudyView } from "@/features/study/components/WriteStudyView";
+import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
+import { UnscrambleStudyView } from "@/features/study/components/UnscrambleStudyView";
+import { PronunciationStudyView } from "@/features/study/components/PronunciationStudyView";
+import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
+import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
+import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";

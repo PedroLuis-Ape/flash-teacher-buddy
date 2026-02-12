@@ -14,12 +14,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
 import { EconomyProvider } from "@/contexts/EconomyContext";
-import { GlobalLayout } from "@/components/GlobalLayout";
+import { GlobalLayout } from "@/components/layout/GlobalLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { InstallPWA } from "@/components/InstallPWA";
 import { PageTransition } from "@/components/PageTransition";
 import { BrowserCheck } from "@/components/BrowserCheck";
-import { GoogleConnectPrompt } from "@/components/GoogleConnectPrompt";
+import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));

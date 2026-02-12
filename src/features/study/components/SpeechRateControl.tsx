@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import { Gauge } from "lucide-react";
 
 const SPEECH_RATE_KEY = "speechRate";

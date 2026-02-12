@@ -78,13 +78,13 @@ export function useSpeechRecognition({
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US'; // CRITICAL: Always force English
+    recognition.lang = lang; // Use dynamic lang prop
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
-      console.log('[useSpeechRecognition] Started listening in: en-US');
+      console.log(`[useSpeechRecognition] Started listening in: ${lang}`);
       setIsListening(true);
       isListeningRef.current = true;
       setError(null);
@@ -174,9 +174,9 @@ export function useSpeechRecognition({
     setError(null);
     
     try {
-      // CRITICAL: Force English (en-US) every single time before starting
-      recognitionRef.current.lang = 'en-US';
-      console.log('[useSpeechRecognition] Forcing language to en-US');
+      // Use dynamic lang prop every time before starting
+      recognitionRef.current.lang = lang;
+      console.log(`[useSpeechRecognition] Setting language to ${lang}`);
       
       recognitionRef.current.start();
       

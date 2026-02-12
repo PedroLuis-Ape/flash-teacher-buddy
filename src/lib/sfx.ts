@@ -1,7 +1,7 @@
 // Sound effects utility for the study games
 // Lightweight, non-blocking audio playback
 
-import { isSoundEnabled } from '@/hooks/useSoundSettings';
+import { isSoundEnabled } from '@/features/study/hooks/useSoundSettings';
 
 function playSound(src: string): void {
   // Check if sound is enabled before playing

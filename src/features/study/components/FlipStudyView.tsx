@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
-import { useTTS } from "@/hooks/useTTS";
+import { useTTS } from "@/features/study/hooks/useTTS";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
