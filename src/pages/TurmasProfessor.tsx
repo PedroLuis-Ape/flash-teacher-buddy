@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useTurmasMine, useCreateTurma, useEnrollAluno } from '@/hooks/useTurmas';
+import { useTurmasMine, useCreateTurma, useEnrollAluno } from '@/features/classroom/hooks/useTurmas';
 import { toast } from 'sonner';
 
 export default function TurmasProfessor() {

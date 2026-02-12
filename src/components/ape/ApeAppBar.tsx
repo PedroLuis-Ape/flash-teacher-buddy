@@ -3,8 +3,8 @@ import { ArrowLeft, Gift, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { EconomyBadge } from "@/components/EconomyBadge";
-import { PresentBoxBadge } from "@/components/PresentBoxBadge";
+import { EconomyBadge } from "@/features/gamification/components/EconomyBadge";
+import { PresentBoxBadge } from "@/features/gamification/components/PresentBoxBadge";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { cn } from "@/lib/utils";
 

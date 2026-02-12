@@ -9,7 +9,7 @@ import { DMList } from '@/components/DMList';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao, useUpdateAtribuicao } from '@/hooks/useAtribuicoes';
+import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao, useUpdateAtribuicao } from '@/features/classroom/hooks/useAtribuicoes';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -17,12 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useUpdateTurma, useDeleteTurma, useEnrollAluno, useRemoveTurmaMember } from '@/hooks/useTurmas';
+import { useUpdateTurma, useDeleteTurma, useEnrollAluno, useRemoveTurmaMember } from '@/features/classroom/hooks/useTurmas';
 import { useCreateAnnouncement } from '@/hooks/useAnnouncements';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
-import { TurmaActivityPanel } from '@/components/TurmaActivityPanel';
+import { TurmaActivityPanel } from '@/features/classroom/components/TurmaActivityPanel';
 import { ClassGoalsTab } from '@/components/ClassGoalsTab';
 
 export default function TurmaDetail() {

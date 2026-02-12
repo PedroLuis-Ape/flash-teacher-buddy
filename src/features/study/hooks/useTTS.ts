@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { cleanTextForTTS } from "@/lib/speech";
+import { cleanTextForTTS } from "@/features/study/lib/speech";
 
 export interface PlayOptions {
   langOverride?: string; // ISO code like "en-US", "pt-BR", "es", "fr", etc.

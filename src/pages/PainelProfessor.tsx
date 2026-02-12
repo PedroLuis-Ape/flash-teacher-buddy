@@ -1,6 +1,6 @@
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
-import { MeusAlunosCard } from "@/components/MeusAlunosCard";
+import { MeusAlunosCard } from "@/features/classroom/components/MeusAlunosCard";
 import { MinhasTurmasCard } from "@/components/MinhasTurmasCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";

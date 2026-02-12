@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Volume2, Star } from "lucide-react";
-import { useTTS } from "@/hooks/useTTS";
+import { useTTS } from "@/features/study/hooks/useTTS";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";

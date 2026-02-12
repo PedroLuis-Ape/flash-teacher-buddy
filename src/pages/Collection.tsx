@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
-import { FlashcardList } from "@/components/FlashcardList";
+import { FlashcardList } from "@/features/study/components/FlashcardList";
 import { PracticeMode } from "@/components/PracticeMode";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ArrowLeft, Play, Pencil } from "lucide-react";

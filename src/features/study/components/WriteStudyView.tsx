@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, Eye, SkipForward, Volume2, Star } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
-import { useTTS } from "@/hooks/useTTS";
+import { useTTS } from "@/features/study/hooks/useTTS";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";

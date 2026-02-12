@@ -3,8 +3,8 @@ import { ArrowLeft, BookOpen, CheckCircle2, Circle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useTurmasAsAluno } from '@/hooks/useTurmas';
-import { useAtribuicoesMinhas } from '@/hooks/useAtribuicoes';
+import { useTurmasAsAluno } from '@/features/classroom/hooks/useTurmas';
+import { useAtribuicoesMinhas } from '@/features/classroom/hooks/useAtribuicoes';
 
 export default function TurmasAluno() {
   const navigate = useNavigate();

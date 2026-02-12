@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Play, ExternalLink, Pencil, Trash2, Plus } from "lucide-react";
 import { AddVideoDialog } from "./AddVideoDialog";
-import { VideoPlayerModal } from "./VideoPlayerModal";
+import { VideoPlayerModal } from "@/features/study/components/VideoPlayerModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Video {
