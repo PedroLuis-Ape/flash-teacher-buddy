@@ -60,8 +60,8 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
     return hash % 2 === 0;
   }, [direction, flashcardId, front]);
 
-  const promptSide = isForward ? sideA : sideB;
-  const answerSide = isForward ? sideB : sideA;
+  const promptSide = isForward ? sideB : sideA;
+  const answerSide = isForward ? sideA : sideB;
 
   const question = promptSide.text;
   const correctSentence = answerSide.text;
