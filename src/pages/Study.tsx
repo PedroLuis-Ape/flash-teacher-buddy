@@ -664,6 +664,10 @@ const Study = () => {
               key={currentCard.id}
               front={currentCard.term}
               back={currentCard.translation}
+              langA={listSettings?.langA || "en"}
+              langB={listSettings?.langB || "pt"}
+              labelA={listSettings?.labelsA || undefined}
+              labelB={listSettings?.labelsB || undefined}
               onNext={() => handleNext(true)}
             />
           )}

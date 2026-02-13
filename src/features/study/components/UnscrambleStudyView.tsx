@@ -49,18 +49,23 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
   
   const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
-  // FIXED: Derive isPtToEn dynamically per card (handles "any" mode)
-  const isPtToEn = useMemo(() => {
+  // --- Side A/B State Consolidation ---
+  const sideA = { text: front, lang: langA };
+  const sideB = { text: back, lang: langB };
+
+  const isForward = useMemo(() => {
     if (direction === "pt-en") return true;
     if (direction === "en-pt") return false;
-    // For "any" mode, use flashcardId to determine direction deterministically
     const hash = (flashcardId || front).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
     return hash % 2 === 0;
   }, [direction, flashcardId, front]);
 
-  const question = isPtToEn ? front : back;
-  const correctSentence = isPtToEn ? back : front;
-  
+  const promptSide = isForward ? sideA : sideB;
+  const answerSide = isForward ? sideB : sideA;
+
+  const question = promptSide.text;
+  const correctSentence = answerSide.text;
+
   // Dynamic TTS language - map short codes to BCP-47
   const toBCP47 = (code: string): string => {
     const map: Record<string, string> = {
@@ -70,7 +75,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
     };
     return map[code] || code;
   };
-  const questionLang = isPtToEn ? toBCP47(langA) : toBCP47(langB);
+  const questionLang = toBCP47(promptSide.lang);
 
   // Fetch user ID for favorites
   useEffect(() => {
@@ -163,7 +168,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
 
   const handlePlayAudio = () => {
     const rate = getSpeechRate();
-    speak(question, { langOverride: questionLang as "pt-BR" | "en-US", rate });
+    speak(question, { langOverride: questionLang, rate });
   };
 
   return (

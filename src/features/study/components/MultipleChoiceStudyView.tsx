@@ -52,19 +52,7 @@ export const MultipleChoiceStudyView = ({
   
   const isFavorite = currentCard.id ? favorites.includes(currentCard.id) : false;
   
-  // FIXED: Derive isPtToEn dynamically per card (handles "any" mode)
-  const isPtToEn = useMemo(() => {
-    if (direction === "pt-en") return true;
-    if (direction === "en-pt") return false;
-    // For "any" mode, use card id to determine direction deterministically
-    const hash = (currentCard.id || currentCard.term).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    return hash % 2 === 0;
-  }, [direction, currentCard.id, currentCard.term]);
-
-  const prompt = isPtToEn ? currentCard.term : currentCard.translation;
-  const correctAnswer = isPtToEn ? currentCard.translation : currentCard.term;
-  
-  // Dynamic labels based on langA/langB props
+  // --- Side A/B State Consolidation ---
   const getLangLabel = (code: string): string => {
     const labels: Record<string, string> = {
       "en": "English", "pt": "Português", "es": "Español", "fr": "Français",
@@ -73,10 +61,25 @@ export const MultipleChoiceStudyView = ({
     };
     return labels[code] || code.toUpperCase();
   };
-  
-  const promptLabel = isPtToEn ? getLangLabel(langA) : getLangLabel(langB);
-  const answerLabel = isPtToEn ? getLangLabel(langB) : getLangLabel(langA);
-  
+
+  const sideA = { text: currentCard.term, lang: langA, label: getLangLabel(langA) };
+  const sideB = { text: currentCard.translation, lang: langB, label: getLangLabel(langB) };
+
+  const isForward = useMemo(() => {
+    if (direction === "pt-en") return true;
+    if (direction === "en-pt") return false;
+    const hash = (currentCard.id || currentCard.term).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return hash % 2 === 0;
+  }, [direction, currentCard.id, currentCard.term]);
+
+  const promptSide = isForward ? sideA : sideB;
+  const answerSide = isForward ? sideB : sideA;
+
+  const prompt = promptSide.text;
+  const correctAnswer = answerSide.text;
+  const promptLabel = promptSide.label;
+  const answerLabel = answerSide.label;
+
   // Dynamic TTS language - map short codes to BCP-47
   const toBCP47 = (code: string): string => {
     const map: Record<string, string> = {
@@ -86,7 +89,7 @@ export const MultipleChoiceStudyView = ({
     };
     return map[code] || code;
   };
-  const promptLang = isPtToEn ? toBCP47(langA) : toBCP47(langB);
+  const promptLang = toBCP47(promptSide.lang);
 
   // Fetch user ID for favorites
   useEffect(() => {
@@ -108,11 +111,11 @@ export const MultipleChoiceStudyView = ({
     // Gerar 3 alternativas incorretas
     const wrongOptions = allCards
       .filter(card => 
-        isPtToEn 
+        isForward 
           ? card.translation !== currentCard.translation 
           : card.term !== currentCard.term
       )
-      .map(card => isPtToEn ? card.translation : card.term);
+      .map(card => isForward ? card.translation : card.term);
 
     // Embaralhar e pegar 3
     const shuffledWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 3);
@@ -127,7 +130,7 @@ export const MultipleChoiceStudyView = ({
     setCorrectIndex(shuffled.indexOf(correctAnswer));
     setSelectedOption(null);
     setShowFeedback(false);
-  }, [currentCard, allCards, isPtToEn]);
+  }, [currentCard, allCards, isForward]);
 
   const handleOptionClick = async (index: number) => {
     if (showFeedback) return; // Prevenir cliques após resposta
@@ -205,7 +208,7 @@ export const MultipleChoiceStudyView = ({
                 className="flex-shrink-0"
                 onClick={() => {
                   const rate = getSpeechRate();
-                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
+                  speak(prompt, { langOverride: promptLang, rate });
                 }}
               >
                 <Volume2 className="h-5 w-5" />

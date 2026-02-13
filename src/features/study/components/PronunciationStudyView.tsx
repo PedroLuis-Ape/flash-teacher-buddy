@@ -11,15 +11,33 @@ import { evaluatePronunciation } from "@/lib/levenshtein";
 interface PronunciationStudyViewProps {
   front: string;
   back: string;
+  langA?: string;
+  langB?: string;
+  labelA?: string;
+  labelB?: string;
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, onNext }: PronunciationStudyViewProps) {
-  // CRITICAL: In pronunciation mode, we practice speaking ENGLISH
-  // front = Portuguese (term), back = English (translation) based on flashcard structure
-  // We SWAP them here: englishText is what we practice, portugueseText is just a hint
-  const englishText = back;      // The phrase user must speak (ENGLISH)
-  const portugueseText = front;  // Just a visual hint (Portuguese)
+export function PronunciationStudyView({ front, back, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
+  // --- Side A/B State Consolidation ---
+  // In pronunciation mode, user practices speaking sideB (the answer/translation side)
+  const sideA = { text: front, lang: langA, label: labelA || "Termo" };
+  const sideB = { text: back, lang: langB, label: labelB || "Definição" };
+
+  // Pronunciation always practices speaking sideB
+  const speakSide = sideB;   // The phrase user must speak
+  const hintSide = sideA;    // Just a visual hint
+
+  // Map short codes to BCP-47
+  const toBCP47 = (code: string): string => {
+    const map: Record<string, string> = {
+      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
+      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
+      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
+    };
+    return map[code] || code;
+  };
+  const speakLang = toBCP47(speakSide.lang);
 
   const {
     isListening,
@@ -30,7 +48,7 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     startListening,
     stopListening,
     resetTranscript,
-  } = usePronunciation({ lang: "en-US" });
+  } = usePronunciation({ lang: speakLang });
 
   const { speak, stop: stopTTS } = useTTS();
   
@@ -41,12 +59,11 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     resetTranscript();
     stopTTS();
     lastSoundPlayedForRef.current = '';
-  }, [englishText, resetTranscript, stopTTS]);
+  }, [speakSide.text, resetTranscript, stopTTS]);
 
   const handlePlayPronunciation = () => {
     stopTTS();
-    // Slow rate (0.5) for pronunciation practice - clearer to hear
-    speak(englishText, { langOverride: "en-US", rate: 0.5 });
+    speak(speakSide.text, { langOverride: speakLang, rate: 0.5 });
   };
 
   const handleMicToggle = () => {
@@ -66,8 +83,8 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
   // Evaluate pronunciation using fuzzy matching
   const evaluation = useMemo(() => {
     if (!transcript || alternatives.length === 0) return null;
-    return evaluatePronunciation(alternatives, englishText);
-  }, [englishText, transcript, alternatives]);
+    return evaluatePronunciation(alternatives, speakSide.text);
+  }, [speakSide.text, transcript, alternatives]);
 
   // Play sound effect in useEffect (NOT in useMemo to avoid issues)
   useEffect(() => {
@@ -158,17 +175,17 @@ export function PronunciationStudyView({ front, back, onNext }: PronunciationStu
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
       <Card className="w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden">
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
-          Fale em Inglês
+          Fale em {speakSide.label}
         </p>
 
-        {/* ENGLISH phrase - BIG */}
+        {/* Phrase to speak - BIG */}
         <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
-          {englishText}
+          {speakSide.text}
         </h2>
 
-        {/* Portuguese translation - small hint */}
+        {/* Hint translation - small */}
         <p className="text-sm text-muted-foreground/60 mb-8 italic">
-          "{portugueseText}"
+          "{hintSide.text}"
         </p>
 
         <Button
