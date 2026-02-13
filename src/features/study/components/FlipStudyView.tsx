@@ -87,17 +87,14 @@ export const FlipStudyView = ({
     toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
   };
 
-  // Determine which text is shown first based on direction
-  // direction "pt-en" means: show front (term) first, then back (translation)
-  // direction "en-pt" means: show back (translation) first, then front (term)
-  const topText = direction === "pt-en" ? front : back;
-  const bottomText = direction === "pt-en" ? back : front;
-  const topLabel = labelA && labelB ? (direction === "pt-en" ? labelA : labelB) : (direction === "pt-en" ? "Lado A" : "Lado B");
-  const bottomLabel = labelA && labelB ? (direction === "pt-en" ? labelB : labelA) : (direction === "pt-en" ? "Lado B" : "Lado A");
-  
-  // Use actual language codes for TTS instead of hardcoded pt-BR/en-US
-  const topLang = direction === "pt-en" ? langA : langB;
-  const bottomLang = direction === "pt-en" ? langB : langA;
+  // --- Side A/B State Consolidation ---
+  // Group all related data per side into static objects to prevent desync bugs.
+  const sideA = { text: front, lang: langA, label: labelA || "Termo" };
+  const sideB = { text: back, lang: langB, label: labelB || "Definição" };
+
+  // Direction mapping: resolve once, use everywhere.
+  const firstSide = direction === "pt-en" ? sideA : sideB;
+  const secondSide = direction === "pt-en" ? sideB : sideA;
 
   // Reset flip state when card changes
   useEffect(() => {
@@ -111,12 +108,12 @@ export const FlipStudyView = ({
 
   const handlePlayTop = () => {
     const rate = getSpeechRate();
-    speak(topText, { langOverride: topLang, rate });
+    speak(firstSide.text, { langOverride: firstSide.lang, rate });
   };
 
   const handlePlayBottom = () => {
     const rate = getSpeechRate();
-    speak(bottomText, { langOverride: bottomLang, rate });
+    speak(secondSide.text, { langOverride: secondSide.lang, rate });
   };
 
   // Keyboard navigation
@@ -186,7 +183,7 @@ export const FlipStudyView = ({
           {/* Top panel (question/origin) */}
           <div className="border-b border-border bg-gradient-to-br from-card to-muted/20 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">{topLabel}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{firstSide.label}</p>
               {ttsEnabled && (
                 <Button
                   variant="ghost"
@@ -200,7 +197,7 @@ export const FlipStudyView = ({
             </div>
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {topText}
+                {firstSide.text}
               </p>
             </ScrollArea>
           </div>
@@ -208,7 +205,7 @@ export const FlipStudyView = ({
           {/* Bottom panel (answer/destination) */}
           <div className="bg-gradient-to-br from-primary/5 to-accent/10 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">{bottomLabel}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{secondSide.label}</p>
               {ttsEnabled && (
                 <Button
                   variant="ghost"
@@ -222,7 +219,7 @@ export const FlipStudyView = ({
             </div>
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {bottomText}
+                {secondSide.text}
               </p>
             </ScrollArea>
           </div>
@@ -318,9 +315,9 @@ export const FlipStudyView = ({
           {/* Front side */}
           <div className="flip-card-front">
             <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20">
-              <p className="text-sm text-muted-foreground mb-2">{topLabel}</p>
+              <p className="text-sm text-muted-foreground mb-2">{firstSide.label}</p>
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {topText}
+                {firstSide.text}
               </p>
               <Button
                 variant="ghost"
@@ -343,9 +340,9 @@ export const FlipStudyView = ({
           {/* Back side */}
           <div className="flip-card-back">
             <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10">
-              <p className="text-sm text-muted-foreground mb-2">{bottomLabel}</p>
+              <p className="text-sm text-muted-foreground mb-2">{secondSide.label}</p>
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {bottomText}
+                {secondSide.text}
               </p>
               <Button
                 variant="ghost"
