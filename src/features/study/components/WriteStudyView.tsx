@@ -55,27 +55,7 @@ export const WriteStudyView = ({
   const [shake, setShake] = useState(false);
   const [userId, setUserId] = useState<string | undefined>();
   
-  // FIXED: Derive isPtToEn from direction prop so it updates per card in mixed mode
-  // Use useMemo with stable random per card based on flashcardId
-  const isPtToEn = useMemo(() => {
-    if (direction === "pt-en") return true;
-    if (direction === "en-pt") return false;
-    // For "any" mode, use flashcardId to determine direction deterministically
-    const hash = (flashcardId || front).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    return hash % 2 === 0;
-  }, [direction, flashcardId, front]);
-  
-  const inputRef = useRef<HTMLInputElement>(null);
-  const { speak } = useTTS();
-  const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
-  
-  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
-
-  const prompt = isPtToEn ? front : back;
-  const correctAnswer = isPtToEn ? back : front;
-  
-  // Dynamic labels based on langA/langB props
+  // --- Side A/B State Consolidation ---
   const getLangLabel = (code: string): string => {
     const labels: Record<string, string> = {
       "en": "English", "pt": "Português", "es": "Español", "fr": "Français",
@@ -84,10 +64,25 @@ export const WriteStudyView = ({
     };
     return labels[code] || code.toUpperCase();
   };
-  
-  const promptLabel = isPtToEn ? getLangLabel(langA) : getLangLabel(langB);
-  const answerLabel = isPtToEn ? getLangLabel(langB) : getLangLabel(langA);
-  
+
+  const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
+  const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
+
+  const isForward = useMemo(() => {
+    if (direction === "pt-en") return true;
+    if (direction === "en-pt") return false;
+    const hash = (flashcardId || front).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return hash % 2 === 0;
+  }, [direction, flashcardId, front]);
+
+  const promptSide = isForward ? sideA : sideB;
+  const answerSide = isForward ? sideB : sideA;
+
+  const prompt = promptSide.text;
+  const correctAnswer = answerSide.text;
+  const promptLabel = promptSide.label;
+  const answerLabel = answerSide.label;
+
   // Dynamic TTS language - map short codes to BCP-47
   const toBCP47 = (code: string): string => {
     const map: Record<string, string> = {
@@ -97,12 +92,14 @@ export const WriteStudyView = ({
     };
     return map[code] || code;
   };
-  const promptLang = isPtToEn ? toBCP47(langA) : toBCP47(langB);
+  const promptLang = toBCP47(promptSide.lang);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { speak } = useTTS();
+  const toggleFavorite = useToggleFavorite();
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   
-  const acceptedAnswers = [
-    correctAnswer,
-    ...(isPtToEn ? acceptedAnswersEn : acceptedAnswersPt),
-  ];
+  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
   // Fetch user ID for favorites
   useEffect(() => {
@@ -119,6 +116,11 @@ export const WriteStudyView = ({
     if (!flashcardId || !userId) return;
     toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
   };
+
+  const acceptedAnswers = [
+    correctAnswer,
+    ...(answerSide.acceptedAnswers || []),
+  ];
 
   useEffect(() => {
     setAnswer("");
@@ -218,7 +220,7 @@ export const WriteStudyView = ({
                 size="sm"
                 onClick={() => {
                   const rate = getSpeechRate();
-                  speak(prompt, { langOverride: promptLang as "pt-BR" | "en-US", rate });
+                  speak(prompt, { langOverride: promptLang, rate });
                 }}
               >
                 <Volume2 className="h-5 w-5" />
