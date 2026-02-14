@@ -72,8 +72,8 @@ export const MultipleChoiceStudyView = ({
     return hash % 2 === 0;
   }, [direction, currentCard.id, currentCard.term]);
 
-  const promptSide = isForward ? sideB : sideA;
-  const answerSide = isForward ? sideA : sideB;
+  const promptSide = isForward ? sideA : sideB;
+  const answerSide = isForward ? sideB : sideA;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
@@ -112,10 +112,10 @@ export const MultipleChoiceStudyView = ({
     const wrongOptions = allCards
       .filter(card => 
         isForward 
-          ? card.term !== currentCard.term 
-          : card.translation !== currentCard.translation
+          ? card.translation !== currentCard.translation 
+          : card.term !== currentCard.term
       )
-      .map(card => isForward ? card.term : card.translation);
+      .map(card => isForward ? card.translation : card.term);
 
     // Embaralhar e pegar 3
     const shuffledWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 3);
