@@ -75,8 +75,8 @@ export const WriteStudyView = ({
     return hash % 2 === 0;
   }, [direction, flashcardId, front]);
 
-  const promptSide = isForward ? sideB : sideA;
-  const answerSide = isForward ? sideA : sideB;
+  const promptSide = isForward ? sideA : sideB;
+  const answerSide = isForward ? sideB : sideA;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;

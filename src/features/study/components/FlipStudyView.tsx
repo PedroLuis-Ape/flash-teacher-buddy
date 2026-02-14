@@ -93,8 +93,8 @@ export const FlipStudyView = ({
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
 
   // Direction mapping: resolve once, use everywhere.
-  const firstSide = direction === "pt-en" ? sideB : sideA;
-  const secondSide = direction === "pt-en" ? sideA : sideB;
+  const firstSide = direction === "pt-en" ? sideA : sideB;
+  const secondSide = direction === "pt-en" ? sideB : sideA;
 
   // Reset flip state when card changes
   useEffect(() => {
