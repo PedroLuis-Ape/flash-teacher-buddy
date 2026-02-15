@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
+import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
@@ -87,14 +88,10 @@ export const FlipStudyView = ({
     toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
   };
 
-  // --- Side A/B State Consolidation ---
-  // Group all related data per side into static objects to prevent desync bugs.
+  // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
-
-  // Direction mapping: resolve once, use everywhere.
-  const firstSide = direction === "pt-en" ? sideA : sideB;
-  const secondSide = direction === "pt-en" ? sideB : sideA;
+  const { promptSide: firstSide, answerSide: secondSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
 
   // Reset flip state when card changes
   useEffect(() => {
@@ -108,12 +105,12 @@ export const FlipStudyView = ({
 
   const handlePlayTop = () => {
     const rate = getSpeechRate();
-    speak(firstSide.text, { langOverride: firstSide.lang, rate });
+    speak(firstSide.text, { langOverride: toBCP47(firstSide.lang), rate });
   };
 
   const handlePlayBottom = () => {
     const rate = getSpeechRate();
-    speak(secondSide.text, { langOverride: secondSide.lang, rate });
+    speak(secondSide.text, { langOverride: toBCP47(secondSide.lang), rate });
   };
 
   // Keyboard navigation

@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Volume2, RotateCcw, Check, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
+import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,32 +50,15 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
   
   const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
 
-  // --- Side A/B State Consolidation ---
-  const sideA = { text: front, lang: langA };
-  const sideB = { text: back, lang: langB };
+  // --- Centralized Side Resolution ---
+  const sideA = { text: front, lang: langA, label: "" };
+  const sideB = { text: back, lang: langB, label: "" };
 
-  const isForward = useMemo(() => {
-    if (direction === "pt-en") return true;
-    if (direction === "en-pt") return false;
-    const hash = (flashcardId || front).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    return hash % 2 === 0;
-  }, [direction, flashcardId, front]);
-
-  const promptSide = isForward ? sideA : sideB;
-  const answerSide = isForward ? sideB : sideA;
+  const { promptSide, answerSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
 
   const question = promptSide.text;
   const correctSentence = answerSide.text;
 
-  // Dynamic TTS language - map short codes to BCP-47
-  const toBCP47 = (code: string): string => {
-    const map: Record<string, string> = {
-      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
-      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
-      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
-    };
-    return map[code] || code;
-  };
   const questionLang = toBCP47(promptSide.lang);
 
   // Fetch user ID for favorites
