@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Volume2, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
+import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
@@ -52,43 +53,17 @@ export const MultipleChoiceStudyView = ({
   
   const isFavorite = currentCard.id ? favorites.includes(currentCard.id) : false;
   
-  // --- Side A/B State Consolidation ---
-  const getLangLabel = (code: string): string => {
-    const labels: Record<string, string> = {
-      "en": "English", "pt": "Português", "es": "Español", "fr": "Français",
-      "de": "Deutsch", "it": "Italiano", "ja": "日本語", "zh": "中文",
-      "ko": "한국어", "ru": "Русский", "ar": "العربية", "hi": "हिन्दी"
-    };
-    return labels[code] || code.toUpperCase();
-  };
-
+  // --- Centralized Side Resolution ---
   const sideA = { text: currentCard.term, lang: langA, label: getLangLabel(langA) };
   const sideB = { text: currentCard.translation, lang: langB, label: getLangLabel(langB) };
 
-  const isForward = useMemo(() => {
-    if (direction === "pt-en") return true;
-    if (direction === "en-pt") return false;
-    const hash = (currentCard.id || currentCard.term).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    return hash % 2 === 0;
-  }, [direction, currentCard.id, currentCard.term]);
-
-  const promptSide = isForward ? sideA : sideB;
-  const answerSide = isForward ? sideB : sideA;
+  const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, currentCard.id || currentCard.term);
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
   const promptLabel = promptSide.label;
   const answerLabel = answerSide.label;
 
-  // Dynamic TTS language - map short codes to BCP-47
-  const toBCP47 = (code: string): string => {
-    const map: Record<string, string> = {
-      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
-      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
-      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
-    };
-    return map[code] || code;
-  };
   const promptLang = toBCP47(promptSide.lang);
 
   // Fetch user ID for favorites
@@ -109,13 +84,14 @@ export const MultipleChoiceStudyView = ({
 
   useEffect(() => {
     // Gerar 3 alternativas incorretas
+    // isAFirst means sideA (term) is the prompt, so answer comes from sideB (translation)
     const wrongOptions = allCards
       .filter(card => 
-        isForward 
+        isAFirst 
           ? card.translation !== currentCard.translation 
           : card.term !== currentCard.term
       )
-      .map(card => isForward ? card.translation : card.term);
+      .map(card => isAFirst ? card.translation : card.term);
 
     // Embaralhar e pegar 3
     const shuffledWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 3);
@@ -130,7 +106,7 @@ export const MultipleChoiceStudyView = ({
     setCorrectIndex(shuffled.indexOf(correctAnswer));
     setSelectedOption(null);
     setShowFeedback(false);
-  }, [currentCard, allCards, isForward]);
+  }, [currentCard, allCards, isAFirst]);
 
   const handleOptionClick = async (index: number) => {
     if (showFeedback) return; // Prevenir cliques após resposta

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Lightbulb, Eye, SkipForward, Volume2, Star } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
 import { useTTS } from "@/features/study/hooks/useTTS";
+import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
@@ -55,43 +56,17 @@ export const WriteStudyView = ({
   const [shake, setShake] = useState(false);
   const [userId, setUserId] = useState<string | undefined>();
   
-  // --- Side A/B State Consolidation ---
-  const getLangLabel = (code: string): string => {
-    const labels: Record<string, string> = {
-      "en": "English", "pt": "Português", "es": "Español", "fr": "Français",
-      "de": "Deutsch", "it": "Italiano", "ja": "日本語", "zh": "中文",
-      "ko": "한국어", "ru": "Русский", "ar": "العربية", "hi": "हिन्दी"
-    };
-    return labels[code] || code.toUpperCase();
-  };
-
+  // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
 
-  const isForward = useMemo(() => {
-    if (direction === "pt-en") return true;
-    if (direction === "en-pt") return false;
-    const hash = (flashcardId || front).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-    return hash % 2 === 0;
-  }, [direction, flashcardId, front]);
-
-  const promptSide = isForward ? sideA : sideB;
-  const answerSide = isForward ? sideB : sideA;
+  const { promptSide, answerSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
   const promptLabel = promptSide.label;
   const answerLabel = answerSide.label;
 
-  // Dynamic TTS language - map short codes to BCP-47
-  const toBCP47 = (code: string): string => {
-    const map: Record<string, string> = {
-      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
-      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
-      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
-    };
-    return map[code] || code;
-  };
   const promptLang = toBCP47(promptSide.lang);
 
   const inputRef = useRef<HTMLInputElement>(null);

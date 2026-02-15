@@ -5,6 +5,7 @@ import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle
 import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
+import { toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 
@@ -28,15 +29,7 @@ export function PronunciationStudyView({ front, back, langA = "en", langB = "pt"
   const speakSide = sideB;   // The phrase user must speak
   const hintSide = sideA;    // Just a visual hint
 
-  // Map short codes to BCP-47
-  const toBCP47 = (code: string): string => {
-    const map: Record<string, string> = {
-      "en": "en-US", "pt": "pt-BR", "es": "es-ES", "fr": "fr-FR",
-      "de": "de-DE", "it": "it-IT", "ja": "ja-JP", "zh": "zh-CN",
-      "ko": "ko-KR", "ru": "ru-RU", "ar": "ar-SA", "hi": "hi-IN"
-    };
-    return map[code] || code;
-  };
+  // Map short codes to BCP-47 using shared utility
   const speakLang = toBCP47(speakSide.lang);
 
   const {
