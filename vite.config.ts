@@ -16,13 +16,29 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   build: {
-    // Production build settings - minify and no sourcemaps
     minify: mode === 'production' ? 'esbuild' : false,
     sourcemap: mode === 'production' ? false : true,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
-        // Mangle/obfuscate variable names in production
-        manualChunks: undefined,
+        manualChunks(id) {
+          // React core
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router')) {
+            return 'react-vendor';
+          }
+          // UI libraries
+          if (id.includes('node_modules/@radix-ui/') || id.includes('node_modules/lucide-react') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge') || id.includes('node_modules/cmdk') || id.includes('node_modules/sonner') || id.includes('node_modules/vaul')) {
+            return 'ui-vendor';
+          }
+          // Data layer
+          if (id.includes('node_modules/@tanstack/') || id.includes('node_modules/@supabase/')) {
+            return 'data-vendor';
+          }
+          // Other vendor libs
+          if (id.includes('node_modules/')) {
+            return 'vendor';
+          }
+        },
       },
     },
   },

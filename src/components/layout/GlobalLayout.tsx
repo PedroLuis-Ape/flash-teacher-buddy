@@ -5,17 +5,14 @@
  * É proibida a cópia, redistribuição ou utilização comercial sem autorização por escrito.
  */
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { CurrencyHeader } from "@/components/CurrencyHeader";
-import { PresentBoxBadge } from "@/features/gamification/components/PresentBoxBadge";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AdminButton } from "@/components/AdminButton";
 import { ApeTabBar } from "@/components/ape/ApeTabBar";
-import { GiftNotificationModal } from "@/components/GiftNotificationModal";
-import { AnnouncementModal } from "@/components/AnnouncementModal";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEconomy } from "@/contexts/EconomyContext";
@@ -26,6 +23,11 @@ import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalFooter } from "@/components/layout/GlobalFooter";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
+
+// Lazy-load heavy modals and badges (not needed for FCP)
+const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
+const GiftNotificationModal = lazy(() => import("@/components/GiftNotificationModal").then(m => ({ default: m.GiftNotificationModal })));
+const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal").then(m => ({ default: m.AnnouncementModal })));
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -87,7 +89,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <CurrencyHeader />
                   {FEATURE_FLAGS.classes_enabled && <NotificationBell />}
-                  {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
+                  {FEATURE_FLAGS.present_inbox_visible && (
+                    <Suspense fallback={null}><PresentBoxBadge /></Suspense>
+                  )}
                 </div>
               </div>
             </header>
@@ -104,8 +108,12 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           )}
           
           {user && <ApeTabBar />}
-          {user && <GiftNotificationModal />}
-          {user && FEATURE_FLAGS.classes_enabled && <AnnouncementModal />}
+          {user && (
+            <Suspense fallback={null}><GiftNotificationModal /></Suspense>
+          )}
+          {user && FEATURE_FLAGS.classes_enabled && (
+            <Suspense fallback={null}><AnnouncementModal /></Suspense>
+          )}
           
           {/* Version Badge */}
           <div className="fixed bottom-20 right-4 z-40">
