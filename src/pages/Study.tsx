@@ -31,7 +31,16 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, ArrowLeftRight, HelpCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 
@@ -103,6 +112,14 @@ const Study = () => {
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<"pt-en" | "en-pt" | "any">(initialDir);
   
+  // Per-student swap preference (visual only, never mutates card data)
+  const swapStorageKey = `swap-pref-${resolvedId}`;
+  const guideStorageKey = `swap-guide-hidden`;
+  const [isSwapped, setIsSwapped] = useState(() => {
+    try { return localStorage.getItem(swapStorageKey) === "true"; } catch { return false; }
+  });
+  const [showSwapGuide, setShowSwapGuide] = useState(false);
+  
   // Fetch favorites for filtering
   const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   const toggleFavorite = useToggleFavorite();
@@ -147,12 +164,44 @@ const Study = () => {
     completeSession,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
   
+  // Swap toggle handler — persists to localStorage, never touches card data
+  const handleSwapToggle = (checked: boolean) => {
+    setIsSwapped(checked);
+    try { localStorage.setItem(swapStorageKey, String(checked)); } catch {}
+    // Show guide on first activation if not hidden
+    if (checked) {
+      try {
+        if (localStorage.getItem(guideStorageKey) !== "true") {
+          setShowSwapGuide(true);
+        }
+      } catch {}
+    }
+    toast.info(checked
+      ? `Cartões invertidos: ${listSettings.labelsB} → ${listSettings.labelsA}`
+      : `Ordem original restaurada: ${listSettings.labelsA} → ${listSettings.labelsB}`
+    );
+  };
+
+  const handleHideGuideForever = () => {
+    try { localStorage.setItem(guideStorageKey, "true"); } catch {}
+    setShowSwapGuide(false);
+  };
+
   // Direção estável por card - use flipDirection for flip mode
+  // isSwapped inverts the direction at rendering layer only
   const decideDirection = (idx: number): "pt-en" | "en-pt" => {
     const dir = normalizedMode === "flip" ? flipDirection : initialDir;
-    if (dir !== "any") return dir;
-    // For "any", alternate deterministically based on card index
-    return idx % 2 === 0 ? "pt-en" : "en-pt";
+    let resolved: "pt-en" | "en-pt";
+    if (dir !== "any") {
+      resolved = dir;
+    } else {
+      resolved = idx % 2 === 0 ? "pt-en" : "en-pt";
+    }
+    // Apply visual swap — just invert the direction, no data mutation
+    if (isSwapped) {
+      resolved = resolved === "pt-en" ? "en-pt" : "pt-en";
+    }
+    return resolved;
   };
   
   const resolvedDirection = decideDirection(currentIndex);
@@ -558,6 +607,28 @@ const Study = () => {
                   </SelectContent>
                 </Select>
               )}
+
+              {/* Swap toggle — visual inversion only */}
+              <div className="flex items-center gap-1.5">
+                <Switch
+                  id="swap-toggle"
+                  checked={isSwapped}
+                  onCheckedChange={handleSwapToggle}
+                />
+                <label htmlFor="swap-toggle" className="text-xs text-muted-foreground hidden sm:inline cursor-pointer select-none">
+                  <ArrowLeftRight className="h-3.5 w-3.5 inline mr-0.5" />
+                  Inverter
+                </label>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setShowSwapGuide(true)}
+                  title="Como funciona a inversão?"
+                >
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </div>
               
               {/* Video button */}
               <StudyVideoButton
@@ -683,6 +754,31 @@ const Study = () => {
           </div>
         )}
       </div>
+
+      {/* Swap Guide Dialog */}
+      <Dialog open={showSwapGuide} onOpenChange={setShowSwapGuide}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="h-5 w-5" />
+              Como funciona a inversão?
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-2 pt-2">
+              <p>Use esta função se os cartões estiverem na ordem oposta ao que você deseja estudar.</p>
+              <p>A inversão <strong>só altera sua visualização</strong> — nenhum dado é modificado no sistema.</p>
+              <p>Você pode ligar e desligar a qualquer momento.</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" size="sm" onClick={handleHideGuideForever}>
+              Não mostrar novamente
+            </Button>
+            <Button size="sm" onClick={() => setShowSwapGuide(false)}>
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
