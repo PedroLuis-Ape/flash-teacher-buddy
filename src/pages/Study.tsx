@@ -312,8 +312,12 @@ const Study = () => {
         
         // Set list settings from DB (with fallbacks for old data)
         const studyType = (listData.study_type === "general" ? "general" : "language") as "language" | "general";
-        const langA = listData.lang_a || "en";
-        const langB = listData.lang_b || "pt";
+        // CRITICAL FIX: In the DB, lang_a/lang_b describe the course language pair,
+        // NOT which field (term/translation) they map to.
+        // Actual data: term is stored in lang_b language, translation in lang_a language.
+        // So for the component props (langA = language of front/term, langB = language of back/translation):
+        const langA = listData.lang_b || "pt"; // language of term (front)
+        const langB = listData.lang_a || "en"; // language of translation (back)
         const defaultLabelA = studyType === "general" ? "Frente" : (langA === "en" ? "English" : langA === "pt" ? "Português" : langA.toUpperCase());
         const defaultLabelB = studyType === "general" ? "Verso" : (langB === "pt" ? "Português" : langB === "en" ? "English" : langB.toUpperCase());
         
@@ -321,8 +325,8 @@ const Study = () => {
           studyType,
           langA,
           langB,
-          labelsA: listData.labels_a || defaultLabelA,
-          labelsB: listData.labels_b || defaultLabelB,
+          labelsA: listData.labels_b || defaultLabelA, // label matching term's language
+          labelsB: listData.labels_a || defaultLabelB, // label matching translation's language
           ttsEnabled: listData.tts_enabled ?? (studyType === "language"),
         });
         
