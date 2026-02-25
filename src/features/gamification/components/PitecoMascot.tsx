@@ -19,8 +19,7 @@ export function PitecoMascot() {
       });
   }, []);
 
-  if (!processedImage) return null;
-
+  if (!processedImage) return null; // Don't block render
   return (
     <img
       loading="lazy"

@@ -9,6 +9,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import "./lib/versionManager"; // Verificar versão e limpar cache
+import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
+import { SafeMode } from "./components/SafeMode";
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <SafeMode>
+    <App />
+  </SafeMode>
+);
