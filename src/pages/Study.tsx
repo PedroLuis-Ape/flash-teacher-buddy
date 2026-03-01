@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -128,7 +128,13 @@ const Study = () => {
   const listId = isListRoute ? resolvedId : undefined;
 
   // Memoize flashcards to prevent unstable references triggering re-init
-  const stableFlashcards = useMemo(() => flashcards, [JSON.stringify(flashcards.map(f => f.id))]);
+  const prevIdsRef = useRef<string>("");
+  const stableFlashcards = useMemo(() => {
+    const ids = flashcards.map(f => f.id).join(",");
+    if (ids === prevIdsRef.current) return flashcards;
+    prevIdsRef.current = ids;
+    return flashcards;
+  }, [flashcards]);
 
   const {
     currentIndex,
