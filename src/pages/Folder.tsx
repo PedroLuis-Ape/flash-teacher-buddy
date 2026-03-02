@@ -840,12 +840,12 @@ const Folder = () => {
                         if (selectionMode) {
                           toggleListSelection(list.id);
                         } else {
-                          navigate(isOwner ? `/list/${list.id}` : `/portal/list/${list.id}/games`);
+                          navigate(`/list/${list.id}/games`);
                         }
                       }}
                       className={`w-full text-left cursor-pointer ${isSelected ? 'ring-2 ring-primary rounded-lg' : ''}`}
                     >
-                      <Card className="hover:shadow-md transition-shadow">
+                      <Card className="transition-all duration-200 md:hover:shadow-md md:hover:bg-primary/5 md:hover:border-primary/30 active:scale-[0.98]">
                         <CardContent className="p-3 flex items-center gap-3">
                           {/* Selection checkbox */}
                           {selectionMode && (
@@ -879,34 +879,28 @@ const Folder = () => {
                             </p>
                           </div>
 
-                          {/* Play Button - hidden in selection mode */}
-                          {!selectionMode && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 shrink-0 hover:bg-primary/10 hover:text-primary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/list/${list.id}/games`);
-                              }}
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          )}
+                          {/* Play button removed - entire row now navigates to games */}
 
                           {canEdit && !selectionMode && (
                             <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditList(list);
-                                }}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/list/${list.id}`);
+                                      }}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Editar conteúdo</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button
