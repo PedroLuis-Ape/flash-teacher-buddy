@@ -40,7 +40,7 @@ export function ApeCardList({
         "border border-border",
         "text-left shadow-sm",
         // Use md: prefix for hover styles to avoid sticky hover on touch devices
-        "md:hover:shadow-md md:hover:border-secondary/50 md:hover:translate-y-[-2px]",
+        "md:hover:shadow-md md:hover:border-primary/30 md:hover:bg-primary/5 md:hover:translate-y-[-2px]",
         "active:scale-[0.98] active:shadow-sm active:translate-y-0",
         !disableAnimation && "scroll-reveal",
         disableAnimation && "opacity-100 translate-y-0",
