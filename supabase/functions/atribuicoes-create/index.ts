@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sanitizeHtml } from '../_shared/sanitize.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -85,8 +86,8 @@ serve(async (req) => {
       .from('atribuicoes')
       .insert({
         turma_id,
-        titulo: titulo.trim(),
-        descricao: descricao?.trim() || null,
+        titulo: sanitizeHtml(titulo.trim()),
+        descricao: descricao ? sanitizeHtml(descricao.trim()) : null,
         fonte_tipo: finalFonteTipo,
         fonte_id: finalFonteId,
         data_limite: data_limite || null,

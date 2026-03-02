@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sanitizeHtml } from '../_shared/sanitize.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -97,8 +98,8 @@ serve(async (req) => {
       );
     }
 
-    // Sanitizar body (remover HTML executável)
-    const sanitizedBody = messageBody.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    // Sanitizar body (escape HTML characters)
+    const sanitizedBody = sanitizeHtml(messageBody.trim());
 
     // Inserir mensagem
     const { data: newMessage, error: insertError } = await supabaseClient
