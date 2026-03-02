@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { sanitizeHtml } from '../_shared/sanitize.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -251,11 +252,11 @@ Deno.serve(async (req) => {
         recipient_id: userId,
         tipo: notificationType,
         titulo: `Aviso de ${turmaNome}`,
-        mensagem: title.trim(),
+        mensagem: sanitizeHtml(title.trim()),
         lida: false,
         metadata: {
           announcement_id: announcementId,
-          full_body: body.trim(),
+          full_body: sanitizeHtml(body.trim()),
           turma_nome: turmaNome,
           turma_id: class_id,
           ...(mode === 'direct_assignment' && {
