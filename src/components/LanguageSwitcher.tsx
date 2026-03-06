@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
 import {
@@ -15,10 +16,23 @@ const languages = [
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
-  const currentLang = i18n.language?.split('-')[0] || 'pt';
+
+  const normalizedLang = (i18n.resolvedLanguage || i18n.language || 'pt').split('-')[0];
+  const currentLang = languages.some((lang) => lang.code === normalizedLang) ? normalizedLang : 'pt';
+
+  const currentLabel = useMemo(() => {
+    const current = languages.find((lang) => lang.code === currentLang);
+    return current ? `${current.flag} ${current.label}` : 'Idioma';
+  }, [currentLang]);
+
+  useEffect(() => {
+    if (normalizedLang !== currentLang) {
+      i18n.changeLanguage(currentLang);
+    }
+  }, [normalizedLang, currentLang, i18n]);
 
   const handleLanguageChange = (langCode: string) => {
-    i18n.changeLanguage(langCode);
+    i18n.changeLanguage(langCode || 'pt');
   };
 
   return (
@@ -26,7 +40,7 @@ export function LanguageSwitcher() {
       <SelectTrigger className="w-full">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4" />
-          <SelectValue />
+          <SelectValue placeholder={currentLabel} />
         </div>
       </SelectTrigger>
       <SelectContent>
