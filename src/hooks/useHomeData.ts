@@ -183,7 +183,7 @@ export function useHomeData(): HomeData {
         }
         
         const { data: sharedData } = await sharedQuery;
-        sharedLists = sharedData || [];
+        sharedLists = toArray<any>(sharedData as any[]);
       }
 
       // Get teacher profiles with folder counts
