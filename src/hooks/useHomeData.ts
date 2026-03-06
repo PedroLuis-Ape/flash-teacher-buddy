@@ -197,17 +197,19 @@ export function useHomeData(): HomeData {
         );
         
         if (!teacherError && teacherData) {
-          teachersInfo = (teacherData as any[]).map((t: any) => ({
-            id: t.teacher_id,
-            name: t.first_name || "Professor",
-            folder_count: Number(t.folder_count) || 0,
-          }));
+          teachersInfo = toArray<any>(teacherData as any[])
+            .filter((t) => typeof t?.teacher_id === "string")
+            .map((t) => ({
+              id: t.teacher_id,
+              name: toText(t.first_name, "Professor"),
+              folder_count: toNumber(t.folder_count, 0),
+            }));
         }
       }
       
       // Add teachers from turmas that aren't already in the list
-      const existingTeacherIds = new Set(teachersInfo.map(t => t.id));
-      const missingTurmaTeacherIds = turmaTeacherIds.filter((id: string) => !existingTeacherIds.has(id));
+      const existingTeacherIds = new Set(teachersInfo.map((t) => t.id));
+      const missingTurmaTeacherIds = turmaTeacherIds.filter((id) => !existingTeacherIds.has(id));
       
       if (missingTurmaTeacherIds.length > 0) {
         // Fetch profiles for turma teachers
@@ -217,70 +219,79 @@ export function useHomeData(): HomeData {
           .in("id", missingTurmaTeacherIds);
         
         // Count folders for each
-        if (turmaTeacherProfiles) {
-          for (const profile of turmaTeacherProfiles) {
-            const { count } = await supabase
-              .from("folders")
-              .select("*", { count: "exact", head: true })
-              .eq("owner_id", profile.id)
-              .eq("visibility", "class");
-            
-            teachersInfo.push({
-              id: profile.id,
-              name: profile.first_name || "Professor",
-              folder_count: count || 0,
-            });
-          }
+        for (const profile of toArray<any>(turmaTeacherProfiles as any[])) {
+          if (typeof profile?.id !== "string") continue;
+
+          const { count } = await supabase
+            .from("folders")
+            .select("*", { count: "exact", head: true })
+            .eq("owner_id", profile.id)
+            .eq("visibility", "class");
+          
+          teachersInfo.push({
+            id: profile.id,
+            name: toText(profile.first_name, "Professor"),
+            folder_count: toNumber(count, 0),
+          });
         }
       }
 
       // Process last session
       let lastSession: LastSession | null = null;
-      if (sessionResult.data && sessionResult.data.lists) {
-        const cardsOrder = (sessionResult.data.cards_order as any[]) || [];
-        const currentIndex = Number(sessionResult.data.current_index) || 0;
+      const sessionData = sessionResult.data as any;
+      if (sessionData && typeof sessionData.list_id === "string") {
+        const cardsOrder = toArray<any>(sessionData.cards_order as any[]);
+        const currentIndex = toNumber(sessionData.current_index, 0);
+        const listRelation = Array.isArray(sessionData.lists) ? sessionData.lists[0] : sessionData.lists;
+
         lastSession = {
-          id: sessionResult.data.list_id,
-          title: (sessionResult.data.lists as any).title || "Sem título",
+          id: sessionData.list_id,
+          title: toText(listRelation?.title, "Sem título"),
           total: Math.max(0, cardsOrder.length),
           reviewed: Math.max(0, Math.min(currentIndex, cardsOrder.length)),
-          mode: sessionResult.data.mode || "flip",
+          mode: toText(sessionData.mode, "flip"),
         };
       }
 
       // Build activity map for ordering
       const activityMap = new Map<string, { studied: string | null; opened: string | null }>();
-      (activityResult.data || []).forEach((a: any) => {
+      toArray<any>(activityResult.data as any[]).forEach((a) => {
+        if (typeof a?.list_id !== "string") return;
         activityMap.set(a.list_id, {
-          studied: a.last_studied_at,
-          opened: a.last_opened_at
+          studied: typeof a?.last_studied_at === "string" ? a.last_studied_at : null,
+          opened: typeof a?.last_opened_at === "string" ? a.last_opened_at : null,
         });
       });
 
-      // Combine and sort all lists by activity
-      const ownListsMapped = (ownListsResult.data || []).map((list: any) => {
-        const activity = activityMap.get(list.id);
-        return {
-          id: list.id,
-          title: list.title || "Sem título",
-          count: list.flashcards?.length || 0,
-          folder_name: list.folders?.title || "Minhas Listas",
-          is_own: true,
-          last_activity: activity?.studied || activity?.opened || list.updated_at,
-        };
-      });
+      const ownListsMapped = toArray<any>(ownListsResult.data as any[])
+        .filter((list) => typeof list?.id === "string")
+        .map((list) => {
+          const activity = activityMap.get(list.id);
+          const folderRel = Array.isArray(list?.folders) ? list.folders[0] : list?.folders;
+          return {
+            id: list.id,
+            title: toText(list?.title, "Sem título"),
+            count: Array.isArray(list?.flashcards) ? list.flashcards.length : 0,
+            folder_name: toText(folderRel?.title, "Minhas Listas"),
+            is_own: true,
+            last_activity: activity?.studied || activity?.opened || list?.updated_at || null,
+          };
+        });
 
-      const sharedListsMapped = sharedLists.map((list: any) => {
-        const activity = activityMap.get(list.id);
-        return {
-          id: list.id,
-          title: list.title || "Sem título",
-          count: list.flashcards?.length || 0,
-          folder_name: list.folders?.title || "Compartilhado",
-          is_own: false,
-          last_activity: activity?.studied || activity?.opened || list.updated_at,
-        };
-      });
+      const sharedListsMapped = toArray<any>(sharedLists)
+        .filter((list) => typeof list?.id === "string")
+        .map((list) => {
+          const activity = activityMap.get(list.id);
+          const folderRel = Array.isArray(list?.folders) ? list.folders[0] : list?.folders;
+          return {
+            id: list.id,
+            title: toText(list?.title, "Sem título"),
+            count: Array.isArray(list?.flashcards) ? list.flashcards.length : 0,
+            folder_name: toText(folderRel?.title, "Compartilhado"),
+            is_own: false,
+            last_activity: activity?.studied || activity?.opened || list?.updated_at || null,
+          };
+        });
 
       // Sort by last_activity (most recent first)
       const allLists = [...ownListsMapped, ...sharedListsMapped]
@@ -293,12 +304,12 @@ export function useHomeData(): HomeData {
 
       // Calculate stats
       const totalOwnLists = ownListsMapped.length;
-      const totalOwnCards = ownListsMapped.reduce((sum, list) => sum + list.count, 0);
+      const totalOwnCards = ownListsMapped.reduce((sum, list) => sum + toNumber(list.count, 0), 0);
 
       setData({
         last: lastSession,
         recents: allLists,
-        teachers: teachersInfo.slice(0, 3),
+        teachers: toArray<TeacherInfo>(teachersInfo).slice(0, 3),
         stats: {
           total_lists: totalOwnLists,
           total_cards: totalOwnCards,
