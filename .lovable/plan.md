@@ -1,118 +1,63 @@
 
-# Relatório de Análise: Bugs e Problemas Visuais
 
-## Resumo Executivo
-Após análise do código, identifiquei **14 pontos de atenção** divididos entre bugs funcionais, problemas visuais e oportunidades de melhoria.
+## Plan: Scrolling Title Enhancement + Security Fixes
+
+### Part A — Enhanced ScrollingTitle Component
+
+**Current state:** `src/components/ui/scrolling-title.tsx` exists but is basic — always animates when overflowing, no mobile/desktop distinction, no `prefers-reduced-motion`, no IntersectionObserver.
+
+**Changes to `src/components/ui/scrolling-title.tsx`:**
+- Add `IntersectionObserver` so animation only runs when visible
+- Add `useIsMobile()` hook: on mobile, auto-scroll when visible; on desktop, scroll only on hover/focus
+- Respect `prefers-reduced-motion`: if enabled, show ellipsis + `title` attribute (tooltip), no animation
+- Use CSS `animation-play-state` for pause control instead of React state toggling
+- Initial state: 1 line with ellipsis (`truncate`); animation activates per rules above
+
+**Apply to (3 files, surgical edits):**
+
+| File | Where | Risk |
+|------|-------|------|
+| `src/components/ape/ApeCardFolder.tsx` | Replace `<h3 className="ape-card-title">{title}</h3>` with `<ScrollingTitle>` | Low |
+| `src/components/ape/ApeCardList.tsx` | Replace `<h3 className="ape-card-title">{title}</h3>` with `<ScrollingTitle>` | Low |
+| `src/pages/Folder.tsx` line ~874 | Replace `<h3 className="font-semibold text-sm truncate">{list.title}</h3>` with `<ScrollingTitle>` | Low |
+
+**CSS (`src/index.css`):** Update `@keyframes marquee` to include start/end pause (e.g., 10% hold, 80% scroll, 10% hold).
 
 ---
 
-## 🐛 BUGS FUNCIONAIS
+### Part B — Security (warn-level findings only)
 
-### 1. **PageTransition pode causar flickering**
-**Arquivo:** `src/components/PageTransition.tsx`
-**Problema:** A lógica de transição usa dois `useEffect` conflitantes - um que espera 150ms para atualizar `displayChildren` e outro que atualiza imediatamente.
-**Impacto:** Pode causar flash de conteúdo antigo durante navegação.
-```text
-Linha 17-24: Define timer de 150ms
-Linha 26-28: Atualiza imediatamente (contradiz a lógica anterior)
+**Scan results:**
+
+| ID | Level | Action |
+|----|-------|--------|
+| `SUPA_auth_leaked_password_protection` | **warn** | Cannot fix via code — requires manual toggle in Auth settings. Will note to user. |
+| `PUBLIC_USER_INVENTORY` | error | **SKIP** (user instruction: ignore non-warn) |
+| `PUBLIC_CATALOG_DATA` | **warn** | Fix: tighten RLS SELECT policy to filter `approved = true` for non-admin users |
+
+**Migration for `public_catalog`:**
+```sql
+DROP POLICY IF EXISTS "Anyone can view active catalog items" ON public.public_catalog;
+
+CREATE POLICY "Anyone can view active approved catalog items"
+ON public.public_catalog
+FOR SELECT
+USING (is_active = true AND approved = true);
 ```
-
-### 2. **Scroll na TurmaActivityPanel pode não funcionar em iOS**
-**Arquivo:** `src/components/TurmaActivityPanel.tsx`
-**Problema:** Altura fixa de `h-[350px]` com ScrollArea pode ter problemas em dispositivos iOS por causa do comportamento de scroll.
-**Impacto:** Usuários no iPhone podem não conseguir fazer scroll completo da lista de alunos.
-
-### 3. **Swipe Navigation interfere com scrolls horizontais**
-**Arquivo:** `src/hooks/useSwipeNavigation.ts`
-**Problema:** O threshold de 100px pode capturar swipes em carrosséis, sliders ou áreas com scroll horizontal.
-**Impacto:** Navegação acidental ao interagir com elementos que têm scroll horizontal.
-
-### 4. **Estado de Loading duplicado em Study.tsx**
-**Arquivo:** `src/pages/Study.tsx`
-**Problema:** Há verificação de `loading || studyLoading` mas ambos são controlados de forma independente.
-**Impacto:** Potencial flash de "Carregando..." seguido de conteúdo parcial.
+Risk: Low — only hides unapproved items from public view. Admin functions use service role key (bypasses RLS).
 
 ---
 
-## 🎨 PROBLEMAS VISUAIS
+### Implementation Order
+1. Enhance `ScrollingTitle` component
+2. Update marquee keyframes in `index.css`
+3. Apply `ScrollingTitle` to ApeCardFolder, ApeCardList, Folder.tsx
+4. Run SQL migration for `public_catalog` RLS
+5. Mark security findings as resolved
 
-### 5. **Version Badge no Auth está com opacity muito baixa**
-**Arquivo:** `src/pages/Auth.tsx` (linha 238)
-**Problema:** Badge tem `opacity-10` que torna praticamente invisível.
-```tsx
-className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-10"
-```
-**Sugestão:** Aumentar para `opacity-50` ou `opacity-30`.
+### Validation
+- Long folder/list names scroll on mobile, hover-scroll on desktop
+- `prefers-reduced-motion` shows tooltip instead of animation
+- Store page still shows only active+approved items
+- No layout overflow on any screen
 
-### 6. **Tab Bar pode ter sobreposição de conteúdo**
-**Arquivo:** `src/components/GlobalLayout.tsx` (linha 70)
-**Problema:** Padding bottom de `pb-20` pode não ser suficiente em dispositivos com home indicator (iPhone X+).
-**Impacto:** Botões de ação podem ficar parcialmente escondidos atrás da Tab Bar.
-
-### 7. **Animação de glow na TabBar pode ser intensiva**
-**Arquivo:** `src/components/ape/ApeTabBar.tsx` (linha 69)
-**Problema:** `animate-pulse` com `blur-md` pode consumir muita GPU em dispositivos mais fracos.
-```tsx
-<div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
-```
-
-### 8. **Cards hover effect pode não funcionar bem em touch**
-**Arquivo:** `src/components/ape/ApeCardFolder.tsx`
-**Problema:** Estados `:hover` são mantidos em touch devices após tap.
-**Impacto:** Card permanece com estilo "elevado" após toque no mobile.
-
----
-
-## ⚠️ AVISOS DE SEGURANÇA (do Linter)
-
-### 9. **6 políticas RLS permissivas demais**
-**Problema:** Existem políticas com `USING (true)` ou `WITH CHECK (true)` para operações de UPDATE/DELETE/INSERT.
-**Impacto:** Potencial risco de segurança - qualquer usuário pode modificar dados.
-**Recomendação:** Revisar e restringir as políticas RLS conforme necessidade.
-
-### 10. **Proteção de senha vazada desabilitada**
-**Problema:** A funcionalidade de verificar senhas vazadas está desativada no Supabase.
-**Impacto:** Usuários podem usar senhas comprometidas.
-
----
-
-## 🔧 OPORTUNIDADES DE MELHORIA
-
-### 11. **Breadcrumbs não estão sendo usados**
-**Arquivo:** `src/components/Breadcrumbs.tsx` foi criado mas não é renderizado em nenhuma página.
-**Status:** Componente órfão.
-
-### 12. **Skeleton components subutilizados**
-**Arquivo:** `src/components/ui/skeleton-card.tsx`
-**Problema:** Componentes `SkeletonCard` e `SkeletonGrid` foram criados mas não são usados nas páginas principais.
-**Páginas que poderiam usar:** Folders.tsx, Index.tsx, TurmaDetail.tsx.
-
-### 13. **Safe area bottom inconsistente**
-**Arquivos:** `index.css` e `ApeTabBar.tsx`
-**Problema:** `safe-area-pb` na TabBar + `pb-24` no GlobalLayout pode criar espaçamento excessivo ou insuficiente dependendo do device.
-
-### 14. **Console logs em produção**
-**Arquivos:** `Profile.tsx`, `Folder.tsx`, `TurmaActivityPanel.tsx`
-**Problema:** Há `console.log` e `console.error` que podem poluir o console em produção.
-
----
-
-## 📋 PRIORIZAÇÃO SUGERIDA
-
-| Prioridade | Item | Categoria |
-|------------|------|-----------|
-| 🔴 Alta | #9 - RLS permissivas | Segurança |
-| 🔴 Alta | #6 - TabBar sobreposição | UX Mobile |
-| 🟡 Média | #1 - PageTransition flicker | UX |
-| 🟡 Média | #3 - Swipe interfere scroll | UX Mobile |
-| 🟡 Média | #2 - Scroll iOS | UX Mobile |
-| 🟢 Baixa | #5 - Version badge opacity | Visual |
-| 🟢 Baixa | #11 - Breadcrumbs órfão | Tech Debt |
-| 🟢 Baixa | #12 - Skeleton subutilizado | Tech Debt |
-| 🟢 Baixa | #14 - Console logs | Tech Debt |
-
----
-
-## Próximos Passos
-
-Você pode me dizer quais itens quer que eu corrija primeiro, ou posso criar um plano de implementação para resolver todos em ordem de prioridade.
