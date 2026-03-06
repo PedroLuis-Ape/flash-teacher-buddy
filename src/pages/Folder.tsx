@@ -19,6 +19,7 @@ import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
 import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { useFolderText } from "@/hooks/useFolderText";
+import { ScrollingTitle } from "@/components/ui/scrolling-title";
 
 interface ListType {
   id: string;
