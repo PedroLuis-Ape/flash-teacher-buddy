@@ -127,7 +127,8 @@ const Folders = () => {
           lists(id, flashcards(id))
         `)
         .eq("owner_id", session.user.id)
-        .is("class_id", null); // Only personal folders (not class folders)
+        .is("class_id", null)
+        .is("deleted_at", null); // Exclude soft-deleted folders
 
       // Apply institution filter
       if (selectedInstitution) {

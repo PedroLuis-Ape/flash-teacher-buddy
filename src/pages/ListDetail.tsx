@@ -162,6 +162,7 @@ const ListDetail = () => {
         .from("flashcards")
         .select("*")
         .eq("list_id", id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: true });
       
       if (error) throw error;

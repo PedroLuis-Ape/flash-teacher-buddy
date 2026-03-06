@@ -120,6 +120,7 @@ export function useHomeData(): HomeData {
             `)
             .eq("owner_id", userId)
             .is("class_id", null)
+            .is("deleted_at", null)
             .order("updated_at", { ascending: false })
             .limit(20);
           

@@ -277,7 +277,8 @@ const Study = () => {
     const { data, error } = await supabase
       .from("flashcards")
       .select("*")
-      .eq(queryColumn, resolvedId);
+      .eq(queryColumn, resolvedId)
+      .is("deleted_at", null);
 
     if (error) {
       toast.error("Erro ao carregar flashcards");
