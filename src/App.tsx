@@ -59,6 +59,7 @@ const GoalNew = lazy(() => import("./pages/GoalNew"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const GlobalImport = lazy(() => import("./pages/GlobalImport"));
+const Trash = lazy(() => import("./pages/Trash"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -133,6 +134,7 @@ const App = () => {
                   <Route path="/goals" element={<Goals />} />
                   <Route path="/goals/new" element={<GoalNew />} />
                   <Route path="/import" element={<GlobalImport />} />
+                  <Route path="/trash" element={<Trash />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageTransition>
