@@ -258,7 +258,7 @@ const Index = () => {
             {loading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <p className="text-2xl font-bold">{stats.total_lists}</p>
+              <p className="text-2xl font-bold">{safeStats.total_lists}</p>
             )}
           </Card>
         </div>
