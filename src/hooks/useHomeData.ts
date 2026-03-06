@@ -150,13 +150,13 @@ export function useHomeData(): HomeData {
           .eq("ativo", true)
       ]);
 
-      // Get teacher IDs from subscriptions
-      const subscriptionTeacherIds = (subscriptionsResult.data || []).map(s => s.teacher_id);
+      const subscriptionTeacherIds = toArray<any>(subscriptionsResult.data as any[])
+        .map((s) => s?.teacher_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0);
       
-      // Get teacher IDs from turma_membros
-      const turmaTeacherIds = (turmaTeachersResult.data || [])
-        .map((m: any) => m.turmas?.owner_teacher_id)
-        .filter(Boolean);
+      const turmaTeacherIds = toArray<any>(turmaTeachersResult.data as any[])
+        .map((m) => m?.turmas?.owner_teacher_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0);
       
       // Combine and dedupe teacher IDs
       const allTeacherIds = [...new Set([...subscriptionTeacherIds, ...turmaTeacherIds])];
