@@ -404,8 +404,9 @@ const Index = () => {
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground mb-2">Últimas estudadas</p>
               {myLists
-                .filter((list): list is NonNullable<typeof list> => Boolean(list && (list as any).id))
-                .map((list) => (
+                .filter((list): list is { id: string; title?: string; count?: number; folder_name?: string } =>
+                  typeof (list as any)?.id === "string"
+                )
                   <ApeCardList
                     key={list.id}
                     title={list.title || "Sem título"}
