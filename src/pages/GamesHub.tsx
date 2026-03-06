@@ -72,6 +72,7 @@ const GamesHub = () => {
           .from("lists")
           .select("*")
           .eq("id", id)
+          .is("deleted_at", null)
           .single();
 
         if (error) {
@@ -90,6 +91,7 @@ const GamesHub = () => {
         .from("lists")
         .select("*")
         .eq("id", id)
+        .is("deleted_at", null)
         .single();
 
       if (error) throw error;

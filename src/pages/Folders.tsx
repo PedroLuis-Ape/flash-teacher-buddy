@@ -166,7 +166,8 @@ const Folders = () => {
           flashcards(id)
         `)
         .eq("folders.owner_id", session.user.id)
-        .is("folders.class_id", null);
+        .is("folders.class_id", null)
+        .is("deleted_at", null);
 
       if (selectedInstitution) {
         listsQuery = listsQuery.eq("folders.institution_id", selectedInstitution.id);

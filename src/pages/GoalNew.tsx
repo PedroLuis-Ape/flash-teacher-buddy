@@ -87,6 +87,7 @@ export default function GoalNew() {
           `)
           .eq('owner_id', user.id)
           .is('class_id', null)
+          .is('deleted_at', null)
           .order('updated_at', { ascending: false });
 
         if (listsError) throw listsError;
@@ -105,6 +106,7 @@ export default function GoalNew() {
           .select('id, title')
           .eq('owner_id', user.id)
           .is('class_id', null)
+          .is('deleted_at', null)
           .order('updated_at', { ascending: false });
 
         if (foldersError) throw foldersError;
