@@ -309,7 +309,7 @@ const Index = () => {
         )}
 
         {/* Continue Studying Card */}
-        {last && (
+        {safeLast && (
           <Card className="overflow-hidden border-border">
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
@@ -318,12 +318,12 @@ const Index = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-muted-foreground mb-1">Voltar para onde parou</p>
-                  <h3 className="font-semibold text-base mb-3 truncate">{last.title}</h3>
+                  <h3 className="font-semibold text-base mb-3 truncate">{safeLast.title || "Sem título"}</h3>
                   <div className="space-y-2">
                     <Progress value={pct} className="h-2" />
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {last.reviewed} de {last.total} cards
+                        {Number(safeLast.reviewed || 0)} de {Number(safeLast.total || 0)} cards
                       </span>
                       <span className="text-primary font-medium">{pct}%</span>
                     </div>
@@ -331,7 +331,7 @@ const Index = () => {
                 </div>
               </div>
               <Button
-                onClick={() => navigate(`/list/${last.id}/games?mode=${last.mode || "flip"}`)}
+                onClick={() => navigate(`/list/${safeLast.id}/games?mode=${safeLast.mode || "flip"}`)}
                 className="w-full mt-4 min-h-[44px]"
               >
                 <Play className="h-4 w-4 mr-2" />
