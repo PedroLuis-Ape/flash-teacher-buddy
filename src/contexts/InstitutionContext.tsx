@@ -44,12 +44,13 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setInstitutions(data || []);
+      const safeInstitutions = Array.isArray(data) ? data : [];
+      setInstitutions(safeInstitutions);
 
       // Restore selected institution from localStorage
       const savedId = localStorage.getItem("selectedInstitutionId");
-      if (savedId && data) {
-        const found = data.find(i => i.id === savedId);
+      if (savedId) {
+        const found = safeInstitutions.find((i) => i?.id === savedId);
         if (found) {
           setSelectedInstitution(found);
         } else {

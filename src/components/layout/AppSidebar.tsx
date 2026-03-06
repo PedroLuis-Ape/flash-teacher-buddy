@@ -35,6 +35,7 @@ export function AppSidebar() {
   const [isCreating, setIsCreating] = useState(false);
 
   const { selectedInstitution, institutions, setSelectedInstitution, refreshInstitutions, deleteInstitution } = useInstitution();
+  const safeInstitutions = Array.isArray(institutions) ? institutions : [];
 
   const handleDeleteInstitution = async (id: string) => {
     try {
