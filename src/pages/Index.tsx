@@ -403,16 +403,18 @@ const Index = () => {
           ) : myLists.length > 0 ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground mb-2">Últimas estudadas</p>
-              {myLists.map((list) => (
-                <ApeCardList
-                  key={list.id}
-                  title={list.title}
-                  cardCount={list.count}
-                  badge={list.folder_name}
-                  onClick={() => navigate(`/list/${list.id}`)}
-                  onPlayClick={() => navigate(`/list/${list.id}/games`)}
-                />
-              ))}
+              {myLists
+                .filter((list): list is NonNullable<typeof list> => Boolean(list && (list as any).id))
+                .map((list) => (
+                  <ApeCardList
+                    key={list.id}
+                    title={list.title || "Sem título"}
+                    cardCount={Number(list.count) || 0}
+                    badge={list.folder_name || "Sem pasta"}
+                    onClick={() => navigate(`/list/${list.id}`)}
+                    onPlayClick={() => navigate(`/list/${list.id}/games`)}
+                  />
+                ))}
             </div>
           ) : (
             <Card className="p-8 text-center border-border">
