@@ -127,7 +127,8 @@ const Folders = () => {
           lists(id, flashcards(id))
         `)
         .eq("owner_id", session.user.id)
-        .is("class_id", null); // Only personal folders (not class folders)
+        .is("class_id", null)
+        .is("deleted_at", null); // Exclude soft-deleted folders
 
       // Apply institution filter
       if (selectedInstitution) {
@@ -165,7 +166,8 @@ const Folders = () => {
           flashcards(id)
         `)
         .eq("folders.owner_id", session.user.id)
-        .is("folders.class_id", null);
+        .is("folders.class_id", null)
+        .is("deleted_at", null);
 
       if (selectedInstitution) {
         listsQuery = listsQuery.eq("folders.institution_id", selectedInstitution.id);
@@ -281,18 +283,33 @@ const Folders = () => {
 
     try {
       setIsDeleting(true);
-      const { error } = await supabase
-        .from("folders")
-        .delete()
-        .eq("id", folderToDelete);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase.rpc("soft_delete_folder" as any, {
+        p_folder_id: folderToDelete,
+        p_user_id: session.user.id,
+      } as any);
 
       if (error) throw error;
 
-      toast.success("✅ Pasta excluída com sucesso!");
+      toast.success("📁 Pasta enviada para a lixeira!", {
+        action: {
+          label: "Desfazer",
+          onClick: async () => {
+            await supabase.rpc("restore_folder" as any, {
+              p_folder_id: folderToDelete,
+              p_user_id: session.user.id,
+            } as any);
+            loadData();
+            toast.success("✅ Pasta restaurada!");
+          },
+        },
+      });
       setFolderToDelete(null);
       loadData();
     } catch (error: any) {
-      console.error("Error deleting folder:", error);
+      console.error("Error soft-deleting folder:", error);
       toast.error("❌ Erro ao excluir pasta");
     } finally {
       setIsDeleting(false);
@@ -318,22 +335,25 @@ const Folders = () => {
 
     try {
       setIsDeleting(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
       const idsToDelete = Array.from(selectedFolders);
       
-      const { error } = await supabase
-        .from("folders")
-        .delete()
-        .in("id", idsToDelete);
+      // Soft delete each folder (cascade handled by RPC)
+      for (const folderId of idsToDelete) {
+        await supabase.rpc("soft_delete_folder" as any, {
+          p_folder_id: folderId,
+          p_user_id: session.user.id,
+        } as any);
+      }
 
-      if (error) throw error;
-
-      toast.success(`✅ ${idsToDelete.length} pasta(s) excluída(s)!`);
+      toast.success(`📁 ${idsToDelete.length} pasta(s) enviada(s) para a lixeira!`);
       setSelectedFolders(new Set());
       setSelectMode(false);
       setShowBulkDeleteDialog(false);
       loadData();
     } catch (error: any) {
-      console.error("Error deleting folders:", error);
+      console.error("Error soft-deleting folders:", error);
       toast.error("❌ Erro ao excluir pastas");
     } finally {
       setIsDeleting(false);

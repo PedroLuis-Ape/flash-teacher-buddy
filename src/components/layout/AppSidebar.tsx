@@ -175,6 +175,20 @@ export function AppSidebar() {
                 <GraduationCap className="h-4 w-4" />
                 <span>{t('sidebar.classes', 'Turmas')}</span>
               </Button>
+              <Button
+                variant={location.pathname === '/trash' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname === '/trash' && "bg-primary/10 text-primary font-medium"
+                )}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/trash');
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>{t('sidebar.trash', 'Lixeira')}</span>
+              </Button>
             </div>
 
             <Separator />

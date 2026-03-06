@@ -709,6 +709,7 @@ export type Database = {
           audio_url: string | null
           collection_id: string | null
           created_at: string
+          deleted_at: string | null
           display_text: string | null
           eval_text: string | null
           hint: string | null
@@ -727,6 +728,7 @@ export type Database = {
           audio_url?: string | null
           collection_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           display_text?: string | null
           eval_text?: string | null
           hint?: string | null
@@ -745,6 +747,7 @@ export type Database = {
           audio_url?: string | null
           collection_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           display_text?: string | null
           eval_text?: string | null
           hint?: string | null
@@ -816,6 +819,7 @@ export type Database = {
         Row: {
           class_id: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           institution_id: string | null
@@ -833,6 +837,7 @@ export type Database = {
         Insert: {
           class_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           institution_id?: string | null
@@ -850,6 +855,7 @@ export type Database = {
         Update: {
           class_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           institution_id?: string | null
@@ -1127,6 +1133,7 @@ export type Database = {
         Row: {
           class_id: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           folder_id: string
           id: string
@@ -1147,6 +1154,7 @@ export type Database = {
         Insert: {
           class_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           folder_id: string
           id?: string
@@ -1167,6 +1175,7 @@ export type Database = {
         Update: {
           class_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           folder_id?: string
           id?: string
@@ -2470,6 +2479,7 @@ export type Database = {
           audio_url: string | null
           collection_id: string | null
           created_at: string
+          deleted_at: string | null
           display_text: string | null
           eval_text: string | null
           hint: string | null
@@ -2494,6 +2504,7 @@ export type Database = {
         Returns: {
           class_id: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           institution_id: string | null
@@ -2520,6 +2531,7 @@ export type Database = {
         Returns: {
           class_id: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           institution_id: string | null
@@ -2546,6 +2558,7 @@ export type Database = {
         Returns: {
           class_id: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           folder_id: string
           id: string
@@ -2638,6 +2651,19 @@ export type Database = {
         Returns: Json
       }
       publish_skin_to_store: { Args: { p_skin_id: string }; Returns: Json }
+      purge_expired_trash: { Args: never; Returns: Json }
+      restore_flashcard: {
+        Args: { p_flashcard_id: string; p_user_id: string }
+        Returns: Json
+      }
+      restore_folder: {
+        Args: { p_folder_id: string; p_user_id: string }
+        Returns: Json
+      }
+      restore_list: {
+        Args: { p_list_id: string; p_user_id: string }
+        Returns: Json
+      }
       search_users: {
         Args: {
           p_limit?: number
@@ -2645,6 +2671,14 @@ export type Database = {
           p_query: string
           p_user_type?: string
         }
+        Returns: Json
+      }
+      soft_delete_folder: {
+        Args: { p_folder_id: string; p_user_id: string }
+        Returns: Json
+      }
+      soft_delete_list: {
+        Args: { p_list_id: string; p_user_id: string }
         Returns: Json
       }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
