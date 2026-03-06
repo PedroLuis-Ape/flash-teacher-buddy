@@ -304,7 +304,7 @@ export function AppSidebar() {
                 </div>
               </ScrollArea>
 
-              {institutions.length === 0 && (
+              {safeInstitutions.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {t('sidebar.noHubsYet')}
                 </p>
