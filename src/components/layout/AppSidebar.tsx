@@ -255,7 +255,7 @@ export function AppSidebar() {
                     </div>
                   </Button>
 
-                  {institutions.map((institution) => (
+                  {safeInstitutions.map((institution) => (
                     <div key={institution.id} className="flex items-center gap-1 group">
                       <Button
                         variant={selectedInstitution?.id === institution.id ? "secondary" : "ghost"}
