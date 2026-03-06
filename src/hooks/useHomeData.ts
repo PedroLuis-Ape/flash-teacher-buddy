@@ -54,6 +54,18 @@ export function useHomeData(): HomeData {
     error: null,
   });
 
+  const toArray = <T,>(value: T[] | null | undefined): T[] =>
+    Array.isArray(value) ? value : [];
+
+  const toNumber = (value: unknown, fallback = 0): number => {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const toText = (value: unknown, fallback: string): string => {
+    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+  };
+
   const loadData = useCallback(async () => {
     try {
       setData(prev => ({ ...prev, loading: true }));
