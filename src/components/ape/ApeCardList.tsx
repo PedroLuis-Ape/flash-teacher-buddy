@@ -1,4 +1,5 @@
 import { FileText, Play } from "lucide-react";
+import { ScrollingTitle } from "@/components/ui/scrolling-title";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,9 +54,7 @@ export function ApeCardList({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="ape-card-title flex-1 min-w-0" title={title}>
-            {title}
-          </h3>
+          <ScrollingTitle text={title} className="ape-card-title flex-1 min-w-0" />
           {badge && (
             <Badge variant="secondary" className="text-xs shrink-0">
               {badge}

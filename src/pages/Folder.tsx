@@ -871,9 +871,7 @@ const Folder = () => {
                           )}
                           
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm truncate leading-tight">
-                              {list.title}
-                            </h3>
+                            <ScrollingTitle text={list.title} className="font-semibold text-sm leading-tight" />
                             <p className="text-xs text-muted-foreground leading-tight mt-0.5">
                               {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
                             </p>
