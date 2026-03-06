@@ -104,18 +104,24 @@ const Index = () => {
     },
   });
 
-  const myLists = recents.slice(0, 5);
+  const safeRecents = Array.isArray(recents) ? recents.filter(Boolean) : [];
+  const myLists = safeRecents.slice(0, 5);
 
-  const pct = last ? Math.round((last.reviewed / (last.total || 1)) * 100) : 0;
+  const safeLast = last && typeof last === "object" ? last : null;
+  const pct = safeLast ? Math.round((Number(safeLast.reviewed || 0) / (Number(safeLast.total || 0) || 1)) * 100) : 0;
 
-  const userInitials = profileData.firstName
+  const safeFirstName = typeof profileData.firstName === "string" && profileData.firstName.trim().length > 0
+    ? profileData.firstName
+    : "Usuário";
+
+  const userInitials = safeFirstName
     .split(" ")
-    .map((n) => n[0])
+    .map((n) => n?.[0] || "")
     .join("")
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || "U";
 
-  const isTeacher = profile?.is_teacher || false;
+  const isTeacher = Boolean(profile?.is_teacher);
   const isHubEmpty = myLists.length === 0 && selectedInstitution;
 
   return (
