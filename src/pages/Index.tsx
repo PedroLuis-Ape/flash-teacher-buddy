@@ -123,6 +123,11 @@ const Index = () => {
 
   const isTeacher = Boolean(profile?.is_teacher);
   const isHubEmpty = myLists.length === 0 && selectedInstitution;
+  const safeStats = {
+    total_lists: Number(stats?.total_lists) || 0,
+    total_cards: Number(stats?.total_cards) || 0,
+    teachers_count: Number(stats?.teachers_count) || 0,
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
