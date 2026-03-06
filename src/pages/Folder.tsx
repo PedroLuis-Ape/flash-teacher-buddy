@@ -19,6 +19,7 @@ import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
 import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { useFolderText } from "@/hooks/useFolderText";
+import { ScrollingTitle } from "@/components/ui/scrolling-title";
 
 interface ListType {
   id: string;
@@ -871,9 +872,7 @@ const Folder = () => {
                           )}
                           
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm truncate leading-tight">
-                              {list.title}
-                            </h3>
+                            <ScrollingTitle text={list.title} className="font-semibold text-sm leading-tight" />
                             <p className="text-xs text-muted-foreground leading-tight mt-0.5">
                               {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
                             </p>

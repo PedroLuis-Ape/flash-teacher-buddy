@@ -1,4 +1,5 @@
 import { Folder, Lock } from "lucide-react";
+import { ScrollingTitle } from "@/components/ui/scrolling-title";
 import { cn } from "@/lib/utils";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
@@ -52,9 +53,7 @@ export function ApeCardFolder({
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="ape-card-title" title={title}>
-          {title}
-        </h3>
+        <ScrollingTitle text={title} className="ape-card-title" />
         {(listCount !== undefined || cardCount !== undefined) && (
           <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
             {[

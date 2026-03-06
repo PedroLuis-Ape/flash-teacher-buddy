@@ -182,7 +182,15 @@ All colors MUST be HSL.
     20%, 40%, 60%, 80% { transform: translateX(10px); }
   }
 
-  /* Marquee Animation for Scrolling Titles */
+  /* Marquee Animation for Scrolling Titles — with start/end pause */
+  @keyframes marquee-pause {
+    0%   { transform: translateX(0); }
+    8%   { transform: translateX(0); }      /* pause at start */
+    92%  { transform: translateX(-50%); }    /* scroll */
+    100% { transform: translateX(-50%); }    /* pause at end */
+  }
+
+  /* Legacy class kept for backwards compat */
   @keyframes marquee {
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
