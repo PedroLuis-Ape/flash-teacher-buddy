@@ -407,6 +407,7 @@ const Index = () => {
                 .filter((list): list is { id: string; title?: string; count?: number; folder_name?: string } =>
                   typeof (list as any)?.id === "string"
                 )
+                .map((list) => (
                   <ApeCardList
                     key={list.id}
                     title={list.title || "Sem título"}
