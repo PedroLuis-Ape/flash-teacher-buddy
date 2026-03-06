@@ -104,19 +104,30 @@ const Index = () => {
     },
   });
 
-  const myLists = recents.slice(0, 5);
+  const safeRecents = Array.isArray(recents) ? recents.filter(Boolean) : [];
+  const myLists = safeRecents.slice(0, 5);
 
-  const pct = last ? Math.round((last.reviewed / (last.total || 1)) * 100) : 0;
+  const safeLast = last && typeof last === "object" ? last : null;
+  const pct = safeLast ? Math.round((Number(safeLast.reviewed || 0) / (Number(safeLast.total || 0) || 1)) * 100) : 0;
 
-  const userInitials = profileData.firstName
+  const safeFirstName = typeof profileData.firstName === "string" && profileData.firstName.trim().length > 0
+    ? profileData.firstName
+    : "Usuário";
+
+  const userInitials = safeFirstName
     .split(" ")
-    .map((n) => n[0])
+    .map((n) => n?.[0] || "")
     .join("")
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || "U";
 
-  const isTeacher = profile?.is_teacher || false;
+  const isTeacher = Boolean(profile?.is_teacher);
   const isHubEmpty = myLists.length === 0 && selectedInstitution;
+  const safeStats = {
+    total_lists: Number(stats?.total_lists) || 0,
+    total_cards: Number(stats?.total_cards) || 0,
+    teachers_count: Number(stats?.teachers_count) || 0,
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -138,7 +149,7 @@ const Index = () => {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold truncate">
-                  Olá, {profileData.firstName || "Usuário"}
+                  Olá, {safeFirstName}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Continue aprendendo!
@@ -247,7 +258,7 @@ const Index = () => {
             {loading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <p className="text-2xl font-bold">{stats.total_lists}</p>
+              <p className="text-2xl font-bold">{safeStats.total_lists}</p>
             )}
           </Card>
         </div>
@@ -298,7 +309,7 @@ const Index = () => {
         )}
 
         {/* Continue Studying Card */}
-        {last && (
+        {safeLast && (
           <Card className="overflow-hidden border-border">
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
@@ -307,12 +318,12 @@ const Index = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-muted-foreground mb-1">Voltar para onde parou</p>
-                  <h3 className="font-semibold text-base mb-3 truncate">{last.title}</h3>
+                  <h3 className="font-semibold text-base mb-3 truncate">{safeLast.title || "Sem título"}</h3>
                   <div className="space-y-2">
                     <Progress value={pct} className="h-2" />
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {last.reviewed} de {last.total} cards
+                        {Number(safeLast.reviewed || 0)} de {Number(safeLast.total || 0)} cards
                       </span>
                       <span className="text-primary font-medium">{pct}%</span>
                     </div>
@@ -320,7 +331,7 @@ const Index = () => {
                 </div>
               </div>
               <Button
-                onClick={() => navigate(`/list/${last.id}/games?mode=${last.mode || "flip"}`)}
+                onClick={() => navigate(`/list/${safeLast.id}/games?mode=${safeLast.mode || "flip"}`)}
                 className="w-full mt-4 min-h-[44px]"
               >
                 <Play className="h-4 w-4 mr-2" />
@@ -392,16 +403,18 @@ const Index = () => {
           ) : myLists.length > 0 ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground mb-2">Últimas estudadas</p>
-              {myLists.map((list) => (
-                <ApeCardList
-                  key={list.id}
-                  title={list.title}
-                  cardCount={list.count}
-                  badge={list.folder_name}
-                  onClick={() => navigate(`/list/${list.id}`)}
-                  onPlayClick={() => navigate(`/list/${list.id}/games`)}
-                />
-              ))}
+              {myLists
+                .filter((list) => typeof (list as any)?.id === "string")
+                .map((list) => (
+                  <ApeCardList
+                    key={list.id}
+                    title={list.title || "Sem título"}
+                    cardCount={Number(list.count) || 0}
+                    badge={list.folder_name || "Sem pasta"}
+                    onClick={() => navigate(`/list/${list.id}`)}
+                    onPlayClick={() => navigate(`/list/${list.id}/games`)}
+                  />
+                ))}
             </div>
           ) : (
             <Card className="p-8 text-center border-border">

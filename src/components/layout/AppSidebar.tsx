@@ -35,6 +35,7 @@ export function AppSidebar() {
   const [isCreating, setIsCreating] = useState(false);
 
   const { selectedInstitution, institutions, setSelectedInstitution, refreshInstitutions, deleteInstitution } = useInstitution();
+  const safeInstitutions = Array.isArray(institutions) ? institutions : [];
 
   const handleDeleteInstitution = async (id: string) => {
     try {
@@ -254,7 +255,7 @@ export function AppSidebar() {
                     </div>
                   </Button>
 
-                  {institutions.map((institution) => (
+                  {safeInstitutions.map((institution) => (
                     <div key={institution.id} className="flex items-center gap-1 group">
                       <Button
                         variant={selectedInstitution?.id === institution.id ? "secondary" : "ghost"}
@@ -303,7 +304,7 @@ export function AppSidebar() {
                 </div>
               </ScrollArea>
 
-              {institutions.length === 0 && (
+              {safeInstitutions.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {t('sidebar.noHubsYet')}
                 </p>
@@ -323,14 +324,14 @@ export function AppSidebar() {
       </Sheet>
 
       {/* Active institution badge */}
-      {selectedInstitution && (
+      {selectedInstitution?.id && (
         <Badge
           variant="secondary"
           className="gap-2"
-          style={{ borderLeft: `3px solid ${selectedInstitution.color}` }}
+          style={{ borderLeft: `3px solid ${selectedInstitution.color || 'hsl(var(--muted-foreground))'}` }}
         >
           <Building2 className="h-3 w-3" />
-          <span className="max-w-[120px] truncate">{selectedInstitution.name}</span>
+          <span className="max-w-[120px] truncate">{selectedInstitution.name || 'Hub'}</span>
           <button
             onClick={() => setSelectedInstitution(null)}
             className="ml-1 hover:bg-background/50 rounded-full p-0.5"
