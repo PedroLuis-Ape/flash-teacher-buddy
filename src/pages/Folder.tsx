@@ -452,14 +452,29 @@ const Folder = () => {
 
   const handleDeleteList = async (listId: string) => {
     try {
-      const { error } = await supabase
-        .from("lists")
-        .delete()
-        .eq("id", listId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase.rpc("soft_delete_list" as any, {
+        p_list_id: listId,
+        p_user_id: session.user.id,
+      } as any);
 
       if (error) throw error;
 
-      toast.success("Lista excluída com sucesso!");
+      toast.success("📋 Lista enviada para a lixeira!", {
+        action: {
+          label: "Desfazer",
+          onClick: async () => {
+            await supabase.rpc("restore_list" as any, {
+              p_list_id: listId,
+              p_user_id: session.user.id,
+            } as any);
+            loadLists();
+            toast.success("✅ Lista restaurada!");
+          },
+        },
+      });
       loadLists();
     } catch (error: any) {
       toast.error("Erro ao excluir lista: " + error.message);
@@ -494,14 +509,17 @@ const Folder = () => {
     
     setIsBulkDeleting(true);
     try {
-      const { error } = await supabase
-        .from("lists")
-        .delete()
-        .in("id", Array.from(selectedLists));
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      for (const listId of Array.from(selectedLists)) {
+        await supabase.rpc("soft_delete_list" as any, {
+          p_list_id: listId,
+          p_user_id: session.user.id,
+        } as any);
+      }
       
-      if (error) throw error;
-      
-      toast.success(`${selectedLists.size} lista(s) excluída(s)!`);
+      toast.success(`📋 ${selectedLists.size} lista(s) enviada(s) para a lixeira!`);
       setSelectedLists(new Set());
       setSelectionMode(false);
       setShowBulkDeleteDialog(false);

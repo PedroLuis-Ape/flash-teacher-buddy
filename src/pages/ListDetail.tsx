@@ -197,11 +197,11 @@ const ListDetail = () => {
     try {
       const { error } = await supabase
         .from("flashcards")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", flashcardId);
 
       if (error) throw error;
-      toast.success("Flashcard excluído!");
+      toast.success("🗂️ Card enviado para a lixeira!");
       loadFlashcards();
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
@@ -215,11 +215,11 @@ const ListDetail = () => {
     try {
       const { error } = await supabase
         .from("flashcards")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .in("id", selectedCards);
 
       if (error) throw error;
-      toast.success(`${selectedCards.length} cards excluídos!`);
+      toast.success(`🗂️ ${selectedCards.length} cards enviados para a lixeira!`);
       setSelectedCards([]);
       loadFlashcards();
     } catch (error: any) {
