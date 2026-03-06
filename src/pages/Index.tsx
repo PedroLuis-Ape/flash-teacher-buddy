@@ -149,7 +149,7 @@ const Index = () => {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold truncate">
-                  Olá, {profileData.firstName || "Usuário"}
+                  Olá, {safeFirstName}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Continue aprendendo!
