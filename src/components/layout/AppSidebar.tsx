@@ -324,14 +324,14 @@ export function AppSidebar() {
       </Sheet>
 
       {/* Active institution badge */}
-      {selectedInstitution && (
+      {selectedInstitution?.id && (
         <Badge
           variant="secondary"
           className="gap-2"
-          style={{ borderLeft: `3px solid ${selectedInstitution.color}` }}
+          style={{ borderLeft: `3px solid ${selectedInstitution.color || 'hsl(var(--muted-foreground))'}` }}
         >
           <Building2 className="h-3 w-3" />
-          <span className="max-w-[120px] truncate">{selectedInstitution.name}</span>
+          <span className="max-w-[120px] truncate">{selectedInstitution.name || 'Hub'}</span>
           <button
             onClick={() => setSelectedInstitution(null)}
             className="ml-1 hover:bg-background/50 rounded-full p-0.5"
