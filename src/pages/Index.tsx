@@ -404,9 +404,7 @@ const Index = () => {
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground mb-2">Últimas estudadas</p>
               {myLists
-                .filter((list): list is { id: string; title?: string; count?: number; folder_name?: string } =>
-                  typeof (list as any)?.id === "string"
-                )
+                .filter((list) => typeof (list as any)?.id === "string")
                 .map((list) => (
                   <ApeCardList
                     key={list.id}
