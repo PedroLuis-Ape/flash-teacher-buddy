@@ -51,6 +51,8 @@ interface Flashcard {
   hint?: string | null;
   accepted_answers_en?: string[];
   accepted_answers_pt?: string[];
+  image_url_a?: string | null;
+  image_url_b?: string | null;
 }
 
 interface VideoInfo {
@@ -682,6 +684,8 @@ const Study = () => {
               back={currentCard.translation}
               hint={currentCard.hint}
               flashcardId={currentCard.id}
+              imageUrlA={currentCard.image_url_a}
+              imageUrlB={currentCard.image_url_b}
               direction={resolvedDirection}
               fastMode={gameSettings.fastMode}
               ttsEnabled={listSettings.ttsEnabled}

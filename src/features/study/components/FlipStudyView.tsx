@@ -12,12 +12,15 @@ import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ImageCard } from "./ImageCard";
 
 interface FlipStudyViewProps {
   front: string;
   back: string;
   hint?: string | null;
   flashcardId?: string;
+  imageUrlA?: string | null;
+  imageUrlB?: string | null;
   onKnew: () => void;
   onDidntKnow: () => void;
   onNext?: () => void;
@@ -38,6 +41,8 @@ export const FlipStudyView = ({
   back,
   hint,
   flashcardId,
+  imageUrlA,
+  imageUrlB,
   onKnew,
   onDidntKnow,
   onNext,
@@ -91,7 +96,11 @@ export const FlipStudyView = ({
   // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
-  const { promptSide: firstSide, answerSide: secondSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const { promptSide: firstSide, answerSide: secondSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+
+  // Resolve images based on which side is prompt vs answer
+  const firstSideImage = isAFirst ? imageUrlA : imageUrlB;
+  const secondSideImage = isAFirst ? imageUrlB : imageUrlA;
 
   // Reset flip state when card changes
   useEffect(() => {
@@ -192,6 +201,9 @@ export const FlipStudyView = ({
                 </Button>
               )}
             </div>
+            {firstSideImage && (
+              <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-2" maxHeight="80px" />
+            )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {firstSide.text}
@@ -214,6 +226,9 @@ export const FlipStudyView = ({
                 </Button>
               )}
             </div>
+            {secondSideImage && (
+              <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-2" maxHeight="80px" />
+            )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {secondSide.text}
@@ -311,23 +326,28 @@ export const FlipStudyView = ({
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           {/* Front side */}
           <div className="flip-card-front">
-            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20">
+           <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20 overflow-auto">
               <p className="text-sm text-muted-foreground mb-2">{firstSide.label}</p>
+              {firstSideImage && (
+                <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-3" maxHeight="120px" />
+              )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {firstSide.text}
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlayTop();
-                }}
-                className="mt-4"
-              >
-                <Volume2 className="mr-2 h-4 w-4" />
-                Ouvir
-              </Button>
+              {ttsEnabled && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayTop();
+                  }}
+                  className="mt-4"
+                >
+                  <Volume2 className="mr-2 h-4 w-4" />
+                  Ouvir
+                </Button>
+              )}
               <p className="text-sm text-muted-foreground mt-4">
                 Clique para revelar
               </p>
@@ -336,23 +356,28 @@ export const FlipStudyView = ({
           
           {/* Back side */}
           <div className="flip-card-back">
-            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10">
+            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10 overflow-auto">
               <p className="text-sm text-muted-foreground mb-2">{secondSide.label}</p>
+              {secondSideImage && (
+                <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-3" maxHeight="120px" />
+              )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {secondSide.text}
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlayBottom();
-                }}
-                className="mt-4"
-              >
-                <Volume2 className="mr-2 h-4 w-4" />
-                Ouvir novamente
-              </Button>
+              {ttsEnabled && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayBottom();
+                  }}
+                  className="mt-4"
+                >
+                  <Volume2 className="mr-2 h-4 w-4" />
+                  Ouvir novamente
+                </Button>
+              )}
             </Card>
           </div>
         </div>
