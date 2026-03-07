@@ -320,23 +320,28 @@ export const FlipStudyView = ({
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           {/* Front side */}
           <div className="flip-card-front">
-            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20">
+           <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20 overflow-auto">
               <p className="text-sm text-muted-foreground mb-2">{firstSide.label}</p>
+              {firstSideImage && (
+                <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-3" maxHeight="120px" />
+              )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {firstSide.text}
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlayTop();
-                }}
-                className="mt-4"
-              >
-                <Volume2 className="mr-2 h-4 w-4" />
-                Ouvir
-              </Button>
+              {ttsEnabled && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayTop();
+                  }}
+                  className="mt-4"
+                >
+                  <Volume2 className="mr-2 h-4 w-4" />
+                  Ouvir
+                </Button>
+              )}
               <p className="text-sm text-muted-foreground mt-4">
                 Clique para revelar
               </p>
@@ -345,23 +350,28 @@ export const FlipStudyView = ({
           
           {/* Back side */}
           <div className="flip-card-back">
-            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10">
+            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10 overflow-auto">
               <p className="text-sm text-muted-foreground mb-2">{secondSide.label}</p>
+              {secondSideImage && (
+                <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-3" maxHeight="120px" />
+              )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {secondSide.text}
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlayBottom();
-                }}
-                className="mt-4"
-              >
-                <Volume2 className="mr-2 h-4 w-4" />
-                Ouvir novamente
-              </Button>
+              {ttsEnabled && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayBottom();
+                  }}
+                  className="mt-4"
+                >
+                  <Volume2 className="mr-2 h-4 w-4" />
+                  Ouvir novamente
+                </Button>
+              )}
             </Card>
           </div>
         </div>
