@@ -1,118 +1,132 @@
 
-# Relatório de Análise: Bugs e Problemas Visuais
 
-## Resumo Executivo
-Após análise do código, identifiquei **14 pontos de atenção** divididos entre bugs funcionais, problemas visuais e oportunidades de melhoria.
+## Plan: Multi-Content Study Platform (Incremental Expansion)
 
----
+### 1. Audit Results
 
-## 🐛 BUGS FUNCIONAIS
+**What already exists and supports flexibility:**
+- `lists` table already has `study_type` (string), `lang_a`/`lang_b`, `labels_a`/`labels_b`, `tts_enabled` -- this is the per-list config layer
+- `ListStudyTypeSelector` component already supports "language" vs "general" toggle with custom labels
+- `flashcards` table has `audio_url`, `hint`, `display_text`, `eval_text`, `note_text` -- extensible columns
+- All study views accept dynamic `labelA`/`labelB`, `langA`/`langB`, `ttsEnabled` props
+- `gameCore.ts` is content-agnostic (operates on `term`/`translation` strings only)
+- `resolveStudySides` is content-agnostic (maps side A/B by direction)
 
-### 1. **PageTransition pode causar flickering**
-**Arquivo:** `src/components/PageTransition.tsx`
-**Problema:** A lógica de transição usa dois `useEffect` conflitantes - um que espera 150ms para atualizar `displayChildren` e outro que atualiza imediatamente.
-**Impacto:** Pode causar flash de conteúdo antigo durante navegação.
-```text
-Linha 17-24: Define timer de 150ms
-Linha 26-28: Atualiza imediatamente (contradiz a lógica anterior)
-```
+**What's rigid / coupled to language:**
+- `flashcards` table has NO `image_url_a` or `image_url_b` columns
+- `CreateFlashcardForm` only has text inputs (no image URL field)
+- `EditFlashcardDialog` -- same, text-only
+- `BulkImportDialog` -- text-only import
+- `FlipStudyView`, `WriteStudyView`, `MultipleChoiceStudyView`, `UnscrambleStudyView` -- render text only, no image rendering
+- `Flashcard.tsx` (card preview) -- text only
+- TTS buttons are always visible in FlipStudyView (should be conditional on `ttsEnabled`)
+- The "Ouvir" button shows even when `ttsEnabled` is false
 
-### 2. **Scroll na TurmaActivityPanel pode não funcionar em iOS**
-**Arquivo:** `src/components/TurmaActivityPanel.tsx`
-**Problema:** Altura fixa de `h-[350px]` com ScrollArea pode ter problemas em dispositivos iOS por causa do comportamento de scroll.
-**Impacto:** Usuários no iPhone podem não conseguir fazer scroll completo da lista de alunos.
+**What's already "almost there":**
+- The `study_type` field on `lists` already exists -- just needs more values
+- `ttsEnabled` prop is already passed to study views but not always respected (FlipStudyView shows Volume2 buttons unconditionally in normal mode)
 
-### 3. **Swipe Navigation interfere com scrolls horizontais**
-**Arquivo:** `src/hooks/useSwipeNavigation.ts`
-**Problema:** O threshold de 100px pode capturar swipes em carrosséis, sliders ou áreas com scroll horizontal.
-**Impacto:** Navegação acidental ao interagir com elementos que têm scroll horizontal.
-
-### 4. **Estado de Loading duplicado em Study.tsx**
-**Arquivo:** `src/pages/Study.tsx`
-**Problema:** Há verificação de `loading || studyLoading` mas ambos são controlados de forma independente.
-**Impacto:** Potencial flash de "Carregando..." seguido de conteúdo parcial.
+### 2. Proposed Changes (Incremental, 3 Phases)
 
 ---
 
-## 🎨 PROBLEMAS VISUAIS
+**Phase 1: Database + Image URL support (this sprint)**
 
-### 5. **Version Badge no Auth está com opacity muito baixa**
-**Arquivo:** `src/pages/Auth.tsx` (linha 238)
-**Problema:** Badge tem `opacity-10` que torna praticamente invisível.
-```tsx
-className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-10"
-```
-**Sugestão:** Aumentar para `opacity-50` ou `opacity-30`.
+1. **Migration: Add image columns to `flashcards`**
+   - `image_url_a TEXT` (nullable) -- image for side A
+   - `image_url_b TEXT` (nullable) -- image for side B
+   - No breaking change: all existing rows get NULL
 
-### 6. **Tab Bar pode ter sobreposição de conteúdo**
-**Arquivo:** `src/components/GlobalLayout.tsx` (linha 70)
-**Problema:** Padding bottom de `pb-20` pode não ser suficiente em dispositivos com home indicator (iPhone X+).
-**Impacto:** Botões de ação podem ficar parcialmente escondidos atrás da Tab Bar.
+2. **Expand `study_type` vocabulary on `lists`**
+   - Currently supports `"language"` and `"general"`.
+   - Add support for `"math"`, `"visual"` as recognized values.
+   - No schema change needed (column is already `text`).
 
-### 7. **Animação de glow na TabBar pode ser intensiva**
-**Arquivo:** `src/components/ape/ApeTabBar.tsx` (linha 69)
-**Problema:** `animate-pulse` com `blur-md` pode consumir muita GPU em dispositivos mais fracos.
-```tsx
-<div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
-```
+3. **Define a StudyTypeConfig map** (new file: `src/features/study/lib/studyTypeConfig.ts`)
+   ```text
+   StudyTypeConfig = {
+     language: { textA: true, textB: true, tts: true, imageA: false, imageB: false },
+     general:  { textA: true, textB: true, tts: false, imageA: optional, imageB: optional },
+     math:     { textA: true, textB: true, tts: false, imageA: optional, imageB: optional },
+     visual:   { textA: optional, textB: optional, tts: optional, imageA: true, imageB: true },
+   }
+   ```
+   This is a pure data map -- no logic, just feature flags per study type.
 
-### 8. **Cards hover effect pode não funcionar bem em touch**
-**Arquivo:** `src/components/ape/ApeCardFolder.tsx`
-**Problema:** Estados `:hover` são mantidos em touch devices após tap.
-**Impacto:** Card permanece com estilo "elevado" após toque no mobile.
+**Phase 2: UI -- Card Creation + Editing with Image URL**
 
----
+4. **Update `CreateFlashcardForm`**
+   - Accept `studyType` prop
+   - Conditionally show "Image URL (Side A)" and "Image URL (Side B)" fields when the study type config allows images
+   - Pass `image_url_a` / `image_url_b` to the `onAdd` callback
 
-## ⚠️ AVISOS DE SEGURANÇA (do Linter)
+5. **Update `EditFlashcardDialog`**
+   - Same: add image URL fields, conditional on study type
 
-### 9. **6 políticas RLS permissivas demais**
-**Problema:** Existem políticas com `USING (true)` ou `WITH CHECK (true)` para operações de UPDATE/DELETE/INSERT.
-**Impacto:** Potencial risco de segurança - qualquer usuário pode modificar dados.
-**Recomendação:** Revisar e restringir as políticas RLS conforme necessidade.
+6. **Update `BulkImportDialog`**
+   - Add optional columns for image URLs in TSV/CSV import
 
-### 10. **Proteção de senha vazada desabilitada**
-**Problema:** A funcionalidade de verificar senhas vazadas está desativada no Supabase.
-**Impacto:** Usuários podem usar senhas comprometidas.
+7. **Update `ListStudyTypeSelector`**
+   - Add "math" and "visual" options (with icons)
+   - Show/hide TTS toggle based on StudyTypeConfig
 
----
+**Phase 3: Study Views -- Render Images**
 
-## 🔧 OPORTUNIDADES DE MELHORIA
+8. **Create `ImageCard` component** (`src/features/study/components/ImageCard.tsx`)
+   - Renders an image from URL with loading/error states
+   - Handles validation (is URL reachable?)
+   - Supports external CDN, Dropbox (`dl=1` transform), Google Drive (`/uc?export=view` transform)
 
-### 11. **Breadcrumbs não estão sendo usados**
-**Arquivo:** `src/components/Breadcrumbs.tsx` foi criado mas não é renderizado em nenhuma página.
-**Status:** Componente órfão.
+9. **Update `FlipStudyView`**
+   - If `image_url_a` exists on current card, render ImageCard alongside or instead of text
+   - Hide TTS buttons when `ttsEnabled === false` (bug fix)
 
-### 12. **Skeleton components subutilizados**
-**Arquivo:** `src/components/ui/skeleton-card.tsx`
-**Problema:** Componentes `SkeletonCard` e `SkeletonGrid` foram criados mas não são usados nas páginas principais.
-**Páginas que poderiam usar:** Folders.tsx, Index.tsx, TurmaDetail.tsx.
+10. **Update other study views** (Write, MultipleChoice, Unscramble)
+    - Show image as part of the prompt when available
+    - Answer input remains text-based
 
-### 13. **Safe area bottom inconsistente**
-**Arquivos:** `index.css` e `ApeTabBar.tsx`
-**Problema:** `safe-area-pb` na TabBar + `pb-24` no GlobalLayout pode criar espaçamento excessivo ou insuficiente dependendo do device.
+11. **Update `Flashcard.tsx`** (card preview in list)
+    - Show thumbnail if image URL exists
 
-### 14. **Console logs em produção**
-**Arquivos:** `Profile.tsx`, `Folder.tsx`, `TurmaActivityPanel.tsx`
-**Problema:** Há `console.log` e `console.error` que podem poluir o console em produção.
+### 3. Files Affected
 
----
+| File | Change |
+|---|---|
+| `supabase/migrations/new` | Add `image_url_a`, `image_url_b` to flashcards |
+| `src/features/study/lib/studyTypeConfig.ts` | NEW -- StudyTypeConfig map |
+| `src/features/study/components/ListStudyTypeSelector.tsx` | Add math/visual options |
+| `src/components/CreateFlashcardForm.tsx` | Add image URL fields |
+| `src/components/EditFlashcardDialog.tsx` | Add image URL fields |
+| `src/components/BulkImportDialog.tsx` | Support image URL columns |
+| `src/features/study/components/ImageCard.tsx` | NEW -- image renderer |
+| `src/features/study/components/FlipStudyView.tsx` | Render images, fix TTS visibility |
+| `src/features/study/components/WriteStudyView.tsx` | Render images in prompt |
+| `src/features/study/components/MultipleChoiceStudyView.tsx` | Render images in prompt |
+| `src/features/study/components/UnscrambleStudyView.tsx` | Render images in prompt |
+| `src/features/study/components/Flashcard.tsx` | Show image thumbnail |
+| `src/pages/ListDetail.tsx` | Pass studyType to form |
 
-## 📋 PRIORIZAÇÃO SUGERIDA
+### 4. Compatibility Guarantees
 
-| Prioridade | Item | Categoria |
-|------------|------|-----------|
-| 🔴 Alta | #9 - RLS permissivas | Segurança |
-| 🔴 Alta | #6 - TabBar sobreposição | UX Mobile |
-| 🟡 Média | #1 - PageTransition flicker | UX |
-| 🟡 Média | #3 - Swipe interfere scroll | UX Mobile |
-| 🟡 Média | #2 - Scroll iOS | UX Mobile |
-| 🟢 Baixa | #5 - Version badge opacity | Visual |
-| 🟢 Baixa | #11 - Breadcrumbs órfão | Tech Debt |
-| 🟢 Baixa | #12 - Skeleton subutilizado | Tech Debt |
-| 🟢 Baixa | #14 - Console logs | Tech Debt |
+- All existing cards have `image_url_a = NULL`, `image_url_b = NULL` -- no breakage
+- All existing lists have `study_type = 'language'` or `'general'` -- no breakage
+- Image rendering is purely additive: only shown when URL is present
+- TTS continues to work exactly as before for `language` type
+- `gameCore.ts` is NOT touched (protected module)
+- `useStudyEngine.ts` is NOT touched (operates on IDs only)
 
----
+### 5. Risk Assessment
 
-## Próximos Passos
+- **Low risk**: DB migration adds nullable columns only
+- **Low risk**: StudyTypeConfig is a pure data map, no logic change
+- **Medium risk**: Image URL rendering needs error handling (broken links, CORS). Mitigated by `ImageCard` component with fallback states.
+- **No risk** to existing language study flow
 
-Você pode me dizer quais itens quer que eu corrija primeiro, ou posso criar um plano de implementação para resolver todos em ordem de prioridade.
+### 6. Recommended Implementation Order
+
+1. Phase 1 first (DB + config map) -- enables everything else
+2. Phase 2 (creation/editing) -- users can start adding image URLs
+3. Phase 3 (study views) -- images render during study
+
+Each phase is independently deployable and safe.
+
