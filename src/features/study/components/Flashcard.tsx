@@ -2,17 +2,20 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { HintButton } from "./HintButton";
+import { ImageCard } from "./ImageCard";
 
 interface FlashcardProps {
   term: string;
   translation: string;
   hint?: string | null;
+  imageUrlA?: string | null;
+  imageUrlB?: string | null;
   className?: string;
   labelA?: string;
   labelB?: string;
 }
 
-export const Flashcard = ({ term, translation, hint, className, labelA = "Term", labelB = "Definition" }: FlashcardProps) => {
+export const Flashcard = ({ term, translation, hint, imageUrlA, imageUrlB, className, labelA = "Term", labelB = "Definition" }: FlashcardProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
   return (
@@ -22,19 +25,25 @@ export const Flashcard = ({ term, translation, hint, className, labelA = "Term",
     >
       <div className={cn("flip-card-inner", isFlipped && "flipped")}>
         <div className="flip-card-front">
-          <Card className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-card to-muted/20 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-shadow duration-300 relative">
+          <Card className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-card to-muted/20 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-shadow duration-300 relative overflow-hidden">
             <HintButton hint={hint} className="absolute top-4 right-4" />
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">{labelA}</p>
+              {imageUrlA && (
+                <ImageCard src={imageUrlA} alt={term} className="mb-2" maxHeight="100px" />
+              )}
               <p className="text-2xl font-semibold">{term}</p>
             </div>
           </Card>
         </div>
         <div className="flip-card-back">
-          <Card className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-primary/10 to-accent/10 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-shadow duration-300 relative">
+          <Card className="w-full h-full flex items-center justify-center p-8 bg-gradient-to-br from-primary/10 to-accent/10 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-shadow duration-300 relative overflow-hidden">
             <HintButton hint={hint} className="absolute top-4 right-4" />
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">{labelB}</p>
+              {imageUrlB && (
+                <ImageCard src={imageUrlB} alt={translation} className="mb-2" maxHeight="100px" />
+              )}
               <p className="text-2xl font-semibold">{translation}</p>
             </div>
           </Card>
