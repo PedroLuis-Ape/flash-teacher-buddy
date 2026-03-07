@@ -1,43 +1,118 @@
 
+# Relatório de Análise: Bugs e Problemas Visuais
 
-## Plan: Fix Black Screen (forwardRef crash) + PWA Cache Hardening
+## Resumo Executivo
+Após análise do código, identifiquei **14 pontos de atenção** divididos entre bugs funcionais, problemas visuais e oportunidades de melhoria.
 
-### Root Cause Analysis
+---
 
-The `forwardRef` crash in `ui-vendor-*.js` happens because Radix UI components call `React.forwardRef`, but `React` is in a separate `react-vendor` chunk. When the Service Worker serves stale/mismatched chunks (e.g., new `ui-vendor` with old `react-vendor`, or vice-versa), the import fails and React is `undefined` inside the UI chunk.
+## 🐛 BUGS FUNCIONAIS
 
-**Two contributing factors:**
-1. **manualChunks race:** Radix UI imports React as a peer dep. Rollup's chunk splitting can create circular or order-dependent imports between `react-vendor` and `ui-vendor` that break under cache mismatch.
-2. **PWA/Workbox precache:** Missing `cleanupOutdatedCaches`, `skipWaiting`, `clientsClaim` means old SW can serve a mix of old+new chunks after deploy.
+### 1. **PageTransition pode causar flickering**
+**Arquivo:** `src/components/PageTransition.tsx`
+**Problema:** A lógica de transição usa dois `useEffect` conflitantes - um que espera 150ms para atualizar `displayChildren` e outro que atualiza imediatamente.
+**Impacto:** Pode causar flash de conteúdo antigo durante navegação.
+```text
+Linha 17-24: Define timer de 150ms
+Linha 26-28: Atualiza imediatamente (contradiz a lógica anterior)
+```
 
-### Changes (4 files)
+### 2. **Scroll na TurmaActivityPanel pode não funcionar em iOS**
+**Arquivo:** `src/components/TurmaActivityPanel.tsx`
+**Problema:** Altura fixa de `h-[350px]` com ScrollArea pode ter problemas em dispositivos iOS por causa do comportamento de scroll.
+**Impacto:** Usuários no iPhone podem não conseguir fazer scroll completo da lista de alunos.
 
-**1. `vite.config.ts` — Stabilize bundling + harden PWA**
-- Add `resolve.dedupe: ['react', 'react-dom']` to prevent React duplication.
-- Simplify `manualChunks`: keep only `react-vendor` (react + react-dom + react-router). Remove `ui-vendor` and `data-vendor` — let Vite handle the rest automatically. This eliminates the cross-chunk import issue.
-- Add Workbox options: `cleanupOutdatedCaches: true`, `skipWaiting: true`, `clientsClaim: true`.
-- Add `navigateFallback: '/index.html'` for SPA navigation.
-- Disable SW registration in development mode (`devOptions: { enabled: false }`).
+### 3. **Swipe Navigation interfere com scrolls horizontais**
+**Arquivo:** `src/hooks/useSwipeNavigation.ts`
+**Problema:** O threshold de 100px pode capturar swipes em carrosséis, sliders ou áreas com scroll horizontal.
+**Impacto:** Navegação acidental ao interagir com elementos que têm scroll horizontal.
 
-**2. `index.html` — Boot fallback loader**
-- Add a visible "Carregando..." loader inside `#root` that React will replace on mount.
-- Add a `<noscript>` fallback.
-- Add a timeout script (8s): if `#root` still shows the loader, display "Falha ao iniciar" message with a "Clear cache & reload" button (calls the same logic as SafeMode's `handleClearAndReload`).
+### 4. **Estado de Loading duplicado em Study.tsx**
+**Arquivo:** `src/pages/Study.tsx`
+**Problema:** Há verificação de `loading || studyLoading` mas ambos são controlados de forma independente.
+**Impacto:** Potencial flash de "Carregando..." seguido de conteúdo parcial.
 
-**3. `src/lib/versionManager.ts` — Bump version**
-- Bump `APP_VERSION` to `"1.1.0"` to force cache clear for all existing users on next load.
+---
 
-**4. `src/main.tsx` — Hide boot loader**
-- After `createRoot().render()`, remove the boot loader element if still present (so it doesn't flash).
+## 🎨 PROBLEMAS VISUAIS
 
-### Files NOT touched
-- No changes to game logic, study engine, pages, hooks, or UI components.
-- No changes to `SafeMode.tsx` (it handles post-mount errors, complementary to the boot fallback).
+### 5. **Version Badge no Auth está com opacity muito baixa**
+**Arquivo:** `src/pages/Auth.tsx` (linha 238)
+**Problema:** Badge tem `opacity-10` que torna praticamente invisível.
+```tsx
+className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-10"
+```
+**Sugestão:** Aumentar para `opacity-50` ou `opacity-30`.
 
-### Validation Checklist
-- Hard reload (Ctrl+Shift+R): app loads, no forwardRef error.
-- Incognito tab: app loads cleanly.
-- After deploy: SW updates immediately (skipWaiting), no stale chunks.
-- Network tab: no 404 on any chunk.
-- Boot timeout: if JS fails entirely, user sees recovery message after 8s.
+### 6. **Tab Bar pode ter sobreposição de conteúdo**
+**Arquivo:** `src/components/GlobalLayout.tsx` (linha 70)
+**Problema:** Padding bottom de `pb-20` pode não ser suficiente em dispositivos com home indicator (iPhone X+).
+**Impacto:** Botões de ação podem ficar parcialmente escondidos atrás da Tab Bar.
 
+### 7. **Animação de glow na TabBar pode ser intensiva**
+**Arquivo:** `src/components/ape/ApeTabBar.tsx` (linha 69)
+**Problema:** `animate-pulse` com `blur-md` pode consumir muita GPU em dispositivos mais fracos.
+```tsx
+<div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
+```
+
+### 8. **Cards hover effect pode não funcionar bem em touch**
+**Arquivo:** `src/components/ape/ApeCardFolder.tsx`
+**Problema:** Estados `:hover` são mantidos em touch devices após tap.
+**Impacto:** Card permanece com estilo "elevado" após toque no mobile.
+
+---
+
+## ⚠️ AVISOS DE SEGURANÇA (do Linter)
+
+### 9. **6 políticas RLS permissivas demais**
+**Problema:** Existem políticas com `USING (true)` ou `WITH CHECK (true)` para operações de UPDATE/DELETE/INSERT.
+**Impacto:** Potencial risco de segurança - qualquer usuário pode modificar dados.
+**Recomendação:** Revisar e restringir as políticas RLS conforme necessidade.
+
+### 10. **Proteção de senha vazada desabilitada**
+**Problema:** A funcionalidade de verificar senhas vazadas está desativada no Supabase.
+**Impacto:** Usuários podem usar senhas comprometidas.
+
+---
+
+## 🔧 OPORTUNIDADES DE MELHORIA
+
+### 11. **Breadcrumbs não estão sendo usados**
+**Arquivo:** `src/components/Breadcrumbs.tsx` foi criado mas não é renderizado em nenhuma página.
+**Status:** Componente órfão.
+
+### 12. **Skeleton components subutilizados**
+**Arquivo:** `src/components/ui/skeleton-card.tsx`
+**Problema:** Componentes `SkeletonCard` e `SkeletonGrid` foram criados mas não são usados nas páginas principais.
+**Páginas que poderiam usar:** Folders.tsx, Index.tsx, TurmaDetail.tsx.
+
+### 13. **Safe area bottom inconsistente**
+**Arquivos:** `index.css` e `ApeTabBar.tsx`
+**Problema:** `safe-area-pb` na TabBar + `pb-24` no GlobalLayout pode criar espaçamento excessivo ou insuficiente dependendo do device.
+
+### 14. **Console logs em produção**
+**Arquivos:** `Profile.tsx`, `Folder.tsx`, `TurmaActivityPanel.tsx`
+**Problema:** Há `console.log` e `console.error` que podem poluir o console em produção.
+
+---
+
+## 📋 PRIORIZAÇÃO SUGERIDA
+
+| Prioridade | Item | Categoria |
+|------------|------|-----------|
+| 🔴 Alta | #9 - RLS permissivas | Segurança |
+| 🔴 Alta | #6 - TabBar sobreposição | UX Mobile |
+| 🟡 Média | #1 - PageTransition flicker | UX |
+| 🟡 Média | #3 - Swipe interfere scroll | UX Mobile |
+| 🟡 Média | #2 - Scroll iOS | UX Mobile |
+| 🟢 Baixa | #5 - Version badge opacity | Visual |
+| 🟢 Baixa | #11 - Breadcrumbs órfão | Tech Debt |
+| 🟢 Baixa | #12 - Skeleton subutilizado | Tech Debt |
+| 🟢 Baixa | #14 - Console logs | Tech Debt |
+
+---
+
+## Próximos Passos
+
+Você pode me dizer quais itens quer que eu corrija primeiro, ou posso criar um plano de implementação para resolver todos em ordem de prioridade.
