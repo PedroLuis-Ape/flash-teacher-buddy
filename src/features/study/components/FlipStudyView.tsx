@@ -12,12 +12,15 @@ import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ImageCard } from "./ImageCard";
 
 interface FlipStudyViewProps {
   front: string;
   back: string;
   hint?: string | null;
   flashcardId?: string;
+  imageUrlA?: string | null;
+  imageUrlB?: string | null;
   onKnew: () => void;
   onDidntKnow: () => void;
   onNext?: () => void;
@@ -38,6 +41,8 @@ export const FlipStudyView = ({
   back,
   hint,
   flashcardId,
+  imageUrlA,
+  imageUrlB,
   onKnew,
   onDidntKnow,
   onNext,
