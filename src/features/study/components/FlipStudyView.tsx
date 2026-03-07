@@ -96,7 +96,11 @@ export const FlipStudyView = ({
   // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
-  const { promptSide: firstSide, answerSide: secondSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const { promptSide: firstSide, answerSide: secondSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+
+  // Resolve images based on which side is prompt vs answer
+  const firstSideImage = isAFirst ? imageUrlA : imageUrlB;
+  const secondSideImage = isAFirst ? imageUrlB : imageUrlA;
 
   // Reset flip state when card changes
   useEffect(() => {
