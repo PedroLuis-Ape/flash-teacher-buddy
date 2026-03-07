@@ -4,23 +4,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { supportsImages } from "@/features/study/lib/studyTypeConfig";
 
 interface CreateFlashcardFormProps {
-  onAdd: (term: string, translation: string, hint?: string) => void;
+  onAdd: (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string) => void;
   labelA?: string;
   labelB?: string;
+  studyType?: string;
 }
 
 export const CreateFlashcardForm = ({ 
   onAdd,
   labelA = "Lado A (Termo)",
   labelB = "Lado B (Tradução)",
+  studyType = "language",
 }: CreateFlashcardFormProps) => {
   const [term, setTerm] = useState("");
   const [translation, setTranslation] = useState("");
   const [hint, setHint] = useState("");
+  const [imageUrlA, setImageUrlA] = useState("");
+  const [imageUrlB, setImageUrlB] = useState("");
+
+  const showImages = supportsImages(studyType);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,10 +37,18 @@ export const CreateFlashcardForm = ({
       return;
     }
 
-    onAdd(term, translation, hint.trim() || undefined);
+    onAdd(
+      term,
+      translation,
+      hint.trim() || undefined,
+      imageUrlA.trim() || undefined,
+      imageUrlB.trim() || undefined,
+    );
     setTerm("");
     setTranslation("");
     setHint("");
+    setImageUrlA("");
+    setImageUrlB("");
     toast.success("Flashcard criado com sucesso!");
   };
 
@@ -80,6 +95,39 @@ export const CreateFlashcardForm = ({
             rows={2}
           />
         </div>
+
+        {showImages && (
+          <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <ImageIcon className="h-4 w-4" />
+              Imagens (opcional — cole URL externa)
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="image-url-a" className="text-xs">Imagem Lado A</Label>
+                <Input
+                  id="image-url-a"
+                  value={imageUrlA}
+                  onChange={(e) => setImageUrlA(e.target.value)}
+                  placeholder="https://..."
+                  className="bg-background text-sm"
+                  type="url"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="image-url-b" className="text-xs">Imagem Lado B</Label>
+                <Input
+                  id="image-url-b"
+                  value={imageUrlB}
+                  onChange={(e) => setImageUrlB(e.target.value)}
+                  placeholder="https://..."
+                  className="bg-background text-sm"
+                  type="url"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <Button type="submit" className="w-full" size="lg">
           <Plus className="mr-2 h-5 w-5" />

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ImageIcon } from "lucide-react";
+import { supportsImages } from "@/features/study/lib/studyTypeConfig";
 
 interface EditFlashcardDialogProps {
   flashcard: {
@@ -11,23 +13,34 @@ interface EditFlashcardDialogProps {
     term: string;
     translation: string;
     hint?: string | null;
+    image_url_a?: string | null;
+    image_url_b?: string | null;
   } | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, term: string, translation: string, hint: string) => Promise<void>;
+  onSave: (id: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string) => Promise<void>;
+  studyType?: string;
+  labelA?: string;
+  labelB?: string;
 }
 
-export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave }: EditFlashcardDialogProps) => {
+export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyType = "language", labelA, labelB }: EditFlashcardDialogProps) => {
   const [term, setTerm] = useState("");
   const [translation, setTranslation] = useState("");
   const [hint, setHint] = useState("");
+  const [imageUrlA, setImageUrlA] = useState("");
+  const [imageUrlB, setImageUrlB] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const showImages = supportsImages(studyType);
 
   useEffect(() => {
     if (flashcard) {
       setTerm(flashcard.term);
       setTranslation(flashcard.translation);
       setHint(flashcard.hint || "");
+      setImageUrlA(flashcard.image_url_a || "");
+      setImageUrlB(flashcard.image_url_b || "");
     }
   }, [flashcard]);
 
@@ -36,7 +49,14 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave }: Edit
     
     setSaving(true);
     try {
-      await onSave(flashcard.id, term.trim(), translation.trim(), hint.trim());
+      await onSave(
+        flashcard.id,
+        term.trim(),
+        translation.trim(),
+        hint.trim(),
+        imageUrlA.trim() || undefined,
+        imageUrlB.trim() || undefined,
+      );
       onClose();
     } finally {
       setSaving(false);
@@ -52,22 +72,22 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave }: Edit
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-term">Português</Label>
+            <Label htmlFor="edit-term">{labelA || "Lado A"}</Label>
             <Input
               id="edit-term"
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              placeholder="Termo em português"
+              placeholder={`Conteúdo do ${labelA || "Lado A"}`}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="edit-translation">English</Label>
+            <Label htmlFor="edit-translation">{labelB || "Lado B"}</Label>
             <Input
               id="edit-translation"
               value={translation}
               onChange={(e) => setTranslation(e.target.value)}
-              placeholder="Translation in English"
+              placeholder={`Conteúdo do ${labelB || "Lado B"}`}
             />
           </div>
           
@@ -81,6 +101,39 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave }: Edit
               rows={2}
             />
           </div>
+
+          {showImages && (
+            <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <ImageIcon className="h-4 w-4" />
+                Imagens (opcional)
+              </div>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-image-a" className="text-xs">Imagem Lado A</Label>
+                  <Input
+                    id="edit-image-a"
+                    value={imageUrlA}
+                    onChange={(e) => setImageUrlA(e.target.value)}
+                    placeholder="https://..."
+                    type="url"
+                    className="text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-image-b" className="text-xs">Imagem Lado B</Label>
+                  <Input
+                    id="edit-image-b"
+                    value={imageUrlB}
+                    onChange={(e) => setImageUrlB(e.target.value)}
+                    placeholder="https://..."
+                    type="url"
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
         <DialogFooter>

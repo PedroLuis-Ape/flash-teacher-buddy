@@ -4,8 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowRightLeft, Volume2, VolumeX, Beaker } from "lucide-react";
+import { ArrowRightLeft, Volume2, VolumeX, BookOpen, Calculator, Image } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { STUDY_TYPE_CONFIG, supportsTTS } from "@/features/study/lib/studyTypeConfig";
 
 // Common language options
 const LANGUAGES = [
@@ -25,7 +26,7 @@ const LANGUAGES = [
 ];
 
 export interface ListStudySettings {
-  studyType: "language" | "general";
+  studyType: "language" | "general" | "math" | "visual";
   langA: string;
   langB: string;
   labelsA: string;
@@ -42,6 +43,13 @@ function getLanguageName(code: string): string {
   const lang = LANGUAGES.find(l => l.code === code);
   return lang?.name || code.toUpperCase();
 }
+
+const STUDY_TYPE_ICONS: Record<string, React.ReactNode> = {
+  language: <Volume2 className="h-4 w-4" />,
+  general: <BookOpen className="h-4 w-4" />,
+  math: <Calculator className="h-4 w-4" />,
+  visual: <Image className="h-4 w-4" />,
+};
 
 export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelectorProps) {
   const [customLangA, setCustomLangA] = useState("");
@@ -62,10 +70,13 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
   }, []);
 
   const isLanguageMode = value.studyType === "language";
+  const hasTTS = supportsTTS(value.studyType);
 
-  const handleToggleMode = (checked: boolean) => {
-    if (checked) {
-      // Switch to language mode
+  const handleStudyTypeChange = (newType: string) => {
+    const config = STUDY_TYPE_CONFIG[newType];
+    if (!config) return;
+
+    if (newType === "language") {
       onChange({
         ...value,
         studyType: "language",
@@ -74,13 +85,12 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
         labelsB: getLanguageName(value.langB || "pt"),
       });
     } else {
-      // Switch to general mode
       onChange({
         ...value,
-        studyType: "general",
-        ttsEnabled: false,
-        labelsA: "Frente",
-        labelsB: "Verso",
+        studyType: newType as ListStudySettings["studyType"],
+        ttsEnabled: newType === "visual" ? false : value.ttsEnabled,
+        labelsA: config.defaultLabelA,
+        labelsB: config.defaultLabelB,
       });
     }
   };
@@ -137,7 +147,6 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
       labelsA: value.labelsB,
       labelsB: value.labelsA,
     });
-    // Also swap custom inputs
     const tempCustom = customLangA;
     setCustomLangA(customLangB);
     setCustomLangB(tempCustom);
@@ -148,24 +157,27 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
 
   return (
     <div className="space-y-4">
-      {/* Main Toggle */}
-      <div className="flex items-start justify-between gap-4 p-4 border rounded-lg bg-muted/30">
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <Volume2 className="h-4 w-4 text-primary" />
-            <Label htmlFor="language-mode-toggle" className="font-medium cursor-pointer">
-              Modo Idiomas (A/B + áudio)
-            </Label>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Ative para estudar idiomas com áudio. Desative para Estudo Geral (Beta).
-          </p>
+      {/* Study Type Selector */}
+      <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+        <Label className="font-medium">Tipo de Estudo</Label>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {Object.entries(STUDY_TYPE_CONFIG).map(([key, config]) => (
+            <Button
+              key={key}
+              type="button"
+              variant={value.studyType === key ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleStudyTypeChange(key)}
+              className="flex items-center gap-2 justify-start"
+            >
+              {STUDY_TYPE_ICONS[key]}
+              <span className="text-xs">{config.label}</span>
+            </Button>
+          ))}
         </div>
-        <Switch
-          id="language-mode-toggle"
-          checked={isLanguageMode}
-          onCheckedChange={handleToggleMode}
-        />
+        <p className="text-xs text-muted-foreground">
+          {STUDY_TYPE_CONFIG[value.studyType]?.description}
+        </p>
       </div>
 
       {/* Language Mode Options */}
@@ -289,15 +301,15 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
         </div>
       )}
 
-      {/* General Mode Badge */}
+      {/* Non-language modes */}
       {!isLanguageMode && (
         <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
           <div className="flex items-center gap-2">
-            <Beaker className="h-4 w-4 text-muted-foreground" />
-            <Badge variant="secondary">Estudo Geral (Beta)</Badge>
+            {STUDY_TYPE_ICONS[value.studyType]}
+            <Badge variant="secondary">{STUDY_TYPE_CONFIG[value.studyType]?.label}</Badge>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm">Label do Lado A</Label>
               <Input
@@ -317,11 +329,34 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
               />
             </div>
           </div>
+
+          {/* TTS toggle for visual mode (optional) */}
+          {hasTTS && (
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center gap-2">
+                {value.ttsEnabled ? (
+                  <Volume2 className="h-4 w-4 text-primary" />
+                ) : (
+                  <VolumeX className="h-4 w-4 text-muted-foreground" />
+                )}
+                <Label htmlFor="tts-toggle-general" className="cursor-pointer">
+                  Ativar áudio (TTS)
+                </Label>
+              </div>
+              <Switch
+                id="tts-toggle-general"
+                checked={value.ttsEnabled}
+                onCheckedChange={(checked) => onChange({ ...value, ttsEnabled: checked })}
+              />
+            </div>
+          )}
           
-          <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
-            <VolumeX className="h-4 w-4" />
-            Modo Estudo Geral não tem áudio por enquanto.
-          </div>
+          {!hasTTS && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
+              <VolumeX className="h-4 w-4" />
+              Este modo não suporta áudio.
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -349,7 +384,9 @@ export function listRowToSettings(row: {
   labels_b?: string | null;
   tts_enabled?: boolean | null;
 }): ListStudySettings {
-  const studyType = (row.study_type === "general" ? "general" : "language") as "language" | "general";
+  const studyType = (["language", "general", "math", "visual"].includes(row.study_type || "") 
+    ? row.study_type 
+    : "language") as ListStudySettings["studyType"];
   const langA = row.lang_a || "en";
   const langB = row.lang_b || "pt";
   
@@ -357,8 +394,8 @@ export function listRowToSettings(row: {
     studyType,
     langA,
     langB,
-    labelsA: row.labels_a || (studyType === "general" ? "Frente" : getLanguageName(langA)),
-    labelsB: row.labels_b || (studyType === "general" ? "Verso" : getLanguageName(langB)),
+    labelsA: row.labels_a || (studyType === "language" ? getLanguageName(langA) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelA || "Frente"),
+    labelsB: row.labels_b || (studyType === "language" ? getLanguageName(langB) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelB || "Verso"),
     ttsEnabled: row.tts_enabled ?? (studyType === "language"),
   };
 }
