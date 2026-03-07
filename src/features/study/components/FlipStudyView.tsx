@@ -201,6 +201,9 @@ export const FlipStudyView = ({
                 </Button>
               )}
             </div>
+            {firstSideImage && (
+              <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-2" maxHeight="80px" />
+            )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {firstSide.text}
@@ -223,6 +226,9 @@ export const FlipStudyView = ({
                 </Button>
               )}
             </div>
+            {secondSideImage && (
+              <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-2" maxHeight="80px" />
+            )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 {secondSide.text}
