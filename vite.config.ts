@@ -22,24 +22,23 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // React core
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router')) {
+          // Only split React core — let Vite handle everything else automatically.
+          // This prevents cross-chunk import races between react-vendor and ui libs.
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/react-router')
+          ) {
             return 'react-vendor';
-          }
-          // UI libraries
-          if (id.includes('node_modules/@radix-ui/') || id.includes('node_modules/lucide-react') || id.includes('node_modules/class-variance-authority') || id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge') || id.includes('node_modules/cmdk') || id.includes('node_modules/sonner') || id.includes('node_modules/vaul')) {
-            return 'ui-vendor';
-          }
-          // Data layer
-          if (id.includes('node_modules/@tanstack/') || id.includes('node_modules/@supabase/')) {
-            return 'data-vendor';
-          }
-          // Other vendor libs
-          if (id.includes('node_modules/')) {
-            return 'vendor';
           }
         },
       },
+    },
+  },
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   plugins: [
@@ -48,6 +47,9 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'icons/*.png'],
+      devOptions: {
+        enabled: false, // Never register SW in dev — avoid stale cache issues
+      },
       manifest: {
         name: 'APE – Apprentice Practice & Enhancement',
         short_name: 'APE',
@@ -77,6 +79,10 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,webp}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             // Never cache API calls - always go to network
@@ -101,9 +107,4 @@ export default defineConfig(({ mode }) => ({
       }
     })
   ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
 }));

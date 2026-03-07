@@ -11,7 +11,7 @@
       (function() {
         try {
           // Aplicar tema salvo ou padrão
-          const theme = localStorage.getItem('theme') || 'dark';
+          var theme = localStorage.getItem('theme') || 'dark';
           document.documentElement.classList.add(theme);
           
           // Aplicar background sólido imediatamente
@@ -57,7 +57,45 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Boot loader — React.createRoot().render() will replace this -->
+      <div id="boot-loader" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui,-apple-system,sans-serif;">
+        <div style="text-align:center;">
+          <div style="width:40px;height:40px;border:3px solid rgba(255,215,0,0.3);border-top-color:#FFD700;border-radius:50%;animation:bl-spin .7s linear infinite;margin:0 auto 16px;"></div>
+          <p id="boot-msg" style="color:#aaa;font-size:14px;">Carregando…</p>
+        </div>
+      </div>
+      <style>@keyframes bl-spin{to{transform:rotate(360deg)}}</style>
+    </div>
+    <noscript><p style="text-align:center;padding:40px;color:#ccc;font-family:sans-serif;">JavaScript é necessário para usar o APE.</p></noscript>
+
+    <!-- Boot timeout: if app didn't mount in 8s, show recovery UI -->
+    <script>
+      (function(){
+        var t = setTimeout(function(){
+          var bl = document.getElementById('boot-loader');
+          if (!bl) return; // App mounted fine
+          var msg = document.getElementById('boot-msg');
+          if (msg) {
+            msg.innerHTML = 'Falha ao iniciar o app.<br><button id="boot-recover" style="margin-top:12px;padding:10px 20px;border:none;border-radius:8px;background:#FFD700;color:#1a1a2e;font-weight:600;font-size:14px;cursor:pointer;">Limpar cache e recarregar</button>';
+            var btn = document.getElementById('boot-recover');
+            if (btn) btn.onclick = function(){
+              try {
+                if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});
+                if('caches' in window) caches.keys().then(function(n){n.forEach(function(k){caches.delete(k)})});
+                var authKeys=[];
+                for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith('sb-'))authKeys.push([k,localStorage.getItem(k)])}
+                localStorage.clear(); sessionStorage.clear();
+                authKeys.forEach(function(p){localStorage.setItem(p[0],p[1])});
+              } catch(e){}
+              window.location.href=window.location.origin+'/?t='+Date.now();
+            };
+          }
+        }, 8000);
+        window.__apeBootTimer = t;
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

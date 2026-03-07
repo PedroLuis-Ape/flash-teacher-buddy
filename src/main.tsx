@@ -13,6 +13,15 @@ import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
 
+// Clear boot timeout — app JS loaded successfully
+if ((window as any).__apeBootTimer) {
+  clearTimeout((window as any).__apeBootTimer);
+}
+
+// Remove boot loader so it doesn't flash under React
+const bootLoader = document.getElementById("boot-loader");
+if (bootLoader) bootLoader.remove();
+
 createRoot(document.getElementById("root")!).render(
   <SafeMode>
     <App />
