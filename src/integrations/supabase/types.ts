@@ -714,6 +714,8 @@ export type Database = {
           eval_text: string | null
           hint: string | null
           id: string
+          image_url_a: string | null
+          image_url_b: string | null
           lang: string | null
           list_id: string | null
           note_text: string[] | null
@@ -733,6 +735,8 @@ export type Database = {
           eval_text?: string | null
           hint?: string | null
           id?: string
+          image_url_a?: string | null
+          image_url_b?: string | null
           lang?: string | null
           list_id?: string | null
           note_text?: string[] | null
@@ -752,6 +756,8 @@ export type Database = {
           eval_text?: string | null
           hint?: string | null
           id?: string
+          image_url_a?: string | null
+          image_url_b?: string | null
           lang?: string | null
           list_id?: string | null
           note_text?: string[] | null
@@ -2484,6 +2490,8 @@ export type Database = {
           eval_text: string | null
           hint: string | null
           id: string
+          image_url_a: string | null
+          image_url_b: string | null
           lang: string | null
           list_id: string | null
           note_text: string[] | null
