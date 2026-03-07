@@ -58,6 +58,8 @@ interface Flashcard {
   translation: string;
   hint?: string | null;
   audio_url: string | null;
+  image_url_a?: string | null;
+  image_url_b?: string | null;
 }
 
 const ListDetail = () => {
@@ -172,20 +174,24 @@ const ListDetail = () => {
   });
 
 
-  const handleAddFlashcard = async (term: string, translation: string, hint?: string) => {
+  const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      const insertData: Record<string, unknown> = {
+        list_id: id,
+        user_id: session.user.id,
+        term,
+        translation,
+        hint: hint || null,
+      };
+      if (imageUrlA) insertData.image_url_a = imageUrlA;
+      if (imageUrlB) insertData.image_url_b = imageUrlB;
+
       const { error } = await supabase
         .from("flashcards")
-        .insert({
-          list_id: id,
-          user_id: session.user.id,
-          term,
-          translation,
-          hint: hint || null,
-        });
+        .insert(insertData as any);
 
       if (error) throw error;
       loadFlashcards();
@@ -246,11 +252,16 @@ const ListDetail = () => {
     }
   };
 
-  const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string) => {
+  const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string) => {
     try {
+      const updateData: Record<string, unknown> = { term, translation, hint: hint || null };
+      // Only set image fields if they were provided (even empty string means clear)
+      updateData.image_url_a = imageUrlA || null;
+      updateData.image_url_b = imageUrlB || null;
+
       const { error } = await supabase
         .from("flashcards")
-        .update({ term, translation, hint: hint || null })
+        .update(updateData as any)
         .eq("id", flashcardId);
 
       if (error) throw error;
