@@ -714,6 +714,7 @@ const ListDetail = () => {
               onAdd={handleAddFlashcard}
               labelA={list?.labels_a || (list?.lang_a === 'en' ? 'English' : list?.lang_a === 'pt' ? 'Português' : 'Lado A')}
               labelB={list?.labels_b || (list?.lang_b === 'pt' ? 'Português' : list?.lang_b === 'en' ? 'English' : 'Lado B')}
+              studyType={list?.study_type || 'language'}
             />
           )}
 
@@ -845,6 +846,9 @@ const ListDetail = () => {
         isOpen={!!editingFlashcard}
         onClose={() => setEditingFlashcard(null)}
         onSave={handleUpdateFlashcard}
+        studyType={list?.study_type || 'language'}
+        labelA={list?.labels_a || (list?.lang_a === 'en' ? 'English' : list?.lang_a === 'pt' ? 'Português' : 'Lado A')}
+        labelB={list?.labels_b || (list?.lang_b === 'pt' ? 'Português' : list?.lang_b === 'en' ? 'English' : 'Lado B')}
       />
 
       {/* List Settings Dialog */}
