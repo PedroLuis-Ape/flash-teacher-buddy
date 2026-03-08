@@ -13,6 +13,7 @@ import { evaluatePronunciation } from "@/lib/levenshtein";
 interface PronunciationStudyViewProps {
   front: string;
   back: string;
+  wordHintsA?: unknown;
   langA?: string;
   langB?: string;
   labelA?: string;
