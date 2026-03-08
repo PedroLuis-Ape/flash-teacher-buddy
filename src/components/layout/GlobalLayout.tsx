@@ -6,6 +6,7 @@
  */
 
 import { ReactNode, useEffect, useState, lazy, Suspense } from "react";
+import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
