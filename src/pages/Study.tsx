@@ -302,18 +302,8 @@ const Study = () => {
       return;
     }
 
-    // Filter by favorites if enabled
-    let filteredData = data;
-    if (favoritesOnly && favorites.length > 0) {
-      filteredData = data.filter(card => favorites.includes(card.id));
-      if (filteredData.length === 0) {
-        toast.error("Nenhum flashcard favorito encontrado nesta lista");
-        navigate(isListRoute ? `/list/${resolvedId}` : `/collection/${resolvedId}`);
-        return;
-      }
-    }
-
-    const orderedData = order === "random" ? shuffleArray([...filteredData]) : filteredData;
+    // Always load ALL cards; favorites filtering is handled by effectiveFlashcards memo
+    const orderedData = order === "random" ? shuffleArray([...data]) : data;
     setFlashcards(orderedData);
 
     // Load list info and video if this is a list route
