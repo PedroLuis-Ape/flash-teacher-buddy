@@ -389,6 +389,9 @@ const ListDetail = () => {
           term: card.term,
           translation: card.translation,
           hint: card.hint || null,
+          image_url_a: card.image_url_a || null,
+          image_url_b: card.image_url_b || null,
+          word_hints: card.word_hints || null,
         }));
         
         const { error: cardsError } = await supabase
