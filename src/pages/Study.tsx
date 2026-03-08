@@ -830,6 +830,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
