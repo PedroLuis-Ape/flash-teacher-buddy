@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supportsImages } from "@/features/study/lib/studyTypeConfig";
+import { WordHintEditor } from "@/features/study/components/WordHintEditor";
+import type { WordHint } from "@/features/study/lib/wordHints";
 
 interface CreateFlashcardFormProps {
-  onAdd: (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string) => void;
+  onAdd: (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: WordHint[]) => void;
   labelA?: string;
   labelB?: string;
   studyType?: string;
@@ -26,8 +28,10 @@ export const CreateFlashcardForm = ({
   const [hint, setHint] = useState("");
   const [imageUrlA, setImageUrlA] = useState("");
   const [imageUrlB, setImageUrlB] = useState("");
+  const [wordHints, setWordHints] = useState<WordHint[]>([]);
 
   const showImages = supportsImages(studyType);
+  const showWordHints = studyType === "language";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,18 +41,23 @@ export const CreateFlashcardForm = ({
       return;
     }
 
+    // Filter out empty word hints before saving
+    const validHints = wordHints.filter(h => h.text.trim() && h.translation.trim());
+
     onAdd(
       term,
       translation,
       hint.trim() || undefined,
       imageUrlA.trim() || undefined,
       imageUrlB.trim() || undefined,
+      validHints.length > 0 ? validHints : undefined,
     );
     setTerm("");
     setTranslation("");
     setHint("");
     setImageUrlA("");
     setImageUrlB("");
+    setWordHints([]);
     toast.success("Flashcard criado com sucesso!");
   };
 
@@ -127,6 +136,10 @@ export const CreateFlashcardForm = ({
               </div>
             </div>
           </div>
+        )}
+
+        {showWordHints && (
+          <WordHintEditor value={wordHints} onChange={setWordHints} />
         )}
 
         <Button type="submit" className="w-full" size="lg">
