@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
   deduplicateGlossary,
   FlashcardPair,
   GlossaryParsed,
-  AI_HELPER_PROMPT,
+  buildAIHelperPrompt,
 } from "@/lib/bulkImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -33,6 +33,8 @@ interface BulkImportDialogProps {
   onImported: () => void;
   labelA?: string;
   labelB?: string;
+  langA?: string;
+  langB?: string;
 }
 
 export const BulkImportDialog = ({
@@ -42,6 +44,8 @@ export const BulkImportDialog = ({
   onImported,
   labelA = "Lado A",
   labelB = "Lado B",
+  langA,
+  langB,
 }: BulkImportDialogProps) => {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -52,7 +56,7 @@ export const BulkImportDialog = ({
   const [showAIHelper, setShowAIHelper] = useState(false);
   const [invertAB, setInvertAB] = useState(false);
   const queryClient = useQueryClient();
-
+  const aiPrompt = useMemo(() => buildAIHelperPrompt(langA, langB), [langA, langB]);
   const handleParse = () => {
     if (!input.trim()) {
       toast.error("Cole o conteúdo dos flashcards");
@@ -163,7 +167,7 @@ export const BulkImportDialog = ({
   };
 
   const handleCopyAIPrompt = () => {
-    navigator.clipboard.writeText(AI_HELPER_PROMPT);
+    navigator.clipboard.writeText(aiPrompt);
     toast.success("Prompt copiado para a área de transferência!");
   };
 
@@ -216,7 +220,7 @@ export const BulkImportDialog = ({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Prompt para copiar e usar com ChatGPT/Claude:</Label>
                   <Textarea
-                    value={AI_HELPER_PROMPT}
+                    value={aiPrompt}
                     readOnly
                     rows={8}
                     className="font-mono text-xs bg-background resize-none"

@@ -63,7 +63,9 @@ export function mergeGlossaryAndManual(
   text: string,
   side: "A" | "B",
   glossary: GlossaryItem[],
-  manualHints: ExtendedWordHint[]
+  manualHints: ExtendedWordHint[],
+  /** Optional: list language context for bidirectional glossary matching */
+  langContext?: { langA?: string; langB?: string }
 ): MergedHint[] {
   if (!text) return [];
 
@@ -80,27 +82,55 @@ export function mergeGlossaryAndManual(
     }
   }
 
-  // 1. Add global glossary entries matching this side
+  // 1. Add global glossary entries — bidirectional matching
+  // When rendering side A text, match glossary entries where side="A" (original_text is in langA).
+  // When rendering side B text, match glossary entries where side="A" BUT use translated_text as the lookup
+  // and original_text as the hint. Also match side="B" entries normally.
   for (const g of glossary) {
     if (!g.is_active) continue;
-    if (g.side !== side) continue;
 
-    const key = g.original_text.toLowerCase();
-    // Check if text contains this glossary term
-    if (!textLower.includes(key)) continue;
+    let matchText: string;
+    let hintText: string;
+    let displayText: string;
+
+    if (side === "A" && g.side === "A") {
+      // Rendering side A text, glossary side A: original_text matches term, show translated_text
+      matchText = g.original_text.toLowerCase();
+      hintText = g.translated_text.trim();
+      displayText = g.original_text;
+    } else if (side === "B" && g.side === "A") {
+      // Rendering side B text, glossary side A: translated_text matches translation, show original_text
+      matchText = g.translated_text.toLowerCase();
+      hintText = g.original_text.trim();
+      displayText = g.translated_text;
+    } else if (side === "B" && g.side === "B") {
+      // Rendering side B text, glossary side B: original_text matches, show translated_text
+      matchText = g.original_text.toLowerCase();
+      hintText = g.translated_text.trim();
+      displayText = g.original_text;
+    } else if (side === "A" && g.side === "B") {
+      // Rendering side A text, glossary side B: translated_text matches, show original_text
+      matchText = g.translated_text.toLowerCase();
+      hintText = g.original_text.trim();
+      displayText = g.translated_text;
+    } else {
+      continue;
+    }
+
+    // Check if text contains the match text
+    if (!textLower.includes(matchText)) continue;
     // Check if suppressed by a manual hint
-    if (suppressedTexts.has(key)) continue;
+    if (suppressedTexts.has(matchText)) continue;
 
-    if (!hintMap.has(key)) {
-      hintMap.set(key, {
-        text: g.original_text,
+    if (!hintMap.has(matchText)) {
+      hintMap.set(matchText, {
+        text: displayText,
         translations: [],
       });
     }
-    const merged = hintMap.get(key)!;
-    const translation = g.translated_text.trim();
-    if (!merged.translations.some((t) => t.text === translation && t.source === "global")) {
-      merged.translations.push({ text: translation, note: g.note || undefined, source: "global" });
+    const merged = hintMap.get(matchText)!;
+    if (!merged.translations.some((t) => t.text === hintText && t.source === "global")) {
+      merged.translations.push({ text: hintText, note: g.note || undefined, source: "global" });
     }
   }
 
