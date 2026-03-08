@@ -3,7 +3,7 @@
  * Reads from localStorage synchronously on init (no flash of wrong state).
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import {
   type PerformanceSettings,
   type PerformancePreset,
