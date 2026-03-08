@@ -2738,6 +2738,24 @@ export type Database = {
         Returns: Json
       }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
+      update_own_profile: {
+        Args: {
+          p_avatar_skin_id?: string
+          p_avatar_url?: string
+          p_first_name?: string
+          p_google_connect_prompt_dont_show?: boolean
+          p_google_connect_prompt_version_seen?: number
+          p_google_connected_at?: string
+          p_is_teacher?: boolean
+          p_last_active_at?: string
+          p_mascot_skin_id?: string
+          p_public_access_enabled?: boolean
+          p_public_slug?: string
+          p_user_id: string
+          p_user_type?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "owner" | "student" | "developer_admin"
