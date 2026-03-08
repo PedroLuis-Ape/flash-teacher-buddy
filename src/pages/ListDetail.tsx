@@ -579,6 +579,21 @@ const ListDetail = () => {
               {list.description && (
                 <p className="text-muted-foreground mt-2 text-sm line-clamp-2">{list.description}</p>
               )}
+              {/* Language direction indicator */}
+              {effectiveSettings.studyType === "language" && (
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                  <span className="px-2 py-0.5 rounded bg-muted font-medium">
+                    A: {effectiveSettings.labelsA}
+                  </span>
+                  <span>→</span>
+                  <span className="px-2 py-0.5 rounded bg-muted font-medium">
+                    B: {effectiveSettings.labelsB}
+                  </span>
+                  {!effectiveSettings.isListOverride && (
+                    <span className="text-muted-foreground/60 italic text-[10px]">(herdado da pasta)</span>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* Action buttons - grid on mobile, flex on desktop */}
