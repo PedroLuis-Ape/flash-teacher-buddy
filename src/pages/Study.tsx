@@ -368,7 +368,7 @@ const Study = () => {
 
   const handleNext = (correct: boolean, skipped: boolean = false) => {
     if (currentIndex < effectiveFlashcards.length) {
-      recordResult(flashcards[currentIndex].id, correct, skipped);
+      recordResult(effectiveFlashcards[currentIndex].id, correct, skipped);
     }
     goToNext();
   };
