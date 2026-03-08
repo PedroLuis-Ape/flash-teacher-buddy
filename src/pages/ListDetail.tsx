@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ListStudyTypeSelector, ListStudySettings, listRowToSettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
+import { ListGlossaryManager } from "@/features/study/components/ListGlossaryManager";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
