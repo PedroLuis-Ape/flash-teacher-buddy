@@ -432,7 +432,7 @@ const Study = () => {
     );
   }
 
-  const currentCard = flashcards[currentIndex];
+  const currentCard = effectiveFlashcards[currentIndex];
 
   if (isFinished) {
     const isFlipMode = normalizedMode === "flip";

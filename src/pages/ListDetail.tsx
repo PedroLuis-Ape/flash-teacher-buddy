@@ -271,7 +271,24 @@ const ListDetail = () => {
 
       if (error) throw error;
       toast.success("Flashcard atualizado!");
-      loadFlashcards();
+
+      // Optimistic in-place update — preserves card position
+      queryClient.setQueryData<Flashcard[]>(["flashcards", id], (old) => {
+        if (!old) return old;
+        return old.map(card =>
+          card.id === flashcardId
+            ? {
+                ...card,
+                term,
+                translation,
+                hint: hint || null,
+                image_url_a: imageUrlA || null,
+                image_url_b: imageUrlB || null,
+                word_hints: (wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0) ? wordHints : null,
+              }
+            : card
+        );
+      });
     } catch (error: any) {
       toast.error("Erro ao atualizar: " + error.message);
     }
