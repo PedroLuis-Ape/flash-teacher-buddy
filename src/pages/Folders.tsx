@@ -510,7 +510,7 @@ const Folders = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {folders.map((folder) => {
+          {filteredFolders.map((folder) => {
             const isFav = folderFavorites.includes(folder.id);
             const isSelected = selectedFolders.has(folder.id);
             return (
