@@ -179,7 +179,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
 
         {/* Phrase to speak - BIG */}
         <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
-          <InteractiveText text={speakSide.text} wordHints={wordHintsA} speakOnHintClick speakLang={speakLang} />
+          <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick speakLang={speakLang} />
         </h2>
 
         {/* Hint translation - small */}
