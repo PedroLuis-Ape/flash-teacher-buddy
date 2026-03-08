@@ -20,7 +20,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
 
   useEffect(() => {
     // Skip observer creation if disabled
-    if (disabled) return;
+    if (isDisabled) return;
     
     const element = ref.current;
     if (!element) return;
