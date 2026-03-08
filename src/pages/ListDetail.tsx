@@ -98,7 +98,8 @@ const ListDetail = () => {
   });
 
   const userId = currentUser?.id;
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
+  const favoritesScope = useMemo(() => (id ? { listId: id } : undefined), [id]);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard', favoritesScope);
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["list", id],
