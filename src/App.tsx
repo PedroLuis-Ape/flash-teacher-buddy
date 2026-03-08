@@ -78,6 +78,7 @@ const App = () => {
   useEffect(() => { perfTelemetry.logBoot(); }, []);
   return (
   <QueryClientProvider client={queryClient}>
+    <PerformanceProvider>
     <EconomyProvider>
       <TooltipProvider>
         <Toaster />
