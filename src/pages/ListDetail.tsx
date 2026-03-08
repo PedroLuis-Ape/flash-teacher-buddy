@@ -768,8 +768,8 @@ const ListDetail = () => {
           {list?.study_type === 'language' && (
             <ListGlossaryManager
               listId={id!}
-              labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-              labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
+              labelA={effectiveSettings.labelsA}
+              labelB={effectiveSettings.labelsB}
               canEdit={canEdit}
             />
           )}
