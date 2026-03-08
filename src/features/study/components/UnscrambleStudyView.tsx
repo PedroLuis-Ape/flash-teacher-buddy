@@ -56,7 +56,10 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
   const sideA = { text: front, lang: langA, label: "" };
   const sideB = { text: back, lang: langB, label: "" };
 
-  const { promptSide, answerSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+
+  // word_hints always belong to sideA; show on prompt only if sideA is prompt
+  const promptWordHints = isAFirst ? wordHintsA : undefined;
 
   const question = promptSide.text;
   const correctSentence = answerSide.text;
