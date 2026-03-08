@@ -25,6 +25,8 @@ interface FlipStudyViewProps {
   imageUrlB?: string | null;
   wordHintsA?: unknown;
   wordHintsB?: unknown;
+  mergedHintsA?: MergedHint[];
+  mergedHintsB?: MergedHint[];
   onKnew: () => void;
   onDidntKnow: () => void;
   onNext?: () => void;
