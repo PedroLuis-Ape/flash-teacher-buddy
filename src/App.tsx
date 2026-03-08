@@ -15,6 +15,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
 import { EconomyProvider } from "@/contexts/EconomyContext";
+import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { InstallPWA } from "@/components/InstallPWA";
