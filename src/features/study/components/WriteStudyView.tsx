@@ -63,7 +63,10 @@ export const WriteStudyView = ({
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
 
-  const { promptSide, answerSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+
+  // word_hints always belong to sideA; show on prompt only if sideA is prompt
+  const promptWordHints = isAFirst ? wordHintsA : undefined;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
