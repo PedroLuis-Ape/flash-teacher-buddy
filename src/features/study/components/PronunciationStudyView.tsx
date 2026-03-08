@@ -15,6 +15,8 @@ interface PronunciationStudyViewProps {
   front: string;
   back: string;
   wordHintsA?: unknown;
+  mergedHintsA?: MergedHint[];
+  mergedHintsB?: MergedHint[];
   langA?: string;
   langB?: string;
   labelA?: string;
