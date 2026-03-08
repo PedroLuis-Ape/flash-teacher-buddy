@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VideoList } from "@/components/VideoList";
