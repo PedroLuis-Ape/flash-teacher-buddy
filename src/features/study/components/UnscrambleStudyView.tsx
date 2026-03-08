@@ -5,6 +5,7 @@ import { Volume2, RotateCcw, Check, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { supabase } from "@/integrations/supabase/client";
