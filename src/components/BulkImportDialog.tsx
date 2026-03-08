@@ -357,9 +357,9 @@ She is late / Ela está atrasada (informal)`}
                     Cards ({stats.valid} válidos{invertAB ? " — Invertido" : ""}):
                   </h4>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 px-1">
-                    <span className="font-semibold text-foreground">A: {invertAB ? labelB : labelA}</span>
+                    <span className="font-semibold text-foreground">A: {labelA}</span>
                     <span>→</span>
-                    <span className="font-semibold text-foreground">B: {invertAB ? labelA : labelB}</span>
+                    <span className="font-semibold text-foreground">B: {labelB}</span>
                   </div>
                   <ul className="space-y-2 text-sm">
                     {preview.slice(0, 20).map((pair, idx) => {
