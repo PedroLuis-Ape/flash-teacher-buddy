@@ -840,6 +840,19 @@ const Folder = () => {
               </div>
             )}
 
+            {/* Search lists */}
+            {lists.length > 3 && (
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={listSearch}
+                  onChange={(e) => setListSearch(e.target.value)}
+                  placeholder="Buscar lista..."
+                  className="pl-9 h-10"
+                />
+              </div>
+            )}
+
             {loading ? (
               <p className="text-center text-sm text-muted-foreground py-4">Carregando...</p>
             ) : lists.length === 0 ? (
