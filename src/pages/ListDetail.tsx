@@ -758,9 +758,9 @@ const ListDetail = () => {
           {canEdit && (
             <CreateFlashcardForm 
               onAdd={handleAddFlashcard}
-              labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-              labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
-              studyType={list?.study_type || 'language'}
+              labelA={effectiveSettings.labelsA}
+              labelB={effectiveSettings.labelsB}
+              studyType={effectiveSettings.studyType}
             />
           )}
 
