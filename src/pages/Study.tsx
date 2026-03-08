@@ -473,6 +473,21 @@ const Study = () => {
 
   const currentCard = effectiveFlashcards[currentIndex];
 
+  // Merge glossary + per-card manual hints for the current card
+  const currentMergedHintsA = useMemo(() => {
+    if (!currentCard) return undefined;
+    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
+    const manual = parseExtendedWordHints(currentCard.word_hints);
+    return mergeGlossaryAndManual(currentCard.term, "A", activeGlossary, manual);
+  }, [currentCard, activeGlossary]);
+
+  const currentMergedHintsB = useMemo(() => {
+    if (!currentCard) return undefined;
+    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
+    const manual = parseExtendedWordHints(currentCard.word_hints);
+    return mergeGlossaryAndManual(currentCard.translation, "B", activeGlossary, manual);
+  }, [currentCard, activeGlossary]);
+
   // Safety fallback: prevents blank/black screen on inconsistent card state
   if (!currentCard) {
     return (
