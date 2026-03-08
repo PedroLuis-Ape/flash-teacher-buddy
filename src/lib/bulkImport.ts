@@ -174,8 +174,9 @@ export type GlossaryParsed = {
   translated_text: string;
 };
 
-const GLOSSARY_MARKER = /^=+\s*GLOSS[AÁ]RIO\s+GLOBAL\s*=+$/i;
-const CARDS_MARKER = /^=+\s*CARDS\s*=+$/i;
+// Tolerant markers: accept === or --- or mixed, with or without accents
+const GLOSSARY_MARKER = /^[=\-]{2,}\s*GLOSS[AÁaá]RIO\s+GLOBAL\s*[=\-]{2,}$/i;
+const CARDS_MARKER = /^[=\-]{2,}\s*CARDS\s*[=\-]{2,}$/i;
 
 /**
  * Parse input that may contain two sections:
