@@ -103,9 +103,11 @@ export const FlipStudyView = ({
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
   const { promptSide: firstSide, answerSide: secondSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
 
-  // Resolve images based on which side is prompt vs answer
+  // Resolve images and word hints based on which side is prompt vs answer
   const firstSideImage = isAFirst ? imageUrlA : imageUrlB;
   const secondSideImage = isAFirst ? imageUrlB : imageUrlA;
+  const firstSideHints = isAFirst ? wordHintsA : wordHintsB;
+  const secondSideHints = isAFirst ? wordHintsB : wordHintsA;
 
   // Reset flip state when card changes
   useEffect(() => {
