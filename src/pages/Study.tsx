@@ -5,6 +5,7 @@ import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
