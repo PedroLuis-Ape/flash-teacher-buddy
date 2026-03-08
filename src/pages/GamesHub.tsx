@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,11 @@ const GamesHub = () => {
   const [userId, setUserId] = useState<string | undefined>();
 
   const isListRoute = location.pathname.includes("/list/");
+
+  const favoritesScope = useMemo(() => {
+    if (!id) return undefined;
+    return isListRoute ? { listId: id } : { collectionId: id };
+  }, [id, isListRoute]);
   
   // Fetch user ID for favorites count
   useEffect(() => {
@@ -52,7 +57,7 @@ const GamesHub = () => {
     fetchUser();
   }, []);
   
-  const { data: favoritesCount = 0 } = useFavoritesCount(userId, 'flashcard');
+  const { data: favoritesCount = 0 } = useFavoritesCount(userId, 'flashcard', favoritesScope);
 
   useEffect(() => {
     if (isListRoute) {

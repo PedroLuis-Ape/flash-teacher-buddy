@@ -26,6 +26,27 @@ function deriveEffectiveFlashcards<T extends { id: string }>(
   return flashcards.filter((c) => favoriteIds.includes(c.id));
 }
 
+/** Scoped counter used by GamesHub banner */
+function deriveScopedFavoritesCount<T extends { id: string }>(
+  flashcards: T[],
+  favoriteIds: string[]
+): number {
+  const ids = new Set(flashcards.map((card) => card.id));
+  return favoriteIds.filter((favoriteId) => ids.has(favoriteId)).length;
+}
+
+/** Safety fallback contract: never render undefined current card */
+function resolveCurrentCard<T extends { id: string }>(
+  flashcards: T[],
+  favoritesOnly: boolean,
+  favoriteIds: string[],
+  currentIndex: number
+): T | null {
+  const effective = deriveEffectiveFlashcards(flashcards, favoritesOnly, favoriteIds);
+  if (effective.length === 0) return null;
+  return effective[currentIndex] ?? null;
+}
+
 // --- Test data ---
 const makeCards = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
@@ -150,5 +171,80 @@ describe("Study only favorites filter", () => {
     const unrelatedFavs = ["other-1", "other-2"];
     const result = deriveEffectiveFlashcards(cards, true, unrelatedFavs);
     expect(result).toEqual([]);
+  });
+});
+
+// =====================================
+// PART D — Scoped counter in Games Hub
+// =====================================
+describe("Favorites counter scoped by current list", () => {
+  const listA = [{ id: "fr-1" }, { id: "fr-2" }];
+  const listB = Array.from({ length: 10 }, (_, i) => ({ id: `en-${i + 1}` }));
+
+  it("list A with 1 favorite shows 1 (not global sum)", () => {
+    const globalFavorites = ["fr-1", ...listB.map((card) => card.id)]; // 11 global
+    expect(deriveScopedFavoritesCount(listA, globalFavorites)).toBe(1);
+  });
+
+  it("list B with 10 favorites shows 10", () => {
+    const globalFavorites = ["fr-1", ...listB.map((card) => card.id)];
+    expect(deriveScopedFavoritesCount(listB, globalFavorites)).toBe(10);
+  });
+
+  it("re-opening list A keeps scoped count stable", () => {
+    const globalFavorites = ["fr-1", ...listB.map((card) => card.id)];
+    const firstOpen = deriveScopedFavoritesCount(listA, globalFavorites);
+    const secondOpen = deriveScopedFavoritesCount(listA, globalFavorites);
+    expect(firstOpen).toBe(1);
+    expect(secondOpen).toBe(1);
+  });
+});
+
+// =========================================
+// PART E — Favorites-only across all modes
+// =========================================
+describe("Favorites-only works for all study modes", () => {
+  const cards = makeCards(4);
+  const singleFavorite = ["card-2"];
+
+  it("flip, write, multiple-choice, unscramble, mixed and pronunciation use same filtered source", () => {
+    const modes = ["flip", "write", "multiple-choice", "unscramble", "mixed", "pronunciation"];
+
+    for (const _mode of modes) {
+      const result = deriveEffectiveFlashcards(cards, true, singleFavorite);
+      expect(result.map((card) => card.id)).toEqual(["card-2"]);
+    }
+  });
+
+  it("with zero favorites returns coherent empty state source", () => {
+    const result = deriveEffectiveFlashcards(cards, true, []);
+    expect(result).toEqual([]);
+  });
+
+  it("disabling favorites-only restores full set", () => {
+    const fullSet = deriveEffectiveFlashcards(cards, false, singleFavorite);
+    expect(fullSet.length).toBe(4);
+  });
+});
+
+// =========================================
+// PART F — No black screen safety fallback
+// =========================================
+describe("Current card resolution safety", () => {
+  const cards = makeCards(3);
+
+  it("returns one card correctly when there is exactly one favorite", () => {
+    const currentCard = resolveCurrentCard(cards, true, ["card-1"], 0);
+    expect(currentCard?.id).toBe("card-1");
+  });
+
+  it("returns null (not crash) when favorites-only has no cards", () => {
+    const currentCard = resolveCurrentCard(cards, true, [], 0);
+    expect(currentCard).toBeNull();
+  });
+
+  it("returns null (not crash) when index is out of range", () => {
+    const currentCard = resolveCurrentCard(cards, true, ["card-1"], 3);
+    expect(currentCard).toBeNull();
   });
 });

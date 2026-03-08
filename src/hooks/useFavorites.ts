@@ -4,20 +4,119 @@ import { toast } from 'sonner';
 
 export type FavoriteResourceType = 'flashcard' | 'list' | 'folder';
 
-export function useFavorites(userId: string | undefined, resourceType: FavoriteResourceType) {
+export interface FavoriteScope {
+  listId?: string;
+  collectionId?: string;
+  folderId?: string;
+  institutionId?: string;
+}
+
+const hasScope = (scope?: FavoriteScope) =>
+  Boolean(scope?.listId || scope?.collectionId || scope?.folderId || scope?.institutionId);
+
+async function resolveScopedFlashcardIds(scope: FavoriteScope): Promise<string[]> {
+  if (!hasScope(scope)) return [];
+
+  // Primary scope: list or collection
+  if (scope.listId || scope.collectionId) {
+    let flashcardsQuery = supabase
+      .from('flashcards')
+      .select('id')
+      .is('deleted_at', null);
+
+    if (scope.listId) {
+      flashcardsQuery = flashcardsQuery.eq('list_id', scope.listId);
+    }
+
+    if (scope.collectionId) {
+      flashcardsQuery = flashcardsQuery.eq('collection_id', scope.collectionId);
+    }
+
+    const { data: flashcards, error } = await flashcardsQuery;
+    if (error) throw error;
+
+    return flashcards?.map((card) => card.id) ?? [];
+  }
+
+  // Secondary scope: folder / institution -> resolve lists first
+  let listsQuery = supabase
+    .from('lists')
+    .select('id')
+    .is('deleted_at', null);
+
+  if (scope.folderId) {
+    listsQuery = listsQuery.eq('folder_id', scope.folderId);
+  }
+
+  if (scope.institutionId) {
+    listsQuery = listsQuery.eq('institution_id', scope.institutionId);
+  }
+
+  const { data: lists, error: listsError } = await listsQuery;
+  if (listsError) throw listsError;
+
+  const listIds = lists?.map((list) => list.id) ?? [];
+  if (listIds.length === 0) return [];
+
+  const { data: flashcards, error: flashcardsError } = await supabase
+    .from('flashcards')
+    .select('id')
+    .in('list_id', listIds)
+    .is('deleted_at', null);
+
+  if (flashcardsError) throw flashcardsError;
+
+  return flashcards?.map((card) => card.id) ?? [];
+}
+
+async function fetchFavoritesByScope(
+  userId: string,
+  resourceType: FavoriteResourceType,
+  scope?: FavoriteScope
+): Promise<string[]> {
+  if (resourceType !== 'flashcard' || !hasScope(scope)) {
+    const { data, error } = await supabase
+      .from('user_favorites')
+      .select('resource_id')
+      .eq('user_id', userId)
+      .eq('resource_type', resourceType);
+
+    if (error) throw error;
+    return data?.map((favorite) => favorite.resource_id) ?? [];
+  }
+
+  const scopedFlashcardIds = await resolveScopedFlashcardIds(scope!);
+  if (scopedFlashcardIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('user_favorites')
+    .select('resource_id')
+    .eq('user_id', userId)
+    .eq('resource_type', resourceType)
+    .in('resource_id', scopedFlashcardIds);
+
+  if (error) throw error;
+  return data?.map((favorite) => favorite.resource_id) ?? [];
+}
+
+export function useFavorites(
+  userId: string | undefined,
+  resourceType: FavoriteResourceType,
+  scope?: FavoriteScope
+) {
   return useQuery({
-    queryKey: ['favorites', userId, resourceType],
+    queryKey: [
+      'favorites',
+      userId,
+      resourceType,
+      scope?.listId ?? null,
+      scope?.collectionId ?? null,
+      scope?.folderId ?? null,
+      scope?.institutionId ?? null,
+    ],
     queryFn: async () => {
       if (!userId) return [];
-      
-      const { data, error } = await supabase
-        .from('user_favorites')
-        .select('resource_id')
-        .eq('user_id', userId)
-        .eq('resource_type', resourceType);
-      
-      if (error) throw error;
-      return data?.map(f => f.resource_id) || [];
+      return fetchFavoritesByScope(userId, resourceType, scope);
     },
     enabled: !!userId,
   });
@@ -40,7 +139,6 @@ export function useToggleFavorite() {
       if (!user) throw new Error('Não autenticado');
       
       if (isFavorite) {
-        // Remove from favorites
         const { error } = await supabase
           .from('user_favorites')
           .delete()
@@ -50,7 +148,6 @@ export function useToggleFavorite() {
         
         if (error) throw error;
       } else {
-        // Add to favorites
         const { error } = await supabase
           .from('user_favorites')
           .insert({ 
@@ -64,33 +161,34 @@ export function useToggleFavorite() {
       
       return { resourceId, resourceType, isFavorite: !isFavorite, userId: user.id };
     },
-    
-    // Optimistic update
+
     onMutate: async ({ resourceId, resourceType, isFavorite }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       await queryClient.cancelQueries({ queryKey: ['favorites', user.id, resourceType] });
 
-      const previousFavorites = queryClient.getQueryData<string[]>(['favorites', user.id, resourceType]);
-
-      queryClient.setQueryData<string[]>(['favorites', user.id, resourceType], (old = []) => {
-        if (isFavorite) {
-          return old.filter(id => id !== resourceId);
-        } else {
-          return [...old, resourceId];
-        }
+      const previousFavoritesEntries = queryClient.getQueriesData<string[]>({
+        queryKey: ['favorites', user.id, resourceType],
       });
 
-      return { previousFavorites, userId: user.id, resourceType };
+      queryClient.setQueriesData<string[]>({
+        queryKey: ['favorites', user.id, resourceType],
+      }, (old = []) => {
+        if (isFavorite) {
+          return old.filter((id) => id !== resourceId);
+        }
+        return [...old, resourceId];
+      });
+
+      return { previousFavoritesEntries, userId: user.id, resourceType };
     },
 
     onError: (error, _variables, context) => {
-      if (context?.userId && context?.previousFavorites !== undefined && context?.resourceType) {
-        queryClient.setQueryData(
-          ['favorites', context.userId, context.resourceType], 
-          context.previousFavorites
-        );
+      if (context?.previousFavoritesEntries) {
+        context.previousFavoritesEntries.forEach(([queryKey, value]) => {
+          queryClient.setQueryData(queryKey, value);
+        });
       }
       console.error('Error toggling favorite:', error);
       toast.error('Erro ao sincronizar favorito');
@@ -103,16 +201,34 @@ export function useToggleFavorite() {
     onSettled: (_data, _error, _variables, context) => {
       if (context?.userId && context?.resourceType) {
         queryClient.invalidateQueries({ queryKey: ['favorites', context.userId, context.resourceType] });
+        queryClient.invalidateQueries({ queryKey: ['favorites-count', context.userId, context.resourceType] });
       }
     },
   });
 }
 
-export function useFavoritesCount(userId: string | undefined, resourceType: FavoriteResourceType) {
+export function useFavoritesCount(
+  userId: string | undefined,
+  resourceType: FavoriteResourceType,
+  scope?: FavoriteScope
+) {
   return useQuery({
-    queryKey: ['favorites-count', userId, resourceType],
+    queryKey: [
+      'favorites-count',
+      userId,
+      resourceType,
+      scope?.listId ?? null,
+      scope?.collectionId ?? null,
+      scope?.folderId ?? null,
+      scope?.institutionId ?? null,
+    ],
     queryFn: async () => {
       if (!userId) return 0;
+
+      if (resourceType === 'flashcard' && hasScope(scope)) {
+        const scopedFavorites = await fetchFavoritesByScope(userId, resourceType, scope);
+        return scopedFavorites.length;
+      }
       
       const { count, error } = await supabase
         .from('user_favorites')
