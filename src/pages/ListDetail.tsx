@@ -762,6 +762,7 @@ const ListDetail = () => {
             />
           )}
 
+          {loading ? (
             <p className="text-center text-muted-foreground">Carregando...</p>
           ) : flashcards.length === 0 ? (
             <Card className="text-center p-12">
