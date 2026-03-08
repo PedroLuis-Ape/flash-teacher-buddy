@@ -15,6 +15,7 @@ import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { mergedHintsToWordHints } from "@/features/study/lib/glossaryMerge";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { getPerfSettings } from "@/lib/performanceSettings";
+import { useTTS } from "@/features/study/hooks/useTTS";
 
 interface InteractiveTextProps {
   text: string;
@@ -22,9 +23,15 @@ interface InteractiveTextProps {
   /** Pre-merged hints (global + manual). Takes priority over wordHints if provided. */
   mergedHints?: MergedHint[];
   className?: string;
+  /** When true, clicking a highlighted glossary word also speaks that specific word/expression. */
+  speakOnHintClick?: boolean;
+  /** Optional BCP-47 language code used for click-to-speak (e.g. fr-FR, en-US). */
+  speakLang?: string;
 }
 
-export const InteractiveText = ({ text, wordHints, mergedHints, className }: InteractiveTextProps) => {
+export const InteractiveText = ({ text, wordHints, mergedHints, className, speakOnHintClick = false, speakLang }: InteractiveTextProps) => {
+  const { speak } = useTTS();
+
   // Feature flag OR performance setting: when word hints are disabled, render plain text
   const perf = getPerfSettings();
   if (!FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips) {
@@ -42,6 +49,11 @@ export const InteractiveText = ({ text, wordHints, mergedHints, className }: Int
 
   const segments = segmentText(text, resolvedHints);
 
+  const handleHintActivate = useCallback((clickedValue: string) => {
+    if (!speakOnHintClick) return;
+    speak(clickedValue, { langOverride: speakLang });
+  }, [speakOnHintClick, speakLang, speak]);
+
   return (
     <span className={className}>
       {segments.map((seg, i) =>
@@ -51,6 +63,7 @@ export const InteractiveText = ({ text, wordHints, mergedHints, className }: Int
             value={seg.value}
             hint={seg.hint}
             mergedTranslations={(seg.hint as any)._mergedTranslations}
+            onActivate={handleHintActivate}
           />
         ) : (
           <span key={i}>{seg.value}</span>
@@ -67,10 +80,12 @@ function HintWord({
   value,
   hint,
   mergedTranslations,
+  onActivate,
 }: {
   value: string;
   hint: WordHint;
   mergedTranslations?: { text: string; note?: string; source: "global" | "manual" }[];
+  onActivate?: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLSpanElement>(null);
@@ -101,8 +116,9 @@ function HintWord({
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    onActivate?.(value);
     setOpen((prev) => !prev);
-  }, []);
+  }, [onActivate, value]);
 
   return (
     <span ref={wrapperRef} className="relative inline">
@@ -116,6 +132,7 @@ function HintWord({
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             e.stopPropagation();
+            onActivate?.(value);
             setOpen((prev) => !prev);
           }
         }}
@@ -162,3 +179,4 @@ function HintWord({
     </span>
   );
 }
+

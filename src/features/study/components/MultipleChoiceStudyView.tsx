@@ -180,7 +180,7 @@ export const MultipleChoiceStudyView = ({
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
-            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2"><InteractiveText text={prompt} wordHints={promptWordHints} /></p>
+            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2"><InteractiveText text={prompt} wordHints={promptWordHints} speakOnHintClick speakLang={promptLang} /></p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
               <Button
