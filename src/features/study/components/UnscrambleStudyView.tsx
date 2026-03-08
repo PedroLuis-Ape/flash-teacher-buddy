@@ -199,7 +199,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
             </Button>
           </div>
         </div>
-        <p className="text-2xl font-bold text-center mb-6"><InteractiveText text={question} wordHints={promptWordHints} speakOnHintClick speakLang={questionLang} /></p>
+        <p className="text-2xl font-bold text-center mb-6"><InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} /></p>
       </Card>
 
       {/* Selected words area */}
