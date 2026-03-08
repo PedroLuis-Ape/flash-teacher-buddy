@@ -98,6 +98,13 @@ export function segmentTextByIndex(text: string, hints: WordHint[]): TextSegment
     const start = hint.startIndex!;
     const end = Math.min(hint.endIndex!, text.length);
 
+    // Skip if out of bounds
+    if (start >= text.length || end > text.length) continue;
+
+    // Skip if text at position doesn't match hint text (e.g. hint from other side)
+    const sliced = text.slice(start, end);
+    if (sliced.toLowerCase() !== hint.text.toLowerCase()) continue;
+
     // Skip if this hint's range is before cursor (overlap with previous)
     if (start < cursor) continue;
 
