@@ -334,13 +334,28 @@ She is late / Ela está atrasada (informal)`}
                     <BookOpen className="h-4 w-4 text-primary" />
                     Glossário ({glossaryPreview.length} termos):
                   </h4>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 px-1">
+                    <span className="font-semibold text-foreground">A: {labelA}</span>
+                    <span>→</span>
+                    <span className="font-semibold text-foreground">B: {labelB}</span>
+                  </div>
                   <ul className="space-y-1 text-sm">
-                    {glossaryPreview.slice(0, 15).map((g, idx) => (
-                      <li key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                        <span className="font-medium break-words">{g.original_text}</span>
-                        <span className="text-muted-foreground break-words">→ {g.translated_text}</span>
-                      </li>
-                    ))}
+                    {glossaryPreview.slice(0, 15).map((g, idx) => {
+                      const origDisplay = invertAB ? g.translated_text : g.original_text;
+                      const transDisplay = invertAB ? g.original_text : g.translated_text;
+                      return (
+                        <li key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                          <span className="font-medium break-words">
+                            <span className="text-xs text-muted-foreground mr-1">A</span>
+                            {origDisplay}
+                          </span>
+                          <span className="text-muted-foreground break-words">
+                            <span className="text-xs mr-1">B</span>
+                            → {transDisplay}
+                          </span>
+                        </li>
+                      );
+                    })}
                     {glossaryPreview.length > 15 && (
                       <li className="text-muted-foreground italic">
                         ...e mais {glossaryPreview.length - 15}
