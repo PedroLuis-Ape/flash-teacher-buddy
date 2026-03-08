@@ -167,24 +167,153 @@ export function deduplicateFlashcards(
   });
 }
 
+// ---------- Glossary-Aware Parser ----------
+
+export type GlossaryParsed = {
+  original_text: string;
+  translated_text: string;
+};
+
+const GLOSSARY_MARKER = /^=+\s*GLOSS[AÁ]RIO\s+GLOBAL\s*=+$/i;
+const CARDS_MARKER = /^=+\s*CARDS\s*=+$/i;
+
+/**
+ * Parse input that may contain two sections:
+ * === GLOSSÁRIO GLOBAL ===
+ * ... glossary lines ...
+ * === CARDS ===
+ * ... card lines ...
+ *
+ * If no markers found, treats entire input as cards (backward compat).
+ */
+export function parseGlossaryAndCards(input: string): {
+  glossaryLines: GlossaryParsed[];
+  cards: FlashcardPair[];
+} {
+  const lines = input.split(/\r?\n/);
+  
+  let glossaryStart = -1;
+  let cardsStart = -1;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (GLOSSARY_MARKER.test(trimmed)) glossaryStart = i;
+    else if (CARDS_MARKER.test(trimmed)) cardsStart = i;
+  }
+  
+  // No markers → legacy: everything is cards
+  if (glossaryStart === -1 && cardsStart === -1) {
+    return { glossaryLines: [], cards: parsePastedFlashcards(input) };
+  }
+  
+  // Extract glossary section
+  const glossaryLines: GlossaryParsed[] = [];
+  if (glossaryStart !== -1) {
+    const end = cardsStart !== -1 ? cardsStart : lines.length;
+    for (let i = glossaryStart + 1; i < end; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const slashIdx = line.indexOf('/');
+      if (slashIdx <= 0) continue;
+      const original = line.substring(0, slashIdx).trim();
+      const translated = line.substring(slashIdx + 1).trim();
+      if (original && translated) {
+        glossaryLines.push({ original_text: original, translated_text: translated });
+      }
+    }
+  }
+  
+  // Extract cards section
+  let cardsText = '';
+  if (cardsStart !== -1) {
+    cardsText = lines.slice(cardsStart + 1).join('\n');
+  }
+  
+  return {
+    glossaryLines,
+    cards: cardsText.trim() ? parsePastedFlashcards(cardsText) : [],
+  };
+}
+
+/**
+ * Deduplicate glossary entries against existing ones.
+ */
+export function deduplicateGlossary(
+  parsed: GlossaryParsed[],
+  existing: { original_text: string; translated_text: string }[]
+): GlossaryParsed[] {
+  const seen = new Set<string>();
+  
+  existing.forEach(e => {
+    seen.add(`${e.original_text.toLowerCase().trim()}|${e.translated_text.toLowerCase().trim()}`);
+  });
+  
+  return parsed.filter(g => {
+    const key = `${g.original_text.toLowerCase().trim()}|${g.translated_text.toLowerCase().trim()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // AI Helper prompt for generating cards in the correct format
-export const AI_HELPER_PROMPT = `Você é uma IA que vai criar cards de estudo para um aplicativo de flashcards.
+export const AI_HELPER_PROMPT = `Você é uma IA responsável por gerar conteúdo estruturado para um aplicativo de flashcards.
 
-Gere uma lista de cards seguindo EXATAMENTE este formato, com UM card por linha:
+A resposta deve seguir ESTRITAMENTE o formato descrito abaixo.
+Não escreva nenhuma explicação fora do formato.
+Não adicione comentários.
+Não adicione títulos extras.
+Não escreva texto antes ou depois das seções.
 
-LADO A / LADO B (observação curta opcional) [descrição detalhada opcional]
+A saída deve conter exatamente DUAS SEÇÕES, nesta ordem:
 
-Regras importantes:
-- Tudo antes da barra \`/\` é o Lado A (pergunta/termo fonte).
-- Tudo depois da barra \`/\` é o Lado B (resposta/tradução).
-- O que estiver entre parênteses \`( )\` é APENAS uma observação curta opcional (ex.: outra tradução possível, um comentário rápido).
-  - Essa observação NÃO deve ser tratada como parte da resposta que o aluno precisa digitar.
-- O que estiver entre colchetes \`[ ]\` é uma descrição detalhada opcional, mais longa, para aparecer como dica na lâmpada.
-  - Pode ter várias linhas, exemplos, explicações de uso etc.
-- NÃO crie parênteses ou colchetes sozinho, a não ser que o usuário peça explicitamente observações e descrições detalhadas.
-- Não use nenhum outro tipo de separador; apenas a barra \`/\`, parênteses \`( )\` e colchetes \`[ ]\` como descrito.
+=== GLOSSÁRIO GLOBAL ===
 
-Exemplo de saída:
-I am / Eu sou (também pode significar "estou" em alguns contextos) [Usado para falar de identidade, profissão ou características fixas do sujeito.]
-She is late / Ela está atrasada (informal) [Usado quando a pessoa chega depois do horário combinado; comum em contextos de trabalho ou estudo.]
-They are happy / Eles estão felizes [Expressa estado emocional temporário. Compare com "They are tall" que seria característica permanente.]`;
+=== CARDS ===
+
+-----------------------------------
+SEÇÃO 1 — GLOSSÁRIO GLOBAL
+-----------------------------------
+
+Nesta seção devem aparecer palavras ou expressões com tradução direta.
+
+Formato obrigatório de cada linha:
+termo_original / tradução
+
+Regras:
+- Cada entrada deve ocupar apenas uma linha.
+- Use apenas a barra \`/\` como separador.
+- Não use parênteses ou colchetes nesta seção.
+- Não escreva explicações nesta seção.
+- Não repita entradas idênticas dentro do glossário.
+- Não escreva frases completas aqui.
+
+Exemplo de formato correto:
+work / trabalhar
+late / atrasado
+look for / procurar
+home / casa
+
+-----------------------------------
+SEÇÃO 2 — CARDS
+-----------------------------------
+
+Nesta seção devem aparecer os flashcards.
+
+Formato obrigatório de cada linha:
+LADO A / LADO B (observação opcional) [descrição opcional]
+
+Regras:
+- Tudo antes da barra \`/\` é o Lado A.
+- Tudo depois da barra \`/\` é o Lado B.
+- O que estiver entre parênteses \`( )\` é uma observação curta opcional.
+- O que estiver entre colchetes \`[ ]\` é uma descrição detalhada opcional.
+- Parênteses e colchetes são opcionais e só devem ser usados quando necessário.
+- Cada card deve ocupar uma única linha.
+- Não use nenhum outro separador além de \`/\`, \`( )\` e \`[ ]\`.
+
+Exemplo de formato correto:
+I work today / Eu trabalho hoje
+She is late / Ela está atrasada
+They look for help / Eles procuram ajuda (informal)
+We go home now / Nós vamos para casa agora [Expressa ação imediata.]`;
