@@ -65,8 +65,8 @@ export const WriteStudyView = ({
 
   const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
 
-  // word_hints always belong to sideA; show on prompt only if sideA is prompt
-  const promptWordHints = isAFirst ? wordHintsA : undefined;
+  // word_hints contain bindings for both sides; segmentText auto-filters by text match
+  const promptWordHints = wordHintsA;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
