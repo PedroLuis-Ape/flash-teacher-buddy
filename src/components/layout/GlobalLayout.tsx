@@ -25,6 +25,7 @@ import { GlobalFooter } from "@/components/layout/GlobalFooter";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { usePerformance } from "@/contexts/PerformanceContext";
 
 // Lazy-load heavy modals and badges (not needed for FCP)
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
