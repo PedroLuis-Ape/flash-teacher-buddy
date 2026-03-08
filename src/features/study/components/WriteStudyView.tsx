@@ -43,6 +43,7 @@ export const WriteStudyView = ({
   flashcardId,
   acceptedAnswersEn = [],
   acceptedAnswersPt = [],
+  wordHintsA,
   direction,
   langA = "en",
   langB = "pt",
