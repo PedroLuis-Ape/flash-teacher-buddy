@@ -46,7 +46,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
     return () => {
       observer.disconnect();
     };
-  }, [threshold, rootMargin, once, disabled]);
+  }, [threshold, rootMargin, once, isDisabled]);
 
   return ref;
 }

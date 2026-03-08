@@ -65,6 +65,14 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
 
   const currentPreset = detectPreset(settings);
 
+  // Sync performance flags to <html> so global CSS can kill animations/hovers
+  useEffect(() => {
+    const el = document.documentElement;
+    el.toggleAttribute('data-perf-no-anim', !settings.animations);
+    el.toggleAttribute('data-perf-no-hover', !settings.hoverEffects);
+    el.toggleAttribute('data-perf-no-decor', !settings.decorativeEffects);
+  }, [settings.animations, settings.hoverEffects, settings.decorativeEffects]);
+
   return (
     <PerformanceContext.Provider value={{ settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset }}>
       {children}
