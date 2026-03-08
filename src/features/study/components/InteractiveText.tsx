@@ -14,6 +14,7 @@ import { segmentText, parseWordHints, type WordHint } from "@/features/study/lib
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { mergedHintsToWordHints } from "@/features/study/lib/glossaryMerge";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { getPerfSettings } from "@/lib/performanceSettings";
 
 interface InteractiveTextProps {
   text: string;
@@ -24,8 +25,9 @@ interface InteractiveTextProps {
 }
 
 export const InteractiveText = ({ text, wordHints, mergedHints, className }: InteractiveTextProps) => {
-  // Feature flag: when word hints are disabled, render plain text
-  if (!FEATURE_FLAGS.word_hints_enabled) {
+  // Feature flag OR performance setting: when word hints are disabled, render plain text
+  const perf = getPerfSettings();
+  if (!FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips) {
     return <span className={className}>{text}</span>;
   }
 

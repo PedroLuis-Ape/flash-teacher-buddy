@@ -2,6 +2,7 @@ import { Home, Library, Store, User, Target } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
+import { usePerformance } from "@/contexts/PerformanceContext";
 
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/" },
@@ -14,6 +15,7 @@ const tabs = [
 export function ApeTabBar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { settings } = usePerformance();
 
   const activeIndex = useMemo(() => {
     for (let i = 0; i < tabs.length; i++) {
@@ -30,10 +32,15 @@ export function ApeTabBar() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border safe-area-pb">
+    <nav className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 border-t border-border safe-area-pb",
+      settings.backdropBlur
+        ? "bg-background/95 backdrop-blur-md"
+        : "bg-background"
+    )}>
       <div className="relative flex items-center justify-around h-16 max-w-screen-xl mx-auto">
-        {/* Animated indicator */}
-        {activeIndex >= 0 && (
+        {/* Animated indicator — only when tabBarAnimations enabled */}
+        {settings.tabBarAnimations && activeIndex >= 0 && (
           <div 
             className="absolute top-0 h-[3px] bg-primary rounded-b-full transition-all duration-300 ease-out"
             style={{
@@ -53,25 +60,27 @@ export function ApeTabBar() {
               onClick={() => navigate(tab.path)}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 min-w-[64px] h-full",
-                "transition-all duration-200",
-                "active:scale-95",
-                active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                settings.animations && "transition-all duration-200",
+                settings.visualFeedback && "active:scale-95",
+                active ? "text-primary" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground")
               )}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
             >
               <div className={cn(
-                "relative transition-transform duration-200",
-                active && "scale-110"
+                "relative",
+                settings.animations && "transition-transform duration-200",
+                active && settings.visualFeedback && "scale-110"
               )}>
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
-                {/* Optimized glow: static opacity instead of animate-pulse for performance */}
-                {active && (
+                {/* Glow effect — only when decorativeEffects enabled */}
+                {active && settings.decorativeEffects && (
                   <div className="absolute inset-0 bg-primary/15 blur-sm rounded-full" />
                 )}
               </div>
               <span className={cn(
-                "text-xs transition-all duration-200",
+                "text-xs",
+                settings.animations && "transition-all duration-200",
                 active ? "font-semibold" : "font-normal"
               )}>
                 {tab.label}

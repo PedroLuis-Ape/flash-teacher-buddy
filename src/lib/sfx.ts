@@ -1,11 +1,12 @@
 // Sound effects utility for the study games
 // Lightweight, non-blocking audio playback
 
-import { isSoundEnabled } from '@/features/study/hooks/useSoundSettings';
+import { getPerfSettings } from '@/lib/performanceSettings';
 
 function playSound(src: string): void {
-  // Check if sound is enabled before playing
-  if (!isSoundEnabled()) return;
+  // Check performance settings first (synchronous, no React needed)
+  const perf = getPerfSettings();
+  if (!perf.soundEffects) return;
   
   try {
     const audio = new Audio(src);

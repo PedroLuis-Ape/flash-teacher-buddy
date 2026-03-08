@@ -15,6 +15,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
 import { EconomyProvider } from "@/contexts/EconomyContext";
+import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { InstallPWA } from "@/components/InstallPWA";
@@ -60,6 +61,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const GlobalImport = lazy(() => import("./pages/GlobalImport"));
 const Trash = lazy(() => import("./pages/Trash"));
+const PerformanceSettings = lazy(() => import("./pages/PerformanceSettings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,6 +78,7 @@ const App = () => {
   useEffect(() => { perfTelemetry.logBoot(); }, []);
   return (
   <QueryClientProvider client={queryClient}>
+    <PerformanceProvider>
     <EconomyProvider>
       <TooltipProvider>
         <Toaster />
@@ -135,6 +138,7 @@ const App = () => {
                   <Route path="/goals/new" element={<GoalNew />} />
                   <Route path="/import" element={<GlobalImport />} />
                   <Route path="/trash" element={<Trash />} />
+                  <Route path="/settings/performance" element={<PerformanceSettings />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageTransition>
@@ -144,6 +148,7 @@ const App = () => {
         </Suspense>
       </TooltipProvider>
     </EconomyProvider>
+    </PerformanceProvider>
   </QueryClientProvider>
   );
 };

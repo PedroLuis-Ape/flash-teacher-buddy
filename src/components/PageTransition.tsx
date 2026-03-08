@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { FEATURE_FLAGS } from '@/lib/featureFlags';
+import { usePerformance } from '@/contexts/PerformanceContext';
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -9,11 +9,13 @@ interface PageTransitionProps {
 
 /**
  * Enhanced page wrapper with smooth fade + scale transitions.
- * Respects FEATURE_FLAGS.page_transitions_enabled for safe mode.
+ * Respects performance settings — skips animation when disabled.
  */
 export function PageTransition({ children }: PageTransitionProps) {
-  // Feature flag: skip all animation logic when disabled
-  if (!FEATURE_FLAGS.page_transitions_enabled) {
+  const { settings } = usePerformance();
+
+  // Skip all animation logic when disabled
+  if (!settings.animations) {
     return <>{children}</>;
   }
 
