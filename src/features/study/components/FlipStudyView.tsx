@@ -14,6 +14,7 @@ import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 
 interface FlipStudyViewProps {
   front: string;
