@@ -48,6 +48,7 @@ export const WriteStudyView = ({
   acceptedAnswersPt = [],
   wordHintsA,
   mergedHintsA,
+  mergedHintsB,
   direction,
   langA = "en",
   langB = "pt",
