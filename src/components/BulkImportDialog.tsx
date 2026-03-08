@@ -33,6 +33,8 @@ interface BulkImportDialogProps {
   onImported: () => void;
   labelA?: string;
   labelB?: string;
+  langA?: string;
+  langB?: string;
 }
 
 export const BulkImportDialog = ({
