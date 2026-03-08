@@ -27,6 +27,7 @@ interface WriteStudyViewProps {
   flashcardId?: string;
   acceptedAnswersEn?: string[];
   acceptedAnswersPt?: string[];
+  wordHintsA?: unknown;
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
