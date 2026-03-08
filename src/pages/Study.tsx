@@ -795,6 +795,7 @@ const Study = () => {
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               wordHintsA={currentCard.word_hints}
+              mergedHintsA={currentMergedHintsA}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
