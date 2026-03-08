@@ -46,6 +46,8 @@ export const FlipStudyView = ({
   flashcardId,
   imageUrlA,
   imageUrlB,
+  wordHintsA,
+  wordHintsB,
   onKnew,
   onDidntKnow,
   onNext,
