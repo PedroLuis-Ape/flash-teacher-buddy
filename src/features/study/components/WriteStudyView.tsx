@@ -193,7 +193,7 @@ export const WriteStudyView = ({
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex items-center justify-center gap-3 mb-8">
-            <p className="text-3xl font-semibold">{prompt}</p>
+            <p className="text-3xl font-semibold"><InteractiveText text={prompt} wordHints={promptWordHints} /></p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
               <Button

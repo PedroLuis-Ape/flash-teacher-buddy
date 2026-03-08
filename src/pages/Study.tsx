@@ -783,6 +783,7 @@ const Study = () => {
               key={currentCard.id}
               front={currentCard.term}
               back={currentCard.translation}
+              wordHintsA={currentCard.word_hints}
               langA={listSettings?.langA || "en"}
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
