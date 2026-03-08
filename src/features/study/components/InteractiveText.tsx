@@ -153,13 +153,11 @@ function HintWord({
           role="tooltip"
         >
           {mergedTranslations && mergedTranslations.length > 0 ? (
-            <span className="block space-y-1">
+            <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               {mergedTranslations.map((t, i) => (
-                <span key={i} className="flex items-start gap-1.5">
+                <span key={i} className="inline-flex items-baseline gap-1 whitespace-nowrap">
+                  {i > 0 && <span className="text-muted-foreground text-xs">·</span>}
                   <span className="font-semibold text-sm leading-tight">{t.text}</span>
-                  {t.source === "global" && (
-                    <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded shrink-0 mt-0.5">global</span>
-                  )}
                   {t.note && (
                     <span className="text-xs text-muted-foreground italic">({t.note})</span>
                   )}
