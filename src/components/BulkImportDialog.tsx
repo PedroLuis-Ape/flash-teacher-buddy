@@ -44,6 +44,8 @@ export const BulkImportDialog = ({
   onImported,
   labelA = "Lado A",
   labelB = "Lado B",
+  langA,
+  langB,
 }: BulkImportDialogProps) => {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");

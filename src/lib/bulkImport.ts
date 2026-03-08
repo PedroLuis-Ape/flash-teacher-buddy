@@ -257,8 +257,97 @@ export function deduplicateGlossary(
   });
 }
 
-// AI Helper prompt for generating cards in the correct format
-export const AI_HELPER_PROMPT = `Você é uma IA responsável por gerar conteúdo estruturado para um aplicativo de flashcards.
+// Language code → display name mapping
+const LANG_NAMES: Record<string, string> = {
+  en: "Inglês", pt: "Português", fr: "Francês", es: "Espanhol",
+  de: "Alemão", it: "Italiano", ja: "Japonês", ko: "Coreano",
+  zh: "Chinês", ru: "Russo", ar: "Árabe", nl: "Holandês",
+};
+
+function langName(code?: string): string {
+  if (!code) return "";
+  return LANG_NAMES[code.toLowerCase()] || code;
+}
+
+/**
+ * Build the AI helper prompt dynamically using the list's language pair.
+ * Falls back to generic "Lado A / Lado B" when no languages are set.
+ */
+export function buildAIHelperPrompt(langA?: string, langB?: string): string {
+  const hasLangs = langA && langB;
+  const nameA = langName(langA);
+  const nameB = langName(langB);
+  const glossaryDirection = hasLangs
+    ? `\nO glossário deve seguir a direção: ${nameA} → ${nameB} (o termo original no lado esquerdo é em ${nameA}, a tradução no lado direito é em ${nameB}).`
+    : "";
+  const cardsDirection = hasLangs
+    ? `\nO Lado A dos cards deve ser em ${nameA} e o Lado B em ${nameB}.`
+    : "";
+
+  return `Você é uma IA responsável por gerar conteúdo estruturado para um aplicativo de flashcards.${glossaryDirection}${cardsDirection}
+
+A resposta deve seguir ESTRITAMENTE o formato descrito abaixo.
+Não escreva nenhuma explicação fora do formato.
+Não adicione comentários.
+Não adicione títulos extras.
+Não escreva texto antes ou depois das seções.
+
+A saída deve conter exatamente DUAS SEÇÕES, nesta ordem:
+
+=== GLOSSÁRIO GLOBAL ===
+
+=== CARDS ===
+
+-----------------------------------
+SEÇÃO 1 — GLOSSÁRIO GLOBAL
+-----------------------------------
+
+Nesta seção devem aparecer palavras ou expressões com tradução direta.
+
+Formato obrigatório de cada linha:
+termo_original / tradução
+
+Regras:
+- Cada entrada deve ocupar apenas uma linha.
+- Use apenas a barra \`/\` como separador.
+- Não use parênteses ou colchetes nesta seção.
+- Não escreva explicações nesta seção.
+- Não repita entradas idênticas dentro do glossário.
+- Não escreva frases completas aqui.
+
+Exemplo de formato correto:
+work / trabalhar
+late / atrasado
+look for / procurar
+home / casa
+
+-----------------------------------
+SEÇÃO 2 — CARDS
+-----------------------------------
+
+Nesta seção devem aparecer os flashcards.
+
+Formato obrigatório de cada linha:
+${hasLangs ? `${nameA}` : "LADO A"} / ${hasLangs ? `${nameB}` : "LADO B"} (observação opcional) [descrição opcional]
+
+Regras:
+- Tudo antes da barra \`/\` é o ${hasLangs ? nameA : "Lado A"}.
+- Tudo depois da barra \`/\` é o ${hasLangs ? nameB : "Lado B"}.
+- O que estiver entre parênteses \`( )\` é uma observação curta opcional.
+- O que estiver entre colchetes \`[ ]\` é uma descrição detalhada opcional.
+- Parênteses e colchetes são opcionais e só devem ser usados quando necessário.
+- Cada card deve ocupar uma única linha.
+- Não use nenhum outro separador além de \`/\`, \`( )\` e \`[ ]\`.
+
+Exemplo de formato correto:
+I work today / Eu trabalho hoje
+She is late / Ela está atrasada
+They look for help / Eles procuram ajuda (informal)
+We go home now / Nós vamos para casa agora [Expressa ação imediata.]`;
+}
+
+// Legacy constant for backward compatibility
+export const AI_HELPER_PROMPT = buildAIHelperPrompt();
 
 A resposta deve seguir ESTRITAMENTE o formato descrito abaixo.
 Não escreva nenhuma explicação fora do formato.
