@@ -166,10 +166,10 @@ export function useGoogleLinking() {
       // Update state and clear google_connected_at
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        await supabase
-          .from("profiles")
-          .update({ google_connected_at: null })
-          .eq("id", session.user.id);
+        await supabase.rpc('update_own_profile', {
+          p_user_id: session.user.id,
+          p_google_connected_at: '__NULL__'
+        });
       }
 
       setState(prev => ({ ...prev, isGoogleConnected: false }));
