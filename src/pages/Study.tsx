@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { getOfflineList } from "@/lib/offlineStore";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
