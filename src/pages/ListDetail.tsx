@@ -82,6 +82,7 @@ const ListDetail = () => {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [cardSearch, setCardSearch] = useState("");
 
   // Fetch current user
   const { data: currentUser } = useQuery({
