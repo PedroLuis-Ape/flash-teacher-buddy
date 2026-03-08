@@ -813,6 +813,7 @@ const Study = () => {
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
