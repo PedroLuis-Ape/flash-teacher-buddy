@@ -1,15 +1,16 @@
 /**
  * ListGlossaryManager — UI to manage per-list global glossary entries.
- * Supports add, edit, delete, toggle active.
+ * Supports add, edit, delete, toggle active, and bulk delete.
  */
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { Languages, Plus, Trash2, Pencil, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Languages, Plus, Trash2, Pencil, ChevronDown, ChevronUp, BookOpen, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useListGlossary, type GlossaryEntry } from "@/hooks/useListGlossary";
 import {
@@ -37,10 +38,12 @@ export const ListGlossaryManager = ({
   labelB = "Lado B",
   canEdit = true,
 }: ListGlossaryManagerProps) => {
-  const { glossary, addEntry, updateEntry, deleteEntry, toggleActive } = useListGlossary(listId);
+  const { glossary, addEntry, updateEntry, deleteEntry, toggleActive, bulkDelete } = useListGlossary(listId);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Form state
   const [originalText, setOriginalText] = useState("");
@@ -55,6 +58,34 @@ export const ListGlossaryManager = ({
     setSide("A");
     setIsAdding(false);
     setEditingId(null);
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === glossary.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(glossary.map((g) => g.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    bulkDelete.mutate(ids, { onSuccess: exitSelectMode });
   };
 
   const handleAdd = () => {
@@ -118,6 +149,72 @@ export const ListGlossaryManager = ({
             Traduções globais aparecem automaticamente em todos os cards desta lista quando a palavra/expressão corresponder.
           </p>
 
+          {/* Select mode toolbar */}
+          {canEdit && glossary.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {!selectMode ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectMode(true)}
+                  className="gap-1.5 text-xs"
+                >
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  Selecionar
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleSelectAll}
+                    className="text-xs"
+                  >
+                    {selectedIds.size === glossary.length ? "Desmarcar todos" : "Selecionar todos"}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={selectedIds.size === 0 || bulkDelete.isPending}
+                        className="gap-1.5 text-xs"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Apagar ({selectedIds.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Apagar {selectedIds.size} tradução(ões)?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Essa ação não pode ser desfeita. As traduções selecionadas serão removidas permanentemente do glossário.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleBulkDelete}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {bulkDelete.isPending ? "Apagando..." : "Apagar"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={exitSelectMode}
+                    className="text-xs"
+                  >
+                    Cancelar
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Existing entries */}
           {glossary.length > 0 && (
             <div className="space-y-2">
@@ -144,10 +241,18 @@ export const ListGlossaryManager = ({
                     key={entry.id}
                     className={cn(
                       "flex items-center gap-2 p-2.5 rounded-md border text-sm",
-                      !entry.is_active && "opacity-50"
+                      !entry.is_active && "opacity-50",
+                      selectMode && selectedIds.has(entry.id) && "border-primary bg-primary/5"
                     )}
                   >
-                    <div className="flex-1 min-w-0">
+                    {selectMode && (
+                      <Checkbox
+                        checked={selectedIds.has(entry.id)}
+                        onCheckedChange={() => toggleSelect(entry.id)}
+                        className="shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0" onClick={selectMode ? () => toggleSelect(entry.id) : undefined}>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-medium truncate">{entry.original_text}</span>
                         <span className="text-muted-foreground">→</span>
@@ -160,7 +265,7 @@ export const ListGlossaryManager = ({
                         {entry.side === "A" ? labelA : labelB}
                       </span>
                     </div>
-                    {canEdit && (
+                    {canEdit && !selectMode && (
                       <div className="flex items-center gap-1 shrink-0">
                         <Switch
                           checked={entry.is_active}
@@ -210,7 +315,7 @@ export const ListGlossaryManager = ({
           )}
 
           {/* Add new entry */}
-          {canEdit && !isAdding && !editingId && (
+          {canEdit && !isAdding && !editingId && !selectMode && (
             <Button
               variant="outline"
               size="sm"

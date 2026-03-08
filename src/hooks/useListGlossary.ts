@@ -92,6 +92,21 @@ export function useListGlossary(listId: string | undefined) {
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
+  const bulkDelete = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from("list_glossary")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey });
+      toast.success(`${variables.length} tradução(ões) removida(s)!`);
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+
   return {
     glossary,
     activeGlossary,
@@ -100,5 +115,6 @@ export function useListGlossary(listId: string | undefined) {
     updateEntry,
     deleteEntry,
     toggleActive,
+    bulkDelete,
   };
 }
