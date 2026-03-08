@@ -170,6 +170,32 @@ describe("Canonical mapping: lang_a=term=sideA, lang_b=translation=sideB", () =>
   }
 });
 
+// getLangLabel tests — ensures all languages have proper fallback labels
+import { getLangLabel } from "./resolveStudySides";
+
+describe("getLangLabel: label fallback for all languages", () => {
+  it.each([
+    ["en", "English"],
+    ["pt", "Português"],
+    ["fr", "Français"],
+    ["es", "Español"],
+    ["de", "Deutsch"],
+    ["it", "Italiano"],
+    ["ja", "日本語"],
+    ["zh", "中文"],
+    ["ko", "한국어"],
+    ["ru", "Русский"],
+    ["ar", "العربية"],
+    ["hi", "हिन्दी"],
+  ])("getLangLabel('%s') === '%s'", (code, expected) => {
+    expect(getLangLabel(code)).toBe(expected);
+  });
+
+  it("unknown code returns uppercased code", () => {
+    expect(getLangLabel("xyz")).toBe("XYZ");
+  });
+
+
 // Summary
 describe("i18n Coverage Report", () => {
   it("PASS: All supported languages verified", () => {
