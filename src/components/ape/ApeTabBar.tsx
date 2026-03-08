@@ -32,10 +32,15 @@ export function ApeTabBar() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border safe-area-pb">
+    <nav className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 border-t border-border safe-area-pb",
+      settings.backdropBlur
+        ? "bg-background/95 backdrop-blur-md"
+        : "bg-background"
+    )}>
       <div className="relative flex items-center justify-around h-16 max-w-screen-xl mx-auto">
-        {/* Animated indicator */}
-        {activeIndex >= 0 && (
+        {/* Animated indicator — only when tabBarAnimations enabled */}
+        {settings.tabBarAnimations && activeIndex >= 0 && (
           <div 
             className="absolute top-0 h-[3px] bg-primary rounded-b-full transition-all duration-300 ease-out"
             style={{
