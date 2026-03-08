@@ -107,6 +107,33 @@ export function useListGlossary(listId: string | undefined) {
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
+  const bulkSwapTerms = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // Fetch current entries to swap their fields
+      const entries = glossary.filter((g) => ids.includes(g.id));
+      if (entries.length === 0) return;
+      // Update each entry swapping original_text ↔ translated_text
+      const updates = entries.map((e) =>
+        supabase
+          .from("list_glossary")
+          .update({
+            original_text: e.translated_text,
+            translated_text: e.original_text,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq("id", e.id)
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey });
+      toast.success(`${variables.length} termo(s) invertido(s)!`);
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+
   return {
     glossary,
     activeGlossary,
@@ -116,5 +143,6 @@ export function useListGlossary(listId: string | undefined) {
     deleteEntry,
     toggleActive,
     bulkDelete,
+    bulkSwapTerms,
   };
 }
