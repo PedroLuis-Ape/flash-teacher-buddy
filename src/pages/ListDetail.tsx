@@ -60,6 +60,7 @@ interface Flashcard {
   audio_url: string | null;
   image_url_a?: string | null;
   image_url_b?: string | null;
+  word_hints?: unknown;
 }
 
 const ListDetail = () => {
