@@ -147,16 +147,22 @@ const ListDetail = () => {
       if (!list?.folder_id) return null;
       const { data, error } = await supabase
         .from("folders")
-        .select("id, title, visibility")
+        .select("id, title, visibility, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
         .eq("id", list.folder_id)
         .maybeSingle();
       
       if (error) throw error;
-      return data as FolderType | null;
+      return data as (FolderType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string | null; labels_b?: string | null; tts_enabled?: boolean }) | null;
     },
     enabled: !!list?.folder_id,
     staleTime: 60_000,
   });
+
+  // Resolve effective settings: list → folder fallback
+  const effectiveSettings = useMemo(
+    () => resolveEffectiveListSettings(list, folder),
+    [list, folder]
+  );
 
   const { data: flashcards = [], isLoading: flashcardsLoading, refetch: loadFlashcards } = useQuery({
     queryKey: ["flashcards", id],
