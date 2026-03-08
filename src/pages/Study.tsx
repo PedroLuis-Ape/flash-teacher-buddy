@@ -768,6 +768,8 @@ const Study = () => {
               imageUrlB={currentCard.image_url_b}
               wordHintsA={currentCard.word_hints}
               wordHintsB={currentCard.word_hints}
+              mergedHintsA={currentMergedHintsA}
+              mergedHintsB={currentMergedHintsB}
               direction={resolvedDirection}
               fastMode={gameSettings.fastMode}
               ttsEnabled={listSettings.ttsEnabled}
