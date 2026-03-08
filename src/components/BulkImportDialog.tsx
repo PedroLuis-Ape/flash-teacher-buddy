@@ -220,7 +220,7 @@ export const BulkImportDialog = ({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Prompt para copiar e usar com ChatGPT/Claude:</Label>
                   <Textarea
-                    value={AI_HELPER_PROMPT}
+                    value={aiPrompt}
                     readOnly
                     rows={8}
                     className="font-mono text-xs bg-background resize-none"

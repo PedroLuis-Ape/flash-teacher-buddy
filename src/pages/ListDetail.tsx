@@ -656,6 +656,8 @@ const ListDetail = () => {
                   onImported={loadFlashcards}
                   labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
                   labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
+                  langA={list?.lang_a || undefined}
+                  langB={list?.lang_b || undefined}
                 />
                 <Button
                   variant="outline"

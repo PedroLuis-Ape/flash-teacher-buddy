@@ -467,8 +467,9 @@ const Study = () => {
     if (!currentCard) return undefined;
     if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
     const manual = parseExtendedWordHints(currentCard.word_hints);
-    return mergeGlossaryAndManual(currentCard.translation, "B", activeGlossary, manual);
-  }, [currentCard, activeGlossary]);
+    const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
+    return mergeGlossaryAndManual(currentCard.translation, "B", activeGlossary, manual, langCtx);
+  }, [currentCard, activeGlossary, listSettings.langA, listSettings.langB]);
 
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
