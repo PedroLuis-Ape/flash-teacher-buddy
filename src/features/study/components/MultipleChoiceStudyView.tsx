@@ -6,6 +6,7 @@ import { Volume2, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
@@ -31,6 +32,8 @@ interface MultipleChoiceStudyViewProps {
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
+  mergedHintsA?: MergedHint[];
+  mergedHintsB?: MergedHint[];
   onCorrect: () => void;
   onIncorrect: () => void;
 }
@@ -41,6 +44,8 @@ export const MultipleChoiceStudyView = ({
   direction,
   langA = "en",
   langB = "pt",
+  mergedHintsA,
+  mergedHintsB,
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
@@ -63,6 +68,7 @@ export const MultipleChoiceStudyView = ({
 
   // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = currentCard.word_hints;
+  const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
@@ -180,7 +186,7 @@ export const MultipleChoiceStudyView = ({
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
-            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2"><InteractiveText text={prompt} wordHints={promptWordHints} speakOnHintClick speakLang={promptLang} /></p>
+            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2"><InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} /></p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
               <Button

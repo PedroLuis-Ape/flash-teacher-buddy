@@ -9,11 +9,14 @@ import { toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 
 interface PronunciationStudyViewProps {
   front: string;
   back: string;
   wordHintsA?: unknown;
+  mergedHintsA?: MergedHint[];
+  mergedHintsB?: MergedHint[];
   langA?: string;
   langB?: string;
   labelA?: string;
@@ -21,7 +24,7 @@ interface PronunciationStudyViewProps {
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, wordHintsA, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
+export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
   // --- Side A/B State Consolidation ---
   // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
@@ -176,12 +179,12 @@ export function PronunciationStudyView({ front, back, wordHintsA, langA = "en", 
 
         {/* Phrase to speak - BIG */}
         <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
-          <InteractiveText text={speakSide.text} wordHints={wordHintsA} speakOnHintClick speakLang={speakLang} />
+          <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick speakLang={speakLang} />
         </h2>
 
         {/* Hint translation - small */}
         <p className="text-sm text-muted-foreground/60 mb-8 italic">
-          "<InteractiveText text={hintSide.text} wordHints={wordHintsA} speakOnHintClick speakLang={hintLang} />"
+          "<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} speakOnHintClick speakLang={hintLang} />"
         </p>
 
         <Button

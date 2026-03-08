@@ -5,6 +5,7 @@ import { Volume2, RotateCcw, Check, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,8 @@ interface UnscrambleStudyViewProps {
   hint?: string | null;
   flashcardId?: string;
   wordHintsA?: unknown;
+  mergedHintsA?: MergedHint[];
+  mergedHintsB?: MergedHint[];
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
@@ -40,7 +43,7 @@ interface WordItem {
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, direction, langA = "en", langB = "pt", onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, mergedHintsA, mergedHintsB, direction, langA = "en", langB = "pt", onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -60,6 +63,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
 
   // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = wordHintsA;
+  const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
 
   const question = promptSide.text;
   const correctSentence = answerSide.text;
@@ -195,7 +199,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
             </Button>
           </div>
         </div>
-        <p className="text-2xl font-bold text-center mb-6"><InteractiveText text={question} wordHints={promptWordHints} speakOnHintClick speakLang={questionLang} /></p>
+        <p className="text-2xl font-bold text-center mb-6"><InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} /></p>
       </Card>
 
       {/* Selected words area */}

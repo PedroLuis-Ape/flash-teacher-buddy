@@ -813,6 +813,7 @@ const Study = () => {
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
@@ -829,6 +830,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
@@ -841,6 +844,8 @@ const Study = () => {
               hint={currentCard.hint}
               flashcardId={currentCard.id}
               wordHintsA={currentCard.word_hints}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
@@ -855,6 +860,8 @@ const Study = () => {
               front={currentCard.term}
               back={currentCard.translation}
               wordHintsA={currentCard.word_hints}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               langA={listSettings?.langA || "en"}
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}

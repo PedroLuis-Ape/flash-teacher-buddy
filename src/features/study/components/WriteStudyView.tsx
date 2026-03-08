@@ -30,6 +30,7 @@ interface WriteStudyViewProps {
   acceptedAnswersPt?: string[];
   wordHintsA?: unknown;
   mergedHintsA?: MergedHint[];
+  mergedHintsB?: MergedHint[];
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
@@ -47,6 +48,7 @@ export const WriteStudyView = ({
   acceptedAnswersPt = [],
   wordHintsA,
   mergedHintsA,
+  mergedHintsB,
   direction,
   langA = "en",
   langB = "pt",
@@ -70,7 +72,7 @@ export const WriteStudyView = ({
 
   // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = wordHintsA;
-  const promptMergedHints = mergedHintsA;
+  const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
