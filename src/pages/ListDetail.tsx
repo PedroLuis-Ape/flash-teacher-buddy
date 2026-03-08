@@ -752,7 +752,16 @@ const ListDetail = () => {
             />
           )}
 
-          {loading ? (
+          {/* Glossary Manager — visible to owners for language lists */}
+          {list?.study_type === 'language' && (
+            <ListGlossaryManager
+              listId={id!}
+              labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
+              labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
+              canEdit={canEdit}
+            />
+          )}
+
             <p className="text-center text-muted-foreground">Carregando...</p>
           ) : flashcards.length === 0 ? (
             <Card className="text-center p-12">
