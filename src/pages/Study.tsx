@@ -741,6 +741,15 @@ const Study = () => {
             </div>
           </div>
 
+          {/* Language direction indicator */}
+          {listSettings.studyType === "language" && (
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">A: {listSettings.labelsA}</span>
+              <span>→</span>
+              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">B: {listSettings.labelsB}</span>
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>
