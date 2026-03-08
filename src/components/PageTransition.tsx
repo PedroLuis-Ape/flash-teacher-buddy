@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -8,9 +9,18 @@ interface PageTransitionProps {
 
 /**
  * Enhanced page wrapper with smooth fade + scale transitions.
- * Fixed: Removed conflicting useEffect hooks that caused flickering.
+ * Respects FEATURE_FLAGS.page_transitions_enabled for safe mode.
  */
 export function PageTransition({ children }: PageTransitionProps) {
+  // Feature flag: skip all animation logic when disabled
+  if (!FEATURE_FLAGS.page_transitions_enabled) {
+    return <>{children}</>;
+  }
+
+  return <AnimatedTransition>{children}</AnimatedTransition>;
+}
+
+function AnimatedTransition({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayChildren, setDisplayChildren] = useState(children);
@@ -40,7 +50,6 @@ export function PageTransition({ children }: PageTransitionProps) {
   }, [location.pathname]);
 
   // Update children immediately if they change without route change
-  // (e.g., data loading complete on same page)
   useEffect(() => {
     if (!isAnimating) {
       setDisplayChildren(children);
