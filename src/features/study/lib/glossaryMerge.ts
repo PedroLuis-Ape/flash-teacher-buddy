@@ -63,7 +63,9 @@ export function mergeGlossaryAndManual(
   text: string,
   side: "A" | "B",
   glossary: GlossaryItem[],
-  manualHints: ExtendedWordHint[]
+  manualHints: ExtendedWordHint[],
+  /** Optional: list language context for bidirectional glossary matching */
+  langContext?: { langA?: string; langB?: string }
 ): MergedHint[] {
   if (!text) return [];
 
