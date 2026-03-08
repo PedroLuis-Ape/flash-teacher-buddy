@@ -921,9 +921,9 @@ const ListDetail = () => {
         isOpen={!!editingFlashcard}
         onClose={() => setEditingFlashcard(null)}
         onSave={handleUpdateFlashcard}
-        studyType={list?.study_type || 'language'}
-        labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-        labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
+        studyType={effectiveSettings.studyType}
+        labelA={effectiveSettings.labelsA}
+        labelB={effectiveSettings.labelsB}
       />
 
       {/* List Settings Dialog */}
