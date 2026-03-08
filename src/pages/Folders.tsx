@@ -397,11 +397,17 @@ const Folders = () => {
     }
   };
 
+  // Search state
+  const [folderSearch, setFolderSearch] = useState("");
+
   // Tab: Folders (Pastas)
+  const filteredFolders = folders.filter((f) =>
+    f.title.toLowerCase().includes(folderSearch.toLowerCase())
+  );
+
   const foldersTab = (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 py-1">
-        <h2 className="text-lg font-semibold">Minhas pastas</h2>
         <div className="flex items-center gap-2">
           {folders.length > 0 && (
             <Button 
