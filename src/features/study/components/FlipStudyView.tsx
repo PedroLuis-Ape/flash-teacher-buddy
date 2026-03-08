@@ -113,6 +113,8 @@ export const FlipStudyView = ({
   const secondSideImage = isAFirst ? imageUrlB : imageUrlA;
   const firstSideHints = isAFirst ? wordHintsA : wordHintsB;
   const secondSideHints = isAFirst ? wordHintsB : wordHintsA;
+  const firstSideMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
+  const secondSideMergedHints = isAFirst ? mergedHintsB : mergedHintsA;
 
   // Reset flip state when card changes
   useEffect(() => {
