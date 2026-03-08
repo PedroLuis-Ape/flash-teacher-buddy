@@ -1138,6 +1138,50 @@ export type Database = {
         }
         Relationships: []
       }
+      list_glossary: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          list_id: string
+          note: string | null
+          original_text: string
+          side: string
+          translated_text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          list_id: string
+          note?: string | null
+          original_text: string
+          side?: string
+          translated_text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          list_id?: string
+          note?: string | null
+          original_text?: string
+          side?: string
+          translated_text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_glossary_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lists: {
         Row: {
           class_id: string | null
