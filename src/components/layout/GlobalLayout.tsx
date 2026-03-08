@@ -85,7 +85,12 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
         <div className="min-h-screen flex flex-col">
           <OfflineIndicator />
         {FEATURE_FLAGS.currency_header_enabled && user && (
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className={cn(
+              "sticky top-0 z-50 w-full border-b",
+              perfSettings.backdropBlur
+                ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+                : "bg-background"
+            )}>
               <div className="max-w-6xl mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">
                 <div className="flex items-center gap-1 md:gap-2">
                   <AppSidebar />
