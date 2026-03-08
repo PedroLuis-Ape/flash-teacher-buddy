@@ -1,14 +1,13 @@
 /**
- * InteractiveText — renders text with clickable/hoverable word hints.
+ * InteractiveText — renders text with hoverable/tappable word hints.
  *
- * Desktop: hover to show tooltip, click to pin.
- * Mobile: tap to show popover.
+ * Desktop: mouseenter shows tooltip, mouseleave hides it.
+ * Mobile: tap shows tooltip, auto-closes after 3s or on outside tap.
  *
  * If no hints are provided, renders plain text — 100% backward compatible.
  */
 
-import { useState, useCallback } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { segmentText, parseWordHints, type WordHint } from "@/features/study/lib/wordHints";
 
@@ -21,7 +20,6 @@ interface InteractiveTextProps {
 export const InteractiveText = ({ text, wordHints, className }: InteractiveTextProps) => {
   const hints = parseWordHints(wordHints);
 
-  // No hints — render plain text, no overhead
   if (hints.length === 0) {
     return <span className={className}>{text}</span>;
   }
@@ -41,54 +39,79 @@ export const InteractiveText = ({ text, wordHints, className }: InteractiveTextP
   );
 };
 
-/** A single highlighted word/expression with a popover */
+const MOBILE_AUTO_CLOSE_MS = 3000;
+
+/** A single highlighted word/expression with a lightweight tooltip */
 function HintWord({ value, hint }: { value: string; hint: WordHint }) {
   const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setOpen((prev) => !prev);
-    },
-    []
-  );
+  // Auto-close on mobile after timeout
+  useEffect(() => {
+    if (!open) return;
+    timerRef.current = setTimeout(() => setOpen(false), MOBILE_AUTO_CLOSE_MS);
+    return () => clearTimeout(timerRef.current);
+  }, [open]);
+
+  // Close on outside tap (mobile)
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: PointerEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handler, true);
+    return () => document.removeEventListener("pointerdown", handler, true);
+  }, [open]);
+
+  const handleMouseEnter = useCallback(() => setOpen(true), []);
+  const handleMouseLeave = useCallback(() => setOpen(false), []);
+
+  const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setOpen((prev) => !prev);
+  }, []);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={handleClick}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              setOpen((prev) => !prev);
-            }
-          }}
-          className={cn(
-            "cursor-pointer border-b-2 border-dashed border-primary/50",
-            "hover:border-primary hover:text-primary transition-colors",
-            "rounded-sm px-0.5 -mx-0.5",
-            open && "bg-primary/10 text-primary border-primary"
-          )}
-        >
-          {value}
-        </span>
-      </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="center"
-        className="w-auto max-w-[240px] p-3 space-y-1"
-        onClick={(e) => e.stopPropagation()}
-        onPointerDownOutside={() => setOpen(false)}
-      >
-        <p className="font-semibold text-sm text-foreground">{hint.translation}</p>
-        {hint.note && (
-          <p className="text-xs text-muted-foreground italic">{hint.note}</p>
+    <span ref={wrapperRef} className="relative inline">
+      <span
+        role="button"
+        tabIndex={0}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleTap}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen((prev) => !prev);
+          }
+        }}
+        className={cn(
+          "cursor-pointer border-b-2 border-dashed border-primary/50",
+          "md:hover:border-primary md:hover:text-primary transition-colors",
+          "rounded-sm px-0.5 -mx-0.5",
+          open && "bg-primary/10 text-primary border-primary"
         )}
-      </PopoverContent>
-    </Popover>
+      >
+        {value}
+      </span>
+      {open && (
+        <span
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none
+                     w-max max-w-[220px] rounded-md border bg-popover px-3 py-2 text-popover-foreground shadow-md
+                     animate-in fade-in-0 zoom-in-95"
+          role="tooltip"
+        >
+          <span className="block font-semibold text-sm">{hint.translation}</span>
+          {hint.note && (
+            <span className="block text-xs text-muted-foreground italic mt-0.5">{hint.note}</span>
+          )}
+        </span>
+      )}
+    </span>
   );
 }
