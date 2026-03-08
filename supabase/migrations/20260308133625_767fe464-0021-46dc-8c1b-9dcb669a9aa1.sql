@@ -1,0 +1,1 @@
+ALTER TABLE public.flashcards ADD COLUMN IF NOT EXISTS word_hints jsonb DEFAULT NULL;
