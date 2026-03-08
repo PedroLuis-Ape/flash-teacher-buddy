@@ -175,7 +175,7 @@ const ListDetail = () => {
   });
 
 
-  const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string) => {
+  const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -189,6 +189,9 @@ const ListDetail = () => {
       };
       if (imageUrlA) insertData.image_url_a = imageUrlA;
       if (imageUrlB) insertData.image_url_b = imageUrlB;
+      if (wordHints && Array.isArray(wordHints) && wordHints.length > 0) {
+        insertData.word_hints = wordHints;
+      }
 
       const { error } = await supabase
         .from("flashcards")
