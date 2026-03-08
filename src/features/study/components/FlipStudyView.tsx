@@ -376,7 +376,7 @@ export const FlipStudyView = ({
                 <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={secondSide.text} wordHints={secondSideHints} />
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} />
               </p>
               {ttsEnabled && (
                 <Button
