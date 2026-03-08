@@ -44,6 +44,8 @@ export const MultipleChoiceStudyView = ({
   direction,
   langA = "en",
   langB = "pt",
+  mergedHintsA,
+  mergedHintsB,
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
