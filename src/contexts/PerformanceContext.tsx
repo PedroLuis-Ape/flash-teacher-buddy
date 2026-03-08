@@ -3,7 +3,7 @@
  * Reads from localStorage synchronously on init (no flash of wrong state).
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import {
   type PerformanceSettings,
   type PerformancePreset,
@@ -64,6 +64,14 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   }, [persist]);
 
   const currentPreset = detectPreset(settings);
+
+  // Sync performance flags to <html> so global CSS can kill animations/hovers
+  useEffect(() => {
+    const el = document.documentElement;
+    el.toggleAttribute('data-perf-no-anim', !settings.animations);
+    el.toggleAttribute('data-perf-no-hover', !settings.hoverEffects);
+    el.toggleAttribute('data-perf-no-decor', !settings.decorativeEffects);
+  }, [settings.animations, settings.hoverEffects, settings.decorativeEffects]);
 
   return (
     <PerformanceContext.Provider value={{ settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset }}>

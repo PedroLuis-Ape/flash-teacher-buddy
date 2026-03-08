@@ -237,6 +237,57 @@ All colors MUST be HSL.
   }
 }
 
+/* ── Performance overrides: Light mode kills ALL motion ── */
+
+/* Kill every transition & animation globally */
+[data-perf-no-anim] *,
+[data-perf-no-anim] *::before,
+[data-perf-no-anim] *::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+/* Scroll-reveal: show immediately */
+[data-perf-no-anim] .scroll-reveal {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Card 3D hover: flatten */
+[data-perf-no-anim] .card-3d:hover,
+[data-perf-no-hover] .card-3d:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* Active press scale: disable */
+[data-perf-no-anim] .active\:scale-\[0\.98\]:active,
+[data-perf-no-anim] .active\:scale-95:active {
+  transform: none !important;
+}
+
+/* Group-hover effects: disable scaling & color shifts */
+[data-perf-no-hover] .group:hover .group-hover\:scale-105,
+[data-perf-no-hover] .group:hover .group-hover\:scale-110 {
+  transform: none !important;
+}
+
+[data-perf-no-hover] .group:hover .group-hover\:bg-primary\/20,
+[data-perf-no-hover] .group:hover .group-hover\:bg-secondary\/30 {
+  background-color: inherit !important;
+}
+
+/* Decorative effects: kill blur, glow */
+[data-perf-no-decor] .backdrop-blur-sm,
+[data-perf-no-decor] .backdrop-blur-md,
+[data-perf-no-decor] .backdrop-blur-lg,
+[data-perf-no-decor] .backdrop-blur-xl {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* Safe area support for iOS notch and Android cutouts */
 @supports(padding: max(0px)) {
   body {

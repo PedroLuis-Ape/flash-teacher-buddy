@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getPerfSettings } from "@/lib/performanceSettings";
 import {
   Tooltip,
   TooltipContent,
@@ -29,12 +30,15 @@ export function ScrollingTitle({ text, className }: ScrollingTitleProps) {
   const [isHovered, setIsHovered] = useState(false);
   const isMobile = useIsMobile();
 
-  // Check prefers-reduced-motion
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  // Check prefers-reduced-motion OR perf settings
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    return getPerfSettings().reduceMotion;
+  });
   useEffect(() => {
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    const perfReduced = getPerfSettings().reduceMotion;
+    setPrefersReducedMotion(mql.matches || perfReduced);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches || getPerfSettings().reduceMotion);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);

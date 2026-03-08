@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { getPerfSettings } from '@/lib/performanceSettings';
 
 interface UseScrollRevealOptions {
   threshold?: number;
@@ -11,12 +12,15 @@ interface UseScrollRevealOptions {
 export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
   options: UseScrollRevealOptions = {}
 ) {
+  // Also check global perf settings — if animations off, skip observer entirely
+  const perfDisabled = !getPerfSettings().animations;
   const { threshold = 0.1, rootMargin = '0px 0px -50px 0px', once = true, disabled = false } = options;
+  const isDisabled = disabled || perfDisabled;
   const ref = useRef<T>(null);
 
   useEffect(() => {
     // Skip observer creation if disabled
-    if (disabled) return;
+    if (isDisabled) return;
     
     const element = ref.current;
     if (!element) return;
@@ -42,7 +46,7 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>(
     return () => {
       observer.disconnect();
     };
-  }, [threshold, rootMargin, once, disabled]);
+  }, [threshold, rootMargin, once, isDisabled]);
 
   return ref;
 }
