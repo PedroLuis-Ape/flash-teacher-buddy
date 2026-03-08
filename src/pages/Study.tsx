@@ -130,14 +130,21 @@ const Study = () => {
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
 
+  // Derive effective flashcards filtered by favorites when enabled
+  const effectiveFlashcards = useMemo(() => {
+    if (!favoritesOnly) return flashcards;
+    if (favorites.length === 0) return []; // favorites not loaded or none found
+    return flashcards.filter(c => favorites.includes(c.id));
+  }, [flashcards, favoritesOnly, favorites]);
+
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
   const stableFlashcards = useMemo(() => {
-    const ids = flashcards.map(f => f.id).join(",");
-    if (ids === prevIdsRef.current) return flashcards;
+    const ids = effectiveFlashcards.map(f => f.id).join(",");
+    if (ids === prevIdsRef.current) return effectiveFlashcards;
     prevIdsRef.current = ids;
-    return flashcards;
-  }, [flashcards]);
+    return effectiveFlashcards;
+  }, [effectiveFlashcards]);
 
   const {
     currentIndex,
