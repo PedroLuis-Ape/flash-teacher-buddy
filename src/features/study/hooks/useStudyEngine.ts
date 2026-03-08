@@ -213,6 +213,14 @@ export function useStudyEngine(
         return;
       }
 
+      const availableCardIds = new Set(flashcards.map((card) => card.id));
+      const sanitizeSessionOrder = (sessionOrder: unknown): string[] => {
+        if (!Array.isArray(sessionOrder)) return [];
+        return sessionOrder
+          .filter((id): id is string => typeof id === 'string')
+          .filter((id) => availableCardIds.has(id));
+      };
+
       // Track that the user opened this list
       trackListOpened(listId);
 
@@ -221,7 +229,7 @@ export function useStudyEngine(
 
       // For flip mode: use EXACT order from flashcards (Study.tsx already applied random/sequential)
       if (isFlipMode) {
-        // Try to restore from Supabase first (for session continuity)
+        // Try to restore from database first (for session continuity)
         const { data: existingSession } = await supabase
           .from('study_sessions')
           .select('*')
@@ -234,22 +242,37 @@ export function useStudyEngine(
           .maybeSingle();
 
         if (existingSession) {
-          setSessionId(existingSession.id);
-          setCurrentIndex(existingSession.current_index);
-          setCardsOrder(existingSession.cards_order as string[]);
-          toast.success("Continuando de onde você parou!");
-          setIsLoading(false);
-          return;
+          const scopedOrder = sanitizeSessionOrder(existingSession.cards_order);
+
+          if (scopedOrder.length > 0) {
+            const safeIndex = Math.min(
+              Math.max(existingSession.current_index ?? 0, 0),
+              scopedOrder.length - 1
+            );
+
+            setSessionId(existingSession.id);
+            setCurrentIndex(safeIndex);
+            setCardsOrder(scopedOrder);
+            toast.success("Continuando de onde você parou!");
+            setIsLoading(false);
+            return;
+          }
+
+          // Incompatible cached session (e.g. favorites-only scope changed)
+          await supabase
+            .from('study_sessions')
+            .update({ completed: true })
+            .eq('id', existingSession.id);
         }
 
-        // Fallback to localStorage if no Supabase session
+        // Fallback to localStorage if no database session
         const savedProgress = loadFlipProgress();
         
         // CRITICAL FIX: Use the exact order from flashcards passed by Study.tsx
         // Study.tsx already applied random/sequential ordering before passing here
         const orderedCards = flashcards.map(f => f.id);
         
-        // Create new session in Supabase for flip mode
+        // Create new session in database for flip mode
         const { data: newSession, error } = await supabase
           .from('study_sessions')
           .insert({
@@ -300,12 +323,27 @@ export function useStudyEngine(
         .maybeSingle();
 
       if (existingSession) {
-        setSessionId(existingSession.id);
-        setCurrentIndex(existingSession.current_index);
-        setCardsOrder(existingSession.cards_order as string[]);
-        toast.success("Continuando de onde você parou!");
-        setIsLoading(false);
-        return;
+        const scopedOrder = sanitizeSessionOrder(existingSession.cards_order);
+
+        if (scopedOrder.length > 0) {
+          const safeIndex = Math.min(
+            Math.max(existingSession.current_index ?? 0, 0),
+            scopedOrder.length - 1
+          );
+
+          setSessionId(existingSession.id);
+          setCurrentIndex(safeIndex);
+          setCardsOrder(scopedOrder);
+          toast.success("Continuando de onde você parou!");
+          setIsLoading(false);
+          return;
+        }
+
+        // Incompatible cached session (e.g. favorites-only scope changed)
+        await supabase
+          .from('study_sessions')
+          .update({ completed: true })
+          .eq('id', existingSession.id);
       }
 
       // Create new session with prioritized flashcards

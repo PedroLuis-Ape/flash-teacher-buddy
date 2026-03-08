@@ -415,7 +415,7 @@ const Study = () => {
     });
   };
 
-  if (loading || studyLoading) {
+  if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
@@ -424,7 +424,7 @@ const Study = () => {
   }
 
   // Empty state when studying favorites but none found in this list
-  if (favoritesOnly && effectiveFlashcards.length === 0 && flashcards.length > 0) {
+  if (favoritesOnly && !favoritesLoading && effectiveFlashcards.length === 0 && flashcards.length > 0) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
         <Star className="h-12 w-12 text-muted-foreground" />
@@ -436,6 +436,24 @@ const Study = () => {
   }
 
   const currentCard = effectiveFlashcards[currentIndex];
+
+  // Safety fallback: prevents blank/black screen on inconsistent card state
+  if (!currentCard) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+        <Star className="h-12 w-12 text-muted-foreground" />
+        <p className="text-muted-foreground text-center text-lg font-medium">
+          Não foi possível iniciar este modo com o filtro atual.
+        </p>
+        <p className="text-sm text-muted-foreground text-center">
+          {favoritesOnly
+            ? "Desative o filtro de favoritos ou marque mais cards nesta lista."
+            : "Tente reiniciar a sessão de estudo."}
+        </p>
+        <Button variant="outline" onClick={handleExit}>Voltar</Button>
+      </div>
+    );
+  }
 
   if (isFinished) {
     const isFlipMode = normalizedMode === "flip";
