@@ -391,7 +391,7 @@ const ListDetail = () => {
           hint: card.hint || null,
           image_url_a: card.image_url_a || null,
           image_url_b: card.image_url_b || null,
-          word_hints: card.word_hints || null,
+          word_hints: (card.word_hints as any) || null,
         }));
         
         const { error: cardsError } = await supabase
