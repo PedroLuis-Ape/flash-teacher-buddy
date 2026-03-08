@@ -593,8 +593,13 @@ const Folder = () => {
     }
   };
 
-  // Memoize sorted lists to avoid re-sorting on every render
-  const sortedLists = useMemo(() => naturalSort(lists, (list) => list.title), [lists]);
+  const [listSearch, setListSearch] = useState("");
+  const sortedLists = useMemo(() => {
+    const sorted = naturalSort(lists, (list) => list.title);
+    if (!listSearch.trim()) return sorted;
+    const q = listSearch.toLowerCase();
+    return sorted.filter((l) => l.title.toLowerCase().includes(q));
+  }, [lists, listSearch]);
 
   if (!folder) {
     return (
