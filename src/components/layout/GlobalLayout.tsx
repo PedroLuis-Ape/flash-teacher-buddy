@@ -40,6 +40,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const { refreshBalance } = useEconomy();
+  const { settings: perfSettings } = usePerformance();
   
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
