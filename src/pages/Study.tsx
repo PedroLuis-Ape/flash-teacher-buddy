@@ -258,6 +258,34 @@ const Study = () => {
     // Check if this is a list or collection
     const isListRoute = window.location.pathname.includes("/list/");
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
+
+    // Offline fallback: if offline and list data is cached locally, use it
+    if (!navigator.onLine && isListRoute) {
+      try {
+        const offlineData = await getOfflineList(resolvedId);
+        if (offlineData) {
+          const orderedData = order === "random" ? shuffleArray([...offlineData.flashcards]) : offlineData.flashcards;
+          setFlashcards(orderedData as Flashcard[]);
+          setListTitle(offlineData.listMeta.title);
+          setListSettings({
+            studyType: (offlineData.listMeta.study_type === "general" ? "general" : "language") as "language" | "general",
+            langA: offlineData.listMeta.lang_a,
+            langB: offlineData.listMeta.lang_b,
+            labelsA: offlineData.listMeta.labels_a,
+            labelsB: offlineData.listMeta.labels_b,
+            ttsEnabled: offlineData.listMeta.tts_enabled,
+          });
+          setLoading(false);
+          toast.info("Usando dados offline");
+          return;
+        }
+      } catch {
+        // IndexedDB error — fall through to online path (will fail gracefully)
+      }
+      toast.error("Esta lista não está disponível offline");
+      setLoading(false);
+      return;
+    }
     
     const { data: { session } } = await supabase.auth.getSession();
     setUserId(session?.user?.id);
