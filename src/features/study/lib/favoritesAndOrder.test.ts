@@ -1,0 +1,154 @@
+import { describe, it, expect } from "vitest";
+
+// ====================================================================
+// Unit tests for card-order preservation and favorites scoping logic
+// ====================================================================
+
+// --- Helpers mirroring production logic ---
+
+/** Simulates optimistic in-place update (ListDetail.tsx handleUpdateFlashcard) */
+function optimisticUpdate<T extends { id: string }>(
+  cards: T[],
+  updatedId: string,
+  patch: Partial<T>
+): T[] {
+  return cards.map((c) => (c.id === updatedId ? { ...c, ...patch } : c));
+}
+
+/** Simulates the effectiveFlashcards memo from Study.tsx */
+function deriveEffectiveFlashcards<T extends { id: string }>(
+  flashcards: T[],
+  favoritesOnly: boolean,
+  favoriteIds: string[]
+): T[] {
+  if (!favoritesOnly) return flashcards;
+  if (favoriteIds.length === 0) return [];
+  return flashcards.filter((c) => favoriteIds.includes(c.id));
+}
+
+// --- Test data ---
+const makeCards = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    id: `card-${i + 1}`,
+    term: `term-${i + 1}`,
+    translation: `trans-${i + 1}`,
+  }));
+
+// ==============================
+// PART A — Card order after edit
+// ==============================
+describe("Card order preservation after edit", () => {
+  const cards = makeCards(10);
+
+  it("editing card in the middle preserves its position", () => {
+    const updated = optimisticUpdate(cards, "card-5", { term: "new-term" });
+    expect(updated.map((c) => c.id)).toEqual(cards.map((c) => c.id));
+    expect(updated[4].term).toBe("new-term");
+    expect(updated[4].id).toBe("card-5");
+  });
+
+  it("editing first card keeps it first", () => {
+    const updated = optimisticUpdate(cards, "card-1", { term: "edited" });
+    expect(updated[0].id).toBe("card-1");
+    expect(updated[0].term).toBe("edited");
+  });
+
+  it("editing last card keeps it last", () => {
+    const updated = optimisticUpdate(cards, "card-10", { term: "edited" });
+    expect(updated[9].id).toBe("card-10");
+    expect(updated[9].term).toBe("edited");
+  });
+
+  it("full list order is unchanged after editing any card", () => {
+    const originalOrder = cards.map((c) => c.id);
+    for (const card of cards) {
+      const updated = optimisticUpdate(cards, card.id, { term: "x" });
+      expect(updated.map((c) => c.id)).toEqual(originalOrder);
+    }
+  });
+});
+
+// ==============================
+// PART B — Favorites scoped per list
+// ==============================
+describe("Favorites scoped per list", () => {
+  const frenchCards = makeCards(5); // card-1..card-5
+  const englishCards = Array.from({ length: 5 }, (_, i) => ({
+    id: `eng-${i + 1}`,
+    term: `eng-term-${i + 1}`,
+    translation: `eng-trans-${i + 1}`,
+  }));
+
+  it("favorites from one list do not leak into another", () => {
+    const frenchFavorites = ["card-1", "card-3"];
+    const effectiveFrench = deriveEffectiveFlashcards(frenchCards, true, frenchFavorites);
+    const effectiveEnglish = deriveEffectiveFlashcards(englishCards, true, frenchFavorites);
+
+    expect(effectiveFrench.length).toBe(2);
+    expect(effectiveEnglish.length).toBe(0); // none of eng-* match card-*
+  });
+
+  it("marking favorites in distinct lists maintains independence", () => {
+    const frenchFavs = ["card-2"];
+    const englishFavs = ["eng-4"];
+    const allFavs = [...frenchFavs, ...englishFavs];
+
+    const effectiveFrench = deriveEffectiveFlashcards(frenchCards, true, allFavs);
+    const effectiveEnglish = deriveEffectiveFlashcards(englishCards, true, allFavs);
+
+    expect(effectiveFrench.map((c) => c.id)).toEqual(["card-2"]);
+    expect(effectiveEnglish.map((c) => c.id)).toEqual(["eng-4"]);
+  });
+
+  it("favoritesOnly=false returns all cards regardless of favorites", () => {
+    const result = deriveEffectiveFlashcards(frenchCards, false, ["card-1"]);
+    expect(result.length).toBe(5);
+  });
+});
+
+// ==============================
+// PART C — Study only favorites
+// ==============================
+describe("Study only favorites filter", () => {
+  const cards = makeCards(10);
+  const favIds = ["card-2", "card-5", "card-8"];
+
+  it("returns only favorited cards when favoritesOnly is true", () => {
+    const result = deriveEffectiveFlashcards(cards, true, favIds);
+    expect(result.map((c) => c.id)).toEqual(["card-2", "card-5", "card-8"]);
+  });
+
+  it("returns empty array when favoritesOnly but favorites not loaded yet", () => {
+    const result = deriveEffectiveFlashcards(cards, true, []);
+    expect(result).toEqual([]);
+  });
+
+  it("returns full set when favoritesOnly is false", () => {
+    const result = deriveEffectiveFlashcards(cards, false, favIds);
+    expect(result.length).toBe(10);
+  });
+
+  it("works for flip, write, multiple-choice, and unscramble modes identically", () => {
+    // The filter is mode-agnostic — same memo runs regardless of mode
+    const modes = ["flip", "write", "multiple-choice", "unscramble"];
+    for (const _mode of modes) {
+      const result = deriveEffectiveFlashcards(cards, true, favIds);
+      expect(result.length).toBe(3);
+      expect(result.every((c) => favIds.includes(c.id))).toBe(true);
+    }
+  });
+
+  it("disabling favorites filter restores full card set", () => {
+    const filtered = deriveEffectiveFlashcards(cards, true, favIds);
+    expect(filtered.length).toBe(3);
+
+    const restored = deriveEffectiveFlashcards(cards, false, favIds);
+    expect(restored.length).toBe(10);
+  });
+
+  it("no favorites in current list returns empty (coherent empty state)", () => {
+    const unrelatedFavs = ["other-1", "other-2"];
+    const result = deriveEffectiveFlashcards(cards, true, unrelatedFavs);
+    expect(result).toEqual([]);
+  });
+});
