@@ -245,6 +245,15 @@ const Profile = () => {
         <Button
           variant="outline"
           className="w-full justify-start min-h-[44px]"
+          onClick={() => navigate("/settings/performance")}
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Desempenho e Qualidade
+        </Button>
+
+        <Button
+          variant="outline"
+          className="w-full justify-start min-h-[44px]"
           onClick={() => navigate("/folders")}
         >
           <User className="h-4 w-4 mr-2" />
