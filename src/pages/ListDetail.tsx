@@ -660,10 +660,10 @@ const ListDetail = () => {
                   existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
                   existingGlossary={glossary.map(g => ({ original_text: g.original_text, translated_text: g.translated_text }))}
                   onImported={loadFlashcards}
-                  labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-                  labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
-                  langA={list?.lang_a || undefined}
-                  langB={list?.lang_b || undefined}
+                  labelA={effectiveSettings.labelsA}
+                  labelB={effectiveSettings.labelsB}
+                  langA={effectiveSettings.langA}
+                  langB={effectiveSettings.langB}
                 />
                 <Button
                   variant="outline"
