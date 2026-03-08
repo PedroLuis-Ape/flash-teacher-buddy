@@ -138,6 +138,7 @@ const App = () => {
                   <Route path="/goals/new" element={<GoalNew />} />
                   <Route path="/import" element={<GlobalImport />} />
                   <Route path="/trash" element={<Trash />} />
+                  <Route path="/settings/performance" element={<PerformanceSettings />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageTransition>
