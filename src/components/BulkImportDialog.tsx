@@ -20,7 +20,7 @@ import {
   deduplicateGlossary,
   FlashcardPair,
   GlossaryParsed,
-  AI_HELPER_PROMPT,
+  buildAIHelperPrompt,
 } from "@/lib/bulkImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
