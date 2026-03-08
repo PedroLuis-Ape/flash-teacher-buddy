@@ -145,7 +145,7 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
           )}
 
           {showWordHints && (
-            <WordHintEditor value={wordHints} onChange={setWordHints} />
+            <WordHintEditor value={wordHints} onChange={setWordHints} sourceText={term} />
           )}
         </div>
         

@@ -139,7 +139,7 @@ export const CreateFlashcardForm = ({
         )}
 
         {showWordHints && (
-          <WordHintEditor value={wordHints} onChange={setWordHints} />
+          <WordHintEditor value={wordHints} onChange={setWordHints} sourceText={term} />
         )}
 
         <Button type="submit" className="w-full" size="lg">
