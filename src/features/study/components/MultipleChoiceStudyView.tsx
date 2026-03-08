@@ -22,6 +22,7 @@ interface MultipleChoiceStudyViewProps {
     term: string;
     translation: string;
     hint?: string | null;
+    word_hints?: unknown;
   };
   allCards: {
     term: string;
