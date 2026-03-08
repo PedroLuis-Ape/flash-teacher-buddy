@@ -795,8 +795,8 @@ const Study = () => {
               flashcardId={currentCard.id}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
-              wordHintsA={currentCard.word_hints}
-              mergedHintsA={currentMergedHintsA}
+              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
