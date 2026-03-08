@@ -122,6 +122,7 @@ const Study = () => {
     try { return localStorage.getItem(swapStorageKey) === "true"; } catch { return false; }
   });
   const [showSwapGuide, setShowSwapGuide] = useState(false);
+  const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
   const favoritesScope = useMemo(() => {
