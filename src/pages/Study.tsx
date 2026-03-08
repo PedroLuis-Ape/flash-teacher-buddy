@@ -844,7 +844,8 @@ const Study = () => {
               hint={currentCard.hint}
               flashcardId={currentCard.id}
               wordHintsA={currentCard.word_hints}
-              direction={resolvedDirection}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               langA={listSettings.langA}
               langB={listSettings.langB}
               onCorrect={() => handleNext(true)}
