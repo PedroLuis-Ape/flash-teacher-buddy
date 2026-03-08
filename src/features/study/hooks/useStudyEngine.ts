@@ -5,7 +5,7 @@ import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useListActivity } from "@/hooks/useListActivity";
 import { updateGoalProgress } from "@/hooks/useGoals";
-import { useTurmaActivity } from "@/hooks/useTurmaActivity";
+import { useTurmaActivity } from "@/features/classroom/hooks/useTurmaActivity";
 
 export interface StudyResult {
   flashcardId: string;

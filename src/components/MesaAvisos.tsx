@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { useAvisosByTurma, Aviso } from '@/hooks/useAvisos';
+import { useAvisosByTurma, Aviso } from '@/features/classroom/hooks/useAvisos';
 import { cn } from '@/lib/utils';
 
 interface MesaAvisosProps {
