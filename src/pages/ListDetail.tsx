@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 // Shared lang-label resolver for all language fallbacks
 import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
@@ -98,7 +98,8 @@ const ListDetail = () => {
   });
 
   const userId = currentUser?.id;
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
+  const favoritesScope = useMemo(() => (id ? { listId: id } : undefined), [id]);
+  const { data: favorites = [] } = useFavorites(userId, 'flashcard', favoritesScope);
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["list", id],
@@ -388,6 +389,9 @@ const ListDetail = () => {
           term: card.term,
           translation: card.translation,
           hint: card.hint || null,
+          image_url_a: card.image_url_a || null,
+          image_url_b: card.image_url_b || null,
+          word_hints: (card.word_hints as any) || null,
         }));
         
         const { error: cardsError } = await supabase
