@@ -21,7 +21,7 @@ interface PronunciationStudyViewProps {
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
+export function PronunciationStudyView({ front, back, wordHintsA, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
   // --- Side A/B State Consolidation ---
   // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
