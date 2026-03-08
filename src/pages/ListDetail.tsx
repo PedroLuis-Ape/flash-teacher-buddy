@@ -166,7 +166,8 @@ const ListDetail = () => {
         .select("*")
         .eq("list_id", id)
         .is("deleted_at", null)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true });
       
       if (error) throw error;
       return data as Flashcard[];
