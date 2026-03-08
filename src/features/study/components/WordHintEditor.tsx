@@ -3,12 +3,14 @@
  *
  * Supports selecting from Side A or Side B, plus fully manual text entry.
  * No auto-fill or locked selections — the user has full control.
+ * Supports suppressGlobal flag for overriding list-level glossary per card.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Languages, Trash2, Pencil, ChevronDown, ChevronUp, AlertTriangle, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WordHint } from "@/features/study/lib/wordHints";
