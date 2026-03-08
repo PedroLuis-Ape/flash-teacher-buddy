@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ListStudyTypeSelector, ListStudySettings, listRowToSettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { ListGlossaryManager } from "@/features/study/components/ListGlossaryManager";
+import { useListGlossary } from "@/hooks/useListGlossary";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
