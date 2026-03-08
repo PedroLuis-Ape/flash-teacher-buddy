@@ -769,6 +769,7 @@ const Study = () => {
               back={currentCard.translation}
               hint={currentCard.hint}
               flashcardId={currentCard.id}
+              wordHintsA={currentCard.word_hints}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
