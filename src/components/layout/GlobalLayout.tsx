@@ -64,8 +64,8 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   // Activity heartbeat - tracks when user is active
   useActivityHeartbeat(user?.id);
   
-  // Swipe navigation - enabled on mobile
-  useSwipeNavigation({ enabled: !!user });
+  // Swipe navigation - enabled on mobile (respects feature flag)
+  useSwipeNavigation({ enabled: !!user && FEATURE_FLAGS.swipe_navigation_enabled });
   
   // Don't show header/tabbar on auth pages
   const isAuthPage = location.pathname === '/auth';

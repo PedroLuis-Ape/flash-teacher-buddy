@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { segmentText, parseWordHints, type WordHint } from "@/features/study/lib/wordHints";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { mergedHintsToWordHints } from "@/features/study/lib/glossaryMerge";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 interface InteractiveTextProps {
   text: string;
@@ -23,6 +24,11 @@ interface InteractiveTextProps {
 }
 
 export const InteractiveText = ({ text, wordHints, mergedHints, className }: InteractiveTextProps) => {
+  // Feature flag: when word hints are disabled, render plain text
+  if (!FEATURE_FLAGS.word_hints_enabled) {
+    return <span className={className}>{text}</span>;
+  }
+
   // If mergedHints are provided, use those; otherwise fall back to raw wordHints
   const resolvedHints = mergedHints
     ? mergedHintsToWordHints(mergedHints)
@@ -95,9 +101,6 @@ function HintWord({
     e.preventDefault();
     setOpen((prev) => !prev);
   }, []);
-
-  // Determine if we have multiple translations
-  const hasMultiple = mergedTranslations && mergedTranslations.length > 1;
 
   return (
     <span ref={wrapperRef} className="relative inline">

@@ -1,97 +1,101 @@
 /**
  * Feature flags for the application
  * Control visibility and access to features
+ *
+ * SAFE MODE: Set flags to false to disable heavy features for debugging.
+ * The app will use stable fallbacks when features are off.
  */
 
 export const FEATURE_FLAGS = {
-  /**
-   * Store visibility
-   * When false: no Store button, route not accessible from UI
-   * When true: show Store button and enable the route
-   */
+  // ─── Store & Economy ───────────────────────────────────
+  /** Store visibility — hides Store button & route when false */
   store_visible: true,
-
-  /**
-   * Economy system visibility
-   * When false: no balance, no inventory, no economy UI
-   * When true: shows balance badge, inventory and appearance tabs, users earn PTS/XP
-   */
+  /** Economy system — balance, inventory, PTS/XP when false */
   economy_enabled: true,
-
-  /**
-   * Weekly conversion cron job
-   * When false: no automatic PTS → PITECOIN conversion
-   * When true: automatic conversion every Sunday 23:59 (São Paulo time)
-   */
+  /** Weekly PTS → PITECOIN conversion cron */
   conversion_cron_enabled: false,
-
-  /**
-   * Admin skins catalog management
-   * When false: no Admin → Catalog panel
-   * When true: developer_admin can manage skins catalog
-   */
+  /** Admin skins catalog management */
   admin_skins_enabled: true,
-
-  /**
-   * User directory / search
-   * When false: no user search functionality
-   * When true: admin can search users by tag/ID
-   */
+  /** User directory / search */
   directory_enabled: false,
-
-  /**
-   * Gifting system
-   * When false: no Admin → Gifts panel
-   * When true: developer_admin can send gifts to users
-   */
+  /** Gifting system (Admin → Gifts) */
   gifting_enabled: false,
-
-  /**
-   * Present Box visibility
-   * When false: no gift inbox in UI
-   * When true: users can see and claim their gifts
-   */
+  /** Present Box visibility */
   present_inbox_visible: true,
-
-  /**
-   * Currency header
-   * When false: no global currency display
-   * When true: shows points + PITECOIN in header across all pages
-   */
+  /** Currency header across all pages */
   currency_header_enabled: true,
 
-  /**
-   * Journey system
-   * When false: journey features disabled
-   * When true: journey features enabled
-   */
+  // ─── Journey & Realms ──────────────────────────────────
+  /** Journey system */
   journey_enabled: false,
-
-  /**
-   * Reinos (Realms) system
-   * When false: no Modo Reino button or features
-   * When true: shows Modo Reino card on home and enables /reinos route
-   */
+  /** Reinos (Realms) — Modo Reino card + /reinos route */
   reinos_enabled: true,
 
-  /**
-   * Classes/Student-Teacher linking system
-   * When false: no classes, messages, notifications, student-teacher features
-   * When true: enables full integration system (Turmas + Atribuições)
-   */
+  // ─── Classes & Communication ───────────────────────────
+  /** Classes/Student-Teacher linking system */
   classes_enabled: true,
-
-  /**
-   * Class communications (chat, DM, comments)
-   * When false: no chat, DM or comments in classes
-   * When true: enables messaging system for classes
-   */
+  /** Class communications (chat, DM, comments) */
   class_comms_enabled: true,
+  /** Meus Alunos (professor's student list) */
+  meus_alunos_enabled: true,
+
+  // ─── Study Engine (performance-sensitive) ──────────────
+  /**
+   * Word hints / interactive text in study views
+   * When false: renders plain text (no highlight, no tooltip)
+   */
+  word_hints_enabled: true,
 
   /**
-   * Meus Alunos (professor's student list)
-   * When false: no student list, no direct assignment
-   * When true: professor can see students, add to classes, assign activities
+   * List glossary (global translations per list)
+   * When false: skips glossary fetch & merge — manual word_hints still work if word_hints_enabled
    */
-  meus_alunos_enabled: true,
+  glossary_enabled: true,
+
+  /**
+   * Card images in study views
+   * When false: hides ImageCard components — text-only cards
+   */
+  study_images_enabled: true,
+
+  /**
+   * Page transition animations
+   * When false: instant page changes, no fade/scale animation
+   */
+  page_transitions_enabled: true,
+
+  /**
+   * Offline mode (download lists for offline use)
+   * When false: hides download buttons, disables IndexedDB caching
+   */
+  offline_mode_enabled: true,
+
+  /**
+   * Activity heartbeat (updates last_active_at every 60s)
+   * When false: no periodic profile updates — reduces DB writes
+   */
+  heartbeat_enabled: true,
+
+  /**
+   * Swipe navigation on mobile
+   * When false: no swipe gesture handling
+   */
+  swipe_navigation_enabled: true,
+} as const;
+
+/**
+ * Quick preset: set all performance-sensitive flags to safe values.
+ * To activate safe mode, copy these values into the flags above.
+ */
+export const SAFE_MODE_PRESET = {
+  word_hints_enabled: false,
+  glossary_enabled: false,
+  study_images_enabled: false,
+  page_transitions_enabled: false,
+  offline_mode_enabled: false,
+  heartbeat_enabled: false,
+  swipe_navigation_enabled: false,
+  economy_enabled: false,
+  currency_header_enabled: false,
+  present_inbox_visible: false,
 } as const;

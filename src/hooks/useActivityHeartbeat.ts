@@ -5,21 +5,21 @@
 
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 const HEARTBEAT_INTERVAL_MS = 60 * 1000; // 60 seconds
 
 /**
  * Hook that sends periodic heartbeat updates to track user activity.
  * This updates the last_active_at field in the profiles table.
- * 
- * @param userId - The user ID to update activity for
+ * Respects FEATURE_FLAGS.heartbeat_enabled for safe mode.
  */
 export function useActivityHeartbeat(userId: string | undefined) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !FEATURE_FLAGS.heartbeat_enabled) return;
 
     const updateActivity = async () => {
       const now = Date.now();

@@ -5,6 +5,7 @@ import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -138,8 +139,8 @@ const Study = () => {
 
   const listId = isListRoute ? resolvedId : undefined;
 
-  // Load list glossary for merged hints
-  const { activeGlossary } = useListGlossary(listId);
+  // Load list glossary for merged hints (skip fetch when feature disabled)
+  const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
 
   // Derive effective flashcards filtered by favorites when enabled
   const effectiveFlashcards = useMemo(() => {
@@ -764,12 +765,12 @@ const Study = () => {
               back={currentCard.translation}
               hint={currentCard.hint}
               flashcardId={currentCard.id}
-              imageUrlA={currentCard.image_url_a}
-              imageUrlB={currentCard.image_url_b}
-              wordHintsA={currentCard.word_hints}
-              wordHintsB={currentCard.word_hints}
-              mergedHintsA={currentMergedHintsA}
-              mergedHintsB={currentMergedHintsB}
+              imageUrlA={FEATURE_FLAGS.study_images_enabled ? currentCard.image_url_a : null}
+              imageUrlB={FEATURE_FLAGS.study_images_enabled ? currentCard.image_url_b : null}
+              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              wordHintsB={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               fastMode={gameSettings.fastMode}
               ttsEnabled={listSettings.ttsEnabled}
@@ -794,8 +795,8 @@ const Study = () => {
               flashcardId={currentCard.id}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
-              wordHintsA={currentCard.word_hints}
-              mergedHintsA={currentMergedHintsA}
+              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
