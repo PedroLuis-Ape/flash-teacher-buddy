@@ -70,11 +70,11 @@ export function useSoundSettings() {
   };
 }
 
-// Global getter for sfx.ts to check if sound is enabled
+// Global getter for sfx.ts — now delegates to performanceSettings
 export function isSoundEnabled(): boolean {
-  if (typeof window === 'undefined') return true;
-  const stored = localStorage.getItem(SOUND_SETTINGS_KEY);
-  return stored === null ? true : stored === 'true';
+  // Legacy compat: check both the old key and the new perf system
+  const { getPerfSettings } = require('@/lib/performanceSettings');
+  return getPerfSettings().soundEffects;
 }
 
 // Global getter for notifications
