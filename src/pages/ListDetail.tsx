@@ -805,7 +805,26 @@ const ListDetail = () => {
                 </div>
               )}
 
-              {flashcards.map((flashcard) => (
+              {/* Search cards */}
+              {flashcards.length > 5 && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={cardSearch}
+                    onChange={(e) => setCardSearch(e.target.value)}
+                    placeholder="Buscar card..."
+                    className="pl-9 h-10"
+                  />
+                </div>
+              )}
+
+              {flashcards
+                .filter((f) => {
+                  if (!cardSearch.trim()) return true;
+                  const q = cardSearch.toLowerCase();
+                  return f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q);
+                })
+                .map((flashcard) => (
                 <Card key={flashcard.id} className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${selectedCards.includes(flashcard.id) ? 'ring-2 ring-primary' : ''}`}>
                   <div className="flex items-start gap-3">
                     {/* Checkbox for selection */}
