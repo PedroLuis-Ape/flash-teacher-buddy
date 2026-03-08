@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageCard } from "./ImageCard";
+import { InteractiveText } from "./InteractiveText";
 
 interface FlipStudyViewProps {
   front: string;
