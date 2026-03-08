@@ -1,118 +1,167 @@
 
-# Relatório de Análise: Bugs e Problemas Visuais
 
-## Resumo Executivo
-Após análise do código, identifiquei **14 pontos de atenção** divididos entre bugs funcionais, problemas visuais e oportunidades de melhoria.
+# Plan: Word Hints in Study Modes + Offline Support
+
+This plan covers two features requested in the same message.
 
 ---
 
-## 🐛 BUGS FUNCIONAIS
+## FEATURE 1: Word Hints Integration in All Study Modes
 
-### 1. **PageTransition pode causar flickering**
-**Arquivo:** `src/components/PageTransition.tsx`
-**Problema:** A lógica de transição usa dois `useEffect` conflitantes - um que espera 150ms para atualizar `displayChildren` e outro que atualiza imediatamente.
-**Impacto:** Pode causar flash de conteúdo antigo durante navegação.
+### Current State
+- `InteractiveText` component exists and works in `FlipStudyView` only
+- `word_hints` field exists on flashcards and is fetched in `Study.tsx`
+- Other 4 modes (Write, MultipleChoice, Unscramble, Pronunciation) render plain text
+
+### What needs to change
+
+**1. Study.tsx** — Pass `wordHints` to all modes (currently only passed to Flip)
+- Add `wordHintsA={currentCard.word_hints}` prop to Write, MultipleChoice, Unscramble, and Pronunciation renders
+
+**2. WriteStudyView.tsx**
+- Add `wordHintsA?: unknown` prop
+- Import `InteractiveText`
+- Replace `{prompt}` (line 190) with `<InteractiveText text={prompt} wordHints={promptWordHints} />`
+- Resolve which side's hints to show based on direction (using `isAFirst` from `resolveStudySides`)
+
+**3. MultipleChoiceStudyView.tsx**
+- Add `wordHintsA?: unknown` to `currentCard` interface
+- Import `InteractiveText`
+- Replace `{prompt}` (line 178) with `<InteractiveText text={prompt} wordHints={promptWordHints} />`
+- Resolve hints based on direction
+
+**4. UnscrambleStudyView.tsx**
+- Add `wordHintsA?: unknown` prop
+- Import `InteractiveText`
+- Replace `{question}` (line 193) with `<InteractiveText text={question} wordHints={promptWordHints} />`
+- Resolve hints based on direction
+
+**5. PronunciationStudyView.tsx**
+- Add `wordHintsA?: unknown` prop
+- Import `InteractiveText`
+- Replace `{speakSide.text}` (line 176) with `<InteractiveText text={speakSide.text} wordHints={...} />`
+- Also replace hint side text (line 181) with interactive version
+
+### Hints direction logic (same pattern as FlipStudyView)
+Each view already calls `resolveStudySides` and knows `isAFirst`. The rule:
+- `wordHintsA` comes from `currentCard.word_hints` (always sideA data)
+- If `isAFirst` → prompt gets `wordHintsA`, answer gets none
+- If `!isAFirst` → prompt gets none, answer gets `wordHintsA`
+
+This keeps the canonical mapping intact.
+
+---
+
+## FEATURE 2: Offline Support (IndexedDB-based)
+
+### Architecture
+
 ```text
-Linha 17-24: Define timer de 150ms
-Linha 26-28: Atualiza imediatamente (contradiz a lógica anterior)
+┌─────────────┐       ┌──────────────┐       ┌──────────────┐
+│  UI Layer   │──────▶│ offlineStore  │──────▶│  IndexedDB   │
+│ (Download   │       │ (lib/offline  │       │  (idb-keyval │
+│  button,    │       │  Manager.ts)  │       │   or raw)    │
+│  status)    │       └──────────────┘       └──────────────┘
+└─────────────┘
 ```
 
-### 2. **Scroll na TurmaActivityPanel pode não funcionar em iOS**
-**Arquivo:** `src/components/TurmaActivityPanel.tsx`
-**Problema:** Altura fixa de `h-[350px]` com ScrollArea pode ter problemas em dispositivos iOS por causa do comportamento de scroll.
-**Impacto:** Usuários no iPhone podem não conseguir fazer scroll completo da lista de alunos.
+### New files to create
 
-### 3. **Swipe Navigation interfere com scrolls horizontais**
-**Arquivo:** `src/hooks/useSwipeNavigation.ts`
-**Problema:** O threshold de 100px pode capturar swipes em carrosséis, sliders ou áreas com scroll horizontal.
-**Impacto:** Navegação acidental ao interagir com elementos que têm scroll horizontal.
+**1. `src/lib/offlineStore.ts`** — Core offline data manager
+- Uses IndexedDB via lightweight wrapper (native `idb` API or small helper)
+- Key operations:
+  - `downloadListForOffline(listId)` — fetches list metadata + all flashcards + favorites, stores in IndexedDB keyed by listId
+  - `getOfflineList(listId)` — returns stored list data or null
+  - `isListAvailableOffline(listId)` — boolean check
+  - `removeOfflineList(listId)` — cleanup
+  - `getOfflineStatus(listId)` — returns `{ available, lastSync, cardCount }`
+  - `syncOfflineList(listId)` — re-downloads fresh data when online
+- Data structure per list:
+  ```ts
+  interface OfflineListData {
+    listId: string;
+    listMeta: { title, lang_a, lang_b, labels_a, labels_b, study_type, ... };
+    flashcards: Flashcard[];
+    favorites: string[]; // card IDs
+    downloadedAt: string; // ISO timestamp
+    version: number;
+  }
+  ```
 
-### 4. **Estado de Loading duplicado em Study.tsx**
-**Arquivo:** `src/pages/Study.tsx`
-**Problema:** Há verificação de `loading || studyLoading` mas ambos são controlados de forma independente.
-**Impacto:** Potencial flash de "Carregando..." seguido de conteúdo parcial.
+**2. `src/hooks/useOffline.ts`** — React hook
+- `useOfflineStatus(listId)` — returns `{ isAvailable, isDownloading, lastSync }`
+- `useDownloadForOffline(listId)` — mutation to trigger download
+- `useRemoveOffline(listId)` — mutation to remove
+- Detects online/offline via `navigator.onLine` + event listeners
 
----
+**3. `src/components/OfflineIndicator.tsx`** — Small status badge
+- Shows cloud-download icon or checkmark
+- Shows "Last sync: X ago"
 
-## 🎨 PROBLEMAS VISUAIS
+**4. `src/components/DownloadOfflineButton.tsx`** — Button for list detail page
+- Toggle button: "Download for offline" / "Available offline ✓"
+- Shows progress state while downloading
 
-### 5. **Version Badge no Auth está com opacity muito baixa**
-**Arquivo:** `src/pages/Auth.tsx` (linha 238)
-**Problema:** Badge tem `opacity-10` que torna praticamente invisível.
-```tsx
-className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-10"
-```
-**Sugestão:** Aumentar para `opacity-50` ou `opacity-30`.
+### Integration points
 
-### 6. **Tab Bar pode ter sobreposição de conteúdo**
-**Arquivo:** `src/components/GlobalLayout.tsx` (linha 70)
-**Problema:** Padding bottom de `pb-20` pode não ser suficiente em dispositivos com home indicator (iPhone X+).
-**Impacto:** Botões de ação podem ficar parcialmente escondidos atrás da Tab Bar.
+**ListDetail.tsx** — Add `DownloadOfflineButton` in the header area
 
-### 7. **Animação de glow na TabBar pode ser intensiva**
-**Arquivo:** `src/components/ape/ApeTabBar.tsx` (linha 69)
-**Problema:** `animate-pulse` com `blur-md` pode consumir muita GPU em dispositivos mais fracos.
-```tsx
-<div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
-```
+**Study.tsx** — Modify `loadFlashcards`:
+- If `!navigator.onLine`, try `getOfflineList(listId)` first
+- If offline data exists, use it instead of Supabase query
+- If no offline data and no internet, show clear error state
 
-### 8. **Cards hover effect pode não funcionar bem em touch**
-**Arquivo:** `src/components/ape/ApeCardFolder.tsx`
-**Problema:** Estados `:hover` são mantidos em touch devices após tap.
-**Impacto:** Card permanece com estilo "elevado" após toque no mobile.
+**GamesHub.tsx** — Show offline badge on lists that are downloaded
 
----
+### PWA / Service Worker
+- Already configured via `vite-plugin-pwa`
+- Add `navigateFallbackDenylist: [/^\/~oauth/]` (missing currently)
+- Add runtime caching for card images:
+  ```ts
+  {
+    urlPattern: /\.(png|jpg|jpeg|webp|gif)$/i,
+    handler: 'CacheFirst',
+    options: { cacheName: 'card-images', expiration: { maxEntries: 500 } }
+  }
+  ```
 
-## ⚠️ AVISOS DE SEGURANÇA (do Linter)
+### TTS/Audio offline
+- Browser SpeechSynthesis API works offline on most devices (uses local voices)
+- Edge TTS (cloud) will NOT work offline → show graceful fallback message
+- No audio caching in this initial version (noted as limitation)
 
-### 9. **6 políticas RLS permissivas demais**
-**Problema:** Existem políticas com `USING (true)` ou `WITH CHECK (true)` para operações de UPDATE/DELETE/INSERT.
-**Impacto:** Potencial risco de segurança - qualquer usuário pode modificar dados.
-**Recomendação:** Revisar e restringir as políticas RLS conforme necessidade.
+### Sync strategy
+- On app focus + online: check if any offline lists need refresh
+- Simple "last-write-wins" — offline is read-only (no offline edits in v1)
+- Re-download replaces local data entirely
 
-### 10. **Proteção de senha vazada desabilitada**
-**Problema:** A funcionalidade de verificar senhas vazadas está desativada no Supabase.
-**Impacto:** Usuários podem usar senhas comprometidas.
-
----
-
-## 🔧 OPORTUNIDADES DE MELHORIA
-
-### 11. **Breadcrumbs não estão sendo usados**
-**Arquivo:** `src/components/Breadcrumbs.tsx` foi criado mas não é renderizado em nenhuma página.
-**Status:** Componente órfão.
-
-### 12. **Skeleton components subutilizados**
-**Arquivo:** `src/components/ui/skeleton-card.tsx`
-**Problema:** Componentes `SkeletonCard` e `SkeletonGrid` foram criados mas não são usados nas páginas principais.
-**Páginas que poderiam usar:** Folders.tsx, Index.tsx, TurmaDetail.tsx.
-
-### 13. **Safe area bottom inconsistente**
-**Arquivos:** `index.css` e `ApeTabBar.tsx`
-**Problema:** `safe-area-pb` na TabBar + `pb-24` no GlobalLayout pode criar espaçamento excessivo ou insuficiente dependendo do device.
-
-### 14. **Console logs em produção**
-**Arquivos:** `Profile.tsx`, `Folder.tsx`, `TurmaActivityPanel.tsx`
-**Problema:** Há `console.log` e `console.error` que podem poluir o console em produção.
+### Backward compatibility
+- Zero impact on existing lists — offline is opt-in per list
+- No DB migration needed (all client-side storage)
+- Lists without offline data continue working exactly as before
 
 ---
 
-## 📋 PRIORIZAÇÃO SUGERIDA
+## Files to modify/create summary
 
-| Prioridade | Item | Categoria |
-|------------|------|-----------|
-| 🔴 Alta | #9 - RLS permissivas | Segurança |
-| 🔴 Alta | #6 - TabBar sobreposição | UX Mobile |
-| 🟡 Média | #1 - PageTransition flicker | UX |
-| 🟡 Média | #3 - Swipe interfere scroll | UX Mobile |
-| 🟡 Média | #2 - Scroll iOS | UX Mobile |
-| 🟢 Baixa | #5 - Version badge opacity | Visual |
-| 🟢 Baixa | #11 - Breadcrumbs órfão | Tech Debt |
-| 🟢 Baixa | #12 - Skeleton subutilizado | Tech Debt |
-| 🟢 Baixa | #14 - Console logs | Tech Debt |
+| File | Action | Purpose |
+|---|---|---|
+| `src/lib/offlineStore.ts` | **Create** | IndexedDB offline data manager |
+| `src/hooks/useOffline.ts` | **Create** | React hooks for offline state |
+| `src/components/OfflineIndicator.tsx` | **Create** | Status badge component |
+| `src/components/DownloadOfflineButton.tsx` | **Create** | Download toggle button |
+| `src/features/study/components/WriteStudyView.tsx` | Edit | Add InteractiveText for prompt |
+| `src/features/study/components/MultipleChoiceStudyView.tsx` | Edit | Add InteractiveText for prompt |
+| `src/features/study/components/UnscrambleStudyView.tsx` | Edit | Add InteractiveText for prompt |
+| `src/features/study/components/PronunciationStudyView.tsx` | Edit | Add InteractiveText for both sides |
+| `src/pages/Study.tsx` | Edit | Pass wordHints to all modes + offline fallback |
+| `src/pages/ListDetail.tsx` | Edit | Add DownloadOfflineButton |
+| `src/pages/GamesHub.tsx` | Edit | Show offline badge |
+| `vite.config.ts` | Edit | Add navigateFallbackDenylist + image cache |
 
----
+### Tests
+- Word hints rendering in each study mode (unit tests on InteractiveText are already passing — integration is the gap)
+- Offline store: save/load/delete cycle
+- Offline detection: fallback to IndexedDB when offline
+- Empty states: no offline data + no internet = clear message
 
-## Próximos Passos
-
-Você pode me dizer quais itens quer que eu corrija primeiro, ou posso criar um plano de implementação para resolver todos em ordem de prioridade.
