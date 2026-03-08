@@ -349,8 +349,6 @@ We go home now / Nós vamos para casa agora [Expressa ação imediata.]`;
 // Legacy constant for backward compatibility
 export const AI_HELPER_PROMPT = buildAIHelperPrompt();
 
-Não escreva nenhuma explicação fora do formato.
-Não adicione comentários.
 Não adicione títulos extras.
 Não escreva texto antes ou depois das seções.
 
