@@ -79,7 +79,8 @@ export function ApeTabBar() {
                 )}
               </div>
               <span className={cn(
-                "text-xs transition-all duration-200",
+                "text-xs",
+                settings.animations && "transition-all duration-200",
                 active ? "font-semibold" : "font-normal"
               )}>
                 {tab.label}
