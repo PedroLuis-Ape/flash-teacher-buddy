@@ -130,14 +130,21 @@ const Study = () => {
   const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
 
+  // Derive effective flashcards filtered by favorites when enabled
+  const effectiveFlashcards = useMemo(() => {
+    if (!favoritesOnly) return flashcards;
+    if (favorites.length === 0) return []; // favorites not loaded or none found
+    return flashcards.filter(c => favorites.includes(c.id));
+  }, [flashcards, favoritesOnly, favorites]);
+
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
   const stableFlashcards = useMemo(() => {
-    const ids = flashcards.map(f => f.id).join(",");
-    if (ids === prevIdsRef.current) return flashcards;
+    const ids = effectiveFlashcards.map(f => f.id).join(",");
+    if (ids === prevIdsRef.current) return effectiveFlashcards;
     prevIdsRef.current = ids;
-    return flashcards;
-  }, [flashcards]);
+    return effectiveFlashcards;
+  }, [effectiveFlashcards]);
 
   const {
     currentIndex,
@@ -295,18 +302,8 @@ const Study = () => {
       return;
     }
 
-    // Filter by favorites if enabled
-    let filteredData = data;
-    if (favoritesOnly && favorites.length > 0) {
-      filteredData = data.filter(card => favorites.includes(card.id));
-      if (filteredData.length === 0) {
-        toast.error("Nenhum flashcard favorito encontrado nesta lista");
-        navigate(isListRoute ? `/list/${resolvedId}` : `/collection/${resolvedId}`);
-        return;
-      }
-    }
-
-    const orderedData = order === "random" ? shuffleArray([...filteredData]) : filteredData;
+    // Always load ALL cards; favorites filtering is handled by effectiveFlashcards memo
+    const orderedData = order === "random" ? shuffleArray([...data]) : data;
     setFlashcards(orderedData);
 
     // Load list info and video if this is a list route
@@ -370,15 +367,15 @@ const Study = () => {
   };
 
   const handleNext = (correct: boolean, skipped: boolean = false) => {
-    if (currentIndex < flashcards.length) {
-      recordResult(flashcards[currentIndex].id, correct, skipped);
+    if (currentIndex < effectiveFlashcards.length) {
+      recordResult(effectiveFlashcards[currentIndex].id, correct, skipped);
     }
     goToNext();
   };
 
   const handleReviewErrors = () => {
     const errorIds = results.filter((r) => !r.correct && !r.skipped).map((r) => r.flashcardId);
-    const errorCards = flashcards.filter((card) => errorIds.includes(card.id));
+    const errorCards = effectiveFlashcards.filter((card) => errorIds.includes(card.id));
     
     if (errorCards.length > 0) {
       // FIXED: Update flashcards state and reset session instead of full page reload
@@ -423,7 +420,19 @@ const Study = () => {
     );
   }
 
-  const currentCard = flashcards[currentIndex];
+  // Empty state when studying favorites but none found in this list
+  if (favoritesOnly && effectiveFlashcards.length === 0 && flashcards.length > 0) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+        <Star className="h-12 w-12 text-muted-foreground" />
+        <p className="text-muted-foreground text-center text-lg font-medium">Nenhum card favorito nesta lista.</p>
+        <p className="text-sm text-muted-foreground text-center">Volte à lista e marque cards como favorito com a estrela ⭐</p>
+        <Button variant="outline" onClick={handleExit}>Voltar</Button>
+      </div>
+    );
+  }
+
+  const currentCard = effectiveFlashcards[currentIndex];
 
   if (isFinished) {
     const isFlipMode = normalizedMode === "flip";
@@ -722,7 +731,7 @@ const Study = () => {
             <MultipleChoiceStudyView
               key={currentCard.id}
               currentCard={currentCard}
-              allCards={flashcards}
+              allCards={effectiveFlashcards}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
