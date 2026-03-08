@@ -487,6 +487,20 @@ const Folders = () => {
         </Dialog>
         </div>
       </div>
+
+      {/* Search */}
+      {folders.length > 3 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={folderSearch}
+            onChange={(e) => setFolderSearch(e.target.value)}
+            placeholder="Buscar pasta..."
+            className="pl-9 h-10"
+          />
+        </div>
+      )}
+
       {loading ? (
         <SkeletonGrid count={5} variant="folder" />
       ) : folders.length === 0 ? (
