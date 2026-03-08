@@ -349,7 +349,7 @@ export const FlipStudyView = ({
                 <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} />
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={firstSideLang} />
               </p>
               {ttsEnabled && (
                 <Button
