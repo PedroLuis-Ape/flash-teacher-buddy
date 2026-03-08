@@ -139,8 +139,8 @@ const Study = () => {
 
   const listId = isListRoute ? resolvedId : undefined;
 
-  // Load list glossary for merged hints
-  const { activeGlossary } = useListGlossary(listId);
+  // Load list glossary for merged hints (skip fetch when feature disabled)
+  const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
 
   // Derive effective flashcards filtered by favorites when enabled
   const effectiveFlashcards = useMemo(() => {
