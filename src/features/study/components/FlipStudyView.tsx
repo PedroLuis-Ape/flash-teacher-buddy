@@ -220,7 +220,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={firstSide.text} wordHints={firstSideHints} />
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} />
               </p>
             </ScrollArea>
           </div>
