@@ -238,7 +238,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {secondSide.text}
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} />
               </p>
             </ScrollArea>
           </div>
