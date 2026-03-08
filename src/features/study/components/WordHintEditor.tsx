@@ -473,6 +473,20 @@ export const WordHintEditor = ({
                         placeholder="Observação (opcional)"
                         className="text-sm h-8"
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`suppress-${index}`}
+                          checked={(value[index] as any)?.suppressGlobal || false}
+                          onCheckedChange={(checked) => {
+                            const updated = [...value];
+                            (updated[index] as any) = { ...updated[index], suppressGlobal: !!checked };
+                            onChange(updated);
+                          }}
+                        />
+                        <Label htmlFor={`suppress-${index}`} className="text-xs text-muted-foreground cursor-pointer">
+                          Ocultar tradução global neste contexto
+                        </Label>
+                      </div>
                       <div className="flex gap-1.5">
                         <Button type="button" size="sm" className="h-7 text-xs" onClick={saveEditing}>
                           Salvar
