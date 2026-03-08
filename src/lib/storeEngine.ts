@@ -248,13 +248,10 @@ export async function equipAvatarAsPhoto(
     const timestamp = Date.now();
     const urlWithCache = `${avatarUrl}?v=${timestamp}`;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        avatar_url: urlWithCache,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
+    const { error } = await supabase.rpc('update_own_profile', {
+      p_user_id: userId,
+      p_avatar_url: urlWithCache
+    });
 
     if (error) {
       console.error('[StoreEngine] Error updating profile photo:', error);
