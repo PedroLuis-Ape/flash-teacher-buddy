@@ -165,15 +165,44 @@ export const ListGlossaryManager = ({
           {canEdit && glossary.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               {!selectMode ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectMode(true)}
-                  className="gap-1.5 text-xs"
-                >
-                  <CheckSquare className="h-3.5 w-3.5" />
-                  Selecionar
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectMode(true)}
+                    className="gap-1.5 text-xs"
+                  >
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    Selecionar
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        disabled={bulkSwapTerms.isPending}
+                      >
+                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                        Inverter todos
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Inverter todos os termos?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Isso vai trocar "original → tradução" por "tradução → original" em todas as {glossary.length} entradas do glossário. Os labels (A/B) permanecem iguais.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleSwapAll}>
+                          {bulkSwapTerms.isPending ? "Invertendo..." : "Inverter todos"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
               ) : (
                 <>
                   <Button
@@ -183,6 +212,16 @@ export const ListGlossaryManager = ({
                     className="text-xs"
                   >
                     {selectedIds.size === glossary.length ? "Desmarcar todos" : "Selecionar todos"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={selectedIds.size === 0 || bulkSwapTerms.isPending}
+                    onClick={handleSwapSelected}
+                    className="gap-1.5 text-xs"
+                  >
+                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                    Inverter ({selectedIds.size})
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
