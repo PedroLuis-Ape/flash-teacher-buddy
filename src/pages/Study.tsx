@@ -321,21 +321,19 @@ const Study = () => {
         
         // Set list settings from DB (with fallbacks for old data)
         const studyType = (listData.study_type === "general" ? "general" : "language") as "language" | "general";
-        // CRITICAL FIX: In the DB, lang_a/lang_b describe the course language pair,
-        // NOT which field (term/translation) they map to.
-        // Actual data: term is stored in lang_b language, translation in lang_a language.
-        // So for the component props (langA = language of front/term, langB = language of back/translation):
-        const langA = listData.lang_b || "pt"; // language of term (front)
-        const langB = listData.lang_a || "en"; // language of translation (back)
-        const defaultLabelA = studyType === "general" ? "Frente" : (langA === "en" ? "English" : langA === "pt" ? "Português" : langA.toUpperCase());
-        const defaultLabelB = studyType === "general" ? "Verso" : (langB === "pt" ? "Português" : langB === "en" ? "English" : langB.toUpperCase());
+        // CANONICAL MAPPING: DB lang_a = language of term/sideA, lang_b = language of translation/sideB
+        // This matches listRowToSettings() and settingsToDbColumns() exactly.
+        const langA = listData.lang_a || "en";
+        const langB = listData.lang_b || "pt";
+        const defaultLabelA = studyType === "general" ? "Frente" : (langA === "en" ? "English" : langA === "pt" ? "Português" : langA === "fr" ? "Français" : langA === "es" ? "Español" : langA === "de" ? "Deutsch" : langA.toUpperCase());
+        const defaultLabelB = studyType === "general" ? "Verso" : (langB === "pt" ? "Português" : langB === "en" ? "English" : langB === "fr" ? "Français" : langB === "es" ? "Español" : langB === "de" ? "Deutsch" : langB.toUpperCase());
         
         setListSettings({
           studyType,
           langA,
           langB,
-          labelsA: listData.labels_b || defaultLabelA, // label matching term's language
-          labelsB: listData.labels_a || defaultLabelB, // label matching translation's language
+          labelsA: listData.labels_a || defaultLabelA,
+          labelsB: listData.labels_b || defaultLabelB,
           ttsEnabled: listData.tts_enabled ?? (studyType === "language"),
         });
         
