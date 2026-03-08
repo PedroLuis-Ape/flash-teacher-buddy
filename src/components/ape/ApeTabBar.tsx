@@ -2,6 +2,7 @@ import { Home, Library, Store, User, Target } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
+import { usePerformance } from "@/contexts/PerformanceContext";
 
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/" },
