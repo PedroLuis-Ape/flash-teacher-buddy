@@ -357,8 +357,8 @@ const Study = () => {
         // This matches listRowToSettings() and settingsToDbColumns() exactly.
         const langA = listData.lang_a || "en";
         const langB = listData.lang_b || "pt";
-        const defaultLabelA = studyType === "general" ? "Frente" : (langA === "en" ? "English" : langA === "pt" ? "Português" : langA === "fr" ? "Français" : langA === "es" ? "Español" : langA === "de" ? "Deutsch" : langA.toUpperCase());
-        const defaultLabelB = studyType === "general" ? "Verso" : (langB === "pt" ? "Português" : langB === "en" ? "English" : langB === "fr" ? "Français" : langB === "es" ? "Español" : langB === "de" ? "Deutsch" : langB.toUpperCase());
+        const defaultLabelA = studyType === "general" ? "Frente" : getLangLabel(langA);
+        const defaultLabelB = studyType === "general" ? "Verso" : getLangLabel(langB);
         
         setListSettings({
           studyType,
