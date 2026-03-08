@@ -77,7 +77,7 @@ export function useOfflineStatus(listId: string | undefined) {
         const cardIds = (cards || []).map(c => c.id);
         if (cardIds.length > 0) {
           const { data: favs } = await supabase
-            .from("favorites")
+            .from("user_favorites")
             .select("resource_id")
             .eq("user_id", user.id)
             .eq("resource_type", "flashcard")
