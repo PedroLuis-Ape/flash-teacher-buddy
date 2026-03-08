@@ -6,6 +6,7 @@ import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
 import { toBCP47 } from "@/features/study/lib/resolveStudySides";
+import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 
