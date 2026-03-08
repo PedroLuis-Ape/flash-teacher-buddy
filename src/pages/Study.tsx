@@ -731,7 +731,7 @@ const Study = () => {
             <MultipleChoiceStudyView
               key={currentCard.id}
               currentCard={currentCard}
-              allCards={flashcards}
+              allCards={effectiveFlashcards}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
