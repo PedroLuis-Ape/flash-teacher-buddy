@@ -89,7 +89,9 @@ const ListDetail = () => {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [cardSearch, setCardSearch] = useState("");
 
-  // Fetch current user
+  // Glossary for bulk import deduplication
+  const { glossary } = useListGlossary(id);
+
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: async () => {
