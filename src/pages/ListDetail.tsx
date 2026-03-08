@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ListStudyTypeSelector, ListStudySettings, listRowToSettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { ListGlossaryManager } from "@/features/study/components/ListGlossaryManager";
+import { useListGlossary } from "@/hooks/useListGlossary";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -88,7 +89,9 @@ const ListDetail = () => {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [cardSearch, setCardSearch] = useState("");
 
-  // Fetch current user
+  // Glossary for bulk import deduplication
+  const { glossary } = useListGlossary(id);
+
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: async () => {
@@ -649,6 +652,7 @@ const ListDetail = () => {
                 <BulkImportDialog
                   collectionId={id!}
                   existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
+                  existingGlossary={glossary.map(g => ({ original_text: g.original_text, translated_text: g.translated_text }))}
                   onImported={loadFlashcards}
                   labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
                   labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
