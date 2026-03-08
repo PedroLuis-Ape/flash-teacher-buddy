@@ -167,7 +167,7 @@ export const BulkImportDialog = ({
   };
 
   const handleCopyAIPrompt = () => {
-    navigator.clipboard.writeText(AI_HELPER_PROMPT);
+    navigator.clipboard.writeText(aiPrompt);
     toast.success("Prompt copiado para a área de transferência!");
   };
 
