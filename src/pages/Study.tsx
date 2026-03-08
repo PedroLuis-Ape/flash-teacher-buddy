@@ -859,6 +859,8 @@ const Study = () => {
               front={currentCard.term}
               back={currentCard.translation}
               wordHintsA={currentCard.word_hints}
+              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
+              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               langA={listSettings?.langA || "en"}
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
