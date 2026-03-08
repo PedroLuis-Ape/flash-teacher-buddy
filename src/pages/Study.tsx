@@ -53,6 +53,7 @@ interface Flashcard {
   accepted_answers_pt?: string[];
   image_url_a?: string | null;
   image_url_b?: string | null;
+  word_hints?: unknown;
 }
 
 interface VideoInfo {
