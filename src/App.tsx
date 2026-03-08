@@ -148,6 +148,7 @@ const App = () => {
         </Suspense>
       </TooltipProvider>
     </EconomyProvider>
+    </PerformanceProvider>
   </QueryClientProvider>
   );
 };
