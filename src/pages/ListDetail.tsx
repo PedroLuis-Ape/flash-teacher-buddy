@@ -721,6 +721,11 @@ const ListDetail = () => {
                 <Download className="h-5 w-5" />
                 Exportar Lista ({flashcards.length} cards)
               </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Formato: <span className="font-semibold text-foreground">A ({effectiveSettings.labelsA})</span>
+                {" / "}
+                <span className="font-semibold text-foreground">B ({effectiveSettings.labelsB})</span>
+              </p>
             </DialogHeader>
             <div className="space-y-4">
               <Textarea

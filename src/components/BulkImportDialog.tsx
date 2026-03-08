@@ -356,6 +356,11 @@ She is late / Ela está atrasada (informal)`}
                   <h4 className="font-semibold mb-2 text-sm">
                     Cards ({stats.valid} válidos{invertAB ? " — Invertido" : ""}):
                   </h4>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 px-1">
+                    <span className="font-semibold text-foreground">A: {invertAB ? labelB : labelA}</span>
+                    <span>→</span>
+                    <span className="font-semibold text-foreground">B: {invertAB ? labelA : labelB}</span>
+                  </div>
                   <ul className="space-y-2 text-sm">
                     {preview.slice(0, 20).map((pair, idx) => {
                       const sideAVal = pair.sideA || pair.en || '?';
@@ -366,8 +371,14 @@ She is late / Ela está atrasada (informal)`}
                       return (
                         <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""}`}>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-1 md:gap-2">
-                            <span className="font-medium break-words">{termText}</span>
-                            <span className="text-muted-foreground break-words">→ {transText}</span>
+                            <span className="font-medium break-words">
+                              <span className="text-xs text-muted-foreground mr-1">A</span>
+                              {termText}
+                            </span>
+                            <span className="text-muted-foreground break-words">
+                              <span className="text-xs mr-1">B</span>
+                              → {transText}
+                            </span>
                           </div>
                           {pair.detailedHint && (
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
