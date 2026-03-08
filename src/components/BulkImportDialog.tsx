@@ -266,17 +266,17 @@ She is late / Ela está atrasada (informal)`}
           {(preview.length > 0 || glossaryPreview.length > 0) && (
             <>
               {/* Invert A/B Switch */}
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+               <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div className="flex items-center gap-2">
                   <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <Label htmlFor="invert-ab" className="text-sm font-medium cursor-pointer">
-                      Inverter Lados (A ↔ B)
+                      Trocar conteúdo entre lados
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       {invertAB 
-                        ? `${labelB} → termo, ${labelA} → tradução`
-                        : `${labelA} → termo, ${labelB} → tradução`
+                        ? `O que era lado A vai para B (${labelB}), e vice-versa`
+                        : `Manter como importado: lado A = ${labelA}, lado B = ${labelB}`
                       }
                     </p>
                   </div>
@@ -357,9 +357,9 @@ She is late / Ela está atrasada (informal)`}
                     Cards ({stats.valid} válidos{invertAB ? " — Invertido" : ""}):
                   </h4>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 px-1">
-                    <span className="font-semibold text-foreground">A: {invertAB ? labelB : labelA}</span>
+                    <span className="font-semibold text-foreground">A: {labelA}</span>
                     <span>→</span>
-                    <span className="font-semibold text-foreground">B: {invertAB ? labelA : labelB}</span>
+                    <span className="font-semibold text-foreground">B: {labelB}</span>
                   </div>
                   <ul className="space-y-2 text-sm">
                     {preview.slice(0, 20).map((pair, idx) => {
