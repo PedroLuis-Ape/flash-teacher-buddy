@@ -51,6 +51,8 @@ export const FlipStudyView = ({
   imageUrlB,
   wordHintsA,
   wordHintsB,
+  mergedHintsA,
+  mergedHintsB,
   onKnew,
   onDidntKnow,
   onNext,
