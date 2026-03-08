@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getOfflineList } from "@/lib/offlineStore";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -257,6 +258,34 @@ const Study = () => {
     // Check if this is a list or collection
     const isListRoute = window.location.pathname.includes("/list/");
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
+
+    // Offline fallback: if offline and list data is cached locally, use it
+    if (!navigator.onLine && isListRoute) {
+      try {
+        const offlineData = await getOfflineList(resolvedId);
+        if (offlineData) {
+          const orderedData = order === "random" ? shuffleArray([...offlineData.flashcards]) : offlineData.flashcards;
+          setFlashcards(orderedData as Flashcard[]);
+          setListTitle(offlineData.listMeta.title);
+          setListSettings({
+            studyType: (offlineData.listMeta.study_type === "general" ? "general" : "language") as "language" | "general",
+            langA: offlineData.listMeta.lang_a,
+            langB: offlineData.listMeta.lang_b,
+            labelsA: offlineData.listMeta.labels_a,
+            labelsB: offlineData.listMeta.labels_b,
+            ttsEnabled: offlineData.listMeta.tts_enabled,
+          });
+          setLoading(false);
+          toast.info("Usando dados offline");
+          return;
+        }
+      } catch {
+        // IndexedDB error — fall through to online path (will fail gracefully)
+      }
+      toast.error("Esta lista não está disponível offline");
+      setLoading(false);
+      return;
+    }
     
     const { data: { session } } = await supabase.auth.getSession();
     setUserId(session?.user?.id);
@@ -741,6 +770,7 @@ const Study = () => {
               flashcardId={currentCard.id}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
+              wordHintsA={currentCard.word_hints}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
@@ -768,6 +798,7 @@ const Study = () => {
               back={currentCard.translation}
               hint={currentCard.hint}
               flashcardId={currentCard.id}
+              wordHintsA={currentCard.word_hints}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
@@ -781,6 +812,7 @@ const Study = () => {
               key={currentCard.id}
               front={currentCard.term}
               back={currentCard.translation}
+              wordHintsA={currentCard.word_hints}
               langA={listSettings?.langA || "en"}
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}

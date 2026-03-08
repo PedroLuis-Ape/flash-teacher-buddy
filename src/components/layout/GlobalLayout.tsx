@@ -23,6 +23,7 @@ import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalFooter } from "@/components/layout/GlobalFooter";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 // Lazy-load heavy modals and badges (not needed for FCP)
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -79,6 +80,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     <InstitutionProvider>
       <TooltipProvider>
         <div className="min-h-screen flex flex-col">
+          <OfflineIndicator />
         {FEATURE_FLAGS.currency_header_enabled && user && (
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <div className="max-w-6xl mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">

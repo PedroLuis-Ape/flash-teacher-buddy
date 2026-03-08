@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Volume2, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
+import { InteractiveText } from "./InteractiveText";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
@@ -21,6 +22,7 @@ interface MultipleChoiceStudyViewProps {
     term: string;
     translation: string;
     hint?: string | null;
+    word_hints?: unknown;
   };
   allCards: {
     term: string;
@@ -58,6 +60,9 @@ export const MultipleChoiceStudyView = ({
   const sideB = { text: currentCard.translation, lang: langB, label: getLangLabel(langB) };
 
   const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, currentCard.id || currentCard.term);
+
+  // word_hints always belong to sideA; show on prompt only if sideA is prompt
+  const promptWordHints = isAFirst ? currentCard.word_hints : undefined;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
@@ -175,7 +180,7 @@ export const MultipleChoiceStudyView = ({
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
-            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2">{prompt}</p>
+            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2"><InteractiveText text={prompt} wordHints={promptWordHints} /></p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
               <Button

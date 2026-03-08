@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Volume2, RotateCcw, Check, Star } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
+import { InteractiveText } from "./InteractiveText";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +17,7 @@ interface UnscrambleStudyViewProps {
   back: string;
   hint?: string | null;
   flashcardId?: string;
+  wordHintsA?: unknown;
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
@@ -38,7 +40,7 @@ interface WordItem {
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction, langA = "en", langB = "pt", onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, direction, langA = "en", langB = "pt", onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -54,7 +56,10 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
   const sideA = { text: front, lang: langA, label: "" };
   const sideB = { text: back, lang: langB, label: "" };
 
-  const { promptSide, answerSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+
+  // word_hints always belong to sideA; show on prompt only if sideA is prompt
+  const promptWordHints = isAFirst ? wordHintsA : undefined;
 
   const question = promptSide.text;
   const correctSentence = answerSide.text;
@@ -190,7 +195,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, direction,
             </Button>
           </div>
         </div>
-        <p className="text-2xl font-bold text-center mb-6">{question}</p>
+        <p className="text-2xl font-bold text-center mb-6"><InteractiveText text={question} wordHints={promptWordHints} /></p>
       </Card>
 
       {/* Selected words area */}

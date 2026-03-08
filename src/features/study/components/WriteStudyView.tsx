@@ -8,6 +8,7 @@ import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
+import { InteractiveText } from "./InteractiveText";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
@@ -26,6 +27,7 @@ interface WriteStudyViewProps {
   flashcardId?: string;
   acceptedAnswersEn?: string[];
   acceptedAnswersPt?: string[];
+  wordHintsA?: unknown;
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
@@ -41,6 +43,7 @@ export const WriteStudyView = ({
   flashcardId,
   acceptedAnswersEn = [],
   acceptedAnswersPt = [],
+  wordHintsA,
   direction,
   langA = "en",
   langB = "pt",
@@ -60,7 +63,10 @@ export const WriteStudyView = ({
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
 
-  const { promptSide, answerSide } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+
+  // word_hints always belong to sideA; show on prompt only if sideA is prompt
+  const promptWordHints = isAFirst ? wordHintsA : undefined;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
@@ -187,7 +193,7 @@ export const WriteStudyView = ({
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex items-center justify-center gap-3 mb-8">
-            <p className="text-3xl font-semibold">{prompt}</p>
+            <p className="text-3xl font-semibold"><InteractiveText text={prompt} wordHints={promptWordHints} /></p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
               <Button

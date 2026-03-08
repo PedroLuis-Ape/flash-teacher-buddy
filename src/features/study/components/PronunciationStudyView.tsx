@@ -6,12 +6,14 @@ import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
 import { toBCP47 } from "@/features/study/lib/resolveStudySides";
+import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 
 interface PronunciationStudyViewProps {
   front: string;
   back: string;
+  wordHintsA?: unknown;
   langA?: string;
   langB?: string;
   labelA?: string;
@@ -19,7 +21,7 @@ interface PronunciationStudyViewProps {
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
+export function PronunciationStudyView({ front, back, wordHintsA, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
   // --- Side A/B State Consolidation ---
   // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
@@ -173,12 +175,12 @@ export function PronunciationStudyView({ front, back, langA = "en", langB = "pt"
 
         {/* Phrase to speak - BIG */}
         <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
-          {speakSide.text}
+          <InteractiveText text={speakSide.text} wordHints={wordHintsA} />
         </h2>
 
         {/* Hint translation - small */}
         <p className="text-sm text-muted-foreground/60 mb-8 italic">
-          "{hintSide.text}"
+          "<InteractiveText text={hintSide.text} wordHints={wordHintsA} />"
         </p>
 
         <Button
