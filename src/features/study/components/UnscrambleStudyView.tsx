@@ -63,6 +63,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
 
   // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = wordHintsA;
+  const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
 
   const question = promptSide.text;
   const correctSentence = answerSide.text;
