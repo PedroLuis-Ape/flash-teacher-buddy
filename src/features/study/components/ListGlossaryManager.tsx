@@ -88,6 +88,18 @@ export const ListGlossaryManager = ({
     bulkDelete.mutate(ids, { onSuccess: exitSelectMode });
   };
 
+  const handleSwapSelected = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    bulkSwapTerms.mutate(ids, { onSuccess: exitSelectMode });
+  };
+
+  const handleSwapAll = () => {
+    const ids = glossary.map((g) => g.id);
+    if (ids.length === 0) return;
+    bulkSwapTerms.mutate(ids);
+  };
+
   const handleAdd = () => {
     if (!originalText.trim() || !translatedText.trim()) return;
     addEntry.mutate(
