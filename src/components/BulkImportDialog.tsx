@@ -56,7 +56,7 @@ export const BulkImportDialog = ({
   const [showAIHelper, setShowAIHelper] = useState(false);
   const [invertAB, setInvertAB] = useState(false);
   const queryClient = useQueryClient();
-
+  const aiPrompt = useMemo(() => buildAIHelperPrompt(langA, langB), [langA, langB]);
   const handleParse = () => {
     if (!input.trim()) {
       toast.error("Cole o conteúdo dos flashcards");
