@@ -596,6 +596,8 @@ const ListDetail = () => {
                   {isCloning ? "Clonando..." : "Clonar"}
                 </Button>
               )}
+              {/* Offline download */}
+              {id && <DownloadOfflineButton listId={id} />}
             </div>
           </div>
         </div>
