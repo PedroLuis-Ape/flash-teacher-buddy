@@ -9,6 +9,7 @@ import { toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 
 interface PronunciationStudyViewProps {
   front: string;
