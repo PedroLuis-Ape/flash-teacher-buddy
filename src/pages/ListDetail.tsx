@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings } from "lucide-react";
+import { DownloadOfflineButton } from "@/components/DownloadOfflineButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
