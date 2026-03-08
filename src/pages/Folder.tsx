@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+// Shared lang-label resolver for all language fallbacks
+import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -361,11 +363,11 @@ const Folder = () => {
   const handleOpenNewListDialog = () => {
     if (folder) {
       setNewListStudySettings({
-        studyType: (folder.study_type === "general" ? "general" : "language") as "language" | "general",
+        studyType: (["language","general","math","visual"].includes(folder.study_type || "") ? folder.study_type : "language") as ListStudySettings["studyType"],
         langA: folder.lang_a || "en",
         langB: folder.lang_b || "pt",
-        labelsA: folder.labels_a || (folder.study_type === "general" ? "Frente" : "English"),
-        labelsB: folder.labels_b || (folder.study_type === "general" ? "Verso" : "Português"),
+        labelsA: folder.labels_a || (folder.study_type === "general" ? "Frente" : getLangLabel(folder.lang_a || "en")),
+        labelsB: folder.labels_b || (folder.study_type === "general" ? "Verso" : getLangLabel(folder.lang_b || "pt")),
         ttsEnabled: folder.tts_enabled ?? true,
       });
     }
