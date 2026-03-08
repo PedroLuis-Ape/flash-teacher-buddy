@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageCard } from "./ImageCard";
+import { InteractiveText } from "./InteractiveText";
 
 interface FlipStudyViewProps {
   front: string;
@@ -21,6 +22,8 @@ interface FlipStudyViewProps {
   flashcardId?: string;
   imageUrlA?: string | null;
   imageUrlB?: string | null;
+  wordHintsA?: unknown;
+  wordHintsB?: unknown;
   onKnew: () => void;
   onDidntKnow: () => void;
   onNext?: () => void;
@@ -43,6 +46,8 @@ export const FlipStudyView = ({
   flashcardId,
   imageUrlA,
   imageUrlB,
+  wordHintsA,
+  wordHintsB,
   onKnew,
   onDidntKnow,
   onNext,
@@ -98,9 +103,11 @@ export const FlipStudyView = ({
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
   const { promptSide: firstSide, answerSide: secondSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
 
-  // Resolve images based on which side is prompt vs answer
+  // Resolve images and word hints based on which side is prompt vs answer
   const firstSideImage = isAFirst ? imageUrlA : imageUrlB;
   const secondSideImage = isAFirst ? imageUrlB : imageUrlA;
+  const firstSideHints = isAFirst ? wordHintsA : wordHintsB;
+  const secondSideHints = isAFirst ? wordHintsB : wordHintsA;
 
   // Reset flip state when card changes
   useEffect(() => {
@@ -206,7 +213,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {firstSide.text}
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} />
               </p>
             </ScrollArea>
           </div>
@@ -231,7 +238,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {secondSide.text}
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} />
               </p>
             </ScrollArea>
           </div>
@@ -332,7 +339,7 @@ export const FlipStudyView = ({
                 <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {firstSide.text}
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} />
               </p>
               {ttsEnabled && (
                 <Button
@@ -362,7 +369,7 @@ export const FlipStudyView = ({
                 <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                {secondSide.text}
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} />
               </p>
               {ttsEnabled && (
                 <Button

@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ImageIcon } from "lucide-react";
 import { supportsImages } from "@/features/study/lib/studyTypeConfig";
+import { WordHintEditor } from "@/features/study/components/WordHintEditor";
+import { parseWordHints, type WordHint } from "@/features/study/lib/wordHints";
 
 interface EditFlashcardDialogProps {
   flashcard: {
@@ -15,10 +17,11 @@ interface EditFlashcardDialogProps {
     hint?: string | null;
     image_url_a?: string | null;
     image_url_b?: string | null;
+    word_hints?: unknown;
   } | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string) => Promise<void>;
+  onSave: (id: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string, wordHints?: WordHint[]) => Promise<void>;
   studyType?: string;
   labelA?: string;
   labelB?: string;
@@ -30,9 +33,11 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
   const [hint, setHint] = useState("");
   const [imageUrlA, setImageUrlA] = useState("");
   const [imageUrlB, setImageUrlB] = useState("");
+  const [wordHints, setWordHints] = useState<WordHint[]>([]);
   const [saving, setSaving] = useState(false);
 
   const showImages = supportsImages(studyType);
+  const showWordHints = studyType === "language";
 
   useEffect(() => {
     if (flashcard) {
@@ -41,12 +46,15 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
       setHint(flashcard.hint || "");
       setImageUrlA(flashcard.image_url_a || "");
       setImageUrlB(flashcard.image_url_b || "");
+      setWordHints(parseWordHints(flashcard.word_hints));
     }
   }, [flashcard]);
 
   const handleSave = async () => {
     if (!flashcard || !term.trim() || !translation.trim()) return;
     
+    const validHints = wordHints.filter(h => h.text.trim() && h.translation.trim());
+
     setSaving(true);
     try {
       await onSave(
@@ -56,6 +64,7 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
         hint.trim(),
         imageUrlA.trim() || undefined,
         imageUrlB.trim() || undefined,
+        validHints.length > 0 ? validHints : undefined,
       );
       onClose();
     } finally {
@@ -65,7 +74,7 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Flashcard</DialogTitle>
         </DialogHeader>
@@ -133,6 +142,10 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
                 </div>
               </div>
             </div>
+          )}
+
+          {showWordHints && (
+            <WordHintEditor value={wordHints} onChange={setWordHints} />
           )}
         </div>
         

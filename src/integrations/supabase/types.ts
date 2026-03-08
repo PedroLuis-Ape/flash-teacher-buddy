@@ -723,6 +723,7 @@ export type Database = {
           translation: string
           updated_at: string
           user_id: string
+          word_hints: Json | null
         }
         Insert: {
           accepted_answers_en?: string[] | null
@@ -744,6 +745,7 @@ export type Database = {
           translation: string
           updated_at?: string
           user_id: string
+          word_hints?: Json | null
         }
         Update: {
           accepted_answers_en?: string[] | null
@@ -765,6 +767,7 @@ export type Database = {
           translation?: string
           updated_at?: string
           user_id?: string
+          word_hints?: Json | null
         }
         Relationships: [
           {
@@ -2499,6 +2502,7 @@ export type Database = {
           translation: string
           updated_at: string
           user_id: string
+          word_hints: Json | null
         }[]
         SetofOptions: {
           from: "*"

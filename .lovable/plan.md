@@ -1,111 +1,118 @@
 
+# Relatório de Análise: Bugs e Problemas Visuais
 
-## Technical Clarification: Canonical Mapping & Direction System
+## Resumo Executivo
+Após análise do código, identifiquei **14 pontos de atenção** divididos entre bugs funcionais, problemas visuais e oportunidades de melhoria.
 
-### 1. Current Canonical Mapping Rules
+---
 
-The full data chain is:
+## 🐛 BUGS FUNCIONAIS
 
+### 1. **PageTransition pode causar flickering**
+**Arquivo:** `src/components/PageTransition.tsx`
+**Problema:** A lógica de transição usa dois `useEffect` conflitantes - um que espera 150ms para atualizar `displayChildren` e outro que atualiza imediatamente.
+**Impacto:** Pode causar flash de conteúdo antigo durante navegação.
 ```text
-DB (lists table)          Code (Study.tsx)         Study Views
-─────────────────         ──────────────────       ─────────────────
-lang_a  ──────────────→   langA  ──────────────→   sideA.lang
-lang_b  ──────────────→   langB  ──────────────→   sideB.lang
-labels_a ─────────────→   labelsA ─────────────→   sideA.label
-labels_b ─────────────→   labelsB ─────────────→   sideB.label
-
-DB (flashcards table)     Code                     Study Views
-─────────────────         ──────────────────       ─────────────────
-term     ─────────────→   front  ──────────────→   sideA.text
-translation ──────────→   back   ──────────────→   sideB.text
+Linha 17-24: Define timer de 150ms
+Linha 26-28: Atualiza imediatamente (contradiz a lógica anterior)
 ```
 
-**Rule**: `lang_a` is ALWAYS the language of `term`. `lang_b` is ALWAYS the language of `translation`. No swap, no conditional, no exception.
+### 2. **Scroll na TurmaActivityPanel pode não funcionar em iOS**
+**Arquivo:** `src/components/TurmaActivityPanel.tsx`
+**Problema:** Altura fixa de `h-[350px]` com ScrollArea pode ter problemas em dispositivos iOS por causa do comportamento de scroll.
+**Impacto:** Usuários no iPhone podem não conseguir fazer scroll completo da lista de alunos.
 
-### 2. Direction Enum: Legacy Names, Abstract Meaning
+### 3. **Swipe Navigation interfere com scrolls horizontais**
+**Arquivo:** `src/hooks/useSwipeNavigation.ts`
+**Problema:** O threshold de 100px pode capturar swipes em carrosséis, sliders ou áreas com scroll horizontal.
+**Impacto:** Navegação acidental ao interagir com elementos que têm scroll horizontal.
 
-The direction type is `"en-pt" | "pt-en" | "any"`. These names are **legacy artifacts** from when the app only supported English/Portuguese. They do NOT refer to actual languages. Their real meaning:
+### 4. **Estado de Loading duplicado em Study.tsx**
+**Arquivo:** `src/pages/Study.tsx`
+**Problema:** Há verificação de `loading || studyLoading` mas ambos são controlados de forma independente.
+**Impacto:** Potencial flash de "Carregando..." seguido de conteúdo parcial.
 
-| Direction value | Actual meaning | prompt = | answer = |
-|---|---|---|---|
-| `"en-pt"` | Side A first | sideA (term) | sideB (translation) |
-| `"pt-en"` | Side B first | sideB (translation) | sideA (term) |
-| `"any"` | Random per card | hash-based | the other |
+---
 
-**Evidence in code** (Study.tsx lines 615-617):
+## 🎨 PROBLEMAS VISUAIS
+
+### 5. **Version Badge no Auth está com opacity muito baixa**
+**Arquivo:** `src/pages/Auth.tsx` (linha 238)
+**Problema:** Badge tem `opacity-10` que torna praticamente invisível.
 ```tsx
-<SelectItem value="en-pt">{listSettings.labelsA} → {listSettings.labelsB}</SelectItem>
-<SelectItem value="pt-en">{listSettings.labelsB} → {listSettings.labelsA}</SelectItem>
+className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-10"
+```
+**Sugestão:** Aumentar para `opacity-50` ou `opacity-30`.
+
+### 6. **Tab Bar pode ter sobreposição de conteúdo**
+**Arquivo:** `src/components/GlobalLayout.tsx` (linha 70)
+**Problema:** Padding bottom de `pb-20` pode não ser suficiente em dispositivos com home indicator (iPhone X+).
+**Impacto:** Botões de ação podem ficar parcialmente escondidos atrás da Tab Bar.
+
+### 7. **Animação de glow na TabBar pode ser intensiva**
+**Arquivo:** `src/components/ape/ApeTabBar.tsx` (linha 69)
+**Problema:** `animate-pulse` com `blur-md` pode consumir muita GPU em dispositivos mais fracos.
+```tsx
+<div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
 ```
 
-So for a fr↔en deck where `labelsA = "Français"` and `labelsB = "English"`:
-- `"en-pt"` shows as **"Français → English"** (sideA first)
-- `"pt-en"` shows as **"English → Français"** (sideB first)
+### 8. **Cards hover effect pode não funcionar bem em touch**
+**Arquivo:** `src/components/ape/ApeCardFolder.tsx`
+**Problema:** Estados `:hover` são mantidos em touch devices após tap.
+**Impacto:** Card permanece com estilo "elevado" após toque no mobile.
 
-The UI labels are correct. The enum values are misleading but harmless -- they're abstract tokens.
+---
 
-### 3. Legacy/Conflicting Terms Audit
+## ⚠️ AVISOS DE SEGURANÇA (do Linter)
 
-| Term in code | Where | Status |
-|---|---|---|
-| `"en-pt"` / `"pt-en"` | `Direction` type in gameCore.ts, useStudyEngine.ts, Study.tsx | **Legacy name, abstract meaning -- NOT a bug** |
-| `front` / `back` | FlipStudyView props, Study.tsx render | Aliases for `term` / `translation` -- consistent |
-| `term` / `translation` | DB column, flashcard interface | Canonical source -- maps to sideA/sideB |
-| `sideA` / `sideB` | resolveStudySides, FlipStudyView internal | Derived from term/translation -- correct |
-| `promptSide` / `answerSide` | resolveStudySides output | Derived from direction -- correct |
-| `firstSide` / `secondSide` | FlipStudyView local vars | Aliases for promptSide/answerSide -- correct |
-| `native` / `foreign` | **Not found anywhere** | Clean |
-| `source` / `target` | **Not found anywhere** | Clean |
-| `question` / `answer` | **Not found anywhere** | Clean |
-| `language1` / `language2` | **Not found anywhere** | Clean |
+### 9. **6 políticas RLS permissivas demais**
+**Problema:** Existem políticas com `USING (true)` ou `WITH CHECK (true)` para operações de UPDATE/DELETE/INSERT.
+**Impacto:** Potencial risco de segurança - qualquer usuário pode modificar dados.
+**Recomendação:** Revisar e restringir as políticas RLS conforme necessidade.
 
-**Conclusion**: No conflicting mappings exist. The only legacy issue is the enum name `"en-pt"` / `"pt-en"`, which functions correctly as an abstract direction indicator.
+### 10. **Proteção de senha vazada desabilitada**
+**Problema:** A funcionalidade de verificar senhas vazadas está desativada no Supabase.
+**Impacto:** Usuários podem usar senhas comprometidas.
 
-### 4. Explicit 5-Example Table (fr↔en deck)
+---
 
-Deck config: `lang_a = "fr"`, `lang_b = "en"`, `labels_a = "Français"`, `labels_b = "English"`
+## 🔧 OPORTUNIDADES DE MELHORIA
 
-| # | term (sideA) | translation (sideB) | Direction | Prompt shown | Answer expected |
-|---|---|---|---|---|---|
-| 1 | bonjour | hello | `"en-pt"` (A→B) | **bonjour** (fr) | **hello** (en) |
-| 2 | bonjour | hello | `"pt-en"` (B→A) | **hello** (en) | **bonjour** (fr) |
-| 3 | merci | thank you | `"en-pt"` (A→B) | **merci** (fr) | **thank you** (en) |
-| 4 | merci | thank you | `"pt-en"` (B→A) | **thank you** (en) | **merci** (fr) |
-| 5 | au revoir | goodbye | `"any"` | hash-dependent | the other side |
+### 11. **Breadcrumbs não estão sendo usados**
+**Arquivo:** `src/components/Breadcrumbs.tsx` foi criado mas não é renderizado em nenhuma página.
+**Status:** Componente órfão.
 
-### 5. Corrected Test Step 7A
+### 12. **Skeleton components subutilizados**
+**Arquivo:** `src/components/ui/skeleton-card.tsx`
+**Problema:** Componentes `SkeletonCard` e `SkeletonGrid` foram criados mas não são usados nas páginas principais.
+**Páginas que poderiam usar:** Folders.tsx, Index.tsx, TurmaDetail.tsx.
 
-The previous report incorrectly mixed "pt" into a fr↔en scenario. Corrected:
+### 13. **Safe area bottom inconsistente**
+**Arquivos:** `index.css` e `ApeTabBar.tsx`
+**Problema:** `safe-area-pb` na TabBar + `pb-24` no GlobalLayout pode criar espaçamento excessivo ou insuficiente dependendo do device.
 
-**Test for fr↔en deck:**
-1. Create a list with `lang_a = fr`, `lang_b = en`
-2. Add card: Français = "bonjour", English = "hello"
-3. Edit the card → confirm fields show "bonjour" in Français, "hello" in English
-4. Study with direction selector showing **"Français → English"** (`"en-pt"` value):
-   - Prompt = "bonjour", Answer = "hello" ✓
-5. Switch to **"English → Français"** (`"pt-en"` value):
-   - Prompt = "hello", Answer = "bonjour" ✓
-6. Never should "hello" appear labeled as Français
+### 14. **Console logs em produção**
+**Arquivos:** `Profile.tsx`, `Folder.tsx`, `TurmaActivityPanel.tsx`
+**Problema:** Há `console.log` e `console.error` que podem poluir o console em produção.
 
-### 6. Test Evidence
+---
 
-The regression tests are in `src/features/study/lib/i18nRegression.test.ts`. The 15 new tests added in the "Canonical mapping" describe block are:
+## 📋 PRIORIZAÇÃO SUGERIDA
 
-For each of 5 language pairs (fr→en, en→fr, en→pt, pt→fr, de→ja):
-1. `[fr→en] term is in lang_a, translation is in lang_b` -- validates DB→code mapping
-2. `[fr→en] sideA.text=term, sideB.text=translation after resolveStudySides` -- validates both directions
-3. `[fr→en] edit dialog returns original values unchanged` -- validates edit roundtrip
+| Prioridade | Item | Categoria |
+|------------|------|-----------|
+| 🔴 Alta | #9 - RLS permissivas | Segurança |
+| 🔴 Alta | #6 - TabBar sobreposição | UX Mobile |
+| 🟡 Média | #1 - PageTransition flicker | UX |
+| 🟡 Média | #3 - Swipe interfere scroll | UX Mobile |
+| 🟡 Média | #2 - Scroll iOS | UX Mobile |
+| 🟢 Baixa | #5 - Version badge opacity | Visual |
+| 🟢 Baixa | #11 - Breadcrumbs órfão | Tech Debt |
+| 🟢 Baixa | #12 - Skeleton subutilizado | Tech Debt |
+| 🟢 Baixa | #14 - Console logs | Tech Debt |
 
-Total: 5 pairs × 3 tests = **15 new tests**.
+---
 
-These tests can be run with:
-```
-npx vitest run src/features/study/lib/i18nRegression.test.ts
-```
+## Próximos Passos
 
-### 7. Remaining Consideration: Rename Direction Enum
-
-The `"en-pt"` / `"pt-en"` enum values are technically correct but semantically misleading. A future rename to `"a-to-b"` / `"b-to-a"` would improve clarity. This is cosmetic -- it requires updating the type, all references in gameCore.ts, useStudyEngine.ts, Study.tsx, and all study view components. It's a separate task, not a bug.
-
-**Should I rename the direction enum values from `"en-pt"/"pt-en"` to `"a-to-b"/"b-to-a"` for clarity?** This is optional and purely cosmetic.
-
+Você pode me dizer quais itens quer que eu corrija primeiro, ou posso criar um plano de implementação para resolver todos em ordem de prioridade.
