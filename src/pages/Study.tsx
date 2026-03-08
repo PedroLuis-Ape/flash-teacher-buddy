@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { getLangLabel } from "@/features/study/lib/resolveStudySides";
+import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
@@ -357,22 +357,27 @@ const Study = () => {
       if (listData) {
         setListTitle(listData.title);
         
-        // Set list settings from DB (with fallbacks for old data)
-        const studyType = (listData.study_type === "general" ? "general" : "language") as "language" | "general";
-        // CANONICAL MAPPING: DB lang_a = language of term/sideA, lang_b = language of translation/sideB
-        // This matches listRowToSettings() and settingsToDbColumns() exactly.
-        const langA = listData.lang_a || "en";
-        const langB = listData.lang_b || "pt";
-        const defaultLabelA = studyType === "general" ? "Frente" : getLangLabel(langA);
-        const defaultLabelB = studyType === "general" ? "Verso" : getLangLabel(langB);
+        // Load folder settings for fallback resolution
+        let folderRow = null;
+        if (listData.folder_id) {
+          const { data: folderData } = await supabase
+            .from("folders")
+            .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+            .eq("id", listData.folder_id)
+            .maybeSingle();
+          folderRow = folderData;
+        }
+
+        // Use centralized resolution with folder fallback
+        const resolved = resolveEffectiveListSettings(listData, folderRow);
         
         setListSettings({
-          studyType,
-          langA,
-          langB,
-          labelsA: listData.labels_a || defaultLabelA,
-          labelsB: listData.labels_b || defaultLabelB,
-          ttsEnabled: listData.tts_enabled ?? (studyType === "language"),
+          studyType: resolved.studyType as "language" | "general",
+          langA: resolved.langA,
+          langB: resolved.langB,
+          labelsA: resolved.labelsA,
+          labelsB: resolved.labelsB,
+          ttsEnabled: resolved.ttsEnabled,
         });
         
         // Load first video from the folder
@@ -740,6 +745,15 @@ const Study = () => {
               </div>
             </div>
           </div>
+
+          {/* Language direction indicator */}
+          {listSettings.studyType === "language" && (
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">A: {listSettings.labelsA}</span>
+              <span>→</span>
+              <span className="px-1.5 py-0.5 rounded bg-muted font-medium">B: {listSettings.labelsB}</span>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">

@@ -312,14 +312,14 @@ const Folder = () => {
       studyType: (folder.study_type === "general" ? "general" : "language") as "language" | "general",
       langA: folder.lang_a || "en",
       langB: folder.lang_b || "pt",
-      labelsA: folder.labels_a || (folder.study_type === "general" ? "Frente" : "English"),
-      labelsB: folder.labels_b || (folder.study_type === "general" ? "Verso" : "Português"),
+      labelsA: folder.labels_a || (folder.study_type === "general" ? "Frente" : getLangLabel(folder.lang_a || "en")),
+      labelsB: folder.labels_b || (folder.study_type === "general" ? "Verso" : getLangLabel(folder.lang_b || "pt")),
       ttsEnabled: folder.tts_enabled ?? true,
     });
     setFolderSettingsOpen(true);
   };
 
-  // Save folder settings
+  // Save folder settings — also propagate to lists that are still using bare defaults (inheritance)
   const handleSaveFolderSettings = async () => {
     if (!folder) return;
     
@@ -338,6 +338,26 @@ const Folder = () => {
         .eq("id", folder.id);
       
       if (error) throw error;
+
+      // Propagate to lists that still have bare defaults (en/pt) — i.e. inheriting lists.
+      // Lists with explicit overrides (non-default langs) are NOT touched.
+      const { error: propError } = await supabase
+        .from("lists")
+        .update({
+          study_type: folderSettings.studyType,
+          lang_a: folderSettings.langA,
+          lang_b: folderSettings.langB,
+          labels_a: folderSettings.labelsA,
+          labels_b: folderSettings.labelsB,
+          tts_enabled: folderSettings.ttsEnabled,
+        })
+        .eq("folder_id", folder.id)
+        .or("lang_a.is.null,lang_a.eq.en")
+        .or("lang_b.is.null,lang_b.eq.pt");
+
+      if (propError) {
+        console.warn("Propagation warning:", propError.message);
+      }
       
       // Update local state
       setFolder({
@@ -350,7 +370,7 @@ const Folder = () => {
         tts_enabled: folderSettings.ttsEnabled,
       });
       
-      toast.success("Idiomas da pasta atualizados!");
+      toast.success("Idiomas da pasta atualizados! Listas herdadas foram sincronizadas.");
       setFolderSettingsOpen(false);
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);

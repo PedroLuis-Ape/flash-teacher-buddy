@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 // Shared lang-label resolver for all language fallbacks
-import { getLangLabel } from "@/features/study/lib/resolveStudySides";
+import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -147,16 +147,22 @@ const ListDetail = () => {
       if (!list?.folder_id) return null;
       const { data, error } = await supabase
         .from("folders")
-        .select("id, title, visibility")
+        .select("id, title, visibility, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
         .eq("id", list.folder_id)
         .maybeSingle();
       
       if (error) throw error;
-      return data as FolderType | null;
+      return data as (FolderType & { study_type?: string; lang_a?: string; lang_b?: string; labels_a?: string | null; labels_b?: string | null; tts_enabled?: boolean }) | null;
     },
     enabled: !!list?.folder_id,
     staleTime: 60_000,
   });
+
+  // Resolve effective settings: list → folder fallback
+  const effectiveSettings = useMemo(
+    () => resolveEffectiveListSettings(list, folder),
+    [list, folder]
+  );
 
   const { data: flashcards = [], isLoading: flashcardsLoading, refetch: loadFlashcards } = useQuery({
     queryKey: ["flashcards", id],
@@ -573,6 +579,21 @@ const ListDetail = () => {
               {list.description && (
                 <p className="text-muted-foreground mt-2 text-sm line-clamp-2">{list.description}</p>
               )}
+              {/* Language direction indicator */}
+              {effectiveSettings.studyType === "language" && (
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                  <span className="px-2 py-0.5 rounded bg-muted font-medium">
+                    A: {effectiveSettings.labelsA}
+                  </span>
+                  <span>→</span>
+                  <span className="px-2 py-0.5 rounded bg-muted font-medium">
+                    B: {effectiveSettings.labelsB}
+                  </span>
+                  {!effectiveSettings.isListOverride && (
+                    <span className="text-muted-foreground/60 italic text-[10px]">(herdado da pasta)</span>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* Action buttons - grid on mobile, flex on desktop */}
@@ -654,10 +675,10 @@ const ListDetail = () => {
                   existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
                   existingGlossary={glossary.map(g => ({ original_text: g.original_text, translated_text: g.translated_text }))}
                   onImported={loadFlashcards}
-                  labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-                  labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
-                  langA={list?.lang_a || undefined}
-                  langB={list?.lang_b || undefined}
+                  labelA={effectiveSettings.labelsA}
+                  labelB={effectiveSettings.labelsB}
+                  langA={effectiveSettings.langA}
+                  langB={effectiveSettings.langB}
                 />
                 <Button
                   variant="outline"
@@ -752,9 +773,9 @@ const ListDetail = () => {
           {canEdit && (
             <CreateFlashcardForm 
               onAdd={handleAddFlashcard}
-              labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-              labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
-              studyType={list?.study_type || 'language'}
+              labelA={effectiveSettings.labelsA}
+              labelB={effectiveSettings.labelsB}
+              studyType={effectiveSettings.studyType}
             />
           )}
 
@@ -762,8 +783,8 @@ const ListDetail = () => {
           {list?.study_type === 'language' && (
             <ListGlossaryManager
               listId={id!}
-              labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-              labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
+              labelA={effectiveSettings.labelsA}
+              labelB={effectiveSettings.labelsB}
               canEdit={canEdit}
             />
           )}
@@ -915,9 +936,9 @@ const ListDetail = () => {
         isOpen={!!editingFlashcard}
         onClose={() => setEditingFlashcard(null)}
         onSave={handleUpdateFlashcard}
-        studyType={list?.study_type || 'language'}
-        labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
-        labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
+        studyType={effectiveSettings.studyType}
+        labelA={effectiveSettings.labelsA}
+        labelB={effectiveSettings.labelsB}
       />
 
       {/* List Settings Dialog */}
