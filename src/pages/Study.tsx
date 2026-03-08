@@ -123,11 +123,14 @@ const Study = () => {
   });
   const [showSwapGuide, setShowSwapGuide] = useState(false);
   
-  // Fetch favorites for filtering
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
+  // Fetch favorites for filtering (strictly scoped to the current list/collection)
+  const favoritesScope = useMemo(() => {
+    if (!resolvedId) return undefined;
+    return isListRoute ? { listId: resolvedId } : { collectionId: resolvedId };
+  }, [resolvedId, isListRoute]);
+  const { data: favorites = [], isLoading: favoritesLoading } = useFavorites(userId, 'flashcard', favoritesScope);
   const toggleFavorite = useToggleFavorite();
 
-  const isListRoute = window.location.pathname.includes("/list/");
   const listId = isListRoute ? resolvedId : undefined;
 
   // Derive effective flashcards filtered by favorites when enabled
