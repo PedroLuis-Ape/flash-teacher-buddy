@@ -29,10 +29,10 @@ export function useActivityHeartbeat(userId: string | undefined) {
       lastUpdateRef.current = now;
       
       try {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ last_active_at: new Date().toISOString() })
-          .eq("id", userId);
+        const { error } = await supabase.rpc('update_own_profile', {
+          p_user_id: userId,
+          p_last_active_at: new Date().toISOString()
+        });
         
         if (error) {
           console.error("[Heartbeat] Error updating activity:", error.message);

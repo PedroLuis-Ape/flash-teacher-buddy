@@ -124,14 +124,15 @@ const Auth = () => {
           const cleanUsername = isProfessor ? username.toLowerCase().replace(/[^a-z0-9_]/g, '') : null;
 
           // O trigger handle_new_user já cria o perfil básico
-          // Agora apenas atualizamos os campos adicionais
-          const {
-            error: profileError
-          } = await supabase.from('profiles').update({
-            first_name: firstName,
-            public_slug: cleanUsername,
-            public_access_enabled: isProfessor
-          }).eq('id', data.user.id);
+          // Atualizamos campos adicionais via security definer function
+          const { error: profileError } = await supabase.rpc('update_own_profile', {
+            p_user_id: data.user.id,
+            p_first_name: firstName,
+            p_public_slug: cleanUsername,
+            p_public_access_enabled: isProfessor,
+            p_is_teacher: isProfessor,
+            p_user_type: isProfessor ? 'professor' : 'aluno'
+          });
           if (profileError) throw profileError;
 
           // Inserir role - o trigger assign_default_role já deve ter criado, mas garantimos aqui
@@ -139,7 +140,7 @@ const Auth = () => {
             error: roleError
           } = await supabase.from('user_roles').insert({
             user_id: data.user.id,
-            role: isProfessor ? 'owner' : 'student'
+            role: 'student'
           });
 
           // Ignorar erro se já existir (trigger já criou)
