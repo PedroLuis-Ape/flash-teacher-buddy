@@ -70,6 +70,7 @@ export const WriteStudyView = ({
 
   // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = wordHintsA;
+  const promptMergedHints = mergedHintsA;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
