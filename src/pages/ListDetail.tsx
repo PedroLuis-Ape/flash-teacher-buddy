@@ -652,6 +652,7 @@ const ListDetail = () => {
                 <BulkImportDialog
                   collectionId={id!}
                   existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
+                  existingGlossary={glossary.map(g => ({ original_text: g.original_text, translated_text: g.translated_text }))}
                   onImported={loadFlashcards}
                   labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
                   labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
