@@ -61,6 +61,9 @@ export const MultipleChoiceStudyView = ({
 
   const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, currentCard.id || currentCard.term);
 
+  // word_hints always belong to sideA; show on prompt only if sideA is prompt
+  const promptWordHints = isAFirst ? currentCard.word_hints : undefined;
+
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
   const promptLabel = promptSide.label;
