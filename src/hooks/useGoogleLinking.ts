@@ -75,10 +75,10 @@ export function useGoogleLinking() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      await supabase
-        .from("profiles")
-        .update({ google_connect_prompt_version_seen: GOOGLE_CONNECT_PROMPT_VERSION })
-        .eq("id", session.user.id);
+      await supabase.rpc('update_own_profile', {
+        p_user_id: session.user.id,
+        p_google_connect_prompt_version_seen: GOOGLE_CONNECT_PROMPT_VERSION
+      });
     } catch (error) {
       console.error("[useGoogleLinking] Error marking as seen:", error);
     }
