@@ -116,6 +116,9 @@ export const FlipStudyView = ({
   const firstSideMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
   const secondSideMergedHints = isAFirst ? mergedHintsB : mergedHintsA;
 
+  const firstSideLang = toBCP47(firstSide.lang);
+  const secondSideLang = toBCP47(secondSide.lang);
+
   // Reset flip state when card changes
   useEffect(() => {
     setIsFlipped(false);
@@ -128,12 +131,12 @@ export const FlipStudyView = ({
 
   const handlePlayTop = () => {
     const rate = getSpeechRate();
-    speak(firstSide.text, { langOverride: toBCP47(firstSide.lang), rate });
+    speak(firstSide.text, { langOverride: firstSideLang, rate });
   };
 
   const handlePlayBottom = () => {
     const rate = getSpeechRate();
-    speak(secondSide.text, { langOverride: toBCP47(secondSide.lang), rate });
+    speak(secondSide.text, { langOverride: secondSideLang, rate });
   };
 
   // Keyboard navigation

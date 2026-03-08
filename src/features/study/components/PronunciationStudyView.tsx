@@ -33,6 +33,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, langA = "en", 
 
   // Map short codes to BCP-47 using shared utility
   const speakLang = toBCP47(speakSide.lang);
+  const hintLang = toBCP47(hintSide.lang);
 
   const {
     isListening,
