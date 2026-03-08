@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { ArrowLeft, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquare, Square, X, Settings, BookOpen, Copy, Sparkles, AlertTriangle, Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VideoList } from "@/components/VideoList";
@@ -593,8 +593,13 @@ const Folder = () => {
     }
   };
 
-  // Memoize sorted lists to avoid re-sorting on every render
-  const sortedLists = useMemo(() => naturalSort(lists, (list) => list.title), [lists]);
+  const [listSearch, setListSearch] = useState("");
+  const sortedLists = useMemo(() => {
+    const sorted = naturalSort(lists, (list) => list.title);
+    if (!listSearch.trim()) return sorted;
+    const q = listSearch.toLowerCase();
+    return sorted.filter((l) => l.title.toLowerCase().includes(q));
+  }, [lists, listSearch]);
 
   if (!folder) {
     return (
@@ -832,6 +837,19 @@ const Folder = () => {
                     Apagar ({selectedLists.size})
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Search lists */}
+            {lists.length > 3 && (
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={listSearch}
+                  onChange={(e) => setListSearch(e.target.value)}
+                  placeholder="Buscar lista..."
+                  className="pl-9 h-10"
+                />
               </div>
             )}
 

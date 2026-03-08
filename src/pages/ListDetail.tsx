@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search } from "lucide-react";
 import { DownloadOfflineButton } from "@/components/DownloadOfflineButton";
 import {
   DropdownMenu,
@@ -82,6 +83,7 @@ const ListDetail = () => {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [cardSearch, setCardSearch] = useState("");
 
   // Fetch current user
   const { data: currentUser } = useQuery({
@@ -804,7 +806,26 @@ const ListDetail = () => {
                 </div>
               )}
 
-              {flashcards.map((flashcard) => (
+              {/* Search cards */}
+              {flashcards.length > 5 && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={cardSearch}
+                    onChange={(e) => setCardSearch(e.target.value)}
+                    placeholder="Buscar card..."
+                    className="pl-9 h-10"
+                  />
+                </div>
+              )}
+
+              {flashcards
+                .filter((f) => {
+                  if (!cardSearch.trim()) return true;
+                  const q = cardSearch.toLowerCase();
+                  return f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q);
+                })
+                .map((flashcard) => (
                 <Card key={flashcard.id} className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${selectedCards.includes(flashcard.id) ? 'ring-2 ring-primary' : ''}`}>
                   <div className="flex items-start gap-3">
                     {/* Checkbox for selection */}

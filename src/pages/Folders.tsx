@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FolderPlus, Trash2, Star, CheckSquare, Square, X, FolderInput } from "lucide-react";
+import { FolderPlus, Trash2, Star, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
@@ -397,11 +397,17 @@ const Folders = () => {
     }
   };
 
+  // Search state
+  const [folderSearch, setFolderSearch] = useState("");
+
   // Tab: Folders (Pastas)
+  const filteredFolders = folders.filter((f) =>
+    f.title.toLowerCase().includes(folderSearch.toLowerCase())
+  );
+
   const foldersTab = (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 py-1">
-        <h2 className="text-lg font-semibold">Minhas pastas</h2>
         <div className="flex items-center gap-2">
           {folders.length > 0 && (
             <Button 
@@ -481,6 +487,20 @@ const Folders = () => {
         </Dialog>
         </div>
       </div>
+
+      {/* Search */}
+      {folders.length > 3 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={folderSearch}
+            onChange={(e) => setFolderSearch(e.target.value)}
+            placeholder="Buscar pasta..."
+            className="pl-9 h-10"
+          />
+        </div>
+      )}
+
       {loading ? (
         <SkeletonGrid count={5} variant="folder" />
       ) : folders.length === 0 ? (
@@ -490,7 +510,7 @@ const Folders = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {folders.map((folder) => {
+          {filteredFolders.map((folder) => {
             const isFav = folderFavorites.includes(folder.id);
             const isSelected = selectedFolders.has(folder.id);
             return (
