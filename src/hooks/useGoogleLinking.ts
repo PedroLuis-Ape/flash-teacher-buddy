@@ -188,10 +188,10 @@ export function useGoogleLinking() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      await supabase
-        .from("profiles")
-        .update({ google_connected_at: new Date().toISOString() })
-        .eq("id", session.user.id);
+      await supabase.rpc('update_own_profile', {
+        p_user_id: session.user.id,
+        p_google_connected_at: new Date().toISOString()
+      });
     } catch (error) {
       console.error("[useGoogleLinking] Error updating connected_at:", error);
     }

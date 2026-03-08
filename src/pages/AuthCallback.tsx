@@ -28,10 +28,10 @@ const AuthCallback = () => {
 
           if (hasGoogle) {
             // Update google_connected_at in profile
-            await supabase
-              .from("profiles")
-              .update({ google_connected_at: new Date().toISOString() })
-              .eq("id", session.user.id);
+            await supabase.rpc('update_own_profile', {
+              p_user_id: session.user.id,
+              p_google_connected_at: new Date().toISOString()
+            });
 
             toast.success("Google conectado com sucesso! 🎉");
           } else {

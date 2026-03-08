@@ -361,15 +361,12 @@ export async function equipSkin(
       return { success: false, message: 'Este item não tem a imagem de card necessária.', error: 'MISSING_ASSET' };
     }
 
-    // 3) Update profile (RLS allows user to update own profile)
-    const updates = type === 'avatar' 
-      ? { avatar_skin_id: skinId }
-      : { mascot_skin_id: skinId };
+    // 3) Update profile via security definer function
+    const rpcParams = type === 'avatar' 
+      ? { p_user_id: userId, p_avatar_skin_id: skinId }
+      : { p_user_id: userId, p_mascot_skin_id: skinId };
 
-    const { error: upErr } = await supabase
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+    const { error: upErr } = await supabase.rpc('update_own_profile', rpcParams);
 
     if (upErr) {
       console.error('[StoreEngine] Profile update error:', upErr);
