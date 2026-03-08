@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Languages, Plus, Trash2, Pencil, ChevronDown, ChevronUp, BookOpen, CheckSquare } from "lucide-react";
+import { Languages, Plus, Trash2, Pencil, ChevronDown, ChevronUp, BookOpen, CheckSquare, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useListGlossary, type GlossaryEntry } from "@/hooks/useListGlossary";
 import {
