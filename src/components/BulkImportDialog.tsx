@@ -103,8 +103,8 @@ export const BulkImportDialog = ({
       if (glossaryPreview.length > 0) {
         const glossaryRows = glossaryPreview.map(g => ({
           list_id: collectionId,
-          original_text: g.original_text,
-          translated_text: g.translated_text,
+          original_text: invertAB ? g.translated_text : g.original_text,
+          translated_text: invertAB ? g.original_text : g.translated_text,
           side: "A" as const,
           is_active: true,
         }));
