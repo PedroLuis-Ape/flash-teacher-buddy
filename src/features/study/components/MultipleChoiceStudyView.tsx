@@ -68,6 +68,7 @@ export const MultipleChoiceStudyView = ({
 
   // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = currentCard.word_hints;
+  const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
