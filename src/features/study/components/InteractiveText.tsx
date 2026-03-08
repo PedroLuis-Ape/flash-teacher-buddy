@@ -14,6 +14,7 @@ import { segmentText, parseWordHints, type WordHint } from "@/features/study/lib
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { mergedHintsToWordHints } from "@/features/study/lib/glossaryMerge";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { getPerfSettings } from "@/lib/performanceSettings";
 
 interface InteractiveTextProps {
   text: string;
