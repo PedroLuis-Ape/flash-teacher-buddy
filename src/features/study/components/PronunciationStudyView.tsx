@@ -33,6 +33,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, langA = "en", 
 
   // Map short codes to BCP-47 using shared utility
   const speakLang = toBCP47(speakSide.lang);
+  const hintLang = toBCP47(hintSide.lang);
 
   const {
     isListening,
@@ -175,12 +176,12 @@ export function PronunciationStudyView({ front, back, wordHintsA, langA = "en", 
 
         {/* Phrase to speak - BIG */}
         <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
-          <InteractiveText text={speakSide.text} wordHints={wordHintsA} />
+          <InteractiveText text={speakSide.text} wordHints={wordHintsA} speakOnHintClick speakLang={speakLang} />
         </h2>
 
         {/* Hint translation - small */}
         <p className="text-sm text-muted-foreground/60 mb-8 italic">
-          "<InteractiveText text={hintSide.text} wordHints={wordHintsA} />"
+          "<InteractiveText text={hintSide.text} wordHints={wordHintsA} speakOnHintClick speakLang={hintLang} />"
         </p>
 
         <Button

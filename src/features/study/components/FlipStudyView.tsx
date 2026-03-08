@@ -116,6 +116,9 @@ export const FlipStudyView = ({
   const firstSideMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
   const secondSideMergedHints = isAFirst ? mergedHintsB : mergedHintsA;
 
+  const firstSideLang = toBCP47(firstSide.lang);
+  const secondSideLang = toBCP47(secondSide.lang);
+
   // Reset flip state when card changes
   useEffect(() => {
     setIsFlipped(false);
@@ -128,12 +131,12 @@ export const FlipStudyView = ({
 
   const handlePlayTop = () => {
     const rate = getSpeechRate();
-    speak(firstSide.text, { langOverride: toBCP47(firstSide.lang), rate });
+    speak(firstSide.text, { langOverride: firstSideLang, rate });
   };
 
   const handlePlayBottom = () => {
     const rate = getSpeechRate();
-    speak(secondSide.text, { langOverride: toBCP47(secondSide.lang), rate });
+    speak(secondSide.text, { langOverride: secondSideLang, rate });
   };
 
   // Keyboard navigation
@@ -220,7 +223,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} />
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={firstSideLang} />
               </p>
             </ScrollArea>
           </div>
@@ -245,7 +248,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} />
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={secondSideLang} />
               </p>
             </ScrollArea>
           </div>
@@ -346,7 +349,7 @@ export const FlipStudyView = ({
                 <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} />
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={firstSideLang} />
               </p>
               {ttsEnabled && (
                 <Button
@@ -376,7 +379,7 @@ export const FlipStudyView = ({
                 <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} />
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={secondSideLang} />
               </p>
               {ttsEnabled && (
                 <Button
