@@ -451,6 +451,23 @@ const Study = () => {
     });
   };
 
+  const currentCard = effectiveFlashcards[currentIndex];
+
+  // Merge glossary + per-card manual hints for the current card (must be before early returns)
+  const currentMergedHintsA = useMemo(() => {
+    if (!currentCard) return undefined;
+    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
+    const manual = parseExtendedWordHints(currentCard.word_hints);
+    return mergeGlossaryAndManual(currentCard.term, "A", activeGlossary, manual);
+  }, [currentCard, activeGlossary]);
+
+  const currentMergedHintsB = useMemo(() => {
+    if (!currentCard) return undefined;
+    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
+    const manual = parseExtendedWordHints(currentCard.word_hints);
+    return mergeGlossaryAndManual(currentCard.translation, "B", activeGlossary, manual);
+  }, [currentCard, activeGlossary]);
+
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -470,23 +487,6 @@ const Study = () => {
       </div>
     );
   }
-
-  const currentCard = effectiveFlashcards[currentIndex];
-
-  // Merge glossary + per-card manual hints for the current card
-  const currentMergedHintsA = useMemo(() => {
-    if (!currentCard) return undefined;
-    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
-    const manual = parseExtendedWordHints(currentCard.word_hints);
-    return mergeGlossaryAndManual(currentCard.term, "A", activeGlossary, manual);
-  }, [currentCard, activeGlossary]);
-
-  const currentMergedHintsB = useMemo(() => {
-    if (!currentCard) return undefined;
-    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
-    const manual = parseExtendedWordHints(currentCard.word_hints);
-    return mergeGlossaryAndManual(currentCard.translation, "B", activeGlossary, manual);
-  }, [currentCard, activeGlossary]);
 
   // Safety fallback: prevents blank/black screen on inconsistent card state
   if (!currentCard) {
