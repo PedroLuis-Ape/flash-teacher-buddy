@@ -375,7 +375,7 @@ const Study = () => {
 
   const handleReviewErrors = () => {
     const errorIds = results.filter((r) => !r.correct && !r.skipped).map((r) => r.flashcardId);
-    const errorCards = flashcards.filter((card) => errorIds.includes(card.id));
+    const errorCards = effectiveFlashcards.filter((card) => errorIds.includes(card.id));
     
     if (errorCards.length > 0) {
       // FIXED: Update flashcards state and reset session instead of full page reload
