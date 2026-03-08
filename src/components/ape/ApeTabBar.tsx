@@ -60,9 +60,9 @@ export function ApeTabBar() {
               onClick={() => navigate(tab.path)}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 min-w-[64px] h-full",
-                "transition-all duration-200",
-                "active:scale-95",
-                active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                settings.animations && "transition-all duration-200",
+                settings.visualFeedback && "active:scale-95",
+                active ? "text-primary" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground")
               )}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
