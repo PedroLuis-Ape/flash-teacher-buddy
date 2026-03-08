@@ -500,6 +500,12 @@ export const WordHintEditor = ({
                       {item.note && (
                         <span className="text-xs text-muted-foreground italic truncate max-w-[100px]">({item.note})</span>
                       )}
+                      {/* Suppress global toggle */}
+                      {(item as any).suppressGlobal && (
+                        <span className="text-[9px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1 rounded shrink-0">
+                          oculta global
+                        </span>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
