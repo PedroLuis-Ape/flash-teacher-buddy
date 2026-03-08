@@ -26,6 +26,27 @@ function deriveEffectiveFlashcards<T extends { id: string }>(
   return flashcards.filter((c) => favoriteIds.includes(c.id));
 }
 
+/** Scoped counter used by GamesHub banner */
+function deriveScopedFavoritesCount<T extends { id: string }>(
+  flashcards: T[],
+  favoriteIds: string[]
+): number {
+  const ids = new Set(flashcards.map((card) => card.id));
+  return favoriteIds.filter((favoriteId) => ids.has(favoriteId)).length;
+}
+
+/** Safety fallback contract: never render undefined current card */
+function resolveCurrentCard<T extends { id: string }>(
+  flashcards: T[],
+  favoritesOnly: boolean,
+  favoriteIds: string[],
+  currentIndex: number
+): T | null {
+  const effective = deriveEffectiveFlashcards(flashcards, favoritesOnly, favoriteIds);
+  if (effective.length === 0) return null;
+  return effective[currentIndex] ?? null;
+}
+
 // --- Test data ---
 const makeCards = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
