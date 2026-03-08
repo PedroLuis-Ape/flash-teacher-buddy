@@ -1,41 +1,61 @@
 /**
  * WordHintEditor — Manual text-selection UI for binding word/expression hints.
  *
- * The user selects a range in the source phrase → enters translation + note →
- * the hint is saved with exact startIndex/endIndex positions.
+ * Supports selecting from Side A or Side B, plus fully manual text entry.
+ * No auto-fill or locked selections — the user has full control.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Languages, Trash2, Pencil, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Languages, Trash2, Pencil, ChevronDown, ChevronUp, AlertTriangle, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WordHint } from "@/features/study/lib/wordHints";
 import { validateHintIndices, revalidateHints } from "@/features/study/lib/wordHints";
 
+type SourceSide = "A" | "B";
+
 interface WordHintEditorProps {
   value: WordHint[];
   onChange: (hints: WordHint[]) => void;
-  /** The source text (term / Side A) to select from */
+  /** Side A text (term) */
   sourceText: string;
+  /** Side B text (translation) — enables dual-side selection */
+  sourceTextB?: string;
+  /** Label for side A */
+  labelA?: string;
+  /** Label for side B */
+  labelB?: string;
 }
 
-interface PendingSelection {
+interface PendingHint {
   text: string;
-  startIndex: number;
-  endIndex: number;
+  startIndex?: number;
+  endIndex?: number;
+  side: SourceSide;
+  manual: boolean;
 }
 
-export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorProps) => {
+export const WordHintEditor = ({
+  value,
+  onChange,
+  sourceText,
+  sourceTextB,
+  labelA = "Lado A",
+  labelB = "Lado B",
+}: WordHintEditorProps) => {
   const [isExpanded, setIsExpanded] = useState(value.length > 0);
-  const [pending, setPending] = useState<PendingSelection | null>(null);
+  const [pending, setPending] = useState<PendingHint | null>(null);
   const [pendingTranslation, setPendingTranslation] = useState("");
   const [pendingNote, setPendingNote] = useState("");
+  const [pendingManualText, setPendingManualText] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [hasStaleHints, setHasStaleHints] = useState(false);
-  const phraseRef = useRef<HTMLDivElement>(null);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualSide, setManualSide] = useState<SourceSide>("A");
+  const phraseRefA = useRef<HTMLDivElement>(null);
+  const phraseRefB = useRef<HTMLDivElement>(null);
   const translationInputRef = useRef<HTMLInputElement>(null);
 
   // Validate hints when sourceText changes
@@ -49,57 +69,79 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
     setHasStaleHints(anyStale);
   }, [sourceText, value]);
 
-  const handleTextSelection = useCallback(() => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || !phraseRef.current) return;
+  const handleTextSelection = useCallback(
+    (side: SourceSide) => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) return;
 
-    const range = selection.getRangeAt(0);
-    if (!phraseRef.current.contains(range.commonAncestorContainer)) return;
+      const ref = side === "A" ? phraseRefA.current : phraseRefB.current;
+      if (!ref) return;
 
-    // Calculate offset relative to the phrase container's full text
-    const fullText = phraseRef.current.textContent || "";
-    const selectedText = selection.toString().trim();
-    if (!selectedText) return;
+      const range = selection.getRangeAt(0);
+      if (!ref.contains(range.commonAncestorContainer)) return;
 
-    // Walk the DOM to find the exact character offset
-    const treeWalker = document.createTreeWalker(phraseRef.current, NodeFilter.SHOW_TEXT);
-    let charOffset = 0;
-    let startIndex = -1;
+      const fullText = ref.textContent || "";
+      const selectedText = selection.toString().trim();
+      if (!selectedText) return;
 
-    while (treeWalker.nextNode()) {
-      const node = treeWalker.currentNode as Text;
-      if (node === range.startContainer) {
-        startIndex = charOffset + range.startOffset;
+      // Walk DOM to find exact char offset
+      const treeWalker = document.createTreeWalker(ref, NodeFilter.SHOW_TEXT);
+      let charOffset = 0;
+      let startIndex = -1;
+
+      while (treeWalker.nextNode()) {
+        const node = treeWalker.currentNode as Text;
+        if (node === range.startContainer) {
+          startIndex = charOffset + range.startOffset;
+        }
+        if (startIndex !== -1) break;
+        charOffset += node.textContent?.length || 0;
       }
-      if (startIndex !== -1) break;
-      charOffset += node.textContent?.length || 0;
-    }
 
-    if (startIndex === -1) return;
+      if (startIndex === -1) return;
 
-    // Verify the text at these indices matches
-    const endIndex = startIndex + selectedText.length;
-    const verify = fullText.slice(startIndex, endIndex);
-    if (verify !== selectedText) return;
+      const endIndex = startIndex + selectedText.length;
+      const verify = fullText.slice(startIndex, endIndex);
+      if (verify !== selectedText) return;
 
-    // Check for overlap with existing hints
-    const overlaps = value.some(
-      (h) =>
-        h.startIndex !== undefined &&
-        h.endIndex !== undefined &&
-        startIndex < h.endIndex &&
-        endIndex > h.startIndex
-    );
-    if (overlaps) return;
+      setPending({ text: selectedText, startIndex, endIndex, side, manual: false });
+      setPendingTranslation("");
+      setPendingNote("");
+      setManualMode(false);
+      selection.removeAllRanges();
 
-    setPending({ text: selectedText, startIndex, endIndex });
+      setTimeout(() => translationInputRef.current?.focus(), 100);
+    },
+    [value]
+  );
+
+  const startManualEntry = useCallback(() => {
+    setManualMode(true);
+    setPending(null);
+    setPendingManualText("");
     setPendingTranslation("");
     setPendingNote("");
-    selection.removeAllRanges();
+    setManualSide("A");
+  }, []);
 
-    // Focus translation input after popover opens
+  const confirmManualEntry = useCallback(() => {
+    const text = pendingManualText.trim();
+    if (!text) return;
+
+    // Try to find exact position in the chosen side's text
+    const sideText = manualSide === "A" ? sourceText : (sourceTextB || "");
+    const idx = sideText.indexOf(text);
+
+    setPending({
+      text,
+      startIndex: idx !== -1 ? idx : undefined,
+      endIndex: idx !== -1 ? idx + text.length : undefined,
+      side: manualSide,
+      manual: true,
+    });
+    setManualMode(false);
     setTimeout(() => translationInputRef.current?.focus(), 100);
-  }, [value, sourceText]);
+  }, [pendingManualText, manualSide, sourceText, sourceTextB]);
 
   const savePending = useCallback(() => {
     if (!pending || !pendingTranslation.trim()) return;
@@ -122,6 +164,7 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
     setPending(null);
     setPendingTranslation("");
     setPendingNote("");
+    setManualMode(false);
   }, []);
 
   const removeItem = useCallback(
@@ -131,11 +174,14 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
     [value, onChange]
   );
 
-  const startEditing = useCallback((index: number) => {
-    setEditingIndex(index);
-    setPendingTranslation(value[index].translation);
-    setPendingNote(value[index].note || "");
-  }, [value]);
+  const startEditing = useCallback(
+    (index: number) => {
+      setEditingIndex(index);
+      setPendingTranslation(value[index].translation);
+      setPendingNote(value[index].note || "");
+    },
+    [value]
+  );
 
   const saveEditing = useCallback(() => {
     if (editingIndex === null || !pendingTranslation.trim()) return;
@@ -157,37 +203,42 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
     setHasStaleHints(false);
   }, [sourceText, value, onChange]);
 
-  // Render the phrase with highlights for bound hints
-  const renderPhrase = () => {
-    if (!sourceText) return <span className="text-muted-foreground italic">Digite a frase no campo acima primeiro</span>;
+  // Render phrase with highlights for bound hints
+  const renderPhrase = (text: string, side: SourceSide) => {
+    if (!text) return <span className="text-muted-foreground italic">Preencha o campo acima primeiro</span>;
 
-    // Build segments from existing hints
-    const sortedHints = [...value]
-      .filter((h) => h.startIndex !== undefined && h.endIndex !== undefined)
-      .sort((a, b) => a.startIndex! - b.startIndex!);
+    // Only highlight index-based hints matching this side
+    const hintsForSide = value.filter(
+      (h) =>
+        h.startIndex !== undefined &&
+        h.endIndex !== undefined &&
+        // For side A, show all indexed hints (default behavior)
+        // We store side info in note prefix or just show all on A for backward compat
+        side === "A"
+    );
 
+    const sortedHints = [...hintsForSide].sort((a, b) => a.startIndex! - b.startIndex!);
     const segments: { text: string; hintIndex?: number }[] = [];
     let cursor = 0;
 
     for (const hint of sortedHints) {
       const start = hint.startIndex!;
-      const end = Math.min(hint.endIndex!, sourceText.length);
-      if (start < cursor) continue;
+      const end = Math.min(hint.endIndex!, text.length);
+      if (start < cursor || start >= text.length) continue;
 
       if (start > cursor) {
-        segments.push({ text: sourceText.slice(cursor, start) });
+        segments.push({ text: text.slice(cursor, start) });
       }
       const idx = value.indexOf(hint);
-      segments.push({ text: sourceText.slice(start, end), hintIndex: idx });
+      segments.push({ text: text.slice(start, end), hintIndex: idx });
       cursor = end;
     }
-    if (cursor < sourceText.length) {
-      segments.push({ text: sourceText.slice(cursor) });
+    if (cursor < text.length) {
+      segments.push({ text: text.slice(cursor) });
     }
 
-    // If no index-based hints exist, just show the full text
     if (sortedHints.length === 0) {
-      return <span>{sourceText}</span>;
+      return <span>{text}</span>;
     }
 
     return (
@@ -249,30 +300,120 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
             </div>
           )}
 
-          {/* Selectable phrase area */}
+          {/* Side A selectable area */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
-              Selecione um trecho da frase abaixo para vincular uma tradução:
+              Selecione um trecho de <strong>{labelA}</strong>:
             </Label>
             <div
-              ref={phraseRef}
-              onMouseUp={handleTextSelection}
-              onTouchEnd={handleTextSelection}
+              ref={phraseRefA}
+              onMouseUp={() => handleTextSelection("A")}
+              onTouchEnd={() => handleTextSelection("A")}
               className={cn(
                 "p-3 rounded-md border bg-background text-base leading-relaxed select-text cursor-text",
-                "min-h-[48px] break-words"
+                "min-h-[44px] break-words"
               )}
             >
-              {renderPhrase()}
+              {renderPhrase(sourceText, "A")}
             </div>
           </div>
 
-          {/* Pending selection popover */}
+          {/* Side B selectable area */}
+          {sourceTextB && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Ou selecione um trecho de <strong>{labelB}</strong>:
+              </Label>
+              <div
+                ref={phraseRefB}
+                onMouseUp={() => handleTextSelection("B")}
+                onTouchEnd={() => handleTextSelection("B")}
+                className={cn(
+                  "p-3 rounded-md border bg-background text-base leading-relaxed select-text cursor-text",
+                  "min-h-[44px] break-words"
+                )}
+              >
+                {renderPhrase(sourceTextB || "", "B")}
+              </div>
+            </div>
+          )}
+
+          {/* Manual entry toggle */}
+          {!pending && !manualMode && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={startManualEntry}
+              className="gap-1.5 text-xs"
+            >
+              <Type className="h-3.5 w-3.5" />
+              Digitar trecho manualmente
+            </Button>
+          )}
+
+          {/* Manual entry form */}
+          {manualMode && (
+            <div className="p-3 rounded-md border-2 border-muted bg-muted/10 space-y-2 animate-in fade-in-0 slide-in-from-top-1">
+              <div className="space-y-1">
+                <Label className="text-xs">Lado de origem</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={manualSide === "A" ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setManualSide("A")}
+                  >
+                    {labelA}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={manualSide === "B" ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setManualSide("B")}
+                  >
+                    {labelB}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Trecho</Label>
+                <Input
+                  value={pendingManualText}
+                  onChange={(e) => setPendingManualText(e.target.value)}
+                  placeholder="Digite o trecho da frase..."
+                  className="text-sm h-9"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmManualEntry();
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" onClick={confirmManualEntry} disabled={!pendingManualText.trim()}>
+                  Confirmar trecho
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={cancelPending}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Pending selection — translation entry */}
           {pending && (
             <div className="p-3 rounded-md border-2 border-primary/40 bg-primary/5 space-y-2 animate-in fade-in-0 slide-in-from-top-1">
               <p className="text-sm">
-                Trecho selecionado:{" "}
+                Trecho:{" "}
                 <span className="font-semibold text-primary">"{pending.text}"</span>
+                <span className="text-xs text-muted-foreground ml-1.5">
+                  ({pending.side === "A" ? labelA : labelB})
+                </span>
               </p>
               <div className="space-y-1">
                 <Label className="text-xs">Tradução</Label>
@@ -315,10 +456,7 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Vínculos criados:</Label>
               {value.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 p-2 rounded-md bg-background border text-sm"
-                >
+                <div key={index} className="flex items-center gap-2 p-2 rounded-md bg-background border text-sm">
                   {editingIndex === index ? (
                     <div className="flex-1 space-y-1.5">
                       <Input
@@ -342,7 +480,11 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          onClick={() => { setEditingIndex(null); setPendingTranslation(""); setPendingNote(""); }}
+                          onClick={() => {
+                            setEditingIndex(null);
+                            setPendingTranslation("");
+                            setPendingNote("");
+                          }}
                         >
                           Cancelar
                         </Button>
@@ -355,7 +497,9 @@ export const WordHintEditor = ({ value, onChange, sourceText }: WordHintEditorPr
                       </span>
                       <span className="text-muted-foreground">→</span>
                       <span className="flex-1 truncate">{item.translation}</span>
-                      {item.note && <span className="text-xs text-muted-foreground italic truncate max-w-[100px]">({item.note})</span>}
+                      {item.note && (
+                        <span className="text-xs text-muted-foreground italic truncate max-w-[100px]">({item.note})</span>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
