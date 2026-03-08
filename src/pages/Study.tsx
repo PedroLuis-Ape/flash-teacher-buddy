@@ -136,7 +136,9 @@ const Study = () => {
   const { data: favorites = [], isLoading: favoritesLoading } = useFavorites(userId, 'flashcard', favoritesScope);
   const toggleFavorite = useToggleFavorite();
 
-  const listId = isListRoute ? resolvedId : undefined;
+  // Load list glossary for merged hints
+  const { activeGlossary } = useListGlossary(listId);
+
 
   // Derive effective flashcards filtered by favorites when enabled
   const effectiveFlashcards = useMemo(() => {
