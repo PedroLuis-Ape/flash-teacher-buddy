@@ -256,12 +256,12 @@ const ListDetail = () => {
     }
   };
 
-  const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string) => {
+  const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
       const updateData: Record<string, unknown> = { term, translation, hint: hint || null };
-      // Only set image fields if they were provided (even empty string means clear)
       updateData.image_url_a = imageUrlA || null;
       updateData.image_url_b = imageUrlB || null;
+      updateData.word_hints = (wordHints && Array.isArray(wordHints) && wordHints.length > 0) ? wordHints : null;
 
       const { error } = await supabase
         .from("flashcards")
