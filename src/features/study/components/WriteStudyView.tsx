@@ -29,6 +29,7 @@ interface WriteStudyViewProps {
   acceptedAnswersEn?: string[];
   acceptedAnswersPt?: string[];
   wordHintsA?: unknown;
+  mergedHintsA?: MergedHint[];
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
