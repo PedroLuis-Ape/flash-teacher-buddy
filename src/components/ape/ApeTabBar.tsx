@@ -68,12 +68,13 @@ export function ApeTabBar() {
               aria-current={active ? "page" : undefined}
             >
               <div className={cn(
-                "relative transition-transform duration-200",
-                active && "scale-110"
+                "relative",
+                settings.animations && "transition-transform duration-200",
+                active && settings.visualFeedback && "scale-110"
               )}>
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
-                {/* Optimized glow: static opacity instead of animate-pulse for performance */}
-                {active && (
+                {/* Glow effect — only when decorativeEffects enabled */}
+                {active && settings.decorativeEffects && (
                   <div className="absolute inset-0 bg-primary/15 blur-sm rounded-full" />
                 )}
               </div>
