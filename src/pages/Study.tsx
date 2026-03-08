@@ -741,6 +741,7 @@ const Study = () => {
               flashcardId={currentCard.id}
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
+              wordHintsA={currentCard.word_hints}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
