@@ -741,8 +741,8 @@ const ListDetail = () => {
           {canEdit && (
             <CreateFlashcardForm 
               onAdd={handleAddFlashcard}
-              labelA={list?.labels_a || (list?.lang_a === 'en' ? 'English' : list?.lang_a === 'pt' ? 'Português' : 'Lado A')}
-              labelB={list?.labels_b || (list?.lang_b === 'pt' ? 'Português' : list?.lang_b === 'en' ? 'English' : 'Lado B')}
+              labelA={list?.labels_a || getLangLabel(list?.lang_a || 'en')}
+              labelB={list?.labels_b || getLangLabel(list?.lang_b || 'pt')}
               studyType={list?.study_type || 'language'}
             />
           )}
