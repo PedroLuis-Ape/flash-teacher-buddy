@@ -22,6 +22,8 @@ interface FlipStudyViewProps {
   flashcardId?: string;
   imageUrlA?: string | null;
   imageUrlB?: string | null;
+  wordHintsA?: unknown;
+  wordHintsB?: unknown;
   onKnew: () => void;
   onDidntKnow: () => void;
   onNext?: () => void;
