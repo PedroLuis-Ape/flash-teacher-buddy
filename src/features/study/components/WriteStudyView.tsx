@@ -9,6 +9,7 @@ import { getDiffTokens } from "@/lib/diffHighlighter";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
@@ -28,6 +29,7 @@ interface WriteStudyViewProps {
   acceptedAnswersEn?: string[];
   acceptedAnswersPt?: string[];
   wordHintsA?: unknown;
+  mergedHintsA?: MergedHint[];
   direction: "pt-en" | "en-pt" | "any";
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
@@ -44,6 +46,7 @@ export const WriteStudyView = ({
   acceptedAnswersEn = [],
   acceptedAnswersPt = [],
   wordHintsA,
+  mergedHintsA,
   direction,
   langA = "en",
   langB = "pt",
@@ -67,6 +70,7 @@ export const WriteStudyView = ({
 
   // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = wordHintsA;
+  const promptMergedHints = mergedHintsA;
 
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
@@ -193,7 +197,7 @@ export const WriteStudyView = ({
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
           <div className="flex items-center justify-center gap-3 mb-8">
-            <p className="text-3xl font-semibold"><InteractiveText text={prompt} wordHints={promptWordHints} /></p>
+            <p className="text-3xl font-semibold"><InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} /></p>
             <div className="flex items-center gap-2">
               <SpeechRateControl />
               <Button

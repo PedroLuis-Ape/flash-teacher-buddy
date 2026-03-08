@@ -14,6 +14,7 @@ import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 
 interface FlipStudyViewProps {
   front: string;
@@ -24,6 +25,8 @@ interface FlipStudyViewProps {
   imageUrlB?: string | null;
   wordHintsA?: unknown;
   wordHintsB?: unknown;
+  mergedHintsA?: MergedHint[];
+  mergedHintsB?: MergedHint[];
   onKnew: () => void;
   onDidntKnow: () => void;
   onNext?: () => void;
@@ -48,6 +51,8 @@ export const FlipStudyView = ({
   imageUrlB,
   wordHintsA,
   wordHintsB,
+  mergedHintsA,
+  mergedHintsB,
   onKnew,
   onDidntKnow,
   onNext,
@@ -108,6 +113,8 @@ export const FlipStudyView = ({
   const secondSideImage = isAFirst ? imageUrlB : imageUrlA;
   const firstSideHints = isAFirst ? wordHintsA : wordHintsB;
   const secondSideHints = isAFirst ? wordHintsB : wordHintsA;
+  const firstSideMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
+  const secondSideMergedHints = isAFirst ? mergedHintsB : mergedHintsA;
 
   // Reset flip state when card changes
   useEffect(() => {
@@ -213,7 +220,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={firstSide.text} wordHints={firstSideHints} />
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} />
               </p>
             </ScrollArea>
           </div>
@@ -238,7 +245,7 @@ export const FlipStudyView = ({
             )}
             <ScrollArea className="max-h-24 sm:max-h-32">
               <p className="text-xl sm:text-2xl font-semibold text-center leading-relaxed text-primary" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={secondSide.text} wordHints={secondSideHints} />
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} />
               </p>
             </ScrollArea>
           </div>
@@ -339,7 +346,7 @@ export const FlipStudyView = ({
                 <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={firstSide.text} wordHints={firstSideHints} />
+                <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} />
               </p>
               {ttsEnabled && (
                 <Button
@@ -369,7 +376,7 @@ export const FlipStudyView = ({
                 <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-3" maxHeight="120px" />
               )}
               <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                <InteractiveText text={secondSide.text} wordHints={secondSideHints} />
+                <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} />
               </p>
               {ttsEnabled && (
                 <Button

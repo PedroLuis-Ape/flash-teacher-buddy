@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { getOfflineList } from "@/lib/offlineStore";
+import { useListGlossary } from "@/hooks/useListGlossary";
+import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -135,6 +137,9 @@ const Study = () => {
   const toggleFavorite = useToggleFavorite();
 
   const listId = isListRoute ? resolvedId : undefined;
+
+  // Load list glossary for merged hints
+  const { activeGlossary } = useListGlossary(listId);
 
   // Derive effective flashcards filtered by favorites when enabled
   const effectiveFlashcards = useMemo(() => {
@@ -446,6 +451,23 @@ const Study = () => {
     });
   };
 
+  const currentCard = effectiveFlashcards[currentIndex];
+
+  // Merge glossary + per-card manual hints for the current card (must be before early returns)
+  const currentMergedHintsA = useMemo(() => {
+    if (!currentCard) return undefined;
+    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
+    const manual = parseExtendedWordHints(currentCard.word_hints);
+    return mergeGlossaryAndManual(currentCard.term, "A", activeGlossary, manual);
+  }, [currentCard, activeGlossary]);
+
+  const currentMergedHintsB = useMemo(() => {
+    if (!currentCard) return undefined;
+    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
+    const manual = parseExtendedWordHints(currentCard.word_hints);
+    return mergeGlossaryAndManual(currentCard.translation, "B", activeGlossary, manual);
+  }, [currentCard, activeGlossary]);
+
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -465,8 +487,6 @@ const Study = () => {
       </div>
     );
   }
-
-  const currentCard = effectiveFlashcards[currentIndex];
 
   // Safety fallback: prevents blank/black screen on inconsistent card state
   if (!currentCard) {
@@ -748,6 +768,8 @@ const Study = () => {
               imageUrlB={currentCard.image_url_b}
               wordHintsA={currentCard.word_hints}
               wordHintsB={currentCard.word_hints}
+              mergedHintsA={currentMergedHintsA}
+              mergedHintsB={currentMergedHintsB}
               direction={resolvedDirection}
               fastMode={gameSettings.fastMode}
               ttsEnabled={listSettings.ttsEnabled}
@@ -773,6 +795,7 @@ const Study = () => {
               acceptedAnswersEn={currentCard.accepted_answers_en || []}
               acceptedAnswersPt={currentCard.accepted_answers_pt || []}
               wordHintsA={currentCard.word_hints}
+              mergedHintsA={currentMergedHintsA}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}

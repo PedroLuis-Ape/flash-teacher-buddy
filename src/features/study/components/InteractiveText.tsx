@@ -4,33 +4,46 @@
  * Desktop: mouseenter shows tooltip, mouseleave hides it.
  * Mobile: tap shows tooltip, auto-closes after 3s or on outside tap.
  *
+ * Supports multi-translation display (global + manual merged hints).
  * If no hints are provided, renders plain text — 100% backward compatible.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { segmentText, parseWordHints, type WordHint } from "@/features/study/lib/wordHints";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { mergedHintsToWordHints } from "@/features/study/lib/glossaryMerge";
 
 interface InteractiveTextProps {
   text: string;
   wordHints?: unknown;
+  /** Pre-merged hints (global + manual). Takes priority over wordHints if provided. */
+  mergedHints?: MergedHint[];
   className?: string;
 }
 
-export const InteractiveText = ({ text, wordHints, className }: InteractiveTextProps) => {
-  const hints = parseWordHints(wordHints);
+export const InteractiveText = ({ text, wordHints, mergedHints, className }: InteractiveTextProps) => {
+  // If mergedHints are provided, use those; otherwise fall back to raw wordHints
+  const resolvedHints = mergedHints
+    ? mergedHintsToWordHints(mergedHints)
+    : parseWordHints(wordHints);
 
-  if (hints.length === 0) {
+  if (resolvedHints.length === 0) {
     return <span className={className}>{text}</span>;
   }
 
-  const segments = segmentText(text, hints);
+  const segments = segmentText(text, resolvedHints);
 
   return (
     <span className={className}>
       {segments.map((seg, i) =>
         seg.hint ? (
-          <HintWord key={i} value={seg.value} hint={seg.hint} />
+          <HintWord
+            key={i}
+            value={seg.value}
+            hint={seg.hint}
+            mergedTranslations={(seg.hint as any)._mergedTranslations}
+          />
         ) : (
           <span key={i}>{seg.value}</span>
         )
@@ -42,7 +55,15 @@ export const InteractiveText = ({ text, wordHints, className }: InteractiveTextP
 const MOBILE_AUTO_CLOSE_MS = 3000;
 
 /** A single highlighted word/expression with a lightweight tooltip */
-function HintWord({ value, hint }: { value: string; hint: WordHint }) {
+function HintWord({
+  value,
+  hint,
+  mergedTranslations,
+}: {
+  value: string;
+  hint: WordHint;
+  mergedTranslations?: { text: string; note?: string; source: "global" | "manual" }[];
+}) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -75,6 +96,9 @@ function HintWord({ value, hint }: { value: string; hint: WordHint }) {
     setOpen((prev) => !prev);
   }, []);
 
+  // Determine if we have multiple translations
+  const hasMultiple = mergedTranslations && mergedTranslations.length > 1;
+
   return (
     <span ref={wrapperRef} className="relative inline">
       <span
@@ -102,13 +126,31 @@ function HintWord({ value, hint }: { value: string; hint: WordHint }) {
       {open && (
         <span
           className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none
-                     w-max max-w-[220px] rounded-md border bg-popover px-3 py-2 text-popover-foreground shadow-md
+                     w-max max-w-[260px] rounded-md border bg-popover px-3 py-2 text-popover-foreground shadow-md
                      animate-in fade-in-0 zoom-in-95"
           role="tooltip"
         >
-          <span className="block font-semibold text-sm">{hint.translation}</span>
-          {hint.note && (
-            <span className="block text-xs text-muted-foreground italic mt-0.5">{hint.note}</span>
+          {mergedTranslations && mergedTranslations.length > 0 ? (
+            <span className="block space-y-1">
+              {mergedTranslations.map((t, i) => (
+                <span key={i} className="flex items-start gap-1.5">
+                  <span className="font-semibold text-sm leading-tight">{t.text}</span>
+                  {t.source === "global" && (
+                    <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded shrink-0 mt-0.5">global</span>
+                  )}
+                  {t.note && (
+                    <span className="text-xs text-muted-foreground italic">({t.note})</span>
+                  )}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <>
+              <span className="block font-semibold text-sm">{hint.translation}</span>
+              {hint.note && (
+                <span className="block text-xs text-muted-foreground italic mt-0.5">{hint.note}</span>
+              )}
+            </>
           )}
         </span>
       )}

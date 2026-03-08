@@ -3,12 +3,14 @@
  *
  * Supports selecting from Side A or Side B, plus fully manual text entry.
  * No auto-fill or locked selections — the user has full control.
+ * Supports suppressGlobal flag for overriding list-level glossary per card.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Languages, Trash2, Pencil, ChevronDown, ChevronUp, AlertTriangle, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WordHint } from "@/features/study/lib/wordHints";
@@ -471,6 +473,20 @@ export const WordHintEditor = ({
                         placeholder="Observação (opcional)"
                         className="text-sm h-8"
                       />
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`suppress-${index}`}
+                          checked={(value[index] as any)?.suppressGlobal || false}
+                          onCheckedChange={(checked) => {
+                            const updated = [...value];
+                            (updated[index] as any) = { ...updated[index], suppressGlobal: !!checked };
+                            onChange(updated);
+                          }}
+                        />
+                        <Label htmlFor={`suppress-${index}`} className="text-xs text-muted-foreground cursor-pointer">
+                          Ocultar tradução global neste contexto
+                        </Label>
+                      </div>
                       <div className="flex gap-1.5">
                         <Button type="button" size="sm" className="h-7 text-xs" onClick={saveEditing}>
                           Salvar
@@ -499,6 +515,12 @@ export const WordHintEditor = ({
                       <span className="flex-1 truncate">{item.translation}</span>
                       {item.note && (
                         <span className="text-xs text-muted-foreground italic truncate max-w-[100px]">({item.note})</span>
+                      )}
+                      {/* Suppress global toggle */}
+                      {(item as any).suppressGlobal && (
+                        <span className="text-[9px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1 rounded shrink-0">
+                          oculta global
+                        </span>
                       )}
                       <Button
                         type="button"
