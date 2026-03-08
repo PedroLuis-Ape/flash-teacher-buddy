@@ -420,6 +420,18 @@ const Study = () => {
     );
   }
 
+  // Empty state when studying favorites but none found in this list
+  if (favoritesOnly && effectiveFlashcards.length === 0 && flashcards.length > 0) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+        <Star className="h-12 w-12 text-muted-foreground" />
+        <p className="text-muted-foreground text-center text-lg font-medium">Nenhum card favorito nesta lista.</p>
+        <p className="text-sm text-muted-foreground text-center">Volte à lista e marque cards como favorito com a estrela ⭐</p>
+        <Button variant="outline" onClick={handleExit}>Voltar</Button>
+      </div>
+    );
+  }
+
   const currentCard = flashcards[currentIndex];
 
   if (isFinished) {
