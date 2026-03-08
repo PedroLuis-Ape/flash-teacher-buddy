@@ -194,7 +194,7 @@ describe("getLangLabel: label fallback for all languages", () => {
   it("unknown code returns uppercased code", () => {
     expect(getLangLabel("xyz")).toBe("XYZ");
   });
-
+});
 
 // Summary
 describe("i18n Coverage Report", () => {
