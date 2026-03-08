@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Target, Trash2, CheckCircle2, AlertCircle, Clock, Send } from 'lucide-react';
-import { useClassGoals, useCreateClassGoal, useDeleteClassGoal, useSubmitClassGoalAssignment, useReviewClassGoalAssignment, useMyClassGoalAssignments } from '@/hooks/useClassGoals';
+import { useClassGoals, useCreateClassGoal, useDeleteClassGoal, useSubmitClassGoalAssignment, useReviewClassGoalAssignment, useMyClassGoalAssignments } from '@/features/classroom/hooks/useClassGoals';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
