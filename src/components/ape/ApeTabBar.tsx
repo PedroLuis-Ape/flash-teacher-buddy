@@ -15,6 +15,7 @@ const tabs = [
 export function ApeTabBar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { settings } = usePerformance();
 
   const activeIndex = useMemo(() => {
     for (let i = 0; i < tabs.length; i++) {
