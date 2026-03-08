@@ -4,6 +4,7 @@ import { useOfflineStatus } from "@/hooks/useOffline";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 interface DownloadOfflineButtonProps {
   listId: string;
@@ -12,6 +13,9 @@ interface DownloadOfflineButtonProps {
 
 export function DownloadOfflineButton({ listId, className }: DownloadOfflineButtonProps) {
   const { isAvailable, isDownloading, lastSync, download, remove } = useOfflineStatus(listId);
+
+  // Feature flag: hide offline download when disabled
+  if (!FEATURE_FLAGS.offline_mode_enabled) return null;
 
   if (isAvailable) {
     return (
