@@ -156,9 +156,30 @@ export function useHomeData(): HomeData {
         // Get teachers from turma_membros (primary method for students)
         supabase
           .from("turma_membros")
-          .select("turma_id, turmas(owner_teacher_id, nome)")
+          .select("turma_id, turmas(owner_teacher_id, nome, institution_id)")
           .eq("user_id", userId)
-          .eq("ativo", true)
+          .eq("ativo", true),
+
+        // Accurate stats count for current institution
+        (async () => {
+          let countQuery = supabase
+            .from("lists")
+            .select("id, flashcards(id)", { count: "exact" })
+            .eq("owner_id", userId)
+            .is("class_id", null)
+            .is("deleted_at", null);
+
+          if (institutionId) {
+            countQuery = countQuery.eq("institution_id", institutionId);
+          } else {
+            countQuery = countQuery.is("institution_id", null);
+          }
+
+          const { data, count } = await countQuery;
+          const totalCards = (data || []).reduce((sum: number, l: any) =>
+            sum + (Array.isArray(l?.flashcards) ? l.flashcards.length : 0), 0);
+          return { listCount: count || 0, cardCount: totalCards };
+        })()
       ]);
 
       const subscriptionTeacherIds = toArray<any>(subscriptionsResult.data as any[])
