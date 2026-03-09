@@ -87,25 +87,35 @@ export function useHomeData(): HomeData {
       const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel
-      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult] = await Promise.all([
-        // Last study session
-        supabase
-          .from("study_sessions")
-          .select(`
-            list_id,
-            mode,
-            current_index,
-            cards_order,
-            lists (
-              id,
-              title
-            )
-          `)
-          .eq("user_id", userId)
-          .eq("completed", false)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult, statsCountResult] = await Promise.all([
+        // Last study session — filtered by institution via lists→folders
+        (async () => {
+          const { data } = await supabase
+            .from("study_sessions")
+            .select(`
+              list_id,
+              mode,
+              current_index,
+              cards_order,
+              lists (
+                id,
+                title,
+                institution_id
+              )
+            `)
+            .eq("user_id", userId)
+            .eq("completed", false)
+            .order("updated_at", { ascending: false })
+            .limit(10);
+          
+          // Filter by institution client-side (session join doesn't support nested eq)
+          const filtered = (data || []).filter((s: any) => {
+            const listRel = Array.isArray(s.lists) ? s.lists[0] : s.lists;
+            const listInst = listRel?.institution_id || null;
+            return institutionId ? listInst === institutionId : listInst === null;
+          });
+          return { data: filtered[0] || null, error: null };
+        })(),
 
         // Own lists (exclude assignment copies - class_id IS NULL)
         (() => {
