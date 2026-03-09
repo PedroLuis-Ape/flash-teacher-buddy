@@ -87,25 +87,35 @@ export function useHomeData(): HomeData {
       const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel
-      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult] = await Promise.all([
-        // Last study session
-        supabase
-          .from("study_sessions")
-          .select(`
-            list_id,
-            mode,
-            current_index,
-            cards_order,
-            lists (
-              id,
-              title
-            )
-          `)
-          .eq("user_id", userId)
-          .eq("completed", false)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult, statsCountResult] = await Promise.all([
+        // Last study session — filtered by institution via lists→folders
+        (async () => {
+          const { data } = await supabase
+            .from("study_sessions")
+            .select(`
+              list_id,
+              mode,
+              current_index,
+              cards_order,
+              lists (
+                id,
+                title,
+                institution_id
+              )
+            `)
+            .eq("user_id", userId)
+            .eq("completed", false)
+            .order("updated_at", { ascending: false })
+            .limit(10);
+          
+          // Filter by institution client-side (session join doesn't support nested eq)
+          const filtered = (data || []).filter((s: any) => {
+            const listRel = Array.isArray(s.lists) ? s.lists[0] : s.lists;
+            const listInst = listRel?.institution_id || null;
+            return institutionId ? listInst === institutionId : listInst === null;
+          });
+          return { data: filtered[0] || null, error: null };
+        })(),
 
         // Own lists (exclude assignment copies - class_id IS NULL)
         (() => {
@@ -146,9 +156,30 @@ export function useHomeData(): HomeData {
         // Get teachers from turma_membros (primary method for students)
         supabase
           .from("turma_membros")
-          .select("turma_id, turmas(owner_teacher_id, nome)")
+          .select("turma_id, turmas(owner_teacher_id, nome, institution_id)")
           .eq("user_id", userId)
-          .eq("ativo", true)
+          .eq("ativo", true),
+
+        // Accurate stats count for current institution
+        (async () => {
+          let countQuery = supabase
+            .from("lists")
+            .select("id, flashcards(id)", { count: "exact" })
+            .eq("owner_id", userId)
+            .is("class_id", null)
+            .is("deleted_at", null);
+
+          if (institutionId) {
+            countQuery = countQuery.eq("institution_id", institutionId);
+          } else {
+            countQuery = countQuery.is("institution_id", null);
+          }
+
+          const { data, count } = await countQuery;
+          const totalCards = (data || []).reduce((sum: number, l: any) =>
+            sum + (Array.isArray(l?.flashcards) ? l.flashcards.length : 0), 0);
+          return { listCount: count || 0, cardCount: totalCards };
+        })()
       ]);
 
       const subscriptionTeacherIds = toArray<any>(subscriptionsResult.data as any[])
@@ -156,6 +187,11 @@ export function useHomeData(): HomeData {
         .filter((id): id is string => typeof id === "string" && id.length > 0);
       
       const turmaTeacherIds = toArray<any>(turmaTeachersResult.data as any[])
+        .filter((m) => {
+          // Filter turmas by institution
+          const turmaInst = m?.turmas?.institution_id || null;
+          return institutionId ? turmaInst === institutionId : true;
+        })
         .map((m) => m?.turmas?.owner_teacher_id)
         .filter((id): id is string => typeof id === "string" && id.length > 0);
       
@@ -303,9 +339,9 @@ export function useHomeData(): HomeData {
         })
         .slice(0, 8);
 
-      // Calculate stats
-      const totalOwnLists = ownListsMapped.length;
-      const totalOwnCards = ownListsMapped.reduce((sum, list) => sum + toNumber(list.count, 0), 0);
+      // Use accurate stats from dedicated count query
+      const totalOwnLists = toNumber((statsCountResult as any)?.listCount, 0);
+      const totalOwnCards = toNumber((statsCountResult as any)?.cardCount, 0);
 
       setData({
         last: lastSession,

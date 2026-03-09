@@ -15,6 +15,7 @@ import {
 import { Plus, Trash2, Target, ChevronRight, Loader2, Folder, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGoals } from "@/hooks/useGoals";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ const DUE_OPTIONS = [
 export default function GoalNew() {
   const navigate = useNavigate();
   const { createGoal } = useGoals();
+  const { selectedInstitution } = useInstitution();
 
   const [title, setTitle] = useState("");
   const [dueDays, setDueDays] = useState<string>("none");
@@ -78,17 +80,25 @@ export default function GoalNew() {
         if (!user) return;
 
         // Fetch lists with folder info (exclude assignment copies - class_id IS NULL)
-        const { data: listsData, error: listsError } = await supabase
+        let listsQuery = supabase
           .from('lists')
           .select(`
             id,
             title,
-            folders!inner(title)
+            folders!inner(title, institution_id)
           `)
           .eq('owner_id', user.id)
           .is('class_id', null)
           .is('deleted_at', null)
           .order('updated_at', { ascending: false });
+
+        if (selectedInstitution) {
+          listsQuery = listsQuery.eq('folders.institution_id', selectedInstitution.id);
+        } else {
+          listsQuery = listsQuery.is('folders.institution_id', null);
+        }
+
+        const { data: listsData, error: listsError } = await listsQuery;
 
         if (listsError) throw listsError;
 
@@ -101,13 +111,21 @@ export default function GoalNew() {
         setLists(formattedLists);
 
         // Fetch folders (exclude assignment copies - class_id IS NULL)
-        const { data: foldersData, error: foldersError } = await supabase
+        let foldersQuery = supabase
           .from('folders')
           .select('id, title')
           .eq('owner_id', user.id)
           .is('class_id', null)
           .is('deleted_at', null)
           .order('updated_at', { ascending: false });
+
+        if (selectedInstitution) {
+          foldersQuery = foldersQuery.eq('institution_id', selectedInstitution.id);
+        } else {
+          foldersQuery = foldersQuery.is('institution_id', null);
+        }
+
+        const { data: foldersData, error: foldersError } = await foldersQuery;
 
         if (foldersError) throw foldersError;
 
@@ -121,7 +139,7 @@ export default function GoalNew() {
     }
 
     fetchData();
-  }, []);
+  }, [selectedInstitution?.id]);
 
   const addStep = () => {
     setSteps([...steps, { 

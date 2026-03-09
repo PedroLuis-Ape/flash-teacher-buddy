@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { toast } from "sonner";
 
 export interface TrashItem {
@@ -13,6 +14,7 @@ export interface TrashItem {
 export function useTrash() {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const { selectedInstitution } = useInstitution();
 
   const loadTrash = useCallback(async () => {
     setLoading(true);
@@ -21,26 +23,49 @@ export function useTrash() {
       if (!session) return;
 
       const userId = session.user.id;
+      const institutionId = selectedInstitution?.id || null;
 
+      // Build folder query with institution filter
+      let foldersQuery = supabase
+        .from("folders")
+        .select("id, title, deleted_at")
+        .eq("owner_id", userId)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (institutionId) {
+        foldersQuery = foldersQuery.eq("institution_id", institutionId);
+      } else {
+        foldersQuery = foldersQuery.is("institution_id", null);
+      }
+
+      // Build lists query with institution filter via folders
+      let listsQuery = supabase
+        .from("lists")
+        .select("id, title, deleted_at, folders!inner(title, institution_id)")
+        .eq("owner_id", userId)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (institutionId) {
+        listsQuery = listsQuery.eq("folders.institution_id", institutionId);
+      } else {
+        listsQuery = listsQuery.is("folders.institution_id", null);
+      }
+
+      // Build flashcards query with institution filter via lists→folders
+      let flashcardsQuery = supabase
+        .from("flashcards")
+        .select("id, term, translation, deleted_at, lists!inner(title, folders!inner(institution_id))")
+        .eq("user_id", userId)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      // For flashcards, filter client-side since nested filtering is complex
       const [foldersRes, listsRes, flashcardsRes] = await Promise.all([
-        supabase
-          .from("folders")
-          .select("id, title, deleted_at")
-          .eq("owner_id", userId)
-          .not("deleted_at", "is", null)
-          .order("deleted_at", { ascending: false }),
-        supabase
-          .from("lists")
-          .select("id, title, deleted_at, folders(title)")
-          .eq("owner_id", userId)
-          .not("deleted_at", "is", null)
-          .order("deleted_at", { ascending: false }),
-        supabase
-          .from("flashcards")
-          .select("id, term, translation, deleted_at, lists(title)")
-          .eq("user_id", userId)
-          .not("deleted_at", "is", null)
-          .order("deleted_at", { ascending: false }),
+        foldersQuery,
+        listsQuery,
+        flashcardsQuery,
       ]);
 
       const result: TrashItem[] = [];
@@ -59,15 +84,19 @@ export function useTrash() {
         })
       );
 
-      (flashcardsRes.data || []).forEach((fc: any) =>
-        result.push({
-          id: fc.id,
-          type: "flashcard",
-          title: `${fc.term || "?"} → ${fc.translation || "?"}`,
-          deleted_at: fc.deleted_at,
-          parent_title: fc.lists?.title,
-        })
-      );
+      // Filter flashcards by institution client-side
+      (flashcardsRes.data || []).forEach((fc: any) => {
+        const fcInst = fc.lists?.folders?.institution_id || null;
+        if (institutionId ? fcInst === institutionId : fcInst === null) {
+          result.push({
+            id: fc.id,
+            type: "flashcard",
+            title: `${fc.term || "?"} → ${fc.translation || "?"}`,
+            deleted_at: fc.deleted_at,
+            parent_title: fc.lists?.title,
+          });
+        }
+      });
 
       // Sort by deleted_at descending
       result.sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime());
@@ -77,7 +106,7 @@ export function useTrash() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedInstitution?.id]);
 
   const restoreItem = useCallback(async (item: TrashItem) => {
     try {
