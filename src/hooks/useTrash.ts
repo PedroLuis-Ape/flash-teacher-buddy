@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { toast } from "sonner";
 
 export interface TrashItem {

@@ -139,7 +139,7 @@ export default function GoalNew() {
     }
 
     fetchData();
-  }, []);
+  }, [selectedInstitution?.id]);
 
   const addStep = () => {
     setSteps([...steps, { 
