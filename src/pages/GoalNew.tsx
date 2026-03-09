@@ -60,6 +60,7 @@ const DUE_OPTIONS = [
 export default function GoalNew() {
   const navigate = useNavigate();
   const { createGoal } = useGoals();
+  const { selectedInstitution } = useInstitution();
 
   const [title, setTitle] = useState("");
   const [dueDays, setDueDays] = useState<string>("none");
