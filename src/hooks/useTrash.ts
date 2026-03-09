@@ -106,7 +106,7 @@ export function useTrash() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedInstitution?.id]);
 
   const restoreItem = useCallback(async (item: TrashItem) => {
     try {
