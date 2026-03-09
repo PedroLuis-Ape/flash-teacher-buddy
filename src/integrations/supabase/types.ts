@@ -2659,6 +2659,7 @@ export type Database = {
       }
       get_public_profile: { Args: { p_public_id: string }; Returns: Json }
       get_rarity_fallback_price: { Args: { p_rarity: string }; Returns: number }
+      get_safe_profile: { Args: { p_user_id: string }; Returns: Json }
       get_subscribed_teachers_with_stats: {
         Args: { _student_id: string }
         Returns: {
