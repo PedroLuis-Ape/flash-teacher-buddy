@@ -111,13 +111,21 @@ export default function GoalNew() {
         setLists(formattedLists);
 
         // Fetch folders (exclude assignment copies - class_id IS NULL)
-        const { data: foldersData, error: foldersError } = await supabase
+        let foldersQuery = supabase
           .from('folders')
           .select('id, title')
           .eq('owner_id', user.id)
           .is('class_id', null)
           .is('deleted_at', null)
           .order('updated_at', { ascending: false });
+
+        if (selectedInstitution) {
+          foldersQuery = foldersQuery.eq('institution_id', selectedInstitution.id);
+        } else {
+          foldersQuery = foldersQuery.is('institution_id', null);
+        }
+
+        const { data: foldersData, error: foldersError } = await foldersQuery;
 
         if (foldersError) throw foldersError;
 
