@@ -187,6 +187,11 @@ export function useHomeData(): HomeData {
         .filter((id): id is string => typeof id === "string" && id.length > 0);
       
       const turmaTeacherIds = toArray<any>(turmaTeachersResult.data as any[])
+        .filter((m) => {
+          // Filter turmas by institution
+          const turmaInst = m?.turmas?.institution_id || null;
+          return institutionId ? turmaInst === institutionId : true;
+        })
         .map((m) => m?.turmas?.owner_teacher_id)
         .filter((id): id is string => typeof id === "string" && id.length > 0);
       
