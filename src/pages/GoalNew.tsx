@@ -80,17 +80,25 @@ export default function GoalNew() {
         if (!user) return;
 
         // Fetch lists with folder info (exclude assignment copies - class_id IS NULL)
-        const { data: listsData, error: listsError } = await supabase
+        let listsQuery = supabase
           .from('lists')
           .select(`
             id,
             title,
-            folders!inner(title)
+            folders!inner(title, institution_id)
           `)
           .eq('owner_id', user.id)
           .is('class_id', null)
           .is('deleted_at', null)
           .order('updated_at', { ascending: false });
+
+        if (selectedInstitution) {
+          listsQuery = listsQuery.eq('folders.institution_id', selectedInstitution.id);
+        } else {
+          listsQuery = listsQuery.is('folders.institution_id', null);
+        }
+
+        const { data: listsData, error: listsError } = await listsQuery;
 
         if (listsError) throw listsError;
 
