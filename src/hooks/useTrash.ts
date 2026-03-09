@@ -84,15 +84,19 @@ export function useTrash() {
         })
       );
 
-      (flashcardsRes.data || []).forEach((fc: any) =>
-        result.push({
-          id: fc.id,
-          type: "flashcard",
-          title: `${fc.term || "?"} → ${fc.translation || "?"}`,
-          deleted_at: fc.deleted_at,
-          parent_title: fc.lists?.title,
-        })
-      );
+      // Filter flashcards by institution client-side
+      (flashcardsRes.data || []).forEach((fc: any) => {
+        const fcInst = fc.lists?.folders?.institution_id || null;
+        if (institutionId ? fcInst === institutionId : fcInst === null) {
+          result.push({
+            id: fc.id,
+            type: "flashcard",
+            title: `${fc.term || "?"} → ${fc.translation || "?"}`,
+            deleted_at: fc.deleted_at,
+            parent_title: fc.lists?.title,
+          });
+        }
+      });
 
       // Sort by deleted_at descending
       result.sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime());
