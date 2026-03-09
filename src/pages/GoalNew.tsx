@@ -15,6 +15,7 @@ import {
 import { Plus, Trash2, Target, ChevronRight, Loader2, Folder, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGoals } from "@/hooks/useGoals";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
