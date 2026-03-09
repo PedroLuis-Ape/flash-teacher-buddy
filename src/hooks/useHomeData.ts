@@ -339,9 +339,9 @@ export function useHomeData(): HomeData {
         })
         .slice(0, 8);
 
-      // Calculate stats
-      const totalOwnLists = ownListsMapped.length;
-      const totalOwnCards = ownListsMapped.reduce((sum, list) => sum + toNumber(list.count, 0), 0);
+      // Use accurate stats from dedicated count query
+      const totalOwnLists = toNumber((statsCountResult as any)?.listCount, 0);
+      const totalOwnCards = toNumber((statsCountResult as any)?.cardCount, 0);
 
       setData({
         last: lastSession,
