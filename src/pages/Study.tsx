@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
+import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
@@ -36,16 +37,7 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, ArrowLeftRight, HelpCircle } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 
@@ -96,9 +88,9 @@ const Study = () => {
   const mode = validModes.has(rawMode) ? rawMode : "flip";
   const normalizedMode = mode === "multiple" ? "multiple-choice" : mode;
 
+  // Direction: accept both legacy (pt-en/en-pt) and canonical (a-b/b-a/any)
   const rawDir = (searchParams.get("dir") || searchParams.get("direction") || "any").toLowerCase();
-  const validDirs = new Set(["pt-en","en-pt","any"]);
-  const initialDir = validDirs.has(rawDir) ? (rawDir as "pt-en"|"en-pt"|"any") : "any";
+  const initialDir: Direction = normalizeDirection(rawDir);
 
   const rawOrder = (searchParams.get("order") || "random").toLowerCase();
   const order = rawOrder === "asc" ? "asc" : "random";
@@ -118,15 +110,8 @@ const Study = () => {
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
   
   // Direction state for flip mode selector
-  const [flipDirection, setFlipDirection] = useState<"pt-en" | "en-pt" | "any">(initialDir);
+  const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
   
-  // Per-student swap preference (visual only, never mutates card data)
-  const swapStorageKey = `swap-pref-${resolvedId}`;
-  const guideStorageKey = `swap-guide-hidden`;
-  const [isSwapped, setIsSwapped] = useState(() => {
-    try { return localStorage.getItem(swapStorageKey) === "true"; } catch { return false; }
-  });
-  const [showSwapGuide, setShowSwapGuide] = useState(false);
   const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
@@ -145,7 +130,7 @@ const Study = () => {
   // Derive effective flashcards filtered by favorites when enabled
   const effectiveFlashcards = useMemo(() => {
     if (!favoritesOnly) return flashcards;
-    if (favorites.length === 0) return []; // favorites not loaded or none found
+    if (favorites.length === 0) return [];
     return flashcards.filter(c => favorites.includes(c.id));
   }, [flashcards, favoritesOnly, favorites]);
 
@@ -175,7 +160,6 @@ const Study = () => {
     navigatePrevious,
     canGoPrevious,
     canGoNext,
-    // Spaced repetition features
     roundNumber,
     roundCorrect,
     roundErrors,
@@ -188,53 +172,21 @@ const Study = () => {
     setGameSettings,
     unseenCardsCount,
     missedCardsCount,
-    // Manual session completion
     completeSession,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
-  
-  // Swap toggle handler — persists to localStorage, never touches card data
-  const handleSwapToggle = (checked: boolean) => {
-    setIsSwapped(checked);
-    try { localStorage.setItem(swapStorageKey, String(checked)); } catch {}
-    // Show guide on first activation if not hidden
-    if (checked) {
-      try {
-        if (localStorage.getItem(guideStorageKey) !== "true") {
-          setShowSwapGuide(true);
-        }
-      } catch {}
-    }
-    toast.info(checked
-      ? `Cartões invertidos: ${listSettings.labelsB} → ${listSettings.labelsA}`
-      : `Ordem original restaurada: ${listSettings.labelsA} → ${listSettings.labelsB}`
-    );
-  };
 
-  const handleHideGuideForever = () => {
-    try { localStorage.setItem(guideStorageKey, "true"); } catch {}
-    setShowSwapGuide(false);
-  };
-
-  // Direção estável por card - use flipDirection for flip mode
-  // isSwapped inverts the direction at rendering layer only
-  const decideDirection = (idx: number): "pt-en" | "en-pt" => {
+  // Direção estável por card
+  const decideDirection = (idx: number): Direction => {
     const dir = normalizedMode === "flip" ? flipDirection : initialDir;
-    let resolved: "pt-en" | "en-pt";
     if (dir !== "any") {
-      resolved = dir;
-    } else {
-      resolved = idx % 2 === 0 ? "pt-en" : "en-pt";
+      return dir;
     }
-    // Apply visual swap — just invert the direction, no data mutation
-    if (isSwapped) {
-      resolved = resolved === "pt-en" ? "en-pt" : "pt-en";
-    }
-    return resolved;
+    return idx % 2 === 0 ? "b-a" : "a-b";
   };
   
   const resolvedDirection = decideDirection(currentIndex);
   
-  // Mixed mode determinístico (não inclui pronunciation no ciclo automático)
+  // Mixed mode determinístico
   const modesCycle = ["flip","write","multiple-choice","unscramble"] as const;
   const mixedModeFor = (idx: number) => modesCycle[idx % modesCycle.length];
   
@@ -243,7 +195,6 @@ const Study = () => {
 
   useEffect(() => {
     loadFlashcards();
-    // FIXED: Added order and initialDir to deps for proper reload on URL param changes
   }, [resolvedId, favoritesOnly, order, initialDir]);
 
   useEffect(() => {
@@ -252,7 +203,6 @@ const Study = () => {
         setShowExitDialog(true);
       }
     };
-
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
@@ -262,11 +212,10 @@ const Study = () => {
 
     setLoading(true);
     
-    // Check if this is a list or collection
     const isListRoute = window.location.pathname.includes("/list/");
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
 
-    // Offline fallback: if offline and list data is cached locally, use it
+    // Offline fallback
     if (!navigator.onLine && isListRoute) {
       try {
         const offlineData = await getOfflineList(resolvedId);
@@ -287,7 +236,7 @@ const Study = () => {
           return;
         }
       } catch {
-        // IndexedDB error — fall through to online path (will fail gracefully)
+        // fall through
       }
       toast.error("Esta lista não está disponível offline");
       setLoading(false);
@@ -297,7 +246,6 @@ const Study = () => {
     const { data: { session } } = await supabase.auth.getSession();
     setUserId(session?.user?.id);
     
-    // Se for lista sem sessão, usar RPC público
     if (isListRoute && !session) {
       const { data, error } = await supabase.rpc('get_portal_flashcards', { 
         _list_id: resolvedId 
@@ -342,11 +290,9 @@ const Study = () => {
       return;
     }
 
-    // Always load ALL cards; favorites filtering is handled by effectiveFlashcards memo
     const orderedData = order === "random" ? shuffleArray([...data]) : data;
     setFlashcards(orderedData);
 
-    // Load list info and video if this is a list route
     if (isListRoute) {
       const { data: listData } = await supabase
         .from("lists")
@@ -357,7 +303,6 @@ const Study = () => {
       if (listData) {
         setListTitle(listData.title);
         
-        // Load folder settings for fallback resolution
         let folderRow = null;
         if (listData.folder_id) {
           const { data: folderData } = await supabase
@@ -368,7 +313,6 @@ const Study = () => {
           folderRow = folderData;
         }
 
-        // Use centralized resolution with folder fallback
         const resolved = resolveEffectiveListSettings(listData, folderRow);
         
         setListSettings({
@@ -380,7 +324,6 @@ const Study = () => {
           ttsEnabled: resolved.ttsEnabled,
         });
         
-        // Load first video from the folder
         const { data: videoData } = await supabase
           .from("videos")
           .select("video_id, title")
@@ -423,7 +366,6 @@ const Study = () => {
     const errorCards = effectiveFlashcards.filter((card) => errorIds.includes(card.id));
     
     if (errorCards.length > 0) {
-      // FIXED: Update flashcards state and reset session instead of full page reload
       const shuffledErrorCards = shuffleArray(errorCards);
       setFlashcards(shuffledErrorCards);
       resetSession();
@@ -436,7 +378,7 @@ const Study = () => {
   };
 
   const handleDirectionChange = (value: string) => {
-    setFlipDirection(value as "pt-en" | "en-pt" | "any");
+    setFlipDirection(normalizeDirection(value));
   };
 
   const handleSettingsChange = (newSettings: GameSettings) => {
@@ -459,7 +401,7 @@ const Study = () => {
 
   const currentCard = effectiveFlashcards[currentIndex];
 
-  // Merge glossary + per-card manual hints for the current card (must be before early returns)
+  // Merge glossary + per-card manual hints for the current card
   const currentMergedHintsA = useMemo(() => {
     if (!currentCard) return undefined;
     if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
@@ -484,7 +426,7 @@ const Study = () => {
     );
   }
 
-  // Empty state when studying favorites but none found in this list
+  // Empty state when studying favorites but none found
   if (favoritesOnly && !favoritesLoading && effectiveFlashcards.length === 0 && flashcards.length > 0) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
@@ -496,7 +438,7 @@ const Study = () => {
     );
   }
 
-  // Safety fallback: prevents blank/black screen on inconsistent card state
+  // Safety fallback
   if (!currentCard) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
@@ -569,7 +511,6 @@ const Study = () => {
 
             {/* Desktop buttons */}
             <div className="hidden md:flex flex-wrap gap-4 justify-center pt-4">
-              {/* CONCLUIR SESSÃO - Botão principal para registrar meta */}
               <Button 
                 variant="default" 
                 size="lg" 
@@ -580,7 +521,6 @@ const Study = () => {
                 CONCLUIR SESSÃO
               </Button>
 
-              {/* Se houver próxima rodada, botão de avançar */}
               {showNextRound && (
                 <Button variant="secondary" size="lg" onClick={startNextRound}>
                   <RefreshCcw className="mr-2 h-5 w-5" />
@@ -588,7 +528,6 @@ const Study = () => {
                 </Button>
               )}
               
-              {/* Reiniciar */}
               {!showNextRound && (
                 <Button 
                   variant="secondary" 
@@ -600,7 +539,6 @@ const Study = () => {
                 </Button>
               )}
               
-              {/* Botão de rever erros */}
               {isFlipMode && errorCount > 0 && (
                 <Button variant="outline" size="lg" onClick={handleReviewErrors}>
                   <RefreshCcw className="mr-2 h-5 w-5" />
@@ -608,7 +546,6 @@ const Study = () => {
                 </Button>
               )}
               
-              {/* Botão "Voltar para Metas" */}
               {fromGoalId && (
                 <Button 
                   variant="outline" 
@@ -619,7 +556,6 @@ const Study = () => {
                 </Button>
               )}
               
-              {/* Botão voltar à lista */}
               <Button 
                 variant="ghost" 
                 size="lg" 
@@ -629,7 +565,7 @@ const Study = () => {
               </Button>
             </div>
 
-            {/* Mobile: Secondary buttons only (main button is sticky) */}
+            {/* Mobile buttons */}
             <div className="flex md:hidden flex-wrap gap-3 justify-center pt-4">
               {showNextRound && (
                 <Button variant="secondary" size="sm" onClick={startNextRound}>
@@ -660,7 +596,7 @@ const Study = () => {
           </Card>
         </div>
 
-        {/* Mobile: Sticky bottom button for completing session */}
+        {/* Mobile: Sticky bottom button */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:hidden">
           <Button 
             variant="default" 
@@ -695,41 +631,19 @@ const Study = () => {
                 showFastMode={effectiveMode === "flip"}
               />
               
-              {/* Direction selector for flip mode */}
+              {/* Direction selector for flip mode — uses dynamic labels */}
               {effectiveMode === "flip" && (
                 <Select value={flipDirection} onValueChange={handleDirectionChange}>
                   <SelectTrigger className="w-[110px] sm:w-[140px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en-pt">{listSettings.labelsA} → {listSettings.labelsB}</SelectItem>
-                    <SelectItem value="pt-en">{listSettings.labelsB} → {listSettings.labelsA}</SelectItem>
+                    <SelectItem value="a-b">{listSettings.labelsA} → {listSettings.labelsB}</SelectItem>
+                    <SelectItem value="b-a">{listSettings.labelsB} → {listSettings.labelsA}</SelectItem>
                     <SelectItem value="any">Misto</SelectItem>
                   </SelectContent>
                 </Select>
               )}
-
-              {/* Swap toggle — visual inversion only */}
-              <div className="flex items-center gap-1.5">
-                <Switch
-                  id="swap-toggle"
-                  checked={isSwapped}
-                  onCheckedChange={handleSwapToggle}
-                />
-                <label htmlFor="swap-toggle" className="text-xs text-muted-foreground hidden sm:inline cursor-pointer select-none">
-                  <ArrowLeftRight className="h-3.5 w-3.5 inline mr-0.5" />
-                  Inverter
-                </label>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setShowSwapGuide(true)}
-                  title="Como funciona a inversão?"
-                >
-                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              </div>
               
               {/* Video button */}
               <StudyVideoButton
@@ -881,31 +795,6 @@ const Study = () => {
           </div>
         )}
       </div>
-
-      {/* Swap Guide Dialog */}
-      <Dialog open={showSwapGuide} onOpenChange={setShowSwapGuide}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArrowLeftRight className="h-5 w-5" />
-              Como funciona a inversão?
-            </DialogTitle>
-            <DialogDescription className="text-left space-y-2 pt-2">
-              <p>Use esta função se os cartões estiverem na ordem oposta ao que você deseja estudar.</p>
-              <p>A inversão <strong>só altera sua visualização</strong> — nenhum dado é modificado no sistema.</p>
-              <p>Você pode ligar e desligar a qualquer momento.</p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" size="sm" onClick={handleHideGuideForever}>
-              Não mostrar novamente
-            </Button>
-            <Button size="sm" onClick={() => setShowSwapGuide(false)}>
-              Entendi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>

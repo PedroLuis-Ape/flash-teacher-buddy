@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveEffectiveListSettings, getLangLabel } from "@/features/study/lib/resolveStudySides";
+import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -29,17 +31,23 @@ interface List {
   folder_id?: string;
 }
 
+interface ListSettings {
+  labelsA: string;
+  labelsB: string;
+}
+
 const GamesHub = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [collection, setCollection] = useState<Collection | null>(null);
   const [list, setList] = useState<List | null>(null);
-  const [direction, setDirection] = useState<"pt-en" | "en-pt" | "any">("any");
+  const [direction, setDirection] = useState<Direction>("any");
   const [order, setOrder] = useState<"random" | "sequential">("random");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | undefined>();
+  const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
 
   const isListRoute = location.pathname.includes("/list/");
 
@@ -48,7 +56,6 @@ const GamesHub = () => {
     return isListRoute ? { listId: id } : { collectionId: id };
   }, [id, isListRoute]);
   
-  // Fetch user ID for favorites count
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -71,7 +78,6 @@ const GamesHub = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      // Se não tiver sessão, tentar carregar como público
       if (!session) {
         const { data, error } = await supabase
           .from("lists")
@@ -87,11 +93,12 @@ const GamesHub = () => {
           return;
         }
         setList(data);
+        // Load effective settings for labels
+        await loadListLabels(data.id, data.folder_id);
         setLoading(false);
         return;
       }
 
-      // Fluxo normal para usuários logados
       const { data, error } = await supabase
         .from("lists")
         .select("*")
@@ -101,12 +108,37 @@ const GamesHub = () => {
 
       if (error) throw error;
       setList(data);
+      await loadListLabels(data.id, data.folder_id);
       setLoading(false);
     } catch (error: any) {
       toast.error("Erro ao carregar lista");
       console.error(error);
       setLoading(false);
     }
+  };
+
+  const loadListLabels = async (listId: string, folderId?: string) => {
+    const { data: listData } = await supabase
+      .from("lists")
+      .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+      .eq("id", listId)
+      .maybeSingle();
+
+    let folderRow = null;
+    if (folderId) {
+      const { data: folderData } = await supabase
+        .from("folders")
+        .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+        .eq("id", folderId)
+        .maybeSingle();
+      folderRow = folderData;
+    }
+
+    const resolved = resolveEffectiveListSettings(listData, folderRow);
+    setListLabels({
+      labelsA: resolved.labelsA,
+      labelsB: resolved.labelsB,
+    });
   };
 
   const loadCollection = async () => {
@@ -141,11 +173,9 @@ const GamesHub = () => {
     navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}${favParam}`);
   };
 
-  // FIX: Safe back navigation to avoid infinite loop
   const handleBack = () => {
     const onPortal = isPortalPath(location.pathname);
     
-    // Check if we have valid history to go back
     if (window.history.state?.idx > 0) {
       navigate(-1);
     } else if (collection) {
@@ -192,14 +222,14 @@ const GamesHub = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium mb-1.5 block">Direção</label>
-              <Select value={direction} onValueChange={(v: any) => setDirection(v)}>
+              <Select value={direction} onValueChange={(v) => setDirection(normalizeDirection(v))}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pt-en">PT → EN</SelectItem>
-                  <SelectItem value="en-pt">EN → PT</SelectItem>
-                  <SelectItem value="any">Misturar</SelectItem>
+                  <SelectItem value="a-b">{listLabels.labelsA} → {listLabels.labelsB}</SelectItem>
+                  <SelectItem value="b-a">{listLabels.labelsB} → {listLabels.labelsA}</SelectItem>
+                  <SelectItem value="any">Misto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -238,7 +268,6 @@ const GamesHub = () => {
             </div>
           )}
 
-          {/* FIX: Mobile-friendly button layout */}
           <div className="flex flex-row flex-wrap gap-3 justify-center w-full pt-2">
             <button
               onClick={() => startGame("flip")}
