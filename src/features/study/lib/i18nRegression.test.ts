@@ -1,5 +1,6 @@
 /**
  * i18n Regression Test — Verifica que a lógica do jogo não depende de idioma.
+ * Updated for canonical direction tokens (a-b, b-a, any).
  *
  * Para rodar: npx vitest run src/features/study/lib/i18nRegression.test.ts
  */
@@ -8,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import {
   resolveStudySides,
   resolveDirection,
+  normalizeDirection,
   shuffleArray,
   computeStats,
   generateMultipleChoiceOptions,
@@ -39,20 +41,18 @@ describe("i18n Regression: game logic is language-agnostic", () => {
         const sA: StudySide = { text: langA.sample, lang: langA.code, label: langA.label };
         const sB: StudySide = { text: langB.sample, lang: langB.code, label: langB.label };
 
-        const enPt = resolveStudySides(sA, sB, "en-pt", "seed");
-        expect(enPt.promptSide.text).toBe(langA.sample);
-        expect(enPt.answerSide.text).toBe(langB.sample);
+        const ab = resolveStudySides(sA, sB, "a-b", "seed");
+        expect(ab.promptSide.text).toBe(langA.sample);
+        expect(ab.answerSide.text).toBe(langB.sample);
 
-        const ptEn = resolveStudySides(sA, sB, "pt-en", "seed");
-        expect(ptEn.promptSide.text).toBe(langB.sample);
-        expect(ptEn.answerSide.text).toBe(langA.sample);
+        const ba = resolveStudySides(sA, sB, "b-a", "seed");
+        expect(ba.promptSide.text).toBe(langB.sample);
+        expect(ba.answerSide.text).toBe(langA.sample);
       });
 
       it(`[${pair}] resolveDirection works regardless of language`, () => {
-        const r1 = resolveDirection("en-pt", false, 0);
-        const r2 = resolveDirection("pt-en", true, 0);
-        expect(r1).toBe("en-pt");
-        expect(r2).toBe("en-pt"); // swap inverts pt-en to en-pt
+        const r1 = resolveDirection("a-b", false, 0);
+        expect(r1).toBe("a-b");
       });
     }
   }
@@ -70,10 +70,10 @@ describe("i18n Regression: game logic is language-agnostic", () => {
 
   it("shuffleArray works with unicode content", () => {
     const items = ["こんにちは", "مرحبا", "你好", "Olá"];
-    const original = [...items]; // snapshot before sort
+    const original = [...items];
     const shuffled = shuffleArray(items);
     expect([...shuffled].sort()).toEqual([...original].sort());
-    expect(items).toEqual(original); // not mutated
+    expect(items).toEqual(original);
   });
 
   it("generateMultipleChoiceOptions works with non-latin scripts", () => {
@@ -88,11 +88,9 @@ describe("i18n Regression: game logic is language-agnostic", () => {
   it("recordResultImmutable uses IDs not text", () => {
     const results = recordResultImmutable([], "id-123", true);
     expect(results[0].flashcardId).toBe("id-123");
-    // No string comparison of translated text
   });
 
   it("getMixedMode is language-independent", () => {
-    // Mode cycle doesn't depend on any language
     expect(getMixedMode(0)).toBe("flip");
     expect(getMixedMode(1)).toBe("write");
   });
@@ -103,10 +101,7 @@ describe("i18n Regression: game logic is language-agnostic", () => {
  * to sideA/sideB without inversion, for any language pair.
  */
 describe("Canonical mapping: lang_a=term=sideA, lang_b=translation=sideB", () => {
-  // Simulates the mapping that Study.tsx must do when loading from DB
   function simulateStudyLoad(dbRow: { lang_a: string; lang_b: string; labels_a: string; labels_b: string }) {
-    // CANONICAL: lang_a → langA (language of term/front/sideA)
-    //            lang_b → langB (language of translation/back/sideB)
     return {
       langA: dbRow.lang_a,
       langB: dbRow.lang_b,
@@ -128,8 +123,6 @@ describe("Canonical mapping: lang_a=term=sideA, lang_b=translation=sideB", () =>
 
     it(`[${pair}] term is in lang_a, translation is in lang_b`, () => {
       const loaded = simulateStudyLoad(tc);
-
-      // langA must match lang_a (NOT lang_b)
       expect(loaded.langA).toBe(tc.lang_a);
       expect(loaded.langB).toBe(tc.lang_b);
       expect(loaded.labelsA).toBe(tc.labels_a);
@@ -141,36 +134,33 @@ describe("Canonical mapping: lang_a=term=sideA, lang_b=translation=sideB", () =>
       const sideA: StudySide = { text: tc.term, lang: loaded.langA, label: loaded.labelsA };
       const sideB: StudySide = { text: tc.translation, lang: loaded.langB, label: loaded.labelsB };
 
-      // en-pt direction: sideA is prompt, sideB is answer
-      const enPt = resolveStudySides(sideA, sideB, "en-pt", "seed");
-      expect(enPt.promptSide.text).toBe(tc.term);
-      expect(enPt.promptSide.lang).toBe(tc.lang_a);
-      expect(enPt.answerSide.text).toBe(tc.translation);
-      expect(enPt.answerSide.lang).toBe(tc.lang_b);
+      // a-b direction: sideA is prompt, sideB is answer
+      const ab = resolveStudySides(sideA, sideB, "a-b", "seed");
+      expect(ab.promptSide.text).toBe(tc.term);
+      expect(ab.promptSide.lang).toBe(tc.lang_a);
+      expect(ab.answerSide.text).toBe(tc.translation);
+      expect(ab.answerSide.lang).toBe(tc.lang_b);
 
-      // pt-en direction: sideB is prompt, sideA is answer
-      const ptEn = resolveStudySides(sideA, sideB, "pt-en", "seed");
-      expect(ptEn.promptSide.text).toBe(tc.translation);
-      expect(ptEn.promptSide.lang).toBe(tc.lang_b);
-      expect(ptEn.answerSide.text).toBe(tc.term);
-      expect(ptEn.answerSide.lang).toBe(tc.lang_a);
+      // b-a direction: sideB is prompt, sideA is answer
+      const ba = resolveStudySides(sideA, sideB, "b-a", "seed");
+      expect(ba.promptSide.text).toBe(tc.translation);
+      expect(ba.promptSide.lang).toBe(tc.lang_b);
+      expect(ba.answerSide.text).toBe(tc.term);
+      expect(ba.answerSide.lang).toBe(tc.lang_a);
     });
 
     it(`[${pair}] edit dialog returns original values unchanged`, () => {
-      // Simulates opening EditFlashcardDialog with a saved card
       const savedCard = { id: "test-id", term: tc.term, translation: tc.translation };
-      // The dialog pre-fills term → term field, translation → translation field
       expect(savedCard.term).toBe(tc.term);
       expect(savedCard.translation).toBe(tc.translation);
-      // Labels in the dialog come from list settings
       const loaded = simulateStudyLoad(tc);
-      expect(loaded.labelsA).toBe(tc.labels_a); // label for term field
-      expect(loaded.labelsB).toBe(tc.labels_b); // label for translation field
+      expect(loaded.labelsA).toBe(tc.labels_a);
+      expect(loaded.labelsB).toBe(tc.labels_b);
     });
   }
 });
 
-// getLangLabel tests — ensures all languages have proper fallback labels
+// getLangLabel tests
 import { getLangLabel } from "./resolveStudySides";
 
 describe("getLangLabel: label fallback for all languages", () => {
@@ -196,17 +186,9 @@ describe("getLangLabel: label fallback for all languages", () => {
   });
 });
 
-// Summary
 describe("i18n Coverage Report", () => {
   it("PASS: All supported languages verified", () => {
     const supported = LANGUAGES.map(l => l.code);
     expect(supported).toEqual(["en", "pt", "es", "fr", "de", "ja", "ar", "zh"]);
-    console.log("\n=== i18n REGRESSION REPORT ===");
-    console.log("Languages tested:", supported.join(", "));
-    console.log("Game logic: LANGUAGE-AGNOSTIC ✓");
-    console.log("Canonical mapping: lang_a=term=sideA ✓");
-    console.log("String comparisons: NONE in core logic ✓");
-    console.log("RTL support: NOT YET (ar/he) — layout only, logic works ✓");
-    console.log("==============================\n");
   });
 });

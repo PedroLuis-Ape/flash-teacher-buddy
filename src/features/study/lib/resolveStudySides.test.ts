@@ -3,7 +3,23 @@ import {
   resolveStudySides,
   getLangLabel,
   resolveEffectiveListSettings,
+  normalizeDirection,
 } from "./resolveStudySides";
+
+// ── normalizeDirection ───────────────────────────────────────────────
+
+describe("normalizeDirection", () => {
+  it("maps legacy tokens to canonical", () => {
+    expect(normalizeDirection("en-pt")).toBe("a-b");
+    expect(normalizeDirection("pt-en")).toBe("b-a");
+  });
+
+  it("passes through canonical tokens", () => {
+    expect(normalizeDirection("a-b")).toBe("a-b");
+    expect(normalizeDirection("b-a")).toBe("b-a");
+    expect(normalizeDirection("any")).toBe("any");
+  });
+});
 
 // ── resolveStudySides ────────────────────────────────────────────────
 
@@ -11,15 +27,15 @@ describe("resolveStudySides", () => {
   const sideA = { text: "Bonjour", lang: "fr", label: "Français" };
   const sideB = { text: "Hello", lang: "en", label: "English" };
 
-  it("en-pt direction → sideA is prompt", () => {
-    const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, "en-pt");
+  it("a-b direction → sideA is prompt", () => {
+    const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, "a-b");
     expect(isAFirst).toBe(true);
     expect(promptSide.text).toBe("Bonjour");
     expect(answerSide.text).toBe("Hello");
   });
 
-  it("pt-en direction → sideB is prompt", () => {
-    const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, "pt-en");
+  it("b-a direction → sideB is prompt", () => {
+    const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, "b-a");
     expect(isAFirst).toBe(false);
     expect(promptSide.text).toBe("Hello");
     expect(answerSide.text).toBe("Bonjour");
@@ -29,6 +45,13 @@ describe("resolveStudySides", () => {
     const r1 = resolveStudySides(sideA, sideB, "any", "card-1");
     const r2 = resolveStudySides(sideA, sideB, "any", "card-1");
     expect(r1.isAFirst).toBe(r2.isAFirst); // deterministic
+  });
+
+  it("accepts legacy en-pt/pt-en", () => {
+    const enPt = resolveStudySides(sideA, sideB, "en-pt");
+    expect(enPt.isAFirst).toBe(true);
+    const ptEn = resolveStudySides(sideA, sideB, "pt-en");
+    expect(ptEn.isAFirst).toBe(false);
   });
 });
 
@@ -115,43 +138,37 @@ describe("resolveEffectiveListSettings", () => {
         const sideA = { text: `text_${a}`, lang: a, label: getLangLabel(a) };
         const sideB = { text: `text_${b}`, lang: b, label: getLangLabel(b) };
 
-        // en-pt (A first)
-        const enPt = resolveStudySides(sideA, sideB, "en-pt");
-        expect(enPt.promptSide.lang).toBe(a);
-        expect(enPt.answerSide.lang).toBe(b);
+        // a-b (A first)
+        const ab = resolveStudySides(sideA, sideB, "a-b");
+        expect(ab.promptSide.lang).toBe(a);
+        expect(ab.answerSide.lang).toBe(b);
 
-        // pt-en (B first)
-        const ptEn = resolveStudySides(sideA, sideB, "pt-en");
-        expect(ptEn.promptSide.lang).toBe(b);
-        expect(ptEn.answerSide.lang).toBe(a);
+        // b-a (B first)
+        const ba = resolveStudySides(sideA, sideB, "b-a");
+        expect(ba.promptSide.lang).toBe(b);
+        expect(ba.answerSide.lang).toBe(a);
 
         // Both should reference the SAME texts, just in different order
-        expect(enPt.promptSide.text).toBe(ptEn.answerSide.text);
-        expect(enPt.answerSide.text).toBe(ptEn.promptSide.text);
+        expect(ab.promptSide.text).toBe(ba.answerSide.text);
+        expect(ab.answerSide.text).toBe(ba.promptSide.text);
       });
     });
 
     it("import preview → save → export → reimport: direction preserved", () => {
-      // Simulate: user imports "Bonjour / Hello" into a fr→en list
-      const importedTerm = "Bonjour";    // sideA = langA = Français
-      const importedTranslation = "Hello"; // sideB = langB = English
+      const importedTerm = "Bonjour";
+      const importedTranslation = "Hello";
 
-      // After save, card in DB: term=Bonjour, translation=Hello
       const savedCard = { term: importedTerm, translation: importedTranslation };
-
-      // Export format: term / translation
       const exportLine = `${savedCard.term} / ${savedCard.translation}`;
       expect(exportLine).toBe("Bonjour / Hello");
 
-      // Reimport: parse export line
       const [reimportTerm, reimportTranslation] = exportLine.split(" / ");
       expect(reimportTerm).toBe(importedTerm);
       expect(reimportTranslation).toBe(importedTranslation);
 
-      // Direction preserved end-to-end
       const sideA = { text: reimportTerm, lang: "fr", label: "Français" };
       const sideB = { text: reimportTranslation, lang: "en", label: "English" };
-      const resolved = resolveStudySides(sideA, sideB, "en-pt");
+      const resolved = resolveStudySides(sideA, sideB, "a-b");
       expect(resolved.promptSide.text).toBe("Bonjour");
       expect(resolved.promptSide.lang).toBe("fr");
       expect(resolved.answerSide.text).toBe("Hello");

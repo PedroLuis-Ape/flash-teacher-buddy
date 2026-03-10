@@ -1,6 +1,6 @@
 /**
  * ===================================================================
- * GAME CORE — TESTES DE PROTEÇÃO
+ * GAME CORE — TESTES DE PROTEÇÃO (v2 — canonical direction tokens)
  * ===================================================================
  *
  * Estes testes validam o comportamento EXATO da lógica do jogo.
@@ -14,7 +14,7 @@ import { describe, it, expect } from "vitest";
 import {
   hashToBool,
   resolveStudySides,
-  applySwap,
+  normalizeDirection,
   resolveDirection,
   shuffleArray,
   computeStats,
@@ -35,18 +35,38 @@ import {
 const sideA: StudySide = { text: "Hello", lang: "en", label: "English" };
 const sideB: StudySide = { text: "Olá", lang: "pt", label: "Português" };
 
+// ─── normalizeDirection ─────────────────────────────────────────────
+
+describe("normalizeDirection", () => {
+  it("maps legacy tokens to canonical", () => {
+    expect(normalizeDirection("en-pt")).toBe("a-b");
+    expect(normalizeDirection("pt-en")).toBe("b-a");
+  });
+
+  it("passes through canonical tokens", () => {
+    expect(normalizeDirection("a-b")).toBe("a-b");
+    expect(normalizeDirection("b-a")).toBe("b-a");
+    expect(normalizeDirection("any")).toBe("any");
+  });
+
+  it("defaults unknown values to any", () => {
+    expect(normalizeDirection("random")).toBe("any");
+    expect(normalizeDirection("")).toBe("any");
+  });
+});
+
 // ─── resolveStudySides ──────────────────────────────────────────────
 
 describe("resolveStudySides", () => {
-  it("en-pt: sideA is prompt, sideB is answer", () => {
-    const result = resolveStudySides(sideA, sideB, "en-pt");
+  it("a-b: sideA is prompt, sideB is answer", () => {
+    const result = resolveStudySides(sideA, sideB, "a-b");
     expect(result.promptSide.text).toBe("Hello");
     expect(result.answerSide.text).toBe("Olá");
     expect(result.isAFirst).toBe(true);
   });
 
-  it("pt-en: sideB is prompt, sideA is answer", () => {
-    const result = resolveStudySides(sideA, sideB, "pt-en");
+  it("b-a: sideB is prompt, sideA is answer", () => {
+    const result = resolveStudySides(sideA, sideB, "b-a");
     expect(result.promptSide.text).toBe("Olá");
     expect(result.answerSide.text).toBe("Hello");
     expect(result.isAFirst).toBe(false);
@@ -61,28 +81,16 @@ describe("resolveStudySides", () => {
   it("never mutates input sides", () => {
     const a = { ...sideA };
     const b = { ...sideB };
-    resolveStudySides(a, b, "en-pt");
+    resolveStudySides(a, b, "a-b");
     expect(a.text).toBe("Hello");
     expect(b.text).toBe("Olá");
   });
-});
 
-// ─── applySwap ──────────────────────────────────────────────────────
-
-describe("applySwap", () => {
-  it("no swap returns same direction", () => {
-    expect(applySwap("en-pt", false)).toBe("en-pt");
-    expect(applySwap("pt-en", false)).toBe("pt-en");
-    expect(applySwap("any", false)).toBe("any");
-  });
-
-  it("swap inverts en-pt <-> pt-en", () => {
-    expect(applySwap("en-pt", true)).toBe("pt-en");
-    expect(applySwap("pt-en", true)).toBe("en-pt");
-  });
-
-  it("swap on 'any' keeps 'any'", () => {
-    expect(applySwap("any", true)).toBe("any");
+  it("accepts legacy en-pt/pt-en tokens", () => {
+    const enPt = resolveStudySides(sideA, sideB, "en-pt" as any);
+    expect(enPt.isAFirst).toBe(true);
+    const ptEn = resolveStudySides(sideA, sideB, "pt-en" as any);
+    expect(ptEn.isAFirst).toBe(false);
   });
 });
 
@@ -90,24 +98,19 @@ describe("applySwap", () => {
 
 describe("resolveDirection", () => {
   it("resolves fixed directions correctly", () => {
-    expect(resolveDirection("en-pt", false, 0)).toBe("en-pt");
-    expect(resolveDirection("pt-en", false, 0)).toBe("pt-en");
+    expect(resolveDirection("a-b", false, 0)).toBe("a-b");
+    expect(resolveDirection("b-a", false, 0)).toBe("b-a");
   });
 
   it("resolves 'any' deterministically by index", () => {
-    expect(resolveDirection("any", false, 0)).toBe("pt-en"); // even
-    expect(resolveDirection("any", false, 1)).toBe("en-pt"); // odd
+    expect(resolveDirection("any", false, 0)).toBe("b-a"); // even
+    expect(resolveDirection("any", false, 1)).toBe("a-b"); // odd
   });
 
-  it("swap inverts resolved direction", () => {
-    expect(resolveDirection("en-pt", true, 0)).toBe("pt-en");
-    expect(resolveDirection("pt-en", true, 0)).toBe("en-pt");
-  });
-
-  it("swap inverts 'any' direction too", () => {
-    const noSwap = resolveDirection("any", false, 0);
-    const withSwap = resolveDirection("any", true, 0);
-    expect(noSwap).not.toBe(withSwap);
+  it("isSwapped parameter is ignored (swap removed)", () => {
+    // swap param kept for API compat but has no effect
+    expect(resolveDirection("a-b", true, 0)).toBe("a-b");
+    expect(resolveDirection("b-a", true, 0)).toBe("b-a");
   });
 });
 
@@ -308,11 +311,71 @@ describe("INVARIANT: no function mutates card data", () => {
     const b: StudySide = { text: card.translation, lang: "pt", label: "Português" };
     
     // Should not throw (frozen objects throw on mutation)
-    resolveStudySides(a, b, "en-pt", card.id);
-    resolveStudySides(a, b, "pt-en", card.id);
+    resolveStudySides(a, b, "a-b", card.id);
+    resolveStudySides(a, b, "b-a", card.id);
     resolveStudySides(a, b, "any", card.id);
     
     expect(card.term).toBe("Dog");
     expect(card.translation).toBe("Cachorro");
+  });
+});
+
+// ─── Canonical A/B Architecture Tests ───────────────────────────────
+
+describe("Canonical A/B architecture", () => {
+  it("term is always side A", () => {
+    const a: StudySide = { text: "Bonjour", lang: "fr", label: "Français" };
+    const b: StudySide = { text: "Hello", lang: "en", label: "English" };
+    
+    const ab = resolveStudySides(a, b, "a-b");
+    expect(ab.promptSide.text).toBe("Bonjour"); // A is prompt
+    expect(ab.answerSide.text).toBe("Hello");   // B is answer
+    
+    const ba = resolveStudySides(a, b, "b-a");
+    expect(ba.promptSide.text).toBe("Hello");   // B is prompt
+    expect(ba.answerSide.text).toBe("Bonjour"); // A is answer
+  });
+
+  it("labels match the content being shown", () => {
+    const a: StudySide = { text: "Bonjour", lang: "fr", label: "Français" };
+    const b: StudySide = { text: "Hello", lang: "en", label: "English" };
+    
+    const ab = resolveStudySides(a, b, "a-b");
+    expect(ab.promptSide.label).toBe("Français");
+    expect(ab.answerSide.label).toBe("English");
+    
+    const ba = resolveStudySides(a, b, "b-a");
+    expect(ba.promptSide.label).toBe("English");
+    expect(ba.answerSide.label).toBe("Français");
+  });
+
+  it("TTS language matches the visible side", () => {
+    const a: StudySide = { text: "Bonjour", lang: "fr", label: "Français" };
+    const b: StudySide = { text: "Hello", lang: "en", label: "English" };
+    
+    const ab = resolveStudySides(a, b, "a-b");
+    expect(ab.promptSide.lang).toBe("fr"); // TTS should speak French
+    expect(ab.answerSide.lang).toBe("en"); // TTS should speak English
+  });
+
+  it("any direction alternates without corrupting A/B", () => {
+    const a: StudySide = { text: "T1", lang: "fr", label: "Français" };
+    const b: StudySide = { text: "T2", lang: "en", label: "English" };
+    
+    const r1 = resolveStudySides(a, b, "any", "card-1");
+    const r2 = resolveStudySides(a, b, "any", "card-2");
+    
+    // Both must reference the original texts
+    expect([r1.promptSide.text, r1.answerSide.text].sort()).toEqual(["T1", "T2"]);
+    expect([r2.promptSide.text, r2.answerSide.text].sort()).toEqual(["T1", "T2"]);
+  });
+
+  it("import/export preserves A/B: field 1 = A = term, field 2 = B = translation", () => {
+    const term = "Bonjour";
+    const translation = "Hello";
+    const exportLine = `${term} / ${translation}`;
+    const [reimportTerm, reimportTranslation] = exportLine.split(" / ");
+    expect(reimportTerm).toBe(term);
+    expect(reimportTranslation).toBe(translation);
   });
 });
