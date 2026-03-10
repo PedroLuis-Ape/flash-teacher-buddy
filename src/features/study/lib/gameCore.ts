@@ -25,8 +25,16 @@
  *   1. O campo `term` do card original NUNCA é reescrito.
  *   2. O campo `translation` do card original NUNCA é reescrito.
  *   3. O embaralhamento SEMPRE opera sobre cópias.
- *   4. A inversão (swap) é aplicada APENAS na direção, não nos dados.
- *   5. Estatísticas são derivadas dos resultados, nunca de estado mutável.
+ *   4. Estatísticas são derivadas dos resultados, nunca de estado mutável.
+ *
+ * DIRECTION TOKENS (v2):
+ *   "a-b" → show side A (term), answer with side B (translation)
+ *   "b-a" → show side B (translation), answer with side A (term)
+ *   "any" → deterministic pseudo-random per card
+ *
+ * LEGACY COMPAT:
+ *   "en-pt" is mapped to "a-b" (A first)
+ *   "pt-en" is mapped to "b-a" (B first)
  * ====================================================================
  */
 
@@ -74,7 +82,18 @@ export interface SessionStats {
   readonly accuracy: number; // 0-1
 }
 
-export type Direction = "pt-en" | "en-pt" | "any";
+/** Canonical direction type. */
+export type Direction = "a-b" | "b-a" | "any";
+
+/**
+ * Normalizes legacy direction tokens to canonical ones.
+ * "en-pt" → "a-b", "pt-en" → "b-a", everything else passes through.
+ */
+export function normalizeDirection(dir: string): Direction {
+  if (dir === "en-pt" || dir === "a-b") return "a-b";
+  if (dir === "pt-en" || dir === "b-a") return "b-a";
+  return "any";
+}
 
 // ─── Pure Functions ──────────────────────────────────────────────────
 
@@ -92,7 +111,7 @@ export function hashToBool(seed: string): boolean {
  *
  * @param sideA  — dados do lado A (term / front)
  * @param sideB  — dados do lado B (translation / back)
- * @param direction — "pt-en" | "en-pt" | "any"
+ * @param direction — "a-b" | "b-a" | "any" (also accepts legacy "en-pt" | "pt-en")
  * @param cardSeed  — string estável por card (id ou texto)
  *
  * NÃO ALTERAR: esta é a fonte única de verdade para todos os modos.
@@ -100,14 +119,15 @@ export function hashToBool(seed: string): boolean {
 export function resolveStudySides(
   sideA: StudySide,
   sideB: StudySide,
-  direction: Direction,
+  direction: Direction | string,
   cardSeed: string = ""
 ): ResolvedSides {
+  const dir = normalizeDirection(direction as string);
   let isAFirst: boolean;
 
-  if (direction === "en-pt") {
+  if (dir === "a-b") {
     isAFirst = true;
-  } else if (direction === "pt-en") {
+  } else if (dir === "b-a") {
     isAFirst = false;
   } else {
     isAFirst = hashToBool(cardSeed);
@@ -121,40 +141,19 @@ export function resolveStudySides(
 }
 
 /**
- * Aplica swap visual invertendo APENAS a direção — nunca os dados.
- *
- * NÃO ALTERAR: garante que swap é sempre na camada de renderização.
- */
-export function applySwap(
-  direction: Direction,
-  isSwapped: boolean
-): Direction {
-  if (!isSwapped) return direction;
-  if (direction === "any") return "any"; // "any" permanece "any" com swap
-  return direction === "pt-en" ? "en-pt" : "pt-en";
-}
-
-/**
- * Resolve direção para um card específico, incluindo swap.
- * Combina decideDirection + applySwap em uma operação atômica.
+ * Resolve direção para um card específico.
+ * Returns a concrete "a-b" or "b-a" (never "any").
  */
 export function resolveDirection(
-  baseDirection: Direction,
-  isSwapped: boolean,
+  baseDirection: Direction | string,
+  _isSwapped: boolean, // kept for API compat but ignored (swap removed)
   cardIndex: number
-): "pt-en" | "en-pt" {
-  let dir = baseDirection;
-  // Apply swap first (inverts the base direction)
-  if (isSwapped && dir !== "any") {
-    dir = dir === "pt-en" ? "en-pt" : "pt-en";
-  }
-  // Resolve "any" to deterministic per-index
+): "a-b" | "b-a" {
+  const dir = normalizeDirection(baseDirection as string);
   if (dir === "any") {
-    const resolved = cardIndex % 2 === 0 ? "pt-en" : "en-pt";
-    // If swapped, invert the resolved "any" direction too
-    return isSwapped ? (resolved === "pt-en" ? "en-pt" : "pt-en") : resolved;
+    return cardIndex % 2 === 0 ? "b-a" : "a-b";
   }
-  return dir as "pt-en" | "en-pt";
+  return dir;
 }
 
 /**

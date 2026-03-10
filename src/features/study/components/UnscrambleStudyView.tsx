@@ -21,7 +21,7 @@ interface UnscrambleStudyViewProps {
   wordHintsA?: unknown;
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
-  direction: "pt-en" | "en-pt" | "any";
+  direction: string;
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
   onCorrect: () => void;
