@@ -29,7 +29,7 @@ interface MultipleChoiceStudyViewProps {
     term: string;
     translation: string;
   }[];
-  direction: "pt-en" | "en-pt" | "any";
+  direction: string;
   langA?: string; // ISO code e.g. "en", "fr"
   langB?: string; // ISO code e.g. "pt", "de"
   mergedHintsA?: MergedHint[];

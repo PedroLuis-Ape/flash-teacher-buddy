@@ -33,7 +33,7 @@ interface FlipStudyViewProps {
   onPrevious?: () => void;
   canGoPrevious?: boolean;
   canGoNext?: boolean;
-  direction: "pt-en" | "en-pt" | "any";
+  direction: string;
   fastMode?: boolean;
   ttsEnabled?: boolean;
   labelA?: string;
