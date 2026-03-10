@@ -9,11 +9,17 @@
  *   sideA  = front = term      = lang_a  (e.g. English)
  *   sideB  = back  = translation = lang_b  (e.g. Portuguese)
  *
- * Direction semantics:
- *   "pt-en"  → show B first (Portuguese prompt), answer with A (English)
- *   "en-pt"  → show A first (English prompt),    answer with B (Portuguese)
- *   "any"    → deterministic pseudo-random per card
+ * Direction semantics (v2 – canonical tokens):
+ *   "a-b"  → show A first, answer with B
+ *   "b-a"  → show B first, answer with A
+ *   "any"  → deterministic pseudo-random per card
+ *
+ * Legacy compat:
+ *   "en-pt" is normalized to "a-b"
+ *   "pt-en" is normalized to "b-a"
  */
+
+export type Direction = "a-b" | "b-a" | "any";
 
 export interface StudySide {
   text: string;
@@ -26,8 +32,17 @@ export interface StudySide {
 export interface ResolvedSides {
   promptSide: StudySide;
   answerSide: StudySide;
-  /** true when sideA is the prompt (i.e. "en-pt" direction) */
+  /** true when sideA is the prompt (i.e. "a-b" direction) */
   isAFirst: boolean;
+}
+
+/**
+ * Normalizes legacy direction tokens to canonical ones.
+ */
+export function normalizeDirection(dir: string): Direction {
+  if (dir === "en-pt" || dir === "a-b") return "a-b";
+  if (dir === "pt-en" || dir === "b-a") return "b-a";
+  return "any";
 }
 
 /**
@@ -44,26 +59,24 @@ function hashToBool(seed: string): boolean {
  *
  * @param sideA  - Object built from `front` / `langA` / `labelA`
  * @param sideB  - Object built from `back`  / `langB` / `labelB`
- * @param direction - "pt-en" | "en-pt" | "any"
+ * @param direction - "a-b" | "b-a" | "any" (also accepts legacy "en-pt" | "pt-en")
  * @param cardSeed  - A stable per-card string (e.g. flashcardId or front text)
  *                    used only when direction === "any"
  */
 export function resolveStudySides(
   sideA: StudySide,
   sideB: StudySide,
-  direction: "pt-en" | "en-pt" | "any",
+  direction: Direction | string,
   cardSeed: string = ""
 ): ResolvedSides {
+  const dir = normalizeDirection(direction as string);
   let isAFirst: boolean;
 
-  if (direction === "en-pt") {
-    // English (A) first → Portuguese (B) answer
+  if (dir === "a-b") {
     isAFirst = true;
-  } else if (direction === "pt-en") {
-    // Portuguese (B) first → English (A) answer
+  } else if (dir === "b-a") {
     isAFirst = false;
   } else {
-    // "any" – deterministic pseudo-random
     isAFirst = hashToBool(cardSeed);
   }
 
