@@ -62,6 +62,7 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const GlobalImport = lazy(() => import("./pages/GlobalImport"));
 const Trash = lazy(() => import("./pages/Trash"));
 const PerformanceSettings = lazy(() => import("./pages/PerformanceSettings"));
+const AuditRepair = lazy(() => import("./pages/AuditRepair"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
