@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { Upload, CheckCircle2, AlertCircle, Copy, Lightbulb, ChevronDown, ChevronUp, ArrowLeftRight, BookOpen } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, Copy, Lightbulb, ChevronDown, ChevronUp, ArrowLeftRight, BookOpen, Info } from "lucide-react";
 import { toast } from "sonner";
 import {
   parsePastedFlashcards,
@@ -25,6 +25,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 
 interface BulkImportDialogProps {
   collectionId: string;
@@ -37,13 +38,40 @@ interface BulkImportDialogProps {
   langB?: string;
 }
 
+/** Resolves a human-readable side label with lang code fallback */
+function resolveSideLabel(label: string | undefined, lang: string | undefined, fallback: string): string {
+  if (label && label !== "Lado A" && label !== "Lado B") return label;
+  if (lang) {
+    const LANG_NAMES: Record<string, string> = {
+      en: "English", pt: "Português", fr: "Français", es: "Español",
+      de: "Deutsch", it: "Italiano", ja: "日本語", ko: "한국어",
+      zh: "中文", ru: "Русский", ar: "العربية", hi: "हिन्दी",
+    };
+    return LANG_NAMES[lang] || lang.toUpperCase();
+  }
+  return fallback;
+}
+
+/** Side badge component for consistent labeling */
+function SideBadge({ side, label, lang }: { side: "A" | "B"; label: string; lang?: string }) {
+  const langSuffix = lang ? ` (${lang})` : "";
+  return (
+    <Badge
+      variant={side === "A" ? "default" : "secondary"}
+      className="text-[10px] px-1.5 py-0 shrink-0 font-semibold"
+    >
+      {side} • {label}{langSuffix}
+    </Badge>
+  );
+}
+
 export const BulkImportDialog = ({
   collectionId,
   existingCards,
   existingGlossary = [],
   onImported,
-  labelA = "Lado A",
-  labelB = "Lado B",
+  labelA: rawLabelA = "Lado A",
+  labelB: rawLabelB = "Lado B",
   langA,
   langB,
 }: BulkImportDialogProps) => {
@@ -57,6 +85,17 @@ export const BulkImportDialog = ({
   const [invertAB, setInvertAB] = useState(false);
   const queryClient = useQueryClient();
   const aiPrompt = useMemo(() => buildAIHelperPrompt(langA, langB), [langA, langB]);
+
+  // Resolved labels with proper fallback
+  const resolvedLabelA = resolveSideLabel(rawLabelA, langA, "Lado A");
+  const resolvedLabelB = resolveSideLabel(rawLabelB, langB, "Lado B");
+
+  // Effective labels considering inversion
+  const effectiveLabelA = invertAB ? resolvedLabelB : resolvedLabelA;
+  const effectiveLabelB = invertAB ? resolvedLabelA : resolvedLabelB;
+  const effectiveLangA = invertAB ? langB : langA;
+  const effectiveLangB = invertAB ? langA : langB;
+
   const handleParse = () => {
     if (!input.trim()) {
       toast.error("Cole o conteúdo dos flashcards");
@@ -64,12 +103,8 @@ export const BulkImportDialog = ({
     }
 
     const { glossaryLines, cards } = parseGlossaryAndCards(input);
-
-    // Deduplicate glossary
     const uniqueGlossary = deduplicateGlossary(glossaryLines, existingGlossary);
     const glossaryDuplicates = glossaryLines.length - uniqueGlossary.length;
-
-    // Deduplicate cards
     const deduplicated = deduplicateFlashcards(cards, existingCards);
     const valid = deduplicated.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
     const incomplete = deduplicated.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
@@ -99,7 +134,6 @@ export const BulkImportDialog = ({
     }
 
     try {
-      // 1. Insert glossary entries first
       if (glossaryPreview.length > 0) {
         const glossaryRows = glossaryPreview.map(g => ({
           list_id: collectionId,
@@ -121,7 +155,6 @@ export const BulkImportDialog = ({
         }
       }
 
-      // 2. Insert flashcards
       if (validPairs.length > 0) {
         const flashcards = validPairs.map(pair => {
           const termValue = pair.sideA || pair.en || '';
@@ -241,7 +274,7 @@ export const BulkImportDialog = ({
             <p className="text-sm text-muted-foreground">
               Formatos aceitos:<br />
               • Duas seções: <code>=== GLOSSÁRIO GLOBAL ===</code> + <code>=== CARDS ===</code><br />
-              • Só cards: <code>{labelA} / {labelB} (obs) [dica]</code>
+              • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code>
             </p>
             <Textarea
               id="bulk-input"
@@ -265,8 +298,30 @@ She is late / Ela está atrasada (informal)`}
 
           {(preview.length > 0 || glossaryPreview.length > 0) && (
             <>
+              {/* Column mapping header */}
+              <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Tudo que aparecer na coluna A será salvo em <strong>term</strong> (lado A).
+                    Tudo que aparecer na coluna B será salvo em <strong>translation</strong> (lado B).
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground font-medium">Coluna 1 =</span>
+                    <SideBadge side="A" label={effectiveLabelA} lang={effectiveLangA} />
+                  </div>
+                  <span className="hidden sm:inline text-muted-foreground">→</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground font-medium">Coluna 2 =</span>
+                    <SideBadge side="B" label={effectiveLabelB} lang={effectiveLangB} />
+                  </div>
+                </div>
+              </div>
+
               {/* Invert A/B Switch */}
-               <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div className="flex items-center gap-2">
                   <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
                   <div>
@@ -275,8 +330,8 @@ She is late / Ela está atrasada (informal)`}
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       {invertAB 
-                        ? `O que era lado A vai para B (${labelB}), e vice-versa`
-                        : `Manter como importado: lado A = ${labelA}, lado B = ${labelB}`
+                        ? `Invertido: A = ${effectiveLabelA}, B = ${effectiveLabelB}`
+                        : `Original: A = ${effectiveLabelA}, B = ${effectiveLabelB}`
                       }
                     </p>
                   </div>
@@ -332,26 +387,21 @@ She is late / Ela está atrasada (informal)`}
                 <div className="border rounded-lg p-4 max-h-40 overflow-y-auto">
                   <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
                     <BookOpen className="h-4 w-4 text-primary" />
-                    Glossário ({glossaryPreview.length} termos):
+                    Glossário ({glossaryPreview.length} termos)
                   </h4>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 px-1">
-                    <span className="font-semibold text-foreground">A: {labelA}</span>
-                    <span>→</span>
-                    <span className="font-semibold text-foreground">B: {labelB}</span>
-                  </div>
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-1.5 text-sm">
                     {glossaryPreview.slice(0, 15).map((g, idx) => {
                       const origDisplay = invertAB ? g.translated_text : g.original_text;
                       const transDisplay = invertAB ? g.original_text : g.translated_text;
                       return (
                         <li key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                          <span className="font-medium break-words">
-                            <span className="text-xs text-muted-foreground mr-1">A</span>
-                            {origDisplay}
+                          <span className="font-medium break-words flex items-center gap-1.5">
+                            <SideBadge side="A" label={effectiveLabelA} lang={effectiveLangA} />
+                            <span className="truncate">{origDisplay}</span>
                           </span>
-                          <span className="text-muted-foreground break-words">
-                            <span className="text-xs mr-1">B</span>
-                            → {transDisplay}
+                          <span className="text-muted-foreground break-words flex items-center gap-1.5">
+                            <SideBadge side="B" label={effectiveLabelB} lang={effectiveLangB} />
+                            <span className="truncate">{transDisplay}</span>
                           </span>
                         </li>
                       );
@@ -369,13 +419,8 @@ She is late / Ela está atrasada (informal)`}
               {preview.length > 0 && (
                 <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
                   <h4 className="font-semibold mb-2 text-sm">
-                    Cards ({stats.valid} válidos{invertAB ? " — Invertido" : ""}):
+                    Cards ({stats.valid} válidos)
                   </h4>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 px-1">
-                    <span className="font-semibold text-foreground">A: {labelA}</span>
-                    <span>→</span>
-                    <span className="font-semibold text-foreground">B: {labelB}</span>
-                  </div>
                   <ul className="space-y-2 text-sm">
                     {preview.slice(0, 20).map((pair, idx) => {
                       const sideAVal = pair.sideA || pair.en || '?';
@@ -386,17 +431,17 @@ She is late / Ela está atrasada (informal)`}
                       return (
                         <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""}`}>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-1 md:gap-2">
-                            <span className="font-medium break-words">
-                              <span className="text-xs text-muted-foreground mr-1">A</span>
-                              {termText}
+                            <span className="font-medium break-words flex items-center gap-1.5">
+                              <SideBadge side="A" label={effectiveLabelA} lang={effectiveLangA} />
+                              <span className="truncate">{termText}</span>
                             </span>
-                            <span className="text-muted-foreground break-words">
-                              <span className="text-xs mr-1">B</span>
-                              → {transText}
+                            <span className="text-muted-foreground break-words flex items-center gap-1.5">
+                              <SideBadge side="B" label={effectiveLabelB} lang={effectiveLangB} />
+                              <span className="truncate">{transText}</span>
                             </span>
                           </div>
                           {pair.detailedHint && (
-                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 ml-1">
                               <Lightbulb className="h-3 w-3 shrink-0" />
                               <span className="truncate">{pair.detailedHint.substring(0, 50)}...</span>
                             </div>
@@ -412,6 +457,21 @@ She is late / Ela está atrasada (informal)`}
                   </ul>
                 </div>
               )}
+
+              {/* Final confirmation summary */}
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-1">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  Você está prestes a salvar:
+                </p>
+                <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
+                  <p><strong>term</strong> (Lado A) = <span className="text-foreground font-medium">{effectiveLabelA}{effectiveLangA ? ` (${effectiveLangA})` : ""}</span></p>
+                  <p><strong>translation</strong> (Lado B) = <span className="text-foreground font-medium">{effectiveLabelB}{effectiveLangB ? ` (${effectiveLangB})` : ""}</span></p>
+                  {totalImportable > 0 && (
+                    <p className="mt-1 text-foreground">{totalImportable} item{totalImportable !== 1 ? "s" : ""} será{totalImportable !== 1 ? "ão" : ""} importado{totalImportable !== 1 ? "s" : ""}</p>
+                  )}
+                </div>
+              </div>
 
               <Button 
                 onClick={handleImport} 
