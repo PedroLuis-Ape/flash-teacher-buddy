@@ -140,6 +140,7 @@ const App = () => {
                   <Route path="/import" element={<GlobalImport />} />
                   <Route path="/trash" element={<Trash />} />
                   <Route path="/settings/performance" element={<PerformanceSettings />} />
+                  <Route path="/audit" element={<AuditRepair />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageTransition>
