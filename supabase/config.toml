@@ -14,3 +14,9 @@ verify_jwt = true
 
 [functions.kingdoms-import-csv]
 verify_jwt = true
+
+[functions.audit-ab-consistency]
+verify_jwt = true
+
+[functions.repair-ab]
+verify_jwt = true
