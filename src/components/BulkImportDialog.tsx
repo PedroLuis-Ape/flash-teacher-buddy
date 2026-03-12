@@ -301,8 +301,8 @@ She is late / Ela está atrasada (informal)`}
             />
           </div>
 
-          <Button onClick={handleParse} variant="secondary" className="w-full">
-            Pré-visualizar
+          <Button onClick={handleParse} variant="secondary" className="w-full" disabled={isParsing}>
+            {isParsing ? "Processando..." : "Pré-visualizar"}
           </Button>
 
           {(preview.length > 0 || glossaryPreview.length > 0) && (
