@@ -69,6 +69,115 @@ interface Flashcard {
   word_hints?: unknown;
 }
 
+// ── PERF: Memoized card row to avoid re-render on selection/search ──
+const FlashcardRow = memo(({
+  flashcard,
+  isSelected,
+  canEdit,
+  userId,
+  isFavorite,
+  onToggleSelection,
+  onEdit,
+  onDelete,
+}: {
+  flashcard: Flashcard;
+  isSelected: boolean;
+  canEdit: boolean;
+  userId?: string;
+  isFavorite: boolean;
+  onToggleSelection: (id: string) => void;
+  onEdit: (f: Flashcard) => void;
+  onDelete: (id: string) => void;
+}) => (
+  <Card className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+    <div className="flex items-start gap-3">
+      {canEdit && (
+        <div className="pt-1">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelection(flashcard.id)}
+          />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
+        <p className="text-muted-foreground break-words">{flashcard.translation}</p>
+        {flashcard.hint && (
+          <div className="flex items-start gap-1.5 mt-2 text-sm text-muted-foreground">
+            <Lightbulb className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <span className="italic break-words">{flashcard.hint}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {userId && (
+          <FavoriteButton
+            resourceId={flashcard.id}
+            resourceType="flashcard"
+            isFavorite={isFavorite}
+            size="sm"
+          />
+        )}
+        {canEdit && (
+          <>
+            <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onDelete(flashcard.id)} className="h-9 w-9 text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  </Card>
+));
+FlashcardRow.displayName = "FlashcardRow";
+
+// ── PERF: Memoized list wrapper ──
+const MemoizedCardList = memo(({
+  flashcards,
+  selectedCards,
+  canEdit,
+  userId,
+  favorites,
+  onToggleSelection,
+  onEdit,
+  onDelete,
+}: {
+  flashcards: Flashcard[];
+  selectedCards: string[];
+  canEdit: boolean;
+  userId?: string;
+  favorites: string[];
+  onToggleSelection: (id: string) => void;
+  onEdit: (f: Flashcard) => void;
+  onDelete: (id: string) => void;
+}) => {
+  // Convert to Set for O(1) lookups
+  const selectedSet = useMemo(() => new Set(selectedCards), [selectedCards]);
+  const favSet = useMemo(() => new Set(favorites), [favorites]);
+
+  return (
+    <>
+      {flashcards.map((flashcard) => (
+        <FlashcardRow
+          key={flashcard.id}
+          flashcard={flashcard}
+          isSelected={selectedSet.has(flashcard.id)}
+          canEdit={canEdit}
+          userId={userId}
+          isFavorite={favSet.has(flashcard.id)}
+          onToggleSelection={onToggleSelection}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      ))}
+    </>
+  );
+});
+MemoizedCardList.displayName = "MemoizedCardList";
+
 const ListDetail = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
