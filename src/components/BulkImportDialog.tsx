@@ -96,24 +96,33 @@ export const BulkImportDialog = ({
   const effectiveLangA = invertAB ? langB : langA;
   const effectiveLangB = invertAB ? langA : langB;
 
+  const [isParsing, setIsParsing] = useState(false);
+
   const handleParse = () => {
     if (!input.trim()) {
       toast.error("Cole o conteúdo dos flashcards");
       return;
     }
 
-    const { glossaryLines, cards } = parseGlossaryAndCards(input);
-    const uniqueGlossary = deduplicateGlossary(glossaryLines, existingGlossary);
-    const glossaryDuplicates = glossaryLines.length - uniqueGlossary.length;
-    const deduplicated = deduplicateFlashcards(cards, existingCards);
-    const valid = deduplicated.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
-    const incomplete = deduplicated.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
-    const duplicates = cards.length - deduplicated.length;
-    const withHints = deduplicated.filter(p => p.detailedHint).length;
+    // ── PERF: Defer heavy parse to next frame to avoid input freeze ──
+    setIsParsing(true);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const { glossaryLines, cards } = parseGlossaryAndCards(input);
+        const uniqueGlossary = deduplicateGlossary(glossaryLines, existingGlossary);
+        const glossaryDuplicates = glossaryLines.length - uniqueGlossary.length;
+        const deduplicated = deduplicateFlashcards(cards, existingCards);
+        const valid = deduplicated.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
+        const incomplete = deduplicated.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
+        const duplicates = cards.length - deduplicated.length;
+        const withHints = deduplicated.filter(p => p.detailedHint).length;
 
-    setGlossaryPreview(uniqueGlossary);
-    setPreview(deduplicated);
-    setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates });
+        setGlossaryPreview(uniqueGlossary);
+        setPreview(deduplicated);
+        setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates });
+        setIsParsing(false);
+      }, 0);
+    });
   };
 
   const handleImport = async () => {
