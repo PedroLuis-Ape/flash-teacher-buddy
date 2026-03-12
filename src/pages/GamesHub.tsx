@@ -74,71 +74,52 @@ const GamesHub = () => {
     }
   }, [id, isListRoute]);
 
+  // ── PERF: Single query for list + labels (eliminated duplicate fetch) ──
   const loadList = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        const { data, error } = await supabase
-          .from("lists")
-          .select("*")
-          .eq("id", id)
-          .is("deleted_at", null)
-          .single();
-
-        if (error) {
-          console.error("Erro ao carregar lista pública:", error);
-          toast.error("Lista não encontrada ou não está compartilhada");
-          navigate("/portal");
-          return;
-        }
-        setList(data);
-        // Load effective settings for labels
-        await loadListLabels(data.id, data.folder_id);
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("lists")
-        .select("*")
+        .select("id, title, description, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
         .eq("id", id)
         .is("deleted_at", null)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast.error("Lista não encontrada ou não está compartilhada");
+          navigate("/portal");
+        } else {
+          toast.error("Erro ao carregar lista");
+        }
+        setLoading(false);
+        return;
+      }
+
       setList(data);
-      await loadListLabels(data.id, data.folder_id);
+
+      // Resolve labels from the same data (no second query)
+      let folderRow = null;
+      if (data.folder_id) {
+        const { data: folderData } = await supabase
+          .from("folders")
+          .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+          .eq("id", data.folder_id)
+          .maybeSingle();
+        folderRow = folderData;
+      }
+
+      const resolved = resolveEffectiveListSettings(data, folderRow);
+      setListLabels({
+        labelsA: resolved.labelsA,
+        labelsB: resolved.labelsB,
+      });
       setLoading(false);
     } catch (error: any) {
       toast.error("Erro ao carregar lista");
       console.error(error);
       setLoading(false);
     }
-  };
-
-  const loadListLabels = async (listId: string, folderId?: string) => {
-    const { data: listData } = await supabase
-      .from("lists")
-      .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
-      .eq("id", listId)
-      .maybeSingle();
-
-    let folderRow = null;
-    if (folderId) {
-      const { data: folderData } = await supabase
-        .from("folders")
-        .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
-        .eq("id", folderId)
-        .maybeSingle();
-      folderRow = folderData;
-    }
-
-    const resolved = resolveEffectiveListSettings(listData, folderRow);
-    setListLabels({
-      labelsA: resolved.labelsA,
-      labelsB: resolved.labelsB,
-    });
   };
 
   const loadCollection = async () => {
