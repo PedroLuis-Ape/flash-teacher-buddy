@@ -300,6 +300,14 @@ const ListDetail = () => {
     staleTime: 30_000,
   });
 
+  // ── PERF: Memoized filtered flashcard list ──
+  const filteredFlashcards = useMemo(() => {
+    if (!cardSearch.trim()) return flashcards;
+    const q = cardSearch.toLowerCase();
+    return flashcards.filter(
+      (f: Flashcard) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
+    );
+  }, [flashcards, cardSearch]);
 
   const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
