@@ -704,7 +704,7 @@ const ListDetail = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setSwapDialogOpen(true)}>
                       <ArrowLeftRight className="mr-2 h-4 w-4" />
-                      Inverter A/B
+                      Inverter conteúdo dos cards
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -749,17 +749,49 @@ const ListDetail = () => {
 
         {/* Swap A/B Confirmation Dialog */}
         <AlertDialog open={swapDialogOpen} onOpenChange={setSwapDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-lg">
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <ArrowLeftRight className="h-5 w-5" />
-                Inverter A/B
+                Inverter conteúdo dos cards
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                Isso vai inverter o lado A e B de <strong>todos os {flashcards.length} cards</strong> desta lista 
-                e trocar os idiomas/labels A ↔ B.
-                <br /><br />
-                Você pode desfazer invertendo novamente.
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    Esta ação <strong className="text-foreground">troca o conteúdo salvo</strong> de todos os <strong className="text-foreground">{flashcards.length} cards</strong> desta lista.
+                  </p>
+
+                  {/* Before / After preview */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
+                      <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Antes</p>
+                      <p><span className="font-medium text-foreground">A (term):</span> {effectiveSettings.labelsA}</p>
+                      <p><span className="font-medium text-foreground">B (translation):</span> {effectiveSettings.labelsB}</p>
+                      {flashcards[0] && (
+                        <div className="pt-1.5 border-t border-border/50 text-xs">
+                          <p className="truncate">A: <em>{flashcards[0].term}</em></p>
+                          <p className="truncate">B: <em>{flashcards[0].translation}</em></p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1.5">
+                      <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Depois</p>
+                      <p><span className="font-medium text-foreground">A (term):</span> {effectiveSettings.labelsB}</p>
+                      <p><span className="font-medium text-foreground">B (translation):</span> {effectiveSettings.labelsA}</p>
+                      {flashcards[0] && (
+                        <div className="pt-1.5 border-t border-border/50 text-xs">
+                          <p className="truncate">A: <em>{flashcards[0].translation}</em></p>
+                          <p className="truncate">B: <em>{flashcards[0].term}</em></p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-xs">
+                    O que será trocado: <strong className="text-foreground">term ↔ translation</strong>, <strong className="text-foreground">lang_a ↔ lang_b</strong>, <strong className="text-foreground">labels_a ↔ labels_b</strong>.
+                    <br />Você pode desfazer invertendo novamente.
+                  </p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -768,7 +800,7 @@ const ListDetail = () => {
                 onClick={handleSwapSides} 
                 disabled={isSwapping}
               >
-                {isSwapping ? "Invertendo..." : "Inverter agora"}
+                {isSwapping ? "Invertendo..." : "Inverter conteúdo agora"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
