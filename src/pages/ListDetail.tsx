@@ -374,13 +374,13 @@ const ListDetail = () => {
     }
   };
 
-  const toggleCardSelection = (cardId: string) => {
+  const toggleCardSelection = useCallback((cardId: string) => {
     setSelectedCards(prev => 
       prev.includes(cardId) 
         ? prev.filter(id => id !== cardId)
         : [...prev, cardId]
     );
-  };
+  }, []);
 
   const toggleSelectAll = () => {
     if (selectedCards.length === flashcards.length) {
