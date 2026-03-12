@@ -704,7 +704,7 @@ const ListDetail = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setSwapDialogOpen(true)}>
                       <ArrowLeftRight className="mr-2 h-4 w-4" />
-                      Inverter A/B
+                      Inverter conteúdo dos cards
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
