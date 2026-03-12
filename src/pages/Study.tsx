@@ -272,76 +272,86 @@ const Study = () => {
     
     const queryColumn = isListRoute ? "list_id" : "collection_id";
     
-    const { data, error } = await supabase
+    // ── PERF: Fetch flashcards + list metadata in parallel ──
+    const cardsPromise = supabase
       .from("flashcards")
       .select("*")
       .eq(queryColumn, resolvedId)
       .is("deleted_at", null);
 
-    if (error) {
+    const listPromise = isListRoute
+      ? supabase
+          .from("lists")
+          .select("title, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+          .eq("id", resolvedId)
+          .maybeSingle()
+      : Promise.resolve({ data: null });
+
+    const [cardsResult, listResult] = await Promise.all([cardsPromise, listPromise]);
+
+    if (cardsResult.error) {
       toast.error("Erro ao carregar flashcards");
       navigate(isListRoute ? `/list/${resolvedId}` : (isPublicRoute ? `/portal/collection/${resolvedId}` : "/"));
       return;
     }
 
-    if (!data || data.length === 0) {
+    if (!cardsResult.data || cardsResult.data.length === 0) {
       toast.error(isListRoute ? "Esta lista não tem flashcards ainda" : "Esta coleção não tem flashcards ainda");
       navigate(isListRoute ? `/list/${resolvedId}` : (isPublicRoute ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}`));
       return;
     }
 
-    const orderedData = order === "random" ? shuffleArray([...data]) : data;
-    setFlashcards(orderedData);
+    const orderedData = order === "random" ? shuffleArray([...cardsResult.data]) : cardsResult.data;
+    
+    const listData = listResult.data as any;
 
-    if (isListRoute) {
-      const { data: listData } = await supabase
-        .from("lists")
-        .select("title, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
-        .eq("id", resolvedId)
-        .maybeSingle();
-      
-      if (listData) {
-        setListTitle(listData.title);
-        
-        let folderRow = null;
-        if (listData.folder_id) {
-          const { data: folderData } = await supabase
+    if (isListRoute && listData) {
+      setListTitle(listData.title);
+
+      // ── PERF: Fetch folder + video in parallel ──
+      const folderPromise = listData.folder_id
+        ? supabase
             .from("folders")
             .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
             .eq("id", listData.folder_id)
-            .maybeSingle();
-          folderRow = folderData;
-        }
+            .maybeSingle()
+        : Promise.resolve({ data: null });
 
-        const resolved = resolveEffectiveListSettings(listData, folderRow);
-        
-        setListSettings({
-          studyType: resolved.studyType as "language" | "general",
-          langA: resolved.langA,
-          langB: resolved.langB,
-          labelsA: resolved.labelsA,
-          labelsB: resolved.labelsB,
-          ttsEnabled: resolved.ttsEnabled,
+      const videoPromise = listData.folder_id
+        ? supabase
+            .from("videos")
+            .select("video_id, title")
+            .eq("folder_id", listData.folder_id)
+            .eq("is_published", true)
+            .order("order_index", { ascending: true })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null });
+
+      const [folderResult, videoResult] = await Promise.all([folderPromise, videoPromise]);
+
+      const resolved = resolveEffectiveListSettings(listData, folderResult.data);
+      
+      // ── PERF: Batch state updates together ──
+      setListSettings({
+        studyType: resolved.studyType as "language" | "general",
+        langA: resolved.langA,
+        langB: resolved.langB,
+        labelsA: resolved.labelsA,
+        labelsB: resolved.labelsB,
+        ttsEnabled: resolved.ttsEnabled,
+      });
+
+      if (videoResult.data) {
+        setVideoInfo({
+          videoId: (videoResult.data as any).video_id,
+          title: (videoResult.data as any).title,
         });
-        
-        const { data: videoData } = await supabase
-          .from("videos")
-          .select("video_id, title")
-          .eq("folder_id", listData.folder_id)
-          .eq("is_published", true)
-          .order("order_index", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        
-        if (videoData) {
-          setVideoInfo({
-            videoId: videoData.video_id,
-            title: videoData.title
-          });
-        }
       }
     }
 
+    // Set flashcards last (triggers engine init)
+    setFlashcards(orderedData);
     setLoading(false);
   };
 

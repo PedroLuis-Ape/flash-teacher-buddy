@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, memo, useRef } from "react";
 // Shared lang-label resolver for all language fallbacks
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
@@ -68,6 +68,115 @@ interface Flashcard {
   image_url_b?: string | null;
   word_hints?: unknown;
 }
+
+// ── PERF: Memoized card row to avoid re-render on selection/search ──
+const FlashcardRow = memo(({
+  flashcard,
+  isSelected,
+  canEdit,
+  userId,
+  isFavorite,
+  onToggleSelection,
+  onEdit,
+  onDelete,
+}: {
+  flashcard: Flashcard;
+  isSelected: boolean;
+  canEdit: boolean;
+  userId?: string;
+  isFavorite: boolean;
+  onToggleSelection: (id: string) => void;
+  onEdit: (f: Flashcard) => void;
+  onDelete: (id: string) => void;
+}) => (
+  <Card className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+    <div className="flex items-start gap-3">
+      {canEdit && (
+        <div className="pt-1">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelection(flashcard.id)}
+          />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
+        <p className="text-muted-foreground break-words">{flashcard.translation}</p>
+        {flashcard.hint && (
+          <div className="flex items-start gap-1.5 mt-2 text-sm text-muted-foreground">
+            <Lightbulb className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <span className="italic break-words">{flashcard.hint}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {userId && (
+          <FavoriteButton
+            resourceId={flashcard.id}
+            resourceType="flashcard"
+            isFavorite={isFavorite}
+            size="sm"
+          />
+        )}
+        {canEdit && (
+          <>
+            <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onDelete(flashcard.id)} className="h-9 w-9 text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  </Card>
+));
+FlashcardRow.displayName = "FlashcardRow";
+
+// ── PERF: Memoized list wrapper ──
+const MemoizedCardList = memo(({
+  flashcards,
+  selectedCards,
+  canEdit,
+  userId,
+  favorites,
+  onToggleSelection,
+  onEdit,
+  onDelete,
+}: {
+  flashcards: Flashcard[];
+  selectedCards: string[];
+  canEdit: boolean;
+  userId?: string;
+  favorites: string[];
+  onToggleSelection: (id: string) => void;
+  onEdit: (f: Flashcard) => void;
+  onDelete: (id: string) => void;
+}) => {
+  // Convert to Set for O(1) lookups
+  const selectedSet = useMemo(() => new Set(selectedCards), [selectedCards]);
+  const favSet = useMemo(() => new Set(favorites), [favorites]);
+
+  return (
+    <>
+      {flashcards.map((flashcard) => (
+        <FlashcardRow
+          key={flashcard.id}
+          flashcard={flashcard}
+          isSelected={selectedSet.has(flashcard.id)}
+          canEdit={canEdit}
+          userId={userId}
+          isFavorite={favSet.has(flashcard.id)}
+          onToggleSelection={onToggleSelection}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      ))}
+    </>
+  );
+});
+MemoizedCardList.displayName = "MemoizedCardList";
 
 const ListDetail = () => {
   const navigate = useNavigate();
@@ -191,6 +300,14 @@ const ListDetail = () => {
     staleTime: 30_000,
   });
 
+  // ── PERF: Memoized filtered flashcard list ──
+  const filteredFlashcards = useMemo(() => {
+    if (!cardSearch.trim()) return flashcards;
+    const q = cardSearch.toLowerCase();
+    return flashcards.filter(
+      (f: Flashcard) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
+    );
+  }, [flashcards, cardSearch]);
 
   const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
@@ -221,7 +338,7 @@ const ListDetail = () => {
     }
   };
 
-  const handleDeleteFlashcard = async (flashcardId: string) => {
+  const handleDeleteFlashcard = useCallback(async (flashcardId: string) => {
     try {
       const { error } = await supabase
         .from("flashcards")
@@ -234,7 +351,7 @@ const ListDetail = () => {
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
     }
-  };
+  }, [loadFlashcards]);
 
   const handleBulkDelete = async () => {
     if (selectedCards.length === 0) return;
@@ -257,13 +374,13 @@ const ListDetail = () => {
     }
   };
 
-  const toggleCardSelection = (cardId: string) => {
+  const toggleCardSelection = useCallback((cardId: string) => {
     setSelectedCards(prev => 
       prev.includes(cardId) 
         ? prev.filter(id => id !== cardId)
         : [...prev, cardId]
     );
-  };
+  }, []);
 
   const toggleSelectAll = () => {
     if (selectedCards.length === flashcards.length) {
@@ -900,68 +1017,17 @@ const ListDetail = () => {
                 </div>
               )}
 
-              {flashcards
-                .filter((f) => {
-                  if (!cardSearch.trim()) return true;
-                  const q = cardSearch.toLowerCase();
-                  return f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q);
-                })
-                .map((flashcard) => (
-                <Card key={flashcard.id} className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${selectedCards.includes(flashcard.id) ? 'ring-2 ring-primary' : ''}`}>
-                  <div className="flex items-start gap-3">
-                    {/* Checkbox for selection */}
-                    {canEdit && (
-                      <div className="pt-1">
-                        <Checkbox
-                          checked={selectedCards.includes(flashcard.id)}
-                          onCheckedChange={() => toggleCardSelection(flashcard.id)}
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
-                      <p className="text-muted-foreground break-words">{flashcard.translation}</p>
-                      {flashcard.hint && (
-                        <div className="flex items-start gap-1.5 mt-2 text-sm text-muted-foreground">
-                          <Lightbulb className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                          <span className="italic break-words">{flashcard.hint}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {userId && (
-                        <FavoriteButton
-                          resourceId={flashcard.id}
-                          resourceType="flashcard"
-                          isFavorite={favorites.includes(flashcard.id)}
-                          size="sm"
-                        />
-                      )}
-                      {canEdit && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingFlashcard(flashcard)}
-                            className="h-9 w-9"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteFlashcard(flashcard.id)}
-                            className="h-9 w-9 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
+              {/* ── PERF: Memoized filtered list + memoized card rows ── */}
+              <MemoizedCardList
+                flashcards={filteredFlashcards}
+                selectedCards={selectedCards}
+                canEdit={canEdit}
+                userId={userId}
+                favorites={favorites}
+                onToggleSelection={toggleCardSelection}
+                onEdit={setEditingFlashcard}
+                onDelete={handleDeleteFlashcard}
+              />
             </div>
           )}
         </div>
