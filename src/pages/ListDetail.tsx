@@ -338,7 +338,7 @@ const ListDetail = () => {
     }
   };
 
-  const handleDeleteFlashcard = async (flashcardId: string) => {
+  const handleDeleteFlashcard = useCallback(async (flashcardId: string) => {
     try {
       const { error } = await supabase
         .from("flashcards")
@@ -351,7 +351,7 @@ const ListDetail = () => {
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
     }
-  };
+  }, [loadFlashcards]);
 
   const handleBulkDelete = async () => {
     if (selectedCards.length === 0) return;
