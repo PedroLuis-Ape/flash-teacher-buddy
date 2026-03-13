@@ -430,20 +430,20 @@ const Study = () => {
   const currentTranslation = currentCard?.translation;
 
   const currentMergedHintsA = useMemo(() => {
-    if (!currentCardId || !currentTerm) return undefined;
-    const manual = parsedWordHintsMap.get(currentCardId) || [];
+    if (!currentCard || !currentTerm) return undefined;
+    const manual = getParsedHints(currentCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTerm, "A", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTerm, activeGlossary, parsedWordHintsMap, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
 
   const currentMergedHintsB = useMemo(() => {
-    if (!currentCardId || !currentTranslation) return undefined;
-    const manual = parsedWordHintsMap.get(currentCardId) || [];
+    if (!currentCard || !currentTranslation) return undefined;
+    const manual = getParsedHints(currentCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTranslation, activeGlossary, parsedWordHintsMap, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
 
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
