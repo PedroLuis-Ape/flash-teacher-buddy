@@ -324,6 +324,30 @@ export function useHomeData(): HomeData {
         });
       });
 
+      // Fetch flashcard counts for own lists in a single query (no nested ID arrays)
+      const ownListIds = toArray<any>(ownListsResult.data as any[])
+        .filter((list) => typeof list?.id === "string")
+        .map((list) => list.id as string);
+      
+      let ownCardCountMap: Record<string, number> = {};
+      if (ownListIds.length > 0) {
+        const { data: cardCounts } = await supabase
+          .from("flashcards")
+          .select("list_id")
+          .in("list_id", ownListIds)
+          .is("deleted_at", null);
+        
+        ownCardCountMap = toArray<any>(cardCounts as any[]).reduce(
+          (acc: Record<string, number>, row: any) => {
+            if (typeof row?.list_id === "string") {
+              acc[row.list_id] = (acc[row.list_id] || 0) + 1;
+            }
+            return acc;
+          },
+          {} as Record<string, number>
+        );
+      }
+
       const ownListsMapped = toArray<any>(ownListsResult.data as any[])
         .filter((list) => typeof list?.id === "string")
         .map((list) => {
@@ -332,7 +356,7 @@ export function useHomeData(): HomeData {
           return {
             id: list.id,
             title: toText(list?.title, "Sem título"),
-            count: Array.isArray(list?.flashcards) ? list.flashcards.length : 0,
+            count: toNumber(ownCardCountMap[list.id], 0),
             folder_name: toText(folderRel?.title, "Minhas Listas"),
             is_own: true,
             last_activity: activity?.studied || activity?.opened || list?.updated_at || null,
