@@ -495,43 +495,32 @@ export function useStudyEngine(
         (existingProgress || []).map(p => [p.flashcard_id, p])
       );
 
-      const toUpdate: any[] = [];
-      const toInsert: any[] = [];
+      // Build a single upsert array — no sequential loops
+      const upsertRecords: any[] = [];
 
       for (const [flashcardId, { correct }] of entries) {
         const existing = existingMap.get(flashcardId);
         if (existing) {
-          toUpdate.push({
+          upsertRecords.push({
             id: existing.id,
+            user_id: user.id,
+            flashcard_id: flashcardId,
+            list_id: listId,
             correct_count: correct ? existing.correct_count + 1 : existing.correct_count,
             incorrect_count: !correct ? existing.incorrect_count + 1 : existing.incorrect_count,
-            last_reviewed: new Date().toISOString()
+            last_reviewed: new Date().toISOString(),
           });
         } else {
-          toInsert.push({
+          upsertRecords.push({
             user_id: user.id,
             flashcard_id: flashcardId,
             list_id: listId,
             correct_count: correct ? 1 : 0,
             incorrect_count: !correct ? 1 : 0,
-            last_reviewed: new Date().toISOString()
+            last_reviewed: new Date().toISOString(),
           });
         }
       }
-
-      // Batch upsert all records in a single call
-      const upsertRecords = [
-        ...toUpdate.map(r => ({
-          id: r.id,
-          user_id: user.id,
-          flashcard_id: entries.find(([fid]) => existingMap.get(fid)?.id === r.id)?.[0] || '',
-          list_id: listId,
-          correct_count: r.correct_count,
-          incorrect_count: r.incorrect_count,
-          last_reviewed: r.last_reviewed,
-        })),
-        ...toInsert,
-      ];
 
       if (upsertRecords.length > 0) {
         await supabase

@@ -159,7 +159,7 @@ export function useHomeData(): HomeData {
           .eq("user_id", userId)
           .eq("ativo", true),
 
-        // Accurate stats: count lists (head-only, no payload)
+        // Accurate stats: count lists (head-only) + card counts via RPC
         (async () => {
           let listCountQuery = supabase
             .from("lists")
@@ -174,25 +174,27 @@ export function useHomeData(): HomeData {
             listCountQuery = listCountQuery.is("institution_id", null);
           }
 
-          const { count: listCount } = await listCountQuery;
+          const [{ count: listCount }, cardCountsResult] = await Promise.all([
+            listCountQuery,
+            supabase.rpc('get_user_card_counts', {
+              _user_id: userId,
+              _institution_id: institutionId,
+            }),
+          ]);
 
-          // Count cards via flashcards table joined to user's lists (head-only)
-          let cardCountQuery = supabase
-            .from("flashcards")
-            .select("id, lists!inner(owner_id, class_id, deleted_at, institution_id)", { count: "exact", head: true })
-            .eq("lists.owner_id", userId)
-            .is("lists.class_id", null)
-            .is("lists.deleted_at", null)
-            .is("deleted_at", null);
+          // Sum all per-list card counts for total
+          const cardCountRows = toArray<any>(cardCountsResult.data as any[]);
+          const totalCards = cardCountRows.reduce((sum: number, r: any) => sum + toNumber(r.card_count, 0), 0);
 
-          if (institutionId) {
-            cardCountQuery = cardCountQuery.eq("lists.institution_id", institutionId);
-          } else {
-            cardCountQuery = cardCountQuery.is("lists.institution_id", null);
+          // Build per-list count map for recents
+          const perListCardCounts: Record<string, number> = {};
+          for (const r of cardCountRows) {
+            if (typeof r?.list_id === "string") {
+              perListCardCounts[r.list_id] = toNumber(r.card_count, 0);
+            }
           }
 
-          const { count: cardCount } = await cardCountQuery;
-          return { listCount: listCount || 0, cardCount: cardCount || 0 };
+          return { listCount: listCount || 0, cardCount: totalCards, perListCardCounts };
         })()
       ]);
 

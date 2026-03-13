@@ -51,6 +51,8 @@ interface Flashcard {
   image_url_a?: string | null;
   image_url_b?: string | null;
   word_hints?: unknown;
+  /** Pre-parsed word hints computed at load time to avoid Main Thread stalls */
+  preParsedHints?: ReturnType<typeof parseExtendedWordHints>;
 }
 
 interface VideoInfo {
