@@ -519,26 +519,27 @@ export function useStudyEngine(
         }
       }
 
-      // Batch update existing records
-      if (toUpdate.length > 0) {
-        for (const record of toUpdate) {
-          await supabase
-            .from('flashcard_progress')
-            .update({
-              correct_count: record.correct_count,
-              incorrect_count: record.incorrect_count,
-              last_reviewed: record.last_reviewed
-            })
-            .eq('id', record.id);
-        }
-      }
+      // Batch upsert all records in a single call
+      const upsertRecords = [
+        ...toUpdate.map(r => ({
+          id: r.id,
+          user_id: user.id,
+          flashcard_id: entries.find(([fid]) => existingMap.get(fid)?.id === r.id)?.[0] || '',
+          list_id: listId,
+          correct_count: r.correct_count,
+          incorrect_count: r.incorrect_count,
+          last_reviewed: r.last_reviewed,
+        })),
+        ...toInsert,
+      ];
 
-      // Batch insert new records
-      if (toInsert.length > 0) {
+      if (upsertRecords.length > 0) {
         await supabase
           .from('flashcard_progress')
-          .insert(toInsert);
+          .upsert(upsertRecords, { onConflict: 'id' });
       }
+
+      // (inserts already included in upsert above)
     } catch (error) {
       console.error('Erro ao salvar progresso em batch:', error);
     }

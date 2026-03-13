@@ -125,7 +125,6 @@ export function useHomeData(): HomeData {
               id,
               title,
               updated_at,
-              flashcards(id),
               folders(title)
             `)
             .eq("owner_id", userId)
@@ -160,25 +159,40 @@ export function useHomeData(): HomeData {
           .eq("user_id", userId)
           .eq("ativo", true),
 
-        // Accurate stats count for current institution
+        // Accurate stats: count lists (head-only, no payload)
         (async () => {
-          let countQuery = supabase
+          let listCountQuery = supabase
             .from("lists")
-            .select("id, flashcards(id)", { count: "exact" })
+            .select("id", { count: "exact", head: true })
             .eq("owner_id", userId)
             .is("class_id", null)
             .is("deleted_at", null);
 
           if (institutionId) {
-            countQuery = countQuery.eq("institution_id", institutionId);
+            listCountQuery = listCountQuery.eq("institution_id", institutionId);
           } else {
-            countQuery = countQuery.is("institution_id", null);
+            listCountQuery = listCountQuery.is("institution_id", null);
           }
 
-          const { data, count } = await countQuery;
-          const totalCards = (data || []).reduce((sum: number, l: any) =>
-            sum + (Array.isArray(l?.flashcards) ? l.flashcards.length : 0), 0);
-          return { listCount: count || 0, cardCount: totalCards };
+          const { count: listCount } = await listCountQuery;
+
+          // Count cards via flashcards table joined to user's lists (head-only)
+          let cardCountQuery = supabase
+            .from("flashcards")
+            .select("id, lists!inner(owner_id, class_id, deleted_at, institution_id)", { count: "exact", head: true })
+            .eq("lists.owner_id", userId)
+            .is("lists.class_id", null)
+            .is("lists.deleted_at", null)
+            .is("deleted_at", null);
+
+          if (institutionId) {
+            cardCountQuery = cardCountQuery.eq("lists.institution_id", institutionId);
+          } else {
+            cardCountQuery = cardCountQuery.is("lists.institution_id", null);
+          }
+
+          const { count: cardCount } = await cardCountQuery;
+          return { listCount: listCount || 0, cardCount: cardCount || 0 };
         })()
       ]);
 
@@ -207,7 +221,6 @@ export function useHomeData(): HomeData {
             id,
             title,
             updated_at,
-            flashcards(id),
             folders(title, owner_id)
           `)
           .in("owner_id", allTeacherIds)
@@ -249,26 +262,36 @@ export function useHomeData(): HomeData {
       const missingTurmaTeacherIds = turmaTeacherIds.filter((id) => !existingTeacherIds.has(id));
       
       if (missingTurmaTeacherIds.length > 0) {
-        // Fetch profiles for turma teachers
-        const { data: turmaTeacherProfiles } = await supabase
-          .from("profiles")
-          .select("id, first_name")
-          .in("id", missingTurmaTeacherIds);
-        
-        // Count folders for each
-        for (const profile of toArray<any>(turmaTeacherProfiles as any[])) {
-          if (typeof profile?.id !== "string") continue;
-
-          const { count } = await supabase
+        // Fetch profiles AND folder counts in parallel (single queries, no N+1 loop)
+        const [profilesResult, foldersResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, first_name")
+            .in("id", missingTurmaTeacherIds),
+          supabase
             .from("folders")
-            .select("*", { count: "exact", head: true })
-            .eq("owner_id", profile.id)
-            .eq("visibility", "class");
-          
+            .select("owner_id")
+            .in("owner_id", missingTurmaTeacherIds)
+            .eq("visibility", "class"),
+        ]);
+
+        // Aggregate folder counts client-side
+        const folderCountMap = toArray<any>(foldersResult.data as any[]).reduce(
+          (acc: Record<string, number>, f: any) => {
+            if (typeof f?.owner_id === "string") {
+              acc[f.owner_id] = (acc[f.owner_id] || 0) + 1;
+            }
+            return acc;
+          },
+          {} as Record<string, number>
+        );
+
+        for (const profile of toArray<any>(profilesResult.data as any[])) {
+          if (typeof profile?.id !== "string") continue;
           teachersInfo.push({
             id: profile.id,
             name: toText(profile.first_name, "Professor"),
-            folder_count: toNumber(count, 0),
+            folder_count: toNumber(folderCountMap[profile.id], 0),
           });
         }
       }
@@ -300,6 +323,30 @@ export function useHomeData(): HomeData {
         });
       });
 
+      // Fetch flashcard counts for own lists in a single query (no nested ID arrays)
+      const ownListIds = toArray<any>(ownListsResult.data as any[])
+        .filter((list) => typeof list?.id === "string")
+        .map((list) => list.id as string);
+      
+      let ownCardCountMap: Record<string, number> = {};
+      if (ownListIds.length > 0) {
+        const { data: cardCounts } = await supabase
+          .from("flashcards")
+          .select("list_id")
+          .in("list_id", ownListIds)
+          .is("deleted_at", null);
+        
+        ownCardCountMap = toArray<any>(cardCounts as any[]).reduce(
+          (acc: Record<string, number>, row: any) => {
+            if (typeof row?.list_id === "string") {
+              acc[row.list_id] = (acc[row.list_id] || 0) + 1;
+            }
+            return acc;
+          },
+          {} as Record<string, number>
+        );
+      }
+
       const ownListsMapped = toArray<any>(ownListsResult.data as any[])
         .filter((list) => typeof list?.id === "string")
         .map((list) => {
@@ -308,12 +355,36 @@ export function useHomeData(): HomeData {
           return {
             id: list.id,
             title: toText(list?.title, "Sem título"),
-            count: Array.isArray(list?.flashcards) ? list.flashcards.length : 0,
+            count: toNumber(ownCardCountMap[list.id], 0),
             folder_name: toText(folderRel?.title, "Minhas Listas"),
             is_own: true,
             last_activity: activity?.studied || activity?.opened || list?.updated_at || null,
           };
         });
+
+      // Fetch flashcard counts for shared lists
+      const sharedListIds = toArray<any>(sharedLists)
+        .filter((list) => typeof list?.id === "string")
+        .map((list) => list.id as string);
+
+      let sharedCardCountMap: Record<string, number> = {};
+      if (sharedListIds.length > 0) {
+        const { data: sharedCardCounts } = await supabase
+          .from("flashcards")
+          .select("list_id")
+          .in("list_id", sharedListIds)
+          .is("deleted_at", null);
+        
+        sharedCardCountMap = toArray<any>(sharedCardCounts as any[]).reduce(
+          (acc: Record<string, number>, row: any) => {
+            if (typeof row?.list_id === "string") {
+              acc[row.list_id] = (acc[row.list_id] || 0) + 1;
+            }
+            return acc;
+          },
+          {} as Record<string, number>
+        );
+      }
 
       const sharedListsMapped = toArray<any>(sharedLists)
         .filter((list) => typeof list?.id === "string")
@@ -323,7 +394,7 @@ export function useHomeData(): HomeData {
           return {
             id: list.id,
             title: toText(list?.title, "Sem título"),
-            count: Array.isArray(list?.flashcards) ? list.flashcards.length : 0,
+            count: toNumber(sharedCardCountMap[list.id], 0),
             folder_name: toText(folderRel?.title, "Compartilhado"),
             is_own: false,
             last_activity: activity?.studied || activity?.opened || list?.updated_at || null,

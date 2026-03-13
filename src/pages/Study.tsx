@@ -411,22 +411,37 @@ const Study = () => {
 
   const currentCard = effectiveFlashcards[currentIndex];
 
+  // Pre-parse word hints once per card set (avoid re-parsing on every card advance)
+  const parsedWordHintsMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof parseExtendedWordHints>>();
+    for (const card of effectiveFlashcards) {
+      if (card.word_hints) {
+        map.set(card.id, parseExtendedWordHints(card.word_hints));
+      }
+    }
+    return map;
+  }, [effectiveFlashcards]);
+
   // Merge glossary + per-card manual hints for the current card
+  const currentCardId = currentCard?.id;
+  const currentTerm = currentCard?.term;
+  const currentTranslation = currentCard?.translation;
+
   const currentMergedHintsA = useMemo(() => {
-    if (!currentCard) return undefined;
-    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
-    const manual = parseExtendedWordHints(currentCard.word_hints);
+    if (!currentCardId || !currentTerm) return undefined;
+    const manual = parsedWordHintsMap.get(currentCardId) || [];
+    if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
-    return mergeGlossaryAndManual(currentCard.term, "A", activeGlossary, manual, langCtx);
-  }, [currentCard, activeGlossary, listSettings.langA, listSettings.langB]);
+    return mergeGlossaryAndManual(currentTerm, "A", activeGlossary, manual, langCtx);
+  }, [currentCardId, currentTerm, activeGlossary, parsedWordHintsMap, listSettings.langA, listSettings.langB]);
 
   const currentMergedHintsB = useMemo(() => {
-    if (!currentCard) return undefined;
-    if (activeGlossary.length === 0 && !currentCard.word_hints) return undefined;
-    const manual = parseExtendedWordHints(currentCard.word_hints);
+    if (!currentCardId || !currentTranslation) return undefined;
+    const manual = parsedWordHintsMap.get(currentCardId) || [];
+    if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
-    return mergeGlossaryAndManual(currentCard.translation, "B", activeGlossary, manual, langCtx);
-  }, [currentCard, activeGlossary, listSettings.langA, listSettings.langB]);
+    return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
+  }, [currentCardId, currentTranslation, activeGlossary, parsedWordHintsMap, listSettings.langA, listSettings.langB]);
 
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
