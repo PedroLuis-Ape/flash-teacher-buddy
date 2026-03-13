@@ -125,7 +125,6 @@ export function useHomeData(): HomeData {
               id,
               title,
               updated_at,
-              flashcards(id),
               folders(title)
             `)
             .eq("owner_id", userId)
@@ -160,25 +159,40 @@ export function useHomeData(): HomeData {
           .eq("user_id", userId)
           .eq("ativo", true),
 
-        // Accurate stats count for current institution
+        // Accurate stats: count lists (head-only, no payload)
         (async () => {
-          let countQuery = supabase
+          let listCountQuery = supabase
             .from("lists")
-            .select("id, flashcards(id)", { count: "exact" })
+            .select("id", { count: "exact", head: true })
             .eq("owner_id", userId)
             .is("class_id", null)
             .is("deleted_at", null);
 
           if (institutionId) {
-            countQuery = countQuery.eq("institution_id", institutionId);
+            listCountQuery = listCountQuery.eq("institution_id", institutionId);
           } else {
-            countQuery = countQuery.is("institution_id", null);
+            listCountQuery = listCountQuery.is("institution_id", null);
           }
 
-          const { data, count } = await countQuery;
-          const totalCards = (data || []).reduce((sum: number, l: any) =>
-            sum + (Array.isArray(l?.flashcards) ? l.flashcards.length : 0), 0);
-          return { listCount: count || 0, cardCount: totalCards };
+          const { count: listCount } = await listCountQuery;
+
+          // Count cards via flashcards table joined to user's lists (head-only)
+          let cardCountQuery = supabase
+            .from("flashcards")
+            .select("id, lists!inner(owner_id, class_id, deleted_at, institution_id)", { count: "exact", head: true })
+            .eq("lists.owner_id", userId)
+            .is("lists.class_id", null)
+            .is("lists.deleted_at", null)
+            .is("deleted_at", null);
+
+          if (institutionId) {
+            cardCountQuery = cardCountQuery.eq("lists.institution_id", institutionId);
+          } else {
+            cardCountQuery = cardCountQuery.is("lists.institution_id", null);
+          }
+
+          const { count: cardCount } = await cardCountQuery;
+          return { listCount: listCount || 0, cardCount: cardCount || 0 };
         })()
       ]);
 
