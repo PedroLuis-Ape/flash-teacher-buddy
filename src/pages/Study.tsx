@@ -303,7 +303,13 @@ const Study = () => {
       return;
     }
 
-    const orderedData = order === "random" ? shuffleArray([...cardsResult.data]) : cardsResult.data;
+    const rawData = order === "random" ? shuffleArray([...cardsResult.data]) : cardsResult.data;
+    
+    // ── PERF: Pre-parse word_hints at load time (off the render path) ──
+    const orderedData: Flashcard[] = rawData.map((card: any) => ({
+      ...card,
+      preParsedHints: card.word_hints ? parseExtendedWordHints(card.word_hints) : undefined,
+    }));
     
     const listData = listResult.data as any;
 
