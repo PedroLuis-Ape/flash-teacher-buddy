@@ -419,16 +419,10 @@ const Study = () => {
 
   const currentCard = effectiveFlashcards[currentIndex];
 
-  // Pre-parse word hints once per card set (avoid re-parsing on every card advance)
-  const parsedWordHintsMap = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof parseExtendedWordHints>>();
-    for (const card of effectiveFlashcards) {
-      if (card.word_hints) {
-        map.set(card.id, parseExtendedWordHints(card.word_hints));
-      }
-    }
-    return map;
-  }, [effectiveFlashcards]);
+  // ── PERF: Read pre-parsed hints from cards (O(1) lookup, no parsing at render time) ──
+  const getParsedHints = useCallback((card: Flashcard) => {
+    return card.preParsedHints || [];
+  }, []);
 
   // Merge glossary + per-card manual hints for the current card
   const currentCardId = currentCard?.id;
