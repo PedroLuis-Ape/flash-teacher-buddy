@@ -221,7 +221,6 @@ export function useHomeData(): HomeData {
             id,
             title,
             updated_at,
-            flashcards(id),
             folders(title, owner_id)
           `)
           .in("owner_id", allTeacherIds)

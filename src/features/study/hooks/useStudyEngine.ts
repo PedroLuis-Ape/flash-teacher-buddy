@@ -539,12 +539,7 @@ export function useStudyEngine(
           .upsert(upsertRecords, { onConflict: 'id' });
       }
 
-      // Batch insert new records
-      if (toInsert.length > 0) {
-        await supabase
-          .from('flashcard_progress')
-          .insert(toInsert);
-      }
+      // (inserts already included in upsert above)
     } catch (error) {
       console.error('Erro ao salvar progresso em batch:', error);
     }
