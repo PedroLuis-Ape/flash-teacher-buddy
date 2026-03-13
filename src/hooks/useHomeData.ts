@@ -263,26 +263,36 @@ export function useHomeData(): HomeData {
       const missingTurmaTeacherIds = turmaTeacherIds.filter((id) => !existingTeacherIds.has(id));
       
       if (missingTurmaTeacherIds.length > 0) {
-        // Fetch profiles for turma teachers
-        const { data: turmaTeacherProfiles } = await supabase
-          .from("profiles")
-          .select("id, first_name")
-          .in("id", missingTurmaTeacherIds);
-        
-        // Count folders for each
-        for (const profile of toArray<any>(turmaTeacherProfiles as any[])) {
-          if (typeof profile?.id !== "string") continue;
-
-          const { count } = await supabase
+        // Fetch profiles AND folder counts in parallel (single queries, no N+1 loop)
+        const [profilesResult, foldersResult] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, first_name")
+            .in("id", missingTurmaTeacherIds),
+          supabase
             .from("folders")
-            .select("*", { count: "exact", head: true })
-            .eq("owner_id", profile.id)
-            .eq("visibility", "class");
-          
+            .select("owner_id")
+            .in("owner_id", missingTurmaTeacherIds)
+            .eq("visibility", "class"),
+        ]);
+
+        // Aggregate folder counts client-side
+        const folderCountMap = toArray<any>(foldersResult.data as any[]).reduce(
+          (acc: Record<string, number>, f: any) => {
+            if (typeof f?.owner_id === "string") {
+              acc[f.owner_id] = (acc[f.owner_id] || 0) + 1;
+            }
+            return acc;
+          },
+          {} as Record<string, number>
+        );
+
+        for (const profile of toArray<any>(profilesResult.data as any[])) {
+          if (typeof profile?.id !== "string") continue;
           teachersInfo.push({
             id: profile.id,
             name: toText(profile.first_name, "Professor"),
-            folder_count: toNumber(count, 0),
+            folder_count: toNumber(folderCountMap[profile.id], 0),
           });
         }
       }
