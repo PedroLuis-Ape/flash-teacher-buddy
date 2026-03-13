@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
@@ -51,6 +51,8 @@ interface Flashcard {
   image_url_a?: string | null;
   image_url_b?: string | null;
   word_hints?: unknown;
+  /** Pre-parsed word hints computed at load time to avoid Main Thread stalls */
+  preParsedHints?: ReturnType<typeof parseExtendedWordHints>;
 }
 
 interface VideoInfo {
@@ -301,7 +303,13 @@ const Study = () => {
       return;
     }
 
-    const orderedData = order === "random" ? shuffleArray([...cardsResult.data]) : cardsResult.data;
+    const rawData = order === "random" ? shuffleArray([...cardsResult.data]) : cardsResult.data;
+    
+    // ── PERF: Pre-parse word_hints at load time (off the render path) ──
+    const orderedData: Flashcard[] = rawData.map((card: any) => ({
+      ...card,
+      preParsedHints: card.word_hints ? parseExtendedWordHints(card.word_hints) : undefined,
+    }));
     
     const listData = listResult.data as any;
 
@@ -411,16 +419,10 @@ const Study = () => {
 
   const currentCard = effectiveFlashcards[currentIndex];
 
-  // Pre-parse word hints once per card set (avoid re-parsing on every card advance)
-  const parsedWordHintsMap = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof parseExtendedWordHints>>();
-    for (const card of effectiveFlashcards) {
-      if (card.word_hints) {
-        map.set(card.id, parseExtendedWordHints(card.word_hints));
-      }
-    }
-    return map;
-  }, [effectiveFlashcards]);
+  // ── PERF: Read pre-parsed hints from cards (O(1) lookup, no parsing at render time) ──
+  const getParsedHints = useCallback((card: Flashcard) => {
+    return card.preParsedHints || [];
+  }, []);
 
   // Merge glossary + per-card manual hints for the current card
   const currentCardId = currentCard?.id;
@@ -428,20 +430,20 @@ const Study = () => {
   const currentTranslation = currentCard?.translation;
 
   const currentMergedHintsA = useMemo(() => {
-    if (!currentCardId || !currentTerm) return undefined;
-    const manual = parsedWordHintsMap.get(currentCardId) || [];
+    if (!currentCard || !currentTerm) return undefined;
+    const manual = getParsedHints(currentCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTerm, "A", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTerm, activeGlossary, parsedWordHintsMap, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
 
   const currentMergedHintsB = useMemo(() => {
-    if (!currentCardId || !currentTranslation) return undefined;
-    const manual = parsedWordHintsMap.get(currentCardId) || [];
+    if (!currentCard || !currentTranslation) return undefined;
+    const manual = getParsedHints(currentCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTranslation, activeGlossary, parsedWordHintsMap, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
 
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (

@@ -159,7 +159,7 @@ export function useHomeData(): HomeData {
           .eq("user_id", userId)
           .eq("ativo", true),
 
-        // Accurate stats: count lists (head-only, no payload)
+        // Accurate stats: count lists (head-only) + card counts via RPC
         (async () => {
           let listCountQuery = supabase
             .from("lists")
@@ -174,25 +174,27 @@ export function useHomeData(): HomeData {
             listCountQuery = listCountQuery.is("institution_id", null);
           }
 
-          const { count: listCount } = await listCountQuery;
+          const [{ count: listCount }, cardCountsResult] = await Promise.all([
+            listCountQuery,
+            supabase.rpc('get_user_card_counts', {
+              _user_id: userId,
+              _institution_id: institutionId,
+            }),
+          ]);
 
-          // Count cards via flashcards table joined to user's lists (head-only)
-          let cardCountQuery = supabase
-            .from("flashcards")
-            .select("id, lists!inner(owner_id, class_id, deleted_at, institution_id)", { count: "exact", head: true })
-            .eq("lists.owner_id", userId)
-            .is("lists.class_id", null)
-            .is("lists.deleted_at", null)
-            .is("deleted_at", null);
+          // Sum all per-list card counts for total
+          const cardCountRows = toArray<any>(cardCountsResult.data as any[]);
+          const totalCards = cardCountRows.reduce((sum: number, r: any) => sum + toNumber(r.card_count, 0), 0);
 
-          if (institutionId) {
-            cardCountQuery = cardCountQuery.eq("lists.institution_id", institutionId);
-          } else {
-            cardCountQuery = cardCountQuery.is("lists.institution_id", null);
+          // Build per-list count map for recents
+          const perListCardCounts: Record<string, number> = {};
+          for (const r of cardCountRows) {
+            if (typeof r?.list_id === "string") {
+              perListCardCounts[r.list_id] = toNumber(r.card_count, 0);
+            }
           }
 
-          const { count: cardCount } = await cardCountQuery;
-          return { listCount: listCount || 0, cardCount: cardCount || 0 };
+          return { listCount: listCount || 0, cardCount: totalCards, perListCardCounts };
         })()
       ]);
 
@@ -323,20 +325,25 @@ export function useHomeData(): HomeData {
         });
       });
 
-      // Fetch flashcard counts for own lists in a single query (no nested ID arrays)
-      const ownListIds = toArray<any>(ownListsResult.data as any[])
+      // ── PERF: Use per-list card counts from RPC (zero extra network calls) ──
+      const perListCardCounts = (statsCountResult as any)?.perListCardCounts || {};
+
+      // For shared lists, we need a separate count query (different owner)
+      const sharedListIds = toArray<any>(sharedLists)
         .filter((list) => typeof list?.id === "string")
         .map((list) => list.id as string);
-      
-      let ownCardCountMap: Record<string, number> = {};
-      if (ownListIds.length > 0) {
-        const { data: cardCounts } = await supabase
+
+      let sharedCardCountMap: Record<string, number> = {};
+      if (sharedListIds.length > 0) {
+        
+        // For shared lists we still need per-list counts — use a single query
+        const { data: sharedCountRows } = await supabase
           .from("flashcards")
           .select("list_id")
-          .in("list_id", ownListIds)
+          .in("list_id", sharedListIds)
           .is("deleted_at", null);
         
-        ownCardCountMap = toArray<any>(cardCounts as any[]).reduce(
+        sharedCardCountMap = toArray<any>(sharedCountRows as any[]).reduce(
           (acc: Record<string, number>, row: any) => {
             if (typeof row?.list_id === "string") {
               acc[row.list_id] = (acc[row.list_id] || 0) + 1;
@@ -355,36 +362,12 @@ export function useHomeData(): HomeData {
           return {
             id: list.id,
             title: toText(list?.title, "Sem título"),
-            count: toNumber(ownCardCountMap[list.id], 0),
+            count: toNumber(perListCardCounts[list.id], 0),
             folder_name: toText(folderRel?.title, "Minhas Listas"),
             is_own: true,
             last_activity: activity?.studied || activity?.opened || list?.updated_at || null,
           };
         });
-
-      // Fetch flashcard counts for shared lists
-      const sharedListIds = toArray<any>(sharedLists)
-        .filter((list) => typeof list?.id === "string")
-        .map((list) => list.id as string);
-
-      let sharedCardCountMap: Record<string, number> = {};
-      if (sharedListIds.length > 0) {
-        const { data: sharedCardCounts } = await supabase
-          .from("flashcards")
-          .select("list_id")
-          .in("list_id", sharedListIds)
-          .is("deleted_at", null);
-        
-        sharedCardCountMap = toArray<any>(sharedCardCounts as any[]).reduce(
-          (acc: Record<string, number>, row: any) => {
-            if (typeof row?.list_id === "string") {
-              acc[row.list_id] = (acc[row.list_id] || 0) + 1;
-            }
-            return acc;
-          },
-          {} as Record<string, number>
-        );
-      }
 
       const sharedListsMapped = toArray<any>(sharedLists)
         .filter((list) => typeof list?.id === "string")
