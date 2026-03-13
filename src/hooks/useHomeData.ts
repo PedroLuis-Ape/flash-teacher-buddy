@@ -367,36 +367,12 @@ export function useHomeData(): HomeData {
           return {
             id: list.id,
             title: toText(list?.title, "Sem título"),
-            count: toNumber(ownCardCountMap[list.id], 0),
+            count: toNumber(perListCardCounts[list.id], 0),
             folder_name: toText(folderRel?.title, "Minhas Listas"),
             is_own: true,
             last_activity: activity?.studied || activity?.opened || list?.updated_at || null,
           };
         });
-
-      // Fetch flashcard counts for shared lists
-      const sharedListIds = toArray<any>(sharedLists)
-        .filter((list) => typeof list?.id === "string")
-        .map((list) => list.id as string);
-
-      let sharedCardCountMap: Record<string, number> = {};
-      if (sharedListIds.length > 0) {
-        const { data: sharedCardCounts } = await supabase
-          .from("flashcards")
-          .select("list_id")
-          .in("list_id", sharedListIds)
-          .is("deleted_at", null);
-        
-        sharedCardCountMap = toArray<any>(sharedCardCounts as any[]).reduce(
-          (acc: Record<string, number>, row: any) => {
-            if (typeof row?.list_id === "string") {
-              acc[row.list_id] = (acc[row.list_id] || 0) + 1;
-            }
-            return acc;
-          },
-          {} as Record<string, number>
-        );
-      }
 
       const sharedListsMapped = toArray<any>(sharedLists)
         .filter((list) => typeof list?.id === "string")
