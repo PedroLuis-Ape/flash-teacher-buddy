@@ -325,20 +325,30 @@ export function useHomeData(): HomeData {
         });
       });
 
-      // Fetch flashcard counts for own lists in a single query (no nested ID arrays)
-      const ownListIds = toArray<any>(ownListsResult.data as any[])
+      // ── PERF: Use per-list card counts from RPC (zero extra network calls) ──
+      const perListCardCounts = (statsCountResult as any)?.perListCardCounts || {};
+
+      // For shared lists, we need a separate count query (different owner)
+      const sharedListIds = toArray<any>(sharedLists)
         .filter((list) => typeof list?.id === "string")
         .map((list) => list.id as string);
-      
-      let ownCardCountMap: Record<string, number> = {};
-      if (ownListIds.length > 0) {
-        const { data: cardCounts } = await supabase
+
+      let sharedCardCountMap: Record<string, number> = {};
+      if (sharedListIds.length > 0) {
+        const { data: sharedCardCounts } = await supabase
           .from("flashcards")
-          .select("list_id")
-          .in("list_id", ownListIds)
+          .select("id", { count: "exact", head: true })
+          .in("list_id", sharedListIds)
           .is("deleted_at", null);
         
-        ownCardCountMap = toArray<any>(cardCounts as any[]).reduce(
+        // For shared lists we still need per-list counts — use a single query
+        const { data: sharedCountRows } = await supabase
+          .from("flashcards")
+          .select("list_id")
+          .in("list_id", sharedListIds)
+          .is("deleted_at", null);
+        
+        sharedCardCountMap = toArray<any>(sharedCountRows as any[]).reduce(
           (acc: Record<string, number>, row: any) => {
             if (typeof row?.list_id === "string") {
               acc[row.list_id] = (acc[row.list_id] || 0) + 1;
