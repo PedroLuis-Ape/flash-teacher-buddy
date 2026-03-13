@@ -2669,6 +2669,13 @@ export type Database = {
           teacher_id: string
         }[]
       }
+      get_user_card_counts: {
+        Args: { _institution_id?: string; _user_id: string }
+        Returns: {
+          card_count: number
+          list_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
