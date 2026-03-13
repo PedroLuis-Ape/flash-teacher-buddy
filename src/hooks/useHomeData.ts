@@ -335,11 +335,6 @@ export function useHomeData(): HomeData {
 
       let sharedCardCountMap: Record<string, number> = {};
       if (sharedListIds.length > 0) {
-        const { data: sharedCardCounts } = await supabase
-          .from("flashcards")
-          .select("id", { count: "exact", head: true })
-          .in("list_id", sharedListIds)
-          .is("deleted_at", null);
         
         // For shared lists we still need per-list counts — use a single query
         const { data: sharedCountRows } = await supabase
