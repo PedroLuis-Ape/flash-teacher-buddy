@@ -62,6 +62,7 @@ export function useStudyEngine(
   const progressBufferRef = useRef<Map<string, { correct: boolean; timestamp: number }>>(new Map());
   const flushProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFlushRef = useRef<number>(0);
+  const authUserIdRef = useRef<string | null>(null);
 
   // Game settings state
   const [gameSettings, setGameSettings] = useState<GameSettings>({
