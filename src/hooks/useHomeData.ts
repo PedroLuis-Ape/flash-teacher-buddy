@@ -330,32 +330,6 @@ export function useHomeData(): HomeData {
       // ── PERF: Use per-list card counts from RPC (zero extra network calls) ──
       const perListCardCounts = (statsCountResult as any)?.perListCardCounts || {};
 
-      // For shared lists, we need a separate count query (different owner)
-      const sharedListIds = toArray<any>(sharedLists)
-        .filter((list) => typeof list?.id === "string")
-        .map((list) => list.id as string);
-
-      let sharedCardCountMap: Record<string, number> = {};
-      if (sharedListIds.length > 0) {
-        
-        // For shared lists we still need per-list counts — use a single query
-        const { data: sharedCountRows } = await supabase
-          .from("flashcards")
-          .select("list_id")
-          .in("list_id", sharedListIds)
-          .is("deleted_at", null);
-        
-        sharedCardCountMap = toArray<any>(sharedCountRows as any[]).reduce(
-          (acc: Record<string, number>, row: any) => {
-            if (typeof row?.list_id === "string") {
-              acc[row.list_id] = (acc[row.list_id] || 0) + 1;
-            }
-            return acc;
-          },
-          {} as Record<string, number>
-        );
-      }
-
       const ownListsMapped = toArray<any>(ownListsResult.data as any[])
         .filter((list) => typeof list?.id === "string")
         .map((list) => {
