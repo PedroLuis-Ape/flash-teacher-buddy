@@ -600,9 +600,8 @@ export function useStudyEngine(
 
     // Award points immediately (important for feedback)
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && correct && FEATURE_FLAGS.economy_enabled) {
-        await awardPoints(user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta');
+      if (authUserIdRef.current && correct && FEATURE_FLAGS.economy_enabled) {
+        await awardPoints(authUserIdRef.current, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta');
       }
     } catch (error) {
       console.error('Erro ao atribuir pontos:', error);
