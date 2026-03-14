@@ -350,10 +350,11 @@ export function useHomeData(): HomeData {
         .map((list) => {
           const activity = activityMap.get(list.id);
           const folderRel = Array.isArray(list?.folders) ? list.folders[0] : list?.folders;
+          const flashcardRel = Array.isArray(list?.flashcards) ? list.flashcards[0] : list?.flashcards;
           return {
             id: list.id,
             title: toText(list?.title, "Sem título"),
-            count: toNumber(sharedCardCountMap[list.id], 0),
+            count: toNumber(flashcardRel?.count, 0),
             folder_name: toText(folderRel?.title, "Compartilhado"),
             is_own: false,
             last_activity: activity?.studied || activity?.opened || list?.updated_at || null,
