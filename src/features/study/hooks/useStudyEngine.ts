@@ -689,12 +689,12 @@ export function useStudyEngine(
         // === UPDATE GOAL PROGRESS ===
         // Check if this completed session counts toward any active goals
         // FREIO #1: Ler from_step do URL para priorizar aquela etapa
-        if (user && listId) {
+        if (userId && listId) {
           try {
             const urlParams = new URLSearchParams(window.location.search);
             const fromStepId = urlParams.get('from_step');
             
-            const result = await updateGoalProgress(user.id, sessionId, listId, mode, fromStepId);
+            const result = await updateGoalProgress(userId, sessionId, listId, mode, fromStepId);
             if (result.updated) {
               if (result.goalCompleted) {
                 toast.success("🎯 Meta concluída! Parabéns!");
