@@ -487,7 +487,7 @@ export function useStudyEngine(
       const { data: existingProgress } = await supabase
         .from('flashcard_progress')
         .select('id, flashcard_id, correct_count, incorrect_count')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .in('flashcard_id', flashcardIds);
 
       const existingMap = new Map(
