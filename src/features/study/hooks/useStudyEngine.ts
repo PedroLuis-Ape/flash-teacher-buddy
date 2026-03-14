@@ -453,12 +453,9 @@ export function useStudyEngine(
     
     // Debounce by 500ms
     saveProgressTimeoutRef.current = setTimeout(async () => {
-      if (!sessionId || !listId) return;
+      if (!sessionId || !listId || !authUserIdRef.current) return;
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
         await supabase
           .from('study_sessions')
           .update({
