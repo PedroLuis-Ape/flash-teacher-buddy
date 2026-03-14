@@ -475,8 +475,8 @@ export function useStudyEngine(
     if (!listId) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = authUserIdRef.current;
+      if (!userId) return;
 
       const entries = Array.from(progressBufferRef.current.entries());
       progressBufferRef.current.clear();
