@@ -177,10 +177,11 @@ export function useStudyEngine(
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+      authUserIdRef.current = user?.id ?? null;
+
       if (!user) {
         setIsAuthenticated(false);
-        
+
         // For flip mode without auth: use EXACT order from flashcards (already ordered by Study.tsx)
         if (isFlipMode) {
           const orderedIds = flashcards.map(f => f.id);
@@ -189,18 +190,18 @@ export function useStudyEngine(
           setIsLoading(false);
           return;
         }
-        
+
         // For quiz modes without auth: shuffle and batch
         let shuffledIds = flashcards
           .map(f => f.id)
           .sort(() => Math.random() - 0.5);
-        
+
         if (!useAllCards) {
           // Initialize spaced repetition pools
           setUnseenCards(shuffledIds.slice(BATCH_SIZE));
           shuffledIds = shuffledIds.slice(0, BATCH_SIZE);
         }
-        
+
         setCardsOrder(shuffledIds);
         setCurrentIndex(0);
         setIsLoading(false);
