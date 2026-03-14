@@ -502,7 +502,7 @@ export function useStudyEngine(
         if (existing) {
           upsertRecords.push({
             id: existing.id,
-            user_id: user.id,
+            user_id: userId,
             flashcard_id: flashcardId,
             list_id: listId,
             correct_count: correct ? existing.correct_count + 1 : existing.correct_count,
@@ -511,7 +511,7 @@ export function useStudyEngine(
           });
         } else {
           upsertRecords.push({
-            user_id: user.id,
+            user_id: userId,
             flashcard_id: flashcardId,
             list_id: listId,
             correct_count: correct ? 1 : 0,
