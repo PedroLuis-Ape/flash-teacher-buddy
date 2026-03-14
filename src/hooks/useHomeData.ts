@@ -223,17 +223,19 @@ export function useHomeData(): HomeData {
             id,
             title,
             updated_at,
-            folders(title, owner_id)
+            folders(title, owner_id),
+            flashcards(count)
           `)
           .in("owner_id", allTeacherIds)
           .eq("visibility", "class")
+          .is("deleted_at", null)
           .order("updated_at", { ascending: false })
           .limit(10);
-        
+
         if (institutionId) {
           sharedQuery = sharedQuery.eq("institution_id", institutionId);
         }
-        
+
         const { data: sharedData } = await sharedQuery;
         sharedLists = toArray<any>(sharedData as any[]);
       }
@@ -328,32 +330,6 @@ export function useHomeData(): HomeData {
       // ── PERF: Use per-list card counts from RPC (zero extra network calls) ──
       const perListCardCounts = (statsCountResult as any)?.perListCardCounts || {};
 
-      // For shared lists, we need a separate count query (different owner)
-      const sharedListIds = toArray<any>(sharedLists)
-        .filter((list) => typeof list?.id === "string")
-        .map((list) => list.id as string);
-
-      let sharedCardCountMap: Record<string, number> = {};
-      if (sharedListIds.length > 0) {
-        
-        // For shared lists we still need per-list counts — use a single query
-        const { data: sharedCountRows } = await supabase
-          .from("flashcards")
-          .select("list_id")
-          .in("list_id", sharedListIds)
-          .is("deleted_at", null);
-        
-        sharedCardCountMap = toArray<any>(sharedCountRows as any[]).reduce(
-          (acc: Record<string, number>, row: any) => {
-            if (typeof row?.list_id === "string") {
-              acc[row.list_id] = (acc[row.list_id] || 0) + 1;
-            }
-            return acc;
-          },
-          {} as Record<string, number>
-        );
-      }
-
       const ownListsMapped = toArray<any>(ownListsResult.data as any[])
         .filter((list) => typeof list?.id === "string")
         .map((list) => {
@@ -374,10 +350,11 @@ export function useHomeData(): HomeData {
         .map((list) => {
           const activity = activityMap.get(list.id);
           const folderRel = Array.isArray(list?.folders) ? list.folders[0] : list?.folders;
+          const flashcardRel = Array.isArray(list?.flashcards) ? list.flashcards[0] : list?.flashcards;
           return {
             id: list.id,
             title: toText(list?.title, "Sem título"),
-            count: toNumber(sharedCardCountMap[list.id], 0),
+            count: toNumber(flashcardRel?.count, 0),
             folder_name: toText(folderRel?.title, "Compartilhado"),
             is_own: false,
             last_activity: activity?.studied || activity?.opened || list?.updated_at || null,

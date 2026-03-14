@@ -62,6 +62,7 @@ export function useStudyEngine(
   const progressBufferRef = useRef<Map<string, { correct: boolean; timestamp: number }>>(new Map());
   const flushProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFlushRef = useRef<number>(0);
+  const authUserIdRef = useRef<string | null>(null);
 
   // Game settings state
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -176,10 +177,11 @@ export function useStudyEngine(
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+      authUserIdRef.current = user?.id ?? null;
+
       if (!user) {
         setIsAuthenticated(false);
-        
+
         // For flip mode without auth: use EXACT order from flashcards (already ordered by Study.tsx)
         if (isFlipMode) {
           const orderedIds = flashcards.map(f => f.id);
@@ -188,18 +190,18 @@ export function useStudyEngine(
           setIsLoading(false);
           return;
         }
-        
+
         // For quiz modes without auth: shuffle and batch
         let shuffledIds = flashcards
           .map(f => f.id)
           .sort(() => Math.random() - 0.5);
-        
+
         if (!useAllCards) {
           // Initialize spaced repetition pools
           setUnseenCards(shuffledIds.slice(BATCH_SIZE));
           shuffledIds = shuffledIds.slice(0, BATCH_SIZE);
         }
-        
+
         setCardsOrder(shuffledIds);
         setCurrentIndex(0);
         setIsLoading(false);
@@ -451,12 +453,9 @@ export function useStudyEngine(
     
     // Debounce by 500ms
     saveProgressTimeoutRef.current = setTimeout(async () => {
-      if (!sessionId || !listId) return;
+      if (!sessionId || !listId || !authUserIdRef.current) return;
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
         await supabase
           .from('study_sessions')
           .update({
@@ -476,8 +475,8 @@ export function useStudyEngine(
     if (!listId) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = authUserIdRef.current;
+      if (!userId) return;
 
       const entries = Array.from(progressBufferRef.current.entries());
       progressBufferRef.current.clear();
@@ -488,7 +487,7 @@ export function useStudyEngine(
       const { data: existingProgress } = await supabase
         .from('flashcard_progress')
         .select('id, flashcard_id, correct_count, incorrect_count')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .in('flashcard_id', flashcardIds);
 
       const existingMap = new Map(
@@ -503,7 +502,7 @@ export function useStudyEngine(
         if (existing) {
           upsertRecords.push({
             id: existing.id,
-            user_id: user.id,
+            user_id: userId,
             flashcard_id: flashcardId,
             list_id: listId,
             correct_count: correct ? existing.correct_count + 1 : existing.correct_count,
@@ -512,7 +511,7 @@ export function useStudyEngine(
           });
         } else {
           upsertRecords.push({
-            user_id: user.id,
+            user_id: userId,
             flashcard_id: flashcardId,
             list_id: listId,
             correct_count: correct ? 1 : 0,
@@ -601,9 +600,8 @@ export function useStudyEngine(
 
     // Award points immediately (important for feedback)
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && correct && FEATURE_FLAGS.economy_enabled) {
-        await awardPoints(user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta');
+      if (authUserIdRef.current && correct && FEATURE_FLAGS.economy_enabled) {
+        await awardPoints(authUserIdRef.current, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta');
       }
     } catch (error) {
       console.error('Erro ao atribuir pontos:', error);
@@ -676,10 +674,10 @@ export function useStudyEngine(
     await flushProgressBuffer();
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user && FEATURE_FLAGS.economy_enabled) {
-        await awardPoints(user.id, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
+      const userId = authUserIdRef.current;
+
+      if (userId && FEATURE_FLAGS.economy_enabled) {
+        await awardPoints(userId, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
       }
 
       if (sessionId) {
@@ -691,12 +689,12 @@ export function useStudyEngine(
         // === UPDATE GOAL PROGRESS ===
         // Check if this completed session counts toward any active goals
         // FREIO #1: Ler from_step do URL para priorizar aquela etapa
-        if (user && listId) {
+        if (userId && listId) {
           try {
             const urlParams = new URLSearchParams(window.location.search);
             const fromStepId = urlParams.get('from_step');
             
-            const result = await updateGoalProgress(user.id, sessionId, listId, mode, fromStepId);
+            const result = await updateGoalProgress(userId, sessionId, listId, mode, fromStepId);
             if (result.updated) {
               if (result.goalCompleted) {
                 toast.success("🎯 Meta concluída! Parabéns!");
