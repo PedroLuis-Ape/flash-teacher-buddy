@@ -223,17 +223,19 @@ export function useHomeData(): HomeData {
             id,
             title,
             updated_at,
-            folders(title, owner_id)
+            folders(title, owner_id),
+            flashcards(count)
           `)
           .in("owner_id", allTeacherIds)
           .eq("visibility", "class")
+          .is("deleted_at", null)
           .order("updated_at", { ascending: false })
           .limit(10);
-        
+
         if (institutionId) {
           sharedQuery = sharedQuery.eq("institution_id", institutionId);
         }
-        
+
         const { data: sharedData } = await sharedQuery;
         sharedLists = toArray<any>(sharedData as any[]);
       }
