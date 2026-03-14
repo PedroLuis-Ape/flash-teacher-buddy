@@ -674,10 +674,10 @@ export function useStudyEngine(
     await flushProgressBuffer();
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user && FEATURE_FLAGS.economy_enabled) {
-        await awardPoints(user.id, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
+      const userId = authUserIdRef.current;
+
+      if (userId && FEATURE_FLAGS.economy_enabled) {
+        await awardPoints(userId, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
       }
 
       if (sessionId) {
