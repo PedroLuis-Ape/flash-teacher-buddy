@@ -1,118 +1,100 @@
 
-# Relatório de Análise: Bugs e Problemas Visuais
 
-## Resumo Executivo
-Após análise do código, identifiquei **14 pontos de atenção** divididos entre bugs funcionais, problemas visuais e oportunidades de melhoria.
+## Plano: Otimização de Performance Real
 
----
+### Diagnóstico
 
-## 🐛 BUGS FUNCIONAIS
-
-### 1. **PageTransition pode causar flickering**
-**Arquivo:** `src/components/PageTransition.tsx`
-**Problema:** A lógica de transição usa dois `useEffect` conflitantes - um que espera 150ms para atualizar `displayChildren` e outro que atualiza imediatamente.
-**Impacto:** Pode causar flash de conteúdo antigo durante navegação.
-```text
-Linha 17-24: Define timer de 150ms
-Linha 26-28: Atualiza imediatamente (contradiz a lógica anterior)
-```
-
-### 2. **Scroll na TurmaActivityPanel pode não funcionar em iOS**
-**Arquivo:** `src/components/TurmaActivityPanel.tsx`
-**Problema:** Altura fixa de `h-[350px]` com ScrollArea pode ter problemas em dispositivos iOS por causa do comportamento de scroll.
-**Impacto:** Usuários no iPhone podem não conseguir fazer scroll completo da lista de alunos.
-
-### 3. **Swipe Navigation interfere com scrolls horizontais**
-**Arquivo:** `src/hooks/useSwipeNavigation.ts`
-**Problema:** O threshold de 100px pode capturar swipes em carrosséis, sliders ou áreas com scroll horizontal.
-**Impacto:** Navegação acidental ao interagir com elementos que têm scroll horizontal.
-
-### 4. **Estado de Loading duplicado em Study.tsx**
-**Arquivo:** `src/pages/Study.tsx`
-**Problema:** Há verificação de `loading || studyLoading` mas ambos são controlados de forma independente.
-**Impacto:** Potencial flash de "Carregando..." seguido de conteúdo parcial.
+Analisei todos os arquivos críticos e encontrei os seguintes gargalos reais que ainda persistem:
 
 ---
 
-## 🎨 PROBLEMAS VISUAIS
+### Gargalo 1: Chamadas auth redundantes no boot
 
-### 5. **Version Badge no Auth está com opacity muito baixa**
-**Arquivo:** `src/pages/Auth.tsx` (linha 238)
-**Problema:** Badge tem `opacity-10` que torna praticamente invisível.
-```tsx
-className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-10"
-```
-**Sugestão:** Aumentar para `opacity-50` ou `opacity-30`.
+**Problema**: Na inicialização do app, CINCO componentes/hooks diferentes chamam `supabase.auth.getSession()` ou `supabase.auth.getUser()` em paralelo:
+- `SessionWatcher` → `getSession()` + `onAuthStateChange`
+- `EconomyContext` → `getSession()` + `hud-summary` edge function + `profiles` query
+- `EconomyInitializer` → `getSession()` + daily login check + conversion check
+- `Index.tsx` → `getSession()` (checkAuth) + `getUser()` (loadProfileData) + `getUser()` (useQuery profile)
+- `GoogleConnectPrompt` → provavelmente mais uma
 
-### 6. **Tab Bar pode ter sobreposição de conteúdo**
-**Arquivo:** `src/components/GlobalLayout.tsx` (linha 70)
-**Problema:** Padding bottom de `pb-20` pode não ser suficiente em dispositivos com home indicator (iPhone X+).
-**Impacto:** Botões de ação podem ficar parcialmente escondidos atrás da Tab Bar.
+Isso gera ~8-10 requests de auth só no boot da Home.
 
-### 7. **Animação de glow na TabBar pode ser intensiva**
-**Arquivo:** `src/components/ape/ApeTabBar.tsx` (linha 69)
-**Problema:** `animate-pulse` com `blur-md` pode consumir muita GPU em dispositivos mais fracos.
-```tsx
-<div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
-```
-
-### 8. **Cards hover effect pode não funcionar bem em touch**
-**Arquivo:** `src/components/ape/ApeCardFolder.tsx`
-**Problema:** Estados `:hover` são mantidos em touch devices após tap.
-**Impacto:** Card permanece com estilo "elevado" após toque no mobile.
+**Solução**: Criar um `useAuthUser` hook centralizado com React Query (`staleTime: 5min`) que faz UMA chamada `getSession()` e compartilha o resultado. Todos os componentes consomem desse cache.
 
 ---
 
-## ⚠️ AVISOS DE SEGURANÇA (do Linter)
+### Gargalo 2: Index.tsx faz 3 chamadas auth separadas + profile duplicado
 
-### 9. **6 políticas RLS permissivas demais**
-**Problema:** Existem políticas com `USING (true)` ou `WITH CHECK (true)` para operações de UPDATE/DELETE/INSERT.
-**Impacto:** Potencial risco de segurança - qualquer usuário pode modificar dados.
-**Recomendação:** Revisar e restringir as políticas RLS conforme necessidade.
+**Problema**: `Index.tsx` tem:
+- `checkAuth()` → `getSession()` 
+- `loadProfileData()` → `getSession()` + query `profiles` (com avatar_skin lookup encadeado)
+- `useQuery(['profile'])` → `getUser()` + query `profiles`
 
-### 10. **Proteção de senha vazada desabilitada**
-**Problema:** A funcionalidade de verificar senhas vazadas está desativada no Supabase.
-**Impacto:** Usuários podem usar senhas comprometidas.
+São 3 auth calls + 2 profile queries na mesma tela.
 
----
-
-## 🔧 OPORTUNIDADES DE MELHORIA
-
-### 11. **Breadcrumbs não estão sendo usados**
-**Arquivo:** `src/components/Breadcrumbs.tsx` foi criado mas não é renderizado em nenhuma página.
-**Status:** Componente órfão.
-
-### 12. **Skeleton components subutilizados**
-**Arquivo:** `src/components/ui/skeleton-card.tsx`
-**Problema:** Componentes `SkeletonCard` e `SkeletonGrid` foram criados mas não são usados nas páginas principais.
-**Páginas que poderiam usar:** Folders.tsx, Index.tsx, TurmaDetail.tsx.
-
-### 13. **Safe area bottom inconsistente**
-**Arquivos:** `index.css` e `ApeTabBar.tsx`
-**Problema:** `safe-area-pb` na TabBar + `pb-24` no GlobalLayout pode criar espaçamento excessivo ou insuficiente dependendo do device.
-
-### 14. **Console logs em produção**
-**Arquivos:** `Profile.tsx`, `Folder.tsx`, `TurmaActivityPanel.tsx`
-**Problema:** Há `console.log` e `console.error` que podem poluir o console em produção.
+**Solução**: Consolidar tudo em um único `useQuery` que busca session + profile completo de uma vez.
 
 ---
 
-## 📋 PRIORIZAÇÃO SUGERIDA
+### Gargalo 3: EconomyContext faz edge function + profile query no boot
 
-| Prioridade | Item | Categoria |
-|------------|------|-----------|
-| 🔴 Alta | #9 - RLS permissivas | Segurança |
-| 🔴 Alta | #6 - TabBar sobreposição | UX Mobile |
-| 🟡 Média | #1 - PageTransition flicker | UX |
-| 🟡 Média | #3 - Swipe interfere scroll | UX Mobile |
-| 🟡 Média | #2 - Scroll iOS | UX Mobile |
-| 🟢 Baixa | #5 - Version badge opacity | Visual |
-| 🟢 Baixa | #11 - Breadcrumbs órfão | Tech Debt |
-| 🟢 Baixa | #12 - Skeleton subutilizado | Tech Debt |
-| 🟢 Baixa | #14 - Console logs | Tech Debt |
+**Problema**: `hud-summary` edge function é chamada no init E novamente em `refreshBalance`. Depois faz OUTRA query no `profiles` para xp/level/streak.
+
+**Solução**: Incluir xp_total, level, current_streak no `hud-summary` edge function para eliminar a query extra ao `profiles`. Usar o hook auth centralizado.
 
 ---
 
-## Próximos Passos
+### Gargalo 4: GamesHub ainda faz 2 queries sequenciais
 
-Você pode me dizer quais itens quer que eu corrija primeiro, ou posso criar um plano de implementação para resolver todos em ordem de prioridade.
+**Problema**: `loadList()` busca a lista, depois sequencialmente busca a pasta para resolver labels. São 2 queries em cascata.
+
+**Solução**: Usar `Promise.all` para buscar list e folder em paralelo (folder_id é conhecido após a primeira query, mas podemos usar o padrão de fetch condicional).
+
+---
+
+### Gargalo 5: ListDetail não tem virtualização
+
+**Problema**: `MemoizedCardList` renderiza TODOS os cards com `.map()`. Com 100+ cards, o DOM fica pesado em mobile.
+
+**Solução**: Usar o `FlashcardList.tsx` (que já tem `@tanstack/react-virtual`) ou aplicar virtualização diretamente no `MemoizedCardList`.
+
+---
+
+### Implementação
+
+#### Arquivo 1: `src/hooks/useAuthUser.ts` (NOVO)
+Hook centralizado com React Query que faz UMA chamada `getSession()` e retorna `{ user, session, isLoading }`. `staleTime: 5min`.
+
+#### Arquivo 2: `src/pages/Index.tsx`
+- Remover `checkAuth()`, `loadProfileData()`, e o `useQuery(['profile'])` separado
+- Usar `useAuthUser()` para auth
+- Consolidar profile loading em um único `useQuery` que busca tudo (first_name, avatar, is_teacher)
+
+#### Arquivo 3: `src/contexts/EconomyContext.tsx`
+- Usar `useAuthUser()` em vez de `getSession()` duplicado
+- Reduzir para uma única chamada no init
+
+#### Arquivo 4: `src/components/EconomyInitializer.tsx`
+- Usar `useAuthUser()` em vez de `getSession()` duplicado
+
+#### Arquivo 5: `src/pages/GamesHub.tsx`
+- Remover o `useEffect` separado para `fetchUser` (usar `useAuthUser`)
+- Paralelizar list + folder fetch com `Promise.all`
+
+#### Arquivo 6: `src/pages/ListDetail.tsx`
+- Substituir `MemoizedCardList` por virtualização usando `@tanstack/react-virtual` (já instalado)
+- Manter `FlashcardRow` memo
+
+#### Arquivo 7: `supabase/functions/hud-summary/index.ts`
+- Incluir `xp_total`, `level`, `current_streak` na resposta do HUD para eliminar a query extra ao `profiles` no EconomyContext
+
+### Resultado esperado
+- Boot: de ~10 auth calls para ~1-2
+- Home: de ~8 queries paralelas para ~4
+- GamesHub: de 2 queries em cascata para paralelo
+- ListDetail com 200+ cards: DOM de ~200 nodes para ~15-20 visíveis
+- Economia: 1 edge function call em vez de edge function + profile query
+
+### Segurança
+Nenhuma mudança em tabelas, RLS ou schema. Apenas otimização de frontend.
+
