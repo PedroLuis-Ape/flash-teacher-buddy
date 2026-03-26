@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useEconomy } from "@/contexts/EconomyContext";
 import { useInstitution } from "@/contexts/InstitutionContext";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
@@ -28,15 +29,16 @@ const Index = () => {
   const { pts_weekly, level, current_streak } = useEconomy();
   const { selectedInstitution } = useInstitution();
   const { soundEnabled, toggleSound, notificationsEnabled, toggleNotifications } = useSoundSettings();
-  const [profileData, setProfileData] = useState<{
-    firstName: string;
-    avatarUrl: string | null;
-  }>({ firstName: "", avatarUrl: null });
+  const { user, isLoading: authLoading } = useAuthUser();
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    checkAuth();
-    loadProfileData();
-    // Refetch home data when coming back to this page
     refetch();
   }, []);
 
@@ -45,63 +47,40 @@ const Index = () => {
     refetch();
   }, [selectedInstitution?.id]);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth", { replace: true });
-    }
-  };
-
-  const loadProfileData = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+  // Single consolidated profile query using cached auth
+  const { data: profileData } = useQuery({
+    queryKey: ['profile-home', user?.id],
+    queryFn: async () => {
+      if (!user) return { firstName: "Usuário", avatarUrl: null, isTeacher: false };
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, avatar_url, avatar_skin_id")
-        .eq("id", session.user.id)
+        .select("first_name, avatar_url, avatar_skin_id, is_teacher")
+        .eq("id", user.id)
         .single();
 
-      if (profile) {
-        let avatarUrl = profile.avatar_url;
-        
-        if (!avatarUrl && profile.avatar_skin_id) {
-          const { data: avatarData } = await supabase
-            .from("public_catalog")
-            .select("avatar_final")
-            .eq("id", profile.avatar_skin_id)
-            .single();
-          
-          if (avatarData?.avatar_final) {
-            avatarUrl = avatarData.avatar_final;
-          }
+      if (!profile) return { firstName: "Usuário", avatarUrl: null, isTeacher: false };
+
+      let avatarUrl = profile.avatar_url;
+      if (!avatarUrl && profile.avatar_skin_id) {
+        const { data: avatarData } = await supabase
+          .from("public_catalog")
+          .select("avatar_final")
+          .eq("id", profile.avatar_skin_id)
+          .single();
+        if (avatarData?.avatar_final) {
+          avatarUrl = avatarData.avatar_final;
         }
-
-        setProfileData({
-          firstName: profile.first_name || "Usuário",
-          avatarUrl: avatarUrl || null
-        });
       }
-    } catch (error) {
-      // Profile loading error - handled silently
-    }
-  };
 
-  const { data: profile } = useQuery({
-    queryKey: ['profile'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('is_teacher')
-        .eq('id', user.id)
-        .single();
-
-      return data;
+      return {
+        firstName: profile.first_name || "Usuário",
+        avatarUrl: avatarUrl || null,
+        isTeacher: Boolean(profile.is_teacher),
+      };
     },
+    enabled: !!user,
+    staleTime: 2 * 60 * 1000,
   });
 
   const safeRecents = Array.isArray(recents) ? recents.filter(Boolean) : [];
@@ -110,7 +89,7 @@ const Index = () => {
   const safeLast = last && typeof last === "object" ? last : null;
   const pct = safeLast ? Math.round((Number(safeLast.reviewed || 0) / (Number(safeLast.total || 0) || 1)) * 100) : 0;
 
-  const safeFirstName = typeof profileData.firstName === "string" && profileData.firstName.trim().length > 0
+  const safeFirstName = profileData?.firstName && typeof profileData.firstName === "string" && profileData.firstName.trim().length > 0
     ? profileData.firstName
     : "Usuário";
 
@@ -121,7 +100,7 @@ const Index = () => {
     .toUpperCase()
     .slice(0, 2) || "U";
 
-  const isTeacher = Boolean(profile?.is_teacher);
+  const isTeacher = Boolean(profileData?.isTeacher);
   const isHubEmpty = myLists.length === 0 && selectedInstitution;
   const safeStats = {
     total_lists: Number(stats?.total_lists) || 0,
@@ -142,7 +121,7 @@ const Index = () => {
           <CardContent className="p-5">
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14 shrink-0">
-                <AvatarImage src={profileData.avatarUrl || undefined} />
+                <AvatarImage src={profileData?.avatarUrl || undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {userInitials}
                 </AvatarFallback>
