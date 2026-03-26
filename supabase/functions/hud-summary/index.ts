@@ -45,10 +45,10 @@ Deno.serve(async (req) => {
 
     console.log('[HUD] Fetching summary for user:', user.id);
 
-    // Get user balances from profiles
+    // Single query: get balances + xp/level/streak from profiles
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('pts_weekly, balance_pitecoin')
+      .select('pts_weekly, balance_pitecoin, xp_total, level, current_streak')
       .eq('id', user.id)
       .single();
 
@@ -92,6 +92,9 @@ Deno.serve(async (req) => {
       ok: true,
       points: profile.pts_weekly || 0,
       ptc: profile.balance_pitecoin || 0,
+      xp_total: profile.xp_total || 0,
+      level: profile.level || 0,
+      current_streak: profile.current_streak || 0,
       inventory_count: inventoryCount || 0,
       ts: new Date().toISOString(),
     };
