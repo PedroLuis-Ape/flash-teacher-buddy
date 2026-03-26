@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { resolveEffectiveListSettings, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { Button } from "@/components/ui/button";
@@ -46,23 +47,25 @@ const GamesHub = () => {
   const [order, setOrder] = useState<"random" | "sequential">("random");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | undefined>();
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
 
   const isListRoute = location.pathname.includes("/list/");
+
+  // Use cached auth from React Query instead of separate getUser() call
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const userId = currentUser?.id;
 
   const favoritesScope = useMemo(() => {
     if (!id) return undefined;
     return isListRoute ? { listId: id } : { collectionId: id };
   }, [id, isListRoute]);
-  
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id);
-    };
-    fetchUser();
-  }, []);
   
   const { data: favoritesCount = 0 } = useFavoritesCount(userId, 'flashcard', favoritesScope);
 
