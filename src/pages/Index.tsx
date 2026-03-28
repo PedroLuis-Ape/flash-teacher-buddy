@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
 import { StudentClassShortcut } from "@/components/StudentClassShortcut";
+import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -243,8 +244,8 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Student Class Shortcut (only for students with classes) */}
-        {!isTeacher && <StudentClassShortcut />}
+        {/* Turma Shortcut (for both students and teachers) */}
+        <TurmaShortcut isTeacher={isTeacher} />
 
         {/* Painel do Professor (apenas para professores) */}
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
