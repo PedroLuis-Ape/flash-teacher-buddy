@@ -243,6 +243,9 @@ const Index = () => {
           </Card>
         </div>
 
+        {/* Student Class Shortcut (only for students with classes) */}
+        {!isTeacher && <StudentClassShortcut />}
+
         {/* Painel do Professor (apenas para professores) */}
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
