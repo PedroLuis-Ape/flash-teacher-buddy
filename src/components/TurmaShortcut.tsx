@@ -52,7 +52,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
             <div
               key={turma.id}
               className="flex items-center gap-4 p-3 rounded-xl bg-background/80 border border-primary/15 cursor-pointer hover:bg-primary/[0.06] hover:border-primary/30 transition-all duration-200 active:scale-[0.98]"
-              onClick={() => navigate(`/turma/${turma.id}`)}
+              onClick={() => navigate(`/turmas/${turma.id}`)}
             >
               <div className="shrink-0 w-11 h-11 rounded-lg bg-primary/15 flex items-center justify-center">
                 <Icon className="h-5 w-5 text-primary" />
@@ -74,7 +74,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
           {turmas.length === 1 && (
             <Button
               className="w-full mt-1 min-h-[44px]"
-              onClick={() => navigate(`/turma/${turmas[0].id}`)}
+              onClick={() => navigate(`/turmas/${turmas[0].id}`)}
             >
               <Icon className="h-4 w-4 mr-2" />
               {isTeacher ? "Gerenciar turma" : "Abrir turma"}
