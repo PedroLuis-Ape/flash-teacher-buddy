@@ -104,7 +104,7 @@ export default function AdminGifts() {
     if (result.success) {
       toast({
         title: "Presente enviado!",
-        description: `Presente enviado para ${selectedUser.first_name || selectedUser.email}.`,
+        description: `Presente enviado para ${selectedUser.first_name || selectedUser.user_tag || 'usuário'}.`,
       });
       // Reset form
       setSelectedUser(null);
@@ -170,7 +170,7 @@ export default function AdminGifts() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{selectedUser.first_name || 'Sem nome'}</p>
-                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                    <p className="text-sm text-muted-foreground">{selectedUser.user_tag}</p>
                     <Badge variant="outline" className="mt-1">
                       {selectedUser.user_tag}
                     </Badge>
@@ -199,7 +199,7 @@ export default function AdminGifts() {
                     }}
                   >
                     <p className="font-medium">{user.first_name || 'Sem nome'}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-sm text-muted-foreground">{user.user_tag}</p>
                     <Badge variant="outline" className="mt-1">
                       {user.user_tag}
                     </Badge>

@@ -715,8 +715,8 @@ const Folders = () => {
           {teachers.map((teacher) => (
             <ApeCardProfessor
               key={teacher.id}
-              name={teacher.first_name || teacher.email}
-              email={teacher.email}
+              name={teacher.first_name || 'Professor'}
+              email=""
               folderCount={teacher.folder_count}
               listCount={teacher.list_count}
               cardCount={teacher.card_count}
