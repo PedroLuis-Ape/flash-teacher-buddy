@@ -9,59 +9,71 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-function detectBrowser(): { name: string; isSupported: boolean } {
+/** Feature-based capability detection instead of UA-string guessing */
+interface BrowserCapabilities {
+  speechRecognition: boolean;
+  speechSynthesis: boolean;
+  serviceWorker: boolean;
+  installPrompt: boolean; // will be updated async
+  touchEvents: boolean;
+  mediaDevices: boolean;
+}
+
+function detectCapabilities(): BrowserCapabilities {
+  const w = typeof window !== 'undefined' ? window : undefined;
+  return {
+    speechRecognition: !!(w && ((w as any).SpeechRecognition || (w as any).webkitSpeechRecognition)),
+    speechSynthesis: !!(w && w.speechSynthesis),
+    serviceWorker: !!(w && 'serviceWorker' in navigator),
+    installPrompt: false, // set later by beforeinstallprompt
+    touchEvents: !!(w && ('ontouchstart' in w || navigator.maxTouchPoints > 0)),
+    mediaDevices: !!(w && navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+  };
+}
+
+function getBrowserName(): string {
   const ua = navigator.userAgent;
-  
-  // Check for Chrome (but not Edge which includes Chrome in UA)
-  if (ua.includes('Chrome') && !ua.includes('Edg')) {
-    return { name: 'Chrome', isSupported: true };
-  }
-  
-  // Check for Edge
-  if (ua.includes('Edg')) {
-    return { name: 'Edge', isSupported: true };
-  }
-  
-  // Check for Safari (but not Chrome-based)
-  if (ua.includes('Safari') && !ua.includes('Chrome')) {
-    return { name: 'Safari', isSupported: true };
-  }
-  
-  // Check for Firefox
-  if (ua.includes('Firefox')) {
-    return { name: 'Firefox', isSupported: false };
-  }
-  
-  // Check for Opera
-  if (ua.includes('Opera') || ua.includes('OPR')) {
-    return { name: 'Opera', isSupported: true };
-  }
-  
-  // Android WebView
-  if (ua.includes('wv') || ua.includes('Android')) {
-    return { name: 'Android WebView', isSupported: true };
-  }
-  
-  return { name: 'Desconhecido', isSupported: false };
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Edg')) return 'Edge';
+  if (ua.includes('OPR') || ua.includes('Opera')) return 'Opera';
+  if (ua.includes('Chrome')) return 'Chrome';
+  if (ua.includes('Safari')) return 'Safari';
+  return 'Desconhecido';
 }
 
 export function BrowserCheck() {
   const [showWarning, setShowWarning] = useState(false);
-  const [browserInfo, setBrowserInfo] = useState<{ name: string; isSupported: boolean } | null>(null);
+  const [missingFeatures, setMissingFeatures] = useState<string[]>([]);
+  const [browserName, setBrowserName] = useState('');
 
   useEffect(() => {
-    const info = detectBrowser();
-    setBrowserInfo(info);
-    
-    // Only show warning for unsupported browsers, and only once per session
     const hasSeenWarning = sessionStorage.getItem('browser-warning-seen');
-    if (!info.isSupported && !hasSeenWarning) {
+    if (hasSeenWarning) return;
+
+    const caps = detectCapabilities();
+    const name = getBrowserName();
+    setBrowserName(name);
+
+    const missing: string[] = [];
+    if (!caps.speechRecognition) missing.push('Reconhecimento de voz');
+    if (!caps.speechSynthesis) missing.push('Síntese de voz (TTS)');
+    if (!caps.mediaDevices) missing.push('Acesso ao microfone');
+
+    // Log capabilities for diagnostics
+    console.log('[BrowserCheck] Browser:', name, '| Capabilities:', caps);
+    if (missing.length > 0) {
+      console.warn('[BrowserCheck] Missing features:', missing.join(', '));
+    }
+
+    // Only show if critical features are missing
+    if (missing.length > 0) {
+      setMissingFeatures(missing);
       setShowWarning(true);
       sessionStorage.setItem('browser-warning-seen', 'true');
     }
   }, []);
 
-  if (!browserInfo || !showWarning) return null;
+  if (!showWarning) return null;
 
   return (
     <Dialog open={showWarning} onOpenChange={setShowWarning}>
@@ -69,21 +81,21 @@ export function BrowserCheck() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-amber-600">
             <AlertTriangle className="h-5 w-5" />
-            Navegador não totalmente compatível
+            Recursos limitados neste navegador
           </DialogTitle>
           <DialogDescription className="pt-4 space-y-4">
             <p>
-              Você está usando <strong>{browserInfo.name}</strong>. Alguns recursos como 
-              reconhecimento de voz podem não funcionar corretamente.
-            </p>
-            <p>
-              Para a melhor experiência, recomendamos usar:
+              Você está usando <strong>{browserName}</strong>. Os seguintes recursos
+              podem não funcionar corretamente:
             </p>
             <ul className="list-disc list-inside space-y-1 text-sm">
-              <li>Google Chrome</li>
-              <li>Microsoft Edge</li>
-              <li>Safari (iOS/macOS)</li>
+              {missingFeatures.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
             </ul>
+            <p className="text-xs text-muted-foreground">
+              Para a melhor experiência, recomendamos Google Chrome, Microsoft Edge ou Safari.
+            </p>
           </DialogDescription>
         </DialogHeader>
         <div className="flex gap-2 mt-4">
