@@ -132,7 +132,7 @@ const Collection = () => {
             )}
             {profile && (
               <p className="text-lg text-muted-foreground">
-                Olá, {profile.first_name?.split(' ')[0] || profile.email?.split('@')[0] || 'Aluno'}!
+                Olá, {profile.first_name?.split(' ')[0] || 'Aluno'}!
               </p>
             )}
           </div>

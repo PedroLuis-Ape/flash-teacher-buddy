@@ -57,7 +57,7 @@ const Profile = () => {
 
       if (profile) {
         setFirstName(profile.first_name || "");
-        setEmail(profile.email || session.user.email || "");
+        setEmail(session.user.email || "");
         
         // Initialize public ID if needed
         if (!profile.user_tag || !profile.user_tag.match(/^[PA][0-9]{6}$/)) {
