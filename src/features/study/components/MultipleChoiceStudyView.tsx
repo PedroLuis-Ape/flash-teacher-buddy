@@ -163,9 +163,9 @@ export const MultipleChoiceStudyView = ({
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
-      <Card className="p-8 bg-gradient-to-br from-card to-muted/20 relative">
-        <div className="absolute top-4 right-4 flex items-center gap-2">
+    <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
+      <Card className="p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative">
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
           {userId && currentCard.id && (
             <Button
               variant="ghost"
@@ -173,51 +173,53 @@ export const MultipleChoiceStudyView = ({
               onClick={handleToggleFavorite}
               disabled={toggleFavorite.isPending}
               className={cn(
-                "transition-colors",
+                "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
               )}
               title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
             >
-              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+              <Star className={cn("h-4 w-4 sm:h-5 sm:w-5", isFavorite && "fill-current")} />
             </Button>
           )}
           <HintButton hint={currentCard.hint} />
         </div>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
-            <p className="text-2xl sm:text-3xl font-semibold break-words max-w-full px-2"><InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} /></p>
-            <div className="flex items-center gap-2">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-8">
+            <p className="text-xl sm:text-3xl font-semibold break-words max-w-full px-2">
+              <InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} />
+            </p>
+            <div className="flex items-center gap-1">
               <SpeechRateControl />
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex-shrink-0"
+                className="flex-shrink-0 h-8 w-8 p-0"
                 onClick={() => {
                   const rate = getSpeechRate();
                   speak(prompt, { langOverride: promptLang, rate });
                 }}
               >
-                <Volume2 className="h-5 w-5" />
+                <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground break-words px-2">Escolha a tradução em {answerLabel}:</p>
+          <p className="text-xs sm:text-sm text-muted-foreground break-words px-2">Escolha a tradução em {answerLabel}:</p>
         </div>
       </Card>
 
-      <div className="grid gap-3">
+      <div className="grid gap-2 sm:gap-3">
         {options.map((option, index) => (
           <Card
             key={index}
-            className={`p-6 cursor-pointer transition-all ${getOptionClassName(index)}`}
+            className={`p-3 sm:p-6 cursor-pointer transition-all ${getOptionClassName(index)}`}
             onClick={() => handleOptionClick(index)}
           >
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-sm sm:text-base">
                 {String.fromCharCode(65 + index)}
               </div>
-              <p className="text-lg font-medium">{option}</p>
+              <p className="text-base sm:text-lg font-medium">{option}</p>
             </div>
           </Card>
         ))}

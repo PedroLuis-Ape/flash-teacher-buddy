@@ -176,9 +176,9 @@ export const WriteStudyView = ({
   const diffTokens = feedback === "incorrect" ? getDiffTokens(answer, correctAnswer) : [];
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
-      <Card className="p-8 bg-gradient-to-br from-card to-muted/20 relative">
-        <div className="absolute top-4 right-4 flex items-center gap-2">
+    <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
+      <Card className="p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative">
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
           {userId && flashcardId && (
             <Button
               variant="ghost"
@@ -186,35 +186,38 @@ export const WriteStudyView = ({
               onClick={handleToggleFavorite}
               disabled={toggleFavorite.isPending}
               className={cn(
-                "transition-colors",
+                "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
               )}
               title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
             >
-              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+              <Star className={cn("h-4 w-4 sm:h-5 sm:w-5", isFavorite && "fill-current")} />
             </Button>
           )}
           <HintButton hint={hint} />
         </div>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground mb-4">{promptLabel}</p>
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <p className="text-3xl font-semibold"><InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} /></p>
-            <div className="flex items-center gap-2">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-8">
+            <p className="text-xl sm:text-3xl font-semibold break-words max-w-full px-2">
+              <InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} />
+            </p>
+            <div className="flex items-center gap-1">
               <SpeechRateControl />
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-8 w-8 p-0"
                 onClick={() => {
                   const rate = getSpeechRate();
                   speak(prompt, { langOverride: promptLang, rate });
                 }}
               >
-                <Volume2 className="h-5 w-5" />
+                <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">Traduza para {answerLabel}:</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Traduza para {answerLabel}:</p>
         </div>
       </Card>
 
@@ -351,22 +354,16 @@ export const WriteStudyView = ({
       </div>
 
       {feedback === null && (
-        <div className="flex gap-3 flex-wrap sticky bottom-4 bg-background/95 backdrop-blur-sm p-2 rounded-lg shadow-lg z-10">
-          <Button variant="outline" onClick={onSkip} className="min-h-[44px]">
-            <SkipForward className="mr-2 h-4 w-4" />
+        <div className="grid grid-cols-[1fr_auto_1fr] sm:flex sm:flex-row gap-2 sm:gap-3 sticky bottom-4 bg-background/95 backdrop-blur-sm p-2 rounded-lg shadow-lg z-10 items-center">
+          <Button variant="outline" onClick={onSkip} className="min-h-[44px] text-sm">
+            <SkipForward className="mr-1 h-4 w-4" />
             Pular
           </Button>
-          <Button variant="secondary" onClick={handleHint} disabled={revealed} className="min-h-[44px]">
-            <Lightbulb className="mr-2 h-4 w-4" />
-            Dica {hintLevel > 0 && `(${hintLevel}/3)`}
+          <Button variant="secondary" onClick={handleHint} disabled={revealed} className="min-h-[44px] text-sm">
+            <Lightbulb className="mr-1 h-4 w-4" />
+            Dica
           </Button>
-          {revealed && (
-            <Button variant="ghost" disabled className="min-h-[44px]">
-              <Eye className="mr-2 h-4 w-4" />
-              Revelado
-            </Button>
-          )}
-          <Button onClick={handleSubmit} className="ml-auto min-h-[44px]" size="lg">
+          <Button onClick={handleSubmit} className="min-h-[44px] text-sm sm:ml-auto" size="lg">
             Corrigir
           </Button>
         </div>

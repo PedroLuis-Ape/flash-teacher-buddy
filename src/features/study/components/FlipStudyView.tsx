@@ -310,7 +310,7 @@ export const FlipStudyView = ({
 
   // Normal Flip Mode UI
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto">
+    <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
       {/* Controls row */}
       <div className="w-full flex justify-between items-center mb-2">
         <HintButton hint={hint} />
@@ -337,18 +337,18 @@ export const FlipStudyView = ({
       
       {/* Flip card - can be flipped infinitely */}
       <div
-        className="flip-card w-full h-80 cursor-pointer"
+        className="flip-card w-full h-64 sm:h-80 cursor-pointer"
         onClick={handleFlip}
       >
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           {/* Front side */}
           <div className="flip-card-front">
-           <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-card to-muted/20 overflow-auto">
-              <p className="text-sm text-muted-foreground mb-2">{firstSide.label}</p>
+           <Card className="w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-card to-muted/20 overflow-auto">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-2">{firstSide.label}</p>
               {firstSideImage && (
-                <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-3" maxHeight="120px" />
+                <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-2 sm:mb-3" maxHeight="100px" />
               )}
-              <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
+              <p className="text-xl sm:text-3xl font-semibold text-center leading-relaxed px-2 sm:px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={firstSideLang} />
               </p>
               {ttsEnabled && (
@@ -373,12 +373,12 @@ export const FlipStudyView = ({
           
           {/* Back side */}
           <div className="flip-card-back">
-            <Card className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/10 to-accent/10 overflow-auto">
-              <p className="text-sm text-muted-foreground mb-2">{secondSide.label}</p>
+            <Card className="w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-primary/10 to-accent/10 overflow-auto">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-2">{secondSide.label}</p>
               {secondSideImage && (
-                <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-3" maxHeight="120px" />
+                <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-2 sm:mb-3" maxHeight="100px" />
               )}
-              <p className="text-2xl sm:text-3xl font-semibold text-center leading-relaxed px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
+              <p className="text-xl sm:text-3xl font-semibold text-center leading-relaxed px-2 sm:px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={secondSideLang} />
               </p>
               {ttsEnabled && (
