@@ -857,6 +857,27 @@ const Study = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <StudyCompletionModal
+        open={showCompletionModal}
+        correctCount={correctCount}
+        errorCount={errorCount}
+        skippedCount={skippedCount}
+        totalCards={totalCards}
+        onComplete={() => {
+          setShowCompletionModal(false);
+          completeSession();
+        }}
+        onRestart={handleRestartWithSettings}
+        onReviewErrors={errorCount > 0 ? handleReviewErrors : undefined}
+        onExit={() => {
+          setShowCompletionModal(false);
+          handleExit();
+        }}
+        onOpenChange={setShowCompletionModal}
+        fromGoalId={fromGoalId}
+        onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
+      />
     </div>
   );
 };
