@@ -652,12 +652,12 @@ const Study = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4 lg:px-8">
+    <div className="min-h-screen bg-background py-4 sm:py-8 px-3 sm:px-4 lg:px-8">
       <div className="container mx-auto max-w-6xl">
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button variant="ghost" onClick={() => setShowExitDialog(true)}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowExitDialog(true)}>
+              <ArrowLeft className="mr-1 h-4 w-4" />
               Sair
             </Button>
 
