@@ -165,9 +165,9 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto p-4">
-      <Card className="w-full p-6 bg-card relative">
-        <div className="absolute top-4 right-4 flex items-center gap-2">
+    <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto px-2 sm:p-4">
+      <Card className="w-full p-4 sm:p-6 bg-card relative">
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
           {userId && flashcardId && (
             <Button
               variant="ghost"
@@ -175,38 +175,40 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
               onClick={handleToggleFavorite}
               disabled={toggleFavorite.isPending}
               className={cn(
-                "transition-colors",
+                "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
               )}
               title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
             >
-              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
+              <Star className={cn("h-4 w-4 sm:h-5 sm:w-5", isFavorite && "fill-current")} />
             </Button>
           )}
           <HintButton hint={hint} />
         </div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Organize as palavras:</h3>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-semibold">Organize as palavras:</h3>
+          <div className="flex items-center gap-1">
             <SpeechRateControl />
             <Button
               variant="ghost"
               size="icon"
               onClick={handlePlayAudio}
-              className="shrink-0"
+              className="shrink-0 h-8 w-8"
             >
-              <Volume2 className="w-5 h-5" />
+              <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </div>
-        <p className="text-2xl font-bold text-center mb-6"><InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} /></p>
+        <p className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 break-words px-2">
+          <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} />
+        </p>
       </Card>
 
       {/* Selected words area */}
-      <Card className="w-full min-h-[120px] p-6 bg-primary/5">
-        <div className="flex flex-wrap gap-2 justify-center">
+      <Card className="w-full min-h-[80px] sm:min-h-[120px] p-3 sm:p-6 bg-primary/5">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
           {selectedWords.length === 0 ? (
-            <p className="text-muted-foreground">Clique nas palavras abaixo para montar a frase</p>
+            <p className="text-sm sm:text-base text-muted-foreground text-center">Clique nas palavras abaixo para montar a frase</p>
           ) : (
             selectedWords.map((item) => (
               <Button
@@ -214,7 +216,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
                 variant="default"
                 onClick={() => handleWordClick(item, false)}
                 disabled={submitted}
-                className="text-lg px-4 py-2"
+                className="text-sm sm:text-lg px-3 py-1.5 sm:px-4 sm:py-2 h-auto"
               >
                 {item.word}
               </Button>
@@ -224,14 +226,14 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
       </Card>
 
       {/* Available words */}
-      <div className="flex flex-wrap gap-2 justify-center w-full">
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center w-full">
         {availableWords.map((item) => (
           <Button
             key={item.id}
             variant="outline"
             onClick={() => handleWordClick(item, true)}
             disabled={submitted}
-            className="text-lg px-4 py-2"
+            className="text-sm sm:text-lg px-3 py-1.5 sm:px-4 sm:py-2 h-auto"
           >
             {item.word}
           </Button>
