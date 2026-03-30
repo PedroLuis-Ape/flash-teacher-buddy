@@ -396,6 +396,7 @@ const Study = () => {
     if (errorCards.length > 0) {
       const shuffledErrorCards = shuffleArray(errorCards);
       setFlashcards(shuffledErrorCards);
+      setShowCompletionModal(false);
       resetSession();
     }
   };
@@ -414,6 +415,7 @@ const Study = () => {
   };
 
   const handleRestartWithSettings = () => {
+    setShowCompletionModal(false);
     restartSession(gameSettings);
   };
 
