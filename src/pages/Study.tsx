@@ -36,6 +36,7 @@ import { PronunciationStudyView } from "@/features/study/components/Pronunciatio
 import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
+import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -114,6 +115,8 @@ const Study = () => {
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
   
+  // Completion modal auto-opens when activity finishes
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
