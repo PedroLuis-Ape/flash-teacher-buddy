@@ -37,7 +37,7 @@ interface FlashcardWithProgress {
   lastReviewed: string | null;
 }
 
-// Batch size for quiz modes
+// Batch size — only used by mixed mode (straight-through modes use all cards)
 const BATCH_SIZE = 10;
 
 export function useStudyEngine(
@@ -77,7 +77,10 @@ export function useStudyEngine(
   const [roundResults, setRoundResults] = useState<StudyResult[]>([]);
 
   const isFlipMode = mode === "flip";
-  const useAllCards = isFlipMode || unlimitedMode;
+  // All standard modes are straight-through (no batching/repetition)
+  // Only explicitly unlimited or flip uses all cards via the old flag
+  const isStraightThrough = true; // all modes now run straight-through
+  const useAllCards = true; // always use all cards in one run
 
   // List activity tracking
   const { trackListOpened, trackListStudied } = useListActivity();
@@ -96,8 +99,8 @@ export function useStudyEngine(
   const skippedCount = results.filter((r) => r.skipped).length;
   const progress = cardsOrder.length > 0 ? ((currentIndex + 1) / cardsOrder.length) * 100 : 0;
 
-  // Check if game is complete (all cards seen and correct)
-  const isGameComplete = !isFlipMode && unseenCards.length === 0 && missedCards.length === 0 && roundNumber > 1;
+  // Game is complete when all cards have been seen (straight-through: same as isFinished)
+  const isGameComplete = isFinished;
 
   // Generate next round using Priority A + B algorithm
   const generateNextRound = useCallback(() => {
@@ -191,16 +194,10 @@ export function useStudyEngine(
           return;
         }
 
-        // For quiz modes without auth: shuffle and batch
-        let shuffledIds = flashcards
+        // For quiz modes without auth: shuffle all cards (straight-through)
+        const shuffledIds = flashcards
           .map(f => f.id)
           .sort(() => Math.random() - 0.5);
-
-        if (!useAllCards) {
-          // Initialize spaced repetition pools
-          setUnseenCards(shuffledIds.slice(BATCH_SIZE));
-          shuffledIds = shuffledIds.slice(0, BATCH_SIZE);
-        }
 
         setCardsOrder(shuffledIds);
         setCurrentIndex(0);
@@ -348,12 +345,8 @@ export function useStudyEngine(
           .eq('id', existingSession.id);
       }
 
-      // Create new session with prioritized flashcards
-      const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, false);
-      
-      // Initialize spaced repetition pools
-      const allCardIds = flashcards.map(f => f.id).sort(() => Math.random() - 0.5);
-      setUnseenCards(allCardIds.slice(BATCH_SIZE));
+      // Create new session with ALL flashcards (straight-through, no batching)
+      const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, true);
       
       const { data: newSession, error } = await supabase
         .from('study_sessions')
@@ -375,14 +368,9 @@ export function useStudyEngine(
       setCurrentIndex(0);
     } catch (error) {
       console.error('Erro ao inicializar sessão:', error);
-      let shuffledIds = flashcards
+      const shuffledIds = flashcards
         .map(f => f.id)
         .sort(() => Math.random() - 0.5);
-      
-      if (!useAllCards) {
-        setUnseenCards(shuffledIds.slice(BATCH_SIZE));
-        shuffledIds = shuffledIds.slice(0, BATCH_SIZE);
-      }
       
       setCardsOrder(shuffledIds);
       setCurrentIndex(0);
@@ -583,15 +571,8 @@ export function useStudyEngine(
       return [...prev, { flashcardId, correct, skipped, attempts: 1 }];
     });
 
-    // Track missed cards for spaced repetition (non-flip modes)
-    if (!isFlipMode && !correct && !skipped) {
-      setMissedCards(prev => 
-        prev.includes(flashcardId) ? prev : [...prev, flashcardId]
-      );
-    } else if (!isFlipMode && correct) {
-      // Remove from missed queue if they got it right
-      setMissedCards(prev => prev.filter(id => id !== flashcardId));
-    }
+    // Straight-through: no missed-card recycling within the same run
+    // (missed tracking disabled for standard modes)
 
     if (!isAuthenticated || !listId || skipped) return;
 
@@ -750,7 +731,7 @@ export function useStudyEngine(
     setResults([]);
     setRoundResults([]);
     setMissedCards([]);
-    setUnseenCards(flashcards.map(f => f.id).slice(BATCH_SIZE));
+    setUnseenCards([]);
     setRoundNumber(1);
     setIsFinished(false);
     initializeSession();
@@ -792,7 +773,7 @@ export function useStudyEngine(
     setResults([]);
     setRoundResults([]);
     setMissedCards([]);
-    setUnseenCards(cardIds.slice(BATCH_SIZE));
+    setUnseenCards([]);
     setRoundNumber(1);
     setIsFinished(false);
 

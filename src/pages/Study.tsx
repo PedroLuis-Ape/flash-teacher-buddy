@@ -36,6 +36,7 @@ import { PronunciationStudyView } from "@/features/study/components/Pronunciatio
 import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
+import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -114,6 +115,8 @@ const Study = () => {
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
   
+  // Completion modal auto-opens when activity finishes
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
@@ -208,6 +211,13 @@ const Study = () => {
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
+
+  // Auto-open completion modal when activity finishes
+  useEffect(() => {
+    if (isFinished) {
+      setShowCompletionModal(true);
+    }
+  }, [isFinished]);
 
   const loadFlashcards = async () => {
     if (!resolvedId) return;
@@ -386,6 +396,7 @@ const Study = () => {
     if (errorCards.length > 0) {
       const shuffledErrorCards = shuffleArray(errorCards);
       setFlashcards(shuffledErrorCards);
+      setShowCompletionModal(false);
       resetSession();
     }
   };
@@ -404,6 +415,7 @@ const Study = () => {
   };
 
   const handleRestartWithSettings = () => {
+    setShowCompletionModal(false);
     restartSession(gameSettings);
   };
 
@@ -845,6 +857,27 @@ const Study = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <StudyCompletionModal
+        open={showCompletionModal}
+        correctCount={correctCount}
+        errorCount={errorCount}
+        skippedCount={skippedCount}
+        totalCards={totalCards}
+        onComplete={() => {
+          setShowCompletionModal(false);
+          completeSession();
+        }}
+        onRestart={handleRestartWithSettings}
+        onReviewErrors={errorCount > 0 ? handleReviewErrors : undefined}
+        onExit={() => {
+          setShowCompletionModal(false);
+          handleExit();
+        }}
+        onOpenChange={setShowCompletionModal}
+        fromGoalId={fromGoalId}
+        onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
+      />
     </div>
   );
 };
