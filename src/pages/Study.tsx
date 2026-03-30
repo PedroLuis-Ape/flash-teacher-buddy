@@ -212,6 +212,13 @@ const Study = () => {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
+  // Auto-open completion modal when activity finishes
+  useEffect(() => {
+    if (isFinished) {
+      setShowCompletionModal(true);
+    }
+  }, [isFinished]);
+
   const loadFlashcards = async () => {
     if (!resolvedId) return;
 
