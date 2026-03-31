@@ -599,19 +599,16 @@ const ListDetail = () => {
     
     setIsSwapping(true);
     try {
-      // Build bulk updates swapping term ↔ translation for every card
-      const updates = flashcards.map((c) => ({
-        id: c.id,
-        term: c.translation,
-        translation: c.term,
-      }));
-
-      // Upsert in a single round-trip
-      const { error } = await supabase
-        .from("flashcards")
-        .upsert(updates, { onConflict: "id" });
-
-      if (error) throw error;
+      // Swap term ↔ translation for every card using batch update
+      const promises = flashcards.map((c) =>
+        supabase
+          .from("flashcards")
+          .update({ term: c.translation, translation: c.term })
+          .eq("id", c.id)
+      );
+      const results = await Promise.all(promises);
+      const firstError = results.find((r) => r.error);
+      if (firstError?.error) throw firstError.error;
 
       toast.success(`Conteúdo de ${flashcards.length} cards invertido com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ["flashcards", id] });
