@@ -875,39 +875,34 @@ const ListDetail = () => {
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm text-muted-foreground">
                   <p>
-                    Esta ação <strong className="text-foreground">troca o conteúdo salvo</strong> de todos os <strong className="text-foreground">{flashcards.length} cards</strong> desta lista.
+                    Esta ação troca <strong className="text-foreground">apenas o conteúdo</strong> de todos os <strong className="text-foreground">{flashcards.length} cards</strong> desta lista.
                   </p>
 
                   {/* Before / After preview */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
-                      <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Antes</p>
-                      <p><span className="font-medium text-foreground">A (term):</span> {effectiveSettings.labelsA}</p>
-                      <p><span className="font-medium text-foreground">B (translation):</span> {effectiveSettings.labelsB}</p>
-                      {flashcards[0] && (
-                        <div className="pt-1.5 border-t border-border/50 text-xs">
-                          <p className="truncate">A: <em>{flashcards[0].term}</em></p>
-                          <p className="truncate">B: <em>{flashcards[0].translation}</em></p>
+                  {flashcards[0] && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
+                        <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Antes</p>
+                        <div className="text-xs space-y-0.5">
+                          <p className="truncate"><span className="font-medium text-foreground">Lado A:</span> <em>{flashcards[0].term}</em></p>
+                          <p className="truncate"><span className="font-medium text-foreground">Lado B:</span> <em>{flashcards[0].translation}</em></p>
                         </div>
-                      )}
-                    </div>
-                    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1.5">
-                      <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Depois</p>
-                      <p><span className="font-medium text-foreground">A (term):</span> {effectiveSettings.labelsB}</p>
-                      <p><span className="font-medium text-foreground">B (translation):</span> {effectiveSettings.labelsA}</p>
-                      {flashcards[0] && (
-                        <div className="pt-1.5 border-t border-border/50 text-xs">
-                          <p className="truncate">A: <em>{flashcards[0].translation}</em></p>
-                          <p className="truncate">B: <em>{flashcards[0].term}</em></p>
+                      </div>
+                      <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1.5">
+                        <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Depois</p>
+                        <div className="text-xs space-y-0.5">
+                          <p className="truncate"><span className="font-medium text-foreground">Lado A:</span> <em>{flashcards[0].translation}</em></p>
+                          <p className="truncate"><span className="font-medium text-foreground">Lado B:</span> <em>{flashcards[0].term}</em></p>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <p className="text-xs">
-                    O que será trocado: <strong className="text-foreground">term ↔ translation</strong>, <strong className="text-foreground">lang_a ↔ lang_b</strong>, <strong className="text-foreground">labels_a ↔ labels_b</strong>.
-                    <br />Você pode desfazer invertendo novamente.
-                  </p>
+                  <div className="rounded-md border border-border bg-muted/30 p-2.5 text-xs space-y-1">
+                    <p>✅ <strong className="text-foreground">Apenas o conteúdo dos cards</strong> será trocado (term ↔ translation).</p>
+                    <p>🔒 Idiomas, rótulos e configurações da lista <strong className="text-foreground">permanecem iguais</strong>.</p>
+                    <p>↩️ Você pode desfazer invertendo novamente.</p>
+                  </div>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
