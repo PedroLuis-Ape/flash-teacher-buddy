@@ -716,16 +716,16 @@ const Folder = () => {
                       Nova Lista
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg max-h-[90vh]">
+                   <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
                     <DialogHeader>
                       <DialogTitle>Criar Nova Lista</DialogTitle>
                       <DialogDescription>
                         A lista será criada e você será redirecionado automaticamente para editá-la.
                       </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleCreateList}>
-                      <ScrollArea className="max-h-[60vh] pr-4">
-                        <div className="space-y-4 py-4">
+                    <form onSubmit={handleCreateList} className="flex flex-col min-h-0 flex-1">
+                      <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1">
+                        <div className="space-y-4 py-2 pb-4">
                           <div className="space-y-2">
                             <Label htmlFor="title">Título</Label>
                             <Input
@@ -743,6 +743,7 @@ const Folder = () => {
                               value={newList.description}
                               onChange={(e) => setNewList({ ...newList, description: e.target.value })}
                               placeholder="Descreva o conteúdo desta lista..."
+                              rows={3}
                             />
                           </div>
                           
@@ -752,9 +753,9 @@ const Folder = () => {
                             onChange={setNewListStudySettings}
                           />
                         </div>
-                      </ScrollArea>
-                      <DialogFooter className="mt-4">
-                        <Button type="submit">Criar Lista</Button>
+                      </div>
+                      <DialogFooter className="mt-2 pt-2 border-t flex-shrink-0">
+                        <Button type="submit" className="w-full sm:w-auto">Criar Lista</Button>
                       </DialogFooter>
                     </form>
                   </DialogContent>

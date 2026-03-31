@@ -173,7 +173,7 @@ export const WriteStudyView = ({
     }
   };
 
-  const diffTokens = feedback === "incorrect" ? getDiffTokens(answer, correctAnswer) : [];
+  // diff tokens no longer used – keeping import for potential future use
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
