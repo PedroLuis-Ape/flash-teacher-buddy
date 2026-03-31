@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 export function AppSidebar() {
   const { t } = useTranslation();
@@ -106,23 +107,25 @@ export function AppSidebar() {
               ].map((item) => {
                 const isActive = location.pathname === item.path || 
                   (item.path !== '/' && location.pathname.startsWith(item.path));
-                return (
-                  <Button
-                    key={item.path}
-                    variant={isActive ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start gap-3 transition-all",
-                      isActive && "bg-primary/10 text-primary font-medium"
-                    )}
-                    onClick={() => {
-                      setIsOpen(false);
-                      navigate(item.path);
-                    }}
-                  >
-                    <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
-                    <span>{item.label}</span>
-                  </Button>
-                );
+                  return (
+                    <Button
+                      key={item.path}
+                      variant={isActive ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full justify-start gap-3 transition-all",
+                        isActive && "bg-primary/10 text-primary font-medium"
+                      )}
+                      onMouseEnter={() => prefetchRoute(item.path)}
+                      onTouchStart={() => prefetchRoute(item.path)}
+                      onClick={() => {
+                        setIsOpen(false);
+                        navigate(item.path);
+                      }}
+                    >
+                      <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
+                      <span>{item.label}</span>
+                    </Button>
+                  );
               })}
             </div>
 

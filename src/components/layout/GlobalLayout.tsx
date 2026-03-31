@@ -26,6 +26,7 @@ import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { usePerformance } from "@/contexts/PerformanceContext";
+import { prefetchCommonRoutes } from "@/lib/routePrefetch";
 
 // Lazy-load heavy modals and badges (not needed for FCP)
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -62,6 +63,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
       refreshBalance();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // Prefetch common route chunks once user is logged in
+  useEffect(() => {
+    if (user) {
+      prefetchCommonRoutes();
+    }
   }, [user?.id]);
 
   // Activity heartbeat - tracks when user is active
