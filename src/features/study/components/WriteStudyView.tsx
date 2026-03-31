@@ -173,7 +173,7 @@ export const WriteStudyView = ({
     }
   };
 
-  const diffTokens = feedback === "incorrect" ? getDiffTokens(answer, correctAnswer) : [];
+  // diff tokens no longer used – keeping import for potential future use
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
@@ -311,39 +311,27 @@ export const WriteStudyView = ({
         )}
 
         {feedback === "incorrect" && (
-          <Alert className="border-red-500 bg-red-50 dark:bg-red-950 animate-fade-in">
+          <Alert className="border-destructive bg-red-50 dark:bg-red-950 animate-fade-in">
             <AlertDescription className="text-red-700 dark:text-red-300">
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 <img 
                   src={pitecoSad} 
                   alt="Piteco triste" 
-                  className="w-16 h-16 object-contain flex-shrink-0"
+                  className="w-12 h-12 sm:w-16 sm:h-16 object-contain flex-shrink-0"
                 />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 text-lg font-semibold mb-2">
-                    <span className="text-2xl">✗</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-base sm:text-lg font-semibold mb-2">
+                    <span className="text-xl sm:text-2xl">✗</span>
                     Incorreto
                   </div>
-                  Compare sua resposta com o gabarito:
-                  <br />
-                  <div className="mt-2 font-mono text-base">
-                    <div>
-                      Você digitou:{" "}
-                      {diffTokens.map((token, idx) => (
-                        <span
-                          key={idx}
-                          className={
-                            token.type === "insert"
-                              ? "bg-red-200 dark:bg-red-900 line-through"
-                              : ""
-                          }
-                        >
-                          {token.text}
-                        </span>
-                      ))}
+                  <div className="space-y-2 text-sm sm:text-base">
+                    <div className="p-2 rounded bg-red-100 dark:bg-red-900/50 break-words">
+                      <span className="text-muted-foreground text-xs block mb-0.5">Você digitou:</span>
+                      <span className="line-through opacity-75">{answer.trim()}</span>
                     </div>
-                    <div className="mt-1">
-                      Correto: <span className="font-semibold">{correctAnswer}</span>
+                    <div className="p-2 rounded bg-green-100 dark:bg-green-900/50 break-words">
+                      <span className="text-muted-foreground text-xs block mb-0.5">Correto:</span>
+                      <span className="font-semibold text-green-800 dark:text-green-200">{correctAnswer}</span>
                     </div>
                   </div>
                 </div>
