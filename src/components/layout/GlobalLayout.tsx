@@ -65,6 +65,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Prefetch common route chunks once user is logged in
+  useEffect(() => {
+    if (user) {
+      prefetchCommonRoutes();
+    }
+  }, [user?.id]);
+
   // Activity heartbeat - tracks when user is active
   useActivityHeartbeat(user?.id);
   
