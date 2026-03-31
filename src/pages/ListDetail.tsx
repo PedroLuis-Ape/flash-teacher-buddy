@@ -593,32 +593,32 @@ const ListDetail = () => {
     toast.success("Copiado para a área de transferência!");
   };
 
-  // Swap A/B sides using atomic RPC
+  // Swap card CONTENT only (term ↔ translation) — keeps list settings untouched
   const handleSwapSides = async () => {
-    if (!id) return;
+    if (!id || flashcards.length === 0) return;
     
     setIsSwapping(true);
     try {
-      const { data, error } = await supabase.rpc('swap_list_sides', {
-        _list_id: id
-      });
+      // Build bulk updates swapping term ↔ translation for every card
+      const updates = flashcards.map((c) => ({
+        id: c.id,
+        term: c.translation,
+        translation: c.term,
+      }));
+
+      // Upsert in a single round-trip
+      const { error } = await supabase
+        .from("flashcards")
+        .upsert(updates, { onConflict: "id" });
 
       if (error) throw error;
 
-      const result = data as { success: boolean; message?: string; error?: string };
-      
-      if (result.success) {
-        toast.success(result.message || "A/B invertidos com sucesso!");
-        // Invalidate and refetch both list and flashcards
-        queryClient.invalidateQueries({ queryKey: ["list", id] });
-        queryClient.invalidateQueries({ queryKey: ["flashcards", id] });
-        setSwapDialogOpen(false);
-      } else {
-        toast.error(result.message || "Erro ao inverter A/B");
-      }
+      toast.success(`Conteúdo de ${flashcards.length} cards invertido com sucesso!`);
+      queryClient.invalidateQueries({ queryKey: ["flashcards", id] });
+      setSwapDialogOpen(false);
     } catch (error: any) {
       console.error("Swap error:", error);
-      toast.error("Erro ao inverter A/B: " + error.message);
+      toast.error("Erro ao inverter conteúdo: " + error.message);
     } finally {
       setIsSwapping(false);
     }
