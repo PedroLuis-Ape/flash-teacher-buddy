@@ -852,7 +852,6 @@ export default function TurmaDetail() {
               </Select>
             </div>
           </div>
-          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAtribDialogOpen(false)}>
               Cancelar
