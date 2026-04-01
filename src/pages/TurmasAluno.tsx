@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, CheckCircle2, Circle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,14 @@ export default function TurmasAluno() {
   const navigate = useNavigate();
   const { data: turmasData, isLoading: turmasLoading } = useTurmasAsAluno();
   const { data: atribuicoesData, isLoading: atribuicoesLoading } = useAtribuicoesMinhas();
+  const atribuicoes = useMemo(() => {
+    const raw = atribuicoesData?.atribuicoes || [];
+    return [...raw].sort((a: any, b: any) => {
+      const orderDiff = (a.order_index ?? 0) - (b.order_index ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+  }, [atribuicoesData]);
 
   if (turmasLoading || atribuicoesLoading) {
     return (
@@ -20,7 +29,6 @@ export default function TurmasAluno() {
   }
 
   const turmas = turmasData?.turmas || [];
-  const atribuicoes = atribuicoesData?.atribuicoes || [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {

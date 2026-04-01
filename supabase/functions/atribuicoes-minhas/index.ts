@@ -37,8 +37,7 @@ serve(async (req) => {
         *,
         atribuicoes(*)
       `)
-      .eq('aluno_id', user.id)
-      .order('updated_at', { ascending: false });
+      .eq('aluno_id', user.id);
 
     if (statusError) {
       console.error('Error fetching atribuições:', statusError);
@@ -53,7 +52,11 @@ serve(async (req) => {
       status: s.status,
       progresso: s.progresso,
       status_id: s.id,
-    }));
+    })).sort((a: any, b: any) => {
+      const orderDiff = (a.order_index ?? 0) - (b.order_index ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
 
     return new Response(
       JSON.stringify({ atribuicoes }),
