@@ -890,17 +890,7 @@ export default function TurmaDetail() {
                 rows={3}
               />
             </div>
-            <div>
-              <Label htmlFor="edit-atrib-pontos">Pontos *</Label>
-              <Input
-                id="edit-atrib-pontos"
-                type="number"
-                value={editAtribPontos}
-                onChange={(e) => setEditAtribPontos(e.target.value)}
-                placeholder="50"
-                min="1"
-              />
-            </div>
+          </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditAtribDialogOpen(false)}>
