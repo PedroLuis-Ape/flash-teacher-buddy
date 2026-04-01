@@ -221,9 +221,32 @@ export default function TurmaDetail() {
     );
   }
 
-  // Apply natural sort to atribuições for correct ordering (1, 2, 10 not 1, 10, 2)
-  const atribuicoes = naturalSort(atribuicoesData?.atribuicoes || [], (a: any) => a.titulo);
+  // Sort atribuições by order_index (proper ordering), fallback to created_at
+  const atribuicoes = [...(atribuicoesData?.atribuicoes || [])].sort((a: any, b: any) => {
+    const orderDiff = (a.order_index ?? 0) - (b.order_index ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
   const membros = turma.turma_membros || [];
+
+  const handleMoveAtrib = async (atribId: string, direction: 'up' | 'down') => {
+    const idx = atribuicoes.findIndex((a: any) => a.id === atribId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= atribuicoes.length) return;
+
+    const current = atribuicoes[idx];
+    const other = atribuicoes[swapIdx];
+
+    try {
+      await Promise.all([
+        reorderAtribuicao.mutateAsync({ atribuicao_id: current.id, new_order_index: other.order_index ?? swapIdx }),
+        reorderAtribuicao.mutateAsync({ atribuicao_id: other.id, new_order_index: current.order_index ?? idx }),
+      ]);
+    } catch {
+      toast.error('Erro ao reordenar');
+    }
+  };
 
   const handleOpenEdit = () => {
     setEditNome(turma?.nome || '');
