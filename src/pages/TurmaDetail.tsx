@@ -81,6 +81,7 @@ export default function TurmaDetail() {
   const updateAtribuicao = useUpdateAtribuicao();
   const removeMember = useRemoveTurmaMember();
   const createAnnouncement = useCreateAnnouncement();
+  const reorderAtribuicao = useReorderAtribuicao();
 
   const { data: turmaData, isLoading: turmaLoading } = useQuery({
     queryKey: ['turma', turmaId],
