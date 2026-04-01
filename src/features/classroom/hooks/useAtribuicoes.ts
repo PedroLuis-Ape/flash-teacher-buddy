@@ -145,7 +145,6 @@ export function useUpdateAtribuicao() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      // Direct Supabase update since we have RLS policies
       const { data, error } = await supabase
         .from('atribuicoes')
         .update({
@@ -154,6 +153,30 @@ export function useUpdateAtribuicao() {
           pontos_vale: payload.pontos_vale,
           data_limite: payload.data_limite,
         })
+        .eq('id', payload.atribuicao_id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atribuicoes'] });
+    },
+  });
+}
+
+export function useReorderAtribuicao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { atribuicao_id: string; new_order_index: number }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data, error } = await supabase
+        .from('atribuicoes')
+        .update({ order_index: payload.new_order_index } as any)
         .eq('id', payload.atribuicao_id)
         .select()
         .single();

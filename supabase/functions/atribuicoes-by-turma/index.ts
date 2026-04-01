@@ -90,6 +90,7 @@ serve(async (req) => {
       .from('atribuicoes')
       .select('*')
       .eq('turma_id', turma_id)
+      .order('order_index', { ascending: true })
       .order('created_at', { ascending: false });
 
     if (atribuicoesError) {
