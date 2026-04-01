@@ -52,7 +52,7 @@ export default function TurmaDetail() {
   const [atribDescricao, setAtribDescricao] = useState('');
   const [atribFonteTipo, setAtribFonteTipo] = useState<'lista' | 'pasta'>('pasta');
   const [atribFonteId, setAtribFonteId] = useState('');
-  const [atribPontos, setAtribPontos] = useState('50');
+  const [atribPontos, setAtribPontos] = useState('50'); // kept for backend compat, hidden from UI
 
   // Edit atribuição state
   const [editAtribDialogOpen, setEditAtribDialogOpen] = useState(false);
