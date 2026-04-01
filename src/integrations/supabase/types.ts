@@ -158,6 +158,7 @@ export type Database = {
           fonte_id: string
           fonte_tipo: Database["public"]["Enums"]["atribuicao_fonte_tipo"]
           id: string
+          order_index: number
           pontos_vale: number
           titulo: string
           turma_id: string
@@ -169,6 +170,7 @@ export type Database = {
           fonte_id: string
           fonte_tipo: Database["public"]["Enums"]["atribuicao_fonte_tipo"]
           id?: string
+          order_index?: number
           pontos_vale?: number
           titulo: string
           turma_id: string
@@ -180,6 +182,7 @@ export type Database = {
           fonte_id?: string
           fonte_tipo?: Database["public"]["Enums"]["atribuicao_fonte_tipo"]
           id?: string
+          order_index?: number
           pontos_vale?: number
           titulo?: string
           turma_id?: string
