@@ -37,8 +37,7 @@ serve(async (req) => {
         *,
         atribuicoes(*)
       `)
-      .eq('aluno_id', user.id)
-      .order('updated_at', { ascending: false });
+      .eq('aluno_id', user.id);
 
     if (statusError) {
       console.error('Error fetching atribuições:', statusError);
