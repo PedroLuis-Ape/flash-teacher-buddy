@@ -851,7 +851,7 @@ export default function TurmaDetail() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            </div>
               <Label htmlFor="atrib-pontos">Pontos *</Label>
               <Input
                 id="atrib-pontos"
