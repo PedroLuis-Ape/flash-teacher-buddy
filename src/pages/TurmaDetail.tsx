@@ -962,6 +962,26 @@ export default function TurmaDetail() {
                     </div>
                     {isOwner && (
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          disabled={atribuicoes.indexOf(atrib) === 0}
+                          onClick={(e) => { e.stopPropagation(); handleMoveAtrib(atrib.id, 'up'); }}
+                          title="Mover para cima"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          disabled={atribuicoes.indexOf(atrib) === atribuicoes.length - 1}
+                          onClick={(e) => { e.stopPropagation(); handleMoveAtrib(atrib.id, 'down'); }}
+                          title="Mover para baixo"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -1012,10 +1032,7 @@ export default function TurmaDetail() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-2">
-                    <Badge variant="outline">{atrib.fonte_tipo}</Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {atrib.pontos_vale} pontos
-                    </span>
+                    <Badge variant="outline">{atrib.fonte_tipo === 'pasta' ? 'Pasta' : 'Lista'}</Badge>
                     <span className="text-sm text-muted-foreground">
                       {atrib.card_count ?? 0} cards
                     </span>
