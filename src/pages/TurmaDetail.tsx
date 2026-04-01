@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { naturalSort } from '@/lib/sorting';
-import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell, Target } from 'lucide-react';
+import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell, Target, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MesaAvisos } from '@/components/MesaAvisos';
@@ -9,7 +8,7 @@ import { DMList } from '@/components/DMList';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao, useUpdateAtribuicao } from '@/features/classroom/hooks/useAtribuicoes';
+import { useAtribuicoesByTurma, useCreateAtribuicao, useDeleteAtribuicao, useUpdateAtribuicao, useReorderAtribuicao } from '@/features/classroom/hooks/useAtribuicoes';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
@@ -52,7 +51,7 @@ export default function TurmaDetail() {
   const [atribDescricao, setAtribDescricao] = useState('');
   const [atribFonteTipo, setAtribFonteTipo] = useState<'lista' | 'pasta'>('pasta');
   const [atribFonteId, setAtribFonteId] = useState('');
-  const [atribPontos, setAtribPontos] = useState('50');
+  const [atribPontos, setAtribPontos] = useState('50'); // kept for backend compat, hidden from UI
 
   // Edit atribuição state
   const [editAtribDialogOpen, setEditAtribDialogOpen] = useState(false);
@@ -81,6 +80,7 @@ export default function TurmaDetail() {
   const updateAtribuicao = useUpdateAtribuicao();
   const removeMember = useRemoveTurmaMember();
   const createAnnouncement = useCreateAnnouncement();
+  const reorderAtribuicao = useReorderAtribuicao();
 
   const { data: turmaData, isLoading: turmaLoading } = useQuery({
     queryKey: ['turma', turmaId],
@@ -220,9 +220,32 @@ export default function TurmaDetail() {
     );
   }
 
-  // Apply natural sort to atribuições for correct ordering (1, 2, 10 not 1, 10, 2)
-  const atribuicoes = naturalSort(atribuicoesData?.atribuicoes || [], (a: any) => a.titulo);
+  // Sort atribuições by order_index (proper ordering), fallback to created_at
+  const atribuicoes = [...(atribuicoesData?.atribuicoes || [])].sort((a: any, b: any) => {
+    const orderDiff = (a.order_index ?? 0) - (b.order_index ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
   const membros = turma.turma_membros || [];
+
+  const handleMoveAtrib = async (atribId: string, direction: 'up' | 'down') => {
+    const idx = atribuicoes.findIndex((a: any) => a.id === atribId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= atribuicoes.length) return;
+
+    const current = atribuicoes[idx];
+    const other = atribuicoes[swapIdx];
+
+    try {
+      await Promise.all([
+        reorderAtribuicao.mutateAsync({ atribuicao_id: current.id, new_order_index: other.order_index ?? swapIdx }),
+        reorderAtribuicao.mutateAsync({ atribuicao_id: other.id, new_order_index: current.order_index ?? idx }),
+      ]);
+    } catch {
+      toast.error('Erro ao reordenar');
+    }
+  };
 
   const handleOpenEdit = () => {
     setEditNome(turma?.nome || '');
@@ -827,17 +850,6 @@ export default function TurmaDetail() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="atrib-pontos">Pontos *</Label>
-              <Input
-                id="atrib-pontos"
-                type="number"
-                value={atribPontos}
-                onChange={(e) => setAtribPontos(e.target.value)}
-                placeholder="50"
-                min="1"
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAtribDialogOpen(false)}>
@@ -874,17 +886,6 @@ export default function TurmaDetail() {
                 onChange={(e) => setEditAtribDescricao(e.target.value)}
                 placeholder="Instruções para os alunos..."
                 rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-atrib-pontos">Pontos *</Label>
-              <Input
-                id="edit-atrib-pontos"
-                type="number"
-                value={editAtribPontos}
-                onChange={(e) => setEditAtribPontos(e.target.value)}
-                placeholder="50"
-                min="1"
               />
             </div>
           </div>
@@ -958,6 +959,26 @@ export default function TurmaDetail() {
                     </div>
                     {isOwner && (
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          disabled={atribuicoes.indexOf(atrib) === 0}
+                          onClick={(e) => { e.stopPropagation(); handleMoveAtrib(atrib.id, 'up'); }}
+                          title="Mover para cima"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          disabled={atribuicoes.indexOf(atrib) === atribuicoes.length - 1}
+                          onClick={(e) => { e.stopPropagation(); handleMoveAtrib(atrib.id, 'down'); }}
+                          title="Mover para baixo"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -1008,10 +1029,7 @@ export default function TurmaDetail() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-2">
-                    <Badge variant="outline">{atrib.fonte_tipo}</Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {atrib.pontos_vale} pontos
-                    </span>
+                    <Badge variant="outline">{atrib.fonte_tipo === 'pasta' ? 'Pasta' : 'Lista'}</Badge>
                     <span className="text-sm text-muted-foreground">
                       {atrib.card_count ?? 0} cards
                     </span>
