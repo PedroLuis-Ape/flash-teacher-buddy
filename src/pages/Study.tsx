@@ -800,6 +800,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
