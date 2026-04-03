@@ -8,7 +8,6 @@ import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
-import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,6 +39,8 @@ interface FlipStudyViewProps {
   labelB?: string;
   langA?: string;
   langB?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 export const FlipStudyView = ({
@@ -66,23 +67,11 @@ export const FlipStudyView = ({
   labelB,
   langA = "en",
   langB = "pt",
+  isFavorite = false,
+  onToggleFavorite,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
-  const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
-  
-  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
-
-  // Fetch user ID for favorites
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id);
-    };
-    fetchUser();
-  }, []);
   
   const handleKnew = async () => {
     playCorrect();
@@ -96,11 +85,6 @@ export const FlipStudyView = ({
   const handleDidntKnow = () => {
     playWrong();
     onDidntKnow();
-  };
-
-  const handleToggleFavorite = () => {
-    if (!flashcardId || !userId) return;
-    toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
   };
 
   // --- Centralized Side Resolution ---
