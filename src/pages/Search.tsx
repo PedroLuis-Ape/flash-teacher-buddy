@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 interface Profile {
   id: string;
   first_name: string | null;
-  email: string | null;
   public_slug: string | null;
   ape_id: string | null;
   user_type: string | null;
