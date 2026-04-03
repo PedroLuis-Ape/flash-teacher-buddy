@@ -18,6 +18,15 @@ if ((window as any).__apeBootTimer) {
   clearTimeout((window as any).__apeBootTimer);
 }
 
+// Unregister service workers inside iframes or preview hosts to prevent stale cache
+try {
+  const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  const isPreviewHost = window.location.hostname.includes("id-preview--") || window.location.hostname.includes("lovableproject.com");
+  if ((isInIframe || isPreviewHost) && "serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  }
+} catch { /* best-effort */ }
+
 // Remove boot loader so it doesn't flash under React
 const bootLoader = document.getElementById("boot-loader");
 if (bootLoader) bootLoader.remove();

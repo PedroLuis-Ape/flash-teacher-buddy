@@ -15,7 +15,8 @@ export function EconomyInitializer() {
   useEffect(() => {
     if (!FEATURE_FLAGS.economy_enabled) return;
 
-    const initializeEconomy = async () => {
+    // Defer economy init by 3s so it never competes with critical boot paths
+    const delayTimer = setTimeout(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
@@ -39,9 +40,9 @@ export function EconomyInitializer() {
       } catch (error) {
         console.error('[EconomyInitializer] Error:', error);
       }
-    };
+    }, 3000);
 
-    initializeEconomy();
+    return () => clearTimeout(delayTimer);
   }, []);
 
   return null; // This component only runs side effects
