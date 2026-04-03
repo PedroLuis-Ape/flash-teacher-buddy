@@ -44,7 +44,7 @@ const Profile = () => {
       // Force fresh data from server (no cache)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("first_name, email, user_tag, avatar_skin_id, mascot_skin_id, avatar_url")
+        .select("first_name, user_tag, avatar_skin_id, mascot_skin_id, avatar_url")
         .eq("id", session.user.id)
         .single();
 

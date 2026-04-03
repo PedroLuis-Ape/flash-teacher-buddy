@@ -68,7 +68,7 @@ export default function Search() {
       // Buscar por nome, @slug público ou APE ID
       let query = supabase
         .from("profiles")
-        .select("id, first_name, email, public_slug, ape_id, user_type, is_teacher")
+        .select("id, first_name, public_slug, ape_id, user_type, is_teacher")
         .or(`first_name.ilike.%${clean}%,public_slug.ilike.%${clean}%,ape_id.ilike.%${clean}%`)
         .limit(20);
 
