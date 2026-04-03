@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle, Star } from "lucide-react";
 import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
@@ -21,10 +21,12 @@ interface PronunciationStudyViewProps {
   langB?: string;
   labelA?: string;
   labelB?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
+export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, onToggleFavorite, onNext }: PronunciationStudyViewProps) {
   // --- Side A/B State Consolidation ---
   // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };

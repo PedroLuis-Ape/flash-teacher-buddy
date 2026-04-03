@@ -87,11 +87,6 @@ export const WriteStudyView = ({
 
   // TTS removed from autoplay - only plays on button click
 
-  const handleToggleFavorite = () => {
-    if (!flashcardId || !userId) return;
-    toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
-  };
-
   const acceptedAnswers = [
     correctAnswer,
     ...(answerSide.acceptedAnswers || []),
