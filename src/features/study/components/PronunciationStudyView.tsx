@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle, Star } from "lucide-react";
 import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
@@ -21,10 +21,12 @@ interface PronunciationStudyViewProps {
   langB?: string;
   labelA?: string;
   labelB?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, onNext }: PronunciationStudyViewProps) {
+export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, onToggleFavorite, onNext }: PronunciationStudyViewProps) {
   // --- Side A/B State Consolidation ---
   // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
@@ -173,6 +175,22 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
       <Card className="w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden">
+        {onToggleFavorite && (
+          <div className="absolute top-3 right-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleFavorite}
+              className={cn(
+                "h-8 w-8 transition-colors",
+                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
+              )}
+              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            >
+              <Star className={cn("h-4 w-4", isFavorite && "fill-current")} />
+            </Button>
+          </div>
+        )}
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
           Fale em {speakSide.label}
         </p>

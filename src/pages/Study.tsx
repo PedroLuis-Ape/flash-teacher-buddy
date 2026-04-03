@@ -775,6 +775,8 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}
@@ -798,6 +800,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -813,6 +817,8 @@ const Study = () => {
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
@@ -830,6 +836,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -847,6 +855,8 @@ const Study = () => {
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onNext={() => handleNext(true)}
             />
           )}

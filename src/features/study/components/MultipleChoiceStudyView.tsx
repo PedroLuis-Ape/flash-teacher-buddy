@@ -13,7 +13,6 @@ import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
-import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 
@@ -30,10 +29,12 @@ interface MultipleChoiceStudyViewProps {
     translation: string;
   }[];
   direction: string;
-  langA?: string; // ISO code e.g. "en", "fr"
-  langB?: string; // ISO code e.g. "pt", "de"
+  langA?: string;
+  langB?: string;
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
 }
@@ -46,6 +47,8 @@ export const MultipleChoiceStudyView = ({
   langB = "pt",
   mergedHintsA,
   mergedHintsB,
+  isFavorite = false,
+  onToggleFavorite,
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
@@ -53,12 +56,7 @@ export const MultipleChoiceStudyView = ({
   const [showFeedback, setShowFeedback] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
-  const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
-  const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
-  
-  const isFavorite = currentCard.id ? favorites.includes(currentCard.id) : false;
   
   // --- Centralized Side Resolution ---
   const sideA = { text: currentCard.term, lang: langA, label: getLangLabel(langA) };
@@ -76,22 +74,6 @@ export const MultipleChoiceStudyView = ({
   const answerLabel = answerSide.label;
 
   const promptLang = toBCP47(promptSide.lang);
-
-  // Fetch user ID for favorites
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id);
-    };
-    fetchUser();
-  }, []);
-
-  // TTS removed from autoplay - only plays on button click
-
-  const handleToggleFavorite = () => {
-    if (!currentCard.id || !userId) return;
-    toggleFavorite.mutate({ resourceId: currentCard.id, resourceType: 'flashcard', isFavorite });
-  };
 
   useEffect(() => {
     // Gerar 3 alternativas incorretas
@@ -166,12 +148,11 @@ export const MultipleChoiceStudyView = ({
     <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
       <Card className="p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative">
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
-          {userId && currentCard.id && (
+          {onToggleFavorite && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleToggleFavorite}
-              disabled={toggleFavorite.isPending}
+              onClick={onToggleFavorite}
               className={cn(
                 "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"

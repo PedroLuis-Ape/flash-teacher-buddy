@@ -16,8 +16,6 @@ import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 
@@ -32,8 +30,10 @@ interface WriteStudyViewProps {
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   direction: string;
-  langA?: string; // ISO code e.g. "en", "fr"
-  langB?: string; // ISO code e.g. "pt", "de"
+  langA?: string;
+  langB?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -52,6 +52,8 @@ export const WriteStudyView = ({
   direction,
   langA = "en",
   langB = "pt",
+  isFavorite = false,
+  onToggleFavorite,
   onCorrect,
   onIncorrect,
   onSkip,
@@ -62,7 +64,6 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
-  const [userId, setUserId] = useState<string | undefined>();
   
   // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
@@ -83,26 +84,8 @@ export const WriteStudyView = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const { speak } = useTTS();
-  const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
-  
-  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
-
-  // Fetch user ID for favorites
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id);
-    };
-    fetchUser();
-  }, []);
 
   // TTS removed from autoplay - only plays on button click
-
-  const handleToggleFavorite = () => {
-    if (!flashcardId || !userId) return;
-    toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
-  };
 
   const acceptedAnswers = [
     correctAnswer,
@@ -179,12 +162,11 @@ export const WriteStudyView = ({
     <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
       <Card className="p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative">
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
-          {userId && flashcardId && (
+          {onToggleFavorite && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleToggleFavorite}
-              disabled={toggleFavorite.isPending}
+              onClick={onToggleFavorite}
               className={cn(
                 "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
