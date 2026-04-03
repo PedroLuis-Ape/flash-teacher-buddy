@@ -320,10 +320,10 @@ export const FlipStudyView = ({
           </Button>
         </div>
         
-        {/* Instructions */}
-        <p className="text-xs text-muted-foreground text-center">
-          Use ← → para navegar • Espaço para avançar
-        </p>
+      {/* Instructions */}
+      <p className="text-xs text-muted-foreground text-center">
+        ← → navegar • Espaço avançar • Enter ouvir áudio
+      </p>
       </div>
     );
   }
