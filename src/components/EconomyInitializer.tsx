@@ -48,7 +48,7 @@ export function EconomyInitializer() {
       }
     };
 
-    initializeEconomy();
+    }
   }, []);
 
   return null; // This component only runs side effects

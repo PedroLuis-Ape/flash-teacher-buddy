@@ -5,6 +5,20 @@ import { useGoogleLinking } from "@/hooks/useGoogleLinking";
 import { Chrome } from "lucide-react";
 
 export function GoogleConnectPrompt() {
+  const [ready, setReady] = useState(false);
+
+  // Defer initialization by 5s to never block app boot
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!ready) return null;
+
+  return <GoogleConnectPromptInner />;
+}
+
+function GoogleConnectPromptInner() {
   const {
     shouldShowPrompt,
     promptLoading,
@@ -20,7 +34,6 @@ export function GoogleConnectPrompt() {
   useEffect(() => {
     if (!promptLoading && shouldShowPrompt) {
       setOpen(true);
-      // Mark as seen immediately when popup opens
       markPromptAsSeen();
     }
   }, [promptLoading, shouldShowPrompt, markPromptAsSeen]);
