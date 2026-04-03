@@ -70,7 +70,11 @@ export default function TurmasAluno() {
             </Card>
           ) : (
             turmas.map((turma: any) => (
-              <Card key={turma.id} className="p-4">
+              <Card
+                key={turma.id}
+                className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate(`/turmas/${turma.id}`)}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{turma.nome}</h3>
@@ -78,7 +82,7 @@ export default function TurmasAluno() {
                       <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
                     )}
                   </div>
-                  <BookOpen className="h-5 w-5 text-muted-foreground" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </Card>
             ))
