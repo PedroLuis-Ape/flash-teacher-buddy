@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
-import { StudentClassShortcut } from "@/components/StudentClassShortcut";
+
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -268,8 +268,6 @@ const Index = () => {
           </Card>
         )}
 
-        {/* Turmas Card (apenas para alunos) */}
-        {!isTeacher && <TurmasCard />}
 
         {/* NEW: Meus Professores Card (apenas para alunos) */}
         {!isTeacher && (

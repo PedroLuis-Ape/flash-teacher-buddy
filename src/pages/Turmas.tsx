@@ -26,11 +26,11 @@ export default function Turmas() {
     },
   });
 
+  const isTeacher = profile?.is_teacher || false;
   const { data: professorData, isLoading: professorLoading } = useTurmasMine();
   const { data: alunoData, isLoading: alunoLoading } = useTurmasAsAluno();
 
-  const isTeacher = profile?.is_teacher || false;
-  const turmasProfessor = professorData?.turmas || [];
+  const turmasProfessor = isTeacher ? (professorData?.turmas || []) : [];
   const turmasAluno = alunoData?.turmas || [];
 
   if (professorLoading || alunoLoading) {

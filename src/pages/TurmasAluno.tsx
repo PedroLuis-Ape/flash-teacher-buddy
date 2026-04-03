@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Circle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -70,7 +70,11 @@ export default function TurmasAluno() {
             </Card>
           ) : (
             turmas.map((turma: any) => (
-              <Card key={turma.id} className="p-4">
+              <Card
+                key={turma.id}
+                className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate(`/turmas/${turma.id}`)}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{turma.nome}</h3>
@@ -78,7 +82,7 @@ export default function TurmasAluno() {
                       <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
                     )}
                   </div>
-                  <BookOpen className="h-5 w-5 text-muted-foreground" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </Card>
             ))
@@ -104,9 +108,6 @@ export default function TurmasAluno() {
                       )}
                       <div className="flex items-center gap-3 mt-2">
                         {getStatusBadge(atribuicao.status)}
-                        <span className="text-sm text-muted-foreground">
-                          {atribuicao.pontos_vale} pontos
-                        </span>
                       </div>
                       {atribuicao.progresso > 0 && (
                         <div className="mt-2">
