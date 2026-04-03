@@ -186,12 +186,11 @@ export const FlipStudyView = ({
         <div className="w-full flex justify-between items-center mb-2">
           <HintButton hint={hint} />
           <div className="flex items-center gap-2">
-            {userId && flashcardId && (
+            {onToggleFavorite && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleToggleFavorite}
-                disabled={toggleFavorite.isPending}
+                onClick={onToggleFavorite}
                 className={cn(
                   "transition-colors",
                   isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
