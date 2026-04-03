@@ -142,6 +142,10 @@ export const FlipStudyView = ({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+
       if (fastMode) {
         // Fast mode: Space advances, no flip
         if (e.key === " ") {
@@ -159,6 +163,22 @@ export const FlipStudyView = ({
         }
       }
       
+      // Enter plays audio for the currently visible side
+      if (e.key === "Enter" && ttsEnabled) {
+        e.preventDefault();
+        if (fastMode) {
+          // In fast mode both sides visible; play the top (prompt) side
+          handlePlayTop();
+        } else {
+          // In normal mode, play whichever side is showing
+          if (isFlipped) {
+            handlePlayBottom();
+          } else {
+            handlePlayTop();
+          }
+        }
+      }
+
       // Arrow keys for navigation
       if (e.key === "ArrowRight" && onNext && canGoNext) {
         e.preventDefault();
@@ -172,7 +192,7 @@ export const FlipStudyView = ({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious]);
+  }, [isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
 
   // Fast Mode UI - two stacked panels
   if (fastMode) {
@@ -300,10 +320,10 @@ export const FlipStudyView = ({
           </Button>
         </div>
         
-        {/* Instructions */}
-        <p className="text-xs text-muted-foreground text-center">
-          Use ← → para navegar • Espaço para avançar
-        </p>
+      {/* Instructions */}
+      <p className="text-xs text-muted-foreground text-center">
+        ← → navegar • Espaço avançar • Enter ouvir áudio
+      </p>
       </div>
     );
   }
@@ -450,7 +470,7 @@ export const FlipStudyView = ({
       
       {/* Instructions */}
       <p className="text-xs text-muted-foreground text-center">
-        Use ← → para navegar • Espaço para virar/confirmar
+        ← → navegar • Espaço virar/confirmar • Enter ouvir áudio
       </p>
     </div>
   );

@@ -117,6 +117,12 @@ const Study = () => {
   
   // Completion modal auto-opens when activity finishes
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+
+  // Persistent completion key scoped by list + mode + direction + favorites
+  const completionKey = useMemo(() => {
+    if (!resolvedId) return null;
+    return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${favoritesOnly}`;
+  }, [resolvedId, normalizedMode, initialDir, favoritesOnly]);
   const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
@@ -212,12 +218,27 @@ const Study = () => {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
-  // Auto-open completion modal when activity finishes
+  // Auto-open completion modal when activity finishes OR on re-entry if already completed
   useEffect(() => {
     if (isFinished) {
       setShowCompletionModal(true);
+      // Persist completion state
+      if (completionKey) {
+        try { localStorage.setItem(completionKey, Date.now().toString()); } catch {}
+      }
     }
-  }, [isFinished]);
+  }, [isFinished, completionKey]);
+
+  // On mount: check if this session was already completed and show restart prompt
+  useEffect(() => {
+    if (!completionKey || loading || studyLoading) return;
+    try {
+      const saved = localStorage.getItem(completionKey);
+      if (saved) {
+        setShowCompletionModal(true);
+      }
+    } catch {}
+  }, [completionKey, loading, studyLoading]);
 
   const loadFlashcards = async () => {
     if (!resolvedId) return;
@@ -397,6 +418,9 @@ const Study = () => {
       const shuffledErrorCards = shuffleArray(errorCards);
       setFlashcards(shuffledErrorCards);
       setShowCompletionModal(false);
+      if (completionKey) {
+        try { localStorage.removeItem(completionKey); } catch {}
+      }
       resetSession();
     }
   };
@@ -416,6 +440,10 @@ const Study = () => {
 
   const handleRestartWithSettings = () => {
     setShowCompletionModal(false);
+    // Clear persistent completion state on restart
+    if (completionKey) {
+      try { localStorage.removeItem(completionKey); } catch {}
+    }
     restartSession(gameSettings);
   };
 
@@ -866,6 +894,9 @@ const Study = () => {
         totalCards={totalCards}
         onComplete={() => {
           setShowCompletionModal(false);
+          if (completionKey) {
+            try { localStorage.removeItem(completionKey); } catch {}
+          }
           completeSession();
         }}
         onRestart={handleRestartWithSettings}
