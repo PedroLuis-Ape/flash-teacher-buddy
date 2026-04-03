@@ -16,8 +16,6 @@ import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 
@@ -32,8 +30,10 @@ interface WriteStudyViewProps {
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   direction: string;
-  langA?: string; // ISO code e.g. "en", "fr"
-  langB?: string; // ISO code e.g. "pt", "de"
+  langA?: string;
+  langB?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -52,6 +52,8 @@ export const WriteStudyView = ({
   direction,
   langA = "en",
   langB = "pt",
+  isFavorite = false,
+  onToggleFavorite,
   onCorrect,
   onIncorrect,
   onSkip,
@@ -62,7 +64,6 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
-  const [userId, setUserId] = useState<string | undefined>();
   
   // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
@@ -83,19 +84,6 @@ export const WriteStudyView = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const { speak } = useTTS();
-  const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
-  
-  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
-
-  // Fetch user ID for favorites
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id);
-    };
-    fetchUser();
-  }, []);
 
   // TTS removed from autoplay - only plays on button click
 
