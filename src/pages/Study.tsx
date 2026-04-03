@@ -117,6 +117,12 @@ const Study = () => {
   
   // Completion modal auto-opens when activity finishes
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+
+  // Persistent completion key scoped by list + mode + direction + favorites
+  const completionKey = useMemo(() => {
+    if (!resolvedId) return null;
+    return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${favoritesOnly}`;
+  }, [resolvedId, normalizedMode, initialDir, favoritesOnly]);
   const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
