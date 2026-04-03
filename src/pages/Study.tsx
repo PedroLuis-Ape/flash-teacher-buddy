@@ -437,6 +437,10 @@ const Study = () => {
 
   const handleRestartWithSettings = () => {
     setShowCompletionModal(false);
+    // Clear persistent completion state on restart
+    if (completionKey) {
+      try { localStorage.removeItem(completionKey); } catch {}
+    }
     restartSession(gameSettings);
   };
 
