@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Circle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
