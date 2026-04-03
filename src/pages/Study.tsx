@@ -775,6 +775,8 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}
