@@ -45,7 +45,6 @@ interface ListType {
 interface TeacherType {
   id: string;
   first_name: string;
-  email: string;
   avatar_url?: string;
   folder_count?: number;
   list_count?: number;
