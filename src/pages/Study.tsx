@@ -891,6 +891,9 @@ const Study = () => {
         totalCards={totalCards}
         onComplete={() => {
           setShowCompletionModal(false);
+          if (completionKey) {
+            try { localStorage.removeItem(completionKey); } catch {}
+          }
           completeSession();
         }}
         onRestart={handleRestartWithSettings}
