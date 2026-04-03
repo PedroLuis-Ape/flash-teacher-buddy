@@ -36,7 +36,7 @@ const Collection = () => {
       
       const { data } = await supabase
         .from("profiles")
-        .select("first_name, email")
+        .select("first_name")
         .eq("id", user.id)
         .single();
       

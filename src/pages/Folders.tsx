@@ -45,7 +45,6 @@ interface ListType {
 interface TeacherType {
   id: string;
   first_name: string;
-  email: string;
   avatar_url?: string;
   folder_count?: number;
   list_count?: number;
@@ -208,7 +207,7 @@ const Folders = () => {
         // Fetch teacher profiles separately
         const { data: teacherProfiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, first_name, email")
+          .select("id, first_name")
           .in("id", teacherIds);
 
         if (profilesError) {

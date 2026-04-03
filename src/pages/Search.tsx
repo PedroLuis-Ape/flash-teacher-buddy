@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 interface Profile {
   id: string;
   first_name: string | null;
-  email: string | null;
   public_slug: string | null;
   ape_id: string | null;
   user_type: string | null;
@@ -69,7 +68,7 @@ export default function Search() {
       // Buscar por nome, @slug público ou APE ID
       let query = supabase
         .from("profiles")
-        .select("id, first_name, email, public_slug, ape_id, user_type, is_teacher")
+        .select("id, first_name, public_slug, ape_id, user_type, is_teacher")
         .or(`first_name.ilike.%${clean}%,public_slug.ilike.%${clean}%,ape_id.ilike.%${clean}%`)
         .limit(20);
 
