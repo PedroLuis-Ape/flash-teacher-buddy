@@ -108,9 +108,6 @@ export default function TurmasAluno() {
                       )}
                       <div className="flex items-center gap-3 mt-2">
                         {getStatusBadge(atribuicao.status)}
-                        <span className="text-sm text-muted-foreground">
-                          {atribuicao.pontos_vale} pontos
-                        </span>
                       </div>
                       {atribuicao.progresso > 0 && (
                         <div className="mt-2">

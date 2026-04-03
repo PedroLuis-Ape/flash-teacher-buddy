@@ -26,7 +26,8 @@ export default function Turmas() {
     },
   });
 
-  const { data: professorData, isLoading: professorLoading } = useTurmasMine();
+  const isTeacher = profile?.is_teacher || false;
+  const { data: professorData, isLoading: professorLoading } = useTurmasMine({ enabled: isTeacher });
   const { data: alunoData, isLoading: alunoLoading } = useTurmasAsAluno();
 
   const isTeacher = profile?.is_teacher || false;

@@ -268,8 +268,6 @@ const Index = () => {
           </Card>
         )}
 
-        {/* Turmas Card (apenas para alunos) */}
-        {!isTeacher && <TurmasCard />}
 
         {/* NEW: Meus Professores Card (apenas para alunos) */}
         {!isTeacher && (
