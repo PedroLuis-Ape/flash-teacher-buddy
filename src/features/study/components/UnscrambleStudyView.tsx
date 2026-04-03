@@ -8,8 +8,6 @@ import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
-import { supabase } from "@/integrations/supabase/client";
-import { useToggleFavorite, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 
@@ -22,8 +20,10 @@ interface UnscrambleStudyViewProps {
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   direction: string;
-  langA?: string; // ISO code e.g. "en", "fr"
-  langB?: string; // ISO code e.g. "pt", "de"
+  langA?: string;
+  langB?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -43,18 +43,13 @@ interface WordItem {
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, mergedHintsA, mergedHintsB, direction, langA = "en", langB = "pt", onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, mergedHintsA, mergedHintsB, direction, langA = "en", langB = "pt", isFavorite = false, onToggleFavorite, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
-  const [userId, setUserId] = useState<string | undefined>();
   const { speak } = useTTS();
-  const toggleFavorite = useToggleFavorite();
-  const { data: favorites = [] } = useFavorites(userId, 'flashcard');
   
-  const isFavorite = flashcardId ? favorites.includes(flashcardId) : false;
-
   // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: "" };
   const sideB = { text: back, lang: langB, label: "" };
@@ -69,22 +64,6 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
   const correctSentence = answerSide.text;
 
   const questionLang = toBCP47(promptSide.lang);
-
-  // Fetch user ID for favorites
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id);
-    };
-    fetchUser();
-  }, []);
-
-  // TTS removed from autoplay - only plays on button click
-
-  const handleToggleFavorite = () => {
-    if (!flashcardId || !userId) return;
-    toggleFavorite.mutate({ resourceId: flashcardId, resourceType: 'flashcard', isFavorite });
-  };
 
   useEffect(() => {
     // Remove palavras que contêm parênteses (são apenas notas/explicações)
