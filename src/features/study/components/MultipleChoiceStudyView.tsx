@@ -148,12 +148,11 @@ export const MultipleChoiceStudyView = ({
     <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
       <Card className="p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative">
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
-          {userId && currentCard.id && (
+          {onToggleFavorite && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleToggleFavorite}
-              disabled={toggleFavorite.isPending}
+              onClick={onToggleFavorite}
               className={cn(
                 "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"

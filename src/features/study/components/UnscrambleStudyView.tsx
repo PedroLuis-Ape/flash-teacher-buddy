@@ -147,12 +147,11 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto px-2 sm:p-4">
       <Card className="w-full p-4 sm:p-6 bg-card relative">
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
-          {userId && flashcardId && (
+          {onToggleFavorite && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleToggleFavorite}
-              disabled={toggleFavorite.isPending}
+              onClick={onToggleFavorite}
               className={cn(
                 "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
