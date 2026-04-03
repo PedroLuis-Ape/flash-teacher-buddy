@@ -855,6 +855,8 @@ const Study = () => {
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onNext={() => handleNext(true)}
             />
           )}
