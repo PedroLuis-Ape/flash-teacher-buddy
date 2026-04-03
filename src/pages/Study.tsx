@@ -817,6 +817,8 @@ const Study = () => {
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
+              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              onToggleFavorite={handleToggleFavorite}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
