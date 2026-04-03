@@ -470,7 +470,7 @@ export const FlipStudyView = ({
       
       {/* Instructions */}
       <p className="text-xs text-muted-foreground text-center">
-        Use ← → para navegar • Espaço para virar/confirmar
+        ← → navegar • Espaço virar/confirmar • Enter ouvir áudio
       </p>
     </div>
   );
