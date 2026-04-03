@@ -418,6 +418,9 @@ const Study = () => {
       const shuffledErrorCards = shuffleArray(errorCards);
       setFlashcards(shuffledErrorCards);
       setShowCompletionModal(false);
+      if (completionKey) {
+        try { localStorage.removeItem(completionKey); } catch {}
+      }
       resetSession();
     }
   };
