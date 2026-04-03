@@ -1,100 +1,66 @@
 
 
-## Plano: Otimização de Performance Real
+## Plan: Student-Side Turma Flow Cleanup and Stabilization
 
-### Diagnóstico
+### Problems Found
 
-Analisei todos os arquivos críticos e encontrei os seguintes gargalos reais que ainda persistem:
+1. **Duplicate turma entry points on student home**: `TurmaShortcut` (highlighted cards with direct navigation) AND `TurmasCard` (generic card navigating to `/turmas`) both render for students. Redundant and confusing.
 
----
+2. **Dead import**: `StudentClassShortcut` is imported in Index.tsx but never rendered.
 
-### Gargalo 1: Chamadas auth redundantes no boot
+3. **Dead-end turma cards in TurmasAluno**: Turma cards at `/turmas/aluno` are NOT clickable (no `onClick`, no `cursor-pointer`). Student sees turmas but cannot tap them.
 
-**Problema**: Na inicialização do app, CINCO componentes/hooks diferentes chamam `supabase.auth.getSession()` ou `supabase.auth.getUser()` em paralelo:
-- `SessionWatcher` → `getSession()` + `onAuthStateChange`
-- `EconomyContext` → `getSession()` + `hud-summary` edge function + `profiles` query
-- `EconomyInitializer` → `getSession()` + daily login check + conversion check
-- `Index.tsx` → `getSession()` (checkAuth) + `getUser()` (loadProfileData) + `getUser()` (useQuery profile)
-- `GoogleConnectPrompt` → provavelmente mais uma
+4. **Points still visible in TurmasAluno**: `{atribuicao.pontos_vale} pontos` still shows despite being removed from TurmaDetail in a previous pass.
 
-Isso gera ~8-10 requests de auth só no boot da Home.
+5. **Overlapping pages**: Students have three overlapping turma screens:
+   - `/turmas` (Turmas page) — lists turma cards, clickable
+   - `/turmas/aluno` (TurmasAluno page) — lists turma cards (not clickable) + assignments flat list
+   - `/turmas/:turmaId` (TurmaDetail) — full detail with tabs including assignments
 
-**Solução**: Criar um `useAuthUser` hook centralizado com React Query (`staleTime: 5min`) que faz UMA chamada `getSession()` e compartilha o resultado. Todos os componentes consomem desse cache.
+6. **Wasted network call**: `Turmas` page loads `useTurmasMine()` even for pure students.
 
 ---
 
-### Gargalo 2: Index.tsx faz 3 chamadas auth separadas + profile duplicado
+### Changes
 
-**Problema**: `Index.tsx` tem:
-- `checkAuth()` → `getSession()` 
-- `loadProfileData()` → `getSession()` + query `profiles` (com avatar_skin lookup encadeado)
-- `useQuery(['profile'])` → `getUser()` + query `profiles`
+#### 1. `src/pages/Index.tsx`
+- Remove the `StudentClassShortcut` import (dead import, never used in JSX).
+- Remove the `TurmasCard` rendering for students (line 272: `{!isTeacher && <TurmasCard />`}). The `TurmaShortcut` component already provides a better, highlighted entry point. If the student has no turmas, `TurmaShortcut` hides itself, and the generic `TurmasCard` adds no value (it just takes student to an empty `/turmas` page anyway).
 
-São 3 auth calls + 2 profile queries na mesma tela.
+#### 2. `src/pages/TurmasAluno.tsx`
+- Make turma cards clickable: add `onClick={() => navigate(\`/turmas/\${turma.id}\`)}` and `cursor-pointer` class.
+- Remove points display from assignments (`{atribuicao.pontos_vale} pontos`).
+- This page becomes a focused "all my turmas + all my assignments" overview, complementary to (not duplicating) TurmaDetail.
 
-**Solução**: Consolidar tudo em um único `useQuery` que busca session + profile completo de uma vez.
+#### 3. `src/pages/Turmas.tsx`
+- For non-teacher users, skip calling `useTurmasMine()` to avoid wasting a network call. Use conditional `enabled` or just render the student view directly using `useTurmasAsAluno`.
 
----
+#### 4. `src/components/TurmaShortcut.tsx`
+- For students with turmas, add a small "Ver todas" link that goes to `/turmas` (already exists for >3 turmas). No changes needed here; behavior is already correct.
 
-### Gargalo 3: EconomyContext faz edge function + profile query no boot
-
-**Problema**: `hud-summary` edge function é chamada no init E novamente em `refreshBalance`. Depois faz OUTRA query no `profiles` para xp/level/streak.
-
-**Solução**: Incluir xp_total, level, current_streak no `hud-summary` edge function para eliminar a query extra ao `profiles`. Usar o hook auth centralizado.
-
----
-
-### Gargalo 4: GamesHub ainda faz 2 queries sequenciais
-
-**Problema**: `loadList()` busca a lista, depois sequencialmente busca a pasta para resolver labels. São 2 queries em cascata.
-
-**Solução**: Usar `Promise.all` para buscar list e folder em paralelo (folder_id é conhecido após a primeira query, mas podemos usar o padrão de fetch condicional).
+#### 5. No changes to teacher-side
+- `TurmasProfessor`, teacher shortcuts, `PainelProfessor`, teacher-side `TurmaDetail` tools — all left untouched.
 
 ---
 
-### Gargalo 5: ListDetail não tem virtualização
+### Summary of Student Flow After Changes
 
-**Problema**: `MemoizedCardList` renderiza TODOS os cards com `.map()`. Com 100+ cards, o DOM fica pesado em mobile.
+```text
+Home → TurmaShortcut (highlighted, up to 3 turmas)
+         ├─ Click turma → /turmas/:id (TurmaDetail with assignments, avisos, metas, messages)
+         └─ "Ver todas" → /turmas (full list, clickable cards → /turmas/:id)
 
-**Solução**: Usar o `FlashcardList.tsx` (que já tem `@tanstack/react-virtual`) ou aplicar virtualização diretamente no `MemoizedCardList`.
+/turmas/aluno → also available, shows turmas (now clickable) + flat assignment list
+```
 
----
+- One clear primary path: Home → TurmaShortcut → TurmaDetail
+- No dead-end cards anywhere
+- No duplicate entry points on home
+- Points removed from student assignment views
+- Consistent clickable behavior across all turma card renderings
 
-### Implementação
-
-#### Arquivo 1: `src/hooks/useAuthUser.ts` (NOVO)
-Hook centralizado com React Query que faz UMA chamada `getSession()` e retorna `{ user, session, isLoading }`. `staleTime: 5min`.
-
-#### Arquivo 2: `src/pages/Index.tsx`
-- Remover `checkAuth()`, `loadProfileData()`, e o `useQuery(['profile'])` separado
-- Usar `useAuthUser()` para auth
-- Consolidar profile loading em um único `useQuery` que busca tudo (first_name, avatar, is_teacher)
-
-#### Arquivo 3: `src/contexts/EconomyContext.tsx`
-- Usar `useAuthUser()` em vez de `getSession()` duplicado
-- Reduzir para uma única chamada no init
-
-#### Arquivo 4: `src/components/EconomyInitializer.tsx`
-- Usar `useAuthUser()` em vez de `getSession()` duplicado
-
-#### Arquivo 5: `src/pages/GamesHub.tsx`
-- Remover o `useEffect` separado para `fetchUser` (usar `useAuthUser`)
-- Paralelizar list + folder fetch com `Promise.all`
-
-#### Arquivo 6: `src/pages/ListDetail.tsx`
-- Substituir `MemoizedCardList` por virtualização usando `@tanstack/react-virtual` (já instalado)
-- Manter `FlashcardRow` memo
-
-#### Arquivo 7: `supabase/functions/hud-summary/index.ts`
-- Incluir `xp_total`, `level`, `current_streak` na resposta do HUD para eliminar a query extra ao `profiles` no EconomyContext
-
-### Resultado esperado
-- Boot: de ~10 auth calls para ~1-2
-- Home: de ~8 queries paralelas para ~4
-- GamesHub: de 2 queries em cascata para paralelo
-- ListDetail com 200+ cards: DOM de ~200 nodes para ~15-20 visíveis
-- Economia: 1 edge function call em vez de edge function + profile query
-
-### Segurança
-Nenhuma mudança em tabelas, RLS ou schema. Apenas otimização de frontend.
+### Files to Change
+- `src/pages/Index.tsx` — remove dead import, remove redundant TurmasCard for students
+- `src/pages/TurmasAluno.tsx` — make turma cards clickable, remove points display
+- `src/pages/Turmas.tsx` — skip teacher data loading for pure students
 
