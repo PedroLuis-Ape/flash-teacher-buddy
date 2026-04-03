@@ -218,12 +218,27 @@ const Study = () => {
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
-  // Auto-open completion modal when activity finishes
+  // Auto-open completion modal when activity finishes OR on re-entry if already completed
   useEffect(() => {
     if (isFinished) {
       setShowCompletionModal(true);
+      // Persist completion state
+      if (completionKey) {
+        try { localStorage.setItem(completionKey, Date.now().toString()); } catch {}
+      }
     }
-  }, [isFinished]);
+  }, [isFinished, completionKey]);
+
+  // On mount: check if this session was already completed and show restart prompt
+  useEffect(() => {
+    if (!completionKey || loading || studyLoading) return;
+    try {
+      const saved = localStorage.getItem(completionKey);
+      if (saved) {
+        setShowCompletionModal(true);
+      }
+    } catch {}
+  }, [completionKey, loading, studyLoading]);
 
   const loadFlashcards = async () => {
     if (!resolvedId) return;
