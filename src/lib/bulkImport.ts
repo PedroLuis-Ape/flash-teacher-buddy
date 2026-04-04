@@ -142,44 +142,36 @@ function findSeparatorIndex(line: string): { index: number; length: number } {
 
 export function parsePastedFlashcards(input: string): FlashcardPair[] {
   const lines = normalizeInputLines(input);
+  const results: FlashcardPair[] = [];
   
-  return lines
-    .filter(Boolean)
-    .map(rawLine => {
-      const line = stripAIArtifacts(rawLine);
-      if (!line) return null;
+  for (const rawLine of lines) {
+    if (!rawLine) continue;
+    const line = stripAIArtifacts(rawLine);
+    if (!line) continue;
 
-      const sep = findSeparatorIndex(line);
+    const sep = findSeparatorIndex(line);
+    
+    if (sep.index > 0) {
+      const sideA = line.substring(0, sep.index).trim();
+      const rest = line.substring(sep.index + sep.length).trim();
       
-      if (sep.index > 0) {
-        const sideA = line.substring(0, sep.index).trim();
-        let rest = line.substring(sep.index + sep.length).trim();
-        
-        // Parse from right to left:
-        // 1. First extract brackets [detailed hint]
-        const { extracted: detailedHint, remaining: afterBrackets } = extractBrackets(rest);
-        
-        // 2. Then extract parentheses (short observation)
-        const { extracted: shortObservation, remaining: sideB } = extractParentheses(afterBrackets);
-        
-        return { 
-          sideA,
-          sideB: sideB.trim() || undefined,
-          shortObservation: shortObservation || undefined,
-          detailedHint: detailedHint || undefined,
-          // Legacy compatibility
-          en: sideA,
-          pt: sideB.trim() || undefined,
-        };
-      }
+      const { extracted: detailedHint, remaining: afterBrackets } = extractBrackets(rest);
+      const { extracted: shortObservation, remaining: sideB } = extractParentheses(afterBrackets);
       
-      // Single text without separator
-      return { 
-        sideA: line,
-        en: line,
-      };
-    })
-    .filter((p): p is FlashcardPair => p !== null && typeof p === 'object');
+      results.push({ 
+        sideA,
+        sideB: sideB.trim() || undefined,
+        shortObservation: shortObservation || undefined,
+        detailedHint: detailedHint || undefined,
+        en: sideA,
+        pt: sideB.trim() || undefined,
+      });
+    } else {
+      results.push({ sideA: line, en: line });
+    }
+  }
+  
+  return results;
 }
 
 export function deduplicateFlashcards(
