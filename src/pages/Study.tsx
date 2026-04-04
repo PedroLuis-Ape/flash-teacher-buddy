@@ -127,8 +127,8 @@ const Study = () => {
   // Persistent completion key scoped by list + mode + direction + favorites
   const completionKey = useMemo(() => {
     if (!resolvedId) return null;
-    return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${favoritesOnly}`;
-  }, [resolvedId, normalizedMode, initialDir, favoritesOnly]);
+    return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
+  }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly]);
   const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
@@ -143,13 +143,6 @@ const Study = () => {
 
   // Load list glossary for merged hints (skip fetch when feature disabled)
   const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
-
-  // Derive effective flashcards filtered by favorites when enabled
-  const effectiveFlashcards = useMemo(() => {
-    if (!favoritesOnly) return flashcards;
-    if (favorites.length === 0) return [];
-    return flashcards.filter(c => favorites.includes(c.id));
-  }, [flashcards, favoritesOnly, favorites]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
