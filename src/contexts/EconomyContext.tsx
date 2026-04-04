@@ -169,7 +169,8 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      channel.unsubscribe();
+      if (channel) channel.unsubscribe();
+      if (visibilityTimer) clearTimeout(visibilityTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);

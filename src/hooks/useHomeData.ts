@@ -72,8 +72,8 @@ export function useHomeData(): HomeData {
     try {
       setData(prev => ({ ...prev, loading: true }));
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      // Use cached auth userId — avoids redundant getSession() call
+      if (!cachedUserId) {
         setData({ 
           last: null, 
           recents: [], 
@@ -85,7 +85,7 @@ export function useHomeData(): HomeData {
         return;
       }
 
-      const userId = session.user.id;
+      const userId = cachedUserId;
       const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel

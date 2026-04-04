@@ -38,23 +38,9 @@ interface GlobalLayoutProps {
 
 export function GlobalLayout({ children }: GlobalLayoutProps) {
   const location = useLocation();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuthUser();
   const { refreshBalance } = useEconomy();
   const { settings: perfSettings } = usePerformance();
-  
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
   
   // Refresh HUD ONLY on initial user login (not on every navigation)
   useEffect(() => {
