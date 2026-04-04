@@ -45,7 +45,8 @@ export function useStudyEngine(
   flashcards: { id: string; term: string; translation: string }[],
   mode: "flip" | "multiple-choice" | "write" | "unscramble",
   unlimitedMode: boolean = false,
-  favoriteIds: string[] = []
+  favoriteIds: string[] = [],
+  initialSettings?: Partial<GameSettings>
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -64,10 +65,11 @@ export function useStudyEngine(
   const lastFlushRef = useRef<number>(0);
   const authUserIdRef = useRef<string | null>(null);
 
-  // Game settings state
+  // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
-    mode: 'random',
-    subset: 'all'
+    mode: initialSettings?.mode ?? 'random',
+    subset: initialSettings?.subset ?? 'all',
+    fastMode: initialSettings?.fastMode,
   });
 
   // Spaced Repetition Lite state

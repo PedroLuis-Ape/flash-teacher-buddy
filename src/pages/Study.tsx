@@ -96,9 +96,15 @@ const Study = () => {
   const initialDir: Direction = normalizeDirection(rawDir);
 
   const rawOrder = (searchParams.get("order") || "random").toLowerCase();
-  const order = rawOrder === "asc" ? "asc" : "random";
+  const initialOrder = rawOrder === "sequential" ? "sequential" : "random";
   
-  const favoritesOnly = searchParams.get("favorites") === "true";
+  const urlFavoritesOnly = searchParams.get("favorites") === "true";
+  
+  // Derive initial game settings from URL params (single source of truth)
+  const initialGameSettings = useMemo(() => ({
+    mode: (initialOrder === "sequential" ? "sequential" : "random") as "sequential" | "random",
+    subset: (urlFavoritesOnly ? "favorites" : "all") as "all" | "favorites",
+  }), []); // intentionally empty deps — only read URL once on mount
   
   // Goal context - para "Voltar para Metas"
   const fromGoalId = searchParams.get("from_goal");
@@ -121,8 +127,8 @@ const Study = () => {
   // Persistent completion key scoped by list + mode + direction + favorites
   const completionKey = useMemo(() => {
     if (!resolvedId) return null;
-    return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${favoritesOnly}`;
-  }, [resolvedId, normalizedMode, initialDir, favoritesOnly]);
+    return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
+  }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly]);
   const isListRoute = window.location.pathname.includes("/list/");
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
@@ -139,11 +145,12 @@ const Study = () => {
   const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
 
   // Derive effective flashcards filtered by favorites when enabled
+  // Uses urlFavoritesOnly for initial load; after engine init, gameSettings.subset becomes the source of truth
   const effectiveFlashcards = useMemo(() => {
-    if (!favoritesOnly) return flashcards;
+    if (!urlFavoritesOnly) return flashcards;
     if (favorites.length === 0) return [];
     return flashcards.filter(c => favorites.includes(c.id));
-  }, [flashcards, favoritesOnly, favorites]);
+  }, [flashcards, urlFavoritesOnly, favorites]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
@@ -184,7 +191,12 @@ const Study = () => {
     unseenCardsCount,
     missedCardsCount,
     completeSession,
-  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
+  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites, initialGameSettings);
+
+  // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
+  const favoritesOnly = gameSettings.subset === 'favorites';
+  // Derive order from unified gameSettings
+  const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
@@ -206,7 +218,7 @@ const Study = () => {
 
   useEffect(() => {
     loadFlashcards();
-  }, [resolvedId, favoritesOnly, order, initialDir]);
+  }, [resolvedId, urlFavoritesOnly, initialOrder, initialDir]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
