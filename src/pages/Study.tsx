@@ -140,6 +140,10 @@ const Study = () => {
   const { data: favorites = [], isLoading: favoritesLoading } = useFavorites(userId, 'flashcard', favoritesScope);
   const toggleFavorite = useToggleFavorite();
 
+  // Red list state (scoped to current list)
+  const { data: redListIds = [] } = useRedList(userId, isListRoute ? resolvedId : undefined);
+  const toggleRedList = useToggleRedList();
+
   const listId = isListRoute ? resolvedId : undefined;
 
   // Load list glossary for merged hints (skip fetch when feature disabled)
