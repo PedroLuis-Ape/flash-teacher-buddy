@@ -135,6 +135,8 @@ export function useHomeData(): HomeData {
           
           if (institutionId) {
             query = query.eq("institution_id", institutionId);
+          } else {
+            query = query.is("institution_id", null);
           }
           
           return query;
@@ -234,6 +236,8 @@ export function useHomeData(): HomeData {
 
         if (institutionId) {
           sharedQuery = sharedQuery.eq("institution_id", institutionId);
+        } else {
+          sharedQuery = sharedQuery.is("institution_id", null);
         }
 
         const { data: sharedData } = await sharedQuery;
@@ -361,14 +365,14 @@ export function useHomeData(): HomeData {
           };
         });
 
-      // Sort by last_activity (most recent first)
+      // Sort by last_activity (most recent first), limit to 5
       const allLists = [...ownListsMapped, ...sharedListsMapped]
         .sort((a, b) => {
           const dateA = a.last_activity ? new Date(a.last_activity).getTime() : 0;
           const dateB = b.last_activity ? new Date(b.last_activity).getTime() : 0;
           return dateB - dateA;
         })
-        .slice(0, 8);
+        .slice(0, 5);
 
       // Use accurate stats from dedicated count query
       const totalOwnLists = toNumber((statsCountResult as any)?.listCount, 0);
