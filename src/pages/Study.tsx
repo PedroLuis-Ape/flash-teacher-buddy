@@ -144,6 +144,14 @@ const Study = () => {
   // Load list glossary for merged hints (skip fetch when feature disabled)
   const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
 
+  // Derive effective flashcards filtered by favorites when enabled
+  // Uses urlFavoritesOnly for initial load; after engine init, gameSettings.subset becomes the source of truth
+  const effectiveFlashcards = useMemo(() => {
+    if (!urlFavoritesOnly) return flashcards;
+    if (favorites.length === 0) return [];
+    return flashcards.filter(c => favorites.includes(c.id));
+  }, [flashcards, urlFavoritesOnly, favorites]);
+
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
   const stableFlashcards = useMemo(() => {
@@ -185,17 +193,10 @@ const Study = () => {
     completeSession,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites, initialGameSettings);
 
-  // Derive favoritesOnly from the unified gameSettings (single source of truth)
+  // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
-
-  // Derive effective flashcards filtered by favorites when enabled
-  const effectiveFlashcards = useMemo(() => {
-    if (!favoritesOnly) return flashcards;
-    if (favorites.length === 0) return [];
-    return flashcards.filter(c => favorites.includes(c.id));
-  }, [flashcards, favoritesOnly, favorites]);
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
