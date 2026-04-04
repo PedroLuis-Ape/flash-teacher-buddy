@@ -23,7 +23,9 @@ interface PronunciationStudyViewProps {
   labelA?: string;
   labelB?: string;
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
   onNext: () => void;
 }
 
