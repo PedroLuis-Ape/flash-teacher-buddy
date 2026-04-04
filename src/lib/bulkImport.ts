@@ -1,6 +1,21 @@
 // Bulk import utilities for flashcards - Language Agnostic
 // Format: SIDE_A / SIDE_B (short observation) [detailed hint]
 
+/**
+ * Strip common AI formatting artifacts from a line:
+ * - Leading numbering: "1. ", "2) ", "01 - ", "- ", "• "
+ * - Markdown bold/italic: **text** → text, *text* → text
+ */
+function stripAIArtifacts(line: string): string {
+  return line
+    .replace(/^\d{1,3}[\.\)]\s+/, '')
+    .replace(/^\d{1,3}\s*[-–—]\s+/, '')
+    .replace(/^[-•]\s+/, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .trim();
+}
+
 export type FlashcardPair = {
   sideA: string;
   sideB?: string;
@@ -101,43 +116,62 @@ function extractParentheses(text: string): { extracted: string; remaining: strin
   return { extracted: '', remaining: text };
 }
 
+/**
+ * Find the best separator index in a line.
+ * Prefers " / " (space-slash-space) to avoid splitting on slashes inside URLs or paths.
+ * Falls back to first "/" only if no spaced version is found.
+ */
+function findSeparatorIndex(line: string): { index: number; length: number } {
+  // Prefer " / " — the canonical format
+  const spacedIdx = line.indexOf(' / ');
+  if (spacedIdx > 0) return { index: spacedIdx, length: 3 };
+
+  // Fallback: first "/" not inside a URL-like pattern
+  const slashIdx = line.indexOf('/');
+  if (slashIdx > 0) {
+    // Reject if it looks like a URL (preceded by ":" or "//")
+    const before = line.substring(0, slashIdx);
+    if (before.endsWith(':') || before.endsWith('/')) {
+      return { index: -1, length: 0 };
+    }
+    return { index: slashIdx, length: 1 };
+  }
+
+  return { index: -1, length: 0 };
+}
+
 export function parsePastedFlashcards(input: string): FlashcardPair[] {
   const lines = normalizeInputLines(input);
+  const results: FlashcardPair[] = [];
   
-  return lines
-    .filter(Boolean)
-    .map(line => {
-      // Try to split by " / " separator
-      const slashIndex = line.indexOf('/');
+  for (const rawLine of lines) {
+    if (!rawLine) continue;
+    const line = stripAIArtifacts(rawLine);
+    if (!line) continue;
+
+    const sep = findSeparatorIndex(line);
+    
+    if (sep.index > 0) {
+      const sideA = line.substring(0, sep.index).trim();
+      const rest = line.substring(sep.index + sep.length).trim();
       
-      if (slashIndex > 0) {
-        const sideA = line.substring(0, slashIndex).trim();
-        let rest = line.substring(slashIndex + 1).trim();
-        
-        // Parse from right to left:
-        // 1. First extract brackets [detailed hint]
-        const { extracted: detailedHint, remaining: afterBrackets } = extractBrackets(rest);
-        
-        // 2. Then extract parentheses (short observation)
-        const { extracted: shortObservation, remaining: sideB } = extractParentheses(afterBrackets);
-        
-        return { 
-          sideA,
-          sideB: sideB.trim() || undefined,
-          shortObservation: shortObservation || undefined,
-          detailedHint: detailedHint || undefined,
-          // Legacy compatibility - map to en/pt for existing code
-          en: sideA,
-          pt: sideB.trim() || undefined,
-        };
-      }
+      const { extracted: detailedHint, remaining: afterBrackets } = extractBrackets(rest);
+      const { extracted: shortObservation, remaining: sideB } = extractParentheses(afterBrackets);
       
-      // Single text without separator
-      return { 
-        sideA: line,
-        en: line,
-      };
-    });
+      results.push({ 
+        sideA,
+        sideB: sideB.trim() || undefined,
+        shortObservation: shortObservation || undefined,
+        detailedHint: detailedHint || undefined,
+        en: sideA,
+        pt: sideB.trim() || undefined,
+      });
+    } else {
+      results.push({ sideA: line, en: line });
+    }
+  }
+  
+  return results;
 }
 
 export function deduplicateFlashcards(
@@ -212,12 +246,14 @@ export function parseGlossaryAndCards(input: string): {
   if (glossaryStart !== -1) {
     const end = cardsStart !== -1 ? cardsStart : lines.length;
     for (let i = glossaryStart + 1; i < end; i++) {
-      const line = lines[i].trim();
+      const raw = lines[i].trim();
+      if (!raw) continue;
+      const line = stripAIArtifacts(raw);
       if (!line) continue;
-      const slashIdx = line.indexOf('/');
-      if (slashIdx <= 0) continue;
-      const original = line.substring(0, slashIdx).trim();
-      const translated = line.substring(slashIdx + 1).trim();
+      const sep = findSeparatorIndex(line);
+      if (sep.index <= 0) continue;
+      const original = line.substring(0, sep.index).trim();
+      const translated = line.substring(sep.index + sep.length).trim();
       if (original && translated) {
         glossaryLines.push({ original_text: original, translated_text: translated });
       }
@@ -287,10 +323,15 @@ export function buildAIHelperPrompt(langA?: string, langB?: string): string {
   return `Você é uma IA responsável por gerar conteúdo estruturado para um aplicativo de flashcards.${glossaryDirection}${cardsDirection}
 
 A resposta deve seguir ESTRITAMENTE o formato descrito abaixo.
-Não escreva nenhuma explicação fora do formato.
-Não adicione comentários.
-Não adicione títulos extras.
-Não escreva texto antes ou depois das seções.
+
+PROIBIDO:
+- Não escreva nenhuma explicação, comentário ou texto fora do formato.
+- Não adicione títulos extras, cabeçalhos ou subtítulos além dos marcadores de seção.
+- Não numere as linhas (ex: "1.", "2)", "-").
+- Não use formatação markdown (ex: **negrito**, *itálico*, # título).
+- Não use bullets ou listas com prefixos.
+- Não adicione linhas em branco extras entre as entradas.
+- Cada entrada deve ser uma linha simples de texto puro.
 
 A saída deve conter exatamente DUAS SEÇÕES, nesta ordem:
 
@@ -307,9 +348,11 @@ Nesta seção devem aparecer palavras ou expressões com tradução direta.
 Formato obrigatório de cada linha:
 termo_original / tradução
 
+O separador é EXATAMENTE: espaço + barra + espaço ( / ).
+
 Regras:
 - Cada entrada deve ocupar apenas uma linha.
-- Use apenas a barra \`/\` como separador.
+- Use APENAS \` / \` (com espaço antes e depois) como separador.
 - Não use parênteses ou colchetes nesta seção.
 - Não escreva explicações nesta seção.
 - Não repita entradas idênticas dentro do glossário.
@@ -330,14 +373,16 @@ Nesta seção devem aparecer os flashcards.
 Formato obrigatório de cada linha:
 ${hasLangs ? `${nameA}` : "LADO A"} / ${hasLangs ? `${nameB}` : "LADO B"} (observação opcional) [descrição opcional]
 
+O separador entre os dois lados é EXATAMENTE: espaço + barra + espaço ( / ).
+
 Regras:
-- Tudo antes da barra \`/\` é o ${hasLangs ? nameA : "Lado A"}.
-- Tudo depois da barra \`/\` é o ${hasLangs ? nameB : "Lado B"}.
+- Tudo antes de \` / \` é o ${hasLangs ? nameA : "Lado A"}.
+- Tudo depois de \` / \` é o ${hasLangs ? nameB : "Lado B"}.
 - O que estiver entre parênteses \`( )\` é uma observação curta opcional.
 - O que estiver entre colchetes \`[ ]\` é uma descrição detalhada opcional.
 - Parênteses e colchetes são opcionais e só devem ser usados quando necessário.
 - Cada card deve ocupar uma única linha.
-- Não use nenhum outro separador além de \`/\`, \`( )\` e \`[ ]\`.
+- Não use nenhum outro separador além de \` / \`, \`( )\` e \`[ ]\`.
 
 Exemplo de formato correto:
 I work today / Eu trabalho hoje
