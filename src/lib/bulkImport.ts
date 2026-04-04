@@ -101,18 +101,44 @@ function extractParentheses(text: string): { extracted: string; remaining: strin
   return { extracted: '', remaining: text };
 }
 
+/**
+ * Find the best separator index in a line.
+ * Prefers " / " (space-slash-space) to avoid splitting on slashes inside URLs or paths.
+ * Falls back to first "/" only if no spaced version is found.
+ */
+function findSeparatorIndex(line: string): { index: number; length: number } {
+  // Prefer " / " — the canonical format
+  const spacedIdx = line.indexOf(' / ');
+  if (spacedIdx > 0) return { index: spacedIdx, length: 3 };
+
+  // Fallback: first "/" not inside a URL-like pattern
+  const slashIdx = line.indexOf('/');
+  if (slashIdx > 0) {
+    // Reject if it looks like a URL (preceded by ":" or "//")
+    const before = line.substring(0, slashIdx);
+    if (before.endsWith(':') || before.endsWith('/')) {
+      return { index: -1, length: 0 };
+    }
+    return { index: slashIdx, length: 1 };
+  }
+
+  return { index: -1, length: 0 };
+}
+
 export function parsePastedFlashcards(input: string): FlashcardPair[] {
   const lines = normalizeInputLines(input);
   
   return lines
     .filter(Boolean)
-    .map(line => {
-      // Try to split by " / " separator
-      const slashIndex = line.indexOf('/');
+    .map(rawLine => {
+      const line = stripAIArtifacts(rawLine);
+      if (!line) return null;
+
+      const sep = findSeparatorIndex(line);
       
-      if (slashIndex > 0) {
-        const sideA = line.substring(0, slashIndex).trim();
-        let rest = line.substring(slashIndex + 1).trim();
+      if (sep.index > 0) {
+        const sideA = line.substring(0, sep.index).trim();
+        let rest = line.substring(sep.index + sep.length).trim();
         
         // Parse from right to left:
         // 1. First extract brackets [detailed hint]
@@ -126,7 +152,7 @@ export function parsePastedFlashcards(input: string): FlashcardPair[] {
           sideB: sideB.trim() || undefined,
           shortObservation: shortObservation || undefined,
           detailedHint: detailedHint || undefined,
-          // Legacy compatibility - map to en/pt for existing code
+          // Legacy compatibility
           en: sideA,
           pt: sideB.trim() || undefined,
         };
@@ -137,7 +163,8 @@ export function parsePastedFlashcards(input: string): FlashcardPair[] {
         sideA: line,
         en: line,
       };
-    });
+    })
+    .filter((p): p is FlashcardPair => p !== null);
 }
 
 export function deduplicateFlashcards(
