@@ -34,7 +34,9 @@ interface WriteStudyViewProps {
   langA?: string;
   langB?: string;
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
