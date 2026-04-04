@@ -38,6 +38,7 @@ import { GameSettingsModal, GameSettings } from "@/features/study/components/Gam
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
+import { useRedList, useToggleRedList } from "@/hooks/useRedList";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
@@ -138,6 +139,10 @@ const Study = () => {
   }, [resolvedId, isListRoute]);
   const { data: favorites = [], isLoading: favoritesLoading } = useFavorites(userId, 'flashcard', favoritesScope);
   const toggleFavorite = useToggleFavorite();
+
+  // Red list state (scoped to current list)
+  const { data: redListIds = [] } = useRedList(userId, isListRoute ? resolvedId : undefined);
+  const toggleRedList = useToggleRedList();
 
   const listId = isListRoute ? resolvedId : undefined;
 
@@ -469,6 +474,20 @@ const Study = () => {
     });
   };
 
+  const handleToggleRedList = () => {
+    const card = effectiveFlashcards[currentIndex];
+    if (!card?.id || !userId) return;
+    // Only allow red-listing if it's a favorite
+    if (!favorites.includes(card.id)) {
+      toast.error('Primeiro marque o card como favorito ⭐');
+      return;
+    }
+    toggleRedList.mutate({
+      flashcardId: card.id,
+      isRedListed: redListIds.includes(card.id),
+    });
+  };
+
   const currentCard = effectiveFlashcards[currentIndex];
 
   // ── PERF: Read pre-parsed hints from cards (O(1) lookup, no parsing at render time) ──
@@ -788,7 +807,9 @@ const Study = () => {
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}
@@ -813,7 +834,9 @@ const Study = () => {
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -830,7 +853,9 @@ const Study = () => {
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
@@ -849,7 +874,9 @@ const Study = () => {
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -868,7 +895,9 @@ const Study = () => {
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onNext={() => handleNext(true)}
             />
           )}

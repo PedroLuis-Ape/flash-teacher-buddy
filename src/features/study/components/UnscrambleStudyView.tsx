@@ -6,6 +6,7 @@ import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,9 @@ interface UnscrambleStudyViewProps {
   langA?: string;
   langB?: string;
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -43,7 +46,7 @@ interface WordItem {
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, mergedHintsA, mergedHintsB, direction, langA = "en", langB = "pt", isFavorite = false, onToggleFavorite, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, mergedHintsA, mergedHintsB, direction, langA = "en", langB = "pt", isFavorite = false, isRedListed = false, onToggleFavorite, onToggleRedList, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -145,7 +148,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto px-2 sm:p-4">
-      <Card className="w-full p-4 sm:p-6 bg-card relative">
+      <Card className={cn("w-full p-4 sm:p-6 bg-card relative", getRedListCardClass(isRedListed))}>
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
           {onToggleFavorite && (
             <Button
@@ -162,6 +165,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
             </Button>
           )}
           <HintButton hint={hint} />
+          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
         </div>
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <h3 className="text-base sm:text-lg font-semibold">Organize as palavras:</h3>

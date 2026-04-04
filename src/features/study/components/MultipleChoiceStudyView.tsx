@@ -7,6 +7,7 @@ import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
@@ -34,7 +35,9 @@ interface MultipleChoiceStudyViewProps {
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
 }
@@ -48,7 +51,9 @@ export const MultipleChoiceStudyView = ({
   mergedHintsA,
   mergedHintsB,
   isFavorite = false,
+  isRedListed = false,
   onToggleFavorite,
+  onToggleRedList,
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
@@ -146,7 +151,7 @@ export const MultipleChoiceStudyView = ({
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
-      <Card className="p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative">
+      <Card className={cn("p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative", getRedListCardClass(isRedListed))}>
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
           {onToggleFavorite && (
             <Button
@@ -163,6 +168,7 @@ export const MultipleChoiceStudyView = ({
             </Button>
           )}
           <HintButton hint={currentCard.hint} />
+          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
         </div>
         <div className="text-center">
           <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>

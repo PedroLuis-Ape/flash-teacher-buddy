@@ -10,6 +10,7 @@ import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
 
 interface PronunciationStudyViewProps {
   front: string;
@@ -22,11 +23,13 @@ interface PronunciationStudyViewProps {
   labelA?: string;
   labelB?: string;
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, onToggleFavorite, onNext }: PronunciationStudyViewProps) {
+export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, isRedListed = false, onToggleFavorite, onToggleRedList, onNext }: PronunciationStudyViewProps) {
   // --- Side A/B State Consolidation ---
   // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
@@ -174,7 +177,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
-      <Card className="w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden">
+      <Card className={cn("w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden", getRedListCardClass(isRedListed))}>
         {onToggleFavorite && (
           <div className="absolute top-3 right-3">
             <Button
@@ -189,6 +192,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
             >
               <Star className={cn("h-4 w-4", isFavorite && "fill-current")} />
             </Button>
+            <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
           </div>
         )}
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">

@@ -22,7 +22,9 @@ import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { FavoriteButton } from "@/features/study/components/FavoriteButton";
+import { RedListButton } from "@/features/study/components/RedListButton";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useRedList } from "@/hooks/useRedList";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,6 +78,7 @@ const FlashcardRow = memo(({
   canEdit,
   userId,
   isFavorite,
+  isRedListed,
   onToggleSelection,
   onEdit,
   onDelete,
@@ -85,6 +88,7 @@ const FlashcardRow = memo(({
   canEdit: boolean;
   userId?: string;
   isFavorite: boolean;
+  isRedListed: boolean;
   onToggleSelection: (id: string) => void;
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
@@ -117,8 +121,13 @@ const FlashcardRow = memo(({
             isFavorite={isFavorite}
             size="sm"
           />
+          <RedListButton
+            flashcardId={flashcard.id}
+            isFavorite={isFavorite}
+            isRedListed={isRedListed}
+            size="sm"
+          />
         )}
-        {canEdit && (
           <>
             <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
               <Pencil className="h-4 w-4" />
@@ -213,6 +222,7 @@ const ListDetail = () => {
   const userId = currentUser?.id;
   const favoritesScope = useMemo(() => (id ? { listId: id } : undefined), [id]);
   const { data: favorites = [] } = useFavorites(userId, 'flashcard', favoritesScope);
+  const { data: redListIds = [] } = useRedList(userId, id);
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["list", id],

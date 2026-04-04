@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
 
 interface FlipStudyViewProps {
   front: string;
@@ -40,7 +41,9 @@ interface FlipStudyViewProps {
   langA?: string;
   langB?: string;
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
 }
 
 export const FlipStudyView = ({
@@ -68,7 +71,9 @@ export const FlipStudyView = ({
   langA = "en",
   langB = "pt",
   isFavorite = false,
+  isRedListed = false,
   onToggleFavorite,
+  onToggleRedList,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const { speak } = useTTS();
@@ -200,12 +205,13 @@ export const FlipStudyView = ({
                 <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
               </Button>
             )}
+            <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
             <SpeechRateControl />
           </div>
         </div>
 
         {/* Fast Mode Card - Two panels stacked */}
-        <Card className="w-full overflow-hidden">
+        <Card className={cn("w-full overflow-hidden", getRedListCardClass(isRedListed))}>
           {/* Top panel (question/origin) */}
           <div className="border-b border-border bg-gradient-to-br from-card to-muted/20 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
@@ -333,13 +339,14 @@ export const FlipStudyView = ({
               <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
             </Button>
           )}
+          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
           <SpeechRateControl />
         </div>
       </div>
       
       {/* Flip card - can be flipped infinitely */}
       <div
-        className="flip-card w-full h-64 sm:h-80 cursor-pointer"
+        className={cn("flip-card w-full h-64 sm:h-80 cursor-pointer", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
         onClick={handleFlip}
       >
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>

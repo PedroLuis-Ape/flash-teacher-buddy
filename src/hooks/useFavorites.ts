@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { removeFromRedListIfNeeded } from '@/hooks/useRedList';
 
 export type FavoriteResourceType = 'flashcard' | 'list' | 'folder';
 
@@ -147,6 +148,11 @@ export function useToggleFavorite() {
           .eq('resource_id', resourceId);
         
         if (error) throw error;
+
+        // Auto-remove from red list when unfavoriting a flashcard
+        if (resourceType === 'flashcard') {
+          await removeFromRedListIfNeeded(user.id, resourceId);
+        }
       } else {
         const { error } = await supabase
           .from('user_favorites')
@@ -198,10 +204,14 @@ export function useToggleFavorite() {
       toast.success(data.isFavorite ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos');
     },
 
-    onSettled: (_data, _error, _variables, context) => {
+    onSettled: (_data, _error, variables, context) => {
       if (context?.userId && context?.resourceType) {
         queryClient.invalidateQueries({ queryKey: ['favorites', context.userId, context.resourceType] });
         queryClient.invalidateQueries({ queryKey: ['favorites-count', context.userId, context.resourceType] });
+        // If unfavoriting a flashcard, also invalidate red-list cache
+        if (variables?.isFavorite && variables?.resourceType === 'flashcard') {
+          queryClient.invalidateQueries({ queryKey: ['red-list', context.userId] });
+        }
       }
     },
   });

@@ -2368,6 +2368,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_red_list: {
+        Row: {
+          created_at: string
+          flashcard_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          flashcard_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          flashcard_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_red_list_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
