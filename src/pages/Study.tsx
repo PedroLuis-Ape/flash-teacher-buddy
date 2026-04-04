@@ -96,9 +96,15 @@ const Study = () => {
   const initialDir: Direction = normalizeDirection(rawDir);
 
   const rawOrder = (searchParams.get("order") || "random").toLowerCase();
-  const order = rawOrder === "asc" ? "asc" : "random";
+  const initialOrder = rawOrder === "sequential" ? "sequential" : "random";
   
-  const favoritesOnly = searchParams.get("favorites") === "true";
+  const urlFavoritesOnly = searchParams.get("favorites") === "true";
+  
+  // Derive initial game settings from URL params (single source of truth)
+  const initialGameSettings = useMemo(() => ({
+    mode: (initialOrder === "sequential" ? "sequential" : "random") as "sequential" | "random",
+    subset: (urlFavoritesOnly ? "favorites" : "all") as "all" | "favorites",
+  }), []); // intentionally empty deps — only read URL once on mount
   
   // Goal context - para "Voltar para Metas"
   const fromGoalId = searchParams.get("from_goal");
