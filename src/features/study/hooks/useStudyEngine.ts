@@ -65,10 +65,11 @@ export function useStudyEngine(
   const lastFlushRef = useRef<number>(0);
   const authUserIdRef = useRef<string | null>(null);
 
-  // Game settings state
+  // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
-    mode: 'random',
-    subset: 'all'
+    mode: initialSettings?.mode ?? 'random',
+    subset: initialSettings?.subset ?? 'all',
+    fastMode: initialSettings?.fastMode,
   });
 
   // Spaced Repetition Lite state
