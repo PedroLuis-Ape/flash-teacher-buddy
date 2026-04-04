@@ -78,6 +78,7 @@ const FlashcardRow = memo(({
   canEdit,
   userId,
   isFavorite,
+  isRedListed,
   onToggleSelection,
   onEdit,
   onDelete,
@@ -87,6 +88,7 @@ const FlashcardRow = memo(({
   canEdit: boolean;
   userId?: string;
   isFavorite: boolean;
+  isRedListed: boolean;
   onToggleSelection: (id: string) => void;
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
