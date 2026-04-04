@@ -177,7 +177,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
-      <Card className="w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden">
+      <Card className={cn("w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden", getRedListCardClass(isRedListed))}>
         {onToggleFavorite && (
           <div className="absolute top-3 right-3">
             <Button
