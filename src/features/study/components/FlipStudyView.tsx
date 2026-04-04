@@ -205,6 +205,7 @@ export const FlipStudyView = ({
                 <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
               </Button>
             )}
+            <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
             <SpeechRateControl />
           </div>
         </div>
