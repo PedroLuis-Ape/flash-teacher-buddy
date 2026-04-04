@@ -316,10 +316,15 @@ export function buildAIHelperPrompt(langA?: string, langB?: string): string {
   return `Você é uma IA responsável por gerar conteúdo estruturado para um aplicativo de flashcards.${glossaryDirection}${cardsDirection}
 
 A resposta deve seguir ESTRITAMENTE o formato descrito abaixo.
-Não escreva nenhuma explicação fora do formato.
-Não adicione comentários.
-Não adicione títulos extras.
-Não escreva texto antes ou depois das seções.
+
+PROIBIDO:
+- Não escreva nenhuma explicação, comentário ou texto fora do formato.
+- Não adicione títulos extras, cabeçalhos ou subtítulos além dos marcadores de seção.
+- Não numere as linhas (ex: "1.", "2)", "-").
+- Não use formatação markdown (ex: **negrito**, *itálico*, # título).
+- Não use bullets ou listas com prefixos.
+- Não adicione linhas em branco extras entre as entradas.
+- Cada entrada deve ser uma linha simples de texto puro.
 
 A saída deve conter exatamente DUAS SEÇÕES, nesta ordem:
 
@@ -336,9 +341,11 @@ Nesta seção devem aparecer palavras ou expressões com tradução direta.
 Formato obrigatório de cada linha:
 termo_original / tradução
 
+O separador é EXATAMENTE: espaço + barra + espaço ( / ).
+
 Regras:
 - Cada entrada deve ocupar apenas uma linha.
-- Use apenas a barra \`/\` como separador.
+- Use APENAS \` / \` (com espaço antes e depois) como separador.
 - Não use parênteses ou colchetes nesta seção.
 - Não escreva explicações nesta seção.
 - Não repita entradas idênticas dentro do glossário.
@@ -359,14 +366,16 @@ Nesta seção devem aparecer os flashcards.
 Formato obrigatório de cada linha:
 ${hasLangs ? `${nameA}` : "LADO A"} / ${hasLangs ? `${nameB}` : "LADO B"} (observação opcional) [descrição opcional]
 
+O separador entre os dois lados é EXATAMENTE: espaço + barra + espaço ( / ).
+
 Regras:
-- Tudo antes da barra \`/\` é o ${hasLangs ? nameA : "Lado A"}.
-- Tudo depois da barra \`/\` é o ${hasLangs ? nameB : "Lado B"}.
+- Tudo antes de \` / \` é o ${hasLangs ? nameA : "Lado A"}.
+- Tudo depois de \` / \` é o ${hasLangs ? nameB : "Lado B"}.
 - O que estiver entre parênteses \`( )\` é uma observação curta opcional.
 - O que estiver entre colchetes \`[ ]\` é uma descrição detalhada opcional.
 - Parênteses e colchetes são opcionais e só devem ser usados quando necessário.
 - Cada card deve ocupar uma única linha.
-- Não use nenhum outro separador além de \`/\`, \`( )\` e \`[ ]\`.
+- Não use nenhum outro separador além de \` / \`, \`( )\` e \`[ ]\`.
 
 Exemplo de formato correto:
 I work today / Eu trabalho hoje
