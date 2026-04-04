@@ -148,6 +148,11 @@ export function useToggleFavorite() {
           .eq('resource_id', resourceId);
         
         if (error) throw error;
+
+        // Auto-remove from red list when unfavoriting a flashcard
+        if (resourceType === 'flashcard') {
+          await removeFromRedListIfNeeded(user.id, resourceId);
+        }
       } else {
         const { error } = await supabase
           .from('user_favorites')
