@@ -204,10 +204,14 @@ export function useToggleFavorite() {
       toast.success(data.isFavorite ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos');
     },
 
-    onSettled: (_data, _error, _variables, context) => {
+    onSettled: (_data, _error, variables, context) => {
       if (context?.userId && context?.resourceType) {
         queryClient.invalidateQueries({ queryKey: ['favorites', context.userId, context.resourceType] });
         queryClient.invalidateQueries({ queryKey: ['favorites-count', context.userId, context.resourceType] });
+        // If unfavoriting a flashcard, also invalidate red-list cache
+        if (variables?.isFavorite && variables?.resourceType === 'flashcard') {
+          queryClient.invalidateQueries({ queryKey: ['red-list', context.userId] });
+        }
       }
     },
   });
