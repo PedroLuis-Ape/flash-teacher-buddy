@@ -10,6 +10,7 @@ import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
 
 interface PronunciationStudyViewProps {
   front: string;
