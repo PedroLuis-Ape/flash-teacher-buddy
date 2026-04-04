@@ -1,6 +1,21 @@
 // Bulk import utilities for flashcards - Language Agnostic
 // Format: SIDE_A / SIDE_B (short observation) [detailed hint]
 
+/**
+ * Strip common AI formatting artifacts from a line:
+ * - Leading numbering: "1. ", "2) ", "01 - ", "- ", "• "
+ * - Markdown bold/italic: **text** → text, *text* → text
+ */
+function stripAIArtifacts(line: string): string {
+  return line
+    .replace(/^\d{1,3}[\.\)]\s+/, '')
+    .replace(/^\d{1,3}\s*[-–—]\s+/, '')
+    .replace(/^[-•]\s+/, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .trim();
+}
+
 export type FlashcardPair = {
   sideA: string;
   sideB?: string;
