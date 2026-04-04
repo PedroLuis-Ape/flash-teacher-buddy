@@ -239,12 +239,14 @@ export function parseGlossaryAndCards(input: string): {
   if (glossaryStart !== -1) {
     const end = cardsStart !== -1 ? cardsStart : lines.length;
     for (let i = glossaryStart + 1; i < end; i++) {
-      const line = lines[i].trim();
+      const raw = lines[i].trim();
+      if (!raw) continue;
+      const line = stripAIArtifacts(raw);
       if (!line) continue;
-      const slashIdx = line.indexOf('/');
-      if (slashIdx <= 0) continue;
-      const original = line.substring(0, slashIdx).trim();
-      const translated = line.substring(slashIdx + 1).trim();
+      const sep = findSeparatorIndex(line);
+      if (sep.index <= 0) continue;
+      const original = line.substring(0, sep.index).trim();
+      const translated = line.substring(sep.index + sep.length).trim();
       if (original && translated) {
         glossaryLines.push({ original_text: original, translated_text: translated });
       }
