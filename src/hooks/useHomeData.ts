@@ -46,6 +46,7 @@ interface HomeData {
 export function useHomeData(): HomeData {
   const { selectedInstitution } = useInstitution();
   const queryClient = useQueryClient();
+  const { userId: cachedUserId } = useAuthUser();
   const [data, setData] = useState<Omit<HomeData, 'refetch'>>({
     last: null,
     recents: [],
