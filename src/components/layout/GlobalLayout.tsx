@@ -5,11 +5,10 @@
  * É proibida a cópia, redistribuição ou utilização comercial sem autorização por escrito.
  */
 
-import { ReactNode, useEffect, useState, lazy, Suspense } from "react";
+import { ReactNode, useEffect, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { CurrencyHeader } from "@/components/CurrencyHeader";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AdminButton } from "@/components/AdminButton";
