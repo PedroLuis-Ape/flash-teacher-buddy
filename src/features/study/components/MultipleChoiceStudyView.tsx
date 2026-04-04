@@ -35,7 +35,9 @@ interface MultipleChoiceStudyViewProps {
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
 }
