@@ -168,6 +168,7 @@ export const MultipleChoiceStudyView = ({
             </Button>
           )}
           <HintButton hint={currentCard.hint} />
+          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
         </div>
         <div className="text-center">
           <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>

@@ -192,6 +192,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
             >
               <Star className={cn("h-4 w-4", isFavorite && "fill-current")} />
             </Button>
+            <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
           </div>
         )}
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">

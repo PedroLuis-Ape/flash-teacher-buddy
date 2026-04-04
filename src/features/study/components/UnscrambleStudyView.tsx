@@ -165,6 +165,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
             </Button>
           )}
           <HintButton hint={hint} />
+          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
         </div>
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <h3 className="text-base sm:text-lg font-semibold">Organize as palavras:</h3>
