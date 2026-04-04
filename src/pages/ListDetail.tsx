@@ -121,8 +121,13 @@ const FlashcardRow = memo(({
             isFavorite={isFavorite}
             size="sm"
           />
+          <RedListButton
+            flashcardId={flashcard.id}
+            isFavorite={isFavorite}
+            isRedListed={isRedListed}
+            size="sm"
+          />
         )}
-        {canEdit && (
           <>
             <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
               <Pencil className="h-4 w-4" />
