@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 interface LastSession {
   id: string;
