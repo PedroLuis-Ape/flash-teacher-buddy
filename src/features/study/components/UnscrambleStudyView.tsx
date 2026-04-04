@@ -148,7 +148,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto px-2 sm:p-4">
-      <Card className="w-full p-4 sm:p-6 bg-card relative">
+      <Card className={cn("w-full p-4 sm:p-6 bg-card relative", getRedListCardClass(isRedListed))}>
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
           {onToggleFavorite && (
             <Button
