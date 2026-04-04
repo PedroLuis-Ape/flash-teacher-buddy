@@ -403,7 +403,7 @@ export function useHomeData(): HomeData {
         error: "Erro ao carregar dados",
       });
     }
-  }, [selectedInstitution?.id]);
+  }, [selectedInstitution?.id, cachedUserId]);
 
   useEffect(() => {
     loadData();
