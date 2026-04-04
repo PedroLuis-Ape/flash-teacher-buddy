@@ -51,7 +51,9 @@ export const MultipleChoiceStudyView = ({
   mergedHintsA,
   mergedHintsB,
   isFavorite = false,
+  isRedListed = false,
   onToggleFavorite,
+  onToggleRedList,
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
