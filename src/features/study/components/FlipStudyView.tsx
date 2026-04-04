@@ -346,7 +346,7 @@ export const FlipStudyView = ({
       
       {/* Flip card - can be flipped infinitely */}
       <div
-        className="flip-card w-full h-64 sm:h-80 cursor-pointer"
+        className={cn("flip-card w-full h-64 sm:h-80 cursor-pointer", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
         onClick={handleFlip}
       >
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
