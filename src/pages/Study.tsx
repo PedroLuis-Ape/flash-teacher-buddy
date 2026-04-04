@@ -183,7 +183,19 @@ const Study = () => {
     unseenCardsCount,
     missedCardsCount,
     completeSession,
-  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites);
+  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites, initialGameSettings);
+
+  // Derive favoritesOnly from the unified gameSettings (single source of truth)
+  const favoritesOnly = gameSettings.subset === 'favorites';
+  // Derive order from unified gameSettings
+  const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
+
+  // Derive effective flashcards filtered by favorites when enabled
+  const effectiveFlashcards = useMemo(() => {
+    if (!favoritesOnly) return flashcards;
+    if (favorites.length === 0) return [];
+    return flashcards.filter(c => favorites.includes(c.id));
+  }, [flashcards, favoritesOnly, favorites]);
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
