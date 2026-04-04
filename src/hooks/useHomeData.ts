@@ -135,6 +135,8 @@ export function useHomeData(): HomeData {
           
           if (institutionId) {
             query = query.eq("institution_id", institutionId);
+          } else {
+            query = query.is("institution_id", null);
           }
           
           return query;
