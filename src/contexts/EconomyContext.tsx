@@ -154,8 +154,13 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
         .subscribe();
     });
 
+    // Debounce visibility refresh - only after 2s of being visible (avoids rapid tab switching)
+    let visibilityTimer: NodeJS.Timeout | null = null;
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') refreshBalance();
+      if (visibilityTimer) clearTimeout(visibilityTimer);
+      if (document.visibilityState === 'visible') {
+        visibilityTimer = setTimeout(() => refreshBalance(), 2000);
+      }
     };
     const handleOnline = () => refreshBalance();
 
