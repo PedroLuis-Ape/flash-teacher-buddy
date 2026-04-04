@@ -38,6 +38,7 @@ import { GameSettingsModal, GameSettings } from "@/features/study/components/Gam
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
+import { useRedList, useToggleRedList } from "@/hooks/useRedList";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
