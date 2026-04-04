@@ -40,14 +40,8 @@ const Index = () => {
     }
   }, [authLoading, user, navigate]);
 
-  useEffect(() => {
-    refetch();
-  }, []);
-
-  // Refetch when institution changes
-  useEffect(() => {
-    refetch();
-  }, [selectedInstitution?.id]);
+  // useHomeData already reloads when selectedInstitution changes (via loadData dep).
+  // No redundant refetch needed.
 
   // Single consolidated profile query using cached auth
   const { data: profileData } = useQuery({
