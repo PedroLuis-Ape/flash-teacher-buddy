@@ -179,7 +179,7 @@ export function parsePastedFlashcards(input: string): FlashcardPair[] {
         en: line,
       };
     })
-    .filter((p): p is FlashcardPair => p !== null);
+    .filter((p): p is FlashcardPair => p !== null && typeof p === 'object');
 }
 
 export function deduplicateFlashcards(
