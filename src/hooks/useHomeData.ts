@@ -365,14 +365,14 @@ export function useHomeData(): HomeData {
           };
         });
 
-      // Sort by last_activity (most recent first)
+      // Sort by last_activity (most recent first), limit to 5
       const allLists = [...ownListsMapped, ...sharedListsMapped]
         .sort((a, b) => {
           const dateA = a.last_activity ? new Date(a.last_activity).getTime() : 0;
           const dateB = b.last_activity ? new Date(b.last_activity).getTime() : 0;
           return dateB - dateA;
         })
-        .slice(0, 8);
+        .slice(0, 5);
 
       // Use accurate stats from dedicated count query
       const totalOwnLists = toNumber((statsCountResult as any)?.listCount, 0);

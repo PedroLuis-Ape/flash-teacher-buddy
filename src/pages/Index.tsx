@@ -80,7 +80,7 @@ const Index = () => {
   });
 
   const safeRecents = Array.isArray(recents) ? recents.filter(Boolean) : [];
-  const myLists = safeRecents.slice(0, 5);
+  const myLists = safeRecents.slice(0, 3);
 
   const safeLast = last && typeof last === "object" ? last : null;
   const pct = safeLast ? Math.round((Number(safeLast.reviewed || 0) / (Number(safeLast.total || 0) || 1)) * 100) : 0;
