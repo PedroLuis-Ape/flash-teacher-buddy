@@ -45,7 +45,8 @@ export function useStudyEngine(
   flashcards: { id: string; term: string; translation: string }[],
   mode: "flip" | "multiple-choice" | "write" | "unscramble",
   unlimitedMode: boolean = false,
-  favoriteIds: string[] = []
+  favoriteIds: string[] = [],
+  initialSettings?: Partial<GameSettings>
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
