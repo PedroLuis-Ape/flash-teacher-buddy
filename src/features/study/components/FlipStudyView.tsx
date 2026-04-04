@@ -41,7 +41,9 @@ interface FlipStudyViewProps {
   langA?: string;
   langB?: string;
   isFavorite?: boolean;
+  isRedListed?: boolean;
   onToggleFavorite?: () => void;
+  onToggleRedList?: () => void;
 }
 
 export const FlipStudyView = ({
