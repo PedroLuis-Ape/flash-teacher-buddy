@@ -474,6 +474,20 @@ const Study = () => {
     });
   };
 
+  const handleToggleRedList = () => {
+    const card = effectiveFlashcards[currentIndex];
+    if (!card?.id || !userId) return;
+    // Only allow red-listing if it's a favorite
+    if (!favorites.includes(card.id)) {
+      toast.error('Primeiro marque o card como favorito ⭐');
+      return;
+    }
+    toggleRedList.mutate({
+      flashcardId: card.id,
+      isRedListed: redListIds.includes(card.id),
+    });
+  };
+
   const currentCard = effectiveFlashcards[currentIndex];
 
   // ── PERF: Read pre-parsed hints from cards (O(1) lookup, no parsing at render time) ──
