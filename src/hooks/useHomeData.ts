@@ -236,6 +236,8 @@ export function useHomeData(): HomeData {
 
         if (institutionId) {
           sharedQuery = sharedQuery.eq("institution_id", institutionId);
+        } else {
+          sharedQuery = sharedQuery.is("institution_id", null);
         }
 
         const { data: sharedData } = await sharedQuery;
