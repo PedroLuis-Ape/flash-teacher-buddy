@@ -71,7 +71,9 @@ export const FlipStudyView = ({
   langA = "en",
   langB = "pt",
   isFavorite = false,
+  isRedListed = false,
   onToggleFavorite,
+  onToggleRedList,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const { speak } = useTTS();
