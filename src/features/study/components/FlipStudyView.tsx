@@ -211,7 +211,7 @@ export const FlipStudyView = ({
         </div>
 
         {/* Fast Mode Card - Two panels stacked */}
-        <Card className="w-full overflow-hidden">
+        <Card className={cn("w-full overflow-hidden", getRedListCardClass(isRedListed))}>
           {/* Top panel (question/origin) */}
           <div className="border-b border-border bg-gradient-to-br from-card to-muted/20 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
