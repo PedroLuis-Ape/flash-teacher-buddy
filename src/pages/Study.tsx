@@ -807,7 +807,9 @@ const Study = () => {
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}
@@ -832,7 +834,9 @@ const Study = () => {
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -849,7 +853,9 @@ const Study = () => {
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
@@ -868,7 +874,9 @@ const Study = () => {
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -887,7 +895,9 @@ const Study = () => {
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
               isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
+              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
               onToggleFavorite={handleToggleFavorite}
+              onToggleRedList={handleToggleRedList}
               onNext={() => handleNext(true)}
             />
           )}
