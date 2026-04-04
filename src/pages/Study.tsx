@@ -218,7 +218,7 @@ const Study = () => {
 
   useEffect(() => {
     loadFlashcards();
-  }, [resolvedId, favoritesOnly, order, initialDir]);
+  }, [resolvedId, urlFavoritesOnly, initialOrder, initialDir]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
