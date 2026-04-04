@@ -127,24 +127,40 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     loadInitialData();
 
-    const channel = supabase
-      .channel('profile-changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
-        if (mounted && payload.new) {
-          setState(prev => ({
-            ...prev,
-            balance_pitecoin: payload.new.balance_pitecoin || 0,
-            pts_weekly: payload.new.pts_weekly || 0,
-            xp_total: payload.new.xp_total || 0,
-            level: payload.new.level || 0,
-            current_streak: payload.new.current_streak || 0,
-          }));
-        }
-      })
-      .subscribe();
+    // Only subscribe to realtime profile changes if we have a user session
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
+    supabase.auth.getSession().then(({ data: { session: initSession } }) => {
+      if (!initSession || !mounted) return;
+      channel = supabase
+        .channel(`profile-${initSession.user.id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${initSession.user.id}`,
+        }, (payload) => {
+          if (mounted && payload.new) {
+            setState(prev => ({
+              ...prev,
+              balance_pitecoin: payload.new.balance_pitecoin || 0,
+              pts_weekly: payload.new.pts_weekly || 0,
+              xp_total: payload.new.xp_total || 0,
+              level: payload.new.level || 0,
+              current_streak: payload.new.current_streak || 0,
+            }));
+          }
+        })
+        .subscribe();
+    });
+
+    // Debounce visibility refresh - only after 2s of being visible (avoids rapid tab switching)
+    let visibilityTimer: NodeJS.Timeout | null = null;
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') refreshBalance();
+      if (visibilityTimer) clearTimeout(visibilityTimer);
+      if (document.visibilityState === 'visible') {
+        visibilityTimer = setTimeout(() => refreshBalance(), 2000);
+      }
     };
     const handleOnline = () => refreshBalance();
 
@@ -153,7 +169,8 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      channel.unsubscribe();
+      if (channel) channel.unsubscribe();
+      if (visibilityTimer) clearTimeout(visibilityTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);

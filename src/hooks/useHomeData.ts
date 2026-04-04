@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 interface LastSession {
   id: string;
@@ -45,6 +46,7 @@ interface HomeData {
 export function useHomeData(): HomeData {
   const { selectedInstitution } = useInstitution();
   const queryClient = useQueryClient();
+  const { userId: cachedUserId } = useAuthUser();
   const [data, setData] = useState<Omit<HomeData, 'refetch'>>({
     last: null,
     recents: [],
@@ -70,8 +72,8 @@ export function useHomeData(): HomeData {
     try {
       setData(prev => ({ ...prev, loading: true }));
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      // Use cached auth userId — avoids redundant getSession() call
+      if (!cachedUserId) {
         setData({ 
           last: null, 
           recents: [], 
@@ -83,7 +85,7 @@ export function useHomeData(): HomeData {
         return;
       }
 
-      const userId = session.user.id;
+      const userId = cachedUserId;
       const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel
@@ -401,7 +403,7 @@ export function useHomeData(): HomeData {
         error: "Erro ao carregar dados",
       });
     }
-  }, [selectedInstitution?.id]);
+  }, [selectedInstitution?.id, cachedUserId]);
 
   useEffect(() => {
     loadData();
