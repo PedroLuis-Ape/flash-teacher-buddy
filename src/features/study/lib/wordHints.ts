@@ -154,7 +154,7 @@ function segmentTextByRegex(text: string, hints: WordHint[]): TextSegment[] {
   const sorted = [...hints].sort((a, b) => b.text.length - a.text.length);
 
   // Build a combined regex with word boundaries (tolerant of trailing punctuation)
-  const patterns = sorted.map((h) => `(${escapeRegExp(h.text)})`);
+  const patterns = sorted.map((h) => `(\\b${escapeRegExp(h.text)}\\b)`);
   const combined = new RegExp(patterns.join("|"), "gi");
 
   const segments: TextSegment[] = [];
