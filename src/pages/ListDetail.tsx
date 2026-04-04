@@ -22,6 +22,7 @@ import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { FavoriteButton } from "@/features/study/components/FavoriteButton";
+import { RedListButton } from "@/features/study/components/RedListButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useRedList } from "@/hooks/useRedList";
 import { Checkbox } from "@/components/ui/checkbox";
