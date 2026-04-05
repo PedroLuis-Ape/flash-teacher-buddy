@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getPerfSettings } from '@/lib/performanceSettings';
 
 const SOUND_SETTINGS_KEY = 'ape-sound-enabled';
 const NOTIFICATIONS_SETTINGS_KEY = 'ape-notifications-enabled';
@@ -72,8 +73,6 @@ export function useSoundSettings() {
 
 // Global getter for sfx.ts — now delegates to performanceSettings
 export function isSoundEnabled(): boolean {
-  // Legacy compat: check both the old key and the new perf system
-  const { getPerfSettings } = require('@/lib/performanceSettings');
   return getPerfSettings().soundEffects;
 }
 
