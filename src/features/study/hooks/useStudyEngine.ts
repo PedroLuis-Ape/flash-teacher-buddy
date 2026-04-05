@@ -824,7 +824,7 @@ export function useStudyEngine(
     setIsFinished(false);
 
     toast.success('Jogo reiniciado!');
-  }, [gameSettings, flashcards, favoriteIds, listId, isFlipMode]);
+  }, [gameSettings, flashcards, favoriteIds, redListIds, listId, isFlipMode]);
 
   // Initialize session on mount
   useEffect(() => {
