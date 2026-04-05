@@ -115,19 +115,22 @@ const FlashcardRow = memo(({
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {userId && (
-          <FavoriteButton
-            resourceId={flashcard.id}
-            resourceType="flashcard"
-            isFavorite={isFavorite}
-            size="sm"
-          />
-          <RedListButton
-            flashcardId={flashcard.id}
-            isFavorite={isFavorite}
-            isRedListed={isRedListed}
-            size="sm"
-          />
+          <>
+            <FavoriteButton
+              resourceId={flashcard.id}
+              resourceType="flashcard"
+              isFavorite={isFavorite}
+              size="sm"
+            />
+            <RedListButton
+              flashcardId={flashcard.id}
+              isFavorite={isFavorite}
+              isRedListed={isRedListed}
+              size="sm"
+            />
+          </>
         )}
+        {canEdit && (
           <>
             <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
               <Pencil className="h-4 w-4" />
