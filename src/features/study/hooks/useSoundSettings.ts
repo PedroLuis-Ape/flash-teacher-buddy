@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getPerfSettings } from '@/lib/performanceSettings';
 
 const SOUND_SETTINGS_KEY = 'ape-sound-enabled';
 const NOTIFICATIONS_SETTINGS_KEY = 'ape-notifications-enabled';
