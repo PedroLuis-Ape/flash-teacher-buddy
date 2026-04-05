@@ -1030,6 +1030,7 @@ const ListDetail = () => {
                 canEdit={canEdit}
                 userId={userId}
                 favorites={favorites}
+                redListIds={redListIds}
                 onToggleSelection={toggleCardSelection}
                 onEdit={setEditingFlashcard}
                 onDelete={handleDeleteFlashcard}
