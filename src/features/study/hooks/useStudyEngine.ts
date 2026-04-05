@@ -387,7 +387,9 @@ export function useStudyEngine(
       }
 
       // Create new session with ALL flashcards (straight-through, no batching)
-      const orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, true);
+      let orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, true);
+      // Inject red-list spaced repetitions when studying favorites
+      orderedCards = injectRedListRepetitions(orderedCards, redListIds, gameSettings.subset === 'favorites');
       
       const { data: newSession, error } = await supabase
         .from('study_sessions')
