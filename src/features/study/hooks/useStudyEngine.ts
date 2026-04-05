@@ -40,13 +40,52 @@ interface FlashcardWithProgress {
 // Batch size — only used by mixed mode (straight-through modes use all cards)
 const BATCH_SIZE = 10;
 
+/**
+ * Inject red-list cards as extra appearances with spaced repetition.
+ * Only active when studying favorites (subset === 'favorites').
+ * Each red card gets up to 3 extra appearances, spaced ~2-3 cards apart.
+ */
+function injectRedListRepetitions(
+  cardIds: string[],
+  redListIds: string[],
+  isFavoritesMode: boolean
+): string[] {
+  if (!isFavoritesMode || redListIds.length === 0) return cardIds;
+
+  const redSet = new Set(redListIds);
+  const redInSession = cardIds.filter(id => redSet.has(id));
+  if (redInSession.length === 0) return cardIds;
+
+  const result = [...cardIds];
+  const MAX_EXTRA = 3;
+  const BASE_SPACING = 2;
+
+  // For each red card, insert up to MAX_EXTRA extra copies spaced throughout
+  for (const redId of redInSession) {
+    const firstIndex = result.indexOf(redId);
+    if (firstIndex === -1) continue;
+
+    let lastInsert = firstIndex;
+    for (let extra = 0; extra < MAX_EXTRA; extra++) {
+      // spacing varies slightly: 2, 3, 2, 3...
+      const spacing = BASE_SPACING + (extra % 2);
+      const insertAt = Math.min(lastInsert + spacing + 1, result.length);
+      result.splice(insertAt, 0, redId);
+      lastInsert = insertAt;
+    }
+  }
+
+  return result;
+}
+
 export function useStudyEngine(
   listId: string | undefined,
   flashcards: { id: string; term: string; translation: string }[],
   mode: "flip" | "multiple-choice" | "write" | "unscramble",
   unlimitedMode: boolean = false,
   favoriteIds: string[] = [],
-  initialSettings?: Partial<GameSettings>
+  initialSettings?: Partial<GameSettings>,
+  redListIds: string[] = []
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
