@@ -804,6 +804,9 @@ export function useStudyEngine(
       cardIds = cardIds.sort(() => Math.random() - 0.5);
     }
 
+    // Inject red-list spaced repetitions when studying favorites
+    cardIds = injectRedListRepetitions(cardIds, redListIds, settings.subset === 'favorites');
+
     // Reset state
     if (listId && isFlipMode) {
       localStorage.removeItem(`flip-progress-${listId}`);
