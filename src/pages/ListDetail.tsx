@@ -115,19 +115,22 @@ const FlashcardRow = memo(({
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {userId && (
-          <FavoriteButton
-            resourceId={flashcard.id}
-            resourceType="flashcard"
-            isFavorite={isFavorite}
-            size="sm"
-          />
-          <RedListButton
-            flashcardId={flashcard.id}
-            isFavorite={isFavorite}
-            isRedListed={isRedListed}
-            size="sm"
-          />
+          <>
+            <FavoriteButton
+              resourceId={flashcard.id}
+              resourceType="flashcard"
+              isFavorite={isFavorite}
+              size="sm"
+            />
+            <RedListButton
+              flashcardId={flashcard.id}
+              isFavorite={isFavorite}
+              isRedListed={isRedListed}
+              size="sm"
+            />
+          </>
         )}
+        {canEdit && (
           <>
             <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
               <Pencil className="h-4 w-4" />
@@ -150,6 +153,7 @@ const MemoizedCardList = memo(({
   canEdit,
   userId,
   favorites,
+  redListIds,
   onToggleSelection,
   onEdit,
   onDelete,
@@ -159,6 +163,7 @@ const MemoizedCardList = memo(({
   canEdit: boolean;
   userId?: string;
   favorites: string[];
+  redListIds: string[];
   onToggleSelection: (id: string) => void;
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
@@ -166,6 +171,7 @@ const MemoizedCardList = memo(({
   // Convert to Set for O(1) lookups
   const selectedSet = useMemo(() => new Set(selectedCards), [selectedCards]);
   const favSet = useMemo(() => new Set(favorites), [favorites]);
+  const redSet = useMemo(() => new Set(redListIds), [redListIds]);
 
   return (
     <>
@@ -177,6 +183,7 @@ const MemoizedCardList = memo(({
           canEdit={canEdit}
           userId={userId}
           isFavorite={favSet.has(flashcard.id)}
+          isRedListed={redSet.has(flashcard.id)}
           onToggleSelection={onToggleSelection}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -1026,6 +1033,7 @@ const ListDetail = () => {
                 canEdit={canEdit}
                 userId={userId}
                 favorites={favorites}
+                redListIds={redListIds}
                 onToggleSelection={toggleCardSelection}
                 onEdit={setEditingFlashcard}
                 onDelete={handleDeleteFlashcard}
