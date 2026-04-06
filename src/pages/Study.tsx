@@ -460,11 +460,19 @@ const Study = () => {
   };
 
   const handleDirectionChange = (value: string) => {
-    setFlipDirection(normalizeDirection(value));
+    const dir = normalizeDirection(value);
+    setFlipDirection(dir);
+    updatePrefs({ direction: dir });
   };
 
   const handleSettingsChange = (newSettings: GameSettings) => {
     setGameSettings(newSettings);
+    // Persist changes back to study preferences
+    updatePrefs({
+      order: newSettings.mode === 'sequential' ? 'sequential' : 'random',
+      favoritesOnly: newSettings.subset === 'favorites',
+      fastMode: newSettings.fastMode ?? false,
+    });
   };
 
   const handleRestartWithSettings = () => {
