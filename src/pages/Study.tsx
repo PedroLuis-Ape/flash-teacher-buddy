@@ -6,6 +6,7 @@ import { normalizeDirection, type Direction } from "@/features/study/lib/gameCor
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
+import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
