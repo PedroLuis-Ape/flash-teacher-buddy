@@ -87,28 +87,38 @@ const Study = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Normalizar mode, dir/direction e order
-  const rawMode = (searchParams.get("mode") || "flip").toLowerCase();
+  // ── Persistent study preferences ──
+  // userId is set later after auth; prefs load with anon key initially
+  const [authUserId, setAuthUserId] = useState<string | undefined>();
+  const { prefs, updatePrefs, applyUrlOverrides } = useStudyPreferences(authUserId);
+  const urlOverridesApplied = useRef(false);
+
+  // Apply URL params as one-time overrides on mount
+  useEffect(() => {
+    if (!urlOverridesApplied.current) {
+      urlOverridesApplied.current = true;
+      applyUrlOverrides(searchParams);
+    }
+  }, []);
+
+  // Derive values from persistent prefs (single source of truth)
+  const rawMode = (prefs.mode || "flip").toLowerCase();
   const validModes = new Set(["flip","write","multiple","multiple-choice","unscramble","mixed","pronunciation"]);
   const mode = validModes.has(rawMode) ? rawMode : "flip";
   const normalizedMode = mode === "multiple" ? "multiple-choice" : mode;
 
-  // Direction: accept both legacy (pt-en/en-pt) and canonical (a-b/b-a/any)
-  const rawDir = (searchParams.get("dir") || searchParams.get("direction") || "any").toLowerCase();
-  const initialDir: Direction = normalizeDirection(rawDir);
-
-  const rawOrder = (searchParams.get("order") || "random").toLowerCase();
-  const initialOrder = rawOrder === "sequential" ? "sequential" : "random";
+  const initialDir: Direction = prefs.direction;
+  const initialOrder = prefs.order;
+  const urlFavoritesOnly = prefs.favoritesOnly;
   
-  const urlFavoritesOnly = searchParams.get("favorites") === "true";
-  
-  // Derive initial game settings from URL params (single source of truth)
+  // Derive initial game settings from persistent prefs
   const initialGameSettings = useMemo(() => ({
     mode: (initialOrder === "sequential" ? "sequential" : "random") as "sequential" | "random",
     subset: (urlFavoritesOnly ? "favorites" : "all") as "all" | "favorites",
-  }), []); // intentionally empty deps — only read URL once on mount
+    fastMode: prefs.fastMode,
+  }), []); // intentionally empty deps — only read once on mount
   
-  // Goal context - para "Voltar para Metas"
+  // Goal context
   const fromGoalId = searchParams.get("from_goal");
   const fromStepId = searchParams.get("from_step");
 
@@ -123,10 +133,10 @@ const Study = () => {
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
   
-  // Completion modal auto-opens when activity finishes
+  // Completion modal
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Persistent completion key scoped by list + mode + direction + favorites
+  // Persistent completion key
   const completionKey = useMemo(() => {
     if (!resolvedId) return null;
     return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
