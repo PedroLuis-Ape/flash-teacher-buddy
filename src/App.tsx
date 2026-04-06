@@ -24,7 +24,7 @@ import { BrowserCheck } from "@/components/BrowserCheck";
 import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
 
 const Index = lazy(() => import("./pages/Index"));
-const Auth = lazy(() => import("./pages/Auth"));
+import Auth from "./pages/Auth"; // Eagerly loaded — critical first paint for unauthenticated users
 const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
 const Folder = lazy(() => import("./pages/Folder"));
