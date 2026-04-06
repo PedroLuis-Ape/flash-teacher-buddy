@@ -306,6 +306,7 @@ const Study = () => {
     
     const { data: { session } } = await supabase.auth.getSession();
     setUserId(session?.user?.id);
+    setAuthUserId(session?.user?.id);
     
     if (isListRoute && !session) {
       const { data, error } = await supabase.rpc('get_portal_flashcards', { 
