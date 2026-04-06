@@ -18,6 +18,7 @@ import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star, Mic } from "l
 import { toast } from "sonner";
 import { isPortalPath, buildBasePath } from "@/lib/utils";
 import { useFavoritesCount } from "@/hooks/useFavorites";
+import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 
 interface Collection {
   id: string;
@@ -43,15 +44,12 @@ const GamesHub = () => {
   const location = useLocation();
   const [collection, setCollection] = useState<Collection | null>(null);
   const [list, setList] = useState<List | null>(null);
-  const [direction, setDirection] = useState<Direction>("any");
-  const [order, setOrder] = useState<"random" | "sequential">("random");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
 
   const isListRoute = location.pathname.includes("/list/");
 
-  // Use cached auth from React Query instead of separate getUser() call
+  // Use cached auth from React Query
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
     queryFn: async () => {
@@ -61,6 +59,9 @@ const GamesHub = () => {
     staleTime: 5 * 60 * 1000,
   });
   const userId = currentUser?.id;
+
+  // ── Persistent study preferences (single source of truth) ──
+  const { prefs, updatePrefs } = useStudyPreferences(userId);
 
   const favoritesScope = useMemo(() => {
     if (!id) return undefined;
@@ -77,7 +78,6 @@ const GamesHub = () => {
     }
   }, [id, isListRoute]);
 
-  // ── PERF: Single query for list + labels (eliminated duplicate fetch) ──
   const loadList = async () => {
     try {
       const { data, error } = await supabase
@@ -101,7 +101,6 @@ const GamesHub = () => {
 
       setList(data);
 
-      // Resolve labels from the same data (no second query)
       let folderRow = null;
       if (data.folder_id) {
         const { data: folderData } = await supabase
@@ -151,10 +150,13 @@ const GamesHub = () => {
   };
 
   const startGame = (mode: "flip" | "write" | "mixed" | "multiple" | "unscramble" | "pronunciation") => {
+    // Persist the chosen mode
+    updatePrefs({ mode });
+
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
-    const favParam = favoritesOnly ? "&favorites=true" : "";
-    navigate(`${basePath}/study?mode=${mode}&dir=${direction}&order=${order}${favParam}`);
+    const favParam = prefs.favoritesOnly ? "&favorites=true" : "";
+    navigate(`${basePath}/study?mode=${mode}&dir=${prefs.direction}&order=${prefs.order}${favParam}`);
   };
 
   const handleBack = () => {
@@ -206,7 +208,10 @@ const GamesHub = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium mb-1.5 block">Direção</label>
-              <Select value={direction} onValueChange={(v) => setDirection(normalizeDirection(v))}>
+              <Select
+                value={prefs.direction}
+                onValueChange={(v) => updatePrefs({ direction: normalizeDirection(v) })}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
@@ -220,7 +225,10 @@ const GamesHub = () => {
 
             <div>
               <label className="text-xs font-medium mb-1.5 block">Ordem</label>
-              <Select value={order} onValueChange={(v: any) => setOrder(v)}>
+              <Select
+                value={prefs.order}
+                onValueChange={(v: any) => updatePrefs({ order: v })}
+              >
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
@@ -246,8 +254,8 @@ const GamesHub = () => {
               </div>
               <Switch
                 id="favorites-only"
-                checked={favoritesOnly}
-                onCheckedChange={setFavoritesOnly}
+                checked={prefs.favoritesOnly}
+                onCheckedChange={(v) => updatePrefs({ favoritesOnly: v })}
               />
             </div>
           )}
