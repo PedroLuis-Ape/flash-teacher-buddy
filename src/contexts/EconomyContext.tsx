@@ -18,6 +18,15 @@ interface EconomyContextValue extends EconomyState {
 
 const EconomyContext = createContext<EconomyContextValue | undefined>(undefined);
 
+const INITIAL_STATE: EconomyState = {
+  balance_pitecoin: 0,
+  pts_weekly: 0,
+  xp_total: 0,
+  level: 0,
+  inventory_count: 0,
+  current_streak: 0,
+};
+
 /** Helper: call hud-summary with a given access token */
 async function fetchHudSummary(accessToken: string) {
   return supabase.functions.invoke('hud-summary', {
@@ -37,47 +46,46 @@ function hudToState(data: any): EconomyState {
   };
 }
 
+/**
+ * CRITICAL CHANGE: Economy failures NEVER call signOut().
+ * Economy is a secondary layer — it degrades gracefully without
+ * poisoning the entire app or forcing the user out.
+ */
 export function EconomyProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<EconomyState>({
-    balance_pitecoin: 0,
-    pts_weekly: 0,
-    xp_total: 0,
-    level: 0,
-    inventory_count: 0,
-    current_streak: 0,
-  });
+  const [state, setState] = useState<EconomyState>(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const consecutiveFailures = useRef(0);
 
   const refreshBalance = useCallback(async () => {
+    // If economy has failed too many times in a row, stop retrying automatically
+    // to prevent background noise. User can still trigger manually.
+    if (consecutiveFailures.current >= 5) return;
+
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
 
     refreshTimeoutRef.current = setTimeout(async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
 
         const { data, error } = await fetchHudSummary(session.access_token);
 
-        if (error && (error.message?.includes('401') || error.message?.includes('403'))) {
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError || !refreshData.session) {
-            await supabase.auth.signOut();
-            return;
-          }
-          const { data: retryData, error: retryError } = await fetchHudSummary(refreshData.session.access_token);
-          if (!retryError && retryData?.ok) {
-            setState(hudToState(retryData));
-          } else {
-            await supabase.auth.signOut();
-          }
+        if (error) {
+          consecutiveFailures.current++;
+          console.warn('[EconomyContext] HUD refresh failed (attempt', consecutiveFailures.current, '):', error.message);
+          // DO NOT signOut — economy failure is not an auth failure
           return;
         }
 
-        if (error) throw error;
-        if (data?.ok) setState(hudToState(data));
+        if (data?.ok) {
+          setState(hudToState(data));
+          consecutiveFailures.current = 0; // reset on success
+        }
       } catch (error) {
-        console.error('[EconomyContext] Error refreshing balance:', error);
+        consecutiveFailures.current++;
+        console.warn('[EconomyContext] Error refreshing balance:', error);
+        // Graceful degradation — keep last known state, do NOT signOut
       }
     }, 300);
   }, []);
@@ -91,35 +99,24 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     const loadInitialData = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session || !mounted) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !mounted) {
           setLoading(false);
           return;
         }
 
         const { data, error } = await fetchHudSummary(session.access_token);
 
-        if (error && (error.message?.includes('401') || error.message?.includes('403'))) {
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError || !refreshData.session) {
-            await supabase.auth.signOut();
-            return;
-          }
-          if (refreshData.session && mounted) {
-            const { data: retryData, error: retryError } = await fetchHudSummary(refreshData.session.access_token);
-            if (!retryError && retryData?.ok) {
-              setState(hudToState(retryData));
-            } else {
-              await supabase.auth.signOut();
-            }
-          }
+        if (error) {
+          // Economy init failure is non-fatal — log and continue with defaults
+          console.warn('[EconomyContext] Initial HUD load failed:', error.message);
           return;
         }
 
-        if (error) throw error;
         if (data?.ok && mounted) setState(hudToState(data));
       } catch (error) {
-        console.error('[EconomyContext] Error loading initial data:', error);
+        // Swallow — economy must never crash the app
+        console.warn('[EconomyContext] Error loading initial data:', error);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -127,34 +124,45 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     loadInitialData();
 
-    // Only subscribe to realtime profile changes if we have a user session
+    // Realtime subscription — set up only after initial load settles
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     supabase.auth.getSession().then(({ data: { session: initSession } }) => {
       if (!initSession || !mounted) return;
-      channel = supabase
-        .channel(`profile-${initSession.user.id}`)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${initSession.user.id}`,
-        }, (payload) => {
-          if (mounted && payload.new) {
-            setState(prev => ({
-              ...prev,
-              balance_pitecoin: payload.new.balance_pitecoin || 0,
-              pts_weekly: payload.new.pts_weekly || 0,
-              xp_total: payload.new.xp_total || 0,
-              level: payload.new.level || 0,
-              current_streak: payload.new.current_streak || 0,
-            }));
-          }
-        })
-        .subscribe();
+      try {
+        channel = supabase
+          .channel(`profile-${initSession.user.id}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${initSession.user.id}`,
+          }, (payload) => {
+            if (mounted && payload.new) {
+              setState(prev => ({
+                ...prev,
+                balance_pitecoin: payload.new.balance_pitecoin || 0,
+                pts_weekly: payload.new.pts_weekly || 0,
+                xp_total: payload.new.xp_total || 0,
+                level: payload.new.level || 0,
+                current_streak: payload.new.current_streak || 0,
+              }));
+            }
+          })
+          .subscribe((status) => {
+            if (status === 'CHANNEL_ERROR') {
+              console.warn('[EconomyContext] Realtime channel error — degrading gracefully');
+            }
+          });
+      } catch (e) {
+        console.warn('[EconomyContext] Realtime setup failed:', e);
+        // Non-fatal — app works without realtime economy updates
+      }
+    }).catch(() => {
+      // Swallow — if we can't even check session for realtime, just skip it
     });
 
-    // Debounce visibility refresh - only after 2s of being visible (avoids rapid tab switching)
+    // Debounce visibility refresh
     let visibilityTimer: NodeJS.Timeout | null = null;
     const handleVisibilityChange = () => {
       if (visibilityTimer) clearTimeout(visibilityTimer);
@@ -162,14 +170,18 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
         visibilityTimer = setTimeout(() => refreshBalance(), 2000);
       }
     };
-    const handleOnline = () => refreshBalance();
+    const handleOnline = () => {
+      // Reset failure counter when network comes back
+      consecutiveFailures.current = 0;
+      refreshBalance();
+    };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
 
     return () => {
       mounted = false;
-      if (channel) channel.unsubscribe();
+      try { if (channel) channel.unsubscribe(); } catch {}
       if (visibilityTimer) clearTimeout(visibilityTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);

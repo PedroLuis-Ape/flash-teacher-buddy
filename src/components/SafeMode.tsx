@@ -1,21 +1,40 @@
 import { Component, ReactNode, ErrorInfo } from "react";
+import { clearErrorBurst } from "@/lib/errorCapture";
 
 const CRASH_KEY = "ape_last_crash";
 const CRASH_COUNT_KEY = "ape_crash_count";
-const CRASH_WINDOW_MS = 30_000; // 30s window for repeated crashes
 
 interface SafeModeState {
   hasError: boolean;
   error: Error | null;
   errorInfo: string;
+  zombieDetected: boolean;
 }
 
 /**
- * Global ErrorBoundary — catches fatal React errors and shows a minimal
- * recovery screen so the app never stays "white-screen dead".
+ * Global ErrorBoundary — catches fatal React errors AND zombie states
+ * (async error bursts detected by errorCapture.ts).
+ * Shows a minimal recovery screen so the app never stays dead.
  */
 export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> {
-  state: SafeModeState = { hasError: false, error: null, errorInfo: "" };
+  state: SafeModeState = { hasError: false, error: null, errorInfo: "", zombieDetected: false };
+
+  private zombieHandler = ((e: CustomEvent) => {
+    this.setState({
+      hasError: true,
+      zombieDetected: true,
+      error: new Error(e.detail?.reason || "App stopped responding"),
+      errorInfo: "The app detected repeated errors and entered recovery mode.",
+    });
+  }) as EventListener;
+
+  componentDidMount() {
+    window.addEventListener('ape-zombie-state', this.zombieHandler);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('ape-zombie-state', this.zombieHandler);
+  }
 
   static getDerivedStateFromError(error: Error): Partial<SafeModeState> {
     return { hasError: true, error };
@@ -39,7 +58,14 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
     console.error("[SafeMode] Fatal error caught:", error, info);
   }
 
+  handleRetry = () => {
+    clearErrorBurst();
+    // Reset error boundary state to re-mount the app tree
+    this.setState({ hasError: false, error: null, errorInfo: "", zombieDetected: false });
+  };
+
   handleReload = () => {
+    clearErrorBurst();
     window.location.reload();
   };
 
@@ -76,6 +102,8 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
   render() {
     if (!this.state.hasError) return this.props.children;
 
+    const isZombie = this.state.zombieDetected;
+
     return (
       <div style={{
         minHeight: "100vh",
@@ -101,7 +129,10 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
             Modo Recuperação
           </h1>
           <p style={{ fontSize: 14, color: "#aaa", marginBottom: 20 }}>
-            Ocorreu um erro ao iniciar o aplicativo. Tente uma das opções abaixo.
+            {isZombie
+              ? "O aplicativo detectou instabilidade e entrou em modo de recuperação."
+              : "Ocorreu um erro ao iniciar o aplicativo. Tente uma das opções abaixo."
+            }
           </p>
 
           {this.state.error && (
@@ -123,6 +154,22 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Retry without reload — re-mount the app tree */}
+            <button
+              onClick={this.handleRetry}
+              style={{
+                padding: "12px 20px",
+                borderRadius: 8,
+                border: "none",
+                background: "#4CAF50",
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              ⚡ Tentar recuperar
+            </button>
             <button
               onClick={this.handleReload}
               style={{
