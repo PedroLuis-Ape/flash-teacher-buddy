@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +18,6 @@ interface AnnouncementData {
     assignment_title?: string;
     fonte_id?: string;
     fonte_tipo?: 'lista' | 'pasta' | 'cardset';
-    // DM specific
     dm_id?: string;
     sender_id?: string;
     sender_name?: string;
@@ -32,49 +31,40 @@ export function AnnouncementModal() {
   const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Check for unread announcements on mount
   const checkForNewAnnouncements = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const lastSeenId = localStorage.getItem(LAST_SEEN_KEY);
 
-      // Query for unread announcements (aviso or aviso_atribuicao) from notificacoes table
       const { data: notifications, error } = await supabase
         .from('notificacoes')
         .select('*')
-        .eq('recipient_id', user.id)
+        .eq('recipient_id', session.user.id)
         .in('tipo', ['aviso', 'aviso_atribuicao'])
         .eq('lida', false)
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (error) {
-        console.error('Error fetching announcements:', error);
-        return;
-      }
+      if (error || !notifications?.length) return;
 
-      if (notifications && notifications.length > 0) {
-        const notif = notifications[0];
+      const notif = notifications[0];
+      if (lastSeenId && notif.id <= lastSeenId) return;
 
-        // Check if we've already seen this notification in this session
-        if (lastSeenId && notif.id <= lastSeenId) return;
-
-        const metadata = notif.metadata as Record<string, any> | null;
-
-        setAnnouncement({
-          id: notif.id,
-          titulo: notif.titulo,
-          mensagem: notif.mensagem,
-          tipo: notif.tipo as 'aviso' | 'aviso_atribuicao',
-          metadata: metadata || undefined,
-        });
-        setIsOpen(true);
-      }
+      const metadata = notif.metadata as Record<string, any> | null;
+      setAnnouncement({
+        id: notif.id,
+        titulo: notif.titulo,
+        mensagem: notif.mensagem,
+        tipo: notif.tipo as 'aviso' | 'aviso_atribuicao',
+        metadata: metadata || undefined,
+      });
+      setIsOpen(true);
     } catch (error) {
-      console.error('Error checking announcements:', error);
+      console.warn('[AnnouncementModal] Error checking announcements:', error);
     }
   }, []);
 
@@ -82,13 +72,13 @@ export function AnnouncementModal() {
     checkForNewAnnouncements();
   }, [checkForNewAnnouncements]);
 
-  // Set up realtime subscription for new announcements
+  // Realtime subscription with PROPER cleanup
   useEffect(() => {
-    const setupRealtimeSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    let mounted = true;
 
-      console.log('[AnnouncementModal] Setting up realtime for user:', user.id);
+    const setup = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || !mounted) return;
 
       const channel = supabase
         .channel('announcement-popup-monitor')
@@ -98,16 +88,13 @@ export function AnnouncementModal() {
             event: 'INSERT',
             schema: 'public',
             table: 'notificacoes',
-            filter: `recipient_id=eq.${user.id}`,
+            filter: `recipient_id=eq.${session.user.id}`,
           },
           (payload) => {
+            if (!mounted) return;
             const notif = payload.new as any;
-            console.log('[AnnouncementModal] Received notification:', notif.tipo);
-            
-            // Only show modal for announcement types and DM
             if (notif.tipo === 'aviso' || notif.tipo === 'aviso_atribuicao' || notif.tipo === 'dm') {
               const metadata = notif.metadata as Record<string, any> | null;
-              
               setAnnouncement({
                 id: notif.id,
                 titulo: notif.titulo,
@@ -119,60 +106,62 @@ export function AnnouncementModal() {
             }
           }
         )
-        .subscribe((status) => {
-          console.log('[AnnouncementModal] Subscription status:', status);
-        });
+        .subscribe();
 
-      return () => {
-        console.log('[AnnouncementModal] Cleaning up realtime subscription');
-        supabase.removeChannel(channel);
-      };
+      channelRef.current = channel;
     };
 
-    setupRealtimeSubscription();
+    setup();
+
+    return () => {
+      mounted = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, []);
 
   const handleDismiss = async () => {
+    // ALWAYS close the modal first — never let dismiss failure trap the user
+    setIsOpen(false);
+
     if (announcement) {
-      // Save last seen ID
       localStorage.setItem(LAST_SEEN_KEY, announcement.id);
-      
-      // Mark notification as read
       try {
         await supabase
           .from('notificacoes')
           .update({ lida: true })
           .eq('id', announcement.id);
       } catch (error) {
-        console.error('Error marking notification as read:', error);
+        console.warn('[AnnouncementModal] Error marking as read:', error);
       }
     }
-    setIsOpen(false);
     setAnnouncement(null);
   };
 
   const handleGoToAssignment = async () => {
+    const meta = announcement?.metadata;
     await handleDismiss();
-    
-    // Navigate directly to content
-    const fonteId = announcement?.metadata?.fonte_id;
-    const fonteTipo = announcement?.metadata?.fonte_tipo;
-    
+
+    const fonteId = meta?.fonte_id;
+    const fonteTipo = meta?.fonte_tipo;
+
     if (fonteId && fonteTipo === 'lista') {
       navigate(`/list/${fonteId}/games`);
     } else if (fonteId && fonteTipo === 'pasta') {
       navigate(`/folder/${fonteId}`);
-    } else if (announcement?.metadata?.turma_id) {
-      // Fallback to turma if fonte info not available
-      navigate(`/turmas/${announcement.metadata.turma_id}`);
+    } else if (meta?.turma_id) {
+      navigate(`/turmas/${meta.turma_id}`);
     }
   };
 
   const handleOpenDM = async () => {
+    const meta = announcement?.metadata;
     await handleDismiss();
-    
-    if (announcement?.metadata?.turma_id && announcement?.metadata?.dm_id) {
-      navigate(`/turmas/${announcement.metadata.turma_id}?tab=mensagens&dm=${announcement.metadata.dm_id}`);
+
+    if (meta?.turma_id && meta?.dm_id) {
+      navigate(`/turmas/${meta.turma_id}?tab=mensagens&dm=${meta.dm_id}`);
     }
   };
 
@@ -186,19 +175,14 @@ export function AnnouncementModal() {
   const senderName = announcement.metadata?.sender_name;
 
   return (
-    <Dialog 
-      open={isOpen} 
+    <Dialog
+      open={isOpen}
       onOpenChange={(open) => {
-        // MODAL BLOQUEANTE: não permite fechar pelo overlay ou ESC
-        // Só fecha via botões explícitos
-        if (!open) return;
+        // Allow closing — NEVER trap the user
+        if (!open) handleDismiss();
       }}
     >
-      <DialogContent 
-        className="sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto [&>button]:hidden"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
+      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-4 pt-2">
           <div className="flex items-center justify-center">
             <div className={`h-16 w-16 rounded-full flex items-center justify-center ${
@@ -219,7 +203,7 @@ export function AnnouncementModal() {
           </div>
           
           <div className="text-center space-y-2">
-          <DialogDescription className="text-sm text-muted-foreground">
+            <DialogDescription className="text-sm text-muted-foreground">
               {isDM 
                 ? `Mensagem de Professor @${senderName || 'Professor'} - ${turmaNome}`
                 : isAssignment 
@@ -255,46 +239,26 @@ export function AnnouncementModal() {
         <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:justify-center pt-2">
           {isDM ? (
             <>
-              <Button 
-                variant="outline" 
-                onClick={handleDismiss}
-                className="w-full sm:w-auto min-w-[120px]"
-              >
+              <Button variant="outline" onClick={handleDismiss} className="w-full sm:w-auto min-w-[120px]">
                 Ver depois
               </Button>
-              <Button 
-                onClick={handleOpenDM}
-                className="w-full sm:w-auto min-w-[180px] font-bold bg-blue-600 hover:bg-blue-700 text-white"
-                size="lg"
-              >
+              <Button onClick={handleOpenDM} className="w-full sm:w-auto min-w-[180px] font-bold bg-blue-600 hover:bg-blue-700 text-white" size="lg">
                 Abrir Conversa
                 <MessageSquare className="ml-2 h-4 w-4" />
               </Button>
             </>
           ) : isAssignment ? (
             <>
-              <Button 
-                variant="outline" 
-                onClick={handleDismiss}
-                className="w-full sm:w-auto min-w-[120px]"
-              >
+              <Button variant="outline" onClick={handleDismiss} className="w-full sm:w-auto min-w-[120px]">
                 Ver depois
               </Button>
-              <Button 
-                onClick={handleGoToAssignment}
-                className="w-full sm:w-auto min-w-[180px] font-bold bg-amber-600 hover:bg-amber-700 text-white"
-                size="lg"
-              >
+              <Button onClick={handleGoToAssignment} className="w-full sm:w-auto min-w-[180px] font-bold bg-amber-600 hover:bg-amber-700 text-white" size="lg">
                 Ir para atividade
                 <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
             </>
           ) : (
-            <Button 
-              onClick={handleDismiss} 
-              className="w-full sm:w-[200px] min-h-[48px] text-base font-semibold"
-              size="lg"
-            >
+            <Button onClick={handleDismiss} className="w-full sm:w-[200px] min-h-[48px] text-base font-semibold" size="lg">
               Entendi
             </Button>
           )}
