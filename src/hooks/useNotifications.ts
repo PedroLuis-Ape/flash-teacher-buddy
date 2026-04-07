@@ -110,12 +110,13 @@ export function useNotifications() {
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return [];
 
       const { data, error } = await supabase
         .from('notificacoes')
         .select('*')
+        .eq('recipient_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -145,13 +146,13 @@ export function useNotifications() {
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
       const { error } = await supabase
         .from('notificacoes')
         .update({ lida: true })
-        .eq('recipient_id', user.id)
+        .eq('recipient_id', session.user.id)
         .eq('lida', false);
 
       if (error) throw error;
@@ -216,8 +217,9 @@ export function useNotifications() {
     let mounted = true;
 
     const setupRealtimeSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !mounted) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || !mounted) return;
+      const user = session.user;
 
       channel = supabase
         .channel('notifications-changes')
