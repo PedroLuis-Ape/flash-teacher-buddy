@@ -67,13 +67,25 @@ const AuditRepair = lazy(() => import("./pages/AuditRepair"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000, // 30s - avoid refetch on every navigation
-      gcTime: 5 * 60 * 1000, // 5min cache
+      staleTime: 30_000,
+      gcTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
     },
+    mutations: {
+      // Global mutation error handler — prevent unhandled rejections from mutations
+      onError: (error) => {
+        console.warn('[QueryClient] Mutation error (handled globally):', error);
+      },
+    },
   },
 });
+
+// Global query cache error handler — logs failed queries so they don't become
+// unhandled rejections that poison the app
+queryClient.getQueryCache().config.onError = (error, query) => {
+  console.warn('[QueryClient] Query failed:', query.queryKey, error);
+};
 
 const App = () => {
   useEffect(() => { perfTelemetry.logBoot(); }, []);

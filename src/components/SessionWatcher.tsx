@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Rotas públicas que não exigem sessão
 const PUBLIC_PREFIXES = ["/auth", "/portal"] as const;
@@ -12,6 +13,7 @@ function isProtectedPath(pathname: string) {
 export function SessionWatcher() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let mounted = true;
@@ -34,63 +36,55 @@ export function SessionWatcher() {
       gotInitialSession = true;
       maybeSetReady();
       
-      // Configurar refresh automático do token a cada 10 minutos (mais frequente para evitar expiração)
       if (session) {
         refreshInterval = setInterval(async () => {
           try {
             const { error } = await supabase.auth.refreshSession();
             if (error) {
-              console.error('[SessionWatcher] Token refresh failed:', error);
-              // Não redireciona para /auth aqui - apenas loga o erro
-              // O Supabase client vai tentar de novo automaticamente
+              console.warn('[SessionWatcher] Token refresh failed:', error.message);
+              // Don't redirect — Supabase client retries automatically
             }
           } catch (e) {
-            console.error('[SessionWatcher] Token refresh exception:', e);
+            console.warn('[SessionWatcher] Token refresh exception:', e);
           }
-        }, 10 * 60 * 1000); // 10 minutos
+        }, 10 * 60 * 1000); // 10 min
       }
     }).catch(err => {
-      // Erro ao obter sessão inicial - não derrubar a aplicação
-      console.error('[SessionWatcher] getSession error:', err);
+      console.warn('[SessionWatcher] getSession error:', err);
       gotInitialSession = true;
       maybeSetReady();
     });
 
     // 2) Listener único de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Marca o primeiro evento e libera a guarda quando combinado com o getSession
       if (!gotFirstAuthEvent) {
         gotFirstAuthEvent = true;
         maybeSetReady();
       }
 
-      // Ao logar novamente, limpar a flag de logout e sair de /auth rapidamente
       if (event === 'SIGNED_IN') {
         sessionStorage.removeItem('logoutInProgress');
+        // Invalidate auth-user query so useAuthUser picks up the new session
+        queryClient.invalidateQueries({ queryKey: ['auth-user'] });
         if (window.location.pathname.startsWith('/auth')) {
           navigate('/', { replace: true });
         }
       }
 
-      // Fluxo de logout explícito: limpar apenas dados de sessão, não localStorage inteiro
       if (event === 'SIGNED_OUT') {
         try {
-          // Sinaliza logout em progresso
           sessionStorage.setItem('logoutInProgress', String(Date.now()));
-          // NÃO limpar localStorage.clear() - isso remove a sessão persistida!
-          // Apenas limpar chaves específicas do app se necessário
           sessionStorage.removeItem('returnTo');
           sessionStorage.setItem('authReady', '0');
-        } catch (e) {
-          // ignore
-        }
+        } catch { /* ignore */ }
+        // Clear all queries on logout so stale data doesn't persist
+        queryClient.clear();
         navigate('/auth', { replace: true });
         return;
       }
       
-      // Token expirado ou sessão revogada remotamente
       if (event === 'TOKEN_REFRESHED' && !session) {
-        console.log('[SessionWatcher] Token refresh failed, session lost');
+        console.warn('[SessionWatcher] Token refresh lost session');
         navigate('/auth', { replace: true });
         return;
       }
@@ -107,7 +101,7 @@ export function SessionWatcher() {
       subscription.unsubscribe();
       if (refreshInterval) clearInterval(refreshInterval);
     };
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   return null;
 }
