@@ -6,6 +6,8 @@
  *
  * Supports multi-translation display (global + manual merged hints).
  * If no hints are provided, renders plain text — 100% backward compatible.
+ *
+ * HOOK SAFETY: All hooks are called unconditionally before any branching.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -30,29 +32,31 @@ interface InteractiveTextProps {
 }
 
 export const InteractiveText = ({ text, wordHints, mergedHints, className, speakOnHintClick = false, speakLang }: InteractiveTextProps) => {
+  // ── ALL HOOKS FIRST — unconditionally, every render ──
   const { speak } = useTTS();
-
-  // Feature flag OR performance setting: when word hints are disabled, render plain text
-  const perf = getPerfSettings();
-  if (!FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips) {
-    return <span className={className}>{text}</span>;
-  }
-
-  // If mergedHints are provided, use those; otherwise fall back to raw wordHints
-  const resolvedHints = mergedHints
-    ? mergedHintsToWordHints(mergedHints)
-    : parseWordHints(wordHints);
-
-  if (resolvedHints.length === 0) {
-    return <span className={className}>{text}</span>;
-  }
-
-  const segments = segmentText(text, resolvedHints);
 
   const handleHintActivate = useCallback((clickedValue: string) => {
     if (!speakOnHintClick) return;
     speak(clickedValue, { langOverride: speakLang });
   }, [speakOnHintClick, speakLang, speak]);
+
+  // ── Derive data (no hooks below this line) ──
+  const perf = getPerfSettings();
+  const hintsDisabled = !FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips;
+
+  const resolvedHints = mergedHints
+    ? mergedHintsToWordHints(mergedHints)
+    : parseWordHints(wordHints);
+
+  const hasHints = !hintsDisabled && resolvedHints.length > 0;
+
+  // ── Render: plain text when no hints ──
+  if (!hasHints) {
+    return <span className={className}>{text}</span>;
+  }
+
+  // ── Render: interactive text with hints ──
+  const segments = segmentText(text, resolvedHints);
 
   return (
     <span className={className}>
@@ -177,4 +181,3 @@ function HintWord({
     </span>
   );
 }
-
