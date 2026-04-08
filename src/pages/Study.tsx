@@ -516,7 +516,8 @@ const Study = () => {
     });
   };
 
-  const currentCard = effectiveFlashcards[currentIndex];
+  // currentCard is now derived from the engine's cardsOrder (engineCurrentCard above)
+  const currentCard = engineCurrentCard;
 
   // ── PERF: Read pre-parsed hints from cards (O(1) lookup, no parsing at render time) ──
   const getParsedHints = useCallback((card: Flashcard) => {
@@ -544,6 +545,14 @@ const Study = () => {
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
   }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
 
+  // Helper to disable favorites filter and restart with all cards
+  const handleDisableFavoritesFilter = () => {
+    updatePrefs({ favoritesOnly: false });
+    handleSettingsChange({ ...gameSettings, subset: 'all' });
+    // Restart with all cards
+    restartSession({ ...gameSettings, subset: 'all' });
+  };
+
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -552,19 +561,24 @@ const Study = () => {
     );
   }
 
-  // Empty state when studying favorites but none found
+  // Empty state when studying favorites but none found — with recovery
   if (favoritesOnly && !favoritesLoading && effectiveFlashcards.length === 0 && flashcards.length > 0) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
         <Star className="h-12 w-12 text-muted-foreground" />
         <p className="text-muted-foreground text-center text-lg font-medium">Nenhum card favorito nesta lista.</p>
-        <p className="text-sm text-muted-foreground text-center">Volte à lista e marque cards como favorito com a estrela ⭐</p>
-        <Button variant="outline" onClick={handleExit}>Voltar</Button>
+        <p className="text-sm text-muted-foreground text-center">Marque cards como favorito com a estrela ⭐ ou desative o filtro.</p>
+        <div className="flex gap-3">
+          <Button variant="default" onClick={handleDisableFavoritesFilter}>
+            Estudar todos os cards
+          </Button>
+          <Button variant="outline" onClick={handleExit}>Voltar</Button>
+        </div>
       </div>
     );
   }
 
-  // Safety fallback
+  // Safety fallback — with recovery options
   if (!currentCard) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
@@ -577,7 +591,14 @@ const Study = () => {
             ? "Desative o filtro de favoritos ou marque mais cards nesta lista."
             : "Tente reiniciar a sessão de estudo."}
         </p>
-        <Button variant="outline" onClick={handleExit}>Voltar</Button>
+        <div className="flex gap-3">
+          {favoritesOnly && (
+            <Button variant="default" onClick={handleDisableFavoritesFilter}>
+              Estudar todos os cards
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleExit}>Voltar</Button>
+        </div>
       </div>
     );
   }
