@@ -207,6 +207,7 @@ const Study = () => {
     unseenCardsCount,
     missedCardsCount,
     completeSession,
+    cardsOrder,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites, initialGameSettings, redListIds);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
