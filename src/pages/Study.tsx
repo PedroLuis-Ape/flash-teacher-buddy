@@ -434,15 +434,18 @@ const Study = () => {
   };
 
   const handleNext = (correct: boolean, skipped: boolean = false) => {
-    if (currentIndex < effectiveFlashcards.length) {
-      recordResult(effectiveFlashcards[currentIndex].id, correct, skipped);
+    // Use engine's cardsOrder as source of truth for which card is current
+    const engineCardId = cardsOrder[currentIndex];
+    if (engineCardId) {
+      recordResult(engineCardId, correct, skipped);
     }
     goToNext();
   };
 
   const handleReviewErrors = () => {
     const errorIds = results.filter((r) => !r.correct && !r.skipped).map((r) => r.flashcardId);
-    const errorCards = effectiveFlashcards.filter((card) => errorIds.includes(card.id));
+    // Look up error cards from the full flashcards array (not effectiveFlashcards which may be filtered)
+    const errorCards = flashcards.filter((card) => errorIds.includes(card.id));
     
     if (errorCards.length > 0) {
       const shuffledErrorCards = shuffleArray(errorCards);
@@ -485,27 +488,31 @@ const Study = () => {
     restartSession(gameSettings);
   };
 
+  // Use engine's cardsOrder to resolve the actual current card
+  const engineCurrentCardId = cardsOrder[currentIndex];
+  const engineCurrentCard = engineCurrentCardId
+    ? (effectiveFlashcards.find(f => f.id === engineCurrentCardId) || flashcards.find(f => f.id === engineCurrentCardId))
+    : undefined;
+
   const handleToggleFavorite = () => {
-    const card = flashcards[currentIndex];
-    if (!card?.id || !userId) return;
+    if (!engineCurrentCard?.id || !userId) return;
     toggleFavorite.mutate({ 
-      resourceId: card.id, 
+      resourceId: engineCurrentCard.id, 
       resourceType: 'flashcard',
-      isFavorite: favorites.includes(card.id)
+      isFavorite: favorites.includes(engineCurrentCard.id)
     });
   };
 
   const handleToggleRedList = () => {
-    const card = effectiveFlashcards[currentIndex];
-    if (!card?.id || !userId) return;
+    if (!engineCurrentCard?.id || !userId) return;
     // Only allow red-listing if it's a favorite
-    if (!favorites.includes(card.id)) {
+    if (!favorites.includes(engineCurrentCard.id)) {
       toast.error('Primeiro marque o card como favorito ⭐');
       return;
     }
     toggleRedList.mutate({
-      flashcardId: card.id,
-      isRedListed: redListIds.includes(card.id),
+      flashcardId: engineCurrentCard.id,
+      isRedListed: redListIds.includes(engineCurrentCard.id),
     });
   };
 
