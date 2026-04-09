@@ -11,6 +11,9 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: {
+    '__BUILD_TIMESTAMP__': JSON.stringify(Date.now().toString()),
+  },
   server: {
     host: "::",
     port: 8080,
@@ -85,8 +88,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            // Never cache API calls - always go to network
-            urlPattern: /\/api\/.*/i,
+            // Never cache API / Supabase calls
+            urlPattern: /\/(api|rest|auth|functions)\/.*/i,
             handler: 'NetworkOnly',
           },
           {
@@ -104,18 +107,19 @@ export default defineConfig(({ mode }) => ({
             }
           },
           {
-            // Cache card images for offline use
+            // Images: NetworkFirst so new assets arrive, with offline fallback
             urlPattern: /\.(png|jpg|jpeg|webp|gif|svg)$/i,
-            handler: 'CacheFirst',
+            handler: 'NetworkFirst',
             options: {
-              cacheName: 'card-images-cache',
+              cacheName: 'images-cache',
               expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 60 * 24 * 14 // 14 days
               },
               cacheableResponse: {
                 statuses: [0, 200]
-              }
+              },
+              networkTimeoutSeconds: 5,
             }
           }
         ]
