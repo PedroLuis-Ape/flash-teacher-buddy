@@ -534,11 +534,20 @@ const Folder = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      for (const listId of Array.from(selectedLists)) {
-        await supabase.rpc("soft_delete_list" as any, {
-          p_list_id: listId,
-          p_user_id: session.user.id,
-        } as any);
+      // Chunked deletion to avoid blocking main thread
+      const ids = Array.from(selectedLists);
+      const CHUNK = 10;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const chunk = ids.slice(i, i + CHUNK);
+        await Promise.all(chunk.map(listId =>
+          supabase.rpc("soft_delete_list" as any, {
+            p_list_id: listId,
+            p_user_id: session.user.id,
+          } as any)
+        ));
+        if (i + CHUNK < ids.length) {
+          await new Promise(r => setTimeout(r, 0));
+        }
       }
       
       toast.success(`📋 ${selectedLists.size} lista(s) enviada(s) para a lixeira!`);
