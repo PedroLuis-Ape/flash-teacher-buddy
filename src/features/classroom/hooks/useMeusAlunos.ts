@@ -14,7 +14,8 @@ export function useStudentsList(q?: string) {
         .from('subscriptions')
         .select('student_id, created_at')
         .eq('teacher_id', session.user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       if (subsError) throw subsError;
       if (!subs || subs.length === 0) {
