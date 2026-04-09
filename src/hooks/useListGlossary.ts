@@ -31,7 +31,8 @@ export function useListGlossary(listId: string | undefined) {
         .from("list_glossary")
         .select("*")
         .eq("list_id", listId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .limit(500);
       if (error) throw error;
       return (data || []) as GlossaryEntry[];
     },

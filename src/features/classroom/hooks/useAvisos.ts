@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 export interface Aviso {
   id: string;
@@ -33,21 +34,20 @@ export interface Aviso {
  * - For professors: shows all notifications grouped by announcement_id
  */
 export function useAvisosByTurma(turmaId: string | null, isOwner: boolean) {
+  const { userId } = useAuthUser();
   return useQuery({
     queryKey: ['avisos-turma', turmaId, isOwner],
     queryFn: async () => {
-      if (!turmaId) return [];
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!turmaId || !userId) return [];
 
       if (isOwner) {
-        // Professor: Get all notifications for this turma, grouped by announcement_id
+        // Professor: Get notifications for this turma, with limit
         const { data: notifications, error } = await supabase
           .from('notificacoes')
           .select('*')
           .in('tipo', ['aviso', 'aviso_atribuicao'])
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(200);
 
         if (error) {
           console.error('Error fetching avisos:', error);
@@ -122,13 +122,14 @@ export function useAvisosByTurma(turmaId: string | null, isOwner: boolean) {
 
         return avisos;
       } else {
-        // Student: Get only their notifications
+        // Student: Get only their notifications, with limit
         const { data: notifications, error } = await supabase
           .from('notificacoes')
           .select('*')
-          .eq('recipient_id', user.id)
+          .eq('recipient_id', userId)
           .in('tipo', ['aviso', 'aviso_atribuicao'])
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(100);
 
         if (error) {
           console.error('Error fetching avisos:', error);

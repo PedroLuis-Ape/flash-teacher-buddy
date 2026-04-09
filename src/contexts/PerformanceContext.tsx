@@ -3,7 +3,7 @@
  * Reads from localStorage synchronously on init (no flash of wrong state).
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import {
   type PerformanceSettings,
   type PerformancePreset,
@@ -73,8 +73,12 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     el.toggleAttribute('data-perf-no-decor', !settings.decorativeEffects);
   }, [settings.animations, settings.hoverEffects, settings.decorativeEffects]);
 
+  const contextValue = useMemo(() => ({
+    settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset,
+  }), [settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset]);
+
   return (
-    <PerformanceContext.Provider value={{ settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset }}>
+    <PerformanceContext.Provider value={contextValue}>
       {children}
     </PerformanceContext.Provider>
   );

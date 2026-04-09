@@ -152,15 +152,24 @@ export const BulkImportDialog = ({
           is_active: true,
         }));
 
-        const { error: glossaryError } = await supabase
-          .from("list_glossary")
-          .insert(glossaryRows as any);
+        // Chunked insert to avoid blocking main thread
+        const CHUNK = 50;
+        for (let i = 0; i < glossaryRows.length; i += CHUNK) {
+          const chunk = glossaryRows.slice(i, i + CHUNK);
+          const { error: glossaryError } = await supabase
+            .from("list_glossary")
+            .insert(chunk as any);
 
-        if (glossaryError) {
-          console.error("Glossary insert error:", glossaryError);
-          toast.error("Erro ao importar glossário: " + glossaryError.message);
-          setLoading(false);
-          return;
+          if (glossaryError) {
+            console.error("Glossary insert error:", glossaryError);
+            toast.error("Erro ao importar glossário: " + glossaryError.message);
+            setLoading(false);
+            return;
+          }
+          // Yield to main thread between chunks
+          if (i + CHUNK < glossaryRows.length) {
+            await new Promise(r => setTimeout(r, 0));
+          }
         }
       }
 
@@ -179,13 +188,21 @@ export const BulkImportDialog = ({
           };
         });
 
-        const { error } = await supabase.from("flashcards").insert(flashcards);
+        // Chunked insert to avoid blocking main thread
+        const CHUNK = 50;
+        for (let i = 0; i < flashcards.length; i += CHUNK) {
+          const chunk = flashcards.slice(i, i + CHUNK);
+          const { error } = await supabase.from("flashcards").insert(chunk);
 
-        if (error) {
-          toast.error("Erro ao importar flashcards");
-          console.error(error);
-          setLoading(false);
-          return;
+          if (error) {
+            toast.error("Erro ao importar flashcards");
+            console.error(error);
+            setLoading(false);
+            return;
+          }
+          if (i + CHUNK < flashcards.length) {
+            await new Promise(r => setTimeout(r, 0));
+          }
         }
       }
 

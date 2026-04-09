@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "selectedInstitutionId";
@@ -143,17 +143,17 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const contextValue = useMemo(() => ({
+    selectedInstitution,
+    institutions,
+    setSelectedInstitution,
+    refreshInstitutions,
+    deleteInstitution,
+    loading,
+  }), [selectedInstitution, institutions, setSelectedInstitution, refreshInstitutions, deleteInstitution, loading]);
+
   return (
-    <InstitutionContext.Provider
-      value={{
-        selectedInstitution,
-        institutions,
-        setSelectedInstitution,
-        refreshInstitutions,
-        deleteInstitution,
-        loading,
-      }}
-    >
+    <InstitutionContext.Provider value={contextValue}>
       {children}
     </InstitutionContext.Provider>
   );

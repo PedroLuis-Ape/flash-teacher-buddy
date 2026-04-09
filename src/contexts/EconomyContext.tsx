@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EconomyState {
@@ -189,8 +189,12 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshBalance]);
 
+  const contextValue = useMemo(() => ({
+    ...state, refreshBalance, updateBalance, loading,
+  }), [state, refreshBalance, updateBalance, loading]);
+
   return (
-    <EconomyContext.Provider value={{ ...state, refreshBalance, updateBalance, loading }}>
+    <EconomyContext.Provider value={contextValue}>
       {children}
     </EconomyContext.Provider>
   );
