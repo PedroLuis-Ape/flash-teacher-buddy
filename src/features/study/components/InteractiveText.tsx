@@ -31,7 +31,7 @@ interface InteractiveTextProps {
   speakLang?: string;
 }
 
-export const InteractiveText = ({ text, wordHints, mergedHints, className, speakOnHintClick = false, speakLang }: InteractiveTextProps) => {
+export const InteractiveText = ({ text = "", wordHints, mergedHints, className, speakOnHintClick = false, speakLang }: InteractiveTextProps) => {
   // ── ALL HOOKS FIRST — unconditionally, every render ──
   const { speak } = useTTS();
 
@@ -41,6 +41,8 @@ export const InteractiveText = ({ text, wordHints, mergedHints, className, speak
   }, [speakOnHintClick, speakLang, speak]);
 
   // ── Derive data (no hooks below this line) ──
+  const safeText = typeof text === "string" ? text : String(text ?? "");
+
   const perf = getPerfSettings();
   const hintsDisabled = !FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips;
 
@@ -50,27 +52,24 @@ export const InteractiveText = ({ text, wordHints, mergedHints, className, speak
 
   const hasHints = !hintsDisabled && resolvedHints.length > 0;
 
-  // ── Render: plain text when no hints ──
-  if (!hasHints) {
-    return <span className={className}>{text}</span>;
-  }
-
-  // ── Render: interactive text with hints ──
-  const segments = segmentText(text, resolvedHints);
+  // ── Unified render: always use segments array ──
+  const segments = hasHints
+    ? segmentText(safeText, resolvedHints)
+    : [{ value: safeText, hint: null as WordHint | null }];
 
   return (
     <span className={className}>
       {segments.map((seg, i) =>
         seg.hint ? (
           <HintWord
-            key={i}
+            key={`hint-${i}-${seg.value}`}
             value={seg.value}
             hint={seg.hint}
             mergedTranslations={(seg.hint as any)._mergedTranslations}
             onActivate={handleHintActivate}
           />
         ) : (
-          <span key={i}>{seg.value}</span>
+          <span key={`plain-${i}-${seg.value}`}>{seg.value}</span>
         )
       )}
     </span>
