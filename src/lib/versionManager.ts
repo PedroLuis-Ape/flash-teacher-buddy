@@ -1,40 +1,45 @@
-// Sistema de versionamento para forçar recarregamento limpo
-export const APP_VERSION = "1.5.0"; // Incrementar quando houver atualizações
-const VERSION_KEY = "app_version";
+// Build identity injected by Vite at build time — unique per build
+declare const __BUILD_TIMESTAMP__: string;
+
+const BUILD_ID: string = typeof __BUILD_TIMESTAMP__ !== 'undefined'
+  ? __BUILD_TIMESTAMP__
+  : 'dev';
+
+const VERSION_KEY = "app_build_id";
+
+export const APP_VERSION = BUILD_ID; // kept for backward compat
 
 export function checkAndClearCache(): boolean {
   try {
-    const storedVersion = localStorage.getItem(VERSION_KEY);
-    
-    if (storedVersion !== APP_VERSION) {
-      console.log(`[VersionManager] Nova versão detectada: ${APP_VERSION}. Limpando cache...`);
-      
-      // Limpar service workers
+    const stored = localStorage.getItem(VERSION_KEY);
+
+    if (stored !== BUILD_ID) {
+      console.log(`[VersionManager] New build detected: ${BUILD_ID}. Clearing caches…`);
+
+      // Unregister service workers so new SW takes over
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => registration.unregister());
-        });
+        navigator.serviceWorker.getRegistrations().then(regs =>
+          regs.forEach(r => r.unregister())
+        );
       }
-      
-      // Limpar caches do navegador
+
+      // Purge browser Cache Storage
       if ('caches' in window) {
-        caches.keys().then(names => {
-          names.forEach(name => caches.delete(name));
-        });
+        caches.keys().then(names =>
+          names.forEach(name => caches.delete(name))
+        );
       }
-      
-      // Atualizar versão
-      localStorage.setItem(VERSION_KEY, APP_VERSION);
-      
-      return true; // Nova versão detectada
+
+      localStorage.setItem(VERSION_KEY, BUILD_ID);
+      return true;
     }
-    
-    return false; // Mesma versão
+
+    return false;
   } catch (error) {
-    console.error("[VersionManager] Erro ao verificar versão:", error);
+    console.error("[VersionManager] Error:", error);
     return false;
   }
 }
 
-// Executar ao iniciar o app
+// Run on import
 checkAndClearCache();
