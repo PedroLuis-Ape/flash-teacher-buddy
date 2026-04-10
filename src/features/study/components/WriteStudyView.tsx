@@ -224,12 +224,12 @@ export const WriteStudyView = ({
         </Alert>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-4" onKeyDown={handleKeyPress} tabIndex={-1}>
         <Input
           ref={inputRef}
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           placeholder="Digite sua resposta..."
           disabled={feedback !== null}
           autoCapitalize="off"

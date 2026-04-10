@@ -17,7 +17,7 @@ export interface StudyResult {
 export interface StudySession {
   collectionId: string;
   mode: "flip" | "write" | "mixed";
-  direction: "pt-en" | "en-pt" | "any";
+  direction: "a-b" | "b-a" | "any";
   results: StudyResult[];
   startTime: number;
   endTime?: number;
