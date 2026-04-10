@@ -12,8 +12,6 @@ import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
-import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 
@@ -106,24 +104,18 @@ export const MultipleChoiceStudyView = ({
     setShowFeedback(false);
   }, [currentCard, allCards, isAFirst]);
 
-  const handleOptionClick = async (index: number) => {
-    if (showFeedback) return; // Prevenir cliques após resposta
+  const handleOptionClick = (index: number) => {
+    if (showFeedback) return;
 
     setSelectedOption(index);
     setShowFeedback(true);
 
-    // Award points and play sound if correct
     if (index === correctIndex) {
       playCorrect();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await awardPoints(session.user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'flashcard_correct');
-      }
     } else {
       playWrong();
     }
 
-    // Dar feedback visual antes de avançar
     setTimeout(() => {
       if (index === correctIndex) {
         onCorrect();
