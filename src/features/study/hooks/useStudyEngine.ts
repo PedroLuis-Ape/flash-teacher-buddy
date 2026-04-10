@@ -785,21 +785,14 @@ export function useStudyEngine(
     const settings = { ...gameSettings, ...newSettings };
     setGameSettings(settings);
 
-    // Get base cards
-    let baseCards = [...flashcards];
-
-    // Filter by favorites if selected
-    if (settings.subset === 'favorites' && favoriteIds.length > 0) {
-      baseCards = baseCards.filter(card => favoriteIds.includes(card.id));
-    }
-
-    if (baseCards.length === 0) {
+    // Use flashcards directly — Study.tsx already filtered by favorites/subset
+    if (flashcards.length === 0) {
       toast.error('Nenhum card encontrado com os filtros selecionados');
       return;
     }
 
     // Get card IDs
-    let cardIds = baseCards.map(f => f.id);
+    let cardIds = flashcards.map(f => f.id);
 
     // Apply ordering
     if (settings.mode === 'random') {
@@ -824,7 +817,7 @@ export function useStudyEngine(
     setIsFinished(false);
 
     toast.success('Jogo reiniciado!');
-  }, [gameSettings, flashcards, favoriteIds, redListIds, listId, isFlipMode]);
+  }, [gameSettings, flashcards, redListIds, listId, isFlipMode]);
 
   // Initialize session on mount
   useEffect(() => {
