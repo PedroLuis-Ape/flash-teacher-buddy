@@ -156,8 +156,14 @@ export const WriteStudyView = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !feedback) {
-      handleSubmit();
+    if (e.key === "Enter") {
+      if (!feedback) {
+        handleSubmit();
+      } else if (feedback === "correct" || feedback === "almost") {
+        onCorrect();
+      } else if (feedback === "incorrect") {
+        onIncorrect();
+      }
     }
   };
 

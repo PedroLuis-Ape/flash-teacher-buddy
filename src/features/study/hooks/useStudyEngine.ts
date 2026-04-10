@@ -249,6 +249,10 @@ export function useStudyEngine(
       setIsAuthenticated(true);
 
       if (!listId) {
+        // No listId (e.g. collection or portal route) — still mount cards
+        const cardIds = flashcards.map(f => f.id).sort(() => Math.random() - 0.5);
+        setCardsOrder(cardIds);
+        setCurrentIndex(0);
         setIsLoading(false);
         return;
       }
@@ -622,13 +626,10 @@ export function useStudyEngine(
     // Track study activity (debounced by the hook)
     trackListStudied(listId);
 
-    // Award points immediately (important for feedback)
-    try {
-      if (authUserIdRef.current && correct && FEATURE_FLAGS.economy_enabled) {
-        await awardPoints(authUserIdRef.current, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta');
-      }
-    } catch (error) {
-      console.error('Erro ao atribuir pontos:', error);
+    // Award points non-blocking (fire-and-forget so UI transitions aren't delayed)
+    if (authUserIdRef.current && correct && FEATURE_FLAGS.economy_enabled) {
+      awardPoints(authUserIdRef.current, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta')
+        .catch(err => console.error('Erro ao atribuir pontos:', err));
     }
 
     // Buffer the progress update instead of writing immediately
