@@ -156,8 +156,14 @@ export const WriteStudyView = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !feedback) {
-      handleSubmit();
+    if (e.key === "Enter") {
+      if (!feedback) {
+        handleSubmit();
+      } else if (feedback === "correct" || feedback === "almost") {
+        onCorrect();
+      } else if (feedback === "incorrect") {
+        onIncorrect();
+      }
     }
   };
 
@@ -218,12 +224,12 @@ export const WriteStudyView = ({
         </Alert>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-4" onKeyDown={handleKeyPress} tabIndex={-1}>
         <Input
           ref={inputRef}
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           placeholder="Digite sua resposta..."
           disabled={feedback !== null}
           autoCapitalize="off"

@@ -122,7 +122,7 @@ export const MultipleChoiceStudyView = ({
       } else {
         onIncorrect();
       }
-    }, 2000);
+    }, 600);
   };
 
   const getOptionClassName = (index: number) => {
