@@ -173,9 +173,14 @@ export function useToggleFavorite() {
       if (!user) return;
 
       await queryClient.cancelQueries({ queryKey: ['favorites', user.id, resourceType] });
+      await queryClient.cancelQueries({ queryKey: ['favorites-count', user.id, resourceType] });
 
       const previousFavoritesEntries = queryClient.getQueriesData<string[]>({
         queryKey: ['favorites', user.id, resourceType],
+      });
+
+      const previousCountEntries = queryClient.getQueriesData<number>({
+        queryKey: ['favorites-count', user.id, resourceType],
       });
 
       queryClient.setQueriesData<string[]>({
@@ -187,12 +192,24 @@ export function useToggleFavorite() {
         return [...old, resourceId];
       });
 
-      return { previousFavoritesEntries, userId: user.id, resourceType };
+      // Optimistic update for favorites count
+      queryClient.setQueriesData<number>({
+        queryKey: ['favorites-count', user.id, resourceType],
+      }, (old = 0) => {
+        return isFavorite ? Math.max(0, old - 1) : old + 1;
+      });
+
+      return { previousFavoritesEntries, previousCountEntries, userId: user.id, resourceType };
     },
 
     onError: (error, _variables, context) => {
       if (context?.previousFavoritesEntries) {
         context.previousFavoritesEntries.forEach(([queryKey, value]) => {
+          queryClient.setQueryData(queryKey, value);
+        });
+      }
+      if (context?.previousCountEntries) {
+        context.previousCountEntries.forEach(([queryKey, value]) => {
           queryClient.setQueryData(queryKey, value);
         });
       }

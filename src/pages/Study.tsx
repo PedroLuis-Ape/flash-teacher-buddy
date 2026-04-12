@@ -217,7 +217,8 @@ const Study = () => {
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
-    const dir = normalizedMode === "flip" ? flipDirection : initialDir;
+    // flipDirection is the SSOT for ALL modes, not just flip
+    const dir = flipDirection;
     if (dir !== "any") {
       return dir;
     }

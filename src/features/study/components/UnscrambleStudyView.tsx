@@ -186,39 +186,49 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
         </p>
       </Card>
 
-      {/* Selected words area */}
-      <Card className="w-full min-h-[80px] sm:min-h-[120px] p-3 sm:p-6 bg-primary/5">
-        <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
+      {/* Selected words area — answer zone */}
+      <Card className="w-full min-h-[60px] sm:min-h-[80px] p-3 sm:p-4 bg-primary/5 border-2 border-dashed border-primary/20">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
           {selectedWords.length === 0 ? (
-            <p className="text-sm sm:text-base text-muted-foreground text-center">Clique nas palavras abaixo para montar a frase</p>
+            <p className="text-xs sm:text-sm text-muted-foreground text-center w-full">Toque nas palavras abaixo para montar a frase</p>
           ) : (
             selectedWords.map((item) => (
-              <Button
+              <button
                 key={item.id}
-                variant="default"
                 onClick={() => handleWordClick(item, false)}
                 disabled={submitted}
-                className="text-sm sm:text-lg px-3 py-1.5 sm:px-4 sm:py-2 h-auto"
+                className={cn(
+                  "inline-flex items-center rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5",
+                  "text-xs sm:text-sm font-medium transition-colors",
+                  "bg-primary text-primary-foreground shadow-sm",
+                  !submitted && "hover:bg-primary/80 active:scale-95 cursor-pointer",
+                  submitted && "opacity-70 cursor-default"
+                )}
               >
                 {item.word}
-              </Button>
+              </button>
             ))
           )}
         </div>
       </Card>
 
-      {/* Available words */}
+      {/* Available words — word bank */}
       <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center w-full">
         {availableWords.map((item) => (
-          <Button
+          <button
             key={item.id}
-            variant="outline"
             onClick={() => handleWordClick(item, true)}
             disabled={submitted}
-            className="text-sm sm:text-lg px-3 py-1.5 sm:px-4 sm:py-2 h-auto"
+            className={cn(
+              "inline-flex items-center rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5",
+              "text-xs sm:text-sm font-medium transition-colors",
+              "bg-muted text-muted-foreground border border-border shadow-sm",
+              !submitted && "hover:bg-accent hover:text-accent-foreground active:scale-95 cursor-pointer",
+              submitted && "opacity-50 cursor-default"
+            )}
           >
             {item.word}
-          </Button>
+          </button>
         ))}
       </div>
 
