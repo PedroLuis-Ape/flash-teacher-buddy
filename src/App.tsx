@@ -98,6 +98,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <Suspense fallback={<LoadingSpinner message="Carregando página..." variant="skeleton" />}>
+        <LazyErrorBoundary>
           <BrowserRouter>
             <SessionWatcher />
             <EconomyInitializer />
@@ -160,6 +161,7 @@ const App = () => {
             </GlobalLayout>
             <InstallPWA />
           </BrowserRouter>
+        </LazyErrorBoundary>
         </Suspense>
       </TooltipProvider>
     </EconomyProvider>
