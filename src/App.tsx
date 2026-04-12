@@ -18,6 +18,7 @@ import { EconomyProvider } from "@/contexts/EconomyContext";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LazyErrorBoundary } from "@/components/LazyErrorBoundary";
 import { InstallPWA } from "@/components/InstallPWA";
 import { PageTransition } from "@/components/PageTransition";
 import { BrowserCheck } from "@/components/BrowserCheck";
