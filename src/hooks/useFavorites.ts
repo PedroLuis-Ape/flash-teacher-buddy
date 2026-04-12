@@ -208,6 +208,11 @@ export function useToggleFavorite() {
           queryClient.setQueryData(queryKey, value);
         });
       }
+      if (context?.previousCountEntries) {
+        context.previousCountEntries.forEach(([queryKey, value]) => {
+          queryClient.setQueryData(queryKey, value);
+        });
+      }
       console.error('Error toggling favorite:', error);
       toast.error('Erro ao sincronizar favorito');
     },
