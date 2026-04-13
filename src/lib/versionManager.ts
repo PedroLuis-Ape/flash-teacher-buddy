@@ -1,13 +1,15 @@
 // Build identity injected by Vite at build time — unique per build
 declare const __BUILD_TIMESTAMP__: string;
 
-const BUILD_ID: string = typeof __BUILD_TIMESTAMP__ !== 'undefined'
-  ? __BUILD_TIMESTAMP__
-  : 'dev';
+export const BUILD_ID: string =
+  typeof __BUILD_TIMESTAMP__ !== "undefined"
+    ? __BUILD_TIMESTAMP__
+    : "dev";
+
+// Versão humana exibida ao usuário
+export const APP_VERSION = "2.5.0";
 
 const VERSION_KEY = "app_build_id";
-
-export const APP_VERSION = BUILD_ID; // kept for backward compat
 
 export function checkAndClearCache(): boolean {
   try {
@@ -16,17 +18,15 @@ export function checkAndClearCache(): boolean {
     if (stored !== BUILD_ID) {
       console.log(`[VersionManager] New build detected: ${BUILD_ID}. Clearing caches…`);
 
-      // Unregister service workers so new SW takes over
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(regs =>
-          regs.forEach(r => r.unregister())
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) =>
+          regs.forEach((r) => r.unregister())
         );
       }
 
-      // Purge browser Cache Storage
-      if ('caches' in window) {
-        caches.keys().then(names =>
-          names.forEach(name => caches.delete(name))
+      if ("caches" in window) {
+        caches.keys().then((names) =>
+          names.forEach((name) => caches.delete(name))
         );
       }
 

@@ -4,6 +4,12 @@ import { clearErrorBurst } from "@/lib/errorCapture";
 const CRASH_KEY = "ape_last_crash";
 const CRASH_COUNT_KEY = "ape_crash_count";
 
+interface ZombieDetail {
+  reason?: string;
+  severity?: "fatal-sync";
+  source?: string;
+}
+
 interface SafeModeState {
   hasError: boolean;
   error: Error | null;
@@ -11,29 +17,38 @@ interface SafeModeState {
   zombieDetected: boolean;
 }
 
-/**
- * Global ErrorBoundary — catches fatal React errors AND zombie states
- * (async error bursts detected by errorCapture.ts).
- * Shows a minimal recovery screen so the app never stays dead.
- */
 export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> {
-  state: SafeModeState = { hasError: false, error: null, errorInfo: "", zombieDetected: false };
+  state: SafeModeState = {
+    hasError: false,
+    error: null,
+    errorInfo: "",
+    zombieDetected: false,
+  };
 
-  private zombieHandler = ((e: CustomEvent) => {
+  private zombieHandler = ((event: Event) => {
+    const e = event as CustomEvent<ZombieDetail>;
+    const detail = e.detail;
+
+    // Só aceita eventos explicitamente fatais
+    if (detail?.severity !== "fatal-sync") {
+      console.warn("[SafeMode] Ignored non-fatal zombie event:", detail);
+      return;
+    }
+
     this.setState({
       hasError: true,
       zombieDetected: true,
-      error: new Error(e.detail?.reason || "App stopped responding"),
-      errorInfo: "The app detected repeated errors and entered recovery mode.",
+      error: new Error(detail?.reason || "App entered recovery mode"),
+      errorInfo: "SafeMode detected repeated fatal synchronous errors.",
     });
   }) as EventListener;
 
   componentDidMount() {
-    window.addEventListener('ape-zombie-state', this.zombieHandler);
+    window.addEventListener("ape-zombie-state", this.zombieHandler);
   }
 
   componentWillUnmount() {
-    window.removeEventListener('ape-zombie-state', this.zombieHandler);
+    window.removeEventListener("ape-zombie-state", this.zombieHandler);
   }
 
   static getDerivedStateFromError(error: Error): Partial<SafeModeState> {
@@ -44,24 +59,33 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
     const msg = `${error?.message || "Unknown error"}\n${info?.componentStack?.slice(0, 500) || ""}`;
     this.setState({ errorInfo: msg });
 
-    // Persist crash info for post-reload detection
     try {
-      localStorage.setItem(CRASH_KEY, JSON.stringify({
-        message: error?.message,
-        stack: error?.stack?.slice(0, 800),
-        time: Date.now(),
-      }));
+      localStorage.setItem(
+        CRASH_KEY,
+        JSON.stringify({
+          message: error?.message,
+          stack: error?.stack?.slice(0, 800),
+          time: Date.now(),
+        })
+      );
+
       const count = parseInt(localStorage.getItem(CRASH_COUNT_KEY) || "0", 10);
       localStorage.setItem(CRASH_COUNT_KEY, String(count + 1));
-    } catch { /* storage full or disabled */ }
+    } catch {
+      // ignore
+    }
 
-    console.error("[SafeMode] Fatal error caught:", error, info);
+    console.error("[SafeMode] Fatal React error caught:", error, info);
   }
 
   handleRetry = () => {
     clearErrorBurst();
-    // Reset error boundary state to re-mount the app tree
-    this.setState({ hasError: false, error: null, errorInfo: "", zombieDetected: false });
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: "",
+      zombieDetected: false,
+    });
   };
 
   handleReload = () => {
@@ -71,32 +95,32 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
 
   handleClearAndReload = () => {
     try {
-      // Unregister service workers
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then(regs =>
-          regs.forEach(r => r.unregister())
+        navigator.serviceWorker.getRegistrations().then((regs) =>
+          regs.forEach((r) => r.unregister())
         );
       }
-      // Clear caches
+
       if ("caches" in window) {
-        caches.keys().then(names => names.forEach(n => caches.delete(n)));
+        caches.keys().then((names) => names.forEach((n) => caches.delete(n)));
       }
-      // Clear localStorage (except auth tokens)
+
       const authKeys: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k && k.startsWith("sb-")) authKeys.push(k);
       }
-      const saved = authKeys.map(k => [k, localStorage.getItem(k)!]);
+
+      const saved = authKeys.map((k) => [k, localStorage.getItem(k)!] as const);
       localStorage.clear();
       saved.forEach(([k, v]) => localStorage.setItem(k, v));
 
-      // Clear sessionStorage
       sessionStorage.clear();
-    } catch { /* best-effort */ }
+    } catch {
+      // best effort
+    }
 
-    // Force reload bypassing cache
-    window.location.href = window.location.origin + "/?t=" + Date.now();
+    window.location.href = `${window.location.origin}/?t=${Date.now()}`;
   };
 
   render() {
@@ -130,9 +154,8 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
           </h1>
           <p style={{ fontSize: 14, color: "#aaa", marginBottom: 20 }}>
             {isZombie
-              ? "O aplicativo detectou instabilidade e entrou em modo de recuperação."
-              : "Ocorreu um erro ao iniciar o aplicativo. Tente uma das opções abaixo."
-            }
+              ? "A interface detectou um erro fatal repetido e entrou em recuperação."
+              : "Ocorreu um erro fatal ao renderizar o aplicativo."}
           </p>
 
           {this.state.error && (
@@ -154,7 +177,6 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* Retry without reload — re-mount the app tree */}
             <button
               onClick={this.handleRetry}
               style={{
@@ -170,6 +192,7 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
             >
               ⚡ Tentar recuperar
             </button>
+
             <button
               onClick={this.handleReload}
               style={{
@@ -185,6 +208,7 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
             >
               🔄 Recarregar
             </button>
+
             <button
               onClick={this.handleClearAndReload}
               style={{
