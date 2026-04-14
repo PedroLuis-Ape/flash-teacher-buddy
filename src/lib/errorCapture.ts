@@ -123,13 +123,8 @@ window.addEventListener("error", (e) => {
 // Promessas rejeitadas continuam sendo registradas, mas NÃO derrubam a UI
 window.addEventListener("unhandledrejection", (e) => {
   saveError("unhandled_promise", e.reason);
-
-  if (!isIgnorablePromiseRejection(e.reason)) {
-    console.warn(
-      "[ErrorCapture] Unhandled promise rejection captured (non-fatal):",
-      e.reason
-    );
-  }
+  // Apenas avisa no console, SEM derrubar a UI ou somar burst
+  console.warn("[ErrorCapture] Requisição assíncrona falhou (Ignorado pelo SafeMode):", e.reason);
 });
 
 export function getLastCrash(): { label: string; message: string; time: number } | null {
