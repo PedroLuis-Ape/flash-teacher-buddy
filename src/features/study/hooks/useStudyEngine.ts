@@ -557,16 +557,15 @@ export function useStudyEngine(
       }
 
       if (upsertRecords.length > 0) {
-        await supabase
-          .from('flashcard_progress')
-          .upsert(upsertRecords, { onConflict: 'id' })
-          .then(({ error }) => {
-            if (error) console.warn('[StudyEngine] Erro no banco durante flush:', error.message);
-          })
-          .catch((err) => {
-            // Se a internet cair bem aqui, nós seguramos o erro para não quebrar o React
-            console.warn('[StudyEngine] Falha de conexão no flush interceptada:', err);
-          });
+        try {
+          const { error } = await supabase
+            .from('flashcard_progress')
+            .upsert(upsertRecords, { onConflict: 'id' });
+          if (error) console.warn('[StudyEngine] Erro no banco durante flush:', error.message);
+        } catch (err) {
+          // Se a internet cair bem aqui, nós seguramos o erro para não quebrar o React
+          console.warn('[StudyEngine] Falha de conexão no flush interceptada:', err);
+        }
       }
 
       // (inserts already included in upsert above)
