@@ -424,7 +424,12 @@ const Study = () => {
 
     // Set flashcards last (triggers engine init)
     setFlashcards(orderedData);
-    setLoading(false);
+    } catch (err) {
+      console.error("[Study] Falha ao carregar flashcards:", err);
+      toast.error("Erro ao carregar dados. Verifique sua conexão.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const shuffleArray = <T,>(array: T[]): T[] => {
