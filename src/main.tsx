@@ -18,7 +18,11 @@ const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
     try {
-      const RELOAD_KEY = "ape_pwa_update_reload_done";
+      const buildId =
+        typeof __BUILD_TIMESTAMP__ !== "undefined"
+          ? __BUILD_TIMESTAMP__
+          : "dev";
+      const RELOAD_KEY = `ape_pwa_update_reload_done_${buildId}`;
       const alreadyReloaded = sessionStorage.getItem(RELOAD_KEY);
 
       if (!alreadyReloaded) {
@@ -26,7 +30,7 @@ const updateSW = registerSW({
         console.log("[PWA] Nova versão encontrada. Aplicando atualização...");
         updateSW(true);
       } else {
-        console.warn("[PWA] Atualização detectada, mas reload já foi feito nesta sessão. Evitando loop.");
+        console.warn("[PWA] Atualização já tentou reload para esta build. Evitando loop.");
       }
     } catch (error) {
       console.warn("[PWA] Falha ao aplicar atualização automática:", error);
