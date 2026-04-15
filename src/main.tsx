@@ -12,6 +12,43 @@ import "./lib/versionManager"; // Verificar versão e limpar cache
 import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
+import { registerSW } from "virtual:pwa-register";
+
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    try {
+      const RELOAD_KEY = "ape_pwa_update_reload_done";
+      const alreadyReloaded = sessionStorage.getItem(RELOAD_KEY);
+
+      if (!alreadyReloaded) {
+        sessionStorage.setItem(RELOAD_KEY, "true");
+        console.log("[PWA] Nova versão encontrada. Aplicando atualização...");
+        updateSW(true);
+      } else {
+        console.warn("[PWA] Atualização detectada, mas reload já foi feito nesta sessão. Evitando loop.");
+      }
+    } catch (error) {
+      console.warn("[PWA] Falha ao aplicar atualização automática:", error);
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log("[PWA] App pronto para uso offline.");
+  },
+  onRegisteredSW(swUrl, registration) {
+    console.log("[PWA] Service Worker registrado:", swUrl);
+
+    if (registration) {
+      setInterval(() => {
+        registration.update();
+      }, 60 * 60 * 1000);
+    }
+  },
+  onRegisterError(error) {
+    console.error("[PWA] Erro ao registrar Service Worker:", error);
+  },
+});
 
 // Clear boot timeout — app JS loaded successfully
 if ((window as any).__apeBootTimer) {
