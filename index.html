@@ -79,12 +79,12 @@
           if (msg) {
             msg.innerHTML = 'Falha ao iniciar o app.<br><button id="boot-recover" style="margin-top:12px;padding:10px 20px;border:none;border-radius:8px;background:#FFD700;color:#1a1a2e;font-weight:600;font-size:14px;cursor:pointer;">Limpar cache e recarregar</button>';
             var btn = document.getElementById('boot-recover');
-            if (btn) btn.onclick = function(){
+            if (btn) btn.onclick = async function(){
               try {
-                if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});
-                if('caches' in window) caches.keys().then(function(n){n.forEach(function(k){caches.delete(k)})});
                 var authKeys=[];
                 for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith('sb-'))authKeys.push([k,localStorage.getItem(k)])}
+                if('serviceWorker' in navigator){var regs=await navigator.serviceWorker.getRegistrations();await Promise.allSettled(regs.map(function(sw){return sw.unregister()}))}
+                if('caches' in window){var names=await caches.keys();await Promise.allSettled(names.map(function(k){return caches.delete(k)}))}
                 localStorage.clear(); sessionStorage.clear();
                 authKeys.forEach(function(p){localStorage.setItem(p[0],p[1])});
               } catch(e){}
