@@ -93,31 +93,33 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
     window.location.reload();
   };
 
-  handleClearAndReload = () => {
+  handleClearAndReload = async () => {
     try {
+      const authKeys: [string, string][] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("sb-")) {
+          const value = localStorage.getItem(k);
+          if (value) authKeys.push([k, value]);
+        }
+      }
+
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then((regs) =>
-          regs.forEach((r) => r.unregister())
-        );
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.allSettled(regs.map((r) => r.unregister()));
       }
 
       if ("caches" in window) {
-        caches.keys().then((names) => names.forEach((n) => caches.delete(n)));
+        const names = await caches.keys();
+        await Promise.allSettled(names.map((n) => caches.delete(n)));
       }
 
-      const authKeys: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith("sb-")) authKeys.push(k);
-      }
-
-      const saved = authKeys.map((k) => [k, localStorage.getItem(k)!] as const);
       localStorage.clear();
-      saved.forEach(([k, v]) => localStorage.setItem(k, v));
+      authKeys.forEach(([k, v]) => localStorage.setItem(k, v));
 
       sessionStorage.clear();
-    } catch {
-      // best effort
+    } catch (error) {
+      console.warn("[SafeMode] Falha ao limpar cache:", error);
     }
 
     window.location.href = `${window.location.origin}/?t=${Date.now()}`;

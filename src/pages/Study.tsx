@@ -278,6 +278,8 @@ const Study = () => {
     const isListRoute = window.location.pathname.includes("/list/");
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
 
+    try {
+
     // Offline fallback
     if (!navigator.onLine && isListRoute) {
       try {
