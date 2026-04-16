@@ -68,7 +68,7 @@ export const FEATURE_FLAGS = {
    * Offline mode (download lists for offline use)
    * When false: hides download buttons, disables IndexedDB caching
    */
-  offline_mode_enabled: true,
+  offline_mode_enabled: false,
 
   /**
    * Activity heartbeat (updates last_active_at every 60s)

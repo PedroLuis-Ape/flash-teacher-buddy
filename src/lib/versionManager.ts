@@ -11,6 +11,9 @@ const VERSION_KEY = "app_build_id";
 // Versão Semântica que vai para a Interface do Usuário (Rodapé, etc)
 export const APP_VERSION = "v2.5.0";
 
+// Exported so other modules can read the current build fingerprint
+export const APP_BUILD_ID = BUILD_ID;
+
 export function checkAppBuildVersion(): boolean {
   try {
     const stored = localStorage.getItem(VERSION_KEY);
@@ -34,3 +37,4 @@ export function checkAppBuildVersion(): boolean {
 }
 
 checkAppBuildVersion();
+console.log("[APE BUILD]", APP_VERSION, APP_BUILD_ID);

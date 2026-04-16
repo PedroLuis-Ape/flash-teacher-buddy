@@ -90,16 +90,8 @@ const Study = () => {
   // ── Persistent study preferences ──
   // userId is set later after auth; prefs load with anon key initially
   const [authUserId, setAuthUserId] = useState<string | undefined>();
-  const { prefs, updatePrefs, applyUrlOverrides } = useStudyPreferences(authUserId);
-  const urlOverridesApplied = useRef(false);
-
-  // Apply URL params as one-time overrides on mount
-  useEffect(() => {
-    if (!urlOverridesApplied.current) {
-      urlOverridesApplied.current = true;
-      applyUrlOverrides(searchParams);
-    }
-  }, []);
+  const { prefs, updatePrefs } = useStudyPreferences(authUserId);
+  // URL overrides are now applied at load time inside useStudyPreferences
 
   // Derive values from persistent prefs (single source of truth)
   const rawMode = (prefs.mode || "flip").toLowerCase();

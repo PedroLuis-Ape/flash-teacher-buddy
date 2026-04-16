@@ -12,52 +12,27 @@ import "./lib/versionManager"; // Verificar versão e limpar cache
 import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
-import { registerSW } from "virtual:pwa-register";
 
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    try {
-      const buildId =
-        typeof __BUILD_TIMESTAMP__ !== "undefined"
-          ? __BUILD_TIMESTAMP__
-          : "dev";
-      const RELOAD_KEY = `ape_pwa_update_reload_done_${buildId}`;
-      const alreadyReloaded = sessionStorage.getItem(RELOAD_KEY);
-
-      if (!alreadyReloaded) {
-        sessionStorage.setItem(RELOAD_KEY, "true");
-        console.log("[PWA] Nova versão encontrada. Aplicando atualização...");
-        updateSW(true);
-      } else {
-        console.warn("[PWA] Atualização já tentou reload para esta build. Evitando loop.");
-      }
-    } catch (error) {
-      console.warn("[PWA] Falha ao aplicar atualização automática:", error);
-      updateSW(true);
+// ── One-time cleanup of old Service Workers and caches ──
+// This runs once per device to flush any stale PWA cache from previous builds.
+try {
+  const SW_CLEANUP_KEY = "ape_sw_cleanup_done_v1";
+  if (!localStorage.getItem(SW_CLEANUP_KEY)) {
+    localStorage.setItem(SW_CLEANUP_KEY, "1");
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+        console.log("[PWA Cleanup] Unregistered", regs.length, "old service workers");
+      });
     }
-  },
-  onOfflineReady() {
-    console.log("[PWA] App pronto para uso offline.");
-  },
-  onRegisteredSW(swUrl, registration) {
-    console.log("[PWA] Service Worker registrado:", swUrl);
-
-    if (registration) {
-      setInterval(() => {
-        registration.update();
-      }, 60 * 60 * 1000);
+    if ("caches" in window) {
+      caches.keys().then(names => {
+        names.forEach(n => caches.delete(n));
+        console.log("[PWA Cleanup] Deleted", names.length, "old caches");
+      });
     }
-  },
-  onRegisterError(error) {
-    console.error("[PWA] Erro ao registrar Service Worker:", error);
-  },
-});
-
-// Clear boot timeout — app JS loaded successfully
-if ((window as any).__apeBootTimer) {
-  clearTimeout((window as any).__apeBootTimer);
-}
+  }
+} catch { /* best-effort */ }
 
 // Unregister service workers inside iframes or preview hosts to prevent stale cache
 try {
@@ -67,6 +42,11 @@ try {
     navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
   }
 } catch { /* best-effort */ }
+
+// Clear boot timeout — app JS loaded successfully
+if ((window as any).__apeBootTimer) {
+  clearTimeout((window as any).__apeBootTimer);
+}
 
 // Remove boot loader so it doesn't flash under React
 const bootLoader = document.getElementById("boot-loader");
