@@ -16,7 +16,7 @@ import { ApeTabBar } from "@/components/ape/ApeTabBar";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEconomy } from "@/contexts/EconomyContext";
-import { APP_VERSION } from "@/lib/versionManager";
+import { APP_VERSION, APP_BUILD_ID } from "@/lib/versionManager";
 import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { InstitutionProvider } from "@/contexts/InstitutionContext";
@@ -119,9 +119,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           )}
           
           {/* Version Badge */}
-          <div className="hidden md:block fixed bottom-6 right-3 z-40 pointer-events-none">
-            <Badge variant="secondary" className="opacity-40 text-xs shadow-sm">
-              v{APP_VERSION}
+          <div className="fixed bottom-20 md:bottom-6 right-3 z-40 pointer-events-none">
+            <Badge variant="secondary" className="opacity-40 text-[10px] shadow-sm">
+              {APP_VERSION} · {String(APP_BUILD_ID).slice(-6)}
             </Badge>
           </div>
         </div>
