@@ -213,14 +213,16 @@ const Study = () => {
     setFlipDirection(prefs.direction);
   }, [prefs.direction]);
 
-  // ── Sync engine gameSettings with prefs (handles late-arriving auth/prefs) ──
+  // ── Sync engine gameSettings with prefs APENAS durante a fase inicial ──
+  // Depois que o jogo carregou, mudanças vêm via handleSettingsChange (caminho controlado)
   useEffect(() => {
+    if (!loading) return;
     setGameSettings({
       mode: prefs.order === "sequential" ? "sequential" : "random",
       subset: prefs.favoritesOnly ? "favorites" : "all",
       fastMode: prefs.fastMode,
     });
-  }, [prefs.order, prefs.favoritesOnly, prefs.fastMode, setGameSettings]);
+  }, [prefs.order, prefs.favoritesOnly, prefs.fastMode, loading, setGameSettings]);
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
