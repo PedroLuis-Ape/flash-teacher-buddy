@@ -208,6 +208,10 @@ export function useStudyEngine(
     // Skip if already initialized with same signature
     const initKey = `${listId}|${mode}|${cardsSignature}`;
     if (lastInitSignatureRef.current === initKey) {
+      // Init já foi feita para esta combinação — destrava o loading se há cards
+      if (flashcards.length > 0) {
+        setIsLoading(false);
+      }
       return;
     }
     
