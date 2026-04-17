@@ -208,6 +208,20 @@ const Study = () => {
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
 
+  // ── Sync flipDirection with prefs.direction (handles late-arriving auth/prefs) ──
+  useEffect(() => {
+    setFlipDirection(prefs.direction);
+  }, [prefs.direction]);
+
+  // ── Sync engine gameSettings with prefs (handles late-arriving auth/prefs) ──
+  useEffect(() => {
+    setGameSettings({
+      mode: prefs.order === "sequential" ? "sequential" : "random",
+      subset: prefs.favoritesOnly ? "favorites" : "all",
+      fastMode: prefs.fastMode,
+    });
+  }, [prefs.order, prefs.favoritesOnly, prefs.fastMode, setGameSettings]);
+
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
     // flipDirection is the SSOT for ALL modes, not just flip
