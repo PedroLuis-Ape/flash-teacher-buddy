@@ -104,11 +104,12 @@ const Study = () => {
   const urlFavoritesOnly = prefs.favoritesOnly;
   
   // Derive initial game settings from persistent prefs
+  // NOTE: only used as initialSettings on first engine init; live updates flow via setGameSettings effect below
   const initialGameSettings = useMemo(() => ({
     mode: (initialOrder === "sequential" ? "sequential" : "random") as "sequential" | "random",
     subset: (urlFavoritesOnly ? "favorites" : "all") as "all" | "favorites",
     fastMode: prefs.fastMode,
-  }), []); // intentionally empty deps — only read once on mount
+  }), [initialOrder, urlFavoritesOnly, prefs.fastMode]);
   
   // Goal context
   const fromGoalId = searchParams.get("from_goal");
@@ -200,12 +201,26 @@ const Study = () => {
     missedCardsCount,
     completeSession,
     cardsOrder,
-  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble", false, favorites, initialGameSettings, redListIds);
+  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble" | "mixed" | "pronunciation", false, favorites, initialGameSettings, redListIds);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
+
+  // ── Sync flipDirection with prefs.direction (handles late-arriving auth/prefs) ──
+  useEffect(() => {
+    setFlipDirection(prefs.direction);
+  }, [prefs.direction]);
+
+  // ── Sync engine gameSettings with prefs (handles late-arriving auth/prefs) ──
+  useEffect(() => {
+    setGameSettings({
+      mode: prefs.order === "sequential" ? "sequential" : "random",
+      subset: prefs.favoritesOnly ? "favorites" : "all",
+      fastMode: prefs.fastMode,
+    });
+  }, [prefs.order, prefs.favoritesOnly, prefs.fastMode, setGameSettings]);
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {

@@ -81,7 +81,7 @@ function injectRedListRepetitions(
 export function useStudyEngine(
   listId: string | undefined,
   flashcards: { id: string; term: string; translation: string }[],
-  mode: "flip" | "multiple-choice" | "write" | "unscramble",
+  mode: "flip" | "multiple-choice" | "write" | "unscramble" | "mixed" | "pronunciation",
   unlimitedMode: boolean = false,
   favoriteIds: string[] = [],
   initialSettings?: Partial<GameSettings>,
