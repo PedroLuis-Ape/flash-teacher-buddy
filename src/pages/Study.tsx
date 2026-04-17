@@ -104,11 +104,12 @@ const Study = () => {
   const urlFavoritesOnly = prefs.favoritesOnly;
   
   // Derive initial game settings from persistent prefs
+  // NOTE: only used as initialSettings on first engine init; live updates flow via setGameSettings effect below
   const initialGameSettings = useMemo(() => ({
     mode: (initialOrder === "sequential" ? "sequential" : "random") as "sequential" | "random",
     subset: (urlFavoritesOnly ? "favorites" : "all") as "all" | "favorites",
     fastMode: prefs.fastMode,
-  }), []); // intentionally empty deps — only read once on mount
+  }), [initialOrder, urlFavoritesOnly, prefs.fastMode]);
   
   // Goal context
   const fromGoalId = searchParams.get("from_goal");
