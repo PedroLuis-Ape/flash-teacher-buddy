@@ -581,22 +581,16 @@ const Study = () => {
     );
   }
 
-  // Empty state when studying favorites but none found — with recovery
-  if (favoritesOnly && !favoritesLoading && effectiveFlashcards.length === 0 && flashcards.length > 0) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
-        <Star className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground text-center text-lg font-medium">Nenhum card favorito nesta lista.</p>
-        <p className="text-sm text-muted-foreground text-center">Marque cards como favorito com a estrela ⭐ ou desative o filtro.</p>
-        <div className="flex gap-3">
-          <Button variant="default" onClick={handleDisableFavoritesFilter}>
-            Estudar todos os cards
-          </Button>
-          <Button variant="outline" onClick={handleExit}>Voltar</Button>
-        </div>
-      </div>
-    );
-  }
+  // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
+  // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
+  // O efeito abaixo desativa o flag persistido para limpar o estado.
+  useEffect(() => {
+    if (favoritesFilterFellBack) {
+      toast.info("Nenhum favorito encontrado. Exibindo todos os cards.");
+      updatePrefs({ favoritesOnly: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoritesFilterFellBack]);
 
   // Safety fallback — with recovery options
   if (!currentCard) {
