@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
@@ -84,20 +85,22 @@ const getDefaultListSettings = (): ListSettings => ({
 const Study = () => {
   const { id, collectionId } = useParams();
   const resolvedId = (id as string) || (collectionId as string) || "";
+  // Route distinction comes from useParams (declarative router-defined keys),
+  // not pathname matching. Keeps things robust against future route additions.
+  const isListRoute = Boolean(id);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // ── Persistent study preferences ──
   // userId is set later after auth; prefs load with anon key initially
   const [authUserId, setAuthUserId] = useState<string | undefined>();
   const { prefs, updatePrefs } = useStudyPreferences(authUserId);
   // URL overrides are now applied at load time inside useStudyPreferences
 
-  // Derive values from persistent prefs (single source of truth)
-  const rawMode = (prefs.mode || "flip").toLowerCase();
-  const validModes = new Set(["flip","write","multiple","multiple-choice","unscramble","mixed","pronunciation"]);
-  const mode = validModes.has(rawMode) ? rawMode : "flip";
-  const normalizedMode = mode === "multiple" ? "multiple-choice" : mode;
+  // Single canonical mode token for the entire engine + view chain.
+  // normalizeStudyMode() handles aliases ("multiple" → "multiple-choice") and
+  // unknown values (falls back to "flip"). No more inline Set + cast.
+  const normalizedMode: StudyMode = normalizeStudyMode(prefs.mode);
 
   const initialDir: Direction = prefs.direction;
   const initialOrder = prefs.order;
@@ -129,12 +132,14 @@ const Study = () => {
   // Completion modal
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Persistent completion key
+  // Persistent completion key — uses urlFavoritesOnly (the prefs-derived value),
+  // which is the SSOT before engine init. After init, gameSettings.subset is the
+  // SSOT, but the key intentionally tracks the user-requested filter for stability.
   const completionKey = useMemo(() => {
     if (!resolvedId) return null;
     return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
   }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly]);
-  const isListRoute = window.location.pathname.includes("/list/");
+  // isListRoute is now derived once at the top of the component (from useParams).
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
   const favoritesScope = useMemo(() => {
@@ -204,7 +209,7 @@ const Study = () => {
     missedCardsCount,
     completeSession,
     cardsOrder,
-  } = useStudyEngine(listId, stableFlashcards, normalizedMode as "flip" | "write" | "multiple-choice" | "unscramble" | "mixed" | "pronunciation", false, favorites, initialGameSettings, redListIds);
+  } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
@@ -246,9 +251,14 @@ const Study = () => {
   const effectiveMode = normalizedMode === "mixed" ? mixedModeFor(currentIndex) : normalizedMode;
   const isPronunciationMode = effectiveMode === "pronunciation";
 
+  // Reload flashcards ONLY when the underlying list/collection changes.
+  // Order/direction/favorites are applied locally (in effectiveFlashcards or by
+  // shuffling) — they must NOT trigger a fresh DB query, which would reset the
+  // session and re-init the engine for free.
   useEffect(() => {
     loadFlashcards();
-  }, [resolvedId, urlFavoritesOnly, initialOrder, initialDir]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedId]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -287,7 +297,7 @@ const Study = () => {
 
     setLoading(true);
     
-    const isListRoute = window.location.pathname.includes("/list/");
+    // isListRoute is the component-level value derived from useParams.
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
 
     try {
@@ -592,18 +602,26 @@ const Study = () => {
     );
   }
 
-  // Safety fallback — with recovery options
+  // Engine still building cardsOrder (window between setFlashcards and engine init).
+  // Show a discreet spinner instead of the alarming "Não foi possível iniciar" screen.
+  // The real "no cards" case is handled inside loadFlashcards() with a toast + redirect.
+  if (!currentCard && flashcards.length > 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Preparando sua sessão...</p>
+      </div>
+    );
+  }
+
+  // True empty state: no cards at all (e.g. after errors, or favorites filter
+  // somehow still produced 0 — shouldn't happen given the fallback, but kept as
+  // a last-resort safety net with a recovery action).
   if (!currentCard) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
         <Star className="h-12 w-12 text-muted-foreground" />
         <p className="text-muted-foreground text-center text-lg font-medium">
-          Não foi possível iniciar este modo com o filtro atual.
-        </p>
-        <p className="text-sm text-muted-foreground text-center">
-          {favoritesOnly
-            ? "Desative o filtro de favoritos ou marque mais cards nesta lista."
-            : "Tente reiniciar a sessão de estudo."}
+          Esta lista não tem cards disponíveis no momento.
         </p>
         <div className="flex gap-3">
           {favoritesOnly && (

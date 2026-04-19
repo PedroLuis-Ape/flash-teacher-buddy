@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { isPortalPath, buildBasePath } from "@/lib/utils";
 import { useFavoritesCount } from "@/hooks/useFavorites";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
 
 interface Collection {
   id: string;
@@ -158,14 +159,19 @@ const GamesHub = () => {
     setLoading(false);
   };
 
-  const startGame = (mode: "flip" | "write" | "mixed" | "multiple" | "unscramble" | "pronunciation") => {
-    // Persist the chosen mode
+  const startGame = (rawMode: StudyMode | "multiple") => {
+    // Normalize any alias (e.g. "multiple" → "multiple-choice") before persisting.
+    // This is the single entry point from the hub into the study session.
+    const mode = normalizeStudyMode(rawMode);
     updatePrefs({ mode });
 
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
-    const favParam = prefs.favoritesOnly ? "&favorites=true" : "";
-    navigate(`${basePath}/study?mode=${mode}&dir=${prefs.direction}&order=${prefs.order}${favParam}`);
+    // Only forward favorites=true if the list actually has favorites — guards against
+    // a stale flag bleeding from a previous list (the auto-reset effect handles state,
+    // this guards the URL too).
+    const favParam = prefs.favoritesOnly && favoritesCount > 0 ? "&favorites=true" : "";
+    navigate(`${basePath}/study?mode=${studyModeToUrlParam(mode)}&dir=${prefs.direction}&order=${prefs.order}${favParam}`);
   };
 
   const handleBack = () => {
