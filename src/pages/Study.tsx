@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
@@ -84,20 +85,22 @@ const getDefaultListSettings = (): ListSettings => ({
 const Study = () => {
   const { id, collectionId } = useParams();
   const resolvedId = (id as string) || (collectionId as string) || "";
+  // Route distinction comes from useParams (declarative router-defined keys),
+  // not pathname matching. Keeps things robust against future route additions.
+  const isListRoute = Boolean(id);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // ── Persistent study preferences ──
   // userId is set later after auth; prefs load with anon key initially
   const [authUserId, setAuthUserId] = useState<string | undefined>();
   const { prefs, updatePrefs } = useStudyPreferences(authUserId);
   // URL overrides are now applied at load time inside useStudyPreferences
 
-  // Derive values from persistent prefs (single source of truth)
-  const rawMode = (prefs.mode || "flip").toLowerCase();
-  const validModes = new Set(["flip","write","multiple","multiple-choice","unscramble","mixed","pronunciation"]);
-  const mode = validModes.has(rawMode) ? rawMode : "flip";
-  const normalizedMode = mode === "multiple" ? "multiple-choice" : mode;
+  // Single canonical mode token for the entire engine + view chain.
+  // normalizeStudyMode() handles aliases ("multiple" → "multiple-choice") and
+  // unknown values (falls back to "flip"). No more inline Set + cast.
+  const normalizedMode: StudyMode = normalizeStudyMode(prefs.mode);
 
   const initialDir: Direction = prefs.direction;
   const initialOrder = prefs.order;
