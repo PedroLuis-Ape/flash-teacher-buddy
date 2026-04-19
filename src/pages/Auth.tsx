@@ -9,7 +9,7 @@ import { PitecoMascot } from "@/features/gamification/components/PitecoMascot";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import { toast } from "sonner";
 import { Download, Chrome } from "lucide-react";
-import { APP_VERSION } from "@/lib/versionManager";
+import { formatVersionShort } from "@/lib/versionManager";
 import { Separator } from "@/components/ui/separator";
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
