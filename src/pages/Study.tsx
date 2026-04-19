@@ -153,11 +153,14 @@ const Study = () => {
   // Load list glossary for merged hints (skip fetch when feature disabled)
   const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
 
-  // Derive effective flashcards filtered by favorites when enabled
-  // Uses urlFavoritesOnly for initial load; after engine init, gameSettings.subset becomes the source of truth
+  // Derive effective flashcards filtered by favorites when enabled.
+  // FALLBACK SEGURO: se favoritesOnly estiver ativo mas a lista não tem nenhum favorito,
+  // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
+  // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
+  const favoritesFilterFellBack = urlFavoritesOnly && !favoritesLoading && favorites.length === 0 && flashcards.length > 0;
   const effectiveFlashcards = useMemo(() => {
     if (!urlFavoritesOnly) return flashcards;
-    if (favorites.length === 0) return [];
+    if (favorites.length === 0) return flashcards; // fallback: estuda todos
     return flashcards.filter(c => favorites.includes(c.id));
   }, [flashcards, urlFavoritesOnly, favorites]);
 
