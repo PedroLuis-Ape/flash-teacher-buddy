@@ -565,6 +565,17 @@ const Study = () => {
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
   }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
 
+  // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
+  // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
+  // Este efeito desativa o flag persistido para limpar o estado herdado.
+  useEffect(() => {
+    if (favoritesFilterFellBack) {
+      toast.info("Nenhum favorito encontrado. Exibindo todos os cards.");
+      updatePrefs({ favoritesOnly: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoritesFilterFellBack]);
+
   // Helper to disable favorites filter and restart with all cards
   const handleDisableFavoritesFilter = () => {
     updatePrefs({ favoritesOnly: false });
@@ -580,17 +591,6 @@ const Study = () => {
       </div>
     );
   }
-
-  // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
-  // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
-  // O efeito abaixo desativa o flag persistido para limpar o estado.
-  useEffect(() => {
-    if (favoritesFilterFellBack) {
-      toast.info("Nenhum favorito encontrado. Exibindo todos os cards.");
-      updatePrefs({ favoritesOnly: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [favoritesFilterFellBack]);
 
   // Safety fallback — with recovery options
   if (!currentCard) {
