@@ -8,11 +8,31 @@ const BUILD_ID: string =
 
 const VERSION_KEY = "app_build_id";
 
-// Versão Semântica que vai para a Interface do Usuário (Rodapé, etc)
-export const APP_VERSION = "v2.5.0";
+/**
+ * Single source of truth for the app's semantic version.
+ * IMPORTANT: store WITHOUT the "v" prefix. The UI is responsible for adding it.
+ */
+export const APP_VERSION = "2.5.5";
 
-// Exported so other modules can read the current build fingerprint
+/** Full build fingerprint (timestamp injected at build time, or "dev" locally). */
 export const APP_BUILD_ID = BUILD_ID;
+
+/** Short build fingerprint suitable for compact UI badges (last 6 chars). */
+export const APP_BUILD_SHORT = String(BUILD_ID).slice(-6);
+
+/**
+ * Canonical label for the version badge.
+ * Format: "v2.5.5 · 832129" (or "v2.5.5 · dev" in local dev).
+ * Use this everywhere the badge/watermark is rendered.
+ */
+export function formatVersionLabel(): string {
+  return `v${APP_VERSION} · ${APP_BUILD_SHORT}`;
+}
+
+/** Short label used on minimal surfaces (e.g. login screen). */
+export function formatVersionShort(): string {
+  return `v${APP_VERSION}`;
+}
 
 export function checkAppBuildVersion(): boolean {
   try {
@@ -37,4 +57,4 @@ export function checkAppBuildVersion(): boolean {
 }
 
 checkAppBuildVersion();
-console.log("[APE BUILD]", APP_VERSION, APP_BUILD_ID);
+console.log("[APE BUILD]", formatVersionLabel());

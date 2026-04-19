@@ -9,7 +9,7 @@ import { PitecoMascot } from "@/features/gamification/components/PitecoMascot";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import { toast } from "sonner";
 import { Download, Chrome } from "lucide-react";
-import { APP_VERSION } from "@/lib/versionManager";
+import { formatVersionShort } from "@/lib/versionManager";
 import { Separator } from "@/components/ui/separator";
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -238,7 +238,7 @@ const Auth = () => {
         <div className="flex justify-center">
           <div className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-40 hover:opacity-70 transition-opacity">
             <p className="text-lg font-semibold text-primary-foreground">
-              v{APP_VERSION}
+              {formatVersionShort()}
             </p>
           </div>
         </div>
