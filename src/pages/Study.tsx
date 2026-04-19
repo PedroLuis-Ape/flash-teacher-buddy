@@ -153,11 +153,14 @@ const Study = () => {
   // Load list glossary for merged hints (skip fetch when feature disabled)
   const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
 
-  // Derive effective flashcards filtered by favorites when enabled
-  // Uses urlFavoritesOnly for initial load; after engine init, gameSettings.subset becomes the source of truth
+  // Derive effective flashcards filtered by favorites when enabled.
+  // FALLBACK SEGURO: se favoritesOnly estiver ativo mas a lista não tem nenhum favorito,
+  // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
+  // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
+  const favoritesFilterFellBack = urlFavoritesOnly && !favoritesLoading && favorites.length === 0 && flashcards.length > 0;
   const effectiveFlashcards = useMemo(() => {
     if (!urlFavoritesOnly) return flashcards;
-    if (favorites.length === 0) return [];
+    if (favorites.length === 0) return flashcards; // fallback: estuda todos
     return flashcards.filter(c => favorites.includes(c.id));
   }, [flashcards, urlFavoritesOnly, favorites]);
 
@@ -562,6 +565,17 @@ const Study = () => {
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
   }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
 
+  // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
+  // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
+  // Este efeito desativa o flag persistido para limpar o estado herdado.
+  useEffect(() => {
+    if (favoritesFilterFellBack) {
+      toast.info("Nenhum favorito encontrado. Exibindo todos os cards.");
+      updatePrefs({ favoritesOnly: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoritesFilterFellBack]);
+
   // Helper to disable favorites filter and restart with all cards
   const handleDisableFavoritesFilter = () => {
     updatePrefs({ favoritesOnly: false });
@@ -574,23 +588,6 @@ const Study = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
-      </div>
-    );
-  }
-
-  // Empty state when studying favorites but none found — with recovery
-  if (favoritesOnly && !favoritesLoading && effectiveFlashcards.length === 0 && flashcards.length > 0) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
-        <Star className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground text-center text-lg font-medium">Nenhum card favorito nesta lista.</p>
-        <p className="text-sm text-muted-foreground text-center">Marque cards como favorito com a estrela ⭐ ou desative o filtro.</p>
-        <div className="flex gap-3">
-          <Button variant="default" onClick={handleDisableFavoritesFilter}>
-            Estudar todos os cards
-          </Button>
-          <Button variant="outline" onClick={handleExit}>Voltar</Button>
-        </div>
       </div>
     );
   }

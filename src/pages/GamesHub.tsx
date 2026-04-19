@@ -68,7 +68,16 @@ const GamesHub = () => {
     return isListRoute ? { listId: id } : { collectionId: id };
   }, [id, isListRoute]);
   
-  const { data: favoritesCount = 0 } = useFavoritesCount(userId, 'flashcard', favoritesScope);
+  const { data: favoritesCount = 0, isLoading: favoritesCountLoading } = useFavoritesCount(userId, 'flashcard', favoritesScope);
+
+  // Auto-reset favoritesOnly when current list/collection has 0 favorites
+  // Prevents a stale `favoritesOnly=true` from a previous list bleeding into the current one.
+  useEffect(() => {
+    if (favoritesCountLoading) return;
+    if (prefs.favoritesOnly && favoritesCount === 0) {
+      updatePrefs({ favoritesOnly: false });
+    }
+  }, [favoritesCount, favoritesCountLoading, prefs.favoritesOnly, updatePrefs]);
 
   useEffect(() => {
     if (isListRoute) {
@@ -240,21 +249,25 @@ const GamesHub = () => {
             </div>
           </div>
 
-          {/* Favorites filter */}
-          {userId && favoritesCount > 0 && (
+          {/* Favorites filter — sempre visível para usuários logados, mesmo com 0 favoritos.
+              Garantia: o controle nunca fica oculto enquanto a preferência pode estar ativa por baixo. */}
+          {userId && (
             <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-500" />
                 <Label htmlFor="favorites-only" className="cursor-pointer">
                   <span className="font-medium">Estudar apenas favoritos</span>
                   <p className="text-xs text-muted-foreground">
-                    {favoritesCount} cards marcados como favorito
+                    {favoritesCount > 0
+                      ? `${favoritesCount} cards marcados como favorito`
+                      : "Nenhum favorito nesta lista"}
                   </p>
                 </Label>
               </div>
               <Switch
                 id="favorites-only"
-                checked={prefs.favoritesOnly}
+                disabled={favoritesCount === 0}
+                checked={prefs.favoritesOnly && favoritesCount > 0}
                 onCheckedChange={(v) => updatePrefs({ favoritesOnly: v })}
               />
             </div>
