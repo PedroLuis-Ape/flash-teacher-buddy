@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { isPortalPath, buildBasePath } from "@/lib/utils";
 import { useFavoritesCount } from "@/hooks/useFavorites";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
 
 interface Collection {
@@ -43,34 +45,91 @@ const GamesHub = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [collection, setCollection] = useState<Collection | null>(null);
-  const [list, setList] = useState<List | null>(null);
-  const [loading, setLoading] = useState(true);
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
 
   // Use declarative route matching (covers /list/:id/games and /portal/list/:id/games)
   // instead of pathname.includes() — robust against future route additions.
   const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
 
-  // Use cached auth from React Query
-  const { data: currentUser } = useQuery({
-    queryKey: ['current-user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  // PERF: centralized auth (no redundant getUser() / getSession() calls)
+  const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
 
   // ── Persistent study preferences (single source of truth) ──
   const { prefs, updatePrefs } = useStudyPreferences(userId);
 
+  // PERF: cached metadata fetches with longer staleTime so back/forth navigation
+  // between list → hub → study → hub does not refetch unnecessarily.
+  const { data: list, isLoading: listLoading } = useQuery({
+    queryKey: ["gameshub-list", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lists")
+        .select("id, title, description, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+        .eq("id", id!)
+        .is("deleted_at", null)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id && isListRoute,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: folderRow } = useQuery({
+    queryKey: ["gameshub-folder", list?.folder_id],
+    queryFn: async () => {
+      if (!list?.folder_id) return null;
+      const { data } = await supabase
+        .from("folders")
+        .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+        .eq("id", list.folder_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!list?.folder_id,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: collection, isLoading: collectionLoading } = useQuery({
+    queryKey: ["gameshub-collection", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("collections")
+        .select("*")
+        .eq("id", id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Collection | null;
+    },
+    enabled: !!id && !isListRoute,
+    staleTime: 5 * 60_000,
+  });
+
+  // Resolve labels once metadata is in
+  useEffect(() => {
+    if (!list) return;
+    const resolved = resolveEffectiveListSettings(list, folderRow ?? null);
+    setListLabels({ labelsA: resolved.labelsA, labelsB: resolved.labelsB });
+  }, [list, folderRow]);
+
+  // Handle errors via effects (kept light to preserve original UX)
+  useEffect(() => {
+    if (isListRoute && !listLoading && !list && id) {
+      toast.error("Lista não encontrada");
+    }
+    if (!isListRoute && !collectionLoading && !collection && id) {
+      toast.error("Coleção não encontrada");
+    }
+  }, [isListRoute, listLoading, list, collectionLoading, collection, id]);
+
+  const loading = isListRoute ? listLoading : collectionLoading;
+
   const favoritesScope = useMemo(() => {
     if (!id) return undefined;
     return isListRoute ? { listId: id } : { collectionId: id };
   }, [id, isListRoute]);
-  
+
   const { data: favoritesCount = 0, isLoading: favoritesCountLoading } = useFavoritesCount(userId, 'flashcard', favoritesScope);
 
   // Auto-reset favoritesOnly when current list/collection has 0 favorites
@@ -81,85 +140,6 @@ const GamesHub = () => {
       updatePrefs({ favoritesOnly: false });
     }
   }, [favoritesCount, favoritesCountLoading, prefs.favoritesOnly, updatePrefs]);
-
-  useEffect(() => {
-    if (isListRoute) {
-      loadList();
-    } else {
-      loadCollection();
-    }
-  }, [id, isListRoute]);
-
-  const loadList = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("lists")
-        .select("id, title, description, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
-        .eq("id", id)
-        .is("deleted_at", null)
-        .single();
-
-      if (error) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          toast.error("Lista não encontrada ou não está compartilhada");
-          navigate("/portal");
-        } else {
-          toast.error("Erro ao carregar lista");
-        }
-        setLoading(false);
-        return;
-      }
-
-      setList(data);
-
-      let folderRow = null;
-      if (data.folder_id) {
-        const { data: folderData } = await supabase
-          .from("folders")
-          .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
-          .eq("id", data.folder_id)
-          .maybeSingle();
-        folderRow = folderData;
-      }
-
-      const resolved = resolveEffectiveListSettings(data, folderRow);
-      setListLabels({
-        labelsA: resolved.labelsA,
-        labelsB: resolved.labelsB,
-      });
-      setLoading(false);
-    } catch (error: any) {
-      toast.error("Erro ao carregar lista");
-      console.error(error);
-      setLoading(false);
-    }
-  };
-
-  const loadCollection = async () => {
-    if (!id) return;
-
-    const { data, error } = await supabase
-      .from("collections")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (error) {
-      toast.error("Erro ao carregar coleção");
-      navigate("/");
-      return;
-    }
-
-    if (!data) {
-      toast.error("Coleção não encontrada");
-      navigate("/");
-      return;
-    }
-
-    setCollection(data);
-    setLoading(false);
-  };
 
   const startGame = (rawMode: StudyMode | "multiple") => {
     // Normalize any alias (e.g. "multiple" → "multiple-choice") before persisting.
