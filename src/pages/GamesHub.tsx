@@ -172,7 +172,17 @@ const GamesHub = () => {
     // Only forward favorites=true if the list actually has favorites — guards against
     // a stale flag bleeding from a previous list (the auto-reset effect handles state,
     // this guards the URL too).
-    const favParam = prefs.favoritesOnly && favoritesCount > 0 ? "&favorites=true" : "";
+    const useFavorites = prefs.favoritesOnly && favoritesCount > 0;
+    const favParam = useFavorites ? "&favorites=true" : "";
+
+    if (import.meta.env.DEV) {
+      console.debug("[GamesHub] startGame", {
+        rawMode, mode, kind, basePath,
+        direction: prefs.direction, order: prefs.order,
+        favoritesOnly: prefs.favoritesOnly, favoritesCount, useFavorites,
+      });
+    }
+
     navigate(`${basePath}/study?mode=${studyModeToUrlParam(mode)}&dir=${prefs.direction}&order=${prefs.order}${favParam}`);
   };
 
