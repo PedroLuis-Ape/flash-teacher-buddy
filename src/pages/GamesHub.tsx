@@ -186,14 +186,8 @@ const GamesHub = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
-    );
-  }
-
+  // PERF: render layout immediately with skeleton header instead of full-screen blocker.
+  // The controls below render with safe defaults; the title appears once metadata resolves.
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6">
@@ -202,14 +196,16 @@ const GamesHub = () => {
           Voltar
         </Button>
 
-        {(collection || list) && (
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">Hub de jogos</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Hub de jogos</h1>
+          {loading ? (
+            <Skeleton className="h-4 w-48 mt-2" />
+          ) : (
             <p className="text-sm text-muted-foreground mt-1">
               {isListRoute ? list?.title : collection?.name}
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="max-w-5xl mx-auto space-y-4">
           <div className="grid grid-cols-2 gap-3">
