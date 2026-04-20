@@ -428,7 +428,9 @@ export function useStudyEngine(
     } finally {
       setIsLoading(false);
     }
-  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress]);
+    // Includes gameSettings.subset and redListIds because they materially affect
+    // the cardsOrder shape (favorites scope + red-list spaced repetition injection).
+  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, redListIds]);
   
   // Store flashcards in a ref for stable access
   const flashcardsRef = useRef(flashcards);

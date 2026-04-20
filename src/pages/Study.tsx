@@ -135,10 +135,13 @@ const Study = () => {
   // Persistent completion key — uses urlFavoritesOnly (the prefs-derived value),
   // which is the SSOT before engine init. After init, gameSettings.subset is the
   // SSOT, but the key intentionally tracks the user-requested filter for stability.
+  // Includes userId (or "anon") so completion state of one account does NOT leak
+  // to another on the same device.
   const completionKey = useMemo(() => {
     if (!resolvedId) return null;
-    return `study-completed:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
-  }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly]);
+    const scope = authUserId || "anon";
+    return `study-completed:${scope}:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
+  }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly, authUserId]);
   // isListRoute is now derived once at the top of the component (from useParams).
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
@@ -221,16 +224,28 @@ const Study = () => {
     setFlipDirection(prefs.direction);
   }, [prefs.direction]);
 
-  // ── Sync engine gameSettings with prefs APENAS durante a fase inicial ──
-  // Depois que o jogo carregou, mudanças vêm via handleSettingsChange (caminho controlado)
+  // ── Sync engine gameSettings with prefs APENAS UMA VEZ no mount ──
+  // Após esse sync inicial, mudanças vêm via handleSettingsChange (caminho controlado).
+  // Usar uma ref impede que mudanças posteriores em prefs reescrevam settings já em uso.
+  const initialSyncDoneRef = useRef(false);
   useEffect(() => {
-    if (!loading) return;
+    if (initialSyncDoneRef.current) return;
+    if (loading) return; // espera flashcards carregarem para ter contexto válido
+    initialSyncDoneRef.current = true;
     setGameSettings({
       mode: prefs.order === "sequential" ? "sequential" : "random",
       subset: prefs.favoritesOnly ? "favorites" : "all",
       fastMode: prefs.fastMode,
     });
-  }, [prefs.order, prefs.favoritesOnly, prefs.fastMode, loading, setGameSettings]);
+    if (import.meta.env.DEV) {
+      console.debug("[Study] Initial gameSettings sync", {
+        mode: normalizedMode,
+        order: prefs.order,
+        favoritesOnly: prefs.favoritesOnly,
+        fastMode: prefs.fastMode,
+      });
+    }
+  }, [loading, prefs.order, prefs.favoritesOnly, prefs.fastMode, normalizedMode, setGameSettings]);
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
@@ -296,9 +311,14 @@ const Study = () => {
     if (!resolvedId) return;
 
     setLoading(true);
-    
-    // isListRoute is the component-level value derived from useParams.
+
+    // isPublicRoute derived from pathname here (no router match available without
+    // declaring a route prefix), but isListRoute is the SSOT from useParams above.
     const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
+
+    if (import.meta.env.DEV) {
+      console.debug("[Study] Loading flashcards", { resolvedId, isListRoute, isPublicRoute });
+    }
 
     try {
 
