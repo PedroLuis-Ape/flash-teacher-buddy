@@ -217,14 +217,8 @@ const ListDetail = () => {
   // Glossary for bulk import deduplication
   const { glossary } = useListGlossary(id);
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['current-user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // PERF: centralized auth (no redundant getUser() call per page mount)
+  const { user: currentUser } = useAuthUser();
 
   const userId = currentUser?.id;
   const favoritesScope = useMemo(() => (id ? { listId: id } : undefined), [id]);

@@ -21,6 +21,7 @@ import { VideoList } from "@/components/VideoList";
 import { naturalSort } from "@/lib/sorting";
 import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { useFolderText } from "@/hooks/useFolderText";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { ScrollingTitle } from "@/components/ui/scrolling-title";
 
 interface ListType {
@@ -82,16 +83,8 @@ const Folder = () => {
   // Folder text hook
   const { folderText, isLoading: textLoading, saveText, isSaving: isSavingText, deleteText } = useFolderText(id);
   
-  // Fetch current user
-  const { data: currentUser } = useQuery({
-    queryKey: ['current-user-folder'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-  
+  // PERF: centralized auth (no redundant getUser() / getSession() calls)
+  const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
 
   // Reset permission states when id changes, THEN load data
