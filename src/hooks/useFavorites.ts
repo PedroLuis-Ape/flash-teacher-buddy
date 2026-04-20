@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { removeFromRedListIfNeeded } from '@/hooks/useRedList';
@@ -120,6 +120,9 @@ export function useFavorites(
       return fetchFavoritesByScope(userId, resourceType, scope);
     },
     enabled: !!userId,
+    // PERF: keep last result while refetching to avoid loading flashes on navigation
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -267,6 +270,9 @@ export function useFavoritesCount(
       return count || 0;
     },
     enabled: !!userId,
+    // PERF: avoid loading flashes when re-entering GamesHub from a list
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 
