@@ -92,13 +92,27 @@ export function useStudyPreferences(userId: string | undefined) {
   const [prefs, setPrefsState] = useState<StudyPreferences>(() => load(userId));
   const userIdRef = useRef(userId);
 
-  // Reload when userId changes (e.g. auth loads after mount)
+  // Reload when userId changes (e.g. auth loads after mount).
+  // MERGE strategy: when transitioning anon → user, prefer the user's stored
+  // settings if they exist, but if there are NONE, carry forward the anonymous
+  // session's prefs so the user doesn't lose their just-made choices on login.
   useEffect(() => {
     if (userId !== userIdRef.current) {
+      const previousAnonPrefs = userIdRef.current === undefined ? prefs : null;
       userIdRef.current = userId;
-      setPrefsState(load(userId));
+      const userHasStored = (() => {
+        try { return localStorage.getItem(storageKey(userId)) !== null; }
+        catch { return false; }
+      })();
+      const next = userHasStored || !previousAnonPrefs ? load(userId) : previousAnonPrefs;
+      setPrefsState(next);
+      if (import.meta.env.DEV) {
+        console.debug("[StudyPreferences] userId changed", {
+          userId, userHasStored, mergedFromAnon: !userHasStored && !!previousAnonPrefs,
+        });
+      }
     }
-  }, [userId]);
+  }, [userId, prefs]);
 
   // Persist whenever prefs change
   useEffect(() => {
