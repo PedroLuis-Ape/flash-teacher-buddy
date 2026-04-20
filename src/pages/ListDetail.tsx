@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { FavoriteButton } from "@/features/study/components/FavoriteButton";
 import { RedListButton } from "@/features/study/components/RedListButton";
-import { useFavorites } from "@/hooks/useFavorites";
+import { useFavorites, useFavoritesCount } from "@/hooks/useFavorites";
 import { useRedList } from "@/hooks/useRedList";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -224,6 +224,8 @@ const ListDetail = () => {
   const userId = currentUser?.id;
   const favoritesScope = useMemo(() => (id ? { listId: id } : undefined), [id]);
   const { data: favorites = [] } = useFavorites(userId, 'flashcard', favoritesScope);
+  // PERF: prefetch favorites count so the GamesHub opens with warm data (no flash)
+  useFavoritesCount(userId, 'flashcard', favoritesScope);
   const { data: redListIds = [] } = useRedList(userId, id);
 
   const { data: list, isLoading: listLoading } = useQuery({
