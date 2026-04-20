@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useMatch } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { resolveEffectiveListSettings, getLangLabel } from "@/features/study/lib/resolveStudySides";
@@ -48,7 +48,9 @@ const GamesHub = () => {
   const [loading, setLoading] = useState(true);
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
 
-  const isListRoute = location.pathname.includes("/list/");
+  // Use declarative route matching (covers /list/:id/games and /portal/list/:id/games)
+  // instead of pathname.includes() — robust against future route additions.
+  const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
 
   // Use cached auth from React Query
   const { data: currentUser } = useQuery({
