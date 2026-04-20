@@ -25,6 +25,7 @@ import { FavoriteButton } from "@/features/study/components/FavoriteButton";
 import { RedListButton } from "@/features/study/components/RedListButton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useRedList } from "@/hooks/useRedList";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
