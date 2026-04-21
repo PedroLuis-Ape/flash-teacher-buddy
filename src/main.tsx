@@ -17,6 +17,10 @@ import { SafeMode } from "./components/SafeMode";
 // The app does NOT use a PWA / SW. Any SW found is a leftover from older
 // builds (or a stale install on mobile) and MUST be unregistered every load
 // to prevent the device from being stuck on an old shell/cache.
+// IMPORTANT: do NOT auto-reload on `controllerchange`. In iframe/preview
+// contexts (Lovable editor) this causes blank-screen reload loops that
+// prevent the app from ever finishing boot — which also hides the
+// version badge that lives in GlobalLayout.
 try {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then((regs) => {
@@ -24,15 +28,6 @@ try {
         console.log("[PWA Cleanup] Unregistering", regs.length, "service worker(s)");
         regs.forEach((r) => r.unregister());
       }
-    });
-    // If a SW is currently controlling the page and then gets replaced/removed,
-    // reload once so the new build's assets take effect immediately on mobile.
-    let didReloadForSwChange = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (didReloadForSwChange) return;
-      didReloadForSwChange = true;
-      console.log("[PWA Cleanup] Service worker controller changed — reloading once");
-      window.location.reload();
     });
   }
   if ("caches" in window) {
