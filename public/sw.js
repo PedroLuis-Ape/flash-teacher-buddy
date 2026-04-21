@@ -9,6 +9,10 @@ self.addEventListener("activate", (event) => {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map((name) => caches.delete(name)));
         await self.registration.unregister();
+        // Take control immediately so any open clients see the unregister
+        if (self.clients && typeof self.clients.claim === "function") {
+          await self.clients.claim();
+        }
         const clientsList = await self.clients.matchAll({
           type: "window",
           includeUncontrolled: true,
