@@ -610,22 +610,53 @@ const ListDetail = () => {
   // Swap card CONTENT only (term ↔ translation) — keeps list settings untouched
   const handleSwapSides = async () => {
     if (!id || flashcards.length === 0) return;
-    
+    if (isSwapping) return; // prevent concurrent runs
+
     setIsSwapping(true);
     try {
-      // Swap term ↔ translation for every card using batch update
-      const promises = flashcards.map((c) =>
-        supabase
-          .from("flashcards")
-          .update({ term: c.translation, translation: c.term })
-          .eq("id", c.id)
-      );
-      const results = await Promise.all(promises);
-      const firstError = results.find((r) => r.error);
-      if (firstError?.error) throw firstError.error;
+      // Snapshot the cards we're operating on (avoid mutation during async loop)
+      const targets = flashcards.map((c) => ({
+        id: c.id,
+        term: c.term,
+        translation: c.translation,
+      }));
 
-      toast.success(`Conteúdo de ${flashcards.length} cards invertido com sucesso!`);
+      // ── Chunked sequential updates ──
+      // Promise.all over hundreds of individual UPDATEs saturates the connection
+      // pool and freezes the UI. We process in chunks of 25 (parallel within chunk,
+      // sequential between chunks). PURE A↔B swap — no other fields touched.
+      const CHUNK = 25;
+      let swapped = 0;
+      for (let i = 0; i < targets.length; i += CHUNK) {
+        const slice = targets.slice(i, i + CHUNK);
+        const results = await Promise.all(
+          slice.map((c) =>
+            supabase
+              .from("flashcards")
+              .update({ term: c.translation, translation: c.term })
+              .eq("id", c.id)
+          )
+        );
+        const failed = results.find((r) => r.error);
+        if (failed?.error) throw failed.error;
+        swapped += slice.length;
+      }
+
+      toast.success(`Conteúdo de ${swapped} cards invertido com sucesso!`);
+
+      // Invalidate every cache that holds card content so the UI reflects the swap
+      // immediately (list view, hub, study session, offline copy).
       queryClient.invalidateQueries({ queryKey: ["flashcards", id] });
+      queryClient.invalidateQueries({ queryKey: ["gameshub-list", id] });
+      queryClient.invalidateQueries({ queryKey: ["study-flashcards", id] });
+      // Drop offline copy if any — it's no longer accurate
+      try {
+        const { removeOfflineList } = await import("@/lib/offlineStore");
+        await removeOfflineList(id).catch(() => {});
+      } catch {
+        // offlineStore not available — safe to ignore
+      }
+
       setSwapDialogOpen(false);
     } catch (error: any) {
       console.error("Swap error:", error);
