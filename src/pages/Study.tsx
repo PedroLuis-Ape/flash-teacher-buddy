@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+import { hashToBool } from "@/features/study/lib/gameCore";
 import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
@@ -254,7 +255,14 @@ const Study = () => {
     if (dir !== "any") {
       return dir;
     }
-    return idx % 2 === 0 ? "b-a" : "a-b";
+    // For "any": use a STABLE hash on the card id, not the array index.
+    // Index-based alternation makes the same card flip direction whenever the
+    // session is re-shuffled — which feels random/broken to the user.
+    // hashToBool(cardId) guarantees the same card always shows the same side
+    // in "any" mode (single source of truth: src/features/study/lib/gameCore).
+    const cardId = cardsOrder[idx];
+    if (!cardId) return idx % 2 === 0 ? "b-a" : "a-b";
+    return hashToBool(cardId) ? "a-b" : "b-a";
   };
   
   const resolvedDirection = decideDirection(currentIndex);
