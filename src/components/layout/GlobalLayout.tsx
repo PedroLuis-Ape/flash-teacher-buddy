@@ -69,7 +69,17 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const isFullScreenPage = location.pathname.includes('/study');
   
   if (isAuthPage) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        {/* Version Badge — also visible on auth so users can report the build */}
+        <div className="fixed bottom-3 right-3 z-50 pointer-events-none">
+          <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
+            {formatVersionLabel()}
+          </Badge>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -118,9 +128,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
             <Suspense fallback={null}><AnnouncementModal /></Suspense>
           )}
           
-          {/* Version Badge */}
-          <div className="fixed bottom-20 md:bottom-6 right-3 z-40 pointer-events-none">
-            <Badge variant="secondary" className="opacity-40 text-[10px] shadow-sm">
+          {/* Version Badge — higher opacity so users can see the live build */}
+          <div className="fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
+            <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
               {formatVersionLabel()}
             </Badge>
           </div>
