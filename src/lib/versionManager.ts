@@ -49,19 +49,20 @@ export function checkAppBuildVersion(): boolean {
       localStorage.setItem(VERSION_KEY, BUILD_ID);
       // Guard against reload loops: only force one reload per new build.
       try {
-        const guard = sessionStorage.getItem(RELOAD_GUARD_KEY);
-        if (guard !== BUILD_ID && typeof window !== "undefined") {
-          sessionStorage.setItem(RELOAD_GUARD_KEY, BUILD_ID);
+        const w: Window | undefined = typeof window !== "undefined" ? window : undefined;
+        const guard = w?.sessionStorage.getItem(RELOAD_GUARD_KEY);
+        if (w && guard !== BUILD_ID) {
+          w.sessionStorage.setItem(RELOAD_GUARD_KEY, BUILD_ID);
           // Drop any leftover SW caches before reloading so mobile picks up
           // fresh hashed assets instead of the previous shell's chunks.
-          if ("caches" in window) {
-            caches.keys().then((names) => {
-              Promise.all(names.map((n) => caches.delete(n))).finally(() => {
-                window.location.reload();
+          if ("caches" in w) {
+            w.caches.keys().then((names) => {
+              Promise.all(names.map((n) => w.caches.delete(n))).finally(() => {
+                w.location.reload();
               });
             });
           } else {
-            window.location.reload();
+            w.location.reload();
           }
         }
       } catch { /* best-effort */ }
