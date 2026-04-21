@@ -13,33 +13,35 @@ import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
 
-// ── One-time cleanup of old Service Workers and caches ──
-// This runs once per device to flush any stale PWA cache from previous builds.
+// ── Always-on Service Worker neutralizer ──
+// The app does NOT use a PWA / SW. Any SW found is a leftover from older
+// builds (or a stale install on mobile) and MUST be unregistered every load
+// to prevent the device from being stuck on an old shell/cache.
 try {
-  const SW_CLEANUP_KEY = "ape_sw_cleanup_done_v1";
-  if (!localStorage.getItem(SW_CLEANUP_KEY)) {
-    localStorage.setItem(SW_CLEANUP_KEY, "1");
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.unregister());
-        console.log("[PWA Cleanup] Unregistered", regs.length, "old service workers");
-      });
-    }
-    if ("caches" in window) {
-      caches.keys().then(names => {
-        names.forEach(n => caches.delete(n));
-        console.log("[PWA Cleanup] Deleted", names.length, "old caches");
-      });
-    }
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      if (regs.length > 0) {
+        console.log("[PWA Cleanup] Unregistering", regs.length, "service worker(s)");
+        regs.forEach((r) => r.unregister());
+      }
+    });
+    // If a SW is currently controlling the page and then gets replaced/removed,
+    // reload once so the new build's assets take effect immediately on mobile.
+    let didReloadForSwChange = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (didReloadForSwChange) return;
+      didReloadForSwChange = true;
+      console.log("[PWA Cleanup] Service worker controller changed — reloading once");
+      window.location.reload();
+    });
   }
-} catch { /* best-effort */ }
-
-// Unregister service workers inside iframes or preview hosts to prevent stale cache
-try {
-  const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
-  const isPreviewHost = window.location.hostname.includes("id-preview--") || window.location.hostname.includes("lovableproject.com");
-  if ((isInIframe || isPreviewHost) && "serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  if ("caches" in window) {
+    caches.keys().then((names) => {
+      if (names.length > 0) {
+        console.log("[PWA Cleanup] Deleting", names.length, "stale cache(s)");
+        names.forEach((n) => caches.delete(n));
+      }
+    });
   }
 } catch { /* best-effort */ }
 
