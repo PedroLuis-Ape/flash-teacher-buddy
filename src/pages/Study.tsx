@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+import { hashToBool } from "@/features/study/lib/gameCore";
 import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
 import { getOfflineList } from "@/lib/offlineStore";
 import { useListGlossary } from "@/hooks/useListGlossary";
