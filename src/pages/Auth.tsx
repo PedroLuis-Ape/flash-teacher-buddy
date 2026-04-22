@@ -40,23 +40,25 @@ const Auth = () => {
     }
   }, []);
   useEffect(() => {
-    // Verificação rápida de sessão existente
-    const checkSession = async () => {
-      const authReady = sessionStorage.getItem('authReady') === '1';
-      const logoutFlag = !!sessionStorage.getItem('logoutInProgress');
-      if (!authReady || logoutFlag) return;
-      const {
-        data: {
-          session
+    // Sessão: a Supabase é a fonte da verdade. Se já existe sessão válida
+    // (persistida nativamente pelo client), redireciona para a home.
+    // Não dependemos mais de flags frágeis em sessionStorage (authReady).
+    const logoutFlag = !!sessionStorage.getItem('logoutInProgress');
+    if (!logoutFlag) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          navigate('/', { replace: true });
         }
-      } = await supabase.auth.getSession();
+      });
+    }
+
+    // Também escuta mudanças de auth para casos de login concluído por OAuth
+    // ou refresh de token enquanto a tela /auth está aberta.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        navigate('/', {
-          replace: true
-        });
+        navigate('/', { replace: true });
       }
-    };
-    checkSession();
+    });
 
     // Detecta se o app pode ser instalado
     const handler = (e: Event) => {
@@ -69,7 +71,10 @@ const Auth = () => {
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
     }
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   // Verificar disponibilidade do username

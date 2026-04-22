@@ -13,7 +13,7 @@ const RELOAD_GUARD_KEY = "app_build_reload_guard";
  * Single source of truth for the app's semantic version.
  * IMPORTANT: store WITHOUT the "v" prefix. The UI is responsible for adding it.
  */
-export const APP_VERSION = "2.5.5";
+export const APP_VERSION = "1.5";
 
 /** Full build fingerprint (timestamp injected at build time, or "dev" locally). */
 export const APP_BUILD_ID = BUILD_ID;
