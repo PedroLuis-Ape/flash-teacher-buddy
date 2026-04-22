@@ -27,7 +27,7 @@ export const APP_BUILD_SHORT = String(BUILD_ID).slice(-6);
  * Use this everywhere the badge/watermark is rendered.
  */
 export function formatVersionLabel(): string {
-  return `v${APP_VERSION} · ${APP_BUILD_SHORT}`;
+  return `v${APP_VERSION}`;
 }
 
 /** Short label used on minimal surfaces (e.g. login screen). */
