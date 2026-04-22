@@ -70,7 +70,13 @@
           <source media="(min-width: 768px)" srcset="/branding/splash-desktop.png" />
           <img src="/branding/splash-mobile.png" alt="APE" id="boot-loader-img" />
         </picture>
-        <p id="boot-msg" style="display:none;"></p>
+        <!-- Progress UI overlay (always visible, sits above artwork) -->
+        <div id="boot-progress" role="progressbar" aria-label="Carregando APE" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="boot-progress-track">
+            <div id="boot-progress-bar"></div>
+          </div>
+          <p id="boot-progress-label">Inicializando APE…</p>
+        </div>
       </div>
       <style>
         #boot-loader{
@@ -88,6 +94,37 @@
         @media (min-width: 768px){
           #boot-loader-img{object-fit:contain;}
         }
+        /* Progress bar — premium dark, sits at the bottom over the artwork */
+        #boot-progress{
+          position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
+          width:min(360px,72vw);
+          display:flex;flex-direction:column;align-items:center;gap:10px;
+          font-family:Nunito,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+          pointer-events:none;
+        }
+        @media (min-width: 768px){
+          #boot-progress{bottom:10%;width:min(420px,40vw);}
+        }
+        #boot-progress-track{
+          width:100%;height:6px;border-radius:999px;
+          background:rgba(255,255,255,0.14);
+          box-shadow:inset 0 1px 2px rgba(0,0,0,0.25);
+          overflow:hidden;
+        }
+        #boot-progress-bar{
+          width:0%;height:100%;border-radius:999px;
+          background:linear-gradient(90deg,#FFD700 0%,#ffb347 50%,#ff7ad9 100%);
+          box-shadow:0 0 12px rgba(255,215,0,0.45);
+          transition:width .35s ease-out;
+        }
+        #boot-progress-label{
+          margin:0;font-size:12px;letter-spacing:0.04em;
+          color:rgba(255,255,255,0.78);text-shadow:0 1px 2px rgba(0,0,0,0.4);
+        }
+        @media (prefers-reduced-motion: reduce){
+          #boot-progress-bar{transition:none;}
+          #boot-loader{transition:none;}
+        }
       </style>
     </div>
     <noscript><p style="text-align:center;padding:40px;color:#ccc;font-family:sans-serif;">JavaScript é necessário para usar o APE.</p></noscript>
@@ -97,6 +134,60 @@
       window.__apeSplashStart = Date.now();
       window.__APE_SPLASH_MIN_MS = 3000; // minimum visible duration
       window.__APE_SPLASH_MAX_MS = 5000; // soft target ceiling
+      // ── Hybrid progress bar controller ───────────────────────────────
+      // Progress is driven by REAL milestones emitted by the app
+      // (window.__apeBootProgress(value, label?)). To avoid the bar
+      // sitting at 0% if the bundle is slow, a soft auto-creep pushes
+      // it gently toward 85%. The final 100% is ALWAYS triggered by
+      // the app, never by the timer — preventing a fake "ready" state.
+      (function(){
+        var bar = null, label = null, root = null;
+        var current = 0;          // 0..100
+        var target  = 8;          // start with a tiny visible nudge
+        var softCap = 85;         // creep ceiling until app confirms ready
+        var lastPaint = 0;
+        function el(){
+          if (!bar)   bar   = document.getElementById('boot-progress-bar');
+          if (!label) label = document.getElementById('boot-progress-label');
+          if (!root)  root  = document.getElementById('boot-progress');
+        }
+        function paint(){
+          el(); if (!bar || !root) return;
+          if (Math.abs(current - lastPaint) < 0.5 && current !== 100) return;
+          bar.style.width = current.toFixed(1) + '%';
+          root.setAttribute('aria-valuenow', String(Math.round(current)));
+          lastPaint = current;
+        }
+        // Soft creep — only moves forward, never past softCap unless
+        // the app explicitly raises the target.
+        var creep = setInterval(function(){
+          var ceiling = Math.min(target, softCap);
+          if (current < ceiling){
+            // Ease-out: bigger steps when far from the ceiling.
+            var step = Math.max(0.4, (ceiling - current) * 0.06);
+            current = Math.min(ceiling, current + step);
+            paint();
+          }
+        }, 90);
+        // Public API used by src/main.tsx to report real milestones.
+        window.__apeBootProgress = function(value, msg){
+          if (typeof value === 'number'){
+            target = Math.max(target, Math.min(100, value));
+            // When app says 100, jump bar straight to 100 and stop creep.
+            if (value >= 100){
+              current = 100; paint();
+              clearInterval(creep);
+            }
+          }
+          if (msg && label){ el(); label && (label.textContent = msg); }
+        };
+        // Stop creeping if the loader is already gone (defensive).
+        var watchdog = setInterval(function(){
+          if (!document.getElementById('boot-loader')) {
+            clearInterval(creep); clearInterval(watchdog);
+          }
+        }, 500);
+      })();
       (function(){
         var t = setTimeout(function(){
           var bl = document.getElementById('boot-loader');
