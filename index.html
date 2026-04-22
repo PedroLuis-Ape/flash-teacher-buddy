@@ -70,7 +70,13 @@
           <source media="(min-width: 768px)" srcset="/branding/splash-desktop.png" />
           <img src="/branding/splash-mobile.png" alt="APE" id="boot-loader-img" />
         </picture>
-        <p id="boot-msg" style="display:none;"></p>
+        <!-- Progress UI overlay (always visible, sits above artwork) -->
+        <div id="boot-progress" role="progressbar" aria-label="Carregando APE" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="boot-progress-track">
+            <div id="boot-progress-bar"></div>
+          </div>
+          <p id="boot-progress-label">Inicializando APE…</p>
+        </div>
       </div>
       <style>
         #boot-loader{
@@ -87,6 +93,37 @@
         }
         @media (min-width: 768px){
           #boot-loader-img{object-fit:contain;}
+        }
+        /* Progress bar — premium dark, sits at the bottom over the artwork */
+        #boot-progress{
+          position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
+          width:min(360px,72vw);
+          display:flex;flex-direction:column;align-items:center;gap:10px;
+          font-family:Nunito,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+          pointer-events:none;
+        }
+        @media (min-width: 768px){
+          #boot-progress{bottom:10%;width:min(420px,40vw);}
+        }
+        #boot-progress-track{
+          width:100%;height:6px;border-radius:999px;
+          background:rgba(255,255,255,0.14);
+          box-shadow:inset 0 1px 2px rgba(0,0,0,0.25);
+          overflow:hidden;
+        }
+        #boot-progress-bar{
+          width:0%;height:100%;border-radius:999px;
+          background:linear-gradient(90deg,#FFD700 0%,#ffb347 50%,#ff7ad9 100%);
+          box-shadow:0 0 12px rgba(255,215,0,0.45);
+          transition:width .35s ease-out;
+        }
+        #boot-progress-label{
+          margin:0;font-size:12px;letter-spacing:0.04em;
+          color:rgba(255,255,255,0.78);text-shadow:0 1px 2px rgba(0,0,0,0.4);
+        }
+        @media (prefers-reduced-motion: reduce){
+          #boot-progress-bar{transition:none;}
+          #boot-loader{transition:none;}
         }
       </style>
     </div>
