@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>APE - Apprenticeship Practice and Enhancement</title>
     <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/branding/icon.png" />
+    <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+
+    <!-- Preload splash images so they appear instantly -->
+    <link rel="preload" as="image" href="/branding/splash-mobile.png" media="(max-width: 767px)" />
+    <link rel="preload" as="image" href="/branding/splash-desktop.png" media="(min-width: 768px)" />
 
     <!-- Force the HTML shell to always be revalidated.
          Hashed JS/CSS assets in /assets are immutable, but the shell must
@@ -58,28 +64,50 @@
 
   <body>
     <div id="root">
-      <!-- Boot loader — React.createRoot().render() will replace this -->
-      <div id="boot-loader" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui,-apple-system,sans-serif;">
-        <div style="text-align:center;">
-          <div style="width:40px;height:40px;border:3px solid rgba(255,215,0,0.3);border-top-color:#FFD700;border-radius:50%;animation:bl-spin .7s linear infinite;margin:0 auto 16px;"></div>
-          <p id="boot-msg" style="color:#aaa;font-size:14px;">Carregando…</p>
-        </div>
+      <!-- Boot loader — replaced by React after mount + min splash time -->
+      <div id="boot-loader" aria-hidden="true">
+        <picture>
+          <source media="(min-width: 768px)" srcset="/branding/splash-desktop.png" />
+          <img src="/branding/splash-mobile.png" alt="APE" id="boot-loader-img" />
+        </picture>
+        <p id="boot-msg" style="display:none;"></p>
       </div>
-      <style>@keyframes bl-spin{to{transform:rotate(360deg)}}</style>
+      <style>
+        #boot-loader{
+          position:fixed;inset:0;z-index:99999;
+          display:flex;align-items:center;justify-content:center;
+          background:#3a0d6b;
+          opacity:1;transition:opacity .5s ease-out;
+          overflow:hidden;
+        }
+        #boot-loader.boot-loader--hide{opacity:0;pointer-events:none;}
+        #boot-loader-img{
+          width:100%;height:100%;object-fit:cover;object-position:center;
+          display:block;user-select:none;-webkit-user-drag:none;
+        }
+        @media (min-width: 768px){
+          #boot-loader-img{object-fit:contain;}
+        }
+      </style>
     </div>
     <noscript><p style="text-align:center;padding:40px;color:#ccc;font-family:sans-serif;">JavaScript é necessário para usar o APE.</p></noscript>
 
-    <!-- Boot timeout: if app didn't mount in 8s, show recovery UI -->
+    <!-- Mark splash start time so React can enforce a minimum display window -->
     <script>
+      window.__apeSplashStart = Date.now();
+      window.__APE_SPLASH_MIN_MS = 3000; // minimum visible duration
+      window.__APE_SPLASH_MAX_MS = 5000; // soft target ceiling
       (function(){
         var t = setTimeout(function(){
           var bl = document.getElementById('boot-loader');
-          if (!bl) return; // App mounted fine
-          var msg = document.getElementById('boot-msg');
-          if (msg) {
-            msg.innerHTML = 'Falha ao iniciar o app.<br><button id="boot-recover" style="margin-top:12px;padding:10px 20px;border:none;border-radius:8px;background:#FFD700;color:#1a1a2e;font-weight:600;font-size:14px;cursor:pointer;">Limpar cache e recarregar</button>';
-            var btn = document.getElementById('boot-recover');
-            if (btn) btn.onclick = async function(){
+          if (!bl) return; // App mounted fine and removed the splash
+          // App still hasn't mounted after 10s — show recovery UI on top of splash
+          var rec = document.createElement('div');
+          rec.style.cssText = 'position:absolute;left:50%;bottom:8%;transform:translateX(-50%);text-align:center;font-family:system-ui,-apple-system,sans-serif;';
+          rec.innerHTML = '<p style="color:#fff;font-size:14px;margin:0 0 12px;">Falha ao iniciar o app.</p><button id="boot-recover" style="padding:10px 20px;border:none;border-radius:8px;background:#FFD700;color:#1a1a2e;font-weight:600;font-size:14px;cursor:pointer;">Limpar cache e recarregar</button>';
+          bl.appendChild(rec);
+          var btn = document.getElementById('boot-recover');
+          if (btn) btn.onclick = async function(){
               try {
                 var authKeys=[];
                 for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith('sb-'))authKeys.push([k,localStorage.getItem(k)])}
@@ -90,8 +118,7 @@
               } catch(e){}
               window.location.href=window.location.origin+'/?t='+Date.now();
             };
-          }
-        }, 8000);
+        }, 10000);
         window.__apeBootTimer = t;
       })();
     </script>
