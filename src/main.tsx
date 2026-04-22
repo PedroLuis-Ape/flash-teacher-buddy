@@ -45,9 +45,25 @@ if ((window as any).__apeBootTimer) {
   clearTimeout((window as any).__apeBootTimer);
 }
 
-// Remove boot loader so it doesn't flash under React
-const bootLoader = document.getElementById("boot-loader");
-if (bootLoader) bootLoader.remove();
+// Remove the splash/boot loader, but enforce a minimum visible duration so
+// the branding artwork is appreciated. Target window: 3s (min) — 5s (soft).
+function dismissSplash() {
+  const bootLoader = document.getElementById("boot-loader");
+  if (!bootLoader) return;
+  const startedAt = (window as any).__apeSplashStart || Date.now();
+  const minMs = (window as any).__APE_SPLASH_MIN_MS ?? 3000;
+  const elapsed = Date.now() - startedAt;
+  const wait = Math.max(0, minMs - elapsed);
+  setTimeout(() => {
+    const el = document.getElementById("boot-loader");
+    if (!el) return;
+    el.classList.add("boot-loader--hide");
+    // Match CSS transition duration before removing from DOM
+    setTimeout(() => el.remove(), 550);
+  }, wait);
+}
+// Defer to next frame so React has a chance to paint behind the splash
+requestAnimationFrame(() => requestAnimationFrame(dismissSplash));
 
 createRoot(document.getElementById("root")!).render(
   <SafeMode>
