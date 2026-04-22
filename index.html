@@ -134,6 +134,60 @@
       window.__apeSplashStart = Date.now();
       window.__APE_SPLASH_MIN_MS = 3000; // minimum visible duration
       window.__APE_SPLASH_MAX_MS = 5000; // soft target ceiling
+      // ── Hybrid progress bar controller ───────────────────────────────
+      // Progress is driven by REAL milestones emitted by the app
+      // (window.__apeBootProgress(value, label?)). To avoid the bar
+      // sitting at 0% if the bundle is slow, a soft auto-creep pushes
+      // it gently toward 85%. The final 100% is ALWAYS triggered by
+      // the app, never by the timer — preventing a fake "ready" state.
+      (function(){
+        var bar = null, label = null, root = null;
+        var current = 0;          // 0..100
+        var target  = 8;          // start with a tiny visible nudge
+        var softCap = 85;         // creep ceiling until app confirms ready
+        var lastPaint = 0;
+        function el(){
+          if (!bar)   bar   = document.getElementById('boot-progress-bar');
+          if (!label) label = document.getElementById('boot-progress-label');
+          if (!root)  root  = document.getElementById('boot-progress');
+        }
+        function paint(){
+          el(); if (!bar || !root) return;
+          if (Math.abs(current - lastPaint) < 0.5 && current !== 100) return;
+          bar.style.width = current.toFixed(1) + '%';
+          root.setAttribute('aria-valuenow', String(Math.round(current)));
+          lastPaint = current;
+        }
+        // Soft creep — only moves forward, never past softCap unless
+        // the app explicitly raises the target.
+        var creep = setInterval(function(){
+          var ceiling = Math.min(target, softCap);
+          if (current < ceiling){
+            // Ease-out: bigger steps when far from the ceiling.
+            var step = Math.max(0.4, (ceiling - current) * 0.06);
+            current = Math.min(ceiling, current + step);
+            paint();
+          }
+        }, 90);
+        // Public API used by src/main.tsx to report real milestones.
+        window.__apeBootProgress = function(value, msg){
+          if (typeof value === 'number'){
+            target = Math.max(target, Math.min(100, value));
+            // When app says 100, jump bar straight to 100 and stop creep.
+            if (value >= 100){
+              current = 100; paint();
+              clearInterval(creep);
+            }
+          }
+          if (msg && label){ el(); label && (label.textContent = msg); }
+        };
+        // Stop creeping if the loader is already gone (defensive).
+        var watchdog = setInterval(function(){
+          if (!document.getElementById('boot-loader')) {
+            clearInterval(creep); clearInterval(watchdog);
+          }
+        }, 500);
+      })();
       (function(){
         var t = setTimeout(function(){
           var bl = document.getElementById('boot-loader');
