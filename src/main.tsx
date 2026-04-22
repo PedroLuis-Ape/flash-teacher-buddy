@@ -13,6 +13,15 @@ import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
 
+// ── Boot progress reporter ────────────────────────────────────────────
+// The HTML inline script defines window.__apeBootProgress(value, label?)
+// which drives the splash progress bar. We emit real milestones here so
+// the bar reflects actual boot progress, not a fake animation.
+const reportBoot = (value: number, label?: string) => {
+  try { (window as any).__apeBootProgress?.(value, label); } catch { /* noop */ }
+};
+reportBoot(15, "Carregando módulos…");
+
 // ── Always-on Service Worker neutralizer ──
 // The app does NOT use a PWA / SW. Any SW found is a leftover from older
 // builds (or a stale install on mobile) and MUST be unregistered every load
@@ -45,6 +54,8 @@ if ((window as any).__apeBootTimer) {
   clearTimeout((window as any).__apeBootTimer);
 }
 
+reportBoot(35, "Preparando interface…");
+
 // Remove the splash/boot loader, but enforce a minimum visible duration so
 // the branding artwork is appreciated. Target window: 3s (min) — 5s (soft).
 function dismissSplash() {
@@ -54,6 +65,8 @@ function dismissSplash() {
   const minMs = (window as any).__APE_SPLASH_MIN_MS ?? 3000;
   const elapsed = Date.now() - startedAt;
   const wait = Math.max(0, minMs - elapsed);
+  // Drive the bar to 100% before fading out so the user sees completion.
+  reportBoot(100, "Pronto!");
   setTimeout(() => {
     const el = document.getElementById("boot-loader");
     if (!el) return;
@@ -62,11 +75,20 @@ function dismissSplash() {
     setTimeout(() => el.remove(), 550);
   }, wait);
 }
-// Defer to next frame so React has a chance to paint behind the splash
-requestAnimationFrame(() => requestAnimationFrame(dismissSplash));
 
 createRoot(document.getElementById("root")!).render(
   <SafeMode>
     <App />
   </SafeMode>
 );
+
+// Wait for React to commit its first paint before dismissing the splash.
+// This guarantees the app shell is actually ready behind the artwork.
+reportBoot(70, "Inicializando sessão…");
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    reportBoot(90, "Quase lá…");
+    // One more frame so the first React paint is fully committed.
+    requestAnimationFrame(dismissSplash);
+  });
+});
