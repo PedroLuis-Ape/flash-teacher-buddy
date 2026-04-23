@@ -63,22 +63,25 @@
   </head>
 
   <body>
-    <div id="root">
-      <!-- Boot loader — replaced by React after mount + min splash time -->
-      <div id="boot-loader" aria-hidden="true">
-        <picture>
-          <source media="(min-width: 768px)" srcset="/branding/splash-desktop.png" />
-          <img src="/branding/splash-mobile.png" alt="APE" id="boot-loader-img" />
-        </picture>
-        <!-- Progress UI overlay (always visible, sits above artwork) -->
-        <div id="boot-progress" role="progressbar" aria-label="Carregando APE" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <div id="boot-progress-track">
-            <div id="boot-progress-bar"></div>
-          </div>
-          <p id="boot-progress-label">Inicializando APE…</p>
+    <div id="root"></div>
+
+    <!-- Boot loader — sits OUTSIDE #root so React's mount does not wipe it.
+         It is dismissed explicitly by src/main.tsx after the minimum
+         splash duration AND after React commits its first paint. -->
+    <div id="boot-loader" aria-hidden="true">
+      <picture>
+        <source media="(min-width: 768px)" srcset="/branding/splash-desktop.png" />
+        <img src="/branding/splash-mobile.png" alt="APE" id="boot-loader-img" />
+      </picture>
+      <!-- Progress UI overlay (always visible, sits above artwork) -->
+      <div id="boot-progress" role="progressbar" aria-label="Carregando APE" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="boot-progress-track">
+          <div id="boot-progress-bar"></div>
         </div>
+        <p id="boot-progress-label">Inicializando APE…</p>
       </div>
-      <style>
+    </div>
+    <style>
         #boot-loader{
           position:fixed;inset:0;z-index:99999;
           display:flex;align-items:center;justify-content:center;
@@ -125,8 +128,7 @@
           #boot-progress-bar{transition:none;}
           #boot-loader{transition:none;}
         }
-      </style>
-    </div>
+    </style>
     <noscript><p style="text-align:center;padding:40px;color:#ccc;font-family:sans-serif;">JavaScript é necessário para usar o APE.</p></noscript>
 
     <!-- Mark splash start time so React can enforce a minimum display window -->
