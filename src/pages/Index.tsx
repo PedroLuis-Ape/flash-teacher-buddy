@@ -189,7 +189,7 @@ const Index = () => {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">PTS Semanais</span>
@@ -201,7 +201,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <Crown className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Nível</span>
@@ -213,7 +213,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <Play className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Sequência</span>
@@ -225,7 +225,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <BookOpen className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Listas</span>
