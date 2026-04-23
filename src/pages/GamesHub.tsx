@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useLocation, useMatch } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -57,6 +57,11 @@ const GamesHub = () => {
 
   // ── Persistent study preferences (single source of truth) ──
   const { prefs, updatePrefs } = useStudyPreferences(userId);
+  // Keep a ref mirror of prefs so startGame() always reads the latest value
+  // even if invoked synchronously after an updatePrefs() in the same tick.
+  // This is a belt-and-suspenders guarantee against stale closures.
+  const prefsRef = useRef(prefs);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
   // PERF: cached metadata fetches with longer staleTime so back/forth navigation
   // between list → hub → study → hub does not refetch unnecessarily.
@@ -147,23 +152,29 @@ const GamesHub = () => {
     const mode = normalizeStudyMode(rawMode);
     updatePrefs({ mode });
 
+    // Read direction/order from the ref (latest committed prefs) — this is
+    // resilient against any stale closure, and is the SSOT we hand to the URL.
+    const liveDirection = prefsRef.current.direction;
+    const liveOrder = prefsRef.current.order;
+    const liveFavoritesOnly = prefsRef.current.favoritesOnly;
+
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
     // Only forward favorites=true if the list actually has favorites — guards against
     // a stale flag bleeding from a previous list (the auto-reset effect handles state,
     // this guards the URL too).
-    const useFavorites = prefs.favoritesOnly && favoritesCount > 0;
+    const useFavorites = liveFavoritesOnly && favoritesCount > 0;
     const favParam = useFavorites ? "&favorites=true" : "";
 
     if (import.meta.env.DEV) {
       console.debug("[GamesHub] startGame", {
         rawMode, mode, kind, basePath,
-        direction: prefs.direction, order: prefs.order,
-        favoritesOnly: prefs.favoritesOnly, favoritesCount, useFavorites,
+        direction: liveDirection, order: liveOrder,
+        favoritesOnly: liveFavoritesOnly, favoritesCount, useFavorites,
       });
     }
 
-    navigate(`${basePath}/study?mode=${studyModeToUrlParam(mode)}&dir=${prefs.direction}&order=${prefs.order}${favParam}`);
+    navigate(`${basePath}/study?mode=${studyModeToUrlParam(mode)}&dir=${liveDirection}&order=${liveOrder}${favParam}`);
   };
 
   const handleBack = () => {
