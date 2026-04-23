@@ -96,14 +96,24 @@ const Study = () => {
   // userId is set later after auth; prefs load with anon key initially
   const [authUserId, setAuthUserId] = useState<string | undefined>();
   const { prefs, updatePrefs } = useStudyPreferences(authUserId);
-  // URL overrides are now applied at load time inside useStudyPreferences
+  // URL overrides are applied at load time inside useStudyPreferences,
+  // but the URL is ALSO read directly here as the canonical SSOT for the
+  // session. This prevents stale prefs (e.g. anon storage from a previous
+  // session) from overriding the user's just-clicked direction in GamesHub.
+  const urlDirRaw = searchParams.get("dir") || searchParams.get("direction");
+  const urlDirection: Direction | null = urlDirRaw && ["a-b", "b-a", "any"].includes(urlDirRaw)
+    ? (urlDirRaw as Direction)
+    : null;
 
   // Single canonical mode token for the entire engine + view chain.
   // normalizeStudyMode() handles aliases ("multiple" → "multiple-choice") and
   // unknown values (falls back to "flip"). No more inline Set + cast.
   const normalizedMode: StudyMode = normalizeStudyMode(prefs.mode);
 
-  const initialDir: Direction = prefs.direction;
+  // SSOT for direction: URL wins over prefs. This guarantees that whatever
+  // GamesHub sent in the URL is what the session uses, even if prefs are
+  // stale or arrive late from auth.
+  const initialDir: Direction = urlDirection ?? prefs.direction;
   const initialOrder = prefs.order;
   const urlFavoritesOnly = prefs.favoritesOnly;
   
@@ -220,10 +230,12 @@ const Study = () => {
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
 
-  // ── Sync flipDirection with prefs.direction (handles late-arriving auth/prefs) ──
+  // ── Sync flipDirection: URL wins, then prefs (handles late-arriving auth) ──
+  // The URL is set by GamesHub at startGame() and is the user's most recent
+  // explicit choice. Only fall back to prefs.direction if the URL is missing.
   useEffect(() => {
-    setFlipDirection(prefs.direction);
-  }, [prefs.direction]);
+    setFlipDirection(urlDirection ?? prefs.direction);
+  }, [urlDirection, prefs.direction]);
 
   // ── Sync engine gameSettings with prefs APENAS UMA VEZ no mount ──
   // Após esse sync inicial, mudanças vêm via handleSettingsChange (caminho controlado).
