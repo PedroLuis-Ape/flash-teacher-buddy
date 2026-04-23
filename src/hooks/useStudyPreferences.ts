@@ -96,6 +96,11 @@ export function useStudyPreferences(userId: string | undefined) {
   // MERGE strategy: when transitioning anon → user, prefer the user's stored
   // settings if they exist, but if there are NONE, carry forward the anonymous
   // session's prefs so the user doesn't lose their just-made choices on login.
+  //
+  // CRITICAL: regardless of which source wins, the URL params (mode/dir/order/
+  // favorites) ALWAYS override afterwards. This prevents stale user prefs
+  // from a previous session from silently overriding the direction the user
+  // just selected in GamesHub.
   useEffect(() => {
     if (userId !== userIdRef.current) {
       const previousAnonPrefs = userIdRef.current === undefined ? prefs : null;
@@ -104,11 +109,35 @@ export function useStudyPreferences(userId: string | undefined) {
         try { return localStorage.getItem(storageKey(userId)) !== null; }
         catch { return false; }
       })();
-      const next = userHasStored || !previousAnonPrefs ? load(userId) : previousAnonPrefs;
+      // load(userId) already applies URL overrides. If we keep the anon
+      // snapshot instead, re-apply URL overrides on top of it so the URL
+      // remains the SSOT for this session.
+      let next: StudyPreferences;
+      if (userHasStored || !previousAnonPrefs) {
+        next = load(userId);
+      } else {
+        next = { ...previousAnonPrefs };
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const urlMode = params.get("mode");
+          if (urlMode) next.mode = urlMode;
+          const urlDir = params.get("dir") || params.get("direction");
+          if (urlDir && ["a-b", "b-a", "any"].includes(urlDir)) {
+            next.direction = urlDir as Direction;
+          }
+          const urlOrder = params.get("order");
+          if (urlOrder === "sequential" || urlOrder === "random") next.order = urlOrder;
+          const urlFav = params.get("favorites");
+          if (urlFav === "true" || urlFav === "false") next.favoritesOnly = urlFav === "true";
+        } catch {
+          // URL parsing failed — keep previous anon prefs
+        }
+      }
       setPrefsState(next);
       if (import.meta.env.DEV) {
         console.debug("[StudyPreferences] userId changed", {
           userId, userHasStored, mergedFromAnon: !userHasStored && !!previousAnonPrefs,
+          finalDirection: next.direction, finalMode: next.mode,
         });
       }
     }
