@@ -111,12 +111,12 @@ const Index = () => {
       <div className="max-w-6xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
         {/* Profile Header */}
         <Card 
-          className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+          className="overflow-hidden cursor-pointer transition-all duration-200 border-border/60 bg-gradient-to-br from-card to-card/60 hover:shadow-[var(--shadow-hover)] hover:border-primary/30"
           onClick={() => navigate("/profile")}
         >
           <CardContent className="p-5">
             <div className="flex items-center gap-4">
-              <Avatar className="h-14 w-14 shrink-0">
+              <Avatar className="h-14 w-14 shrink-0 ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
                 <AvatarImage src={profileData?.avatarUrl || undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {userInitials}
