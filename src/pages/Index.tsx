@@ -318,10 +318,17 @@ const Index = () => {
         )}
 
         {/* Modo Reino Coming Soon */}
-        <Card className="overflow-hidden border-2 border-primary/20">
+        <Card
+          className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative"
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-30 blur-3xl"
+            style={{ background: "hsl(var(--primary-glow))" }}
+          />
           <CardContent className="p-5">
             <div className="flex items-center gap-4">
-              <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shadow-[var(--shadow-glow)]">
                 <Crown className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
