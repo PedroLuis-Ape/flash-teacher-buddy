@@ -29,17 +29,25 @@ export function ApeCardList({
   className,
   disableAnimation = false
 }: ApeCardListProps) {
-  const revealRef = useScrollReveal<HTMLButtonElement>({ disabled: disableAnimation });
+  const revealRef = useScrollReveal<HTMLDivElement>({ disabled: disableAnimation });
 
   return (
-    <button
+    <div
       ref={disableAnimation ? undefined : revealRef}
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       className={cn(
-        "group card-3d ape-card-row rounded-xl",
+        "group card-3d ape-card-row rounded-xl cursor-pointer select-none",
         "bg-card transition-all duration-200",
         "border border-border",
-        "text-left shadow-sm",
+        "text-left shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         // Use md: prefix for hover styles to avoid sticky hover on touch devices
         "md:hover:shadow-md md:hover:border-primary/30 md:hover:bg-primary/5 md:hover:translate-y-[-2px]",
         "active:scale-[0.98] active:shadow-sm active:translate-y-0",
@@ -85,6 +93,6 @@ export function ApeCardList({
           <Play className="h-4 w-4" />
         </Button>
       )}
-    </button>
+    </div>
   );
 }

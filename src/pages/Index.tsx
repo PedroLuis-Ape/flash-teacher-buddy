@@ -111,12 +111,12 @@ const Index = () => {
       <div className="max-w-6xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
         {/* Profile Header */}
         <Card 
-          className="overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+          className="overflow-hidden cursor-pointer transition-all duration-200 border-border/60 bg-gradient-to-br from-card to-card/60 hover:shadow-[var(--shadow-hover)] hover:border-primary/30"
           onClick={() => navigate("/profile")}
         >
           <CardContent className="p-5">
             <div className="flex items-center gap-4">
-              <Avatar className="h-14 w-14 shrink-0">
+              <Avatar className="h-14 w-14 shrink-0 ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
                 <AvatarImage src={profileData?.avatarUrl || undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {userInitials}
@@ -189,7 +189,7 @@ const Index = () => {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">PTS Semanais</span>
@@ -201,7 +201,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <Crown className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Nível</span>
@@ -213,7 +213,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <Play className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Sequência</span>
@@ -225,7 +225,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="p-4 border-border">
+          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <BookOpen className="h-4 w-4 text-primary" />
               <span className="text-xs text-muted-foreground">Listas</span>
@@ -318,10 +318,17 @@ const Index = () => {
         )}
 
         {/* Modo Reino Coming Soon */}
-        <Card className="overflow-hidden border-2 border-primary/20">
+        <Card
+          className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative"
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full opacity-30 blur-3xl"
+            style={{ background: "hsl(var(--primary-glow))" }}
+          />
           <CardContent className="p-5">
             <div className="flex items-center gap-4">
-              <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shadow-[var(--shadow-glow)]">
                 <Crown className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
