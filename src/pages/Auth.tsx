@@ -219,7 +219,22 @@ const Auth = () => {
       }
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-accent flex items-center justify-center p-4 relative overflow-hidden">
+  return <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: "var(--gradient-auth)" }}
+    >
+      {/* Decorative ambient glows */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-32 -left-32 w-[420px] h-[420px] rounded-full opacity-40 blur-3xl"
+        style={{ background: "radial-gradient(circle, hsl(var(--primary-glow)) 0%, transparent 70%)" }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-32 -right-32 w-[460px] h-[460px] rounded-full opacity-30 blur-3xl"
+        style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, transparent 70%)" }}
+      />
+
       <PitecoMascot />
 
       {/* Download button - fixed position */}
@@ -227,13 +242,18 @@ const Auth = () => {
           <Download className="w-5 h-5" />
           Download
         </Button>}
-      
-      <div className="w-full max-w-md space-y-6 relative z-20">
-        <Card className="p-6 shadow-[var(--shadow-card)] bg-card/95 backdrop-blur">
+
+      <div className="w-full max-w-md space-y-5 relative z-20">
+        <Card
+          className="p-6 border-white/10 bg-card/80 backdrop-blur-xl"
+          style={{ boxShadow: "var(--shadow-glow), var(--shadow-card)" }}
+        >
           <div className="flex flex-col items-center text-center">
-            <PitecoLogo className="h-24 w-24 mb-4" />
-            <h1 className="text-4xl font-bold mb-2">Bem-vindo à APE! 🎓</h1>
-            <p className="text-muted-foreground text-lg">
+            <PitecoLogo className="h-24 w-24 mb-4 drop-shadow-[0_4px_24px_hsl(var(--primary-glow)/0.55)]" />
+            <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary-foreground to-primary-glow">
+              Bem-vindo à APE
+            </h1>
+            <p className="text-muted-foreground text-base sm:text-lg">
               Apprenticeship Practice and Enhancement
             </p>
           </div>
@@ -241,14 +261,17 @@ const Auth = () => {
 
         {/* Version Badge */}
         <div className="flex justify-center">
-          <div className="bg-primary/20 backdrop-blur-sm px-8 py-3 rounded-full border border-primary/30 shadow-lg opacity-40 hover:opacity-70 transition-opacity">
-            <p className="text-lg font-semibold text-primary-foreground">
+          <div className="bg-white/10 backdrop-blur-sm px-5 py-1.5 rounded-full border border-white/15 shadow-md">
+            <p className="text-xs font-medium tracking-wide text-white/85">
               {formatVersionShort()}
             </p>
           </div>
         </div>
 
-        <Card className="w-full max-w-md bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl">
+        <Card
+          className="w-full max-w-md bg-card/85 backdrop-blur-xl border-white/10"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
           <CardHeader>
             <CardTitle className="text-2xl">{isSignUp ? "Criar Conta" : "Entrar"}</CardTitle>
             <CardDescription>
