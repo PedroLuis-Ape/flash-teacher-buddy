@@ -19,9 +19,9 @@ export function SessionWatcher() {
   useEffect(() => {
     // Single reactive listener — Supabase's autoRefreshToken handles token renewal
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!initializedRef.current) {
-        initializedRef.current = true;
-      }
+      // Mark as initialized AFTER processing this event (so the first event
+      // — typically INITIAL_SESSION — does not itself trigger a guard redirect).
+      const wasInitialized = initializedRef.current;
 
       if (event === 'SIGNED_IN') {
         // Invalidate auth-user query so useAuthUser picks up the new session
@@ -29,31 +29,42 @@ export function SessionWatcher() {
         if (window.location.pathname.startsWith('/auth')) {
           navigate('/', { replace: true });
         }
+        initializedRef.current = true;
+        return;
       }
 
       if (event === 'SIGNED_OUT') {
         // Clear all queries on logout so stale data doesn't persist
         queryClient.clear();
         navigate('/auth', { replace: true });
+        initializedRef.current = true;
         return;
       }
 
       if (event === 'TOKEN_REFRESHED' && !session) {
         console.warn('[SessionWatcher] Token refresh lost session');
         navigate('/auth', { replace: true });
+        initializedRef.current = true;
         return;
       }
 
-      // Route guard — only after first event received, redirect if no session on protected path
-      if (initializedRef.current && !session && isProtectedPath(window.location.pathname)) {
+      // Route guard — only AFTER the first event has been processed,
+      // and never on the very first INITIAL_SESSION (which can race with
+      // optimistic localStorage hydration in useAuthUser).
+      if (wasInitialized && !session && isProtectedPath(window.location.pathname)) {
         navigate('/auth', { replace: true });
       }
+
+      initializedRef.current = true;
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, queryClient]);
+    // navigate/queryClient are stable across renders; we deliberately
+    // mount this listener exactly once to avoid duplicate subscriptions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return null;
 }
