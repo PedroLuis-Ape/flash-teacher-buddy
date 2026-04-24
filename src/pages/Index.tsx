@@ -6,6 +6,7 @@ import { useEconomy } from "@/contexts/EconomyContext";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { pageMount, pageReady } from "@/lib/perfLog";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
@@ -32,6 +33,14 @@ const Index = () => {
   const { selectedInstitution } = useInstitution();
   const { soundEnabled, toggleSound, notificationsEnabled, toggleNotifications } = useSoundSettings();
   const { user, isLoading: authLoading } = useAuthUser();
+
+  // DEV-only lifecycle markers — help locate where the app freezes.
+  useEffect(() => {
+    pageMount("Index");
+  }, []);
+  useEffect(() => {
+    if (!loading && !authLoading) pageReady("Index", { recents: recents?.length });
+  }, [loading, authLoading, recents?.length]);
 
   // Redirect if not authenticated
   useEffect(() => {

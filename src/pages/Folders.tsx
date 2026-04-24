@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { pageMount } from "@/lib/perfLog";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeTabs } from "@/components/ape/ApeTabs";
 import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
@@ -57,6 +58,12 @@ const Folders = () => {
   const [lists, setLists] = useState<ListType[]>([]);
   const [teachers, setTeachers] = useState<TeacherType[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // DEV-only: mark page mount to help locate freezes.
+  useEffect(() => {
+    pageMount("Folders");
+  }, []);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newFolder, setNewFolder] = useState({ title: "", description: "", visibility: "private" });
   const [userRole, setUserRole] = useState<string | null>(null);

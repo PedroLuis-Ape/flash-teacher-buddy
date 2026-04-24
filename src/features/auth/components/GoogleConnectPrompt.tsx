@@ -9,6 +9,10 @@ export function GoogleConnectPrompt() {
 
   // Defer initialization by 5s to never block app boot
   useEffect(() => {
+    // Never run on auth/portal pages — the prompt is only relevant
+    // inside the authenticated app shell.
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    if (path.startsWith("/auth") || path.startsWith("/portal")) return;
     const t = setTimeout(() => setReady(true), 5000);
     return () => clearTimeout(t);
   }, []);

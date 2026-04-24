@@ -15,6 +15,11 @@ export function EconomyInitializer() {
   useEffect(() => {
     if (!FEATURE_FLAGS.economy_enabled) return;
 
+    // Skip on public/auth routes — economy work is only meaningful for
+    // authenticated users inside the app shell.
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    if (path.startsWith("/auth") || path.startsWith("/portal")) return;
+
     // Defer economy init by 3s so it never competes with critical boot paths
     const delayTimer = setTimeout(async () => {
       try {

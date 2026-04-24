@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo, useRef } from "react";
+import { useState, useMemo, useCallback, memo, useRef, useEffect } from "react";
 // Shared lang-label resolver for all language fallbacks
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { pageMount, perfLog } from "@/lib/perfLog";
 
 interface ListType {
   id: string;
@@ -199,6 +200,12 @@ const ListDetail = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { id } = useParams();
+
+  // DEV-only mount marker — runs after first paint so it never blocks rendering.
+  useEffect(() => {
+    pageMount("ListDetail", { id });
+  }, [id]);
+
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   const [isCloning, setIsCloning] = useState(false);
