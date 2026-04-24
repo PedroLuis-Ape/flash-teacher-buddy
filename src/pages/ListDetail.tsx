@@ -614,34 +614,29 @@ const ListDetail = () => {
 
     setIsSwapping(true);
     try {
-      // Snapshot the cards we're operating on (avoid mutation during async loop)
-      const targets = flashcards.map((c) => ({
-        id: c.id,
-        term: c.term,
-        translation: c.translation,
-      }));
-
-      // ── Chunked sequential updates ──
-      // Promise.all over hundreds of individual UPDATEs saturates the connection
-      // pool and freezes the UI. We process in chunks of 25 (parallel within chunk,
-      // sequential between chunks). PURE A↔B swap — no other fields touched.
-      const CHUNK = 25;
-      let swapped = 0;
-      for (let i = 0; i < targets.length; i += CHUNK) {
-        const slice = targets.slice(i, i + CHUNK);
-        const results = await Promise.all(
-          slice.map((c) =>
-            supabase
-              .from("flashcards")
-              .update({ term: c.translation, translation: c.term })
-              .eq("id", c.id)
-          )
-        );
-        const failed = results.find((r) => r.error);
-        if (failed?.error) throw failed.error;
-        swapped += slice.length;
+      if (import.meta.env.DEV) {
+        console.debug("[SwapSides]", {
+          listId: id,
+          totalCards: flashcards.length,
+          usingRpc: true,
+        });
       }
 
+      // Single atomic RPC call replaces the previous client-side chunked loop.
+      // Server-side: validates permission, swaps every card's term ↔ translation
+      // in one transaction, returns the affected count. Mobile-safe.
+      const { data, error } = await supabase.rpc("swap_flashcards_sides", {
+        _list_id: id,
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; cards_swapped?: number; message?: string; error?: string } | null;
+      if (!result?.success) {
+        throw new Error(result?.message || "Não foi possível inverter o conteúdo.");
+      }
+
+      const swapped = result.cards_swapped ?? flashcards.length;
       toast.success(`Conteúdo de ${swapped} cards invertido com sucesso!`);
 
       // Invalidate every cache that holds card content so the UI reflects the swap

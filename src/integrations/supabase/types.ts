@@ -2774,6 +2774,7 @@ export type Database = {
         Args: { p_list_id: string; p_user_id: string }
         Returns: Json
       }
+      swap_flashcards_sides: { Args: { _list_id: string }; Returns: Json }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
       update_own_profile: {
         Args: {
