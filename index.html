@@ -106,9 +106,7 @@
           width:100%;height:100%;object-fit:cover;object-position:center;
           display:block;user-select:none;-webkit-user-drag:none;
         }
-        @media (min-width: 768px){
-          #boot-loader-img{object-fit:contain;}
-        }
+        /* Cover on every viewport — slight crop is acceptable, banding is not. */
         /* Progress bar — premium dark, sits at the bottom over the artwork */
         #boot-progress{
           position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
