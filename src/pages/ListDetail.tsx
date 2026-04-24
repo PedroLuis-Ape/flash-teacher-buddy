@@ -201,12 +201,10 @@ const ListDetail = () => {
   const queryClient = useQueryClient();
   const { id } = useParams();
 
-  // DEV-only mount marker.
-  // useEffect runs after first paint so it never blocks rendering.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  // (intentionally placed near top to make freeze diagnosis easy)
-  // eslint-disable-next-line
-  ((): void => { /* no-op anchor for readability */ })();
+  // DEV-only mount marker — runs after first paint so it never blocks rendering.
+  useEffect(() => {
+    pageMount("ListDetail", { id });
+  }, [id]);
 
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
