@@ -6,6 +6,7 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useListActivity } from "@/hooks/useListActivity";
 import { updateGoalProgress } from "@/hooks/useGoals";
 import { useTurmaActivity } from "@/features/classroom/hooks/useTurmaActivity";
+import { perfLog } from "@/lib/perfLog";
 
 export interface StudyResult {
   flashcardId: string;
@@ -205,6 +206,7 @@ export function useStudyEngine(
 
   // Initialize session - guards against duplicate calls
   const initializeSession = useCallback(async () => {
+    const __t0 = performance.now();
     // Skip if already initialized with same signature
     const initKey = `${listId}|${mode}|${cardsSignature}`;
     if (lastInitSignatureRef.current === initKey) {
@@ -427,6 +429,7 @@ export function useStudyEngine(
       setCurrentIndex(0);
     } finally {
       setIsLoading(false);
+      perfLog("useStudyEngine.initializeSession", __t0, { listId, mode, cards: flashcards.length });
     }
     // Includes gameSettings.subset and redListIds because they materially affect
     // the cardsOrder shape (favorites scope + red-list spaced repetition injection).
