@@ -45,6 +45,7 @@ import { useRedList, useToggleRedList } from "@/hooks/useRedList";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
+import { pageMount } from "@/lib/perfLog";
 
 interface Flashcard {
   id: string;
@@ -91,6 +92,11 @@ const Study = () => {
   const isListRoute = Boolean(id);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // DEV-only mount marker (helps localize freezes when entering study).
+  useEffect(() => {
+    pageMount("Study", { id: resolvedId });
+  }, [resolvedId]);
 
   // ── Persistent study preferences ──
   // userId is set later after auth; prefs load with anon key initially

@@ -58,6 +58,12 @@ const Folders = () => {
   const [lists, setLists] = useState<ListType[]>([]);
   const [teachers, setTeachers] = useState<TeacherType[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // DEV-only: mark page mount to help locate freezes.
+  useEffect(() => {
+    pageMount("Folders");
+  }, []);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newFolder, setNewFolder] = useState({ title: "", description: "", visibility: "private" });
   const [userRole, setUserRole] = useState<string | null>(null);

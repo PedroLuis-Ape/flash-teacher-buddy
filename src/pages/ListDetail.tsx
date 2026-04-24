@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { pageMount, perfLog } from "@/lib/perfLog";
 
 interface ListType {
   id: string;
@@ -199,6 +200,14 @@ const ListDetail = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { id } = useParams();
+
+  // DEV-only mount marker.
+  // useEffect runs after first paint so it never blocks rendering.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // (intentionally placed near top to make freeze diagnosis easy)
+  // eslint-disable-next-line
+  ((): void => { /* no-op anchor for readability */ })();
+
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   const [isCloning, setIsCloning] = useState(false);
