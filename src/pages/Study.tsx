@@ -589,6 +589,32 @@ const Study = () => {
   // currentCard is now derived from the engine's cardsOrder (engineCurrentCard above)
   const currentCard = engineCurrentCard;
 
+  // ── DEV diagnostic: confirm the direction propagated from URL → prefs → engine
+  // matches what the user picked in GamesHub. No-op in production builds.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (!currentCard) return;
+    const resolvedDirection = (() => {
+      const dir = flipDirection;
+      if (dir !== "any") return dir;
+      // Mirror decideDirection's "any" branch (deterministic per-card)
+      return currentIndex % 2 === 0 ? "a-b" : "b-a";
+    })();
+    const promptShown = resolvedDirection === "a-b" ? currentCard.term : currentCard.translation;
+    const expectedAnswer = resolvedDirection === "a-b" ? currentCard.translation : currentCard.term;
+    console.debug("[DirectionDebug]", {
+      urlDir: urlDirection,
+      prefsDirection: prefs.direction,
+      flipDirection,
+      resolvedDirection,
+      sideA: currentCard.term,
+      sideB: currentCard.translation,
+      promptShown,
+      expectedAnswer,
+      mode: effectiveMode,
+    });
+  }, [currentCard, currentIndex, flipDirection, urlDirection, prefs.direction, effectiveMode]);
+
   // ── PERF: Read pre-parsed hints from cards (O(1) lookup, no parsing at render time) ──
   const getParsedHints = useCallback((card: Flashcard) => {
     return card.preParsedHints || [];
