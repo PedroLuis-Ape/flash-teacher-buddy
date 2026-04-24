@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { pageMount } from "@/lib/perfLog";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeTabs } from "@/components/ape/ApeTabs";
 import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
