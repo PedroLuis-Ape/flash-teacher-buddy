@@ -164,10 +164,11 @@ const GamesHub = () => {
     const mode = normalizeStudyMode(rawMode);
     updatePrefs({ mode });
 
-    // Read direction/order from the ref (latest committed prefs) — this is
-    // resilient against any stale closure, and is the SSOT we hand to the URL.
-    const liveDirection = prefsRef.current.direction;
-    const liveOrder = prefsRef.current.order;
+    // SSOT for the URL = local selection state (what the user just picked in
+    // the Selects). This sidesteps any race with the async prefs writer.
+    // Favorites toggle is stable enough to read from the ref.
+    const liveDirection = selectedDirection;
+    const liveOrder = selectedOrder;
     const liveFavoritesOnly = prefsRef.current.favoritesOnly;
 
     const kind = isListRoute ? "list" : "collection";
@@ -235,8 +236,12 @@ const GamesHub = () => {
             <div>
               <label className="text-xs font-medium mb-1.5 block">Direção</label>
               <Select
-                value={prefs.direction}
-                onValueChange={(v) => updatePrefs({ direction: normalizeDirection(v) })}
+                value={selectedDirection}
+                onValueChange={(v) => {
+                  const dir = normalizeDirection(v);
+                  setSelectedDirection(dir);   // immediate, no race
+                  updatePrefs({ direction: dir }); // persist
+                }}
               >
                 <SelectTrigger className="h-9">
                   <SelectValue />
@@ -252,8 +257,11 @@ const GamesHub = () => {
             <div>
               <label className="text-xs font-medium mb-1.5 block">Ordem</label>
               <Select
-                value={prefs.order}
-                onValueChange={(v: any) => updatePrefs({ order: v })}
+                value={selectedOrder}
+                onValueChange={(v: any) => {
+                  setSelectedOrder(v);
+                  updatePrefs({ order: v });
+                }}
               >
                 <SelectTrigger className="h-9">
                   <SelectValue />
