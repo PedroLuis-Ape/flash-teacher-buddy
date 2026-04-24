@@ -1,0 +1,16 @@
+{
+  "name": "APE - Apprentice Practice & Enhancement",
+  "short_name": "APE",
+  "description": "Aplicativo de flashcards para prática e aprimoramento do aprendizado.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#3a0d6b",
+  "theme_color": "#3a0d6b",
+  "icons": [
+    { "src": "/icons/pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pwa-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
