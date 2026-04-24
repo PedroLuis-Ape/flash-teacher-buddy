@@ -9,19 +9,11 @@ self.addEventListener("activate", (event) => {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map((name) => caches.delete(name)));
         await self.registration.unregister();
-        // Take control immediately so any open clients see the unregister
-        if (self.clients && typeof self.clients.claim === "function") {
-          await self.clients.claim();
-        }
-        const clientsList = await self.clients.matchAll({
-          type: "window",
-          includeUncontrolled: true,
-        });
-        for (const client of clientsList) {
-          if ("navigate" in client) {
-            client.navigate(client.url);
-          }
-        }
+        // IMPORTANT: do NOT auto-navigate clients here.
+        // In iframe / Lovable preview contexts, calling client.navigate(url)
+        // can trigger reload loops that prevent the app from ever booting.
+        // Unregistering + clearing caches is enough — next natural reload
+        // will load the fresh shell.
       } catch (error) {
         console.warn("[SW cleanup] Failed:", error);
       }
