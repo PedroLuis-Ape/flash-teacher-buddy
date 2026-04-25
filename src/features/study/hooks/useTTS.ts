@@ -234,17 +234,24 @@ export function useTTS() {
       if (lang.length === 2) {
         lang = ISO_TO_BCP47[lang] || `${lang}-${lang.toUpperCase()}`;
       }
-      
+
+      // English must always normalize to en-US (never en-GB, en-AU, etc.)
+      if (lang.toLowerCase().startsWith("en")) {
+        lang = "en-US";
+      }
+
       // Find the best voice using smart algorithm
       const voice = pickVoice(lang, currentVoices);
 
       // Create utterance
       const utterance = new SpeechSynthesisUtterance(cleanedText);
-      
+
       // Apply voice if found
       if (voice) {
         utterance.voice = voice;
-        utterance.lang = voice.lang;
+        // Force en-US tag when speaking English, even if the voice reports a different sub-tag.
+        // This nudges engines that honor utterance.lang over voice.lang.
+        utterance.lang = lang === "en-US" ? "en-US" : voice.lang;
       } else {
         utterance.lang = lang;
         console.warn('[TTS] No voice found for', lang, '- using browser default');
