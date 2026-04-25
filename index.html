@@ -96,15 +96,29 @@
     <style>
         #boot-loader{
           position:fixed;inset:0;z-index:99999;
-          display:flex;align-items:center;justify-content:center;
           background:#3a0d6b;
           opacity:1;transition:opacity .5s ease-out;
           overflow:hidden;
+          width:100vw;height:100vh;min-width:100vw;min-height:100vh;
+          margin:0;padding:0;
+        }
+        @supports (height: 100dvh){
+          #boot-loader{height:100dvh;min-height:100dvh;}
         }
         #boot-loader.boot-loader--hide{opacity:0;pointer-events:none;}
+        #boot-loader picture{
+          position:absolute;inset:0;display:block;
+          width:100%;height:100%;
+        }
         #boot-loader-img{
-          width:100%;height:100%;object-fit:cover;object-position:center;
+          position:absolute;inset:0;
+          width:100vw;height:100vh;
+          min-width:100vw;min-height:100vh;
+          object-fit:cover;object-position:center center;
           display:block;user-select:none;-webkit-user-drag:none;
+        }
+        @supports (height: 100dvh){
+          #boot-loader-img{height:100dvh;min-height:100dvh;}
         }
         /* Cover on every viewport — slight crop is acceptable, banding is not. */
         /* Progress bar — premium dark, sits at the bottom over the artwork */
