@@ -23,6 +23,13 @@ export interface WordHint {
   startIndex?: number;
   /** End character index in source text (exclusive) */
   endIndex?: number;
+  /**
+   * Which side of the card this hint belongs to.
+   * "A" = term (default for legacy hints)
+   * "B" = translation
+   * Backward-compatible: undefined is treated as "A".
+   */
+  side?: "A" | "B";
 }
 
 /** A segment of text that may or may not have a hint attached */

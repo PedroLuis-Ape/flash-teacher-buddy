@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Languages, Trash2, Pencil, ChevronDown, ChevronUp, AlertTriangle, Type } from "lucide-react";
+import { Languages, Trash2, Pencil, ChevronDown, ChevronUp, AlertTriangle, Type, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WordHint } from "@/features/study/lib/wordHints";
 import { validateHintIndices, revalidateHints } from "@/features/study/lib/wordHints";
@@ -37,6 +37,8 @@ interface PendingHint {
   endIndex?: number;
   side: SourceSide;
   manual: boolean;
+  /** True when the manual text was not found in the source side */
+  notFound?: boolean;
 }
 
 export const WordHintEditor = ({
@@ -95,18 +97,45 @@ export const WordHintEditor = ({
         const node = treeWalker.currentNode as Text;
         if (node === range.startContainer) {
           startIndex = charOffset + range.startOffset;
+          break;
         }
-        if (startIndex !== -1) break;
         charOffset += node.textContent?.length || 0;
       }
 
-      if (startIndex === -1) return;
+      // Fallback: if DOM walk failed, locate via case-insensitive search in side text
+      let resolvedStart = startIndex;
+      let resolvedEnd = startIndex >= 0 ? startIndex + selectedText.length : -1;
+      if (resolvedStart >= 0) {
+        const verify = fullText.slice(resolvedStart, resolvedEnd);
+        if (verify !== selectedText) {
+          // Position drifted (e.g. due to highlight spans) — re-anchor textually
+          const sideText = side === "A" ? sourceText : (sourceTextB || "");
+          const fallback = sideText.toLowerCase().indexOf(selectedText.toLowerCase());
+          if (fallback !== -1) {
+            resolvedStart = fallback;
+            resolvedEnd = fallback + selectedText.length;
+          } else {
+            resolvedStart = -1;
+          }
+        }
+      } else {
+        const sideText = side === "A" ? sourceText : (sourceTextB || "");
+        const fallback = sideText.toLowerCase().indexOf(selectedText.toLowerCase());
+        if (fallback !== -1) {
+          resolvedStart = fallback;
+          resolvedEnd = fallback + selectedText.length;
+        }
+      }
 
-      const endIndex = startIndex + selectedText.length;
-      const verify = fullText.slice(startIndex, endIndex);
-      if (verify !== selectedText) return;
+      if (resolvedStart < 0) return;
 
-      setPending({ text: selectedText, startIndex, endIndex, side, manual: false });
+      setPending({
+        text: selectedText,
+        startIndex: resolvedStart,
+        endIndex: resolvedEnd,
+        side,
+        manual: false,
+      });
       setPendingTranslation("");
       setPendingNote("");
       setManualMode(false);
@@ -114,7 +143,7 @@ export const WordHintEditor = ({
 
       setTimeout(() => translationInputRef.current?.focus(), 100);
     },
-    [value]
+    [sourceText, sourceTextB]
   );
 
   const startManualEntry = useCallback(() => {
@@ -123,23 +152,27 @@ export const WordHintEditor = ({
     setPendingManualText("");
     setPendingTranslation("");
     setPendingNote("");
-    setManualSide("A");
   }, []);
 
   const confirmManualEntry = useCallback(() => {
     const text = pendingManualText.trim();
     if (!text) return;
 
-    // Try to find exact position in the chosen side's text
+    // Try to locate the snippet in the chosen side's text (case-insensitive)
     const sideText = manualSide === "A" ? sourceText : (sourceTextB || "");
-    const idx = sideText.indexOf(text);
+    let idx = sideText.indexOf(text);
+    if (idx === -1) {
+      idx = sideText.toLowerCase().indexOf(text.toLowerCase());
+    }
+    const found = idx !== -1;
 
     setPending({
       text,
-      startIndex: idx !== -1 ? idx : undefined,
-      endIndex: idx !== -1 ? idx + text.length : undefined,
+      startIndex: found ? idx : undefined,
+      endIndex: found ? idx + text.length : undefined,
       side: manualSide,
       manual: true,
+      notFound: !found,
     });
     setManualMode(false);
     setTimeout(() => translationInputRef.current?.focus(), 100);
@@ -154,12 +187,14 @@ export const WordHintEditor = ({
       note: pendingNote.trim() || undefined,
       startIndex: pending.startIndex,
       endIndex: pending.endIndex,
+      side: pending.side,
     };
 
     onChange([...value, newHint]);
     setPending(null);
     setPendingTranslation("");
     setPendingNote("");
+    setPendingManualText("");
   }, [pending, pendingTranslation, pendingNote, value, onChange]);
 
   const cancelPending = useCallback(() => {
@@ -167,6 +202,7 @@ export const WordHintEditor = ({
     setPendingTranslation("");
     setPendingNote("");
     setManualMode(false);
+    setPendingManualText("");
   }, []);
 
   const removeItem = useCallback(
@@ -209,15 +245,13 @@ export const WordHintEditor = ({
   const renderPhrase = (text: string, side: SourceSide) => {
     if (!text) return <span className="text-muted-foreground italic">Preencha o campo acima primeiro</span>;
 
-    // Only highlight index-based hints matching this side
-    const hintsForSide = value.filter(
-      (h) =>
-        h.startIndex !== undefined &&
-        h.endIndex !== undefined &&
-        // For side A, show all indexed hints (default behavior)
-        // We store side info in note prefix or just show all on A for backward compat
-        side === "A"
-    );
+    // Highlight only hints belonging to this side.
+    // Legacy hints without `side` are treated as belonging to side A.
+    const hintsForSide = value.filter((h) => {
+      if (h.startIndex === undefined || h.endIndex === undefined) return false;
+      const hintSide: SourceSide = (h.side ?? "A") as SourceSide;
+      return hintSide === side;
+    });
 
     const sortedHints = [...hintsForSide].sort((a, b) => a.startIndex! - b.startIndex!);
     const segments: { text: string; hintIndex?: number }[] = [];
@@ -227,6 +261,9 @@ export const WordHintEditor = ({
       const start = hint.startIndex!;
       const end = Math.min(hint.endIndex!, text.length);
       if (start < cursor || start >= text.length) continue;
+      // Skip if the slice doesn't actually match the hint text (drifted)
+      const sliced = text.slice(start, end);
+      if (sliced.toLowerCase() !== hint.text.toLowerCase()) continue;
 
       if (start > cursor) {
         segments.push({ text: text.slice(cursor, start) });
@@ -239,7 +276,7 @@ export const WordHintEditor = ({
       segments.push({ text: text.slice(cursor) });
     }
 
-    if (sortedHints.length === 0) {
+    if (segments.length === 0) {
       return <span>{text}</span>;
     }
 
@@ -340,18 +377,23 @@ export const WordHintEditor = ({
             </div>
           )}
 
-          {/* Manual entry toggle */}
+          {/* Manual entry toggle — promoted as the primary, mobile-friendly flow */}
           {!pending && !manualMode && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={startManualEntry}
-              className="gap-1.5 text-xs"
-            >
-              <Type className="h-3.5 w-3.5" />
-              Digitar trecho manualmente
-            </Button>
+            <div className="flex flex-col gap-1.5">
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={startManualEntry}
+                className="gap-1.5"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar dica manualmente
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Recomendado no celular. Selecionar texto acima também funciona como atalho.
+              </p>
+            </div>
           )}
 
           {/* Manual entry form */}
@@ -375,6 +417,7 @@ export const WordHintEditor = ({
                     size="sm"
                     className="h-7 text-xs"
                     onClick={() => setManualSide("B")}
+                    disabled={!sourceTextB}
                   >
                     {labelB}
                   </Button>
@@ -395,6 +438,10 @@ export const WordHintEditor = ({
                     }
                   }}
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Prévia: o trecho será salvo no lado{" "}
+                  <strong>{manualSide === "A" ? labelA : labelB}</strong>.
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button type="button" size="sm" onClick={confirmManualEntry} disabled={!pendingManualText.trim()}>
@@ -417,6 +464,15 @@ export const WordHintEditor = ({
                   ({pending.side === "A" ? labelA : labelB})
                 </span>
               </p>
+              {pending.notFound && (
+                <div className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Esse trecho não foi encontrado exatamente no texto. A dica será salva por
+                    correspondência manual.
+                  </span>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label className="text-xs">Tradução</Label>
                 <Input
@@ -510,6 +566,9 @@ export const WordHintEditor = ({
                     <>
                       <span className="font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded text-xs">
                         {item.text}
+                      </span>
+                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground bg-muted px-1 py-0.5 rounded shrink-0">
+                        {(item.side ?? "A") === "A" ? labelA : labelB}
                       </span>
                       <span className="text-muted-foreground">→</span>
                       <span className="flex-1 truncate">{item.translation}</span>
