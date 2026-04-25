@@ -377,18 +377,23 @@ export const WordHintEditor = ({
             </div>
           )}
 
-          {/* Manual entry toggle */}
+          {/* Manual entry toggle — promoted as the primary, mobile-friendly flow */}
           {!pending && !manualMode && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={startManualEntry}
-              className="gap-1.5 text-xs"
-            >
-              <Type className="h-3.5 w-3.5" />
-              Digitar trecho manualmente
-            </Button>
+            <div className="flex flex-col gap-1.5">
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={startManualEntry}
+                className="gap-1.5"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar dica manualmente
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Recomendado no celular. Selecionar texto acima também funciona como atalho.
+              </p>
+            </div>
           )}
 
           {/* Manual entry form */}
@@ -412,6 +417,7 @@ export const WordHintEditor = ({
                     size="sm"
                     className="h-7 text-xs"
                     onClick={() => setManualSide("B")}
+                    disabled={!sourceTextB}
                   >
                     {labelB}
                   </Button>
@@ -432,6 +438,10 @@ export const WordHintEditor = ({
                     }
                   }}
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Prévia: o trecho será salvo no lado{" "}
+                  <strong>{manualSide === "A" ? labelA : labelB}</strong>.
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button type="button" size="sm" onClick={confirmManualEntry} disabled={!pendingManualText.trim()}>
@@ -454,6 +464,15 @@ export const WordHintEditor = ({
                   ({pending.side === "A" ? labelA : labelB})
                 </span>
               </p>
+              {pending.notFound && (
+                <div className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Esse trecho não foi encontrado exatamente no texto. A dica será salva por
+                    correspondência manual.
+                  </span>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label className="text-xs">Tradução</Label>
                 <Input
