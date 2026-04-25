@@ -245,15 +245,13 @@ export const WordHintEditor = ({
   const renderPhrase = (text: string, side: SourceSide) => {
     if (!text) return <span className="text-muted-foreground italic">Preencha o campo acima primeiro</span>;
 
-    // Only highlight index-based hints matching this side
-    const hintsForSide = value.filter(
-      (h) =>
-        h.startIndex !== undefined &&
-        h.endIndex !== undefined &&
-        // For side A, show all indexed hints (default behavior)
-        // We store side info in note prefix or just show all on A for backward compat
-        side === "A"
-    );
+    // Highlight only hints belonging to this side.
+    // Legacy hints without `side` are treated as belonging to side A.
+    const hintsForSide = value.filter((h) => {
+      if (h.startIndex === undefined || h.endIndex === undefined) return false;
+      const hintSide: SourceSide = (h.side ?? "A") as SourceSide;
+      return hintSide === side;
+    });
 
     const sortedHints = [...hintsForSide].sort((a, b) => a.startIndex! - b.startIndex!);
     const segments: { text: string; hintIndex?: number }[] = [];
@@ -263,6 +261,9 @@ export const WordHintEditor = ({
       const start = hint.startIndex!;
       const end = Math.min(hint.endIndex!, text.length);
       if (start < cursor || start >= text.length) continue;
+      // Skip if the slice doesn't actually match the hint text (drifted)
+      const sliced = text.slice(start, end);
+      if (sliced.toLowerCase() !== hint.text.toLowerCase()) continue;
 
       if (start > cursor) {
         segments.push({ text: text.slice(cursor, start) });
@@ -275,7 +276,7 @@ export const WordHintEditor = ({
       segments.push({ text: text.slice(cursor) });
     }
 
-    if (sortedHints.length === 0) {
+    if (segments.length === 0) {
       return <span>{text}</span>;
     }
 
