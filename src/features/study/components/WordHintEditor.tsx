@@ -567,6 +567,9 @@ export const WordHintEditor = ({
                       <span className="font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded text-xs">
                         {item.text}
                       </span>
+                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground bg-muted px-1 py-0.5 rounded shrink-0">
+                        {(item.side ?? "A") === "A" ? labelA : labelB}
+                      </span>
                       <span className="text-muted-foreground">→</span>
                       <span className="flex-1 truncate">{item.translation}</span>
                       {item.note && (
