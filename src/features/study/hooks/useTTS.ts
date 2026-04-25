@@ -23,7 +23,8 @@ const ISO_TO_BCP47: Record<string, string> = {
 
 /**
  * Smart Voice Selection Algorithm
- * Priority: Google > Microsoft/Natural > Exact locale > Prefix match
+ * Priority for English: en-US strict first, then quality tiers within en-US.
+ * For other languages: Google > Microsoft/Natural > Exact locale > Prefix match.
  */
 function pickVoice(langCode: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   if (!voices || voices.length === 0) return null;
@@ -32,6 +33,65 @@ function pickVoice(langCode: string, voices: SpeechSynthesisVoice[]): SpeechSynt
   const normalizedLang = langCode.toLowerCase();
   const prefix = normalizedLang.split("-")[0]; // "en" from "en-US"
   const fullLocale = ISO_TO_BCP47[prefix] || langCode;
+
+  const voiceName = (v: SpeechSynthesisVoice) => v.name.toLowerCase();
+
+  // Helper: rank voices by manufacturer/quality preference
+  const pickByQuality = (pool: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
+    if (pool.length === 0) return null;
+    const google = pool.find(v => voiceName(v).includes("google"));
+    if (google) return google;
+    const premium = pool.find(v =>
+      voiceName(v).includes("microsoft") ||
+      voiceName(v).includes("natural") ||
+      voiceName(v).includes("neural") ||
+      voiceName(v).includes("enhanced")
+    );
+    if (premium) return premium;
+    const apple = pool.find(v =>
+      voiceName(v).includes("samantha") ||
+      voiceName(v).includes("alex") ||
+      voiceName(v).includes("victoria")
+    );
+    if (apple) return apple;
+    return pool[0];
+  };
+
+  // ── ENGLISH SPECIAL CASE ──────────────────────────────────────────────
+  // Always prefer en-US strictly, regardless of manufacturer ranking.
+  // Only fall back to other English variants if no en-US voice exists.
+  if (prefix === "en") {
+    const usVoices = voices.filter(v => v.lang.toLowerCase() === "en-us");
+    if (usVoices.length > 0) {
+      const picked = pickByQuality(usVoices) ?? usVoices[0];
+      if (import.meta.env.DEV) {
+        console.debug("[TTS]", {
+          requestedLang: langCode,
+          normalizedLang: "en-US",
+          selectedVoice: picked.name,
+          selectedVoiceLang: picked.lang,
+        });
+      }
+      return picked;
+    }
+
+    // No en-US voice — fall back to any English voice but warn.
+    const anyEnglish = voices.filter(v => v.lang.toLowerCase().startsWith("en"));
+    if (anyEnglish.length > 0) {
+      const picked = pickByQuality(anyEnglish) ?? anyEnglish[0];
+      if (import.meta.env.DEV) {
+        console.warn("[TTS] English fallback is not en-US", {
+          selectedVoice: picked.name,
+          selectedVoiceLang: picked.lang,
+        });
+      }
+      return picked;
+    }
+
+    console.warn(`[TTS] No English voice found for: ${langCode}`);
+    return null;
+  }
+  // ──────────────────────────────────────────────────────────────────────
 
   // Filter voices that match our language
   const matchingVoices = voices.filter(v => {
@@ -46,8 +106,6 @@ function pickVoice(langCode: string, voices: SpeechSynthesisVoice[]): SpeechSynt
     console.warn(`[TTS] No voices found for language: ${langCode}`);
     return null;
   }
-
-  const voiceName = (v: SpeechSynthesisVoice) => v.name.toLowerCase();
 
   // Tier 1: Google voices (highest quality on Chrome)
   const googleVoice = matchingVoices.find(v => 
@@ -176,17 +234,24 @@ export function useTTS() {
       if (lang.length === 2) {
         lang = ISO_TO_BCP47[lang] || `${lang}-${lang.toUpperCase()}`;
       }
-      
+
+      // English must always normalize to en-US (never en-GB, en-AU, etc.)
+      if (lang.toLowerCase().startsWith("en")) {
+        lang = "en-US";
+      }
+
       // Find the best voice using smart algorithm
       const voice = pickVoice(lang, currentVoices);
 
       // Create utterance
       const utterance = new SpeechSynthesisUtterance(cleanedText);
-      
+
       // Apply voice if found
       if (voice) {
         utterance.voice = voice;
-        utterance.lang = voice.lang;
+        // Force en-US tag when speaking English, even if the voice reports a different sub-tag.
+        // This nudges engines that honor utterance.lang over voice.lang.
+        utterance.lang = lang === "en-US" ? "en-US" : voice.lang;
       } else {
         utterance.lang = lang;
         console.warn('[TTS] No voice found for', lang, '- using browser default');
