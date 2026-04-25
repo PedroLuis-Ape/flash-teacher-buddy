@@ -22,6 +22,11 @@ const reportBoot = (value: number, label?: string) => {
 };
 reportBoot(15, "Carregando módulos…");
 
+const splashLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.debug("[StartupSplash]", ...args);
+};
+splashLog("mounted");
+
 // ── Always-on Service Worker neutralizer ──
 // The app does NOT use a PWA / SW. Any SW found is a leftover from older
 // builds (or a stale install on mobile) and MUST be unregistered every load
@@ -56,39 +61,100 @@ if ((window as any).__apeBootTimer) {
 
 reportBoot(35, "Preparando interface…");
 
-// Remove the splash/boot loader, but enforce a minimum visible duration so
-// the branding artwork is appreciated. Target window: 3s (min) — 5s (soft).
-function dismissSplash() {
-  const bootLoader = document.getElementById("boot-loader");
-  if (!bootLoader) return;
-  const startedAt = (window as any).__apeSplashStart || Date.now();
-  const minMs = (window as any).__APE_SPLASH_MIN_MS ?? 3000;
-  const elapsed = Date.now() - startedAt;
-  const wait = Math.max(0, minMs - elapsed);
-  // Drive the bar to 100% before fading out so the user sees completion.
+// ── Splash lifecycle ───────────────────────────────────────────────────
+// The splash is a visual MASK over the app while it boots in background.
+// The <App/> mounts immediately; the splash overlay sits above it (z-index
+// 99999 in index.html) and is dismissed when:
+//   (minimum time elapsed) AND (app is ready)
+//   OR maximum timeout reached (safety release).
+const SPLASH_MIN_MS = (window as any).__APE_SPLASH_MIN_MS ?? 3000;
+const SPLASH_MAX_MS = (window as any).__APE_SPLASH_MAX_MS_HARD ?? 9000;
+const startedAt: number = (window as any).__apeSplashStart || Date.now();
+
+let appReady = false;
+let minTimePassed = false;
+let dismissed = false;
+let progressInterval: number | null = null;
+
+function startProgressTicker() {
+  // 0% → 70% during the minimum window, 70% → 95% while waiting for appReady.
+  const tick = () => {
+    if (dismissed) return;
+    const elapsed = Date.now() - startedAt;
+    let target: number;
+    if (elapsed < SPLASH_MIN_MS) {
+      target = Math.min(70, Math.round((elapsed / SPLASH_MIN_MS) * 70));
+    } else if (!appReady) {
+      const overshoot = Math.min(1, (elapsed - SPLASH_MIN_MS) / 4000);
+      target = 70 + Math.round(overshoot * 25); // 70 → 95
+    } else {
+      target = 95;
+    }
+    reportBoot(target);
+  };
+  tick();
+  progressInterval = window.setInterval(tick, 150);
+}
+
+function tryDismiss() {
+  if (dismissed) return;
+  if (!minTimePassed || !appReady) return;
+  finishAndHide();
+}
+
+function finishAndHide() {
+  if (dismissed) return;
+  dismissed = true;
+  if (progressInterval !== null) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+  // Drive the bar to 100% so the user sees real completion.
   reportBoot(100, "Pronto!");
+  // Small grace delay (200ms) for the bar to visibly land on 100%.
   setTimeout(() => {
     const el = document.getElementById("boot-loader");
     if (!el) return;
     el.classList.add("boot-loader--hide");
-    // Match CSS transition duration before removing from DOM
+    splashLog("dismissed");
+    // Match CSS transition duration before removing from DOM.
     setTimeout(() => el.remove(), 550);
-  }, wait);
+  }, 200);
 }
 
+// Schedule the minimum-time gate.
+const elapsedAtBoot = Date.now() - startedAt;
+const remainingMin = Math.max(0, SPLASH_MIN_MS - elapsedAtBoot);
+setTimeout(() => {
+  minTimePassed = true;
+  splashLog("minimum time passed");
+  tryDismiss();
+}, remainingMin);
+
+// Schedule the hard safety timeout — splash MUST go away even if app stalls.
+setTimeout(() => {
+  if (dismissed) return;
+  splashLog("max timeout reached");
+  finishAndHide();
+}, SPLASH_MAX_MS);
+
+startProgressTicker();
+
+// Mount the app IMMEDIATELY in parallel with the splash. The splash sits
+// outside #root and overlays the app while it boots in background.
+reportBoot(40, "Inicializando interface…");
 createRoot(document.getElementById("root")!).render(
   <SafeMode>
     <App />
   </SafeMode>
 );
 
-// Wait for React to commit its first paint before dismissing the splash.
-// This guarantees the app shell is actually ready behind the artwork.
-reportBoot(70, "Inicializando sessão…");
+// Mark the app as "ready" once React has committed its first paint.
+// Two rAFs guarantee layout + paint are flushed.
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
-    reportBoot(90, "Quase lá…");
-    // One more frame so the first React paint is fully committed.
-    requestAnimationFrame(dismissSplash);
+    appReady = true;
+    splashLog("app ready");
+    tryDismiss();
   });
 });
