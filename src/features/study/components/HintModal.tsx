@@ -8,11 +8,65 @@ interface HintModalProps {
   onClose: () => void;
 }
 
+/**
+ * Lightweight markdown renderer for hint text.
+ * Supports:
+ *  - **bold** inline
+ *  - lines starting with "- " or "* " as bullet items
+ *  - blank lines as paragraph breaks
+ *  - everything else as paragraphs (preserving newlines via white-space pre-line)
+ * Intentionally minimal: no external markdown library, no HTML injection.
+ */
+const renderInline = (text: string): React.ReactNode[] => {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
+const renderHintBody = (raw: string): React.ReactNode => {
+  // Split into blocks separated by blank lines
+  const blocks = raw.replace(/\r\n/g, "\n").split(/\n\s*\n/);
+
+  return blocks.map((block, bi) => {
+    const lines = block.split("\n").map((l) => l.trimEnd());
+    const isList = lines.every((l) => /^\s*[-*]\s+/.test(l) || l.trim() === "");
+
+    if (isList && lines.some((l) => l.trim() !== "")) {
+      const items = lines
+        .filter((l) => l.trim() !== "")
+        .map((l) => l.replace(/^\s*[-*]\s+/, ""));
+      return (
+        <ul
+          key={bi}
+          className="list-disc pl-5 space-y-1.5 my-2 marker:text-muted-foreground"
+        >
+          {items.map((item, ii) => (
+            <li key={ii} className="leading-relaxed">{renderInline(item)}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <p
+        key={bi}
+        className="leading-relaxed mb-3 last:mb-0"
+        style={{ whiteSpace: "pre-line" }}
+      >
+        {renderInline(block)}
+      </p>
+    );
+  });
+};
+
 export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
   if (!isOpen) return null;
 
   const hasHint = hint && hint.trim().length > 0;
-  const displayText = hasHint ? hint : "Nenhuma dica disponível para este card.";
 
   return (
     <div 
@@ -20,7 +74,7 @@ export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
       onClick={onClose}
     >
       <Card 
-        className={`relative w-full max-w-md max-h-[70vh] p-6 animate-fade-in ${hasHint ? 'border-warning/50' : 'border-muted'}`}
+        className={`relative w-full max-w-lg max-h-[80vh] p-5 sm:p-6 animate-fade-in ${hasHint ? 'border-warning/50' : 'border-muted'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <Button
@@ -40,15 +94,21 @@ export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
             <h3 className={`font-semibold mb-2 ${hasHint ? 'text-warning' : 'text-muted-foreground'}`}>
               {hasHint ? 'Dica' : 'Sem dica'}
             </h3>
-            {/* 
-              IMPORTANT: Use white-space: pre-wrap to preserve line breaks 
-              as written by the teacher in the hint field
+            {/*
+              Renders teacher-authored hint text with light markdown:
+              - paragraphs separated by blank lines
+              - "- " / "* " lines become bullet lists
+              - **text** becomes bold
+              Long text is scrollable; line breaks are preserved (pre-line).
             */}
-            <div 
-              className="text-foreground leading-relaxed max-h-[50vh] overflow-y-auto pr-2"
-              style={{ whiteSpace: 'pre-wrap' }}
-            >
-              {displayText}
+            <div className="text-foreground text-[15px] sm:text-base max-h-[60vh] overflow-y-auto pr-2">
+              {hasHint
+                ? renderHintBody(hint as string)
+                : (
+                  <p className="leading-relaxed text-muted-foreground">
+                    Nenhuma dica disponível para este card.
+                  </p>
+                )}
             </div>
           </div>
         </div>
