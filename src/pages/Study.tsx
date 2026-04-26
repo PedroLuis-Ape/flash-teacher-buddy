@@ -982,8 +982,23 @@ const Study = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-4 sm:py-8 px-3 sm:px-4 lg:px-8">
+    <div
+      data-red-focus={redFocusActive ? "true" : undefined}
+      className={`min-h-screen py-4 sm:py-8 px-3 sm:px-4 lg:px-8 transition-colors ${
+        redFocusActive
+          ? "bg-gradient-to-b from-red-950/40 via-background to-background"
+          : "bg-background"
+      }`}
+    >
       <div className="container mx-auto max-w-6xl">
+        {redFocusActive && (
+          <div className="mb-3 flex items-center justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500">
+              <Flame className="h-4 w-4" />
+              Foco Vermelho
+            </div>
+          </div>
+        )}
         <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowExitDialog(true)}>
@@ -998,6 +1013,12 @@ const Study = () => {
                 onSettingsChange={handleSettingsChange}
                 onRestart={handleRestartWithSettings}
                 showFastMode={effectiveMode === "flip"}
+                onEditCurrentCard={
+                  currentCard
+                    ? () => setEditingFlashcard(currentCard as Flashcard)
+                    : undefined
+                }
+                canEditCurrentCard={!!currentCard}
               />
               
               {/* Direction selector for flip mode — uses dynamic labels */}
