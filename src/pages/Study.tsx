@@ -186,10 +186,12 @@ const Study = () => {
   // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
   // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
   const favoritesFilterFellBack = urlFavoritesOnly && !favoritesLoading && favorites.length === 0 && flashcards.length > 0;
-  // We accept redFocus as an extra filter on top of favorites. Read it directly
-  // from the prefs SSOT here (Study.tsx) so the deck recomputes the moment the
-  // user flips the switch. The engine reuses the already-filtered deck.
-  const redFocusActiveForDeck = urlFavoritesOnly && prefs.redFocus === true;
+  // redFocus is session-scoped (NOT persisted in prefs). It lives on the
+  // engine's gameSettings; we use a small local state mirror so we can derive
+  // `effectiveFlashcards` without a circular dependency on the engine's output.
+  // handleSettingsChange below keeps both in sync (mirror is updated first,
+  // then restartSession is called).
+  const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState<boolean>(false);
   const effectiveFlashcards = useMemo(() => {
     if (!urlFavoritesOnly) return flashcards;
     if (favorites.length === 0) return flashcards; // fallback: estuda todos
