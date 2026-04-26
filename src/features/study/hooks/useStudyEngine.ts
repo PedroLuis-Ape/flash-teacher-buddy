@@ -28,6 +28,11 @@ export interface GameSettings {
   mode: 'sequential' | 'random';
   subset: 'all' | 'favorites';
   fastMode?: boolean;
+  /** When true (and subset === 'favorites'), the parent restricts the deck
+   *  to favorites that are also red-listed. The engine itself does not
+   *  re-filter — it trusts the deck it receives. We carry the flag here
+   *  so it survives restartSession() round-trips. */
+  redFocus?: boolean;
 }
 
 interface FlashcardWithProgress {
@@ -110,6 +115,7 @@ export function useStudyEngine(
     mode: initialSettings?.mode ?? 'random',
     subset: initialSettings?.subset ?? 'all',
     fastMode: initialSettings?.fastMode,
+    redFocus: initialSettings?.redFocus,
   });
 
   // Spaced Repetition Lite state
