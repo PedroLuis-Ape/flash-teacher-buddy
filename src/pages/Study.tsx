@@ -186,14 +186,19 @@ const Study = () => {
   // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
   // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
   const favoritesFilterFellBack = urlFavoritesOnly && !favoritesLoading && favorites.length === 0 && flashcards.length > 0;
-  // Note: redFocus filtering is applied AFTER the engine is initialized via
-  // gameSettings.redFocus (see below). At initial mount we keep the same
-  // favorites-only behavior — Study restarts the session when redFocus toggles.
+  // We accept redFocus as an extra filter on top of favorites. Read it directly
+  // from the prefs SSOT here (Study.tsx) so the deck recomputes the moment the
+  // user flips the switch. The engine reuses the already-filtered deck.
+  const redFocusActiveForDeck = urlFavoritesOnly && prefs.redFocus === true;
   const effectiveFlashcards = useMemo(() => {
     if (!urlFavoritesOnly) return flashcards;
     if (favorites.length === 0) return flashcards; // fallback: estuda todos
-    return flashcards.filter(c => favorites.includes(c.id));
-  }, [flashcards, urlFavoritesOnly, favorites]);
+    const favSet = new Set(favorites);
+    const favOnly = flashcards.filter(c => favSet.has(c.id));
+    if (!redFocusActiveForDeck) return favOnly;
+    const redSet = new Set(redListIds);
+    return favOnly.filter(c => redSet.has(c.id));
+  }, [flashcards, urlFavoritesOnly, favorites, redFocusActiveForDeck, redListIds]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
