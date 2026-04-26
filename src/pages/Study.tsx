@@ -784,6 +784,29 @@ const Study = () => {
   // somehow still produced 0 — shouldn't happen given the fallback, but kept as
   // a last-resort safety net with a recovery action).
   if (!currentCard) {
+    // Friendly empty state when redFocus produces zero cards
+    if (redFocusActive) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+          <Flame className="h-12 w-12 text-red-500" />
+          <p className="text-foreground text-center text-lg font-medium">
+            Nenhum card em Foco Vermelho nesta lista.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Button
+              variant="default"
+              onClick={() => handleSettingsChange({ ...gameSettings, redFocus: false })}
+            >
+              Estudar favoritos
+            </Button>
+            <Button variant="outline" onClick={handleDisableFavoritesFilter}>
+              Estudar todos
+            </Button>
+            <Button variant="ghost" onClick={handleExit}>Voltar</Button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
         <Star className="h-12 w-12 text-muted-foreground" />
