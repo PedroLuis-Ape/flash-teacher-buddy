@@ -40,9 +40,10 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
+import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 import { pageMount } from "@/lib/perfLog";
@@ -142,6 +143,8 @@ const Study = () => {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [userId, setUserId] = useState<string | undefined>();
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
+  // In-game card editor (uses the same EditFlashcardDialog as ListDetail)
+  const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
@@ -183,6 +186,9 @@ const Study = () => {
   // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
   // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
   const favoritesFilterFellBack = urlFavoritesOnly && !favoritesLoading && favorites.length === 0 && flashcards.length > 0;
+  // Note: redFocus filtering is applied AFTER the engine is initialized via
+  // gameSettings.redFocus (see below). At initial mount we keep the same
+  // favorites-only behavior — Study restarts the session when redFocus toggles.
   const effectiveFlashcards = useMemo(() => {
     if (!urlFavoritesOnly) return flashcards;
     if (favorites.length === 0) return flashcards; // fallback: estuda todos
@@ -233,6 +239,7 @@ const Study = () => {
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
+  const redFocusActive = !!gameSettings.redFocus && favoritesOnly;
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
 
@@ -546,13 +553,28 @@ const Study = () => {
   };
 
   const handleSettingsChange = (newSettings: GameSettings) => {
-    setGameSettings(newSettings);
-    // Persist changes back to study preferences
+    // RULE: redFocus only makes sense when subset === 'favorites'. Force off otherwise.
+    const coerced: GameSettings = {
+      ...newSettings,
+      redFocus: newSettings.subset === 'favorites' ? !!newSettings.redFocus : false,
+    };
+
+    const subsetChanged = coerced.subset !== gameSettings.subset;
+    const redFocusChanged = !!coerced.redFocus !== !!gameSettings.redFocus;
+
+    setGameSettings(coerced);
+    // Persist changes back to study preferences (redFocus is session-scoped only)
     updatePrefs({
-      order: newSettings.mode === 'sequential' ? 'sequential' : 'random',
-      favoritesOnly: newSettings.subset === 'favorites',
-      fastMode: newSettings.fastMode ?? false,
+      order: coerced.mode === 'sequential' ? 'sequential' : 'random',
+      favoritesOnly: coerced.subset === 'favorites',
+      fastMode: coerced.fastMode ?? false,
     });
+
+    // When the deck composition rule changes (subset or redFocus), restart
+    // the session so the engine rebuilds cardsOrder from the new effective deck.
+    if (subsetChanged || redFocusChanged) {
+      restartSession(coerced);
+    }
   };
 
   const handleRestartWithSettings = () => {
@@ -590,6 +612,70 @@ const Study = () => {
       flashcardId: engineCurrentCard.id,
       isRedListed: redListIds.includes(engineCurrentCard.id),
     });
+  };
+
+  // ── In-game card edit ──
+  // Mirrors ListDetail's handleUpdateFlashcard but updates local `flashcards`
+  // state (not React Query cache) so the current session sees changes
+  // immediately WITHOUT resetting cardsOrder or currentIndex.
+  const handleUpdateFlashcardInGame = async (
+    flashcardId: string,
+    term: string,
+    translation: string,
+    hint: string,
+    imageUrlA?: string,
+    imageUrlB?: string,
+    wordHints?: unknown,
+  ) => {
+    try {
+      const updateData: Record<string, unknown> = {
+        term,
+        translation,
+        hint: hint || null,
+        image_url_a: imageUrlA || null,
+        image_url_b: imageUrlB || null,
+        word_hints:
+          wordHints && Array.isArray(wordHints) && wordHints.length > 0
+            ? wordHints
+            : null,
+      };
+
+      const { error } = await supabase
+        .from("flashcards")
+        .update(updateData as any)
+        .eq("id", flashcardId);
+
+      if (error) throw error;
+
+      // In-place update: preserves session order + currentIndex.
+      // Recomputes preParsedHints so the lightbulb / glossary react instantly.
+      setFlashcards(prev =>
+        prev.map(card =>
+          card.id === flashcardId
+            ? {
+                ...card,
+                term,
+                translation,
+                hint: hint || null,
+                image_url_a: imageUrlA || null,
+                image_url_b: imageUrlB || null,
+                word_hints:
+                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+                    ? wordHints
+                    : null,
+                preParsedHints:
+                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+                    ? parseExtendedWordHints(wordHints)
+                    : undefined,
+              }
+            : card
+        )
+      );
+
+      toast.success("Card atualizado!");
+    } catch (err: any) {
+      toast.error("Erro ao atualizar: " + (err?.message ?? "desconhecido"));
+    }
   };
 
   // currentCard is now derived from the engine's cardsOrder (engineCurrentCard above)
