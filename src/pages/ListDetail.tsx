@@ -614,7 +614,22 @@ const ListDetail = () => {
     toast.success("Copiado para a área de transferência!");
   };
 
-  // Swap card CONTENT only (term ↔ translation) — keeps list settings untouched
+  // ────────────────────────────────────────────────────────────────────
+  // 🛡️ PROTECTED FUNCTION — "Inverter conteúdo dos cards"
+  // ────────────────────────────────────────────────────────────────────
+  // Swaps card CONTENT only (term ↔ translation) for ALL cards in this
+  // list, in a SINGLE atomic Supabase RPC call: `swap_flashcards_sides`.
+  //
+  // RULES (DO NOT BREAK — see docs/SWAP_CONTENT_PROTECTED.md):
+  //   • Must be ONE RPC call. NEVER loop card-by-card on the client.
+  //   • Must NEVER touch list/folder settings (lang_a, lang_b,
+  //     labels_a, labels_b, study_type, tts_enabled). Inverting
+  //     labels/languages is a separate operation (`swap_list_sides`).
+  //   • Must invalidate ONLY: ["flashcards", id], ["gameshub-list", id],
+  //     ["study-flashcards", id], plus the offline copy.
+  //
+  // Regression test: src/pages/__tests__/swapFlashcardsSides.contract.test.ts
+  // ────────────────────────────────────────────────────────────────────
   const handleSwapSides = async () => {
     if (!id || flashcards.length === 0) return;
     if (isSwapping) return; // prevent concurrent runs
