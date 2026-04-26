@@ -570,6 +570,8 @@ const Study = () => {
     const redFocusChanged = !!coerced.redFocus !== !!gameSettings.redFocus;
 
     setGameSettings(coerced);
+    // Keep the deck-filter mirror in sync so effectiveFlashcards recomputes.
+    setRedFocusActiveForDeck(!!coerced.redFocus && coerced.subset === 'favorites');
     // Persist changes back to study preferences (redFocus is session-scoped only)
     updatePrefs({
       order: coerced.mode === 'sequential' ? 'sequential' : 'random',
