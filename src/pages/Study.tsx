@@ -1252,6 +1252,19 @@ const Study = () => {
         fromGoalId={fromGoalId}
         onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
       />
+
+      {/* In-game card editor — reuses the same dialog as ListDetail.
+          Saving via handleUpdateFlashcardInGame updates `flashcards` in place,
+          preserving cardsOrder + currentIndex (no session restart). */}
+      <EditFlashcardDialog
+        flashcard={editingFlashcard}
+        isOpen={!!editingFlashcard}
+        onClose={() => setEditingFlashcard(null)}
+        onSave={handleUpdateFlashcardInGame}
+        studyType={listSettings.studyType}
+        labelA={listSettings.labelsA}
+        labelB={listSettings.labelsB}
+      />
     </div>
   );
 };
