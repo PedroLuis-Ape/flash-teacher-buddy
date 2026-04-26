@@ -40,9 +40,10 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
+import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 import { pageMount } from "@/lib/perfLog";
@@ -142,6 +143,8 @@ const Study = () => {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [userId, setUserId] = useState<string | undefined>();
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
+  // In-game card editor (uses the same EditFlashcardDialog as ListDetail)
+  const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
@@ -183,11 +186,21 @@ const Study = () => {
   // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
   // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
   const favoritesFilterFellBack = urlFavoritesOnly && !favoritesLoading && favorites.length === 0 && flashcards.length > 0;
+  // redFocus is session-scoped (NOT persisted in prefs). It lives on the
+  // engine's gameSettings; we use a small local state mirror so we can derive
+  // `effectiveFlashcards` without a circular dependency on the engine's output.
+  // handleSettingsChange below keeps both in sync (mirror is updated first,
+  // then restartSession is called).
+  const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState<boolean>(false);
   const effectiveFlashcards = useMemo(() => {
     if (!urlFavoritesOnly) return flashcards;
     if (favorites.length === 0) return flashcards; // fallback: estuda todos
-    return flashcards.filter(c => favorites.includes(c.id));
-  }, [flashcards, urlFavoritesOnly, favorites]);
+    const favSet = new Set(favorites);
+    const favOnly = flashcards.filter(c => favSet.has(c.id));
+    if (!redFocusActiveForDeck) return favOnly;
+    const redSet = new Set(redListIds);
+    return favOnly.filter(c => redSet.has(c.id));
+  }, [flashcards, urlFavoritesOnly, favorites, redFocusActiveForDeck, redListIds]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
@@ -233,6 +246,7 @@ const Study = () => {
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
+  const redFocusActive = !!gameSettings.redFocus && favoritesOnly;
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
 
@@ -546,13 +560,30 @@ const Study = () => {
   };
 
   const handleSettingsChange = (newSettings: GameSettings) => {
-    setGameSettings(newSettings);
-    // Persist changes back to study preferences
+    // RULE: redFocus only makes sense when subset === 'favorites'. Force off otherwise.
+    const coerced: GameSettings = {
+      ...newSettings,
+      redFocus: newSettings.subset === 'favorites' ? !!newSettings.redFocus : false,
+    };
+
+    const subsetChanged = coerced.subset !== gameSettings.subset;
+    const redFocusChanged = !!coerced.redFocus !== !!gameSettings.redFocus;
+
+    setGameSettings(coerced);
+    // Keep the deck-filter mirror in sync so effectiveFlashcards recomputes.
+    setRedFocusActiveForDeck(!!coerced.redFocus && coerced.subset === 'favorites');
+    // Persist changes back to study preferences (redFocus is session-scoped only)
     updatePrefs({
-      order: newSettings.mode === 'sequential' ? 'sequential' : 'random',
-      favoritesOnly: newSettings.subset === 'favorites',
-      fastMode: newSettings.fastMode ?? false,
+      order: coerced.mode === 'sequential' ? 'sequential' : 'random',
+      favoritesOnly: coerced.subset === 'favorites',
+      fastMode: coerced.fastMode ?? false,
     });
+
+    // When the deck composition rule changes (subset or redFocus), restart
+    // the session so the engine rebuilds cardsOrder from the new effective deck.
+    if (subsetChanged || redFocusChanged) {
+      restartSession(coerced);
+    }
   };
 
   const handleRestartWithSettings = () => {
@@ -590,6 +621,70 @@ const Study = () => {
       flashcardId: engineCurrentCard.id,
       isRedListed: redListIds.includes(engineCurrentCard.id),
     });
+  };
+
+  // ── In-game card edit ──
+  // Mirrors ListDetail's handleUpdateFlashcard but updates local `flashcards`
+  // state (not React Query cache) so the current session sees changes
+  // immediately WITHOUT resetting cardsOrder or currentIndex.
+  const handleUpdateFlashcardInGame = async (
+    flashcardId: string,
+    term: string,
+    translation: string,
+    hint: string,
+    imageUrlA?: string,
+    imageUrlB?: string,
+    wordHints?: unknown,
+  ) => {
+    try {
+      const updateData: Record<string, unknown> = {
+        term,
+        translation,
+        hint: hint || null,
+        image_url_a: imageUrlA || null,
+        image_url_b: imageUrlB || null,
+        word_hints:
+          wordHints && Array.isArray(wordHints) && wordHints.length > 0
+            ? wordHints
+            : null,
+      };
+
+      const { error } = await supabase
+        .from("flashcards")
+        .update(updateData as any)
+        .eq("id", flashcardId);
+
+      if (error) throw error;
+
+      // In-place update: preserves session order + currentIndex.
+      // Recomputes preParsedHints so the lightbulb / glossary react instantly.
+      setFlashcards(prev =>
+        prev.map(card =>
+          card.id === flashcardId
+            ? {
+                ...card,
+                term,
+                translation,
+                hint: hint || null,
+                image_url_a: imageUrlA || null,
+                image_url_b: imageUrlB || null,
+                word_hints:
+                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+                    ? wordHints
+                    : null,
+                preParsedHints:
+                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+                    ? parseExtendedWordHints(wordHints)
+                    : undefined,
+              }
+            : card
+        )
+      );
+
+      toast.success("Card atualizado!");
+    } catch (err: any) {
+      toast.error("Erro ao atualizar: " + (err?.message ?? "desconhecido"));
+    }
   };
 
   // currentCard is now derived from the engine's cardsOrder (engineCurrentCard above)
@@ -689,6 +784,29 @@ const Study = () => {
   // somehow still produced 0 — shouldn't happen given the fallback, but kept as
   // a last-resort safety net with a recovery action).
   if (!currentCard) {
+    // Friendly empty state when redFocus produces zero cards
+    if (redFocusActive) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+          <Flame className="h-12 w-12 text-red-500" />
+          <p className="text-foreground text-center text-lg font-medium">
+            Nenhum card em Foco Vermelho nesta lista.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Button
+              variant="default"
+              onClick={() => handleSettingsChange({ ...gameSettings, redFocus: false })}
+            >
+              Estudar favoritos
+            </Button>
+            <Button variant="outline" onClick={handleDisableFavoritesFilter}>
+              Estudar todos
+            </Button>
+            <Button variant="ghost" onClick={handleExit}>Voltar</Button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
         <Star className="h-12 w-12 text-muted-foreground" />
@@ -864,8 +982,23 @@ const Study = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-4 sm:py-8 px-3 sm:px-4 lg:px-8">
+    <div
+      data-red-focus={redFocusActive ? "true" : undefined}
+      className={`min-h-screen py-4 sm:py-8 px-3 sm:px-4 lg:px-8 transition-colors ${
+        redFocusActive
+          ? "bg-gradient-to-b from-red-950/40 via-background to-background"
+          : "bg-background"
+      }`}
+    >
       <div className="container mx-auto max-w-6xl">
+        {redFocusActive && (
+          <div className="mb-3 flex items-center justify-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500">
+              <Flame className="h-4 w-4" />
+              Foco Vermelho
+            </div>
+          </div>
+        )}
         <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowExitDialog(true)}>
@@ -880,6 +1013,12 @@ const Study = () => {
                 onSettingsChange={handleSettingsChange}
                 onRestart={handleRestartWithSettings}
                 showFastMode={effectiveMode === "flip"}
+                onEditCurrentCard={
+                  currentCard
+                    ? () => setEditingFlashcard(currentCard as Flashcard)
+                    : undefined
+                }
+                canEditCurrentCard={!!currentCard}
               />
               
               {/* Direction selector for flip mode — uses dynamic labels */}
@@ -1112,6 +1251,19 @@ const Study = () => {
         onOpenChange={setShowCompletionModal}
         fromGoalId={fromGoalId}
         onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
+      />
+
+      {/* In-game card editor — reuses the same dialog as ListDetail.
+          Saving via handleUpdateFlashcardInGame updates `flashcards` in place,
+          preserving cardsOrder + currentIndex (no session restart). */}
+      <EditFlashcardDialog
+        flashcard={editingFlashcard}
+        isOpen={!!editingFlashcard}
+        onClose={() => setEditingFlashcard(null)}
+        onSave={handleUpdateFlashcardInGame}
+        studyType={listSettings.studyType}
+        labelA={listSettings.labelsA}
+        labelB={listSettings.labelsB}
       />
     </div>
   );
