@@ -21,6 +21,22 @@ interface RecentList {
   last_activity?: string | null;
 }
 
+/**
+ * Pastas recentes da instituição/hub atual.
+ * Filtragem:
+ *  - Sem hub selecionado: mostra apenas pastas com institution_id = NULL.
+ *  - Com hub selecionado: mostra apenas pastas daquele hub.
+ * NUNCA mistura pastas entre hubs.
+ */
+export interface RecentFolder {
+  id: string;
+  title: string;
+  list_count: number;
+  card_count: number;
+  last_activity: string | null;
+  institution_id: string | null;
+}
+
 interface TeacherInfo {
   id: string;
   name: string;
@@ -36,6 +52,7 @@ interface Stats {
 interface HomeData {
   last: LastSession | null;
   recents: RecentList[];
+  recentFolders: RecentFolder[];
   teachers: TeacherInfo[];
   stats: Stats;
   loading: boolean;
@@ -50,6 +67,7 @@ export function useHomeData(): HomeData {
   const [data, setData] = useState<Omit<HomeData, 'refetch'>>({
     last: null,
     recents: [],
+    recentFolders: [],
     teachers: [],
     stats: { total_lists: 0, total_cards: 0, teachers_count: 0 },
     loading: true,
@@ -77,6 +95,7 @@ export function useHomeData(): HomeData {
         setData({ 
           last: null, 
           recents: [], 
+          recentFolders: [],
           teachers: [],
           stats: { total_lists: 0, total_cards: 0, teachers_count: 0 },
           loading: false, 
@@ -89,7 +108,7 @@ export function useHomeData(): HomeData {
       const institutionId = selectedInstitution?.id || null;
 
       // Fetch in parallel
-      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult, statsCountResult] = await Promise.all([
+      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult, statsCountResult, recentFoldersResult] = await Promise.all([
         // Last study session — filtered by institution via lists→folders
         (async () => {
           const { data } = await supabase
@@ -199,7 +218,33 @@ export function useHomeData(): HomeData {
           }
 
           return { listCount: listCount || 0, cardCount: totalCards, perListCardCounts };
-        })()
+        })(),
+
+        // Recent folders for the current hub (instituição). Strict isolation:
+        // - selectedInstitution null  → only folders with institution_id IS NULL
+        // - selectedInstitution set   → only folders matching that institution_id
+        (() => {
+          let q = supabase
+            .from("folders")
+            .select(`
+              id,
+              title,
+              updated_at,
+              institution_id,
+              lists:lists(id, deleted_at)
+            `)
+            .eq("owner_id", userId)
+            .is("deleted_at", null)
+            .order("updated_at", { ascending: false })
+            .limit(5);
+
+          if (institutionId) {
+            q = q.eq("institution_id", institutionId);
+          } else {
+            q = q.is("institution_id", null);
+          }
+          return q;
+        })(),
       ]);
 
       const subscriptionTeacherIds = toArray<any>(subscriptionsResult.data as any[])
@@ -380,9 +425,32 @@ export function useHomeData(): HomeData {
       const totalOwnLists = toNumber((statsCountResult as any)?.listCount, 0);
       const totalOwnCards = toNumber((statsCountResult as any)?.cardCount, 0);
 
+      // ── Build recentFolders (strict per-institution isolation) ──
+      // Card counts per list come from the same RPC already used for stats — zero extra calls.
+      const recentFoldersMapped: RecentFolder[] = toArray<any>(recentFoldersResult.data as any[])
+        .filter((f) => typeof f?.id === "string")
+        .map((f) => {
+          const lists = toArray<any>(f?.lists as any[]).filter(
+            (l) => l && l.deleted_at == null && typeof l.id === "string"
+          );
+          const cardCount = lists.reduce(
+            (sum, l) => sum + toNumber(perListCardCounts[l.id], 0),
+            0
+          );
+          return {
+            id: f.id,
+            title: toText(f?.title, "Sem título"),
+            list_count: lists.length,
+            card_count: cardCount,
+            last_activity: typeof f?.updated_at === "string" ? f.updated_at : null,
+            institution_id: typeof f?.institution_id === "string" ? f.institution_id : null,
+          };
+        });
+
       setData({
         last: lastSession,
         recents: allLists,
+        recentFolders: recentFoldersMapped,
         teachers: toArray<TeacherInfo>(teachersInfo).slice(0, 3),
         stats: {
           total_lists: totalOwnLists,
@@ -397,6 +465,7 @@ export function useHomeData(): HomeData {
       setData({
         last: null,
         recents: [],
+        recentFolders: [],
         teachers: [],
         stats: { total_lists: 0, total_cards: 0, teachers_count: 0 },
         loading: false,

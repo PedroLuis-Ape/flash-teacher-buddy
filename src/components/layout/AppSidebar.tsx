@@ -4,9 +4,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { 
-  Menu, Building2, Plus, X, Check, Trash2, StickyNote, Target, ChevronRight,
+  Menu, Building2, Plus, Check, Trash2, StickyNote, Target, ChevronRight,
   Home, Library, Store, User, GraduationCap, Search
 } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
@@ -340,23 +339,11 @@ export function AppSidebar() {
         </SheetContent>
       </Sheet>
 
-      {/* Active institution badge */}
-      {selectedInstitution?.id && (
-        <Badge
-          variant="secondary"
-          className="gap-2"
-          style={{ borderLeft: `3px solid ${selectedInstitution.color || 'hsl(var(--muted-foreground))'}` }}
-        >
-          <Building2 className="h-3 w-3" />
-          <span className="max-w-[120px] truncate">{selectedInstitution.name || 'Hub'}</span>
-          <button
-            onClick={() => setSelectedInstitution(null)}
-            className="ml-1 hover:bg-background/50 rounded-full p-0.5"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
-      )}
+      {/*
+        NOTE: o antigo chip de instituição (com botão "X") foi removido daqui.
+        A instituição ativa agora é exibida pelo componente <InstitutionBar />,
+        renderizado abaixo do header apenas na Home (ver GlobalLayout.tsx).
+      */}
     </>
   );
 }
