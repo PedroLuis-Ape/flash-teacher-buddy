@@ -4,9 +4,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { 
-  Menu, Building2, Plus, X, Check, Trash2, StickyNote, Target, ChevronRight,
+  Menu, Building2, Plus, Check, Trash2, StickyNote, Target, ChevronRight,
   Home, Library, Store, User, GraduationCap, Search
 } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
