@@ -142,6 +142,19 @@ export function useStudyEngine(
     [flashcards]
   );
 
+  // Scope key — separates persisted sessions per (subset / order / redFocus).
+  // Without this, switching between "all" and "favorites" would either reuse the
+  // wrong session (and reset the index) or overwrite the other scope's progress.
+  // The full set of IDs in `flashcards` already differs between scopes, but we
+  // also keep this scope label so we can match sessions back even when the
+  // underlying deck composition changes (e.g. user added/removed favorites).
+  const sessionScopeKey = useMemo(() => {
+    const sub = gameSettings.subset ?? 'all';
+    const order = gameSettings.mode ?? 'random';
+    const red = gameSettings.redFocus ? 'red' : 'normal';
+    return `${sub}:${order}:${red}`;
+  }, [gameSettings.subset, gameSettings.mode, gameSettings.redFocus]);
+
   const correctCount = results.filter((r) => r.correct && !r.skipped).length;
   const errorCount = results.filter((r) => !r.correct && !r.skipped).length;
   const skippedCount = results.filter((r) => r.skipped).length;
@@ -182,11 +195,18 @@ export function useStudyEngine(
     return shuffledRound;
   }, [missedCards, unseenCards]);
 
-  // Load flip mode progress from localStorage
+  // Scoped flip-progress storage key — keeps "all" and "favorites" (and red focus)
+  // progress separate so toggling between them never wipes the other trail.
+  const flipProgressKey = useMemo(() => {
+    const uid = authUserIdRef.current ?? 'anon';
+    return `flip-progress-${uid}-${listId ?? 'no-list'}-${mode}-${sessionScopeKey}`;
+  }, [listId, mode, sessionScopeKey]);
+
+  // Load flip mode progress from localStorage (scoped)
   const loadFlipProgress = useCallback(() => {
     if (!listId) return null;
     try {
-      const saved = localStorage.getItem(`flip-progress-${listId}`);
+      const saved = localStorage.getItem(flipProgressKey);
       if (saved) {
         return JSON.parse(saved);
       }
@@ -194,13 +214,13 @@ export function useStudyEngine(
       console.error('Error loading flip progress:', e);
     }
     return null;
-  }, [listId]);
+  }, [listId, flipProgressKey]);
 
-  // Save flip mode progress to localStorage
+  // Save flip mode progress to localStorage (scoped)
   const saveFlipProgress = useCallback(() => {
     if (!listId || !isFlipMode) return;
     try {
-      localStorage.setItem(`flip-progress-${listId}`, JSON.stringify({
+      localStorage.setItem(flipProgressKey, JSON.stringify({
         index: currentIndex,
         knownCards: results.filter(r => r.correct).map(r => r.flashcardId),
         timestamp: Date.now(),
@@ -208,13 +228,16 @@ export function useStudyEngine(
     } catch (e) {
       console.error('Error saving flip progress:', e);
     }
-  }, [listId, isFlipMode, currentIndex, results]);
+  }, [listId, isFlipMode, currentIndex, results, flipProgressKey]);
 
   // Initialize session - guards against duplicate calls
   const initializeSession = useCallback(async () => {
     const __t0 = performance.now();
-    // Skip if already initialized with same signature
-    const initKey = `${listId}|${mode}|${cardsSignature}`;
+    // Skip if already initialized with same signature.
+    // IMPORTANT: include sessionScopeKey so switching between "all"/"favorites"
+    // (or toggling redFocus / order) re-initializes the engine and loads the
+    // saved session for that scope instead of reusing the previous one.
+    const initKey = `${listId}|${mode}|${cardsSignature}|${sessionScopeKey}`;
     if (lastInitSignatureRef.current === initKey) {
       // Init já foi feita para esta combinação — destrava o loading se há cards
       if (flashcards.length > 0) {
@@ -277,6 +300,23 @@ export function useStudyEngine(
           .filter((id) => availableCardIds.has(id));
       };
 
+      // Returns true when the saved session's card-set matches the current
+      // effective deck closely enough to be considered the SAME scope.
+      // We use set equality of unique IDs (ignoring red-list repetitions which
+      // duplicate IDs). If the saved session is a strict superset (e.g. "all"
+      // vs "favorites"), it does NOT match — we want a separate session row.
+      const sessionMatchesCurrentScope = (sessionOrder: unknown): boolean => {
+        if (!Array.isArray(sessionOrder)) return false;
+        const savedUnique = new Set(
+          sessionOrder.filter((id): id is string => typeof id === 'string')
+        );
+        if (savedUnique.size !== availableCardIds.size) return false;
+        for (const id of savedUnique) {
+          if (!availableCardIds.has(id)) return false;
+        }
+        return true;
+      };
+
       // Track that the user opened this list
       trackListOpened(listId);
 
@@ -285,40 +325,39 @@ export function useStudyEngine(
 
       // For flip mode: use EXACT order from flashcards (Study.tsx already applied random/sequential)
       if (isFlipMode) {
-        // Try to restore from database first (for session continuity)
-        const { data: existingSession } = await supabase
+        // Try to restore from database first (for session continuity).
+        // We fetch the recent open sessions and pick the one whose card-set
+        // matches the current scope, so "all" and "favorites" stay isolated.
+        const { data: openSessions } = await supabase
           .from('study_sessions')
           .select('*')
           .eq('user_id', user.id)
           .eq('list_id', listId)
           .eq('mode', mode)
           .eq('completed', false)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .order('updated_at', { ascending: false })
+          .limit(10);
 
-        if (existingSession) {
-          const scopedOrder = sanitizeSessionOrder(existingSession.cards_order);
+        const matchingSession = (openSessions ?? []).find(s =>
+          sessionMatchesCurrentScope(s.cards_order)
+        );
+
+        if (matchingSession) {
+          const scopedOrder = sanitizeSessionOrder(matchingSession.cards_order);
 
           if (scopedOrder.length > 0) {
             const safeIndex = Math.min(
-              Math.max(existingSession.current_index ?? 0, 0),
+              Math.max(matchingSession.current_index ?? 0, 0),
               scopedOrder.length - 1
             );
 
-            setSessionId(existingSession.id);
+            setSessionId(matchingSession.id);
             setCurrentIndex(safeIndex);
             setCardsOrder(scopedOrder);
             toast.success("Continuando de onde você parou!");
             setIsLoading(false);
             return;
           }
-
-          // Incompatible cached session (e.g. favorites-only scope changed)
-          await supabase
-            .from('study_sessions')
-            .update({ completed: true })
-            .eq('id', existingSession.id);
         }
 
         // Fallback to localStorage if no database session
@@ -366,40 +405,40 @@ export function useStudyEngine(
         return;
       }
 
-      // For quiz modes, check for existing session
-      const { data: existingSession } = await supabase
+      // For quiz modes: pick the open session whose card-set matches the
+      // current scope. This keeps "all" and "favorites" (and redFocus) on
+      // separate persisted rows so toggling between them never zeroes the
+      // other trail.
+      const { data: openSessions } = await supabase
         .from('study_sessions')
         .select('*')
         .eq('user_id', user.id)
         .eq('list_id', listId)
         .eq('mode', mode)
         .eq('completed', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('updated_at', { ascending: false })
+        .limit(10);
 
-      if (existingSession) {
-        const scopedOrder = sanitizeSessionOrder(existingSession.cards_order);
+      const matchingSession = (openSessions ?? []).find(s =>
+        sessionMatchesCurrentScope(s.cards_order)
+      );
+
+      if (matchingSession) {
+        const scopedOrder = sanitizeSessionOrder(matchingSession.cards_order);
 
         if (scopedOrder.length > 0) {
           const safeIndex = Math.min(
-            Math.max(existingSession.current_index ?? 0, 0),
+            Math.max(matchingSession.current_index ?? 0, 0),
             scopedOrder.length - 1
           );
 
-          setSessionId(existingSession.id);
+          setSessionId(matchingSession.id);
           setCurrentIndex(safeIndex);
           setCardsOrder(scopedOrder);
           toast.success("Continuando de onde você parou!");
           setIsLoading(false);
           return;
         }
-
-        // Incompatible cached session (e.g. favorites-only scope changed)
-        await supabase
-          .from('study_sessions')
-          .update({ completed: true })
-          .eq('id', existingSession.id);
       }
 
       // Create new session with ALL flashcards (straight-through, no batching)
@@ -439,7 +478,7 @@ export function useStudyEngine(
     }
     // Includes gameSettings.subset and redListIds because they materially affect
     // the cardsOrder shape (favorites scope + red-list spaced repetition injection).
-  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, redListIds]);
+  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, redListIds, sessionScopeKey]);
   
   // Store flashcards in a ref for stable access
   const flashcardsRef = useRef(flashcards);
@@ -844,7 +883,7 @@ export function useStudyEngine(
   // Initialize session on mount
   useEffect(() => {
     initializeSession();
-  }, [listId, cardsSignature, mode]); // Only reinit on meaningful changes
+  }, [listId, cardsSignature, mode, sessionScopeKey]); // Only reinit on meaningful changes (scope included)
 
   // Save progress on index change
   useEffect(() => {
@@ -859,6 +898,24 @@ export function useStudyEngine(
       saveFlipProgress();
     }
   }, [currentIndex, results, isLoading, isFlipMode, saveFlipProgress]);
+
+  // Force-save current index immediately (no debounce). Used when switching
+  // study scope so the previous trail's index isn't lost while waiting for
+  // the debounced save to fire.
+  const saveProgressNow = useCallback(async () => {
+    if (!sessionId || !listId || !authUserIdRef.current) return;
+    try {
+      await supabase
+        .from('study_sessions')
+        .update({
+          current_index: currentIndex,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+    } catch (error) {
+      console.error('[StudyEngine] saveProgressNow falhou:', error);
+    }
+  }, [sessionId, currentIndex, listId]);
 
   // Cleanup: flush progress buffer and turma activity on unmount
   useEffect(() => {
@@ -920,5 +977,7 @@ export function useStudyEngine(
     missedCardsCount: missedCards.length,
     // Manual session completion export
     completeSession,
+    // Scope helpers — used by Study.tsx to switch scopes without resetting
+    saveProgressNow,
   };
 }
