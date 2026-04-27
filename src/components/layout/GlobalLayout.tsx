@@ -26,6 +26,7 @@ import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import { prefetchCommonRoutes } from "@/lib/routePrefetch";
+import { InstitutionBar } from "@/components/layout/InstitutionBar";
 
 // Lazy-load heavy modals and badges (not needed for FCP)
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -67,6 +68,15 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const isAuthPage = location.pathname === '/auth';
   // Full screen pages without footer
   const isFullScreenPage = location.pathname.includes('/study');
+
+  // Top bar contextual variants — keeps the bar light on internal pages and minimal in games.
+  const isHome = location.pathname === '/';
+  const isGameRoute =
+    location.pathname.includes('/study') || location.pathname.includes('/games');
+  // Hide secondary actions (notifications, presents) inside game / study to avoid distractions.
+  const showSecondaryActions = !isGameRoute;
+  // Institution bar only appears on Home; internal pages and games stay clean.
+  const showInstitutionBar = isHome;
   
   if (isAuthPage) {
     return (
@@ -101,12 +111,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
                 </div>
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <CurrencyHeader />
-                  {FEATURE_FLAGS.classes_enabled && <NotificationBell />}
-                  {FEATURE_FLAGS.present_inbox_visible && (
+                  {showSecondaryActions && FEATURE_FLAGS.classes_enabled && <NotificationBell />}
+                  {showSecondaryActions && FEATURE_FLAGS.present_inbox_visible && (
                     <Suspense fallback={null}><PresentBoxBadge /></Suspense>
                   )}
                 </div>
               </div>
+              {showInstitutionBar && <InstitutionBar />}
             </header>
           )}
           <main className="flex-1">
