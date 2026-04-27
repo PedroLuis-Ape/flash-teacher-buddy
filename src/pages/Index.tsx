@@ -9,6 +9,7 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { pageMount, pageReady } from "@/lib/perfLog";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardList } from "@/components/ape/ApeCardList";
+import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { TurmasCard } from "@/features/classroom/components/TurmasCard";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX, Bell, BellOff, FolderOpen } from "lucide-react";
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
@@ -28,7 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { last, recents, stats, loading, refetch } = useHomeData();
+  const { last, recents, recentFolders, stats, loading, refetch } = useHomeData();
   const { pts_weekly, level, current_streak } = useEconomy();
   const { selectedInstitution } = useInstitution();
   const { soundEnabled, toggleSound, notificationsEnabled, toggleNotifications } = useSoundSettings();
@@ -90,6 +91,9 @@ const Index = () => {
 
   const safeRecents = Array.isArray(recents) ? recents.filter(Boolean) : [];
   const myLists = safeRecents.slice(0, 3);
+
+  const safeRecentFolders = Array.isArray(recentFolders) ? recentFolders.filter(Boolean) : [];
+  const myFolders = safeRecentFolders.slice(0, 3);
 
   const safeLast = last && typeof last === "object" ? last : null;
   const pct = safeLast ? Math.round((Number(safeLast.reviewed || 0) / (Number(safeLast.total || 0) || 1)) * 100) : 0;
