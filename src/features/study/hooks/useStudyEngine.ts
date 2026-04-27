@@ -825,7 +825,7 @@ export function useStudyEngine(
     } catch (error) {
       console.error('Erro ao completar sessão:', error);
     }
-  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode]);
+  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey]);
 
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
