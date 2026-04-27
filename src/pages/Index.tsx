@@ -357,6 +357,55 @@ const Index = () => {
           </CardContent>
         </Card>
 
+        {/* Pastas recentes (filtradas por instituição/hub) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <ApeSectionTitle>
+              {selectedInstitution
+                ? `Pastas recentes — ${selectedInstitution.name}`
+                : "Pastas recentes"}
+            </ApeSectionTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/folders")}
+              className="min-h-[36px] px-3 text-primary hover:text-primary"
+            >
+              Ver todas
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+            </div>
+          ) : myFolders.length > 0 ? (
+            <div className="space-y-3">
+              {myFolders.map((folder) => (
+                <ApeCardFolder
+                  key={folder.id}
+                  title={folder.title}
+                  listCount={folder.list_count}
+                  cardCount={folder.card_count}
+                  onClick={() => navigate(`/folder/${folder.id}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-6 text-center border-border">
+              <FolderOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {selectedInstitution
+                  ? `Nenhuma pasta ainda em "${selectedInstitution.name}".`
+                  : "Nenhuma pasta na área Geral."}
+              </p>
+            </Card>
+          )}
+        </div>
+
         {/* Minhas Listas */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
