@@ -818,7 +818,7 @@ export function useStudyEngine(
 
       // Clear flip mode progress
       if (isFlipMode && listId) {
-        localStorage.removeItem(`flip-progress-${listId}`);
+        localStorage.removeItem(flipProgressKey);
       }
 
       toast.success("Sessão de estudo concluída! 🎉");
@@ -830,7 +830,7 @@ export function useStudyEngine(
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
     if (listId && isFlipMode) {
-      localStorage.removeItem(`flip-progress-${listId}`);
+      localStorage.removeItem(flipProgressKey);
     }
     setResults([]);
     setRoundResults([]);
@@ -839,7 +839,7 @@ export function useStudyEngine(
     setRoundNumber(1);
     setIsFinished(false);
     initializeSession();
-  }, [listId, isFlipMode, flashcards, initializeSession]);
+  }, [listId, isFlipMode, flashcards, initializeSession, flipProgressKey]);
 
   // Restart session with new settings
   const restartSession = useCallback((newSettings?: Partial<GameSettings>) => {
@@ -865,7 +865,7 @@ export function useStudyEngine(
 
     // Reset state
     if (listId && isFlipMode) {
-      localStorage.removeItem(`flip-progress-${listId}`);
+      localStorage.removeItem(flipProgressKey);
     }
 
     setCardsOrder(cardIds);
@@ -878,7 +878,7 @@ export function useStudyEngine(
     setIsFinished(false);
 
     toast.success('Jogo reiniciado!');
-  }, [gameSettings, flashcards, redListIds, listId, isFlipMode]);
+  }, [gameSettings, flashcards, redListIds, listId, isFlipMode, flipProgressKey]);
 
   // Initialize session on mount
   useEffect(() => {
