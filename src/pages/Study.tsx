@@ -242,6 +242,7 @@ const Study = () => {
     missedCardsCount,
     completeSession,
     cardsOrder,
+    saveProgressNow,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
@@ -569,6 +570,14 @@ const Study = () => {
     const subsetChanged = coerced.subset !== gameSettings.subset;
     const redFocusChanged = !!coerced.redFocus !== !!gameSettings.redFocus;
 
+    // Persistência por escopo: ao trocar de all↔favorites (ou redFocus), o
+    // engine vai REINICIALIZAR carregando a study_session do novo escopo
+    // (não é reset). Antes de trocar, gravamos imediatamente o índice atual
+    // para que o trail anterior preserve onde o usuário parou.
+    if (subsetChanged || redFocusChanged) {
+      void saveProgressNow();
+    }
+
     setGameSettings(coerced);
     // Keep the deck-filter mirror in sync so effectiveFlashcards recomputes.
     setRedFocusActiveForDeck(!!coerced.redFocus && coerced.subset === 'favorites');
@@ -579,11 +588,11 @@ const Study = () => {
       fastMode: coerced.fastMode ?? false,
     });
 
-    // When the deck composition rule changes (subset or redFocus), restart
-    // the session so the engine rebuilds cardsOrder from the new effective deck.
-    if (subsetChanged || redFocusChanged) {
-      restartSession(coerced);
-    }
+    // NOTA: NÃO chamar restartSession aqui. O engine detecta a mudança de
+    // escopo (subset/redFocus/order) via sessionScopeKey + cardsSignature e
+    // re-inicializa carregando a sessão persistida daquele escopo (ou cria
+    // uma nova se for a primeira vez). Reset só acontece quando o usuário
+    // pede explicitamente em "Reiniciar Jogo".
   };
 
   const handleRestartWithSettings = () => {
