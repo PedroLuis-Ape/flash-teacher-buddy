@@ -119,7 +119,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <ApeAppBar title="Início" />
+      {/*
+        Home AppBar (Linha 3 — título): mantém apenas o título e a busca.
+        Economia, presente e tema são acessíveis pela top bar global / card de perfil
+        para evitar duplicação visual no mobile.
+      */}
+      <ApeAppBar
+        title="Início"
+        showSearch
+        showEconomy={false}
+        showGift={false}
+        showThemeToggle={false}
+      />
 
       <div className="max-w-6xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
         {/* Profile Header */}
