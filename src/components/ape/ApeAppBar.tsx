@@ -17,6 +17,14 @@ interface ApeAppBarProps {
   children?: ReactNode;
   className?: string;
   compact?: boolean;
+  /** Hide the search button (default: shown) */
+  showSearch?: boolean;
+  /** Hide the economy badge (default: shown if flag enabled) */
+  showEconomy?: boolean;
+  /** Hide the present/gift badge (default: shown if flag enabled) */
+  showGift?: boolean;
+  /** Hide the theme toggle (default: shown) */
+  showThemeToggle?: boolean;
 }
 
 export function ApeAppBar({ 
@@ -27,7 +35,11 @@ export function ApeAppBar({
   rightContent,
   children,
   className,
-  compact = false
+  compact = false,
+  showSearch = true,
+  showEconomy = true,
+  showGift = true,
+  showThemeToggle = true,
 }: ApeAppBarProps) {
   const navigate = useNavigate();
 
@@ -72,19 +84,21 @@ export function ApeAppBar({
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {rightContent}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/search')}
-            aria-label="Pesquisar usuários"
-            title="Pesquisar"
-            className="h-10 w-10"
-          >
-            <Search className="h-5 w-5" />
-          </Button>
-          {FEATURE_FLAGS.economy_enabled && <EconomyBadge />}
-          {FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
-          <ThemeToggle />
+          {showSearch && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/search')}
+              aria-label="Pesquisar usuários"
+              title="Pesquisar"
+              className="h-10 w-10"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          )}
+          {showEconomy && FEATURE_FLAGS.economy_enabled && <EconomyBadge />}
+          {showGift && FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
+          {showThemeToggle && <ThemeToggle />}
         </div>
       </div>
     </header>
