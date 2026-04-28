@@ -74,7 +74,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const isGameRoute =
     location.pathname.includes('/study') || location.pathname.includes('/games');
   // Hide secondary actions (notifications, presents) inside game / study to avoid distractions.
-  const showSecondaryActions = !isGameRoute;
+  // On Home we also hide them: the top bar must stay minimal (menu + compact PTS only),
+  // since notifications/presents are reachable via sidebar / store tab and PTS already
+  // appears in the stats card. This removes the triple-layer clutter on mobile Home.
+  const showSecondaryActions = !isGameRoute && !isHome;
+  // CurrencyHeader on Home is redundant (PTS is shown in the stats grid). Hide it there
+  // to leave a clean Linha 1: [menu] ............... [admin?]
+  const showCurrencyHeader = !isHome;
   // Institution bar only appears on Home; internal pages and games stay clean.
   const showInstitutionBar = isHome;
   
@@ -110,7 +116,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
                   <AdminButton />
                 </div>
                 <div className="flex items-center gap-1.5 md:gap-2">
-                  <CurrencyHeader />
+                  {showCurrencyHeader && <CurrencyHeader />}
                   {showSecondaryActions && FEATURE_FLAGS.classes_enabled && <NotificationBell />}
                   {showSecondaryActions && FEATURE_FLAGS.present_inbox_visible && (
                     <Suspense fallback={null}><PresentBoxBadge /></Suspense>
