@@ -42,9 +42,12 @@ export function InstitutionBar() {
   }
 
   // Modo segmentado: 1+ instituições + opção Geral
+  // Pequeno fix de exibição: normaliza "Frances" → "Francês" sem alterar dado em DB.
+  const prettyName = (name: string) =>
+    name.trim().toLowerCase() === "frances" ? "Francês" : name;
   const segments: Array<{ id: string | null; name: string; color?: string | null }> = [
     { id: null, name: "Geral" },
-    ...safeInstitutions.map((i) => ({ id: i.id, name: i.name, color: i.color })),
+    ...safeInstitutions.map((i) => ({ id: i.id, name: prettyName(i.name), color: i.color })),
   ];
 
   return (
@@ -54,8 +57,9 @@ export function InstitutionBar() {
           role="tablist"
           aria-label="Selecionar instituição"
           className={cn(
-            "w-full rounded-xl border border-primary/20 p-1",
-            "bg-card/60 backdrop-blur-sm",
+            "w-full rounded-2xl border border-primary/25 p-1",
+            "bg-card/50 backdrop-blur-md",
+            "shadow-[0_0_20px_-10px_hsl(var(--primary)/0.45)]",
             "flex items-center gap-1 overflow-x-auto scrollbar-none"
           )}
         >
@@ -77,12 +81,12 @@ export function InstitutionBar() {
                   }
                 }}
                 className={cn(
-                  "relative flex-1 min-w-[88px] px-3 py-2 rounded-lg",
+                  "relative flex-1 min-w-[88px] px-3 py-2 rounded-xl",
                   "text-sm font-medium whitespace-nowrap transition-all duration-200",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
                   isActive
-                    ? "bg-gradient-to-r from-primary/25 via-primary/15 to-accent/25 text-foreground shadow-[0_0_16px_-8px_hsl(var(--primary)/0.6)] border border-primary/40"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent"
+                    ? "bg-gradient-to-r from-primary via-primary/80 to-accent text-primary-foreground shadow-[0_4px_20px_-6px_hsl(var(--primary)/0.7)] border border-primary/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40 border border-transparent"
                 )}
               >
                 <span className="flex items-center justify-center gap-2">
