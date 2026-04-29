@@ -120,7 +120,13 @@ const Folders = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Build query with institution filter
+      const userId = session.user.id;
+      const institutionId = selectedInstitution?.id || null;
+
+      // ── Lightweight folders fetch (no flashcards payload). ──
+      // Card counts are aggregated server-side via the RPC `get_user_card_counts`,
+      // which already powers the Home. We then derive folder card_count by
+      // summing per-list counts within each folder.
       let foldersQuery = supabase
         .from("folders")
         .select(`
@@ -130,15 +136,15 @@ const Folders = () => {
           visibility, 
           owner_id,
           institution_id,
-          lists(id, flashcards(id))
+          lists(id, deleted_at)
         `)
-        .eq("owner_id", session.user.id)
+        .eq("owner_id", userId)
         .is("class_id", null)
         .is("deleted_at", null); // Exclude soft-deleted folders
 
       // Apply institution filter
-      if (selectedInstitution) {
-        foldersQuery = foldersQuery.eq("institution_id", selectedInstitution.id);
+      if (institutionId) {
+        foldersQuery = foldersQuery.eq("institution_id", institutionId);
       } else {
         foldersQuery = foldersQuery.is("institution_id", null);
       }
@@ -146,21 +152,7 @@ const Folders = () => {
       // Order by updated_at DESC (most recent first) for personal library
       foldersQuery = foldersQuery.order("updated_at", { ascending: false });
 
-      const { data: foldersData, error: foldersError } = await foldersQuery;
-
-      if (foldersError) throw foldersError;
-
-      const processedFolders = (foldersData || []).map((folder: any) => ({
-        ...folder,
-        list_count: folder.lists?.length || 0,
-        card_count: folder.lists?.reduce((sum: number, list: any) => 
-          sum + (list.flashcards?.length || 0), 0) || 0,
-        isOwner: true
-      }));
-
-      setFolders(processedFolders);
-
-      // Load lists for favorites tab
+      // Load lists for favorites tab — without flashcards payload
       let listsQuery = supabase
         .from("lists")
         .select(`
@@ -168,20 +160,61 @@ const Folders = () => {
           title,
           description,
           folder_id,
-          folders!inner(title, owner_id, institution_id, class_id),
-          flashcards(id)
+          folders!inner(title, owner_id, institution_id, class_id)
         `)
-        .eq("folders.owner_id", session.user.id)
+        .eq("folders.owner_id", userId)
         .is("folders.class_id", null)
         .is("deleted_at", null);
 
-      if (selectedInstitution) {
-        listsQuery = listsQuery.eq("folders.institution_id", selectedInstitution.id);
+      if (institutionId) {
+        listsQuery = listsQuery.eq("folders.institution_id", institutionId);
       } else {
         listsQuery = listsQuery.is("folders.institution_id", null);
       }
 
-      const { data: listsData, error: listsError } = await listsQuery;
+      // Run folders, lists and per-list card counts in parallel.
+      const [
+        { data: foldersData, error: foldersError },
+        { data: listsData, error: listsError },
+        cardCountsResult,
+      ] = await Promise.all([
+        foldersQuery,
+        listsQuery,
+        supabase.rpc('get_user_card_counts', {
+          _user_id: userId,
+          _institution_id: institutionId,
+        }),
+      ]);
+
+      if (foldersError) throw foldersError;
+
+      // Build per-list card count map (RPC returns rows: { list_id, card_count })
+      const perListCardCounts: Record<string, number> = {};
+      const cardRows = Array.isArray(cardCountsResult?.data) ? cardCountsResult.data : [];
+      for (const r of cardRows as any[]) {
+        if (r && typeof r.list_id === 'string') {
+          const n = typeof r.card_count === 'number' ? r.card_count : Number(r.card_count);
+          perListCardCounts[r.list_id] = Number.isFinite(n) ? n : 0;
+        }
+      }
+
+      const processedFolders = (foldersData || []).map((folder: any) => {
+        const validLists = (folder.lists || []).filter(
+          (l: any) => l && l.deleted_at == null && typeof l.id === 'string'
+        );
+        const cardCount = validLists.reduce(
+          (sum: number, l: any) => sum + (perListCardCounts[l.id] || 0),
+          0
+        );
+        return {
+          ...folder,
+          list_count: validLists.length,
+          card_count: cardCount,
+          isOwner: true,
+        };
+      });
+
+      setFolders(processedFolders);
 
       if (listsError) {
         console.error("Error loading lists:", listsError);
@@ -192,7 +225,7 @@ const Folders = () => {
           description: list.description,
           folder_id: list.folder_id,
           folder_title: list.folders?.title,
-          card_count: list.flashcards?.length || 0,
+          card_count: perListCardCounts[list.id] || 0,
         }));
         setLists(processedLists);
       }
@@ -201,7 +234,7 @@ const Folders = () => {
       const { data: subscriptions, error: subsError } = await supabase
         .from("subscriptions")
         .select("teacher_id")
-        .eq("student_id", session.user.id);
+        .eq("student_id", userId);
 
       if (subsError) {
         console.error("Error loading subscriptions:", subsError);
