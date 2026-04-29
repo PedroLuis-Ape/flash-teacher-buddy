@@ -417,48 +417,31 @@ const Index = () => {
           )}
         </div>
 
-        {/* Minhas Listas */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <ApeSectionTitle>Minhas listas</ApeSectionTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/folders")}
-              className="min-h-[36px] px-3 text-primary hover:text-primary"
-            >
-              Ver todas
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-
-          {loading ? (
+        {/* Listas recentes — só aparece quando há listas */}
+        {loading ? (
+          <div className="space-y-4">
+            <ApeSectionTitle>Listas recentes</ApeSectionTitle>
             <div className="space-y-3">
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
             </div>
-          ) : isHubEmpty ? (
-            // Empty state for selected hub
-            <Card className="p-8 text-center border-border">
-              <FolderPlus className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="font-semibold text-base mb-2">
-                Nenhuma lista em "{selectedInstitution?.name}"
-              </h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Crie sua primeira lista neste hub ou mude para outro hub no menu lateral.
-              </p>
-              <Button 
+          </div>
+        ) : myLists.filter((list) => typeof (list as any)?.id === "string").length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <ApeSectionTitle>Listas recentes</ApeSectionTitle>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate("/folders")}
-                className="min-h-[44px]"
+                className="min-h-[36px] px-3 text-primary hover:text-primary"
               >
-                <FolderPlus className="h-4 w-4 mr-2" />
-                Criar lista neste hub
+                Ver todas
+                <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
-            </Card>
-          ) : myLists.length > 0 ? (
+            </div>
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-2">Últimas estudadas</p>
               {myLists
                 .filter((list) => typeof (list as any)?.id === "string")
                 .map((list) => (
@@ -472,22 +455,8 @@ const Index = () => {
                   />
                 ))}
             </div>
-          ) : (
-            <Card className="p-8 text-center border-border">
-              <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="font-semibold text-base mb-2">Nenhuma lista encontrada</h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Comece criando sua primeira lista de estudos
-              </p>
-              <Button 
-                onClick={() => navigate("/folders")}
-                className="min-h-[44px]"
-              >
-                Criar minha primeira lista
-              </Button>
-            </Card>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {/* Quick Actions */}
         <div className="space-y-4">
