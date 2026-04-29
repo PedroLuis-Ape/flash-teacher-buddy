@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, FolderPlus, Settings, Volume2, VolumeX, Bell, BellOff, FolderOpen } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, FolderOpen } from "lucide-react";
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
@@ -110,7 +110,7 @@ const Index = () => {
     .slice(0, 2) || "U";
 
   const isTeacher = Boolean(profileData?.isTeacher);
-  const isHubEmpty = myLists.length === 0 && selectedInstitution;
+  // (isHubEmpty removido — Home não exibe mais empty state grande de listas)
   const safeStats = {
     total_lists: Number(stats?.total_lists) || 0,
     total_cards: Number(stats?.total_cards) || 0,
