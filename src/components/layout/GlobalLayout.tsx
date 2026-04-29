@@ -5,7 +5,7 @@
  * É proibida a cópia, redistribuição ou utilização comercial sem autorização por escrito.
  */
 
-import { ReactNode, useEffect, lazy, Suspense } from "react";
+import { ReactNode, useEffect, useState, lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 import { useAuthUser } from "@/hooks/useAuthUser";
@@ -42,24 +42,43 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const { user } = useAuthUser();
   const { refreshBalance } = useEconomy();
   const { settings: perfSettings } = usePerformance();
-  
-  // Refresh HUD ONLY on initial user login (not on every navigation)
+
+  // ── Defer secondary work so it never competes with first paint. ──
+  // Modais, prefetch, refreshBalance e heartbeat só ligam alguns segundos
+  // depois que a tela já está interativa. Se requestIdleCallback estiver
+  // disponível, usamos; caso contrário, setTimeout serve de fallback.
+  const [secondaryReady, setSecondaryReady] = useState(false);
+
   useEffect(() => {
-    if (user) {
-      refreshBalance();
-    }
+    if (!user) return;
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      // Prefetch and balance refresh — both opportunistic, never blocking.
+      try { refreshBalance(); } catch { /* noop */ }
+      try { prefetchCommonRoutes(); } catch { /* noop */ }
+      setSecondaryReady(true);
+    };
+    const ric = (window as any).requestIdleCallback as
+      | ((cb: () => void, opts?: { timeout: number }) => number)
+      | undefined;
+    const handle = ric
+      ? ric(run, { timeout: 2500 })
+      : (setTimeout(run, 1500) as unknown as number);
+    return () => {
+      cancelled = true;
+      if (ric && (window as any).cancelIdleCallback) {
+        (window as any).cancelIdleCallback(handle);
+      } else {
+        clearTimeout(handle as unknown as ReturnType<typeof setTimeout>);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Prefetch common route chunks once user is logged in
-  useEffect(() => {
-    if (user) {
-      prefetchCommonRoutes();
-    }
-  }, [user?.id]);
-
-  // Activity heartbeat - tracks when user is active
-  useActivityHeartbeat(user?.id);
+  // Activity heartbeat — only after the page is interactive to avoid
+  // competing with the initial Home load.
+  useActivityHeartbeat(secondaryReady ? user?.id : undefined);
   
   // Swipe navigation - enabled on mobile (respects feature flag)
   useSwipeNavigation({ enabled: !!user && FEATURE_FLAGS.swipe_navigation_enabled });
@@ -138,10 +157,10 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           )}
           
           {user && <ApeTabBar />}
-          {user && (
+          {user && secondaryReady && (
             <Suspense fallback={null}><GiftNotificationModal /></Suspense>
           )}
-          {user && FEATURE_FLAGS.classes_enabled && (
+          {user && secondaryReady && FEATURE_FLAGS.classes_enabled && (
             <Suspense fallback={null}><AnnouncementModal /></Suspense>
           )}
           
