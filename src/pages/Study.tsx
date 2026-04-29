@@ -606,8 +606,17 @@ const Study = () => {
 
   // Use engine's cardsOrder to resolve the actual current card
   const engineCurrentCardId = cardsOrder[currentIndex];
+  // PERF: O(1) lookup via memoized Map instead of repeated find() across large lists.
+  const flashcardById = useMemo(
+    () => new Map(flashcards.map((card) => [card.id, card])),
+    [flashcards]
+  );
+  const effectiveFlashcardById = useMemo(
+    () => new Map(effectiveFlashcards.map((card) => [card.id, card])),
+    [effectiveFlashcards]
+  );
   const engineCurrentCard = engineCurrentCardId
-    ? (effectiveFlashcards.find(f => f.id === engineCurrentCardId) || flashcards.find(f => f.id === engineCurrentCardId))
+    ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
     : undefined;
 
   const handleToggleFavorite = () => {
