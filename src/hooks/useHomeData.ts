@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInstitution } from "@/contexts/InstitutionContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthUser } from "@/hooks/useAuthUser";
 
 interface LastSession {
@@ -60,52 +59,37 @@ interface HomeData {
   refetch: () => void;
 }
 
-export function useHomeData(): HomeData {
-  const { selectedInstitution } = useInstitution();
-  const queryClient = useQueryClient();
-  const { userId: cachedUserId } = useAuthUser();
-  const [data, setData] = useState<Omit<HomeData, 'refetch'>>({
-    last: null,
-    recents: [],
-    recentFolders: [],
-    teachers: [],
-    stats: { total_lists: 0, total_cards: 0, teachers_count: 0 },
-    loading: true,
-    error: null,
-  });
+const toArray = <T,>(value: T[] | null | undefined): T[] =>
+  Array.isArray(value) ? value : [];
 
-  const toArray = <T,>(value: T[] | null | undefined): T[] =>
-    Array.isArray(value) ? value : [];
+const toNumber = (value: unknown, fallback = 0): number => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
-  const toNumber = (value: unknown, fallback = 0): number => {
-    const parsed = typeof value === "number" ? value : Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
+const toText = (value: unknown, fallback: string): string => {
+  return typeof value === "string" && value.trim().length > 0 ? value : fallback;
+};
 
-  const toText = (value: unknown, fallback: string): string => {
-    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
-  };
+type HomeDataPayload = Omit<HomeData, 'refetch' | 'loading' | 'error'>;
 
-  const loadData = useCallback(async () => {
-    try {
-      setData(prev => ({ ...prev, loading: true }));
-      
-      // Use cached auth userId — avoids redundant getSession() call
-      if (!cachedUserId) {
-        setData({ 
-          last: null, 
-          recents: [], 
-          recentFolders: [],
-          teachers: [],
-          stats: { total_lists: 0, total_cards: 0, teachers_count: 0 },
-          loading: false, 
-          error: null 
-        });
-        return;
-      }
+const EMPTY_PAYLOAD: HomeDataPayload = {
+  last: null,
+  recents: [],
+  recentFolders: [],
+  teachers: [],
+  stats: { total_lists: 0, total_cards: 0, teachers_count: 0 },
+};
 
-      const userId = cachedUserId;
-      const institutionId = selectedInstitution?.id || null;
+async function fetchHomeData(
+  userId: string,
+  institutionId: string | null,
+): Promise<HomeDataPayload> {
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.time('[HomeData] load');
+  }
+  try {
 
       // Fetch in parallel
       const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult, statsCountResult, recentFoldersResult] = await Promise.all([
@@ -447,42 +431,48 @@ export function useHomeData(): HomeData {
           };
         });
 
-      setData({
-        last: lastSession,
-        recents: allLists,
-        recentFolders: recentFoldersMapped,
-        teachers: toArray<TeacherInfo>(teachersInfo).slice(0, 3),
-        stats: {
-          total_lists: totalOwnLists,
-          total_cards: totalOwnCards,
-          teachers_count: allTeacherIds.length,
-        },
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      console.error("Error loading home data:", error);
-      setData({
-        last: null,
-        recents: [],
-        recentFolders: [],
-        teachers: [],
-        stats: { total_lists: 0, total_cards: 0, teachers_count: 0 },
-        loading: false,
-        error: "Erro ao carregar dados",
-      });
+    return {
+      last: lastSession,
+      recents: allLists,
+      recentFolders: recentFoldersMapped,
+      teachers: toArray<TeacherInfo>(teachersInfo).slice(0, 3),
+      stats: {
+        total_lists: totalOwnLists,
+        total_cards: totalOwnCards,
+        teachers_count: allTeacherIds.length,
+      },
+    };
+  } finally {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.timeEnd('[HomeData] load');
     }
-  }, [selectedInstitution?.id, cachedUserId]);
+  }
+}
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+export function useHomeData(): HomeData {
+  const { selectedInstitution } = useInstitution();
+  const { userId: cachedUserId } = useAuthUser();
+  const institutionId = selectedInstitution?.id ?? null;
 
-  // Also invalidate cache when refetching
-  const refetch = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['home-data'] });
-    loadData();
-  }, [loadData, queryClient]);
+  const query = useQuery<HomeDataPayload>({
+    queryKey: ['home-data', cachedUserId, selectedInstitution?.id ?? 'general'],
+    queryFn: () => fetchHomeData(cachedUserId as string, institutionId),
+    enabled: !!cachedUserId,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 
-  return { ...data, refetch };
+  const payload = query.data ?? EMPTY_PAYLOAD;
+
+  return {
+    ...payload,
+    loading: !!cachedUserId && query.isLoading,
+    error: query.isError ? "Erro ao carregar dados" : null,
+    refetch: () => {
+      query.refetch();
+    },
+  };
 }
