@@ -548,7 +548,7 @@ const Folders = () => {
           <p className="text-xs mt-1">Crie sua primeira pasta de estudos</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
           {filteredFolders.map((folder) => {
             const isFav = folderFavorites.includes(folder.id);
             const isSelected = selectedFolders.has(folder.id);
