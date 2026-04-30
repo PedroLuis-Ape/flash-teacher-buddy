@@ -132,7 +132,7 @@ const Index = () => {
         showThemeToggle={false}
       />
 
-      <div className="max-w-6xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
+      <div className="max-w-5xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
         {/* Profile Header */}
         <Card 
           className="overflow-hidden cursor-pointer transition-all duration-200 border-border/60 bg-gradient-to-br from-card to-card/60 hover:shadow-[var(--shadow-hover)] hover:border-primary/30"
@@ -394,7 +394,7 @@ const Index = () => {
               <Skeleton className="h-14 w-full" />
             </div>
           ) : myFolders.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {myFolders.map((folder) => (
                 <ApeCardFolder
                   key={folder.id}
@@ -441,7 +441,7 @@ const Index = () => {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {myLists
                 .filter((list) => typeof (list as any)?.id === "string")
                 .map((list) => (
@@ -461,7 +461,7 @@ const Index = () => {
         {/* Quick Actions */}
         <div className="space-y-4">
           <ApeSectionTitle>Atalhos</ApeSectionTitle>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-3xl">
             <Card
               className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/store")}
