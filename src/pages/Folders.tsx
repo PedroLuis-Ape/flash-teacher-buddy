@@ -750,7 +750,7 @@ const Folders = () => {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
           {teachers.map((teacher) => (
             <ApeCardProfessor
               key={teacher.id}
@@ -793,7 +793,7 @@ const Folders = () => {
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                 Pastas favoritas
               </h3>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                 {favoritedFolders.map((folder) => (
                   <div key={folder.id} className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
@@ -827,7 +827,7 @@ const Folders = () => {
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                 Listas favoritas
               </h3>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                 {favoritedLists.map((list) => (
                   <div key={list.id} className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
