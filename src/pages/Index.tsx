@@ -132,7 +132,7 @@ const Index = () => {
         showThemeToggle={false}
       />
 
-      <div className="max-w-6xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
+      <div className="max-w-5xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
         {/* Profile Header */}
         <Card 
           className="overflow-hidden cursor-pointer transition-all duration-200 border-border/60 bg-gradient-to-br from-card to-card/60 hover:shadow-[var(--shadow-hover)] hover:border-primary/30"
