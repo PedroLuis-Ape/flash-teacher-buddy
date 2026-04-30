@@ -212,7 +212,7 @@ const Index = () => {
         </Card>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
           <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-4 w-4 text-primary" />
@@ -394,7 +394,7 @@ const Index = () => {
               <Skeleton className="h-14 w-full" />
             </div>
           ) : myFolders.length > 0 ? (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {myFolders.map((folder) => (
                 <ApeCardFolder
                   key={folder.id}
@@ -441,7 +441,7 @@ const Index = () => {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {myLists
                 .filter((list) => typeof (list as any)?.id === "string")
                 .map((list) => (
@@ -461,7 +461,7 @@ const Index = () => {
         {/* Quick Actions */}
         <div className="space-y-4">
           <ApeSectionTitle>Atalhos</ApeSectionTitle>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card
               className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/store")}
