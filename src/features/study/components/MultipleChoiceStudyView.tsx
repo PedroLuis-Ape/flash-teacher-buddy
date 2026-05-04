@@ -14,6 +14,8 @@ import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { pickSmartDistractors } from "@/features/study/lib/smartDistractors";
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
@@ -82,15 +84,26 @@ export const MultipleChoiceStudyView = ({
     // Gerar 3 alternativas incorretas
     // isAFirst means sideA (term) is the prompt, so answer comes from sideB (translation)
     const wrongOptions = allCards
-      .filter(card => 
-        isAFirst 
-          ? card.translation !== currentCard.translation 
+      .filter(card =>
+        isAFirst
+          ? card.translation !== currentCard.translation
           : card.term !== currentCard.term
       )
       .map(card => isAFirst ? card.translation : card.term);
 
-    // Embaralhar e pegar 3
-    const shuffledWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 3);
+    // V2: similarity-based selection (Levenshtein) — fallback to random when off
+    let shuffledWrong: string[];
+    if (FEATURE_FLAGS.intelligent_study_engine) {
+      shuffledWrong = pickSmartDistractors(correctAnswer, wrongOptions, 3);
+      // Top up with random picks if scoring returned fewer than 3
+      if (shuffledWrong.length < 3) {
+        const used = new Set(shuffledWrong);
+        const fillers = wrongOptions.filter(o => !used.has(o)).sort(() => Math.random() - 0.5);
+        shuffledWrong = [...shuffledWrong, ...fillers].slice(0, 3);
+      }
+    } else {
+      shuffledWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 3);
+    }
 
     // Adicionar a resposta correta
     const allOptions = [...shuffledWrong, correctAnswer];
@@ -102,7 +115,7 @@ export const MultipleChoiceStudyView = ({
     setCorrectIndex(shuffled.indexOf(correctAnswer));
     setSelectedOption(null);
     setShowFeedback(false);
-  }, [currentCard, allCards, isAFirst]);
+  }, [currentCard, allCards, isAFirst, correctAnswer]);
 
   const handleOptionClick = (index: number) => {
     if (showFeedback) return;
