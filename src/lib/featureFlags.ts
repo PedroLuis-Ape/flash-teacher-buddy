@@ -84,11 +84,12 @@ export const FEATURE_FLAGS = {
 
   // ─── Importer ──────────────────────────────────────────
   /**
-   * Bulk Import 2.0 — tolerant separator detection (/, |, =>, —, –, -, tab).
-   * When false (default): falls back to legacy " / "-only parser.
-   * Safe to toggle at runtime; affects only parse step, not persistence shape.
+   * Bulk Import 2.0 — tolerant separator detection (/, |, =>, —, –, -, tab)
+   * + editable review step in BulkImportDialog before persisting.
+   * When false: falls back to legacy " / "-only parser and read-only preview.
+   * Safe to toggle at runtime; affects only parse + preview UI, not persistence shape.
    */
-  bulk_import_v2: false,
+  bulk_import_v2: true,
 } as const;
 
 /**
