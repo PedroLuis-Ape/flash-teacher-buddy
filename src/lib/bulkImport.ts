@@ -282,12 +282,13 @@ export function parseGlossaryAndCards(input: string): {
   const glossaryLines: GlossaryParsed[] = [];
   if (glossaryStart !== -1) {
     const end = cardsStart !== -1 ? cardsStart : lines.length;
+    const detect = FEATURE_FLAGS.bulk_import_v2 ? findSeparatorIndexV2 : findSeparatorIndex;
     for (let i = glossaryStart + 1; i < end; i++) {
       const raw = lines[i].trim();
       if (!raw) continue;
       const line = stripAIArtifacts(raw);
       if (!line) continue;
-      const sep = findSeparatorIndex(line);
+      const sep = detect(line);
       if (sep.index <= 0) continue;
       const original = line.substring(0, sep.index).trim();
       const translated = line.substring(sep.index + sep.length).trim();
