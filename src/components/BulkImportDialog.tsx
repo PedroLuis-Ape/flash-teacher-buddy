@@ -234,14 +234,19 @@ export const BulkImportDialog = ({
         const flashcards = validPairs.map(pair => {
           const termValue = pair.sideA || pair.en || '';
           const transValue = pair.sideB || pair.pt || '';
+          // shortObservation comes from "(...)" on the RIGHT of the separator,
+          // i.e. it belongs to sideB. After invertAB, sideB content becomes
+          // `term` (side A), so the observation must follow to accepted_answers_en.
+          // Convention (see WriteStudyView): _en = side A (term), _pt = side B (translation).
+          const obs = pair.shortObservation ? [pair.shortObservation] : [];
           return {
             list_id: collectionId,
             user_id: user.id,
             term: invertAB ? transValue : termValue,
             translation: invertAB ? termValue : transValue,
             hint: pair.detailedHint || null,
-            accepted_answers_en: [],
-            accepted_answers_pt: pair.shortObservation ? [pair.shortObservation] : [],
+            accepted_answers_en: invertAB ? obs : [],
+            accepted_answers_pt: invertAB ? [] : obs,
           };
         });
 
