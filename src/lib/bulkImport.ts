@@ -1,6 +1,8 @@
 // Bulk import utilities for flashcards - Language Agnostic
 // Format: SIDE_A / SIDE_B (short observation) [detailed hint]
 
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
+
 /**
  * Strip common AI formatting artifacts from a line:
  * - Leading numbering: "1. ", "2) ", "01 - ", "- ", "• "
@@ -140,16 +142,51 @@ function findSeparatorIndex(line: string): { index: number; length: number } {
   return { index: -1, length: 0 };
 }
 
+/**
+ * V2 — Tolerant separator detection.
+ *
+ * Tries, in priority order, separators surrounded by whitespace:
+ *   " / " → " | " → " => " → " — " → " – " → " - " → "\t"
+ *
+ * Whitespace requirement avoids splitting on hyphens inside words
+ * ("self-care") or pipes inside table syntax fragments.
+ *
+ * Falls back to legacy `findSeparatorIndex` (single "/") if nothing else
+ * matches, so behavior is a strict superset of v1.
+ *
+ * Pure function — no side effects, safe to enable/disable at any time.
+ */
+const V2_SEPARATORS: ReadonlyArray<{ token: string; length: number }> = [
+  { token: ' / ',  length: 3 },
+  { token: ' | ',  length: 3 },
+  { token: ' => ', length: 4 },
+  { token: ' — ',  length: 3 }, // em-dash
+  { token: ' – ',  length: 3 }, // en-dash
+  { token: ' - ',  length: 3 },
+  { token: '\t',   length: 1 },
+];
+
+export function findSeparatorIndexV2(line: string): { index: number; length: number } {
+  for (const { token, length } of V2_SEPARATORS) {
+    const idx = line.indexOf(token);
+    if (idx > 0) return { index: idx, length };
+  }
+  // Fallback to legacy detector (handles bare "/" with URL guard).
+  return findSeparatorIndex(line);
+}
+
 export function parsePastedFlashcards(input: string): FlashcardPair[] {
   const lines = normalizeInputLines(input);
   const results: FlashcardPair[] = [];
-  
+
+  const detect = FEATURE_FLAGS.bulk_import_v2 ? findSeparatorIndexV2 : findSeparatorIndex;
+
   for (const rawLine of lines) {
     if (!rawLine) continue;
     const line = stripAIArtifacts(rawLine);
     if (!line) continue;
 
-    const sep = findSeparatorIndex(line);
+    const sep = detect(line);
     
     if (sep.index > 0) {
       const sideA = line.substring(0, sep.index).trim();
@@ -245,12 +282,13 @@ export function parseGlossaryAndCards(input: string): {
   const glossaryLines: GlossaryParsed[] = [];
   if (glossaryStart !== -1) {
     const end = cardsStart !== -1 ? cardsStart : lines.length;
+    const detect = FEATURE_FLAGS.bulk_import_v2 ? findSeparatorIndexV2 : findSeparatorIndex;
     for (let i = glossaryStart + 1; i < end; i++) {
       const raw = lines[i].trim();
       if (!raw) continue;
       const line = stripAIArtifacts(raw);
       if (!line) continue;
-      const sep = findSeparatorIndex(line);
+      const sep = detect(line);
       if (sep.index <= 0) continue;
       const original = line.substring(0, sep.index).trim();
       const translated = line.substring(sep.index + sep.length).trim();

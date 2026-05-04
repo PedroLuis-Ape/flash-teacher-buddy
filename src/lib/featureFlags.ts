@@ -81,6 +81,14 @@ export const FEATURE_FLAGS = {
    * When false: no swipe gesture handling
    */
   swipe_navigation_enabled: true,
+
+  // ─── Importer ──────────────────────────────────────────
+  /**
+   * Bulk Import 2.0 — tolerant separator detection (/, |, =>, —, –, -, tab).
+   * When false (default): falls back to legacy " / "-only parser.
+   * Safe to toggle at runtime; affects only parse step, not persistence shape.
+   */
+  bulk_import_v2: false,
 } as const;
 
 /**
