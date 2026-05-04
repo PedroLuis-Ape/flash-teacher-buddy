@@ -1,6 +1,8 @@
 // Bulk import utilities for flashcards - Language Agnostic
 // Format: SIDE_A / SIDE_B (short observation) [detailed hint]
 
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
+
 /**
  * Strip common AI formatting artifacts from a line:
  * - Leading numbering: "1. ", "2) ", "01 - ", "- ", "• "
