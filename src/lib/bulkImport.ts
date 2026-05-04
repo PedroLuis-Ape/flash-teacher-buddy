@@ -140,16 +140,61 @@ function findSeparatorIndex(line: string): { index: number; length: number } {
   return { index: -1, length: 0 };
 }
 
+/**
+ * V2 — Tolerant separator detection.
+ *
+ * Tries, in priority order, separators surrounded by whitespace:
+ *   " / " → " | " → " => " → " — " → " – " → " - " → "\t"
+ *
+ * Whitespace requirement avoids splitting on hyphens inside words
+ * ("self-care") or pipes inside table syntax fragments.
+ *
+ * Falls back to legacy `findSeparatorIndex` (single "/") if nothing else
+ * matches, so behavior is a strict superset of v1.
+ *
+ * Pure function — no side effects, safe to enable/disable at any time.
+ */
+const V2_SEPARATORS: ReadonlyArray<{ token: string; length: number }> = [
+  { token: ' / ',  length: 3 },
+  { token: ' | ',  length: 3 },
+  { token: ' => ', length: 4 },
+  { token: ' — ',  length: 3 }, // em-dash
+  { token: ' – ',  length: 3 }, // en-dash
+  { token: ' - ',  length: 3 },
+  { token: '\t',   length: 1 },
+];
+
+export function findSeparatorIndexV2(line: string): { index: number; length: number } {
+  for (const { token, length } of V2_SEPARATORS) {
+    const idx = line.indexOf(token);
+    if (idx > 0) return { index: idx, length };
+  }
+  // Fallback to legacy detector (handles bare "/" with URL guard).
+  return findSeparatorIndex(line);
+}
+
 export function parsePastedFlashcards(input: string): FlashcardPair[] {
   const lines = normalizeInputLines(input);
   const results: FlashcardPair[] = [];
-  
+
+  // Lazy-load flag to avoid coupling lib to React imports.
+  // Falls back to legacy parser when flag is false/undefined.
+  let useV2 = false;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const flags = require('@/lib/featureFlags').FEATURE_FLAGS;
+    useV2 = Boolean(flags?.bulk_import_v2);
+  } catch {
+    useV2 = false;
+  }
+  const detect = useV2 ? findSeparatorIndexV2 : findSeparatorIndex;
+
   for (const rawLine of lines) {
     if (!rawLine) continue;
     const line = stripAIArtifacts(rawLine);
     if (!line) continue;
 
-    const sep = findSeparatorIndex(line);
+    const sep = detect(line);
     
     if (sep.index > 0) {
       const sideA = line.substring(0, sep.index).trim();
