@@ -90,6 +90,14 @@ export const FEATURE_FLAGS = {
    * Safe to toggle at runtime; affects only parse + preview UI, not persistence shape.
    */
   bulk_import_v2: true,
+
+  /**
+   * Study Intelligence Engine — weighted scoring (new/misses/recency/red − mastery)
+   * for initial deck ordering + dynamic re-injection of failed cards ~5 slots ahead.
+   * When false: legacy ordering by incorrect_count only, no re-injection.
+   * Scope: useStudyEngine. Safe to toggle at runtime.
+   */
+  intelligent_study_engine: false,
 } as const;
 
 /**

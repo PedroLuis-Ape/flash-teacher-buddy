@@ -7,6 +7,11 @@ import { useListActivity } from "@/hooks/useListActivity";
 import { updateGoalProgress } from "@/hooks/useGoals";
 import { useTurmaActivity } from "@/features/classroom/hooks/useTurmaActivity";
 import { perfLog } from "@/lib/perfLog";
+import {
+  orderByIntelligence,
+  reinjectFailedCard,
+  type CardProgressLike,
+} from "@/features/study/lib/intelligenceScoring";
 
 export interface StudyResult {
   flashcardId: string;
@@ -494,6 +499,24 @@ export function useStudyEngine(
     useAll: boolean
   ): Promise<string[]> => {
     try {
+      // V2 path — full progress fields (correct, incorrect, last_reviewed)
+      // for the weighted intelligence scorer.
+      if (FEATURE_FLAGS.intelligent_study_engine) {
+        const { data: progressData } = await supabase
+          .from('flashcard_progress')
+          .select('flashcard_id, correct_count, incorrect_count, last_reviewed')
+          .eq('user_id', userId)
+          .eq('list_id', listId);
+
+        const progressMap = new Map<string, CardProgressLike>(
+          (progressData ?? []).map(p => [p.flashcard_id, p as CardProgressLike])
+        );
+        const redSet = new Set(redListIds);
+        const ordered = orderByIntelligence(cards, progressMap, redSet);
+        return useAll ? ordered : ordered.slice(0, BATCH_SIZE);
+      }
+
+      // Legacy path — incorrect_count only
       const { data: progressData } = await supabase
         .from('flashcard_progress')
         .select('flashcard_id, incorrect_count')
@@ -680,6 +703,20 @@ export function useStudyEngine(
 
     // Straight-through: no missed-card recycling within the same run
     // (missed tracking disabled for standard modes)
+
+    // V2 — Intelligent dynamic re-injection: when a non-flip card is missed,
+    // schedule it ~5 slots ahead so the user retries it before the run ends.
+    // Pure positional update; does not touch persistence or counters.
+    if (
+      FEATURE_FLAGS.intelligent_study_engine &&
+      !isFlipMode &&
+      !skipped &&
+      !correct
+    ) {
+      setCardsOrder((prev) =>
+        reinjectFailedCard(prev, currentIndex, flashcardId, 5, 3)
+      );
+    }
 
     if (!isAuthenticated || !listId || skipped) return;
 
