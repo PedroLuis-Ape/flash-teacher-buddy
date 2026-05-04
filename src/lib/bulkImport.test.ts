@@ -56,11 +56,17 @@ describe("parsePastedFlashcards (legacy, flag off)", () => {
     expect(r[0].shortObservation).toBe("informal");
     expect(r[0].detailedHint).toBe("greeting");
   });
-  it("does NOT split on ' - ' when flag is off", () => {
-    const r = parsePastedFlashcards("hello - olá");
+  it("does NOT split on ' - ' when flag is off", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/featureFlags", () => ({
+      FEATURE_FLAGS: { bulk_import_v2: false },
+    }));
+    const { parsePastedFlashcards: p } = await import("./bulkImport");
+    const r = p("hello - olá");
     // legacy parser keeps the whole line as sideA
     expect(r[0].sideA).toBe("hello - olá");
     expect(r[0].sideB).toBeUndefined();
+    vi.doUnmock("@/lib/featureFlags");
   });
 });
 
