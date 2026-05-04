@@ -704,6 +704,20 @@ export function useStudyEngine(
     // Straight-through: no missed-card recycling within the same run
     // (missed tracking disabled for standard modes)
 
+    // V2 — Intelligent dynamic re-injection: when a non-flip card is missed,
+    // schedule it ~5 slots ahead so the user retries it before the run ends.
+    // Pure positional update; does not touch persistence or counters.
+    if (
+      FEATURE_FLAGS.intelligent_study_engine &&
+      !isFlipMode &&
+      !skipped &&
+      !correct
+    ) {
+      setCardsOrder((prev) =>
+        reinjectFailedCard(prev, currentIndex, flashcardId, 5, 3)
+      );
+    }
+
     if (!isAuthenticated || !listId || skipped) return;
 
     // Track study activity (debounced by the hook)
