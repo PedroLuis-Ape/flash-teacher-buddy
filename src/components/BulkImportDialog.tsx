@@ -11,8 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { Upload, CheckCircle2, AlertCircle, Copy, Lightbulb, ChevronDown, ChevronUp, ArrowLeftRight, BookOpen, Info } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, Copy, Lightbulb, ChevronDown, ChevronUp, ArrowLeftRight, BookOpen, Info, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import {
   parsePastedFlashcards,
   deduplicateFlashcards,
@@ -97,6 +99,61 @@ export const BulkImportDialog = ({
   const effectiveLangB = invertAB ? langA : langB;
 
   const [isParsing, setIsParsing] = useState(false);
+  const editableReview = FEATURE_FLAGS.bulk_import_v2;
+
+  // ── Recompute stats when preview/glossary edited inline (V2) ──
+  const recomputeStats = (cards: FlashcardPair[], glossary: GlossaryParsed[]) => {
+    const valid = cards.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
+    const incomplete = cards.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
+    const withHints = cards.filter(p => p.detailedHint).length;
+    setStats(s => ({ ...s, valid, incomplete, withHints, glossaryNew: glossary.length }));
+  };
+
+  const updateCard = (idx: number, field: "A" | "B", value: string) => {
+    setPreview(prev => {
+      const next = [...prev];
+      const cur = { ...next[idx] };
+      if (field === "A") {
+        if (cur.sideA !== undefined || cur.en === undefined) cur.sideA = value;
+        else cur.en = value;
+      } else {
+        if (cur.sideB !== undefined || cur.pt === undefined) cur.sideB = value;
+        else cur.pt = value;
+      }
+      next[idx] = cur;
+      recomputeStats(next, glossaryPreview);
+      return next;
+    });
+  };
+
+  const removeCard = (idx: number) => {
+    setPreview(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      recomputeStats(next, glossaryPreview);
+      return next;
+    });
+  };
+
+  const updateGlossary = (idx: number, field: "orig" | "trans", value: string) => {
+    setGlossaryPreview(prev => {
+      const next = [...prev];
+      next[idx] = {
+        ...next[idx],
+        original_text: field === "orig" ? value : next[idx].original_text,
+        translated_text: field === "trans" ? value : next[idx].translated_text,
+      };
+      recomputeStats(preview, next);
+      return next;
+    });
+  };
+
+  const removeGlossary = (idx: number) => {
+    setGlossaryPreview(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      recomputeStats(preview, next);
+      return next;
+    });
+  };
 
   const handleParse = () => {
     if (!input.trim()) {
@@ -414,21 +471,58 @@ She is late / Ela está atrasada (informal)`}
                   <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
                     <BookOpen className="h-4 w-4 text-primary" />
                     Glossário ({glossaryPreview.length} termos)
+                    {editableReview && (
+                      <span className="ml-auto text-[10px] text-muted-foreground font-normal flex items-center gap-1">
+                        <Pencil className="h-3 w-3" /> editável
+                      </span>
+                    )}
                   </h4>
                   <ul className="space-y-1.5 text-sm">
                     {glossaryPreview.slice(0, 15).map((g, idx) => {
                       const origDisplay = invertAB ? g.translated_text : g.original_text;
                       const transDisplay = invertAB ? g.original_text : g.translated_text;
                       return (
-                        <li key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                          <span className="font-medium break-words flex items-center gap-1.5">
+                        <li key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-1 md:gap-2 items-center">
+                          <span className="font-medium break-words flex items-center gap-1.5 min-w-0">
                             <SideBadge side="A" label={effectiveLabelA} lang={effectiveLangA} />
-                            <span className="truncate">{origDisplay}</span>
+                            {editableReview ? (
+                              <Input
+                                value={origDisplay}
+                                onChange={(e) =>
+                                  updateGlossary(idx, invertAB ? "trans" : "orig", e.target.value)
+                                }
+                                className="h-7 text-xs"
+                              />
+                            ) : (
+                              <span className="truncate">{origDisplay}</span>
+                            )}
                           </span>
-                          <span className="text-muted-foreground break-words flex items-center gap-1.5">
+                          <span className="text-muted-foreground break-words flex items-center gap-1.5 min-w-0">
                             <SideBadge side="B" label={effectiveLabelB} lang={effectiveLangB} />
-                            <span className="truncate">{transDisplay}</span>
+                            {editableReview ? (
+                              <Input
+                                value={transDisplay}
+                                onChange={(e) =>
+                                  updateGlossary(idx, invertAB ? "orig" : "trans", e.target.value)
+                                }
+                                className="h-7 text-xs"
+                              />
+                            ) : (
+                              <span className="truncate">{transDisplay}</span>
+                            )}
                           </span>
+                          {editableReview && (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() => removeGlossary(idx)}
+                              aria-label="Remover termo"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          )}
                         </li>
                       );
                     })}
@@ -444,8 +538,13 @@ She is late / Ela está atrasada (informal)`}
               {/* Cards Preview */}
               {preview.length > 0 && (
                 <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
-                  <h4 className="font-semibold mb-2 text-sm">
-                    Cards ({stats.valid} válidos)
+                  <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
+                    <span>Cards ({stats.valid} válidos)</span>
+                    {editableReview && (
+                      <span className="ml-auto text-[10px] text-muted-foreground font-normal flex items-center gap-1">
+                        <Pencil className="h-3 w-3" /> editável
+                      </span>
+                    )}
                   </h4>
                   <ul className="space-y-2 text-sm">
                     {preview.slice(0, 20).map((pair, idx) => {
@@ -456,15 +555,47 @@ She is late / Ela está atrasada (informal)`}
                       const isValid = (pair.sideA && pair.sideB) || (pair.en && pair.pt);
                       return (
                         <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""}`}>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-1 md:gap-2">
-                            <span className="font-medium break-words flex items-center gap-1.5">
+                          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-1 md:gap-2 items-center">
+                            <span className="font-medium break-words flex items-center gap-1.5 min-w-0">
                               <SideBadge side="A" label={effectiveLabelA} lang={effectiveLangA} />
-                              <span className="truncate">{termText}</span>
+                              {editableReview ? (
+                                <Input
+                                  value={termText === '?' ? '' : termText}
+                                  onChange={(e) =>
+                                    updateCard(idx, invertAB ? "B" : "A", e.target.value)
+                                  }
+                                  className="h-7 text-xs"
+                                />
+                              ) : (
+                                <span className="truncate">{termText}</span>
+                              )}
                             </span>
-                            <span className="text-muted-foreground break-words flex items-center gap-1.5">
+                            <span className="text-muted-foreground break-words flex items-center gap-1.5 min-w-0">
                               <SideBadge side="B" label={effectiveLabelB} lang={effectiveLangB} />
-                              <span className="truncate">{transText}</span>
+                              {editableReview ? (
+                                <Input
+                                  value={transText === '?' ? '' : transText}
+                                  onChange={(e) =>
+                                    updateCard(idx, invertAB ? "A" : "B", e.target.value)
+                                  }
+                                  className="h-7 text-xs"
+                                />
+                              ) : (
+                                <span className="truncate">{transText}</span>
+                              )}
                             </span>
+                            {editableReview && (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => removeCard(idx)}
+                                aria-label="Remover card"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              </Button>
+                            )}
                           </div>
                           {pair.detailedHint && (
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 ml-1">
