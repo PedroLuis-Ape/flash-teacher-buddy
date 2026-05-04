@@ -179,17 +179,7 @@ export function parsePastedFlashcards(input: string): FlashcardPair[] {
   const lines = normalizeInputLines(input);
   const results: FlashcardPair[] = [];
 
-  // Lazy-load flag to avoid coupling lib to React imports.
-  // Falls back to legacy parser when flag is false/undefined.
-  let useV2 = false;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const flags = require('@/lib/featureFlags').FEATURE_FLAGS;
-    useV2 = Boolean(flags?.bulk_import_v2);
-  } catch {
-    useV2 = false;
-  }
-  const detect = useV2 ? findSeparatorIndexV2 : findSeparatorIndex;
+  const detect = FEATURE_FLAGS.bulk_import_v2 ? findSeparatorIndexV2 : findSeparatorIndex;
 
   for (const rawLine of lines) {
     if (!rawLine) continue;
