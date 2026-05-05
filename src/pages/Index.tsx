@@ -126,10 +126,8 @@ const Index = () => {
       */}
       <ApeAppBar
         title="Início"
+        variant="home"
         showSearch
-        showEconomy={false}
-        showGift={false}
-        showThemeToggle={false}
       />
 
       <div className="max-w-5xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
@@ -405,16 +403,7 @@ const Index = () => {
                 />
               ))}
             </div>
-          ) : (
-            <Card className="p-6 text-center border-border">
-              <FolderOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {selectedInstitution
-                  ? `Nenhuma pasta ainda em "${selectedInstitution.name}".`
-                  : "Nenhuma pasta na área Geral."}
-              </p>
-            </Card>
-          )}
+          ) : null}
         </div>
 
         {/* Listas recentes — só aparece quando há listas */}
