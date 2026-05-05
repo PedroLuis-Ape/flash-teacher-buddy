@@ -367,6 +367,7 @@ const Index = () => {
         </Card>
 
         {/* Pastas recentes (filtradas por instituição/hub) */}
+        {(loading || myFolders.length > 0) && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <ApeSectionTitle>
@@ -405,6 +406,7 @@ const Index = () => {
             </div>
           ) : null}
         </div>
+        )}
 
         {/* Listas recentes — só aparece quando há listas */}
         {loading ? (
