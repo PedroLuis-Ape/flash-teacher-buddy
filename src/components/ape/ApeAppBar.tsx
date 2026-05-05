@@ -17,31 +17,54 @@ interface ApeAppBarProps {
   children?: ReactNode;
   className?: string;
   compact?: boolean;
-  /** Hide the search button (default: shown) */
+  /**
+   * Visual/behavior variant. Defaults to "internal".
+   * - "home":     Home dashboard (no back, optional ações).
+   * - "internal": Standard internal page (back habilitado por padrão).
+   * - "game":     Study/game (top bar mínima, sem ações secundárias).
+   * - "default":  Comportamento legado, controlado pelas props.
+   */
+  variant?: "home" | "internal" | "game" | "default";
+  /** Show the search button (default: false — opt-in) */
   showSearch?: boolean;
-  /** Hide the economy badge (default: shown if flag enabled) */
+  /** Show the economy badge (default: false — opt-in) */
   showEconomy?: boolean;
-  /** Hide the present/gift badge (default: shown if flag enabled) */
+  /** Show the present/gift badge (default: false — opt-in) */
   showGift?: boolean;
-  /** Hide the theme toggle (default: shown) */
+  /** Show the theme toggle (default: false — opt-in) */
   showThemeToggle?: boolean;
 }
 
 export function ApeAppBar({ 
   title, 
-  showBack = false, 
+  showBack,
   backPath,
   onBack,
   rightContent,
   children,
   className,
   compact = false,
-  showSearch = true,
-  showEconomy = true,
-  showGift = true,
-  showThemeToggle = true,
+  variant = "internal",
+  showSearch = false,
+  showEconomy = false,
+  showGift = false,
+  showThemeToggle = false,
 }: ApeAppBarProps) {
   const navigate = useNavigate();
+
+  // Variant-driven defaults — keep behavior previsível por tela.
+  // Cada variant define um padrão; props explícitas sempre vencem.
+  const isGame = variant === "game";
+  const isHome = variant === "home";
+  const resolvedShowBack =
+    typeof showBack === "boolean"
+      ? showBack
+      : variant === "internal" || variant === "game";
+  // Game force-disables ações secundárias para foco total.
+  const resolvedShowSearch = isGame ? false : showSearch;
+  const resolvedShowEconomy = isGame ? false : showEconomy;
+  const resolvedShowGift = isGame ? false : showGift;
+  const resolvedShowThemeToggle = isGame ? false : showThemeToggle;
 
   const handleBack = () => {
     if (onBack) {
@@ -60,10 +83,10 @@ export function ApeAppBar({
     )}>
       <div className={cn(
         "container mx-auto px-3 sm:px-4 flex items-center justify-between gap-2",
-        compact ? "h-14" : "h-14 sm:h-16"
+        compact || isGame ? "h-14" : "h-14 sm:h-16"
       )}>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-          {showBack && (
+          {resolvedShowBack && (
           <Button
             variant="ghost"
             size="icon"
@@ -84,7 +107,7 @@ export function ApeAppBar({
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {rightContent}
-          {showSearch && (
+          {resolvedShowSearch && (
             <Button
               variant="ghost"
               size="icon"
@@ -96,9 +119,9 @@ export function ApeAppBar({
               <Search className="h-5 w-5" />
             </Button>
           )}
-          {showEconomy && FEATURE_FLAGS.economy_enabled && <EconomyBadge />}
-          {showGift && FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
-          {showThemeToggle && <ThemeToggle />}
+          {resolvedShowEconomy && FEATURE_FLAGS.economy_enabled && <EconomyBadge />}
+          {resolvedShowGift && FEATURE_FLAGS.present_inbox_visible && <PresentBoxBadge />}
+          {resolvedShowThemeToggle && <ThemeToggle />}
         </div>
       </div>
     </header>

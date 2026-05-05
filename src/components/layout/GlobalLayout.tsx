@@ -14,7 +14,6 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { AdminButton } from "@/components/AdminButton";
 import { ApeTabBar } from "@/components/ape/ApeTabBar";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEconomy } from "@/contexts/EconomyContext";
 import { formatVersionLabel } from "@/lib/versionManager";
 import { Badge } from "@/components/ui/badge";
@@ -98,8 +97,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   // appears in the stats card. This removes the triple-layer clutter on mobile Home.
   const showSecondaryActions = !isGameRoute && !isHome;
   // CurrencyHeader on Home is redundant (PTS is shown in the stats grid). Hide it there
-  // to leave a clean Linha 1: [menu] ............... [admin?]
-  const showCurrencyHeader = !isHome;
+  // to leave a clean Linha 1: [menu] ............... [admin?]. Also hide inside games
+  // for full-focus mode.
+  const showCurrencyHeader = !isHome && !isGameRoute;
   // Institution bar only appears on Home; internal pages and games stay clean.
   const showInstitutionBar = isHome;
   
@@ -119,8 +119,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
 
   return (
     <InstitutionProvider>
-      <TooltipProvider>
-        <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col">
           <OfflineIndicator />
         {FEATURE_FLAGS.currency_header_enabled && user && (
             <header className={cn(
@@ -170,8 +169,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
               {formatVersionLabel()}
             </Badge>
           </div>
-        </div>
-      </TooltipProvider>
+      </div>
     </InstitutionProvider>
   );
 }

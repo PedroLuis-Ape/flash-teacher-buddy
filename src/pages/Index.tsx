@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, FolderOpen } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
@@ -126,10 +126,8 @@ const Index = () => {
       */}
       <ApeAppBar
         title="Início"
+        variant="home"
         showSearch
-        showEconomy={false}
-        showGift={false}
-        showThemeToggle={false}
       />
 
       <div className="max-w-5xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
@@ -369,6 +367,7 @@ const Index = () => {
         </Card>
 
         {/* Pastas recentes (filtradas por instituição/hub) */}
+        {(loading || myFolders.length > 0) && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <ApeSectionTitle>
@@ -405,17 +404,9 @@ const Index = () => {
                 />
               ))}
             </div>
-          ) : (
-            <Card className="p-6 text-center border-border">
-              <FolderOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                {selectedInstitution
-                  ? `Nenhuma pasta ainda em "${selectedInstitution.name}".`
-                  : "Nenhuma pasta na área Geral."}
-              </p>
-            </Card>
-          )}
+          ) : null}
         </div>
+        )}
 
         {/* Listas recentes — só aparece quando há listas */}
         {loading ? (
