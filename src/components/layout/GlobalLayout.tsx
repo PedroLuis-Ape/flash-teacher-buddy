@@ -97,8 +97,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   // appears in the stats card. This removes the triple-layer clutter on mobile Home.
   const showSecondaryActions = !isGameRoute && !isHome;
   // CurrencyHeader on Home is redundant (PTS is shown in the stats grid). Hide it there
-  // to leave a clean Linha 1: [menu] ............... [admin?]
-  const showCurrencyHeader = !isHome;
+  // to leave a clean Linha 1: [menu] ............... [admin?]. Also hide inside games
+  // for full-focus mode.
+  const showCurrencyHeader = !isHome && !isGameRoute;
   // Institution bar only appears on Home; internal pages and games stay clean.
   const showInstitutionBar = isHome;
   
