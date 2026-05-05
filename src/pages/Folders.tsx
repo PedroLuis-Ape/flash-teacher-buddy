@@ -868,7 +868,7 @@ const Folders = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ApeAppBar title="Biblioteca" />
+      <ApeAppBar title="Biblioteca" variant="home" />
       <div className="max-w-5xl mx-auto px-4 lg:px-8">
         <ApeTabs tabs={tabs} defaultValue="folders" />
       </div>
