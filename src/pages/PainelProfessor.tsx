@@ -8,7 +8,7 @@ import { BookOpen } from "lucide-react";
 const PainelProfessor = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
-      <ApeAppBar title="Painel do Professor" />
+      <ApeAppBar title="Painel do Professor" showBack />
       
       <div className="max-w-6xl mx-auto p-4 lg:px-8 space-y-8">
         <div className="space-y-2">
