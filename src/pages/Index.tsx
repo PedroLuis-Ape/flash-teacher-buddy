@@ -131,21 +131,21 @@ const Index = () => {
       />
 
       <div className="max-w-5xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
-        {/* Profile Header */}
-        <Card 
-          className="overflow-hidden cursor-pointer transition-all duration-200 border-border/60 bg-gradient-to-br from-card to-card/60 hover:shadow-[var(--shadow-hover)] hover:border-primary/30"
+        {/* Profile Header — premium welcome banner */}
+        <Card
+          className="welcome-banner cursor-pointer border-0"
           onClick={() => navigate("/profile")}
         >
-          <CardContent className="p-5">
+          <CardContent className="relative p-5 sm:p-6">
             <div className="flex items-center gap-4">
-              <Avatar className="h-14 w-14 shrink-0 ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
+              <Avatar className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 ring-2 ring-primary/50 ring-offset-2 ring-offset-background shadow-[0_0_24px_-6px_hsl(var(--primary)/0.7)]">
                 <AvatarImage src={profileData?.avatarUrl || undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold truncate">
+                <h2 className="text-xl sm:text-2xl font-bold truncate">
                   Olá, {safeFirstName}
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -209,53 +209,53 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Statistics Cards */}
+        {/* Statistics Cards — premium stat tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
-          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
+          <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
+              <span className="icon-tile !w-9 !h-9"><TrendingUp className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">PTS Semanais</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <p className="text-2xl font-bold">{pts_weekly}</p>
+              <p className="text-3xl font-bold tracking-tight">{pts_weekly}</p>
             )}
           </Card>
 
-          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
+          <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
-              <Crown className="h-4 w-4 text-primary" />
+              <span className="icon-tile !w-9 !h-9"><Crown className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">Nível</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <p className="text-2xl font-bold">{level}</p>
+              <p className="text-3xl font-bold tracking-tight">{level}</p>
             )}
           </Card>
 
-          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
+          <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
-              <Play className="h-4 w-4 text-primary" />
+              <span className="icon-tile !w-9 !h-9"><Play className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">Sequência</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <p className="text-2xl font-bold">{current_streak}</p>
+              <p className="text-3xl font-bold tracking-tight">{current_streak}</p>
             )}
           </Card>
 
-          <Card className="p-4 border-border/60 bg-gradient-to-br from-card to-card/70 hover:shadow-[var(--shadow-card)] hover:border-primary/25 transition-all duration-200">
+          <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
-              <BookOpen className="h-4 w-4 text-primary" />
+              <span className="icon-tile !w-9 !h-9"><BookOpen className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">Listas</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <p className="text-2xl font-bold">{safeStats.total_lists}</p>
+              <p className="text-3xl font-bold tracking-tight">{safeStats.total_lists}</p>
             )}
           </Card>
         </div>
