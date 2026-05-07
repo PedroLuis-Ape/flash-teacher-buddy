@@ -33,10 +33,10 @@ export function ApeTabBar() {
 
   return (
     <nav className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 border-t border-border safe-area-pb",
+      "fixed bottom-0 left-0 right-0 z-50 safe-area-pb",
       settings.backdropBlur
-        ? "bg-background/95 backdrop-blur-md"
-        : "bg-background"
+        ? "tab-bar-premium"
+        : "bg-background border-t border-border"
     )}>
       <div className="relative flex items-center justify-around h-16 max-w-screen-xl mx-auto">
         {/* Animated indicator — only when tabBarAnimations enabled */}
@@ -62,7 +62,7 @@ export function ApeTabBar() {
                 "relative flex flex-col items-center justify-center gap-1 min-w-[64px] h-full",
                 settings.animations && "transition-all duration-200",
                 settings.visualFeedback && "active:scale-95",
-                active ? "text-primary" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground")
+                active ? "text-primary tab-item-active" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground")
               )}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
