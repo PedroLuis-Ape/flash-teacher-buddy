@@ -453,7 +453,7 @@ She is late / Ela está atrasada (informal)`}
             </div>
           )}
 
-          {(preview.length > 0 || glossaryPreview.length > 0) && (
+          {(preview.length > 0 || glossaryPreview.length > 0 || layeredGroups.length > 0) && (
             <>
               {/* Column mapping header */}
               <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-3 space-y-2">
@@ -502,6 +502,15 @@ She is late / Ela está atrasada (informal)`}
 
               <Alert>
                 <AlertDescription className="space-y-2">
+                  {stats.layeredGroups > 0 && (
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                      <span>
+                        {stats.layeredGroups} card{stats.layeredGroups !== 1 ? "s" : ""} principal
+                        {stats.layeredGroups !== 1 ? "is" : ""} com {stats.layeredCards} camada{stats.layeredCards !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
                   {stats.glossaryNew > 0 && (
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-4 w-4 text-primary" />
