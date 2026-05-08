@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search, Layers } from "lucide-react";
 import { DownloadOfflineButton } from "@/components/DownloadOfflineButton";
 import {
   DropdownMenu,
@@ -45,6 +45,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { pageMount, perfLog } from "@/lib/perfLog";
+import { MergeIntoLayersDialog } from "@/features/cards/components/MergeIntoLayersDialog";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 interface ListType {
   id: string;
@@ -216,6 +218,7 @@ const ListDetail = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [mergeLayersOpen, setMergeLayersOpen] = useState(false);
   // List settings dialog
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
@@ -1055,6 +1058,18 @@ const ListDetail = () => {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
+
+                  {FEATURE_FLAGS.layered_cards && selectedCards.length >= 2 && canEdit && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setMergeLayersOpen(true)}
+                    >
+                      <Layers className="h-4 w-4" />
+                      Mesclar em camadas ({selectedCards.length})
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -1098,6 +1113,22 @@ const ListDetail = () => {
         labelA={effectiveSettings.labelsA}
         labelB={effectiveSettings.labelsB}
       />
+
+      {/* Merge into layers dialog */}
+      {FEATURE_FLAGS.layered_cards && id && (
+        <MergeIntoLayersDialog
+          open={mergeLayersOpen}
+          onOpenChange={setMergeLayersOpen}
+          listId={id}
+          candidates={flashcards
+            .filter((f) => selectedCards.includes(f.id))
+            .map((f) => ({ id: f.id, term: f.term, translation: f.translation }))}
+          onMerged={() => {
+            setSelectedCards([]);
+            loadFlashcards();
+          }}
+        />
+      )}
 
       {/* List Settings Dialog */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>

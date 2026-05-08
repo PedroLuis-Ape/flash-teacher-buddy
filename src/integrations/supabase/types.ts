@@ -711,17 +711,23 @@ export type Database = {
           accepted_answers_pt: string[] | null
           audio_url: string | null
           collection_id: string | null
+          context_tag: string | null
           created_at: string
           deleted_at: string | null
           display_text: string | null
           eval_text: string | null
+          example_text: string | null
+          example_translation: string | null
           hint: string | null
           id: string
           image_url_a: string | null
           image_url_b: string | null
           lang: string | null
+          layer_index: number | null
           list_id: string | null
           note_text: string[] | null
+          parent_card_id: string | null
+          short_explanation: string | null
           term: string
           translation: string
           updated_at: string
@@ -733,17 +739,23 @@ export type Database = {
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
           collection_id?: string | null
+          context_tag?: string | null
           created_at?: string
           deleted_at?: string | null
           display_text?: string | null
           eval_text?: string | null
+          example_text?: string | null
+          example_translation?: string | null
           hint?: string | null
           id?: string
           image_url_a?: string | null
           image_url_b?: string | null
           lang?: string | null
+          layer_index?: number | null
           list_id?: string | null
           note_text?: string[] | null
+          parent_card_id?: string | null
+          short_explanation?: string | null
           term: string
           translation: string
           updated_at?: string
@@ -755,17 +767,23 @@ export type Database = {
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
           collection_id?: string | null
+          context_tag?: string | null
           created_at?: string
           deleted_at?: string | null
           display_text?: string | null
           eval_text?: string | null
+          example_text?: string | null
+          example_translation?: string | null
           hint?: string | null
           id?: string
           image_url_a?: string | null
           image_url_b?: string | null
           lang?: string | null
+          layer_index?: number | null
           list_id?: string | null
           note_text?: string[] | null
+          parent_card_id?: string | null
+          short_explanation?: string | null
           term?: string
           translation?: string
           updated_at?: string
@@ -785,6 +803,13 @@ export type Database = {
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_parent_card_id_fkey"
+            columns: ["parent_card_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
             referencedColumns: ["id"]
           },
         ]
@@ -2560,17 +2585,23 @@ export type Database = {
           accepted_answers_pt: string[] | null
           audio_url: string | null
           collection_id: string | null
+          context_tag: string | null
           created_at: string
           deleted_at: string | null
           display_text: string | null
           eval_text: string | null
+          example_text: string | null
+          example_translation: string | null
           hint: string | null
           id: string
           image_url_a: string | null
           image_url_b: string | null
           lang: string | null
+          layer_index: number | null
           list_id: string | null
           note_text: string[] | null
+          parent_card_id: string | null
+          short_explanation: string | null
           term: string
           translation: string
           updated_at: string
