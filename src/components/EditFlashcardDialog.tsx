@@ -8,6 +8,9 @@ import { ImageIcon } from "lucide-react";
 import { supportsImages } from "@/features/study/lib/studyTypeConfig";
 import { WordHintEditor } from "@/features/study/components/WordHintEditor";
 import { parseWordHints, type WordHint } from "@/features/study/lib/wordHints";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { LayeredCardEditor } from "@/features/cards/components/LayeredCardEditor";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EditFlashcardDialogProps {
   flashcard: {
@@ -18,6 +21,9 @@ interface EditFlashcardDialogProps {
     image_url_a?: string | null;
     image_url_b?: string | null;
     word_hints?: unknown;
+    list_id?: string;
+    user_id?: string;
+    parent_card_id?: string | null;
   } | null;
   isOpen: boolean;
   onClose: () => void;
@@ -35,9 +41,14 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
   const [imageUrlB, setImageUrlB] = useState("");
   const [wordHints, setWordHints] = useState<WordHint[]>([]);
   const [saving, setSaving] = useState(false);
+  const [meta, setMeta] = useState<{ listId: string; userId: string } | null>(null);
 
   const showImages = supportsImages(studyType);
   const showWordHints = studyType === "language";
+  const showLayers =
+    FEATURE_FLAGS.layered_cards &&
+    !!flashcard &&
+    !flashcard.parent_card_id; // hide editor on a layer itself; only show on principals/standalone
 
   useEffect(() => {
     if (flashcard) {
@@ -49,6 +60,29 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
       setWordHints(parseWordHints(flashcard.word_hints));
     }
   }, [flashcard]);
+
+  // Resolve list_id/user_id for the layer editor when not passed in props.
+  useEffect(() => {
+    if (!FEATURE_FLAGS.layered_cards || !flashcard || !isOpen) return;
+    if (flashcard.list_id && flashcard.user_id) {
+      setMeta({ listId: flashcard.list_id, userId: flashcard.user_id });
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("flashcards")
+        .select("list_id, user_id")
+        .eq("id", flashcard.id)
+        .maybeSingle();
+      if (!cancelled && data) {
+        setMeta({ listId: (data as any).list_id, userId: (data as any).user_id });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [flashcard, isOpen]);
 
   const handleSave = async () => {
     if (!flashcard || !term.trim() || !translation.trim()) return;
@@ -152,6 +186,15 @@ export const EditFlashcardDialog = ({ flashcard, isOpen, onClose, onSave, studyT
               sourceTextB={translation}
               labelA={labelA || "Lado A"}
               labelB={labelB || "Lado B"}
+            />
+          )}
+
+          {showLayers && flashcard && meta && (
+            <LayeredCardEditor
+              principalId={flashcard.id}
+              listId={meta.listId}
+              userId={meta.userId}
+              term={term || flashcard.term}
             />
           )}
         </div>
