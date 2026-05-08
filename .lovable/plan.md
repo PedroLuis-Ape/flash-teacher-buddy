@@ -1,120 +1,164 @@
+## Objetivo
 
-
-## Diagnóstico real (em ordem de gravidade)
-
-### Bug 1: tela "Carregando..." infinita ao iniciar qualquer modo de jogo
-
-**Onde**: `src/pages/Study.tsx`, linha 571.
-
-A condição de loading é:
-```ts
-if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
-  return <p>Carregando...</p>;
-}
-```
-
-Onde `studyLoading` vem de `useStudyEngine` (`isLoading` interno).
-
-**Por que trava**: Em `useStudyEngine.ts` (linha 207):
-```ts
-const initializeSession = useCallback(async () => {
-  const initKey = `${listId}|${mode}|${cardsSignature}`;
-  if (lastInitSignatureRef.current === initKey) {
-    return; // ← sai SEM mudar isLoading
-  }
-  if (flashcards.length === 0) {
-    setIsLoading(false);
-    return;
-  }
-  lastInitSignatureRef.current = initKey;
-  ...
-```
-
-`isLoading` começa como `true`. Esse hook é chamado pelo `Study.tsx` antes de `loadFlashcards()` terminar — então `flashcards` é `[]`, `cardsSignature` é `""`, e o efeito da linha 830 dispara `initializeSession()`. A primeira execução cai no `flashcards.length === 0` → seta `isLoading=false` ✓.
-
-Mas em seguida, novos `useEffect` de `Study.tsx` (linhas 211-223) disparam `setGameSettings(...)` toda vez que `prefs` mudam. Isso **não** reinicializa o engine, mas: o `useEffect` da linha 830 depende de `[listId, cardsSignature, mode]`. Quando `loadFlashcards` finalmente popula `setFlashcards(orderedData)`, `cardsSignature` muda, o efeito reroda, **mas** se `listId` ainda for `undefined` no primeiro render (rota é `/collection/:collectionId`, não `/list/:id`), a chave `initKey` fica `"undefined|write|<sig>"`. Tudo bem na 1ª vez. O problema é o `early return` quando o efeito reroda com a **mesma** signature: `lastInitSignatureRef.current === initKey` → retorna sem mexer em `isLoading`. Combinado com o `useEffect` da linha 217 que faz `setGameSettings` repetidamente (a função `setGameSettings` muda de identidade a cada render do hook), há re-render em loop que mantém `isLoading=true` em casos onde `flashcards.length > 0` mas a init não chegou a executar de fato.
-
-Mas o ponto mais grave: **na linha 217-223 o `useEffect` tem `setGameSettings` como dependência**. `setGameSettings` é o setter de `useState`, que tem identidade estável — não é o problema. O problema real é mais simples: depois de `setGameSettings({...})`, o engine **não re-inicializa**, então `cardsOrder` segue `[]`. A condição `currentCard` (linha 864) vira `null`, e `Study.tsx` linha 597 (`if (!currentCard)`) deveria mostrar fallback. Mas esse fallback exige `loading === false && studyLoading === false`. Se `studyLoading` ficar travado em `true` por causa do early return de `initializeSession`, o usuário fica vendo "Carregando..." para sempre.
-
-**Causa raiz confirmada**: o `early return` da linha 210-212 do `useStudyEngine.ts` não chama `setIsLoading(false)`. Em qualquer cenário onde a signature já bate (re-render por outro motivo enquanto cards ainda não foram carregados), o `isLoading` interno fica preso.
-
-Adicionalmente, o `useEffect` da linha 217-223 do `Study.tsx` chama `setGameSettings` em **todo render** onde `prefs` ainda não convergiram, criando re-renders extras que agravam o problema.
-
-### Bug 2: a publicação não sobe pro domínio
-
-**Hipótese**: Não tenho prova que o build novo não chegue ao domínio. Precisamos confirmar com o badge de versão (já implementado em `GlobalLayout.tsx`).
-
-O badge mostra `v2.5.0 · <últimos 6 dígitos do build_id>`. Se você publicar agora e os últimos 6 dígitos **não mudarem** entre preview e domínio público, o problema é deploy/cache de CDN. Se mudarem mas o bug continuar, o problema é exclusivamente código.
-
-Pelo que sei do estado atual:
-- VitePWA está desativado em `vite.config.ts` ✓
-- `public/sw.js` é um Service Worker auto-destrutivo ✓
-- Manifest PWA está fora do `index.html` ✓
-
-Esses 3 pontos já matam a hipótese de cache de PWA. Falta apenas verificar empiricamente o build_id nos dois ambientes.
+Expandir o sistema de cards para suportar **múltiplas camadas de significado** (mini-baralho interno), preservando 100% do comportamento atual de cards de camada única.
 
 ---
 
-## Plano de correção (mínimo, incremental)
+## 1. Modelo de dados (incremental, sem quebrar nada)
 
-### Etapa 1 — Corrigir o loading infinito do jogo (causa raiz)
+Adicionar colunas opcionais à tabela `flashcards` (nada é removido):
 
-**Arquivo**: `src/features/study/hooks/useStudyEngine.ts`
+- `parent_card_id uuid NULL` — referência ao card principal. Se `NULL`, o card é principal (comportamento atual).
+- `layer_index int NULL` — ordem da camada (0,1,2…). `NULL` para cards sem camadas.
+- `example_text text NULL` — frase de exemplo (lado A).
+- `example_translation text NULL` — tradução do exemplo (lado B).
+- `context_tag text NULL` — tag opcional ("informal", "phrasal", etc).
+- `short_explanation text NULL` — explicação curta opcional.
 
-Mudança cirúrgica em `initializeSession` (linha 208-212): garantir que `setIsLoading(false)` seja chamado também no early return de signature duplicada, **se já houver cards carregados**:
+Índice em `(parent_card_id, layer_index)`.
 
-```ts
-const initKey = `${listId}|${mode}|${cardsSignature}`;
-if (lastInitSignatureRef.current === initKey) {
-  // Init já foi feita para esta combinação — destrava o loading
-  if (flashcards.length > 0) {
-    setIsLoading(false);
-  }
-  return;
-}
-```
+**Compatibilidade:** cards antigos têm tudo `NULL` → continuam funcionando como hoje. RLS atual já cobre (mesmo `list_id` / `user_id`).
 
-### Etapa 2 — Evitar `setGameSettings` em loop por mudança de prefs
-
-**Arquivo**: `src/pages/Study.tsx`, linhas 217-223.
-
-O `useEffect` atual chama `setGameSettings` toda vez que `prefs.order/favoritesOnly/fastMode` mudam. Após a init do engine, isso pode reescrever as settings e gerar re-renders. Adicionar guard para só sincronizar enquanto `loading === true` (ou seja, antes da primeira renderização real do jogo). Depois disso, as mudanças vêm pelo `handleSettingsChange` (linha 487), que é o caminho controlado.
-
-```ts
-useEffect(() => {
-  if (!loading) return; // só sincroniza durante a fase inicial
-  setGameSettings({
-    mode: prefs.order === "sequential" ? "sequential" : "random",
-    subset: prefs.favoritesOnly ? "favorites" : "all",
-    fastMode: prefs.fastMode,
-  });
-}, [prefs.order, prefs.favoritesOnly, prefs.fastMode, loading, setGameSettings]);
-```
-
-### Etapa 3 — Verificar se o domínio recebe a build nova
-
-Sem mexer em código. Após as etapas 1 e 2 serem aplicadas e a Lovable buildar:
-
-1. Abra `https://www.apeeducation.org/?t=999999` em aba anônima.
-2. Olhe o badge no canto inferior. Anote os 6 últimos dígitos.
-3. Abra o preview Lovable. Anote os 6 últimos dígitos.
-4. Se forem **iguais** → deploy está OK, a correção dos jogos já resolve tudo.
-5. Se forem **diferentes** → é problema de CDN/deploy (não-código), e abrimos uma segunda investigação focada em headers de cache do hosting.
-
-### Etapa 4 (somente se Etapa 3 mostrar build_id diferentes)
-
-Investigar:
-- O Service Worker antigo em `/sw.js` no domínio público está sendo substituído pelo novo `public/sw.js` auto-destrutivo? (Pode haver cache-control agressivo no `sw.js` antigo segurando ele.)
-- Headers de `Cache-Control` no `index.html` servido pelo hosting Lovable.
-
-Não vou propor mudanças de código aqui agora porque seria especulação. Decidimos depois do resultado empírico da Etapa 3.
+**Convenção:**
+- Card principal "agregador": tem `term` (ex: "get") mas pode ter `translation` vazia/resumo. Suas camadas são linhas separadas com `parent_card_id = principal.id`.
+- Camadas **não aparecem** em listagens normais — só dentro do principal.
 
 ---
 
-## Arquivos que serão alterados nesta rodada
+## 2. Importação com camadas
 
-1. `src/features/study/hooks/useStudyEngine.ts` — 4 linhas no `initializeSession`.
-2. `src/pages/Study.tsx` — 2 linhas no `useEffect` de sync de gameSettings.
+Estender `src/lib/bulkImport.ts` (sem remover formato atual):
 
-Nada mais. Nada de reescrever, nada de PWA, nada de versionManager, nada de SafeMode. Só o bug real do loading infinito.
+Novo formato detectado por **indentação ou prefixo**:
 
+```
+get
+  pegar / conseguir | I got a new phone. | Eu consegui um celular novo.
+  entender | I get it. | Eu entendi.
+  chegar | I got home late. | Eu cheguei em casa tarde.
+```
+
+Ou agrupamento por palavra repetida na coluna A (mesma `term` em linhas consecutivas → vira camadas).
+
+Parser retorna estrutura:
+```ts
+{ term, layers: [{ translation, example, exampleTranslation, tag? }] }
+```
+
+`BulkImportDialog` insere 1 card principal + N camadas (`parent_card_id` apontando ao principal). Tudo numa transação chunked (mantém padrão atual de chunks de 50–100).
+
+UI: toggle "Detectar camadas automaticamente" no diálogo (default ligado se feature flag `layered_cards` ativa).
+
+---
+
+## 3. Mesclar cards prontos
+
+Em `FlashcardList`:
+
+- Modo "seleção múltipla" (checkbox por card — só aparece quando o usuário ativa).
+- Botão **"Mesclar em camadas"** quando ≥2 cards selecionados.
+- Modal com:
+  - Campo "Título do card principal" (sugestão automática: maior substring comum entre os `term`s, fallback = primeiro termo).
+  - Lista ordenável das camadas (drag para reordenar).
+  - Botão Confirmar.
+- Ao confirmar: cria novo card principal, atualiza os selecionados com `parent_card_id` + `layer_index`.
+
+**Desfazer mesclagem:** botão "Separar camadas" no card principal → seta `parent_card_id = NULL`, `layer_index = NULL` em todas as camadas, deleta o principal agregador (se foi criado pela mesclagem) ou mantém (se já era card real).
+
+---
+
+## 4. UI de edição do card principal
+
+Novo componente `LayeredCardEditor`:
+
+- Mostra lista de camadas em accordion.
+- Adicionar / remover / reordenar (drag-and-drop com `@dnd-kit` que já existe no projeto, ou setas up/down).
+- Cada camada edita: tradução, explicação, exemplo, tradução do exemplo, tag.
+
+Integrado em `EditFlashcardDialog` quando o card tem camadas (ou usuário clica em "Adicionar camada" num card simples → vira principal automaticamente).
+
+---
+
+## 5. Modos de jogo
+
+Princípio: **cada camada é um mini-card independente** durante a sessão.
+
+Em `useStudyEngine` — etapa de "expansão":
+
+```ts
+function expandLayers(cards) {
+  return cards.flatMap(c =>
+    c.layers?.length
+      ? c.layers.map((L, i) => ({
+          id: `${c.id}::${L.id}`,
+          parent_id: c.id,
+          layer_index: i,
+          term: c.term,
+          translation: L.translation,
+          example: L.example,
+          exampleTranslation: L.exampleTranslation,
+          hint: L.short_explanation,
+        }))
+      : [c]
+  );
+}
+```
+
+Comportamento por modo:
+
+- **Flip / Estudar**: mostra card principal com indicador "Camada 1 de 3" + botão "Próxima camada". Ou pode estudar camada-a-camada como cards normais (preferência do usuário, default = camada-a-camada).
+- **Múltipla escolha**: usa `translation` da camada específica como resposta correta; `example` aparece como contexto da pergunta para evitar ambiguidade (ex: "_I ___ home late_ → chegar"). Distratores filtram para não coincidir com outras camadas do mesmo principal.
+- **Escrita**: valida contra a tradução da camada específica; mostra exemplo como dica.
+- **Conectar palavras (unscramble)**: usa `example` da camada (não a palavra solta).
+- **Pronúncia**: usa `example` quando disponível, senão `term`.
+
+---
+
+## 6. Progresso
+
+`flashcard_progress` já tem `flashcard_id`. Camadas são linhas reais em `flashcards`, então **cada camada já registra progresso independente** sem mudança de schema. Apenas garantir que o engine usa `layer.id` (não `parent_id`) ao gravar acertos.
+
+---
+
+## 7. Feature flag
+
+`layered_cards` em `src/lib/featureFlags.ts` — desligada por padrão. Quando off, parser ignora indentação, UI não mostra "Mesclar", engine não expande. Zero risco para usuários atuais.
+
+---
+
+## 8. Arquivos a tocar
+
+**Migration nova:**
+- `supabase/migrations/<ts>_layered_cards.sql` — adiciona colunas + índice.
+
+**Novos:**
+- `src/features/cards/lib/layeredImport.ts` — parser novo formato.
+- `src/features/cards/lib/mergeLayers.ts` — lógica mesclar/desfazer.
+- `src/features/cards/components/LayeredCardEditor.tsx`
+- `src/features/cards/components/MergeIntoLayersDialog.tsx`
+- `src/features/cards/lib/expandLayers.ts` — usado pelo engine.
+- testes para parser, merge, expand.
+
+**Editar (extensão pura):**
+- `src/lib/bulkImport.ts` — chamar `layeredImport` quando flag ligada.
+- `src/components/BulkImportDialog.tsx` — toggle "Detectar camadas".
+- `src/features/study/components/FlashcardList.tsx` — modo seleção + botão mesclar.
+- `src/components/EditFlashcardDialog.tsx` — slot para `LayeredCardEditor`.
+- `src/features/study/hooks/useStudyEngine.ts` — chamar `expandLayers` no início.
+- `src/features/study/components/{MultipleChoiceStudyView,WriteStudyView,UnscrambleStudyView,FlipStudyView}.tsx` — usar `example` quando presente.
+- `src/lib/featureFlags.ts` — `layered_cards`.
+
+**Não tocados:** auth, RLS existentes, rotas, turmas, store, economia, metas, idioma, tema, performance.
+
+---
+
+## 9. Entrega faseada
+
+1. Migration + flag + tipos.
+2. Parser de importação + diálogo (Funcionamento 1).
+3. `expandLayers` no engine + ajustes mínimos por modo.
+4. `LayeredCardEditor` + edição.
+5. Mesclar/desfazer (Funcionamento 2).
+6. Polimento visual seguindo design premium atual.
+
+Posso começar pela Fase 1 assim que aprovado.
