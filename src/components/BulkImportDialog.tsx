@@ -550,6 +550,37 @@ She is late / Ela está atrasada (informal)`}
 
               {/* Glossary Preview */}
               {glossaryPreview.length > 0 && (
+                <></>
+              )}
+              {layeredGroups.length > 0 && (
+                <div className="border rounded-lg p-4 max-h-60 overflow-y-auto bg-primary/5">
+                  <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    Cards em camadas ({layeredGroups.length})
+                  </h4>
+                  <ul className="space-y-2 text-sm">
+                    {layeredGroups.slice(0, 10).map((g, i) => (
+                      <li key={i} className="border-l-2 border-primary/40 pl-2">
+                        <div className="font-medium">{g.term}</div>
+                        <ul className="ml-2 text-xs text-muted-foreground space-y-0.5">
+                          {g.layers.map((L, j) => (
+                            <li key={j} className="truncate">
+                              <span className="text-foreground">{j + 1}.</span> {L.translation}
+                              {L.example ? <span className="opacity-70"> — {L.example}</span> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                    {layeredGroups.length > 10 && (
+                      <li className="text-muted-foreground italic">
+                        ...e mais {layeredGroups.length - 10}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+              {glossaryPreview.length > 0 && (
                 <div className="border rounded-lg p-4 max-h-40 overflow-y-auto">
                   <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
                     <BookOpen className="h-4 w-4 text-primary" />
