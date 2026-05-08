@@ -218,6 +218,7 @@ const ListDetail = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [mergeLayersOpen, setMergeLayersOpen] = useState(false);
   // List settings dialog
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
