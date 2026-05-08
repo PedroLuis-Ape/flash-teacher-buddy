@@ -344,7 +344,7 @@ export const BulkImportDialog = ({
     toast.success("Prompt copiado para a área de transferência!");
   };
 
-  const totalImportable = stats.valid + stats.glossaryNew;
+  const totalImportable = stats.valid + stats.glossaryNew + stats.layeredCards;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -435,6 +435,23 @@ She is late / Ela está atrasada (informal)`}
           <Button onClick={handleParse} variant="secondary" className="w-full" disabled={isParsing}>
             {isParsing ? "Processando..." : "Pré-visualizar"}
           </Button>
+
+          {FEATURE_FLAGS.layered_cards && (
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2 min-w-0">
+                <BookOpen className="h-4 w-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <Label htmlFor="detect-layers" className="text-sm font-medium cursor-pointer">
+                    Detectar camadas automaticamente
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Agrupa termos repetidos ou indentados como camadas de um mesmo card.
+                  </p>
+                </div>
+              </div>
+              <Switch id="detect-layers" checked={detectLayers} onCheckedChange={setDetectLayers} />
+            </div>
+          )}
 
           {(preview.length > 0 || glossaryPreview.length > 0) && (
             <>
