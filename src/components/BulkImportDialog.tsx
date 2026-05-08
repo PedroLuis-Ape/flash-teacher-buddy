@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { parseLayeredInput, type LayeredGroup } from "@/features/cards/lib/layeredImport";
+import { createLayeredCard } from "@/features/cards/lib/layeredCards";
 
 interface BulkImportDialogProps {
   collectionId: string;
@@ -81,7 +83,9 @@ export const BulkImportDialog = ({
   const [input, setInput] = useState("");
   const [preview, setPreview] = useState<FlashcardPair[]>([]);
   const [glossaryPreview, setGlossaryPreview] = useState<GlossaryParsed[]>([]);
-  const [stats, setStats] = useState({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0, glossaryNew: 0, glossaryDuplicates: 0 });
+  const [layeredGroups, setLayeredGroups] = useState<LayeredGroup[]>([]);
+  const [detectLayers, setDetectLayers] = useState<boolean>(FEATURE_FLAGS.layered_cards);
+  const [stats, setStats] = useState({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0, glossaryNew: 0, glossaryDuplicates: 0, layeredGroups: 0, layeredCards: 0 });
   const [loading, setLoading] = useState(false);
   const [showAIHelper, setShowAIHelper] = useState(false);
   const [invertAB, setInvertAB] = useState(false);
@@ -165,7 +169,26 @@ export const BulkImportDialog = ({
     setIsParsing(true);
     requestAnimationFrame(() => {
       setTimeout(() => {
-        const { glossaryLines, cards } = parseGlossaryAndCards(input);
+        // ── Layered detection (opt-in via flag + toggle) ──
+        let textForFlatParse = input;
+        let detectedGroups: LayeredGroup[] = [];
+        if (FEATURE_FLAGS.layered_cards && detectLayers) {
+          // parseLayeredInput operates on the GLOSSARY+CARDS text as-is. To
+          // avoid hijacking the "=== GLOSSÁRIO GLOBAL ===" section, we only
+          // run it against the CARDS section when the dual-section header is
+          // present.
+          const cardsSectionMatch = input.match(/===\s*CARDS\s*===([\s\S]*)$/i);
+          const layeredSource = cardsSectionMatch ? cardsSectionMatch[1] : input;
+          const layered = parseLayeredInput(layeredSource);
+          detectedGroups = layered.groups;
+          if (detectedGroups.length > 0) {
+            const leftoverText = layered.leftover.join("\n");
+            textForFlatParse = cardsSectionMatch
+              ? input.replace(cardsSectionMatch[1], "\n" + leftoverText)
+              : leftoverText;
+          }
+        }
+        const { glossaryLines, cards } = parseGlossaryAndCards(textForFlatParse);
         const uniqueGlossary = deduplicateGlossary(glossaryLines, existingGlossary);
         const glossaryDuplicates = glossaryLines.length - uniqueGlossary.length;
         const deduplicated = deduplicateFlashcards(cards, existingCards);
@@ -173,10 +196,12 @@ export const BulkImportDialog = ({
         const incomplete = deduplicated.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
         const duplicates = cards.length - deduplicated.length;
         const withHints = deduplicated.filter(p => p.detailedHint).length;
+        const layeredCards = detectedGroups.reduce((s, g) => s + g.layers.length, 0);
 
         setGlossaryPreview(uniqueGlossary);
         setPreview(deduplicated);
-        setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates });
+        setLayeredGroups(detectedGroups);
+        setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates, layeredGroups: detectedGroups.length, layeredCards });
         setIsParsing(false);
       }, 0);
     });
@@ -184,8 +209,8 @@ export const BulkImportDialog = ({
 
   const handleImport = async () => {
     const validPairs = preview.filter(p => (p.sideA && p.sideB) || (p.en && p.pt));
-    
-    if (validPairs.length === 0 && glossaryPreview.length === 0) {
+
+    if (validPairs.length === 0 && glossaryPreview.length === 0 && layeredGroups.length === 0) {
       toast.error("Nenhum item válido para importar");
       return;
     }
@@ -200,6 +225,31 @@ export const BulkImportDialog = ({
     }
 
     try {
+      // ── Layered groups first (additive; never touches existing cards) ──
+      if (FEATURE_FLAGS.layered_cards && layeredGroups.length > 0) {
+        for (const group of layeredGroups) {
+          // Respect invertAB: when inverted, layer.translation becomes the
+          // term and the (former) term becomes the translation side.
+          const effectiveGroup: LayeredGroup = invertAB
+            ? {
+                term: group.layers[0]?.translation ?? group.term,
+                layers: group.layers.map((L) => ({
+                  ...L,
+                  translation: group.term,
+                })),
+              }
+            : group;
+          try {
+            await createLayeredCard({ listId: collectionId, userId: user.id, group: effectiveGroup });
+          } catch (e: any) {
+            console.error("Layered insert error:", e);
+            toast.error("Erro ao importar cards em camadas: " + (e?.message ?? "desconhecido"));
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       if (glossaryPreview.length > 0) {
         const glossaryRows = glossaryPreview.map(g => ({
           list_id: collectionId,
@@ -270,12 +320,14 @@ export const BulkImportDialog = ({
 
       const parts: string[] = [];
       if (validPairs.length > 0) parts.push(`${validPairs.length} cards`);
+      if (layeredGroups.length > 0) parts.push(`${layeredGroups.length} cards em camadas (${stats.layeredCards})`);
       if (glossaryPreview.length > 0) parts.push(`${glossaryPreview.length} termos no glossário`);
       toast.success(`✅ Importados: ${parts.join(" + ")}!`);
       
       setInput("");
       setPreview([]);
       setGlossaryPreview([]);
+      setLayeredGroups([]);
       setInvertAB(false);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
@@ -292,7 +344,7 @@ export const BulkImportDialog = ({
     toast.success("Prompt copiado para a área de transferência!");
   };
 
-  const totalImportable = stats.valid + stats.glossaryNew;
+  const totalImportable = stats.valid + stats.glossaryNew + stats.layeredCards;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -384,7 +436,24 @@ She is late / Ela está atrasada (informal)`}
             {isParsing ? "Processando..." : "Pré-visualizar"}
           </Button>
 
-          {(preview.length > 0 || glossaryPreview.length > 0) && (
+          {FEATURE_FLAGS.layered_cards && (
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2 min-w-0">
+                <BookOpen className="h-4 w-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <Label htmlFor="detect-layers" className="text-sm font-medium cursor-pointer">
+                    Detectar camadas automaticamente
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Agrupa termos repetidos ou indentados como camadas de um mesmo card.
+                  </p>
+                </div>
+              </div>
+              <Switch id="detect-layers" checked={detectLayers} onCheckedChange={setDetectLayers} />
+            </div>
+          )}
+
+          {(preview.length > 0 || glossaryPreview.length > 0 || layeredGroups.length > 0) && (
             <>
               {/* Column mapping header */}
               <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-3 space-y-2">
@@ -433,6 +502,15 @@ She is late / Ela está atrasada (informal)`}
 
               <Alert>
                 <AlertDescription className="space-y-2">
+                  {stats.layeredGroups > 0 && (
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                      <span>
+                        {stats.layeredGroups} card{stats.layeredGroups !== 1 ? "s" : ""} principal
+                        {stats.layeredGroups !== 1 ? "is" : ""} com {stats.layeredCards} camada{stats.layeredCards !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
                   {stats.glossaryNew > 0 && (
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-4 w-4 text-primary" />
@@ -471,6 +549,37 @@ She is late / Ela está atrasada (informal)`}
               </Alert>
 
               {/* Glossary Preview */}
+              {glossaryPreview.length > 0 && (
+                <></>
+              )}
+              {layeredGroups.length > 0 && (
+                <div className="border rounded-lg p-4 max-h-60 overflow-y-auto bg-primary/5">
+                  <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    Cards em camadas ({layeredGroups.length})
+                  </h4>
+                  <ul className="space-y-2 text-sm">
+                    {layeredGroups.slice(0, 10).map((g, i) => (
+                      <li key={i} className="border-l-2 border-primary/40 pl-2">
+                        <div className="font-medium">{g.term}</div>
+                        <ul className="ml-2 text-xs text-muted-foreground space-y-0.5">
+                          {g.layers.map((L, j) => (
+                            <li key={j} className="truncate">
+                              <span className="text-foreground">{j + 1}.</span> {L.translation}
+                              {L.example ? <span className="opacity-70"> — {L.example}</span> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                    {layeredGroups.length > 10 && (
+                      <li className="text-muted-foreground italic">
+                        ...e mais {layeredGroups.length - 10}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
               {glossaryPreview.length > 0 && (
                 <div className="border rounded-lg p-4 max-h-40 overflow-y-auto">
                   <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
