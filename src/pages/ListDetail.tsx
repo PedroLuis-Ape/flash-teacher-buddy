@@ -1058,6 +1058,18 @@ const ListDetail = () => {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
+
+                  {FEATURE_FLAGS.layered_cards && selectedCards.length >= 2 && canEdit && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setMergeLayersOpen(true)}
+                    >
+                      <Layers className="h-4 w-4" />
+                      Mesclar em camadas ({selectedCards.length})
+                    </Button>
+                  )}
                 </div>
               )}
 
