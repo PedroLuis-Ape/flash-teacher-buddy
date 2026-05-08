@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search, Layers } from "lucide-react";
 import { DownloadOfflineButton } from "@/components/DownloadOfflineButton";
 import {
   DropdownMenu,
@@ -45,6 +45,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { pageMount, perfLog } from "@/lib/perfLog";
+import { MergeIntoLayersDialog } from "@/features/cards/components/MergeIntoLayersDialog";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 interface ListType {
   id: string;
