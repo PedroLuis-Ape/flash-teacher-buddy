@@ -92,6 +92,14 @@ export const FEATURE_FLAGS = {
   bulk_import_v2: true,
 
   /**
+   * Layered cards — allow a single "main card" to contain multiple internal
+   * meaning layers (translations + examples). Off by default; when off, the
+   * import parser ignores indentation, the Merge UI is hidden and the study
+   * engine does not expand layers. Pure additive feature.
+   */
+  layered_cards: true,
+
+  /**
    * Study Intelligence Engine — weighted scoring (new/misses/recency/red − mastery)
    * for initial deck ordering + dynamic re-injection of failed cards ~5 slots ahead.
    * When false: legacy ordering by incorrect_count only, no re-injection.
