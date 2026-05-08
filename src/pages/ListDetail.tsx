@@ -1114,6 +1114,22 @@ const ListDetail = () => {
         labelB={effectiveSettings.labelsB}
       />
 
+      {/* Merge into layers dialog */}
+      {FEATURE_FLAGS.layered_cards && id && (
+        <MergeIntoLayersDialog
+          open={mergeLayersOpen}
+          onOpenChange={setMergeLayersOpen}
+          listId={id}
+          candidates={flashcards
+            .filter((f) => selectedCards.includes(f.id))
+            .map((f) => ({ id: f.id, term: f.term, translation: f.translation }))}
+          onMerged={() => {
+            setSelectedCards([]);
+            loadFlashcards();
+          }}
+        />
+      )}
+
       {/* List Settings Dialog */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh]">
