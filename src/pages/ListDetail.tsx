@@ -252,6 +252,22 @@ const ListDetail = () => {
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [mergeLayersOpen, setMergeLayersOpen] = useState(false);
+  const [isUnmerging, setIsUnmerging] = useState(false);
+
+  const handleUnmergeLayers = useCallback(async (principalId: string) => {
+    if (isUnmerging) return;
+    if (!window.confirm("Separar as camadas? Cada camada voltará a ser um card individual.")) return;
+    setIsUnmerging(true);
+    try {
+      await unmergeLayers(principalId);
+      toast.success("Camadas separadas — cards restaurados");
+      await loadFlashcards();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao separar camadas");
+    } finally {
+      setIsUnmerging(false);
+    }
+  }, [isUnmerging, loadFlashcards]);
   // List settings dialog
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
