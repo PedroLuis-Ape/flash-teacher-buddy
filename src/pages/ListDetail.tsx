@@ -1141,6 +1141,7 @@ const ListDetail = () => {
                 onToggleSelection={toggleCardSelection}
                 onEdit={setEditingFlashcard}
                 onDelete={handleDeleteFlashcard}
+                onUnmerge={handleUnmergeLayers}
               />
             </div>
           )}
