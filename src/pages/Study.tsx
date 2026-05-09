@@ -668,24 +668,26 @@ const Study = () => {
     : undefined;
 
   const handleToggleFavorite = () => {
-    if (!engineCurrentCard?.id || !userId) return;
+    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
+    if (!targetId || !userId) return;
     toggleFavorite.mutate({ 
-      resourceId: engineCurrentCard.id, 
+      resourceId: targetId,
       resourceType: 'flashcard',
-      isFavorite: favorites.includes(engineCurrentCard.id)
+      isFavorite: favorites.includes(targetId)
     });
   };
 
   const handleToggleRedList = () => {
-    if (!engineCurrentCard?.id || !userId) return;
+    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
+    if (!targetId || !userId) return;
     // Only allow red-listing if it's a favorite
-    if (!favorites.includes(engineCurrentCard.id)) {
+    if (!favorites.includes(targetId)) {
       toast.error('Primeiro marque o card como favorito ⭐');
       return;
     }
     toggleRedList.mutate({
-      flashcardId: engineCurrentCard.id,
-      isRedListed: redListIds.includes(engineCurrentCard.id),
+      flashcardId: targetId,
+      isRedListed: redListIds.includes(targetId),
     });
   };
 
