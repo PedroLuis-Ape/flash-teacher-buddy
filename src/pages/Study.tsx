@@ -772,6 +772,9 @@ const Study = () => {
   const displayedCard: Flashcard | undefined = hasLayers
     ? { ...(cardLayers![safeLayerIdx] as Flashcard), preParsedHints: (cardLayers![safeLayerIdx] as any).preParsedHints }
     : currentCard;
+  useEffect(() => {
+    displayedCardIdRef.current = displayedCard?.id ?? null;
+  }, [displayedCard?.id]);
 
   // ── DEV diagnostic: confirm the direction propagated from URL → prefs → engine
   // matches what the user picked in GamesHub. No-op in production builds.
