@@ -73,6 +73,10 @@ interface Flashcard {
   image_url_a?: string | null;
   image_url_b?: string | null;
   word_hints?: unknown;
+  parent_card_id?: string | null;
+  layer_index?: number | null;
+  /** Computed client-side: number of layers a principal card aggregates. */
+  __layerCount?: number;
 }
 
 // ── PERF: Memoized card row to avoid re-render on selection/search ──
@@ -109,7 +113,19 @@ const FlashcardRow = memo(({
       )}
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
-        <p className="text-muted-foreground break-words">{flashcard.translation}</p>
+        {flashcard.__layerCount && flashcard.__layerCount > 0 ? (
+          <p className="text-muted-foreground break-words italic text-sm">
+            Card em camadas — {flashcard.__layerCount} significado{flashcard.__layerCount === 1 ? "" : "s"}
+          </p>
+        ) : (
+          <p className="text-muted-foreground break-words">{flashcard.translation}</p>
+        )}
+        {flashcard.__layerCount && flashcard.__layerCount > 0 ? (
+          <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <Layers className="h-3 w-3" />
+            {flashcard.__layerCount} camadas
+          </span>
+        ) : null}
         {flashcard.hint && (
           <div className="flex items-start gap-1.5 mt-2 text-sm text-muted-foreground">
             <Lightbulb className="h-4 w-4 text-warning shrink-0 mt-0.5" />
@@ -326,10 +342,21 @@ const ListDetail = () => {
 
   // ── PERF: Memoized filtered flashcard list ──
   const filteredFlashcards = useMemo(() => {
-    if (!cardSearch.trim()) return flashcards;
+    // Layered cards: hide layer rows from the main list; they are managed
+    // inside their principal's editor. Annotate principals with layer count.
+    const layerCounts = new Map<string, number>();
+    for (const f of flashcards as Flashcard[]) {
+      if (f.parent_card_id) {
+        layerCounts.set(f.parent_card_id, (layerCounts.get(f.parent_card_id) ?? 0) + 1);
+      }
+    }
+    const visible = (flashcards as Flashcard[])
+      .filter((f) => !f.parent_card_id)
+      .map((f) => ({ ...f, __layerCount: layerCounts.get(f.id) ?? 0 }));
+    if (!cardSearch.trim()) return visible;
     const q = cardSearch.toLowerCase();
-    return flashcards.filter(
-      (f: Flashcard) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
+    return visible.filter(
+      (f) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
     );
   }, [flashcards, cardSearch]);
 
