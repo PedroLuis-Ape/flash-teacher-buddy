@@ -750,6 +750,23 @@ const Study = () => {
   // currentCard is now derived from the engine's cardsOrder (engineCurrentCard above)
   const currentCard = engineCurrentCard;
 
+  // ── Layered cards: cycle through layers within a single deck entry ──
+  // Local state only — does NOT advance the engine index. When the engine
+  // moves to a new card, layerIdx resets to 0.
+  const [layerIdx, setLayerIdx] = useState(0);
+  useEffect(() => {
+    setLayerIdx(0);
+  }, [engineCurrentCardId]);
+  const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
+  const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
+  const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+  // The "displayed" card is the active layer when the deck card is layered.
+  // It carries the same shape as a normal flashcard, including its own id —
+  // so progress, favorites, edit, etc. naturally target the visible layer.
+  const displayedCard: Flashcard | undefined = hasLayers
+    ? { ...(cardLayers![safeLayerIdx] as Flashcard), preParsedHints: (cardLayers![safeLayerIdx] as any).preParsedHints }
+    : currentCard;
+
   // ── DEV diagnostic: confirm the direction propagated from URL → prefs → engine
   // matches what the user picked in GamesHub. No-op in production builds.
   useEffect(() => {
