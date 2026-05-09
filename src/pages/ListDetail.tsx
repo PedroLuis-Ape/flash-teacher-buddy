@@ -342,10 +342,21 @@ const ListDetail = () => {
 
   // ── PERF: Memoized filtered flashcard list ──
   const filteredFlashcards = useMemo(() => {
-    if (!cardSearch.trim()) return flashcards;
+    // Layered cards: hide layer rows from the main list; they are managed
+    // inside their principal's editor. Annotate principals with layer count.
+    const layerCounts = new Map<string, number>();
+    for (const f of flashcards as Flashcard[]) {
+      if (f.parent_card_id) {
+        layerCounts.set(f.parent_card_id, (layerCounts.get(f.parent_card_id) ?? 0) + 1);
+      }
+    }
+    const visible = (flashcards as Flashcard[])
+      .filter((f) => !f.parent_card_id)
+      .map((f) => ({ ...f, __layerCount: layerCounts.get(f.id) ?? 0 }));
+    if (!cardSearch.trim()) return visible;
     const q = cardSearch.toLowerCase();
-    return flashcards.filter(
-      (f: Flashcard) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
+    return visible.filter(
+      (f) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
     );
   }, [flashcards, cardSearch]);
 
