@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search, Layers } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search, Layers, Unlink } from "lucide-react";
 import { DownloadOfflineButton } from "@/components/DownloadOfflineButton";
 import {
   DropdownMenu,
@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { pageMount, perfLog } from "@/lib/perfLog";
 import { MergeIntoLayersDialog } from "@/features/cards/components/MergeIntoLayersDialog";
+import { unmergeLayers } from "@/features/cards/lib/layeredCards";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 interface ListType {
@@ -100,6 +101,7 @@ const FlashcardRow = memo(({
   onToggleSelection: (id: string) => void;
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
+  onUnmerge?: (id: string) => void;
 }) => (
   <Card className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}>
     <div className="flex items-start gap-3">
@@ -155,6 +157,17 @@ const FlashcardRow = memo(({
             <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
               <Pencil className="h-4 w-4" />
             </Button>
+            {flashcard.__layerCount && flashcard.__layerCount > 0 && onUnmerge && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onUnmerge(flashcard.id)}
+                className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                title="Separar camadas"
+              >
+                <Unlink className="h-4 w-4" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => onDelete(flashcard.id)} className="h-9 w-9 text-destructive hover:text-destructive">
               <Trash2 className="h-4 w-4" />
             </Button>
