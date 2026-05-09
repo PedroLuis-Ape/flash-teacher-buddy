@@ -113,7 +113,19 @@ const FlashcardRow = memo(({
       )}
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-base sm:text-lg mb-1 break-words">{flashcard.term}</p>
-        <p className="text-muted-foreground break-words">{flashcard.translation}</p>
+        {flashcard.__layerCount && flashcard.__layerCount > 0 ? (
+          <p className="text-muted-foreground break-words italic text-sm">
+            Card em camadas — {flashcard.__layerCount} significado{flashcard.__layerCount === 1 ? "" : "s"}
+          </p>
+        ) : (
+          <p className="text-muted-foreground break-words">{flashcard.translation}</p>
+        )}
+        {flashcard.__layerCount && flashcard.__layerCount > 0 ? (
+          <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <Layers className="h-3 w-3" />
+            {flashcard.__layerCount} camadas
+          </span>
+        ) : null}
         {flashcard.hint && (
           <div className="flex items-start gap-1.5 mt-2 text-sm text-muted-foreground">
             <Lightbulb className="h-4 w-4 text-warning shrink-0 mt-0.5" />
