@@ -458,18 +458,40 @@ const Study = () => {
       return;
     }
 
-    // Layered cards: a "principal" aggregator (a card referenced as
-    // parent_card_id by other cards) must NOT enter the study deck — it has
-    // no real meaning of its own. Its layer rows are real flashcards and stay
-    // in the deck as independent mini-cards.
+    // Layered cards: principals (aggregator rows referenced as parent_card_id
+    // by other cards) are never shown in the study deck. Their layer rows are
+    // real flashcards — but instead of appearing as N independent items, we
+    // group them: only the FIRST layer enters the deck, with the full sorted
+    // sibling list attached as `__layers`. The view then shows the active
+    // layer and offers a "Próxima camada" button to cycle within the group,
+    // while progress is still recorded per-layer (each layer has its own id).
     const allCards = cardsResult.data as any[];
     const principalIds = new Set<string>();
+    const layersByPrincipal = new Map<string, any[]>();
     for (const c of allCards) {
-      if (c.parent_card_id) principalIds.add(c.parent_card_id);
+      if (c.parent_card_id) {
+        principalIds.add(c.parent_card_id);
+        const arr = layersByPrincipal.get(c.parent_card_id) ?? [];
+        arr.push(c);
+        layersByPrincipal.set(c.parent_card_id, arr);
+      }
     }
-    const studyableCards = allCards.filter(
-      (c) => !(principalIds.has(c.id) && !c.parent_card_id)
-    );
+    for (const arr of layersByPrincipal.values()) {
+      arr.sort((a, b) => (a.layer_index ?? 0) - (b.layer_index ?? 0));
+    }
+    const studyableCards: any[] = [];
+    for (const c of allCards) {
+      // Skip principal aggregator rows (they have no own meaning).
+      if (principalIds.has(c.id) && !c.parent_card_id) continue;
+      if (c.parent_card_id) {
+        const group = layersByPrincipal.get(c.parent_card_id) ?? [];
+        // Only the first layer of each group is the deck entry-point.
+        if (group[0]?.id !== c.id) continue;
+        studyableCards.push({ ...c, __layers: group });
+      } else {
+        studyableCards.push(c);
+      }
+    }
     const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
