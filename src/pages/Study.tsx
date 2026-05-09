@@ -450,7 +450,19 @@ const Study = () => {
       return;
     }
 
-    const rawData = order === "random" ? shuffleArray([...cardsResult.data]) : cardsResult.data;
+    // Layered cards: a "principal" aggregator (a card referenced as
+    // parent_card_id by other cards) must NOT enter the study deck — it has
+    // no real meaning of its own. Its layer rows are real flashcards and stay
+    // in the deck as independent mini-cards.
+    const allCards = cardsResult.data as any[];
+    const principalIds = new Set<string>();
+    for (const c of allCards) {
+      if (c.parent_card_id) principalIds.add(c.parent_card_id);
+    }
+    const studyableCards = allCards.filter(
+      (c) => !(principalIds.has(c.id) && !c.parent_card_id)
+    );
+    const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
     const orderedData: Flashcard[] = rawData.map((card: any) => ({
