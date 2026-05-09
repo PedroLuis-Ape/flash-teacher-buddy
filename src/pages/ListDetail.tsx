@@ -91,6 +91,7 @@ const FlashcardRow = memo(({
   onToggleSelection,
   onEdit,
   onDelete,
+  onUnmerge,
 }: {
   flashcard: Flashcard;
   isSelected: boolean;
