@@ -809,26 +809,27 @@ const Study = () => {
     return card.preParsedHints || [];
   }, []);
 
-  // Merge glossary + per-card manual hints for the current card
-  const currentCardId = currentCard?.id;
-  const currentTerm = currentCard?.term;
-  const currentTranslation = currentCard?.translation;
+  // Merge glossary + per-card manual hints for the currently visible card
+  // (which is a layer when the deck entry is layered).
+  const currentCardId = displayedCard?.id;
+  const currentTerm = displayedCard?.term;
+  const currentTranslation = displayedCard?.translation;
 
   const currentMergedHintsA = useMemo(() => {
-    if (!currentCard || !currentTerm) return undefined;
-    const manual = getParsedHints(currentCard);
+    if (!displayedCard || !currentTerm) return undefined;
+    const manual = getParsedHints(displayedCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTerm, "A", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
 
   const currentMergedHintsB = useMemo(() => {
-    if (!currentCard || !currentTranslation) return undefined;
-    const manual = getParsedHints(currentCard);
+    if (!displayedCard || !currentTranslation) return undefined;
+    const manual = getParsedHints(displayedCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
 
   // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
   // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
