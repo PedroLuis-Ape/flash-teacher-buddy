@@ -43,7 +43,7 @@ import { StudyCompletionModal } from "@/features/study/components/StudyCompletio
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 import { pageMount } from "@/lib/perfLog";
@@ -58,6 +58,14 @@ interface Flashcard {
   image_url_a?: string | null;
   image_url_b?: string | null;
   word_hints?: unknown;
+  parent_card_id?: string | null;
+  layer_index?: number | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  context_tag?: string | null;
+  short_explanation?: string | null;
+  /** When set, this card is the entry-point of a layered group; siblings hold all layers (including this one) sorted by layer_index. */
+  __layers?: Flashcard[];
   /** Pre-parsed word hints computed at load time to avoid Main Thread stalls */
   preParsedHints?: ReturnType<typeof parseExtendedWordHints>;
 }
