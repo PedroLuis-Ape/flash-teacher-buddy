@@ -451,6 +451,21 @@ const ListDetail = () => {
     );
   }, []);
 
+  const handleUnmergeLayers = useCallback(async (principalId: string) => {
+    if (isUnmergingRef.current) return;
+    if (!window.confirm("Separar as camadas? Cada camada voltará a ser um card individual.")) return;
+    isUnmergingRef.current = true;
+    try {
+      await unmergeLayers(principalId);
+      toast.success("Camadas separadas — cards restaurados");
+      await loadFlashcards();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao separar camadas");
+    } finally {
+      isUnmergingRef.current = false;
+    }
+  }, [loadFlashcards]);
+
   const toggleSelectAll = () => {
     if (selectedCards.length === flashcards.length) {
       setSelectedCards([]);
