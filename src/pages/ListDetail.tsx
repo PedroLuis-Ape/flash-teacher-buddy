@@ -191,6 +191,7 @@ const MemoizedCardList = memo(({
   onToggleSelection,
   onEdit,
   onDelete,
+  onUnmerge,
 }: {
   flashcards: Flashcard[];
   selectedCards: string[];
@@ -201,6 +202,7 @@ const MemoizedCardList = memo(({
   onToggleSelection: (id: string) => void;
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
+  onUnmerge?: (id: string) => void;
 }) => {
   // Convert to Set for O(1) lookups
   const selectedSet = useMemo(() => new Set(selectedCards), [selectedCards]);
@@ -221,6 +223,7 @@ const MemoizedCardList = memo(({
           onToggleSelection={onToggleSelection}
           onEdit={onEdit}
           onDelete={onDelete}
+          onUnmerge={onUnmerge}
         />
       ))}
     </>
