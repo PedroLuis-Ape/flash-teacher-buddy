@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search, Layers } from "lucide-react";
+import { ArrowLeft, Play, Trash2, Share2, Copy, Pencil, Lightbulb, FolderPlus, Mic, CheckSquare, Square, Download, ArrowLeftRight, MoreVertical, Settings, Search, Layers, Unlink } from "lucide-react";
 import { DownloadOfflineButton } from "@/components/DownloadOfflineButton";
 import {
   DropdownMenu,
@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { pageMount, perfLog } from "@/lib/perfLog";
 import { MergeIntoLayersDialog } from "@/features/cards/components/MergeIntoLayersDialog";
+import { unmergeLayers } from "@/features/cards/lib/layeredCards";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 interface ListType {
@@ -90,6 +91,7 @@ const FlashcardRow = memo(({
   onToggleSelection,
   onEdit,
   onDelete,
+  onUnmerge,
 }: {
   flashcard: Flashcard;
   isSelected: boolean;
@@ -100,6 +102,7 @@ const FlashcardRow = memo(({
   onToggleSelection: (id: string) => void;
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
+  onUnmerge?: (id: string) => void;
 }) => (
   <Card className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}>
     <div className="flex items-start gap-3">
@@ -155,6 +158,17 @@ const FlashcardRow = memo(({
             <Button variant="ghost" size="icon" onClick={() => onEdit(flashcard)} className="h-9 w-9">
               <Pencil className="h-4 w-4" />
             </Button>
+            {flashcard.__layerCount && flashcard.__layerCount > 0 && onUnmerge && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onUnmerge(flashcard.id)}
+                className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                title="Separar camadas"
+              >
+                <Unlink className="h-4 w-4" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => onDelete(flashcard.id)} className="h-9 w-9 text-destructive hover:text-destructive">
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -177,6 +191,7 @@ const MemoizedCardList = memo(({
   onToggleSelection,
   onEdit,
   onDelete,
+  onUnmerge,
 }: {
   flashcards: Flashcard[];
   selectedCards: string[];
@@ -187,6 +202,7 @@ const MemoizedCardList = memo(({
   onToggleSelection: (id: string) => void;
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
+  onUnmerge?: (id: string) => void;
 }) => {
   // Convert to Set for O(1) lookups
   const selectedSet = useMemo(() => new Set(selectedCards), [selectedCards]);
@@ -207,6 +223,7 @@ const MemoizedCardList = memo(({
           onToggleSelection={onToggleSelection}
           onEdit={onEdit}
           onDelete={onDelete}
+          onUnmerge={onUnmerge}
         />
       ))}
     </>
@@ -235,6 +252,7 @@ const ListDetail = () => {
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [mergeLayersOpen, setMergeLayersOpen] = useState(false);
+  const isUnmergingRef = useRef(false);
   // List settings dialog
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [listSettings, setListSettings] = useState<ListStudySettings | null>(null);
@@ -432,6 +450,21 @@ const ListDetail = () => {
         : [...prev, cardId]
     );
   }, []);
+
+  const handleUnmergeLayers = useCallback(async (principalId: string) => {
+    if (isUnmergingRef.current) return;
+    if (!window.confirm("Separar as camadas? Cada camada voltará a ser um card individual.")) return;
+    isUnmergingRef.current = true;
+    try {
+      await unmergeLayers(principalId);
+      toast.success("Camadas separadas — cards restaurados");
+      await loadFlashcards();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao separar camadas");
+    } finally {
+      isUnmergingRef.current = false;
+    }
+  }, [loadFlashcards]);
 
   const toggleSelectAll = () => {
     if (selectedCards.length === flashcards.length) {
@@ -1124,6 +1157,7 @@ const ListDetail = () => {
                 onToggleSelection={toggleCardSelection}
                 onEdit={setEditingFlashcard}
                 onDelete={handleDeleteFlashcard}
+                onUnmerge={handleUnmergeLayers}
               />
             </div>
           )}

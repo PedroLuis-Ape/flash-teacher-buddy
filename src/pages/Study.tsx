@@ -43,7 +43,7 @@ import { StudyCompletionModal } from "@/features/study/components/StudyCompletio
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 import { pageMount } from "@/lib/perfLog";
@@ -58,6 +58,14 @@ interface Flashcard {
   image_url_a?: string | null;
   image_url_b?: string | null;
   word_hints?: unknown;
+  parent_card_id?: string | null;
+  layer_index?: number | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  context_tag?: string | null;
+  short_explanation?: string | null;
+  /** When set, this card is the entry-point of a layered group; siblings hold all layers (including this one) sorted by layer_index. */
+  __layers?: Flashcard[];
   /** Pre-parsed word hints computed at load time to avoid Main Thread stalls */
   preParsedHints?: ReturnType<typeof parseExtendedWordHints>;
 }
@@ -145,6 +153,10 @@ const Study = () => {
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
   // In-game card editor (uses the same EditFlashcardDialog as ListDetail)
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
+  // Tracks the currently visible layer id (for layered cards). Set up in an
+  // effect below; consumed by handleNext / favorites toggles so they target
+  // the visible layer rather than the deck entry-point.
+  const displayedCardIdRef = useRef<string | null>(null);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
@@ -450,18 +462,40 @@ const Study = () => {
       return;
     }
 
-    // Layered cards: a "principal" aggregator (a card referenced as
-    // parent_card_id by other cards) must NOT enter the study deck — it has
-    // no real meaning of its own. Its layer rows are real flashcards and stay
-    // in the deck as independent mini-cards.
+    // Layered cards: principals (aggregator rows referenced as parent_card_id
+    // by other cards) are never shown in the study deck. Their layer rows are
+    // real flashcards — but instead of appearing as N independent items, we
+    // group them: only the FIRST layer enters the deck, with the full sorted
+    // sibling list attached as `__layers`. The view then shows the active
+    // layer and offers a "Próxima camada" button to cycle within the group,
+    // while progress is still recorded per-layer (each layer has its own id).
     const allCards = cardsResult.data as any[];
     const principalIds = new Set<string>();
+    const layersByPrincipal = new Map<string, any[]>();
     for (const c of allCards) {
-      if (c.parent_card_id) principalIds.add(c.parent_card_id);
+      if (c.parent_card_id) {
+        principalIds.add(c.parent_card_id);
+        const arr = layersByPrincipal.get(c.parent_card_id) ?? [];
+        arr.push(c);
+        layersByPrincipal.set(c.parent_card_id, arr);
+      }
     }
-    const studyableCards = allCards.filter(
-      (c) => !(principalIds.has(c.id) && !c.parent_card_id)
-    );
+    for (const arr of layersByPrincipal.values()) {
+      arr.sort((a, b) => (a.layer_index ?? 0) - (b.layer_index ?? 0));
+    }
+    const studyableCards: any[] = [];
+    for (const c of allCards) {
+      // Skip principal aggregator rows (they have no own meaning).
+      if (principalIds.has(c.id) && !c.parent_card_id) continue;
+      if (c.parent_card_id) {
+        const group = layersByPrincipal.get(c.parent_card_id) ?? [];
+        // Only the first layer of each group is the deck entry-point.
+        if (group[0]?.id !== c.id) continue;
+        studyableCards.push({ ...c, __layers: group });
+      } else {
+        studyableCards.push(c);
+      }
+    }
     const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
@@ -537,10 +571,12 @@ const Study = () => {
   };
 
   const handleNext = (correct: boolean, skipped: boolean = false) => {
-    // Use engine's cardsOrder as source of truth for which card is current
-    const engineCardId = cardsOrder[currentIndex];
-    if (engineCardId) {
-      recordResult(engineCardId, correct, skipped);
+    // For layered cards, progress is recorded against the visible layer's id
+    // (each layer is a real flashcard row). For normal cards the engine's
+    // cardsOrder id is the same as the displayed card.
+    const cardId = displayedCardIdRef.current ?? cardsOrder[currentIndex];
+    if (cardId) {
+      recordResult(cardId, correct, skipped);
     }
     goToNext();
   };
@@ -632,24 +668,26 @@ const Study = () => {
     : undefined;
 
   const handleToggleFavorite = () => {
-    if (!engineCurrentCard?.id || !userId) return;
+    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
+    if (!targetId || !userId) return;
     toggleFavorite.mutate({ 
-      resourceId: engineCurrentCard.id, 
+      resourceId: targetId,
       resourceType: 'flashcard',
-      isFavorite: favorites.includes(engineCurrentCard.id)
+      isFavorite: favorites.includes(targetId)
     });
   };
 
   const handleToggleRedList = () => {
-    if (!engineCurrentCard?.id || !userId) return;
+    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
+    if (!targetId || !userId) return;
     // Only allow red-listing if it's a favorite
-    if (!favorites.includes(engineCurrentCard.id)) {
+    if (!favorites.includes(targetId)) {
       toast.error('Primeiro marque o card como favorito ⭐');
       return;
     }
     toggleRedList.mutate({
-      flashcardId: engineCurrentCard.id,
-      isRedListed: redListIds.includes(engineCurrentCard.id),
+      flashcardId: targetId,
+      isRedListed: redListIds.includes(targetId),
     });
   };
 
@@ -720,6 +758,26 @@ const Study = () => {
   // currentCard is now derived from the engine's cardsOrder (engineCurrentCard above)
   const currentCard = engineCurrentCard;
 
+  // ── Layered cards: cycle through layers within a single deck entry ──
+  // Local state only — does NOT advance the engine index. When the engine
+  // moves to a new card, layerIdx resets to 0.
+  const [layerIdx, setLayerIdx] = useState(0);
+  useEffect(() => {
+    setLayerIdx(0);
+  }, [engineCurrentCardId]);
+  const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
+  const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
+  const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+  // The "displayed" card is the active layer when the deck card is layered.
+  // It carries the same shape as a normal flashcard, including its own id —
+  // so progress, favorites, edit, etc. naturally target the visible layer.
+  const displayedCard: Flashcard | undefined = hasLayers
+    ? { ...(cardLayers![safeLayerIdx] as Flashcard), preParsedHints: (cardLayers![safeLayerIdx] as any).preParsedHints }
+    : currentCard;
+  useEffect(() => {
+    displayedCardIdRef.current = displayedCard?.id ?? null;
+  }, [displayedCard?.id]);
+
   // ── DEV diagnostic: confirm the direction propagated from URL → prefs → engine
   // matches what the user picked in GamesHub. No-op in production builds.
   useEffect(() => {
@@ -751,26 +809,27 @@ const Study = () => {
     return card.preParsedHints || [];
   }, []);
 
-  // Merge glossary + per-card manual hints for the current card
-  const currentCardId = currentCard?.id;
-  const currentTerm = currentCard?.term;
-  const currentTranslation = currentCard?.translation;
+  // Merge glossary + per-card manual hints for the currently visible card
+  // (which is a layer when the deck entry is layered).
+  const currentCardId = displayedCard?.id;
+  const currentTerm = displayedCard?.term;
+  const currentTranslation = displayedCard?.translation;
 
   const currentMergedHintsA = useMemo(() => {
-    if (!currentCard || !currentTerm) return undefined;
-    const manual = getParsedHints(currentCard);
+    if (!displayedCard || !currentTerm) return undefined;
+    const manual = getParsedHints(displayedCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTerm, "A", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTerm, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
 
   const currentMergedHintsB = useMemo(() => {
-    if (!currentCard || !currentTranslation) return undefined;
-    const manual = getParsedHints(currentCard);
+    if (!displayedCard || !currentTranslation) return undefined;
+    const manual = getParsedHints(displayedCard);
     if (activeGlossary.length === 0 && manual.length === 0) return undefined;
     const langCtx = { langA: listSettings.langA, langB: listSettings.langB };
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
-  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, currentCard, listSettings.langA, listSettings.langB]);
+  }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
 
   // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
   // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
@@ -1107,18 +1166,37 @@ const Study = () => {
           </div>
         </div>
 
+        {hasLayers && cardLayers && (
+          <div className="mb-3 flex items-center justify-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+            <Layers className="h-4 w-4 text-primary shrink-0" />
+            <span className="font-medium">
+              Camada {safeLayerIdx + 1} de {cardLayers.length}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-8"
+              onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
+            >
+              Próxima camada
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
         <div className="mb-6">
-          {effectiveMode === "flip" && currentCard && (
+          {effectiveMode === "flip" && displayedCard && (
             <FlipStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              hint={currentCard.hint}
-              flashcardId={currentCard.id}
-              imageUrlA={FEATURE_FLAGS.study_images_enabled ? currentCard.image_url_a : null}
-              imageUrlB={FEATURE_FLAGS.study_images_enabled ? currentCard.image_url_b : null}
-              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
-              wordHintsB={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              hint={displayedCard.hint}
+              flashcardId={displayedCard.id}
+              imageUrlA={FEATURE_FLAGS.study_images_enabled ? displayedCard.image_url_a : null}
+              imageUrlB={FEATURE_FLAGS.study_images_enabled ? displayedCard.image_url_b : null}
+              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? displayedCard.word_hints : null}
+              wordHintsB={FEATURE_FLAGS.word_hints_enabled ? displayedCard.word_hints : null}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
@@ -1128,8 +1206,8 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onKnew={() => handleNext(true)}
@@ -1140,23 +1218,23 @@ const Study = () => {
               canGoNext={canGoNext}
             />
           )}
-          {effectiveMode === "write" && currentCard && (
+          {effectiveMode === "write" && displayedCard && (
             <WriteStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              hint={currentCard.hint}
-              flashcardId={currentCard.id}
-              acceptedAnswersEn={currentCard.accepted_answers_en || []}
-              acceptedAnswersPt={currentCard.accepted_answers_pt || []}
-              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              hint={displayedCard.hint}
+              flashcardId={displayedCard.id}
+              acceptedAnswersEn={displayedCard.accepted_answers_en || []}
+              acceptedAnswersPt={displayedCard.accepted_answers_pt || []}
+              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? displayedCard.word_hints : null}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1164,39 +1242,39 @@ const Study = () => {
               onSkip={() => handleNext(false, true)}
             />
           )}
-          {effectiveMode === "multiple-choice" && currentCard && (
+          {effectiveMode === "multiple-choice" && displayedCard && (
             <MultipleChoiceStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              currentCard={currentCard}
+              key={`${displayedCard.id}-${currentIndex}`}
+              currentCard={displayedCard}
               allCards={effectiveFlashcards}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
           )}
-          {effectiveMode === "unscramble" && currentCard && (
+          {effectiveMode === "unscramble" && displayedCard && (
             <UnscrambleStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              hint={currentCard.hint}
-              flashcardId={currentCard.id}
-              wordHintsA={currentCard.word_hints}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              hint={displayedCard.hint}
+              flashcardId={displayedCard.id}
+              wordHintsA={displayedCard.word_hints}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1204,20 +1282,20 @@ const Study = () => {
               onSkip={() => handleNext(false, true)}
             />
           )}
-          {effectiveMode === "pronunciation" && currentCard && (
+          {effectiveMode === "pronunciation" && displayedCard && (
             <PronunciationStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              wordHintsA={currentCard.word_hints}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              wordHintsA={displayedCard.word_hints}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               langA={listSettings?.langA || "en"}
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onNext={() => handleNext(true)}
