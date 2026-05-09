@@ -73,6 +73,10 @@ interface Flashcard {
   image_url_a?: string | null;
   image_url_b?: string | null;
   word_hints?: unknown;
+  parent_card_id?: string | null;
+  layer_index?: number | null;
+  /** Computed client-side: number of layers a principal card aggregates. */
+  __layerCount?: number;
 }
 
 // ── PERF: Memoized card row to avoid re-render on selection/search ──
