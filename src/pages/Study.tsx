@@ -153,6 +153,10 @@ const Study = () => {
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
   // In-game card editor (uses the same EditFlashcardDialog as ListDetail)
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
+  // Tracks the currently visible layer id (for layered cards). Set up in an
+  // effect below; consumed by handleNext / favorites toggles so they target
+  // the visible layer rather than the deck entry-point.
+  const displayedCardIdRef = useRef<string | null>(null);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
