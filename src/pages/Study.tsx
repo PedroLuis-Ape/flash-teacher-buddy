@@ -567,10 +567,12 @@ const Study = () => {
   };
 
   const handleNext = (correct: boolean, skipped: boolean = false) => {
-    // Use engine's cardsOrder as source of truth for which card is current
-    const engineCardId = cardsOrder[currentIndex];
-    if (engineCardId) {
-      recordResult(engineCardId, correct, skipped);
+    // For layered cards, progress is recorded against the visible layer's id
+    // (each layer is a real flashcard row). For normal cards the engine's
+    // cardsOrder id is the same as the displayed card.
+    const cardId = displayedCardIdRef.current ?? cardsOrder[currentIndex];
+    if (cardId) {
+      recordResult(cardId, correct, skipped);
     }
     goToNext();
   };
