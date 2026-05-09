@@ -1166,18 +1166,37 @@ const Study = () => {
           </div>
         </div>
 
+        {hasLayers && cardLayers && (
+          <div className="mb-3 flex items-center justify-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+            <Layers className="h-4 w-4 text-primary shrink-0" />
+            <span className="font-medium">
+              Camada {safeLayerIdx + 1} de {cardLayers.length}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-8"
+              onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
+            >
+              Próxima camada
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
         <div className="mb-6">
-          {effectiveMode === "flip" && currentCard && (
+          {effectiveMode === "flip" && displayedCard && (
             <FlipStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              hint={currentCard.hint}
-              flashcardId={currentCard.id}
-              imageUrlA={FEATURE_FLAGS.study_images_enabled ? currentCard.image_url_a : null}
-              imageUrlB={FEATURE_FLAGS.study_images_enabled ? currentCard.image_url_b : null}
-              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
-              wordHintsB={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              hint={displayedCard.hint}
+              flashcardId={displayedCard.id}
+              imageUrlA={FEATURE_FLAGS.study_images_enabled ? displayedCard.image_url_a : null}
+              imageUrlB={FEATURE_FLAGS.study_images_enabled ? displayedCard.image_url_b : null}
+              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? displayedCard.word_hints : null}
+              wordHintsB={FEATURE_FLAGS.word_hints_enabled ? displayedCard.word_hints : null}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
@@ -1187,8 +1206,8 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onKnew={() => handleNext(true)}
@@ -1199,23 +1218,23 @@ const Study = () => {
               canGoNext={canGoNext}
             />
           )}
-          {effectiveMode === "write" && currentCard && (
+          {effectiveMode === "write" && displayedCard && (
             <WriteStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              hint={currentCard.hint}
-              flashcardId={currentCard.id}
-              acceptedAnswersEn={currentCard.accepted_answers_en || []}
-              acceptedAnswersPt={currentCard.accepted_answers_pt || []}
-              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? currentCard.word_hints : null}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              hint={displayedCard.hint}
+              flashcardId={displayedCard.id}
+              acceptedAnswersEn={displayedCard.accepted_answers_en || []}
+              acceptedAnswersPt={displayedCard.accepted_answers_pt || []}
+              wordHintsA={FEATURE_FLAGS.word_hints_enabled ? displayedCard.word_hints : null}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1223,39 +1242,39 @@ const Study = () => {
               onSkip={() => handleNext(false, true)}
             />
           )}
-          {effectiveMode === "multiple-choice" && currentCard && (
+          {effectiveMode === "multiple-choice" && displayedCard && (
             <MultipleChoiceStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              currentCard={currentCard}
+              key={`${displayedCard.id}-${currentIndex}`}
+              currentCard={displayedCard}
               allCards={effectiveFlashcards}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
           )}
-          {effectiveMode === "unscramble" && currentCard && (
+          {effectiveMode === "unscramble" && displayedCard && (
             <UnscrambleStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              hint={currentCard.hint}
-              flashcardId={currentCard.id}
-              wordHintsA={currentCard.word_hints}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              hint={displayedCard.hint}
+              flashcardId={displayedCard.id}
+              wordHintsA={displayedCard.word_hints}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1263,20 +1282,20 @@ const Study = () => {
               onSkip={() => handleNext(false, true)}
             />
           )}
-          {effectiveMode === "pronunciation" && currentCard && (
+          {effectiveMode === "pronunciation" && displayedCard && (
             <PronunciationStudyView
-              key={`${currentCard.id}-${currentIndex}`}
-              front={currentCard.term}
-              back={currentCard.translation}
-              wordHintsA={currentCard.word_hints}
+              key={`${displayedCard.id}-${currentIndex}`}
+              front={displayedCard.term}
+              back={displayedCard.translation}
+              wordHintsA={displayedCard.word_hints}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               langA={listSettings?.langA || "en"}
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
-              isFavorite={!!currentCard.id && favorites.includes(currentCard.id)}
-              isRedListed={!!currentCard.id && redListIds.includes(currentCard.id)}
+              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
+              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onNext={() => handleNext(true)}
