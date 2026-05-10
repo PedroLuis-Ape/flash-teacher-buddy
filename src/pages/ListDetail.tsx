@@ -416,6 +416,17 @@ const ListDetail = () => {
       .map((f) => ({ ...f, __layerSearchHit: !f.__ownSearchText?.includes(q) && !!f.__layerSearchText?.includes(q) }));
   }, [visibleFlashcards, cardSearch]);
 
+  const filteredFlashcardIds = useMemo(
+    () => filteredFlashcards.map((f) => f.id),
+    [filteredFlashcards]
+  );
+  const filteredFlashcardIdSet = useMemo(
+    () => new Set(filteredFlashcardIds),
+    [filteredFlashcardIds]
+  );
+  const selectedVisibleCount = selectedCards.filter((id) => filteredFlashcardIdSet.has(id)).length;
+  const allVisibleSelected = filteredFlashcardIds.length > 0 && selectedVisibleCount === filteredFlashcardIds.length;
+
   const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
