@@ -386,24 +386,35 @@ const ListDetail = () => {
   });
 
   // ── PERF: Memoized filtered flashcard list ──
-  const filteredFlashcards = useMemo(() => {
-    // Layered cards: hide layer rows from the main list; they are managed
-    // inside their principal's editor. Annotate principals with layer count.
-    const layerCounts = new Map<string, number>();
+  const visibleFlashcards = useMemo(() => {
+    const layersByParent = new Map<string, Flashcard[]>();
     for (const f of flashcards as Flashcard[]) {
       if (f.parent_card_id) {
-        layerCounts.set(f.parent_card_id, (layerCounts.get(f.parent_card_id) ?? 0) + 1);
+        const group = layersByParent.get(f.parent_card_id) ?? [];
+        group.push(f);
+        layersByParent.set(f.parent_card_id, group);
       }
     }
-    const visible = (flashcards as Flashcard[])
+    return (flashcards as Flashcard[])
       .filter((f) => !f.parent_card_id)
-      .map((f) => ({ ...f, __layerCount: layerCounts.get(f.id) ?? 0 }));
-    if (!cardSearch.trim()) return visible;
+      .map((f) => {
+        const layers = layersByParent.get(f.id) ?? [];
+        return {
+          ...f,
+          __layerCount: layers.length,
+          __ownSearchText: searchableTextForCard(f),
+          __layerSearchText: layers.map(searchableTextForCard).join("\n"),
+        };
+      });
+  }, [flashcards]);
+
+  const filteredFlashcards = useMemo(() => {
+    if (!cardSearch.trim()) return visibleFlashcards.map((f) => ({ ...f, __layerSearchHit: false }));
     const q = cardSearch.toLowerCase();
-    return visible.filter(
-      (f) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
-    );
-  }, [flashcards, cardSearch]);
+    return visibleFlashcards
+      .filter((f) => f.__ownSearchText?.includes(q) || f.__layerSearchText?.includes(q))
+      .map((f) => ({ ...f, __layerSearchHit: !f.__ownSearchText?.includes(q) && !!f.__layerSearchText?.includes(q) }));
+  }, [visibleFlashcards, cardSearch]);
 
   const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
