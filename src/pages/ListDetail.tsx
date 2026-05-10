@@ -1124,7 +1124,7 @@ const ListDetail = () => {
           ) : (
             <div className="space-y-4">
               {/* Bulk selection controls */}
-              {canEdit && flashcards.length > 0 && (
+              {canEdit && visibleFlashcards.length > 0 && (
                 <div className="flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
                   <Button
                     variant="ghost"
@@ -1132,15 +1132,15 @@ const ListDetail = () => {
                     onClick={toggleSelectAll}
                     className="gap-2"
                   >
-                    {selectedCards.length === flashcards.length ? (
+                    {allVisibleSelected ? (
                       <CheckSquare className="h-4 w-4" />
                     ) : (
                       <Square className="h-4 w-4" />
                     )}
-                    {selectedCards.length === flashcards.length ? "Desmarcar Todos" : "Selecionar Todos"}
+                    {allVisibleSelected ? "Desmarcar Todos" : "Selecionar Todos"}
                   </Button>
                   
-                  {selectedCards.length > 0 && (
+                  {selectedVisibleCount > 0 && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -1150,14 +1150,14 @@ const ListDetail = () => {
                           className="gap-2"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Excluir ({selectedCards.length})
+                          Excluir ({selectedVisibleCount})
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza que deseja excluir {selectedCards.length} cards? Esta ação não pode ser desfeita.
+                            Tem certeza que deseja excluir {selectedVisibleCount} cards visíveis? Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -1170,7 +1170,7 @@ const ListDetail = () => {
                     </AlertDialog>
                   )}
 
-                  {FEATURE_FLAGS.layered_cards && selectedCards.length >= 2 && canEdit && (
+                  {FEATURE_FLAGS.layered_cards && selectedVisibleCount >= 2 && canEdit && (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -1178,7 +1178,7 @@ const ListDetail = () => {
                       onClick={() => setMergeLayersOpen(true)}
                     >
                       <Layers className="h-4 w-4" />
-                      Mesclar em camadas ({selectedCards.length})
+                      Mesclar em camadas ({selectedVisibleCount})
                     </Button>
                   )}
                 </div>
