@@ -1233,7 +1233,7 @@ const ListDetail = () => {
           onOpenChange={setMergeLayersOpen}
           listId={id}
           candidates={flashcards
-            .filter((f) => selectedCards.includes(f.id))
+            .filter((f) => selectedCards.includes(f.id) && filteredFlashcardIdSet.has(f.id))
             .map((f) => ({ id: f.id, term: f.term, translation: f.translation }))}
           onMerged={() => {
             setSelectedCards([]);
