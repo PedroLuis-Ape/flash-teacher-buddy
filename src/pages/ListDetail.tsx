@@ -473,16 +473,18 @@ const ListDetail = () => {
 
   const handleBulkDelete = async () => {
     if (selectedCards.length === 0) return;
+    const visibleSelection = selectedCards.filter((cardId) => filteredFlashcardIdSet.has(cardId));
+    if (visibleSelection.length === 0) return;
     
     setIsDeleting(true);
     try {
       const { error } = await supabase
         .from("flashcards")
         .update({ deleted_at: new Date().toISOString() })
-        .in("id", selectedCards);
+        .in("id", visibleSelection);
 
       if (error) throw error;
-      toast.success(`🗂️ ${selectedCards.length} cards enviados para a lixeira!`);
+      toast.success(`🗂️ ${visibleSelection.length} cards enviados para a lixeira!`);
       setSelectedCards([]);
       loadFlashcards();
     } catch (error: any) {
@@ -515,13 +517,13 @@ const ListDetail = () => {
     }
   }, [loadFlashcards]);
 
-  const toggleSelectAll = () => {
-    if (selectedCards.length === flashcards.length) {
+  const toggleSelectAll = useCallback(() => {
+    if (allVisibleSelected) {
       setSelectedCards([]);
     } else {
-      setSelectedCards(flashcards.map(f => f.id));
+      setSelectedCards(filteredFlashcardIds);
     }
-  };
+  }, [allVisibleSelected, filteredFlashcardIds]);
 
   const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
