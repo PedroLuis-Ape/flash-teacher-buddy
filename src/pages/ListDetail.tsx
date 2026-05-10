@@ -76,8 +76,14 @@ interface Flashcard {
   word_hints?: unknown;
   parent_card_id?: string | null;
   layer_index?: number | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  context_tag?: string | null;
+  short_explanation?: string | null;
   /** Computed client-side: number of layers a principal card aggregates. */
   __layerCount?: number;
+  /** Computed client-side: search matched an internal layer. */
+  __layerSearchHit?: boolean;
 }
 
 // ── PERF: Memoized card row to avoid re-render on selection/search ──
@@ -127,6 +133,11 @@ const FlashcardRow = memo(({
           <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
             <Layers className="h-3 w-3" />
             {flashcard.__layerCount} camadas
+          </span>
+        ) : null}
+        {flashcard.__layerSearchHit ? (
+          <span className="inline-flex items-center gap-1 mt-2 ml-2 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
+            Encontrado em camada
           </span>
         ) : null}
         {flashcard.hint && (
