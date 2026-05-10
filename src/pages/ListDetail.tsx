@@ -461,7 +461,7 @@ const ListDetail = () => {
       const { error } = await supabase
         .from("flashcards")
         .update({ deleted_at: new Date().toISOString() })
-        .eq("id", flashcardId);
+        .or(`id.eq.${flashcardId},parent_card_id.eq.${flashcardId}`);
 
       if (error) throw error;
       toast.success("🗂️ Card enviado para a lixeira!");
@@ -481,7 +481,7 @@ const ListDetail = () => {
       const { error } = await supabase
         .from("flashcards")
         .update({ deleted_at: new Date().toISOString() })
-        .in("id", visibleSelection);
+        .or(`id.in.(${visibleSelection.join(",")}),parent_card_id.in.(${visibleSelection.join(",")})`);
 
       if (error) throw error;
       toast.success(`🗂️ ${visibleSelection.length} cards enviados para a lixeira!`);
