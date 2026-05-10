@@ -84,7 +84,23 @@ interface Flashcard {
   __layerCount?: number;
   /** Computed client-side: search matched an internal layer. */
   __layerSearchHit?: boolean;
+  __ownSearchText?: string;
+  __layerSearchText?: string;
 }
+
+const searchableTextForCard = (card: Flashcard) =>
+  [
+    card.term,
+    card.translation,
+    card.hint,
+    card.example_text,
+    card.example_translation,
+    card.context_tag,
+    card.short_explanation,
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .toLowerCase();
 
 // ── PERF: Memoized card row to avoid re-render on selection/search ──
 const FlashcardRow = memo(({
