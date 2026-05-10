@@ -2761,6 +2761,10 @@ export type Database = {
         Args: { _turma_id: string; _user_id: string }
         Returns: boolean
       }
+      merge_cards_into_layers: {
+        Args: { _card_ids: string[]; _list_id: string; _title: string }
+        Returns: Json
+      }
       process_exchange: {
         Args: { p_operation_id: string; p_pts: number; p_user_id: string }
         Returns: Json
@@ -2807,6 +2811,7 @@ export type Database = {
       }
       swap_flashcards_sides: { Args: { _list_id: string }; Returns: Json }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
+      unmerge_layered_card: { Args: { _principal_id: string }; Returns: Json }
       update_own_profile: {
         Args: {
           p_avatar_skin_id?: string

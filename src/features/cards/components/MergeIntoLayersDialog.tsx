@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,7 @@ export const MergeIntoLayersDialog = ({
   const [order, setOrder] = useState<MergeCandidate[]>([]);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const suggested = useMemo(
     () => suggestMainTitle(candidates.map((c) => c.term)),
@@ -71,6 +72,7 @@ export const MergeIntoLayersDialog = ({
   };
 
   const handleConfirm = async () => {
+    if (savingRef.current) return;
     if (order.length < 2) {
       toast.error("Selecione pelo menos 2 cards");
       return;
@@ -79,6 +81,7 @@ export const MergeIntoLayersDialog = ({
       toast.error("Defina um título para o card principal");
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -93,14 +96,22 @@ export const MergeIntoLayersDialog = ({
         title: title.trim(),
       });
       toast.success(`✅ ${order.length} cards mesclados em camadas`);
-      qc.invalidateQueries({ queryKey: ["flashcards"] });
       qc.invalidateQueries({ queryKey: ["flashcards", listId] });
+      qc.invalidateQueries({ queryKey: ["gameshub-list", listId] });
+      qc.invalidateQueries({ queryKey: ["study-flashcards", listId] });
+      try {
+        const { removeOfflineList } = await import("@/lib/offlineStore");
+        await removeOfflineList(listId).catch(() => {});
+      } catch {
+        // Offline cache is best-effort only.
+      }
       onMerged?.();
       onOpenChange(false);
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || "Erro ao mesclar cards");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

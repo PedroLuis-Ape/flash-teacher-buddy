@@ -78,66 +78,36 @@ export interface MergeIntoLayersArgs {
 
 export async function mergeIntoLayers({
   listId,
-  userId,
   cardIds,
   title,
 }: MergeIntoLayersArgs): Promise<{ principalId: string }> {
   if (cardIds.length < 2) throw new Error("Selecione pelo menos 2 cards para mesclar");
 
-  // Create the principal "header" row. We deliberately do NOT copy a
-  // translation here — the principal acts as a label, the layers carry the
-  // actual meanings.
-  const { data: principal, error: pErr } = await supabase
-    .from("flashcards")
-    .insert({
-      list_id: listId,
-      user_id: userId,
-      term: title,
-      translation: "",
-    })
-    .select("id")
-    .single();
+  const { data, error } = await (supabase as any).rpc("merge_cards_into_layers", {
+    _list_id: listId,
+    _card_ids: cardIds,
+    _title: title,
+  });
 
-  if (pErr || !principal) throw pErr ?? new Error("Falha ao criar card principal");
+  if (error) throw error;
 
-  // Update selected cards in chunks to keep within Supabase's payload guidance.
-  const CHUNK = 50;
-  for (let i = 0; i < cardIds.length; i += CHUNK) {
-    const slice = cardIds.slice(i, i + CHUNK);
-    // Postgres lets us update layer_index per-row only via individual calls;
-    // we keep a stable order by issuing one update per card. The cost is small
-    // (typically <20 cards) and avoids a custom RPC.
-    await Promise.all(
-      slice.map((cardId, localIdx) =>
-        supabase
-          .from("flashcards")
-          .update({
-            parent_card_id: principal.id,
-            layer_index: i + localIdx,
-          })
-          .eq("id", cardId)
-      )
-    );
-    if (i + CHUNK < cardIds.length) {
-      await new Promise((r) => setTimeout(r, 0));
-    }
+  const result = data as { success?: boolean; principal_id?: string; message?: string } | null;
+  if (!result?.success || !result.principal_id) {
+    throw new Error(result?.message || "Erro ao mesclar cards");
   }
 
-  return { principalId: principal.id };
+  return { principalId: result.principal_id };
 }
 
 export async function unmergeLayers(principalId: string): Promise<void> {
-  // Detach all children — they become regular standalone cards again.
-  const { error: eDetach } = await supabase
-    .from("flashcards")
-    .update({ parent_card_id: null, layer_index: null })
-    .eq("parent_card_id", principalId);
-  if (eDetach) throw eDetach;
+  const { data, error } = await (supabase as any).rpc("unmerge_layered_card", {
+    _principal_id: principalId,
+  });
 
-  // Remove the principal aggregator row (it was only a label).
-  const { error: eDel } = await supabase
-    .from("flashcards")
-    .delete()
-    .eq("id", principalId);
-  if (eDel) throw eDel;
+  if (error) throw error;
+
+  const result = data as { success?: boolean; message?: string } | null;
+  if (!result?.success) {
+    throw new Error(result?.message || "Erro ao separar camadas");
+  }
 }

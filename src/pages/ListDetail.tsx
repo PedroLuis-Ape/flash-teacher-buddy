@@ -76,9 +76,31 @@ interface Flashcard {
   word_hints?: unknown;
   parent_card_id?: string | null;
   layer_index?: number | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  context_tag?: string | null;
+  short_explanation?: string | null;
   /** Computed client-side: number of layers a principal card aggregates. */
   __layerCount?: number;
+  /** Computed client-side: search matched an internal layer. */
+  __layerSearchHit?: boolean;
+  __ownSearchText?: string;
+  __layerSearchText?: string;
 }
+
+const searchableTextForCard = (card: Flashcard) =>
+  [
+    card.term,
+    card.translation,
+    card.hint,
+    card.example_text,
+    card.example_translation,
+    card.context_tag,
+    card.short_explanation,
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .toLowerCase();
 
 // ── PERF: Memoized card row to avoid re-render on selection/search ──
 const FlashcardRow = memo(({
@@ -127,6 +149,11 @@ const FlashcardRow = memo(({
           <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
             <Layers className="h-3 w-3" />
             {flashcard.__layerCount} camadas
+          </span>
+        ) : null}
+        {flashcard.__layerSearchHit ? (
+          <span className="inline-flex items-center gap-1 mt-2 ml-2 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
+            Encontrado em camada
           </span>
         ) : null}
         {flashcard.hint && (
@@ -359,24 +386,46 @@ const ListDetail = () => {
   });
 
   // ── PERF: Memoized filtered flashcard list ──
-  const filteredFlashcards = useMemo(() => {
-    // Layered cards: hide layer rows from the main list; they are managed
-    // inside their principal's editor. Annotate principals with layer count.
-    const layerCounts = new Map<string, number>();
+  const visibleFlashcards = useMemo(() => {
+    const layersByParent = new Map<string, Flashcard[]>();
     for (const f of flashcards as Flashcard[]) {
       if (f.parent_card_id) {
-        layerCounts.set(f.parent_card_id, (layerCounts.get(f.parent_card_id) ?? 0) + 1);
+        const group = layersByParent.get(f.parent_card_id) ?? [];
+        group.push(f);
+        layersByParent.set(f.parent_card_id, group);
       }
     }
-    const visible = (flashcards as Flashcard[])
+    return (flashcards as Flashcard[])
       .filter((f) => !f.parent_card_id)
-      .map((f) => ({ ...f, __layerCount: layerCounts.get(f.id) ?? 0 }));
-    if (!cardSearch.trim()) return visible;
+      .map((f) => {
+        const layers = layersByParent.get(f.id) ?? [];
+        return {
+          ...f,
+          __layerCount: layers.length,
+          __ownSearchText: searchableTextForCard(f),
+          __layerSearchText: layers.map(searchableTextForCard).join("\n"),
+        };
+      });
+  }, [flashcards]);
+
+  const filteredFlashcards = useMemo(() => {
+    if (!cardSearch.trim()) return visibleFlashcards.map((f) => ({ ...f, __layerSearchHit: false }));
     const q = cardSearch.toLowerCase();
-    return visible.filter(
-      (f) => f.term.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q)
-    );
-  }, [flashcards, cardSearch]);
+    return visibleFlashcards
+      .filter((f) => f.__ownSearchText?.includes(q) || f.__layerSearchText?.includes(q))
+      .map((f) => ({ ...f, __layerSearchHit: !f.__ownSearchText?.includes(q) && !!f.__layerSearchText?.includes(q) }));
+  }, [visibleFlashcards, cardSearch]);
+
+  const filteredFlashcardIds = useMemo(
+    () => filteredFlashcards.map((f) => f.id),
+    [filteredFlashcards]
+  );
+  const filteredFlashcardIdSet = useMemo(
+    () => new Set(filteredFlashcardIds),
+    [filteredFlashcardIds]
+  );
+  const selectedVisibleCount = selectedCards.filter((id) => filteredFlashcardIdSet.has(id)).length;
+  const allVisibleSelected = filteredFlashcardIds.length > 0 && selectedVisibleCount === filteredFlashcardIds.length;
 
   const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
@@ -412,7 +461,7 @@ const ListDetail = () => {
       const { error } = await supabase
         .from("flashcards")
         .update({ deleted_at: new Date().toISOString() })
-        .eq("id", flashcardId);
+        .or(`id.eq.${flashcardId},parent_card_id.eq.${flashcardId}`);
 
       if (error) throw error;
       toast.success("🗂️ Card enviado para a lixeira!");
@@ -424,16 +473,18 @@ const ListDetail = () => {
 
   const handleBulkDelete = async () => {
     if (selectedCards.length === 0) return;
+    const visibleSelection = selectedCards.filter((cardId) => filteredFlashcardIdSet.has(cardId));
+    if (visibleSelection.length === 0) return;
     
     setIsDeleting(true);
     try {
       const { error } = await supabase
         .from("flashcards")
         .update({ deleted_at: new Date().toISOString() })
-        .in("id", selectedCards);
+        .or(`id.in.(${visibleSelection.join(",")}),parent_card_id.in.(${visibleSelection.join(",")})`);
 
       if (error) throw error;
-      toast.success(`🗂️ ${selectedCards.length} cards enviados para a lixeira!`);
+      toast.success(`🗂️ ${visibleSelection.length} cards enviados para a lixeira!`);
       setSelectedCards([]);
       loadFlashcards();
     } catch (error: any) {
@@ -466,13 +517,13 @@ const ListDetail = () => {
     }
   }, [loadFlashcards]);
 
-  const toggleSelectAll = () => {
-    if (selectedCards.length === flashcards.length) {
+  const toggleSelectAll = useCallback(() => {
+    if (allVisibleSelected) {
       setSelectedCards([]);
     } else {
-      setSelectedCards(flashcards.map(f => f.id));
+      setSelectedCards(filteredFlashcardIds);
     }
-  };
+  }, [allVisibleSelected, filteredFlashcardIds]);
 
   const handleUpdateFlashcard = async (flashcardId: string, term: string, translation: string, hint: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
@@ -1073,7 +1124,7 @@ const ListDetail = () => {
           ) : (
             <div className="space-y-4">
               {/* Bulk selection controls */}
-              {canEdit && flashcards.length > 0 && (
+              {canEdit && visibleFlashcards.length > 0 && (
                 <div className="flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
                   <Button
                     variant="ghost"
@@ -1081,15 +1132,15 @@ const ListDetail = () => {
                     onClick={toggleSelectAll}
                     className="gap-2"
                   >
-                    {selectedCards.length === flashcards.length ? (
+                    {allVisibleSelected ? (
                       <CheckSquare className="h-4 w-4" />
                     ) : (
                       <Square className="h-4 w-4" />
                     )}
-                    {selectedCards.length === flashcards.length ? "Desmarcar Todos" : "Selecionar Todos"}
+                    {allVisibleSelected ? "Desmarcar Todos" : "Selecionar Todos"}
                   </Button>
                   
-                  {selectedCards.length > 0 && (
+                  {selectedVisibleCount > 0 && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -1099,14 +1150,14 @@ const ListDetail = () => {
                           className="gap-2"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Excluir ({selectedCards.length})
+                          Excluir ({selectedVisibleCount})
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza que deseja excluir {selectedCards.length} cards? Esta ação não pode ser desfeita.
+                            Tem certeza que deseja excluir {selectedVisibleCount} cards visíveis? Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -1119,7 +1170,7 @@ const ListDetail = () => {
                     </AlertDialog>
                   )}
 
-                  {FEATURE_FLAGS.layered_cards && selectedCards.length >= 2 && canEdit && (
+                  {FEATURE_FLAGS.layered_cards && selectedVisibleCount >= 2 && canEdit && (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -1127,7 +1178,7 @@ const ListDetail = () => {
                       onClick={() => setMergeLayersOpen(true)}
                     >
                       <Layers className="h-4 w-4" />
-                      Mesclar em camadas ({selectedCards.length})
+                      Mesclar em camadas ({selectedVisibleCount})
                     </Button>
                   )}
                 </div>
@@ -1182,7 +1233,7 @@ const ListDetail = () => {
           onOpenChange={setMergeLayersOpen}
           listId={id}
           candidates={flashcards
-            .filter((f) => selectedCards.includes(f.id))
+            .filter((f) => selectedCards.includes(f.id) && filteredFlashcardIdSet.has(f.id))
             .map((f) => ({ id: f.id, term: f.term, translation: f.translation }))}
           onMerged={() => {
             setSelectedCards([]);
