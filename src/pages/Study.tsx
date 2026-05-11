@@ -208,10 +208,27 @@ const Study = () => {
     if (!urlFavoritesOnly) return flashcards;
     if (favorites.length === 0) return flashcards; // fallback: estuda todos
     const favSet = new Set(favorites);
-    const favOnly = flashcards.filter(c => favSet.has(c.id));
+    // Layered cards: a deck entry should match if ANY of its inner layers
+    // is favorited (or the parent/principal id, when known). Otherwise the
+    // group would disappear from the Favorites mode just because the user
+    // starred layer 2 instead of layer 1.
+    const cardMatchesFav = (c: Flashcard) => {
+      if (favSet.has(c.id)) return true;
+      const layers = (c as any).__layers as Flashcard[] | undefined;
+      if (layers && layers.some(L => favSet.has(L.id))) return true;
+      if (c.parent_card_id && favSet.has(c.parent_card_id)) return true;
+      return false;
+    };
+    const favOnly = flashcards.filter(cardMatchesFav);
     if (!redFocusActiveForDeck) return favOnly;
     const redSet = new Set(redListIds);
-    return favOnly.filter(c => redSet.has(c.id));
+    const cardMatchesRed = (c: Flashcard) => {
+      if (redSet.has(c.id)) return true;
+      const layers = (c as any).__layers as Flashcard[] | undefined;
+      if (layers && layers.some(L => redSet.has(L.id))) return true;
+      return false;
+    };
+    return favOnly.filter(cardMatchesRed);
   }, [flashcards, urlFavoritesOnly, favorites, redFocusActiveForDeck, redListIds]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
