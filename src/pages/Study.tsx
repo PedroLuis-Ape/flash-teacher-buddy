@@ -208,10 +208,27 @@ const Study = () => {
     if (!urlFavoritesOnly) return flashcards;
     if (favorites.length === 0) return flashcards; // fallback: estuda todos
     const favSet = new Set(favorites);
-    const favOnly = flashcards.filter(c => favSet.has(c.id));
+    // Layered cards: a deck entry should match if ANY of its inner layers
+    // is favorited (or the parent/principal id, when known). Otherwise the
+    // group would disappear from the Favorites mode just because the user
+    // starred layer 2 instead of layer 1.
+    const cardMatchesFav = (c: Flashcard) => {
+      if (favSet.has(c.id)) return true;
+      const layers = (c as any).__layers as Flashcard[] | undefined;
+      if (layers && layers.some(L => favSet.has(L.id))) return true;
+      if (c.parent_card_id && favSet.has(c.parent_card_id)) return true;
+      return false;
+    };
+    const favOnly = flashcards.filter(cardMatchesFav);
     if (!redFocusActiveForDeck) return favOnly;
     const redSet = new Set(redListIds);
-    return favOnly.filter(c => redSet.has(c.id));
+    const cardMatchesRed = (c: Flashcard) => {
+      if (redSet.has(c.id)) return true;
+      const layers = (c as any).__layers as Flashcard[] | undefined;
+      if (layers && layers.some(L => redSet.has(L.id))) return true;
+      return false;
+    };
+    return favOnly.filter(cardMatchesRed);
   }, [flashcards, urlFavoritesOnly, favorites, redFocusActiveForDeck, redListIds]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
@@ -763,8 +780,27 @@ const Study = () => {
   // moves to a new card, layerIdx resets to 0.
   const [layerIdx, setLayerIdx] = useState(0);
   useEffect(() => {
+    // Default to layer 0. When the user is in Favorites mode (or Foco Vermelho),
+    // try to start on the first layer that is favorited / red-listed so the
+    // group opens on the layer the student actually starred.
+    const card = engineCurrentCardId ? flashcardById.get(engineCurrentCardId) : undefined;
+    const layers = (card as any)?.__layers as Flashcard[] | undefined;
+    if (!layers || layers.length === 0) {
+      setLayerIdx(0);
+      return;
+    }
+    if (urlFavoritesOnly && favorites.length > 0) {
+      const favSet = new Set(favorites);
+      const redSet = new Set(redListIds);
+      const wantRed = redFocusActiveForDeck;
+      const idx = layers.findIndex(L =>
+        wantRed ? redSet.has(L.id) : favSet.has(L.id)
+      );
+      setLayerIdx(idx >= 0 ? idx : 0);
+      return;
+    }
     setLayerIdx(0);
-  }, [engineCurrentCardId]);
+  }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck]);
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
