@@ -199,61 +199,6 @@ export const FlipStudyView = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Skip if user is typing in an input/textarea
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
-
-      if (fastMode) {
-        // Fast mode: Space advances, no flip
-        if (e.key === " ") {
-          e.preventDefault();
-          handleKnew();
-        }
-      } else {
-        // Normal mode: Space flips or confirms
-        if (e.key === " " && !isFlipped) {
-          e.preventDefault();
-          handleFlip();
-        } else if (e.key === " " && isFlipped) {
-          e.preventDefault();
-          handleKnew();
-        }
-      }
-      
-      // Enter plays audio for the currently visible side
-      if (e.key === "Enter" && ttsEnabled) {
-        e.preventDefault();
-        if (fastMode) {
-          // In fast mode both sides visible; play the top (prompt) side
-          handlePlayTop();
-        } else {
-          // In normal mode, play whichever side is showing
-          if (isFlipped) {
-            handlePlayBottom();
-          } else {
-            handlePlayTop();
-          }
-        }
-      }
-
-      // Arrow keys for navigation
-      if (e.key === "ArrowRight" && onNext && canGoNext) {
-        e.preventDefault();
-        onNext();
-      }
-      if (e.key === "ArrowLeft" && onPrevious && canGoPrevious) {
-        e.preventDefault();
-        onPrevious();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
-
   // Fast Mode UI - two stacked panels
   if (fastMode) {
     return (
