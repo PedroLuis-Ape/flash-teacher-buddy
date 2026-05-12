@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
