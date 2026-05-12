@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
@@ -128,60 +130,74 @@ export const FlipStudyView = ({
     speak(secondSide.text, { langOverride: secondSideLang, rate });
   };
 
-  // Keyboard navigation
+  // Reactive shortcut map — updates immediately when user remaps in settings.
+  const shortcuts = useShortcutMap();
+
+  // Keyboard navigation — keys are now configurable via the settings page.
+  // Defaults preserve previous behavior (Space=flip/confirm, Enter=audio,
+  // ArrowLeft/Right=prev/next), so existing users see no change.
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Skip if user is typing in an input/textarea
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      if (isTypingTarget(e.target)) return;
+      const k = normalizeKey(e.key);
+
+      const flipKey = normalizeKey(shortcuts.flip);
+      const knewKey = normalizeKey(shortcuts.knew);
+      const didntKey = normalizeKey(shortcuts.didntKnow);
+      const audioKey = normalizeKey(shortcuts.playAudio);
+      const nextKey = normalizeKey(shortcuts.nextCard);
+      const prevKey = normalizeKey(shortcuts.prevCard);
 
       if (fastMode) {
-        // Fast mode: Space advances, no flip
-        if (e.key === " ") {
+        // Fast mode shows both sides; the flip key advances as "knew".
+        if (k === flipKey) {
           e.preventDefault();
           handleKnew();
+          return;
         }
       } else {
-        // Normal mode: Space flips or confirms
-        if (e.key === " " && !isFlipped) {
+        if (k === flipKey) {
           e.preventDefault();
-          handleFlip();
-        } else if (e.key === " " && isFlipped) {
-          e.preventDefault();
-          handleKnew();
-        }
-      }
-      
-      // Enter plays audio for the currently visible side
-      if (e.key === "Enter" && ttsEnabled) {
-        e.preventDefault();
-        if (fastMode) {
-          // In fast mode both sides visible; play the top (prompt) side
-          handlePlayTop();
-        } else {
-          // In normal mode, play whichever side is showing
-          if (isFlipped) {
-            handlePlayBottom();
-          } else {
-            handlePlayTop();
-          }
+          if (!isFlipped) handleFlip();
+          else handleKnew();
+          return;
         }
       }
 
-      // Arrow keys for navigation
-      if (e.key === "ArrowRight" && onNext && canGoNext) {
+      if (k === knewKey) {
+        e.preventDefault();
+        handleKnew();
+        return;
+      }
+      if (k === didntKey) {
+        e.preventDefault();
+        handleDidntKnow?.();
+        return;
+      }
+
+      if (k === audioKey && ttsEnabled) {
+        e.preventDefault();
+        if (fastMode || !isFlipped) handlePlayTop();
+        else handlePlayBottom();
+        return;
+      }
+
+      if (k === nextKey && onNext && canGoNext) {
         e.preventDefault();
         onNext();
+        return;
       }
-      if (e.key === "ArrowLeft" && onPrevious && canGoPrevious) {
+      if (k === prevKey && onPrevious && canGoPrevious) {
         e.preventDefault();
         onPrevious();
+        return;
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
 
   // Fast Mode UI - two stacked panels
   if (fastMode) {

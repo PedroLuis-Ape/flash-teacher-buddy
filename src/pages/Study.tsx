@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useKeyboardShortcuts as useStudyShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
@@ -885,6 +886,35 @@ const Study = () => {
     // Restart with all cards
     restartSession({ ...gameSettings, subset: 'all' });
   };
+
+  // ── Global configurable keyboard shortcuts (cross-mode) ───────────────────
+  // Mode-specific actions (flip, knew, didn't know, audio in Flip, write submit
+  // via Enter) remain owned by each view component. Here we centralize the
+  // actions that always make sense regardless of the active mode: navigation,
+  // layer cycling, and restarting the session. Disabled while a modal is open
+  // so it doesn't fight with dialog focus / Escape handling.
+  useStudyShortcuts(
+    {
+      nextCard: () => {
+        // Treat global "next" as a skip — equivalent to the existing skip flow.
+        if (currentCard) handleNext(false, true);
+      },
+      prevCard: () => {
+        goToPrevious();
+      },
+      nextLayer: () => {
+        if (hasLayers && cardLayers) {
+          setLayerIdx((i) => (i + 1) % cardLayers.length);
+        }
+      },
+      restart: () => {
+        handleRestartWithSettings();
+      },
+    },
+    {
+      disabled: showExitDialog || showCompletionModal,
+    },
+  );
 
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (

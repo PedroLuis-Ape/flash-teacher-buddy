@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, RefreshCw, Zap, Flame, Pencil } from "lucide-react";
+import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export interface GameSettings {
   mode: 'sequential' | 'random';
@@ -181,6 +182,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               Editar explicação deste card
             </Button>
           )}
+
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/settings/shortcuts" onClick={() => setOpen(false)}>
+              <Keyboard className="mr-2 h-4 w-4" />
+              Configurar atalhos do teclado
+            </Link>
+          </Button>
 
           <Button onClick={handleRestart} className="w-full" variant="default">
             <RefreshCw className="mr-2 h-4 w-4" />
