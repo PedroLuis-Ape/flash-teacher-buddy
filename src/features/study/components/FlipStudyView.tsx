@@ -130,6 +130,75 @@ export const FlipStudyView = ({
     speak(secondSide.text, { langOverride: secondSideLang, rate });
   };
 
+  // Reactive shortcut map — updates immediately when user remaps in settings.
+  const shortcuts = useShortcutMap();
+
+  // Keyboard navigation — keys are now configurable via the settings page.
+  // Defaults preserve previous behavior (Space=flip/confirm, Enter=audio,
+  // ArrowLeft/Right=prev/next), so existing users see no change.
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      const k = normalizeKey(e.key);
+
+      const flipKey = normalizeKey(shortcuts.flip);
+      const knewKey = normalizeKey(shortcuts.knew);
+      const didntKey = normalizeKey(shortcuts.didntKnow);
+      const audioKey = normalizeKey(shortcuts.playAudio);
+      const nextKey = normalizeKey(shortcuts.nextCard);
+      const prevKey = normalizeKey(shortcuts.prevCard);
+
+      if (fastMode) {
+        // Fast mode shows both sides; the flip key advances as "knew".
+        if (k === flipKey) {
+          e.preventDefault();
+          handleKnew();
+          return;
+        }
+      } else {
+        if (k === flipKey) {
+          e.preventDefault();
+          if (!isFlipped) handleFlip();
+          else handleKnew();
+          return;
+        }
+      }
+
+      if (k === knewKey) {
+        e.preventDefault();
+        handleKnew();
+        return;
+      }
+      if (k === didntKey) {
+        e.preventDefault();
+        handleDidntKnow?.();
+        return;
+      }
+
+      if (k === audioKey && ttsEnabled) {
+        e.preventDefault();
+        if (fastMode || !isFlipped) handlePlayTop();
+        else handlePlayBottom();
+        return;
+      }
+
+      if (k === nextKey && onNext && canGoNext) {
+        e.preventDefault();
+        onNext();
+        return;
+      }
+      if (k === prevKey && onPrevious && canGoPrevious) {
+        e.preventDefault();
+        onPrevious();
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
