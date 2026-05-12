@@ -886,6 +886,35 @@ const Study = () => {
     restartSession({ ...gameSettings, subset: 'all' });
   };
 
+  // ── Global configurable keyboard shortcuts (cross-mode) ───────────────────
+  // Mode-specific actions (flip, knew, didn't know, audio in Flip, write submit
+  // via Enter) remain owned by each view component. Here we centralize the
+  // actions that always make sense regardless of the active mode: navigation,
+  // layer cycling, and restarting the session. Disabled while a modal is open
+  // so it doesn't fight with dialog focus / Escape handling.
+  useStudyShortcuts(
+    {
+      nextCard: () => {
+        // Treat global "next" as a skip — equivalent to the existing skip flow.
+        if (currentCard) handleNext(false, true);
+      },
+      prevCard: () => {
+        goToPrevious();
+      },
+      nextLayer: () => {
+        if (hasLayers && cardLayers) {
+          setLayerIdx((i) => (i + 1) % cardLayers.length);
+        }
+      },
+      restart: () => {
+        handleRestartWithSettings();
+      },
+    },
+    {
+      disabled: showExitDialog || showCompletionModal,
+    },
+  );
+
   if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
