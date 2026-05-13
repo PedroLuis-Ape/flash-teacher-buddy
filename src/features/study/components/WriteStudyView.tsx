@@ -91,6 +91,7 @@ export const WriteStudyView = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const { speak } = useTTS();
+  const shortcuts = useShortcutMap();
 
   // TTS removed from autoplay - only plays on button click
 
