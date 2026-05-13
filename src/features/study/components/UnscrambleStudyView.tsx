@@ -11,6 +11,8 @@ import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
 import { HintButton } from "./HintButton";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
+import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
 interface UnscrambleStudyViewProps {
   front: string;
