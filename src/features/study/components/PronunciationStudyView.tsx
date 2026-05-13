@@ -11,6 +11,8 @@ import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
+import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
 interface PronunciationStudyViewProps {
   front: string;
@@ -55,6 +57,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
   } = usePronunciation({ lang: speakLang });
 
   const { speak, stop: stopTTS } = useTTS();
+  const shortcuts = useShortcutMap();
   
   // Track if we've already played sound for this transcript
   const lastSoundPlayedForRef = useRef<string>('');
@@ -64,6 +67,21 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
     stopTTS();
     lastSoundPlayedForRef.current = '';
   }, [speakSide.text, resetTranscript, stopTTS]);
+
+  // Keyboard shortcuts for pronunciation: nextCard advances to the next card.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      const k = normalizeKey(e.key);
+      const nextKey = normalizeKey(shortcuts.nextCard);
+      if (k === nextKey) {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shortcuts, onNext]);
 
   const handlePlayPronunciation = () => {
     stopTTS();
