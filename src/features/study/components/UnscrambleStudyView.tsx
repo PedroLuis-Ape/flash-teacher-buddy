@@ -88,6 +88,29 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
     setIsCorrect(false);
   }, [front, back, correctSentence]);
 
+  // Keyboard shortcuts for unscramble: confirm = submit/check, skip = skip card.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      const k = normalizeKey(e.key);
+      const confirmKey = normalizeKey(shortcuts.confirm);
+      const skipKey = normalizeKey(shortcuts.skip);
+
+      if (k === confirmKey && !submitted && selectedWords.length > 0) {
+        e.preventDefault();
+        handleSubmit();
+        return;
+      }
+      if (k === skipKey && !submitted) {
+        e.preventDefault();
+        onSkip();
+        return;
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shortcuts, submitted, selectedWords.length, onSkip]);
+
   const handleWordClick = (item: WordItem, fromAvailable: boolean) => {
     if (submitted) return;
 
