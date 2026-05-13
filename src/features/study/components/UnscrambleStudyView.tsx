@@ -54,6 +54,7 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const { speak } = useTTS();
+  const shortcuts = useShortcutMap();
   
   // --- Centralized Side Resolution ---
   const sideA = { text: front, lang: langA, label: "" };
