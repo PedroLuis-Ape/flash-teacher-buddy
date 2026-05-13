@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { pickSmartDistractors } from "@/features/study/lib/smartDistractors";
+import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
