@@ -159,7 +159,15 @@ export const WriteStudyView = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    // Use configured shortcut keys instead of hardcoded Enter.
+    // Allow Enter even when typing in the input (allowEnterInTyping logic
+    // is handled by the global hook; here we just map the key).
+    const k = normalizeKey(e.key);
+    const confirmKey = normalizeKey(shortcuts.confirm);
+    const skipKey = normalizeKey(shortcuts.skip);
+
+    if (k === confirmKey) {
+      e.preventDefault();
       if (!feedback) {
         handleSubmit();
       } else if (feedback === "correct" || feedback === "almost") {
@@ -167,6 +175,12 @@ export const WriteStudyView = ({
       } else if (feedback === "incorrect") {
         onIncorrect();
       }
+      return;
+    }
+
+    if (k === skipKey && !feedback) {
+      e.preventDefault();
+      onSkip();
     }
   };
 
