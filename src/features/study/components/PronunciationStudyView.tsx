@@ -68,6 +68,21 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
     lastSoundPlayedForRef.current = '';
   }, [speakSide.text, resetTranscript, stopTTS]);
 
+  // Keyboard shortcuts for pronunciation: nextCard advances to the next card.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      const k = normalizeKey(e.key);
+      const nextKey = normalizeKey(shortcuts.nextCard);
+      if (k === nextKey) {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shortcuts, onNext]);
+
   const handlePlayPronunciation = () => {
     stopTTS();
     speak(speakSide.text, { langOverride: speakLang, rate: 0.5 });
