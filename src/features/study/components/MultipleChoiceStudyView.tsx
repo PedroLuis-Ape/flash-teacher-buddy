@@ -120,6 +120,26 @@ export const MultipleChoiceStudyView = ({
     setShowFeedback(false);
   }, [currentCard, allCards, isAFirst, correctAnswer]);
 
+  // Keyboard shortcuts for multiple choice: 1-4 or A-D selects the option.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showFeedback) return;
+      if (isTypingTarget(e.target)) return;
+      const k = normalizeKey(e.key);
+      let index: number | null = null;
+      if (k === "1" || k === "A") index = 0;
+      else if (k === "2" || k === "B") index = 1;
+      else if (k === "3" || k === "C") index = 2;
+      else if (k === "4" || k === "D") index = 3;
+      if (index !== null && index < options.length) {
+        e.preventDefault();
+        handleOptionClick(index);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showFeedback, options.length, correctIndex]);
+
   const handleOptionClick = (index: number) => {
     if (showFeedback) return;
 
