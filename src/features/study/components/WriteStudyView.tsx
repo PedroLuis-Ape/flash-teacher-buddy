@@ -19,6 +19,8 @@ import { HintButton } from "./HintButton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
+import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
 interface WriteStudyViewProps {
   front: string;
