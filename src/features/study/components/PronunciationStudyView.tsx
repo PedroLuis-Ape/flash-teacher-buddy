@@ -11,6 +11,8 @@ import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
+import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
 interface PronunciationStudyViewProps {
   front: string;
