@@ -64,6 +64,7 @@ export const MultipleChoiceStudyView = ({
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
   const { speak } = useTTS();
+  const shortcuts = useShortcutMap();
   
   // --- Centralized Side Resolution ---
   const sideA = { text: currentCard.term, lang: langA, label: getLangLabel(langA) };
