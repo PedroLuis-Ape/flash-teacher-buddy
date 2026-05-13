@@ -57,6 +57,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
   } = usePronunciation({ lang: speakLang });
 
   const { speak, stop: stopTTS } = useTTS();
+  const shortcuts = useShortcutMap();
   
   // Track if we've already played sound for this transcript
   const lastSoundPlayedForRef = useRef<string>('');
