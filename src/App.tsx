@@ -26,6 +26,11 @@ import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPro
 
 const Index = lazy(() => import("./pages/Index"));
 import Auth from "./pages/Auth"; // Eagerly loaded — critical first paint for unauthenticated users
+import LandingPage from "./pages/LandingPage"; // Public landing — eager so SEO/visitor first paint is instant
+const InglesParaIniciantes = lazy(() => import("./pages/seo/InglesParaIniciantes"));
+const AtividadesDeIngles = lazy(() => import("./pages/seo/AtividadesDeIngles"));
+const FlashcardsDeIngles = lazy(() => import("./pages/seo/FlashcardsDeIngles"));
+const ParaProfessores = lazy(() => import("./pages/seo/ParaProfessores"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
 const Folder = lazy(() => import("./pages/Folder"));
@@ -108,7 +113,12 @@ const App = () => {
             <GlobalLayout>
               <PageTransition>
                 <Routes>
-                  <Route path="/" element={<Index />} />
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/dashboard" element={<Index />} />
+                  <Route path="/ingles-para-iniciantes" element={<InglesParaIniciantes />} />
+                  <Route path="/atividades-de-ingles" element={<AtividadesDeIngles />} />
+                  <Route path="/flashcards-de-ingles" element={<FlashcardsDeIngles />} />
+                  <Route path="/para-professores" element={<ParaProfessores />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/profile" element={<Profile />} />

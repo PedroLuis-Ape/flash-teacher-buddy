@@ -46,7 +46,7 @@ const AuthCallback = () => {
           }
 
           setMessage("Redirecionando...");
-          navigate("/", { replace: true });
+          navigate("/dashboard", { replace: true });
         } else {
           // No session, redirect to auth
           navigate("/auth", { replace: true });

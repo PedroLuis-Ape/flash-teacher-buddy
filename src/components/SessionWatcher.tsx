@@ -3,10 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
-// Rotas públicas que não exigem sessão
-const PUBLIC_PREFIXES = ["/auth", "/portal"] as const;
+// Rotas públicas que não exigem sessão.
+// Prefixos: qualquer rota que comece com um destes é pública.
+const PUBLIC_PREFIXES = [
+  "/auth",
+  "/portal",
+  "/about",
+  "/ingles-para-iniciantes",
+  "/atividades-de-ingles",
+  "/flashcards-de-ingles",
+  "/para-professores",
+] as const;
+
+// Caminhos exatos públicos (não usar startsWith pois "/" pegaria tudo).
+const PUBLIC_EXACT = new Set<string>(["/"]);
 
 function isProtectedPath(pathname: string) {
+  if (PUBLIC_EXACT.has(pathname)) return false;
   return !PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
@@ -27,7 +40,7 @@ export function SessionWatcher() {
         // Invalidate auth-user query so useAuthUser picks up the new session
         queryClient.invalidateQueries({ queryKey: ['auth-user'] });
         if (window.location.pathname.startsWith('/auth')) {
-          navigate('/', { replace: true });
+          navigate('/dashboard', { replace: true });
         }
         initializedRef.current = true;
         return;

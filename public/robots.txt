@@ -12,5 +12,34 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /auth
+Disallow: /auth/
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /folders
+Disallow: /folder/
+Disallow: /list/
+Disallow: /collection/
+Disallow: /admin/
+Disallow: /notes
+Disallow: /notes/
+Disallow: /goals
+Disallow: /goals/
+Disallow: /trash
+Disallow: /settings/
+Disallow: /audit
+Disallow: /painel-professor
+Disallow: /professor/
+Disallow: /turmas
+Disallow: /turmas/
+Disallow: /search
+Disallow: /store
+Disallow: /reinos
+Disallow: /reino
+Disallow: /reino/
+Disallow: /gifts
+Disallow: /import
+Disallow: /my-teachers
+Disallow: /professores/
 
 Sitemap: https://www.apeeducation.org/sitemap.xml

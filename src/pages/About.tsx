@@ -10,12 +10,30 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, BookOpen, Copyright, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SEOHead } from "@/components/seo/SEOHead";
 
 export default function About() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Sobre o APE — Plataforma de Estudo Ativo"
+        description="Conheça o APE, uma plataforma educacional de estudo ativo com flashcards, jogos, turmas e prática guiada de idiomas."
+        path="/about"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          name: "Sobre o APE",
+          inLanguage: "pt-BR",
+          url: "https://www.apeeducation.org/about",
+          mainEntity: {
+            "@type": "Organization",
+            name: "APE",
+            url: "https://www.apeeducation.org/",
+          },
+        }}
+      />
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Button
           variant="ghost"
