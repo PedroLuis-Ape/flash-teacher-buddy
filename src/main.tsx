@@ -12,6 +12,7 @@ import "./lib/versionManager"; // Verificar versão e limpar cache
 import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
+import { HelmetProvider } from "react-helmet-async";
 
 // ── Boot progress reporter ────────────────────────────────────────────
 // The HTML inline script defines window.__apeBootProgress(value, label?)
@@ -145,7 +146,9 @@ startProgressTicker();
 reportBoot(40, "Inicializando interface…");
 createRoot(document.getElementById("root")!).render(
   <SafeMode>
-    <App />
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
   </SafeMode>
 );
 
