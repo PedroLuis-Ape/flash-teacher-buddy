@@ -12,7 +12,13 @@ export function GoogleConnectPrompt() {
     // Never run on auth/portal pages — the prompt is only relevant
     // inside the authenticated app shell.
     const path = typeof window !== "undefined" ? window.location.pathname : "";
-    if (path.startsWith("/auth") || path.startsWith("/portal")) return;
+    // Skip prompt on all public/marketing routes — only show inside the app shell.
+    const PUBLIC = [
+      "/auth", "/portal", "/about",
+      "/ingles-para-iniciantes", "/atividades-de-ingles",
+      "/flashcards-de-ingles", "/para-professores",
+    ];
+    if (path === "/" || PUBLIC.some((p) => path.startsWith(p))) return;
     const t = setTimeout(() => setReady(true), 5000);
     return () => clearTimeout(t);
   }, []);
