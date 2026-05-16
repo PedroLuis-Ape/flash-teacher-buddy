@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ListChecks, FolderTree, Sparkles, ArrowRight, Gamepad2, Users,
@@ -92,9 +93,9 @@ export default function LandingPage() {
                 e professores transformarem vocabulário em fluência.
               </p>
               <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Button asChild size="lg" className="gap-2">
-                  <Link to="/auth">Começar agora <ArrowRight className="h-4 w-4" /></Link>
-                </Button>
+                <AuthAwareCTA size="lg" className="gap-2">
+                  Começar agora <ArrowRight className="h-4 w-4" />
+                </AuthAwareCTA>
                 <Button asChild size="lg" variant="outline">
                   <Link to="/portal">Ver portal público</Link>
                 </Button>
@@ -136,7 +137,7 @@ export default function LandingPage() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PILLARS.map(({ icon: Icon, title, text }) => (
-            <Card key={title} className="h-full">
+            <Card key={title} className="h-full interactive-card">
               <CardContent className="p-6">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-3">
                   <Icon className="h-5 w-5" />
@@ -223,8 +224,8 @@ export default function LandingPage() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {EXPLORE.map(({ to, title, text }) => (
-            <Link key={to} to={to} className="group">
-              <Card className="h-full transition-colors group-hover:border-primary/50">
+            <Link key={to} to={to} className="group block pressable">
+              <Card className="h-full interactive-card group-hover:border-primary/50">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-lg mb-1 group-hover:text-primary">{title}</h3>
                   <p className="text-sm text-muted-foreground">{text}</p>
@@ -243,9 +244,7 @@ export default function LandingPage() {
         <p className="text-muted-foreground mb-8">
           Crie seu acesso e comece em poucos minutos.
         </p>
-        <Button asChild size="lg">
-          <Link to="/auth">Criar acesso</Link>
-        </Button>
+        <AuthAwareCTA size="lg">Criar acesso</AuthAwareCTA>
       </section>
 
       <PublicFooter />

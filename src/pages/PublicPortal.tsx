@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
@@ -7,6 +7,7 @@ import { ApeGrid } from "@/components/ape/ApeGrid";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { PublicBackBar } from "@/components/seo/PublicBackBar";
 
@@ -131,9 +132,7 @@ const PublicPortal = () => {
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
             Crie uma conta para estudar com listas personalizadas, jogos de flashcards e atividades interativas.
           </p>
-          <Button asChild size="lg">
-            <Link to="/auth">Criar acesso</Link>
-          </Button>
+          <AuthAwareCTA size="lg">Criar acesso</AuthAwareCTA>
         </section>
       </div>
     </div>

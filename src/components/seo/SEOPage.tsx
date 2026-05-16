@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { Card, CardContent } from "@/components/ui/card";
 import { SEOHead, type SEOHeadProps } from "@/components/seo/SEOHead";
 import { PublicNav, PublicFooter } from "@/components/seo/PublicNav";
@@ -36,9 +37,7 @@ export function SEOPage({
         </h1>
         <p className="mt-6 text-lg text-muted-foreground">{intro}</p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <Button asChild size="lg">
-            <Link to="/auth">Começar agora</Link>
-          </Button>
+          <AuthAwareCTA size="lg">Começar agora</AuthAwareCTA>
           <Button asChild size="lg" variant="outline">
             <Link to="/portal">Ver materiais públicos</Link>
           </Button>
@@ -47,7 +46,7 @@ export function SEOPage({
 
       <section className="max-w-4xl mx-auto px-4 md:px-6 py-8 w-full space-y-10">
         {sections.map(({ title, body }) => (
-          <Card key={title}>
+          <Card key={title} className="interactive-card">
             <CardContent className="p-6 md:p-8">
               <h2 className="text-2xl md:text-3xl font-bold mb-3">{title}</h2>
               <div className="text-muted-foreground leading-relaxed space-y-3">
@@ -62,9 +61,7 @@ export function SEOPage({
         <section className="max-w-3xl mx-auto px-4 md:px-6 py-16 text-center w-full">
           <h2 className="text-2xl md:text-3xl font-bold mb-3">{finalCta.title}</h2>
           <p className="text-muted-foreground mb-6">{finalCta.text}</p>
-          <Button asChild size="lg">
-            <Link to="/auth">{finalCta.buttonLabel ?? "Criar acesso"}</Link>
-          </Button>
+          <AuthAwareCTA size="lg">{finalCta.buttonLabel ?? "Criar acesso"}</AuthAwareCTA>
         </section>
       )}
 

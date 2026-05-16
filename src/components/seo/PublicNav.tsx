@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
+import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 
 const NAV_LINKS = [
   { to: "/", label: "Início" },
@@ -32,19 +33,19 @@ export function PublicNav() {
             <Link
               key={l.to}
               to={l.to}
-              className="px-3 py-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+              className="nav-link-animated px-3 py-2 rounded-md text-muted-foreground hover:text-foreground"
             >
               {l.label}
             </Link>
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-            <Link to="/auth">Entrar</Link>
-          </Button>
-          <Button asChild size="sm" className="hidden sm:inline-flex">
-            <Link to="/auth">Começar agora</Link>
-          </Button>
+          <AuthAwareCTA variant="ghost" size="sm" className="hidden sm:inline-flex">
+            Entrar
+          </AuthAwareCTA>
+          <AuthAwareCTA size="sm" className="hidden sm:inline-flex">
+            Começar agora
+          </AuthAwareCTA>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
@@ -58,18 +59,18 @@ export function PublicNav() {
                     key={l.to}
                     to={l.to}
                     onClick={() => setOpen(false)}
-                    className="px-3 py-3 rounded-md hover:bg-muted text-foreground"
+                    className="nav-link-animated px-3 py-3 rounded-md text-foreground"
                   >
                     {l.label}
                   </Link>
                 ))}
                 <div className="h-px bg-border my-3" />
-                <Button asChild variant="outline" onClick={() => setOpen(false)}>
-                  <Link to="/auth">Entrar</Link>
-                </Button>
-                <Button asChild onClick={() => setOpen(false)}>
-                  <Link to="/auth">Começar agora</Link>
-                </Button>
+                <AuthAwareCTA variant="outline" onClick={() => setOpen(false)}>
+                  Entrar
+                </AuthAwareCTA>
+                <AuthAwareCTA onClick={() => setOpen(false)}>
+                  Começar agora
+                </AuthAwareCTA>
               </nav>
             </SheetContent>
           </Sheet>
@@ -85,9 +86,9 @@ export function PublicFooter() {
       <div className="max-w-6xl mx-auto px-4 md:px-6 flex flex-col md:flex-row gap-4 items-center justify-between">
         <p>© {new Date().getFullYear()} APE — Apprenticeship Practice and Enhancement</p>
         <nav className="flex flex-wrap gap-4">
-          <Link to="/about" className="hover:text-foreground">Sobre</Link>
-          <Link to="/portal" className="hover:text-foreground">Portal</Link>
-          <Link to="/auth" className="hover:text-foreground">Entrar</Link>
+          <Link to="/about" className="nav-link-animated hover:text-foreground">Sobre</Link>
+          <Link to="/portal" className="nav-link-animated hover:text-foreground">Portal</Link>
+          <Link to="/auth" className="nav-link-animated hover:text-foreground">Entrar</Link>
         </nav>
       </div>
     </footer>
