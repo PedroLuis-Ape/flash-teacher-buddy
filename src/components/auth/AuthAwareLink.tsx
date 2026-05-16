@@ -4,7 +4,7 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { Button } from "@/components/ui/button";
 import type { ButtonProps } from "@/components/ui/button";
 
-interface AuthAwareCTAProps extends Omit<ButtonProps, "onClick"> {
+interface AuthAwareCTAProps extends ButtonProps {
   /** Destino quando o usuário JÁ está logado. Default: "/dashboard" */
   authedTo?: string;
   /** Destino quando o usuário NÃO está logado. Default: "/auth" */
@@ -19,11 +19,13 @@ interface AuthAwareCTAProps extends Omit<ButtonProps, "onClick"> {
  * Não cria persistência própria nem força logout.
  */
 export const AuthAwareCTA = forwardRef<HTMLButtonElement, AuthAwareCTAProps>(
-  ({ authedTo = "/dashboard", guestTo = "/auth", children, ...props }, ref) => {
+  ({ authedTo = "/dashboard", guestTo = "/auth", children, onClick, ...props }, ref) => {
     const navigate = useNavigate();
     const { user } = useAuthUser();
 
     const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+      onClick?.(e);
+      if (e.defaultPrevented) return;
       e.preventDefault();
       navigate(user ? authedTo : guestTo);
     };
