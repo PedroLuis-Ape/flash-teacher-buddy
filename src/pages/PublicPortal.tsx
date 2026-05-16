@@ -7,6 +7,7 @@ import { ApeGrid } from "@/components/ape/ApeGrid";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { PublicBackBar } from "@/components/seo/PublicBackBar";
 
@@ -131,9 +132,7 @@ const PublicPortal = () => {
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
             Crie uma conta para estudar com listas personalizadas, jogos de flashcards e atividades interativas.
           </p>
-          <Button asChild size="lg">
-            <Link to="/auth">Criar acesso</Link>
-          </Button>
+          <AuthAwareCTA size="lg">Criar acesso</AuthAwareCTA>
         </section>
       </div>
     </div>
