@@ -432,6 +432,61 @@ All colors MUST be HSL.
     transform: translateY(-4px) rotate3d(1, 1, 0, 1deg);
     box-shadow: var(--shadow-hover);
   }
+
+  /* ── Microinteractions (subtle, brand-safe) ─────────────────
+   * Apply via className. Respects prefers-reduced-motion and
+   * the global perf kill-switch (`data-perf-no-anim`).
+   * ──────────────────────────────────────────────────────────── */
+
+  .interactive-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    will-change: transform;
+  }
+  .interactive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -12px hsl(var(--primary) / 0.25);
+    border-color: hsl(var(--primary) / 0.35);
+  }
+  .interactive-card:active {
+    transform: translateY(0) scale(0.99);
+    transition-duration: 0.08s;
+  }
+
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -10px hsl(var(--primary) / 0.3);
+  }
+
+  .pressable {
+    transition: transform 0.12s ease;
+  }
+  .pressable:active {
+    transform: scale(0.98);
+  }
+
+  .nav-link-animated {
+    position: relative;
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+  .nav-link-animated::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 4px;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.25s ease;
+  }
+  .nav-link-animated:hover::after {
+    transform: scaleX(1);
+  }
 }
 
 /* ── Performance overrides: Light mode kills ALL motion ── */
@@ -463,6 +518,41 @@ All colors MUST be HSL.
 [data-perf-no-anim] .active\:scale-\[0\.98\]:active,
 [data-perf-no-anim] .active\:scale-95:active {
   transform: none !important;
+}
+
+/* Microinteractions: flatten under perf kill-switch */
+[data-perf-no-anim] .interactive-card:hover,
+[data-perf-no-anim] .interactive-card:active,
+[data-perf-no-anim] .hover-lift:hover,
+[data-perf-no-anim] .pressable:active,
+[data-perf-no-hover] .interactive-card:hover,
+[data-perf-no-hover] .hover-lift:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-card) !important;
+}
+[data-perf-no-anim] .nav-link-animated::after,
+[data-perf-no-hover] .nav-link-animated:hover::after {
+  transform: scaleX(0) !important;
+}
+
+/* Respect user OS preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .interactive-card,
+  .hover-lift,
+  .pressable,
+  .nav-link-animated,
+  .nav-link-animated::after {
+    transition: none !important;
+  }
+  .interactive-card:hover,
+  .interactive-card:active,
+  .hover-lift:hover,
+  .pressable:active {
+    transform: none !important;
+  }
+  .nav-link-animated:hover::after {
+    transform: scaleX(0) !important;
+  }
 }
 
 /* Group-hover effects: disable scaling & color shifts */
