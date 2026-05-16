@@ -7,14 +7,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield, BookOpen, Copyright, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Shield, BookOpen, Copyright, User } from "lucide-react";
 import { SEOHead } from "@/components/seo/SEOHead";
+import { PublicBackBar } from "@/components/seo/PublicBackBar";
 
 export default function About() {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
@@ -34,16 +31,8 @@ export default function About() {
           },
         }}
       />
+      <PublicBackBar />
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
-
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-primary mb-2">APE</h1>
           <p className="text-xl text-muted-foreground">
