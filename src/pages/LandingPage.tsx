@@ -2,19 +2,17 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  BookOpen, PenLine, ListChecks, FolderTree, GraduationCap,
-  Globe, Sparkles, ArrowRight, Gamepad2, Users
+  ListChecks, FolderTree, Sparkles, ArrowRight, Gamepad2, Users,
+  Layers, TrendingUp, Check
 } from "lucide-react";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { PublicNav, PublicFooter } from "@/components/seo/PublicNav";
 
-const FEATURES = [
-  { icon: BookOpen, title: "Flashcards de inglês", text: "Crie e revise cartões com vocabulário, frases e gramática." },
-  { icon: PenLine, title: "Prática de escrita", text: "Digite a resposta para fixar a forma correta da palavra." },
-  { icon: ListChecks, title: "Múltipla escolha", text: "Treine reconhecimento com alternativas inteligentes." },
-  { icon: FolderTree, title: "Organização de palavras", text: "Pastas, listas e coleções para estruturar seu estudo." },
-  { icon: GraduationCap, title: "Turmas e acompanhamento", text: "Professores criam turmas e acompanham o progresso dos alunos." },
-  { icon: Globe, title: "Portal público de materiais", text: "Conteúdos compartilhados acessíveis sem cadastro." },
+const PILLARS = [
+  { icon: FolderTree, title: "Crie listas", text: "Organize vocabulário, frases e gramática em listas e pastas próprias." },
+  { icon: Layers, title: "Estude com flashcards", text: "Revise em sessões curtas com áudio, dicas e modos de flip." },
+  { icon: Gamepad2, title: "Pratique com jogos", text: "Múltipla escolha, escrita e tradução para fixar de verdade." },
+  { icon: TrendingUp, title: "Acompanhe progresso", text: "Metas pessoais, lista vermelha e histórico de estudo." },
 ];
 
 const EXPLORE = [
@@ -80,37 +78,64 @@ export default function LandingPage() {
           className="pointer-events-none absolute -bottom-32 -right-32 w-[460px] h-[460px] rounded-full opacity-25 blur-3xl"
           style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, transparent 70%)" }}
         />
-        <div className="max-w-5xl mx-auto px-4 md:px-6 py-16 md:py-24 text-center relative">
-          <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-4">
-            <Sparkles className="h-3.5 w-3.5" /> Estudo ativo de inglês
-          </span>
-          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
-            APE — Inglês com flashcards, jogos e prática ativa
-          </h1>
-          <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Uma plataforma de estudo criada para transformar vocabulário, frases e gramática em prática real,
-            com flashcards, exercícios interativos e acompanhamento para alunos e professores.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild size="lg" className="gap-2">
-              <Link to="/auth">Começar agora <ArrowRight className="h-4 w-4" /></Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/portal">Ver portal público</Link>
-            </Button>
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-20 relative">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="text-center lg:text-left">
+              <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground mb-4">
+                <Sparkles className="h-3.5 w-3.5" /> Estudo ativo de inglês
+              </span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
+                Inglês com flashcards, jogos e prática ativa
+              </h1>
+              <p className="mt-5 text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
+                Crie listas, estude com flashcards e pratique com jogos. Uma plataforma para alunos
+                e professores transformarem vocabulário em fluência.
+              </p>
+              <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                <Button asChild size="lg" className="gap-2">
+                  <Link to="/auth">Começar agora <ArrowRight className="h-4 w-4" /></Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/portal">Ver portal público</Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Visual mock — flashcard preview */}
+            <div className="relative max-w-md w-full mx-auto">
+              <div className="absolute inset-0 -rotate-6 translate-x-4 translate-y-4 rounded-2xl bg-accent/20 border border-border" aria-hidden="true" />
+              <div className="absolute inset-0 rotate-3 -translate-x-2 -translate-y-2 rounded-2xl bg-primary/10 border border-border" aria-hidden="true" />
+              <Card className="relative shadow-xl">
+                <CardContent className="p-8">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Flashcard · Inglês → Português</div>
+                  <div className="text-3xl md:text-4xl font-bold mb-2">to practice</div>
+                  <div className="text-muted-foreground mb-6">/ˈpræktɪs/ · verbo</div>
+                  <div className="rounded-lg bg-muted/50 p-4 text-sm">
+                    <span className="text-muted-foreground">Tradução:</span>{" "}
+                    <span className="font-medium text-foreground">praticar</span>
+                  </div>
+                  <div className="mt-5 flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-primary" /> Acertou</span>
+                    <span>Card 4 / 12</span>
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full w-1/3 bg-gradient-to-r from-primary to-primary-glow" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* FEATURES */}
+      {/* O QUE O APE FAZ */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-16 w-full">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-3">Como o APE ajuda no estudo</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-3">O que o APE faz</h2>
         <p className="text-center text-muted-foreground max-w-2xl mx-auto mb-10">
-          Recursos pensados para quem quer praticar inglês de forma constante, com vocabulário em inglês,
-          prática de frases em inglês e revisão ativa.
+          Quatro pilares que sustentam a rotina de estudo.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map(({ icon: Icon, title, text }) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {PILLARS.map(({ icon: Icon, title, text }) => (
             <Card key={title} className="h-full">
               <CardContent className="p-6">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-3">
@@ -128,62 +153,64 @@ export default function LandingPage() {
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-16 w-full">
         <div className="grid md:grid-cols-2 gap-10 items-center">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Para alunos</h2>
+            <div className="inline-flex items-center gap-2 text-primary mb-3">
+              <ListChecks className="h-5 w-5" />
+              <span className="text-sm font-semibold uppercase tracking-wider">Para alunos</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Estude com ritmo e clareza</h2>
             <p className="text-muted-foreground text-lg leading-relaxed">
-              O aluno pode praticar vocabulário em inglês, traduzir frases, treinar escrita e revisar conteúdos
-              de forma ativa. Os modos de estudo (flip, escrita e múltipla escolha) ajudam a fixar palavras
-              novas com mais consistência, do nível básico ao intermediário.
+              Pratique vocabulário, traduza frases e treine escrita em sessões curtas. Flip, escrita e
+              múltipla escolha trabalham habilidades diferentes — do básico ao intermediário.
             </p>
-            <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-              <li>• Listas de flashcards com áudio e dicas contextuais.</li>
-              <li>• Revisão dirigida de palavras difíceis (lista vermelha).</li>
-              <li>• Acompanhamento de progresso e metas pessoais.</li>
-            </ul>
+            <Button asChild className="mt-6" variant="secondary">
+              <Link to="/atividades-de-ingles">Ver tipos de atividades</Link>
+            </Button>
           </div>
-          <Card>
-            <CardContent className="p-6 space-y-3">
-              <div className="flex items-center gap-2 text-primary">
-                <Gamepad2 className="h-5 w-5" />
-                <span className="font-semibold">Estudo com jogos</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                A proposta do APE é estudar de forma mais dinâmica, sem perder a estrutura pedagógica.
-                Cada modo é desenhado para reforçar uma habilidade diferente — leitura, reconhecimento, escrita
-                e tradução — em sessões curtas e focadas.
-              </p>
-              <Button asChild variant="secondary" size="sm">
-                <Link to="/atividades-de-ingles">Ver tipos de atividades</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <ul className="space-y-3">
+            {[
+              "Listas de flashcards com áudio e dicas contextuais",
+              "Revisão dirigida de palavras difíceis (lista vermelha)",
+              "Metas pessoais e acompanhamento de progresso",
+              "Modos de estudo focados em fixação real",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-3 p-3 rounded-lg bg-muted/40">
+                <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <span className="text-sm">{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
       {/* PARA PROFESSORES */}
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-16 w-full">
         <div className="grid md:grid-cols-2 gap-10 items-center">
-          <Card className="md:order-2">
-            <CardContent className="p-6 space-y-3">
-              <div className="flex items-center gap-2 text-primary">
-                <Users className="h-5 w-5" />
-                <span className="font-semibold">Plataforma para professores de inglês</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Crie listas próprias, organize materiais por turma e compartilhe conteúdos de forma estruturada
-                com seus alunos. Professores acompanham o progresso individual e coletivo.
-              </p>
-              <Button asChild variant="secondary" size="sm">
-                <Link to="/para-professores">Ver recursos para professores</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <ul className="space-y-3 md:order-2">
+            {[
+              "Criação de listas e importação em lote",
+              "Pastas organizadas por tema ou turma",
+              "Turmas com acompanhamento individual",
+              "Compartilhamento de materiais no portal público",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-3 p-3 rounded-lg bg-muted/40">
+                <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <span className="text-sm">{item}</span>
+              </li>
+            ))}
+          </ul>
           <div className="md:order-1">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Para professores</h2>
+            <div className="inline-flex items-center gap-2 text-primary mb-3">
+              <Users className="h-5 w-5" />
+              <span className="text-sm font-semibold uppercase tracking-wider">Para professores</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Materiais e turmas no mesmo lugar</h2>
             <p className="text-muted-foreground text-lg leading-relaxed">
-              Professores podem montar listas de vocabulário, importar materiais em lote, organizar pastas por
-              tema e compartilhar conteúdos públicos no portal. Um espaço pensado para aulas de inglês,
-              reforço e turmas regulares.
+              Monte listas de vocabulário, organize pastas por tema e acompanhe alunos em turmas.
+              Pensado para aulas regulares, reforço e estudo autônomo.
             </p>
+            <Button asChild className="mt-6" variant="secondary">
+              <Link to="/para-professores">Ver recursos para professores</Link>
+            </Button>
           </div>
         </div>
       </section>

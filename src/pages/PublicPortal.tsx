@@ -8,6 +8,7 @@ import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/seo/SEOHead";
+import { PublicBackBar } from "@/components/seo/PublicBackBar";
 
 interface FolderType {
   id: string;
@@ -72,6 +73,7 @@ const PublicPortal = () => {
         }}
       />
       <ApeAppBar title="Portal do Aluno" variant="home" />
+      <PublicBackBar showPortal={false} />
 
       <div className="container mx-auto px-4 py-6 max-w-5xl">
         {/* Hero */}

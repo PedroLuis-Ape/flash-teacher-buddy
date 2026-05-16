@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SEOHead, type SEOHeadProps } from "@/components/seo/SEOHead";
 import { PublicNav, PublicFooter } from "@/components/seo/PublicNav";
+import { PublicBackBar } from "@/components/seo/PublicBackBar";
 
 interface SEOPageProps extends SEOHeadProps {
   h1: string;
@@ -27,6 +28,7 @@ export function SEOPage({
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead {...seo} />
       <PublicNav />
+      <PublicBackBar />
 
       <section className="max-w-4xl mx-auto px-4 md:px-6 py-12 md:py-16 w-full text-center">
         <h1 className="text-4xl md:text-5xl font-extrabold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
