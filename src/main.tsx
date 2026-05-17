@@ -13,6 +13,11 @@ import "./lib/errorCapture"; // Global error/rejection capture (must be early)
 import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
 import { HelmetProvider } from "react-helmet-async";
+import { bootPalette } from "./lib/palettes";
+
+// Apply user's saved palette BEFORE first paint to avoid a color flash.
+// The boot splash also covers the moment of palette/theme switch.
+try { bootPalette(); } catch { /* noop */ }
 
 // ── Boot progress reporter ────────────────────────────────────────────
 // The HTML inline script defines window.__apeBootProgress(value, label?)
