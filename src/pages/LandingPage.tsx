@@ -4,7 +4,7 @@ import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ListChecks, FolderTree, Sparkles, ArrowRight, Gamepad2, Users,
-  Layers, TrendingUp, Check
+  Layers, TrendingUp, Check, PenLine, ListOrdered, Shuffle, Mic
 } from "lucide-react";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { PublicNav, PublicFooter } from "@/components/seo/PublicNav";
@@ -21,6 +21,108 @@ const EXPLORE = [
   { to: "/atividades-de-ingles", title: "Atividades de Inglês", text: "Tradução, frases, gramática e revisão ativa." },
   { to: "/flashcards-de-ingles", title: "Flashcards de Inglês", text: "Memorize vocabulário e frases com revisão ativa." },
   { to: "/para-professores", title: "Para Professores", text: "Crie listas, organize materiais e acompanhe turmas." },
+];
+
+/**
+ * Demonstração visual dos modos de prática.
+ * Apenas conteúdo estático — não toca nos jogos reais.
+ */
+const PRACTICE_MODES = [
+  {
+    icon: Layers,
+    title: "Flashcards",
+    text: "Vire o card, ouça o áudio e marque acertos.",
+    preview: (
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Inglês</div>
+        <div className="text-lg font-bold">to practice</div>
+        <div className="mt-2 text-xs text-muted-foreground">↺ Tocar para virar</div>
+      </div>
+    ),
+  },
+  {
+    icon: PenLine,
+    title: "Escrita",
+    text: "Digite a tradução e fixe a escrita correta.",
+    preview: (
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Traduza</div>
+        <div className="text-sm font-medium mb-2">to practice</div>
+        <div className="h-7 rounded-md border border-primary/40 bg-muted/40 px-2 flex items-center text-xs text-foreground">
+          pratic<span className="ml-px inline-block w-px h-3 bg-foreground animate-pulse" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    icon: ListOrdered,
+    title: "Múltipla escolha",
+    text: "Escolha a opção correta entre quatro.",
+    preview: (
+      <div className="rounded-lg border border-border bg-card p-3 space-y-1">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">to practice</div>
+        {["praticar", "estudar", "treinar", "lembrar"].map((opt, i) => (
+          <div
+            key={opt}
+            className={`text-xs px-2 py-1 rounded border ${i === 0 ? "border-primary/60 bg-primary/10 text-foreground" : "border-border text-muted-foreground"}`}
+          >
+            {opt}
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    icon: Shuffle,
+    title: "Organizar palavras",
+    text: "Reordene os termos para formar a frase.",
+    preview: (
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Monte a frase</div>
+        <div className="flex flex-wrap gap-1">
+          {["I", "want", "to", "practice", "english"].map((w) => (
+            <span key={w} className="text-xs px-2 py-1 rounded bg-muted border border-border">{w}</span>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    icon: Mic,
+    title: "Pronúncia",
+    text: "Ouça o áudio nativo e repita em voz alta.",
+    preview: (
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Áudio</div>
+        <div className="text-sm font-medium mb-2">to practice</div>
+        <div className="flex items-end gap-0.5 h-6">
+          {[3, 6, 4, 8, 5, 7, 3, 9, 5, 4, 7, 3].map((h, i) => (
+            <span
+              key={i}
+              className="w-1 rounded-sm bg-gradient-to-t from-primary to-primary-glow"
+              style={{ height: `${h * 10}%` }}
+            />
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    icon: TrendingUp,
+    title: "Progresso",
+    text: "Acompanhe metas, sequência e revisão ativa.",
+    preview: (
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+          <span>Meta semanal</span><span className="text-primary">68%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden mb-2">
+          <div className="h-full w-2/3 bg-gradient-to-r from-primary to-primary-glow" />
+        </div>
+        <div className="text-xs text-muted-foreground">Sequência: 5 dias 🔥</div>
+      </div>
+    ),
+  },
 ];
 
 const jsonLd = [
@@ -144,6 +246,30 @@ export default function LandingPage() {
                 </div>
                 <h3 className="font-semibold text-lg mb-1">{title}</h3>
                 <p className="text-sm text-muted-foreground">{text}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* MODOS DE PRÁTICA — demonstração visual estática */}
+      <section className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-16 w-full">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-3">Modos de prática</h2>
+        <p className="text-center text-muted-foreground max-w-2xl mx-auto mb-10">
+          Diferentes formas de praticar a mesma palavra — fixação real, do reconhecimento à produção.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {PRACTICE_MODES.map(({ icon: Icon, title, text, preview }) => (
+            <Card key={title} className="h-full interactive-card">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <h3 className="font-semibold">{title}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">{text}</p>
+                {preview}
               </CardContent>
             </Card>
           ))}
