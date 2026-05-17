@@ -21,6 +21,7 @@ import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as Search
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
+import { PaletteSelector } from "@/components/PaletteSelector";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -202,6 +203,11 @@ const Index = () => {
                         onCheckedChange={toggleNotifications}
                       />
                     </div>
+
+                    <Separator />
+
+                    {/* Palette Selector */}
+                    <PaletteSelector />
                   </div>
                 </PopoverContent>
               </Popover>
