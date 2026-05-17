@@ -130,7 +130,7 @@ const Index = () => {
         showSearch
       />
 
-      <div className="max-w-5xl mx-auto space-y-6 px-4 lg:px-8 pt-4">
+      <div className="max-w-7xl mx-auto space-y-6 px-4 lg:px-8 xl:px-12 pt-4">
         {/* Profile Header — premium welcome banner */}
         <Card
           className="welcome-banner cursor-pointer border-0"
@@ -210,7 +210,7 @@ const Index = () => {
         </Card>
 
         {/* Statistics Cards — premium stat tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 xl:gap-4">
           <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><TrendingUp className="h-4 w-4 text-primary" /></span>
@@ -452,7 +452,7 @@ const Index = () => {
         {/* Quick Actions */}
         <div className="space-y-4">
           <ApeSectionTitle>Atalhos</ApeSectionTitle>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             <Card
               className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/store")}
