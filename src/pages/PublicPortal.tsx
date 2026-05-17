@@ -34,9 +34,20 @@ const PublicPortal = () => {
 
       if (error) throw error;
 
+      // Defesa extra: mesmo que get_portal_folders já filtre, garantimos que
+      // nenhuma pasta de atribuição (vinculada a turma ou com prefixo
+      // "[Atribuição]") apareça no Portal Público.
+      const publicOnly = (data || []).filter((folder: any) => {
+        if (folder?.class_id) return false;
+        const title: string = folder?.title || "";
+        if (title.trim().toLowerCase().startsWith("[atribuição]")) return false;
+        if (title.trim().toLowerCase().startsWith("[atribuicao]")) return false;
+        return true;
+      });
+
       // Load counts for each folder
       const foldersWithCounts = await Promise.all(
-        (data || []).map(async (folder: any) => {
+        publicOnly.map(async (folder: any) => {
           const { data: countsData } = await supabase.rpc('get_portal_counts', {
             _folder_id: folder.id
           });

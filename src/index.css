@@ -100,13 +100,13 @@
     position: relative;
     overflow: hidden;
     border-radius: calc(var(--radius) + 0.25rem);
-    border: 1px solid hsl(var(--primary) / 0.35);
+    border: 1px solid hsl(var(--primary) / 0.22);
     background:
-      radial-gradient(ellipse 60% 80% at 80% 50%, hsl(var(--primary-glow) / 0.25), transparent 70%),
-      linear-gradient(135deg, hsl(var(--card) / 0.85), hsl(var(--background) / 0.9));
+      radial-gradient(ellipse 60% 80% at 80% 50%, hsl(var(--primary-glow) / 0.14), transparent 70%),
+      linear-gradient(135deg, hsl(var(--card) / 0.92), hsl(var(--background) / 0.94));
     box-shadow:
-      0 0 32px -10px hsl(var(--primary) / 0.55),
-      inset 0 1px 0 0 hsl(var(--primary-glow) / 0.12);
+      0 4px 18px -10px hsl(var(--primary) / 0.28),
+      inset 0 1px 0 0 hsl(var(--primary-glow) / 0.08);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
   }
@@ -128,21 +128,21 @@
   .stat-tile {
     position: relative;
     border-radius: var(--radius);
-    border: 1px solid hsl(var(--primary) / 0.28);
+    border: 1px solid hsl(var(--primary) / 0.18);
     background:
-      linear-gradient(140deg, hsl(var(--card) / 0.85), hsl(var(--background) / 0.7));
+      linear-gradient(140deg, hsl(var(--card) / 0.95), hsl(var(--background) / 0.85));
     box-shadow:
-      0 0 18px -10px hsl(var(--primary) / 0.55),
-      inset 0 1px 0 0 hsl(var(--primary-glow) / 0.08);
+      0 2px 12px -8px hsl(var(--primary) / 0.25),
+      inset 0 1px 0 0 hsl(var(--primary-glow) / 0.05);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
   .stat-tile:hover {
-    border-color: hsl(var(--primary) / 0.55);
+    border-color: hsl(var(--primary) / 0.4);
     box-shadow:
-      0 8px 28px -10px hsl(var(--primary) / 0.65),
-      inset 0 1px 0 0 hsl(var(--primary-glow) / 0.14);
+      0 6px 20px -10px hsl(var(--primary) / 0.4),
+      inset 0 1px 0 0 hsl(var(--primary-glow) / 0.08);
   }
 
   /* Icon tile: small rounded square holding a lucide icon */
