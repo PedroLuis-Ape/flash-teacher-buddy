@@ -276,6 +276,110 @@ All colors MUST be HSL.
     --shadow-hover: 0 12px 40px -8px hsl(268 78% 68% / 0.45);
     --shadow-glow: 0 0 50px -10px hsl(290 82% 70% / 0.5);
   }
+
+  /* ────────────────────────────────────────────────────────────
+   * APE PALETTES — applied via html[data-palette="..."]
+   * Specificity (0,1,1) beats `.dark` / `:root` so palette wins.
+   * Palette is independent of light/dark — but each palette has
+   * an intended base that bootPalette() syncs with the .dark class.
+   * ──────────────────────────────────────────────────────────── */
+
+  /* APE Classic — current dark purple identity (default).
+     Mirrors the .dark block above; explicit here so switching
+     back from another palette restores the original look. */
+  html[data-palette="classic"] {
+    --background: 258 30% 8%;
+    --foreground: 270 25% 96%;
+    --card: 260 25% 13%;
+    --card-foreground: 270 25% 96%;
+    --popover: 260 28% 11%;
+    --popover-foreground: 270 25% 96%;
+    --primary: 268 78% 68%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 286 90% 76%;
+    --secondary: 224 70% 60%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 260 18% 20%;
+    --muted-foreground: 270 12% 70%;
+    --accent: 290 82% 70%;
+    --accent-foreground: 0 0% 100%;
+    --border: 260 20% 22%;
+    --input: 260 20% 20%;
+    --ring: 268 78% 68%;
+    --gradient-hero: linear-gradient(135deg, hsl(268 78% 68%), hsl(290 82% 70%));
+    --gradient-card: linear-gradient(145deg, hsl(260 25% 13%), hsl(264 28% 17%));
+    --shadow-card: 0 6px 28px -8px hsl(0 0% 0% / 0.55);
+    --shadow-hover: 0 12px 40px -8px hsl(268 78% 68% / 0.45);
+    --shadow-glow: 0 0 50px -10px hsl(290 82% 70% / 0.5);
+  }
+
+  /* APE Fresh — light, educational, green primary + soft blue. */
+  html[data-palette="fresh"] {
+    --background: 150 30% 98%;
+    --foreground: 160 25% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 25% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 25% 12%;
+    --primary: 152 60% 38%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 162 70% 52%;
+    --secondary: 200 75% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 150 20% 93%;
+    --muted-foreground: 160 15% 32%;
+    --accent: 200 75% 52%;
+    --accent-foreground: 0 0% 100%;
+    --border: 150 20% 86%;
+    --input: 150 20% 86%;
+    --ring: 152 60% 38%;
+    --gradient-hero: linear-gradient(135deg, hsl(152 60% 38%), hsl(200 75% 52%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(150 30% 98%));
+    --shadow-card: 0 4px 18px -6px hsl(152 60% 38% / 0.18);
+    --shadow-hover: 0 8px 26px -6px hsl(152 60% 38% / 0.28);
+    --shadow-glow: 0 0 32px -10px hsl(200 75% 52% / 0.35);
+  }
+  /* Suppress the dark nebula body when Fresh is active. */
+  html[data-palette="fresh"].dark body,
+  html[data-palette="fresh"] body {
+    background-color: hsl(150 30% 98%);
+    background-image: none;
+  }
+
+  /* APE Ocean — dark, calm cyan with soft purple accent. */
+  html[data-palette="ocean"] {
+    --background: 215 40% 9%;
+    --foreground: 200 25% 95%;
+    --card: 215 35% 14%;
+    --card-foreground: 200 25% 95%;
+    --popover: 215 38% 12%;
+    --popover-foreground: 200 25% 95%;
+    --primary: 190 78% 55%;
+    --primary-foreground: 215 50% 8%;
+    --primary-glow: 195 85% 65%;
+    --secondary: 220 65% 58%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 215 25% 20%;
+    --muted-foreground: 200 15% 72%;
+    --accent: 260 55% 65%;
+    --accent-foreground: 0 0% 100%;
+    --border: 215 25% 22%;
+    --input: 215 25% 20%;
+    --ring: 190 78% 55%;
+    --gradient-hero: linear-gradient(135deg, hsl(190 78% 55%), hsl(220 65% 58%));
+    --gradient-card: linear-gradient(145deg, hsl(215 35% 14%), hsl(215 38% 17%));
+    --shadow-card: 0 6px 28px -8px hsl(0 0% 0% / 0.5);
+    --shadow-hover: 0 12px 36px -8px hsl(190 78% 55% / 0.35);
+    --shadow-glow: 0 0 42px -12px hsl(195 85% 65% / 0.4);
+  }
+  /* Recolor the dark nebula body for Ocean. */
+  html[data-palette="ocean"].dark body {
+    background-color: hsl(215 45% 7%);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 0%, hsl(190 78% 28% / 0.30), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 85% 15%, hsl(220 65% 32% / 0.25), transparent 65%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, hsl(260 55% 28% / 0.20), transparent 70%);
+  }
 }
 
 @layer base {
