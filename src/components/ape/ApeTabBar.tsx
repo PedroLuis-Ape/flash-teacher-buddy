@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { usePerformance } from "@/contexts/PerformanceContext";
 
 const tabs = [
-  { id: "home", label: "Início", icon: Home, path: "/" },
+  { id: "home", label: "Início", icon: Home, path: "/dashboard" },
   { id: "library", label: "Biblioteca", icon: Library, path: "/folders" },
   { id: "goals", label: "Metas", icon: Target, path: "/goals" },
   { id: "store", label: "Loja", icon: Store, path: "/store" },
@@ -20,15 +20,15 @@ export function ApeTabBar() {
   const activeIndex = useMemo(() => {
     for (let i = 0; i < tabs.length; i++) {
       const path = tabs[i].path;
-      if (path === "/" && location.pathname === "/") return i;
-      if (path !== "/" && location.pathname.startsWith(path)) return i;
+      if (location.pathname === path) return i;
+      if (path !== "/" && location.pathname.startsWith(path + "/")) return i;
     }
     return -1;
   }, [location.pathname]);
 
   const isActive = (path: string) => {
-    if (path === "/") return location.pathname === "/";
-    return location.pathname.startsWith(path);
+    if (location.pathname === path) return true;
+    return path !== "/" && location.pathname.startsWith(path + "/");
   };
 
   return (
