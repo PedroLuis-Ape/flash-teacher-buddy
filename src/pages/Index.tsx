@@ -466,6 +466,74 @@ const Index = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             <Card
               className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/folders")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Library className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Biblioteca</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Pastas e listas
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/folders?action=new-list")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Plus className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Nova lista</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Criar do zero
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/goals")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Target className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Metas</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Acompanhe progresso
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/notes")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <StickyNote className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Minhas Notas</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Anotações rápidas
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/store")}
             >
               <div className="flex flex-col items-center text-center gap-3">
