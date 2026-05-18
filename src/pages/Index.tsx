@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus } from "lucide-react";
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
@@ -269,10 +269,14 @@ const Index = () => {
         {/* Turma Shortcut (for both students and teachers) */}
         <TurmaShortcut isTeacher={isTeacher} />
 
-        {/* Painel do Professor (apenas para professores) */}
+        {/*
+          Feature cards grid — empilhado no mobile, 2 colunas em desktop
+          para aproveitar melhor a largura sem mexer na lógica de cada card.
+        */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 xl:gap-4">
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
             onClick={() => navigate('/painel-professor')}
           >
             <div className="flex items-center gap-4">
@@ -294,7 +298,7 @@ const Index = () => {
         {/* NEW: Meus Professores Card (apenas para alunos) */}
         {!isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
             onClick={() => navigate('/my-teachers')}
           >
             <div className="flex items-center gap-4">
@@ -314,7 +318,7 @@ const Index = () => {
 
         {/* Continue Studying Card */}
         {safeLast && (
-          <Card className="overflow-hidden border-border">
+          <Card className="overflow-hidden border-border h-full">
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -347,7 +351,7 @@ const Index = () => {
 
         {/* Modo Reino Coming Soon */}
         <Card
-          className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative"
+          className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative h-full"
         >
           <div
             aria-hidden="true"
@@ -371,6 +375,7 @@ const Index = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
 
         {/* Pastas recentes (filtradas por instituição/hub) */}
         {(loading || myFolders.length > 0) && (
@@ -459,6 +464,74 @@ const Index = () => {
         <div className="space-y-4">
           <ApeSectionTitle>Atalhos</ApeSectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/folders")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Library className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Biblioteca</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Pastas e listas
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/folders?action=new-list")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Plus className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Nova lista</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Criar do zero
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/goals")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Target className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Metas</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Acompanhe progresso
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card
+              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              onClick={() => navigate("/notes")}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <StickyNote className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Minhas Notas</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Anotações rápidas
+                  </p>
+                </div>
+              </div>
+            </Card>
+
             <Card
               className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/store")}
