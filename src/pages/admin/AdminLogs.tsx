@@ -30,7 +30,7 @@ export default function AdminLogs() {
 
   const checkAdminAccess = async () => {
     if (!FEATURE_FLAGS.admin_skins_enabled) {
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
 
@@ -52,7 +52,7 @@ export default function AdminLogs() {
         description: "Você não tem permissão para acessar esta página.",
         variant: "destructive",
       });
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
 

@@ -36,7 +36,7 @@ export default function AdminGifts() {
 
   const checkAdminAccess = async () => {
     if (!FEATURE_FLAGS.gifting_enabled) {
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
 
@@ -58,7 +58,7 @@ export default function AdminGifts() {
         description: "Você não tem permissão para acessar esta página.",
         variant: "destructive",
       });
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
 

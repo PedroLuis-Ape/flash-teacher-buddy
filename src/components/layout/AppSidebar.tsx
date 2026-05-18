@@ -98,14 +98,14 @@ export function AppSidebar() {
                 {t('sidebar.mainNav', 'Principal')}
               </h3>
               {[
-                { icon: Home, label: t('tabbar.home', 'Início'), path: '/' },
+                { icon: Home, label: t('tabbar.home', 'Início'), path: '/dashboard' },
                 { icon: Library, label: t('tabbar.library', 'Biblioteca'), path: '/folders' },
                 { icon: Target, label: t('tabbar.goals', 'Metas'), path: '/goals' },
                 { icon: Store, label: t('tabbar.store', 'Loja'), path: '/store' },
                 { icon: User, label: t('tabbar.profile', 'Perfil'), path: '/profile' },
               ].map((item) => {
-                const isActive = location.pathname === item.path || 
-                  (item.path !== '/' && location.pathname.startsWith(item.path));
+                const isActive = location.pathname === item.path ||
+                  (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
                   return (
                     <Button
                       key={item.path}

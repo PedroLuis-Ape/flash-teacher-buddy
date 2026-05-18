@@ -45,7 +45,7 @@ export default function Turmas() {
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-10 bg-background border-b p-4">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-2xl font-bold">Turmas</h1>

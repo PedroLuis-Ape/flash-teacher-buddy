@@ -162,7 +162,7 @@ export default function Reinos() {
           <p className="text-muted-foreground mb-4">
             O Modo Reino está sendo preparado. Volte em breve!
           </p>
-          <Button onClick={() => navigate("/")}>
+          <Button onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
@@ -179,7 +179,7 @@ export default function Reinos() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

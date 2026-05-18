@@ -84,11 +84,15 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   
   // Don't show header/tabbar on auth pages
   const isAuthPage = location.pathname === '/auth';
+  // Public landing page — keep it free of internal app chrome (header/tabbar/footer)
+  // even when the user is logged in. The landing must look the same for visitors
+  // and authenticated users.
+  const isPublicLanding = location.pathname === '/';
   // Full screen pages without footer
   const isFullScreenPage = location.pathname.includes('/study');
 
   // Top bar contextual variants — keeps the bar light on internal pages and minimal in games.
-  const isHome = location.pathname === '/';
+  const isHome = location.pathname === '/dashboard';
   const isGameRoute =
     location.pathname.includes('/study') || location.pathname.includes('/games');
   // Hide secondary actions (notifications, presents) inside game / study to avoid distractions.
@@ -103,7 +107,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   // Institution bar only appears on Home; internal pages and games stay clean.
   const showInstitutionBar = isHome;
   
-  if (isAuthPage) {
+  if (isAuthPage || isPublicLanding) {
     return (
       <>
         {children}
