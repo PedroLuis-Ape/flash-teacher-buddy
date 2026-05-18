@@ -269,10 +269,14 @@ const Index = () => {
         {/* Turma Shortcut (for both students and teachers) */}
         <TurmaShortcut isTeacher={isTeacher} />
 
-        {/* Painel do Professor (apenas para professores) */}
+        {/*
+          Feature cards grid — empilhado no mobile, 2 colunas em desktop
+          para aproveitar melhor a largura sem mexer na lógica de cada card.
+        */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 xl:gap-4">
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
             onClick={() => navigate('/painel-professor')}
           >
             <div className="flex items-center gap-4">
@@ -294,7 +298,7 @@ const Index = () => {
         {/* NEW: Meus Professores Card (apenas para alunos) */}
         {!isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
             onClick={() => navigate('/my-teachers')}
           >
             <div className="flex items-center gap-4">
@@ -314,7 +318,7 @@ const Index = () => {
 
         {/* Continue Studying Card */}
         {safeLast && (
-          <Card className="overflow-hidden border-border">
+          <Card className="overflow-hidden border-border h-full">
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -347,7 +351,7 @@ const Index = () => {
 
         {/* Modo Reino Coming Soon */}
         <Card
-          className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative"
+          className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative h-full"
         >
           <div
             aria-hidden="true"
@@ -371,6 +375,7 @@ const Index = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
 
         {/* Pastas recentes (filtradas por instituição/hub) */}
         {(loading || myFolders.length > 0) && (
