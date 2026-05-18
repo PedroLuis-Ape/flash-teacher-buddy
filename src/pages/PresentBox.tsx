@@ -20,7 +20,7 @@ export default function PresentBox() {
 
   useEffect(() => {
     if (!FEATURE_FLAGS.present_inbox_visible) {
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
 
