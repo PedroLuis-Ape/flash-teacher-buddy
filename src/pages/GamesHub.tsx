@@ -231,8 +231,8 @@ const GamesHub = () => {
           )}
         </div>
 
-        <div className="max-w-5xl mx-auto space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium mb-1.5 block">Direção</label>
               <Select
@@ -298,10 +298,10 @@ const GamesHub = () => {
             </div>
           )}
 
-          <div className="flex flex-row flex-wrap gap-3 justify-center w-full pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
             <button
               onClick={() => startGame("flip")}
-              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <RotateCcw className="h-5 w-5 text-primary" />
@@ -311,7 +311,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("write")}
-              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Pencil className="h-5 w-5 text-primary" />
@@ -321,7 +321,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("multiple")}
-              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <ListOrdered className="h-5 w-5 text-primary" />
@@ -331,7 +331,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("unscramble")}
-              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Layers3 className="h-5 w-5 text-primary" />
@@ -341,7 +341,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("mixed")}
-              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <RotateCcw className="h-5 w-5 text-primary" />
@@ -351,7 +351,7 @@ const GamesHub = () => {
 
             <button
               onClick={() => startGame("pronunciation")}
-              className="flex-1 min-w-[140px] flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent transition-colors border-orange-500/30 bg-orange-500/5"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 hover:-translate-y-0.5 hover:shadow-md transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
                 <Mic className="h-5 w-5 text-orange-500" />
