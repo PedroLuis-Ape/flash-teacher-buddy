@@ -548,7 +548,7 @@ const Folders = () => {
           <p className="text-xs mt-1">Crie sua primeira pasta de estudos</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-fr">
           {filteredFolders.map((folder) => {
             const isFav = folderFavorites.includes(folder.id);
             const isSelected = selectedFolders.has(folder.id);
@@ -750,7 +750,7 @@ const Folders = () => {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-fr">
           {teachers.map((teacher) => (
             <ApeCardProfessor
               key={teacher.id}
@@ -793,7 +793,7 @@ const Folders = () => {
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                 Pastas favoritas
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-fr">
                 {favoritedFolders.map((folder) => (
                   <div key={folder.id} className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
@@ -827,7 +827,7 @@ const Folders = () => {
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                 Listas favoritas
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-fr">
                 {favoritedLists.map((list) => (
                   <div key={list.id} className="flex items-center gap-2">
                     <div className="flex-1 min-w-0">
@@ -869,7 +869,7 @@ const Folders = () => {
   return (
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Biblioteca" variant="home" />
-      <div className="max-w-5xl mx-auto px-4 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 lg:px-8">
         <ApeTabs tabs={tabs} defaultValue="folders" />
       </div>
 
