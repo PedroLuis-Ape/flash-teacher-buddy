@@ -87,7 +87,7 @@ const PublicPortal = () => {
       <ApeAppBar title="Portal do Aluno" variant="home" />
       <PublicBackBar showPortal={false} />
 
-      <div className="container mx-auto px-4 py-6 max-w-5xl">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Hero */}
         <section className="text-center py-8 md:py-12">
           <h1 className="text-3xl md:text-4xl font-extrabold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">
