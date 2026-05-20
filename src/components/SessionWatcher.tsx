@@ -61,10 +61,12 @@ export function SessionWatcher() {
         return;
       }
 
-      // Route guard — only AFTER the first event has been processed,
-      // and never on the very first INITIAL_SESSION (which can race with
-      // optimistic localStorage hydration in useAuthUser).
-      if (wasInitialized && !session && isProtectedPath(window.location.pathname)) {
+      // Route guard — redirect logged-out users away from protected routes.
+      // Runs on INITIAL_SESSION too: if the user opened a protected URL directly
+      // without a session, send them to /auth instead of leaving them on a blank
+      // protected page. Safe because Supabase already hydrated from localStorage
+      // before firing INITIAL_SESSION.
+      if (!session && isProtectedPath(window.location.pathname)) {
         navigate('/auth', { replace: true });
       }
 
