@@ -89,10 +89,17 @@ const Folders = () => {
   const { data: listFavorites = [] } = useFavorites(userId, 'list');
   const toggleFavorite = useToggleFavorite();
 
+  // Re-load when the SELECTED HUB ID changes — not the object reference.
+ // The context can emit a new object with the same id (e.g. after SIGNED_IN
+ // re-fetches institutions), which would otherwise re-fire loadData in a
+ // loop and trap the page in skeleton/loading.
   useEffect(() => {
+    let cancelled = false;
     checkAuth();
-    loadData();
-  }, [selectedInstitution]); // Reload when institution changes
+    loadData(() => cancelled);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInstitution?.id]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -114,7 +121,7 @@ const Folders = () => {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (isCancelled?: () => boolean) => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -187,6 +194,7 @@ const Folders = () => {
       ]);
 
       if (foldersError) throw foldersError;
+      if (isCancelled?.()) return;
 
       // Build per-list card count map (RPC returns rows: { list_id, card_count })
       const perListCardCounts: Record<string, number> = {};
@@ -214,6 +222,7 @@ const Folders = () => {
         };
       });
 
+      if (isCancelled?.()) return;
       setFolders(processedFolders);
 
       if (listsError) {
@@ -227,7 +236,7 @@ const Folders = () => {
           folder_title: list.folders?.title,
           card_count: perListCardCounts[list.id] || 0,
         }));
-        setLists(processedLists);
+        if (!isCancelled?.()) setLists(processedLists);
       }
 
       // Load teachers (subscriptions)
@@ -255,15 +264,15 @@ const Folders = () => {
         }
 
         if (teacherProfiles) {
-          setTeachers(teacherProfiles as TeacherType[]);
+          if (!isCancelled?.()) setTeachers(teacherProfiles as TeacherType[]);
         }
       }
 
     } catch (error: any) {
       console.error("Error loading data:", error);
-      toast.error("Erro ao carregar dados");
+      if (!isCancelled?.()) toast.error("Erro ao carregar dados");
     } finally {
-      setLoading(false);
+      if (!isCancelled?.()) setLoading(false);
     }
   };
 
