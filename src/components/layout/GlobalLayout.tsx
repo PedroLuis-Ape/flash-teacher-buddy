@@ -86,8 +86,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const isAuthPage = location.pathname === '/auth';
   // Public landing page — keep it free of internal app chrome (header/tabbar/footer)
   // even when the user is logged in. The landing must look the same for visitors
-  // and authenticated users.
-  const isPublicLanding = location.pathname === '/';
+  // and authenticated users. Includes /landing (always-public alias of /).
+  const isPublicLanding =
+    location.pathname === '/' || location.pathname === '/landing';
   // Full screen pages without footer
   const isFullScreenPage = location.pathname.includes('/study');
 
