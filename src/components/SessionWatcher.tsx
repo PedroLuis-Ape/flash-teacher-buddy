@@ -16,7 +16,7 @@ const PUBLIC_PREFIXES = [
 ] as const;
 
 // Caminhos exatos públicos (não usar startsWith pois "/" pegaria tudo).
-const PUBLIC_EXACT = new Set<string>(["/"]);
+const PUBLIC_EXACT = new Set<string>(["/", "/landing"]);
 
 function isProtectedPath(pathname: string) {
   if (PUBLIC_EXACT.has(pathname)) return false;
