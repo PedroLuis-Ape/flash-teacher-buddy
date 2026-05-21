@@ -27,6 +27,7 @@ import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPro
 const Index = lazy(() => import("./pages/Index"));
 import Auth from "./pages/Auth"; // Eagerly loaded — critical first paint for unauthenticated users
 import LandingPage from "./pages/LandingPage"; // Public landing — eager so SEO/visitor first paint is instant
+import RootEntry from "./components/RootEntry"; // Smart "/" gate: guests → landing, logged-in → /dashboard
 const InglesParaIniciantes = lazy(() => import("./pages/seo/InglesParaIniciantes"));
 const AtividadesDeIngles = lazy(() => import("./pages/seo/AtividadesDeIngles"));
 const FlashcardsDeIngles = lazy(() => import("./pages/seo/FlashcardsDeIngles"));
@@ -113,7 +114,8 @@ const App = () => {
             <GlobalLayout>
               <PageTransition>
                 <Routes>
-                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/" element={<RootEntry />} />
+                  <Route path="/landing" element={<LandingPage />} />
                   <Route path="/dashboard" element={<Index />} />
                   <Route path="/ingles-para-iniciantes" element={<InglesParaIniciantes />} />
                   <Route path="/atividades-de-ingles" element={<AtividadesDeIngles />} />
