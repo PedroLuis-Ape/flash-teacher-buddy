@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
+import { SmartCTA } from "@/components/cta/SmartCTA";
+import { LandingStickyCTA } from "@/components/cta/LandingStickyCTA";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ListChecks, FolderTree, Sparkles, ArrowRight, Gamepad2, Users,
@@ -191,16 +192,26 @@ export default function LandingPage() {
                 Inglês com flashcards, jogos e prática ativa
               </h1>
               <p className="mt-5 text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
-                Crie listas, estude com flashcards e pratique com jogos. Uma plataforma para alunos
-                e professores transformarem vocabulário em fluência.
+                Crie listas, pratique com jogos e transforme vocabulário em uso real —
+                feito para alunos e professores.
               </p>
               <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <AuthAwareCTA size="lg" className="gap-2">
-                  Começar agora <ArrowRight className="h-4 w-4" />
-                </AuthAwareCTA>
-                <Button asChild size="lg" variant="outline">
-                  <Link to="/portal">Ver portal público</Link>
-                </Button>
+                <SmartCTA
+                  destination="app"
+                  placement="hero"
+                  size="lg"
+                  className="gap-2"
+                  label={<>Começar a estudar agora <ArrowRight className="h-4 w-4" /></>}
+                  authedLabel={<>Abrir meu painel <ArrowRight className="h-4 w-4" /></>}
+                />
+                <SmartCTA
+                  destination="public"
+                  to="/portal"
+                  placement="hero"
+                  size="lg"
+                  variant="outline"
+                  label="Ver uma atividade"
+                />
               </div>
             </div>
 
@@ -370,10 +381,17 @@ export default function LandingPage() {
         <p className="text-muted-foreground mb-8">
           Crie seu acesso e comece em poucos minutos.
         </p>
-        <AuthAwareCTA size="lg">Criar acesso</AuthAwareCTA>
+        <SmartCTA
+          destination="app"
+          placement="section"
+          size="lg"
+          label="Criar acesso"
+          authedLabel="Continuar estudando"
+        />
       </section>
 
       <PublicFooter />
+      <LandingStickyCTA />
     </div>
   );
 }
