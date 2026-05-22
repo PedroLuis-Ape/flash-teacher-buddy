@@ -349,6 +349,41 @@ const Index = () => {
           </Card>
         )}
 
+        {/* Fallback primary CTA quando ainda não há histórico de estudo */}
+        {!safeLast && !loading && (
+          <Card className="overflow-hidden border-border h-full">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Library className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground mb-1">Pronto para começar?</p>
+                  <h3 className="font-semibold text-base mb-3">
+                    {safeRecents.length > 0 || myFolders.length > 0
+                      ? "Abrir minha biblioteca"
+                      : "Criar minha primeira lista"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {safeRecents.length > 0 || myFolders.length > 0
+                      ? "Escolha uma lista ou pasta para estudar agora."
+                      : "Monte sua primeira lista de vocabulário e comece a praticar."}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => navigate("/folders")}
+                className="w-full mt-4 min-h-[44px]"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {safeRecents.length > 0 || myFolders.length > 0
+                  ? "Abrir biblioteca"
+                  : "Criar lista"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Modo Reino Coming Soon */}
         <Card
           className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative h-full"
