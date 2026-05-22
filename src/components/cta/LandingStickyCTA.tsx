@@ -42,7 +42,7 @@ export function LandingStickyCTA() {
           destination="app"
           placement="sticky"
           size="default"
-          className="flex-1 gap-2"
+          className="flex-1 !w-auto gap-2"
           label={
             <>
               Começar a estudar <ArrowRight className="h-4 w-4" />
@@ -59,7 +59,7 @@ export function LandingStickyCTA() {
             variant="ghost"
             size="default"
             onClick={() => navigate("/portal")}
-            className="shrink-0"
+            className="shrink-0 !w-auto"
           >
             Ver atividade
           </Button>
