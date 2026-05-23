@@ -1,6 +1,6 @@
 /**
  * APE – Apprentice Practice & Enhancement
- * © 2025 Pedro Luis de Oliveira Silva. Todos os direitos reservados.
+ * © 2025 APE Education. Todos os direitos reservados.
  */
 
 /**
