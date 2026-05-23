@@ -191,6 +191,20 @@ export function AppSidebar() {
                 <Trash2 className="h-4 w-4" />
                 <span>{t('sidebar.trash', 'Lixeira')}</span>
               </Button>
+              <Button
+                variant={location.pathname === '/landing' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname === '/landing' && "bg-primary/10 text-primary font-medium"
+                )}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/landing');
+                }}
+              >
+                <Globe className="h-4 w-4" />
+                <span>{t('sidebar.landing', 'Página inicial')}</span>
+              </Button>
             </div>
 
             <Separator />
