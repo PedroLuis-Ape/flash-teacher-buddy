@@ -84,7 +84,7 @@ export function PublicFooter() {
   return (
     <footer className="border-t border-border/50 mt-16 py-8 text-sm text-muted-foreground">
       <div className="max-w-6xl mx-auto px-4 md:px-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <p>© {new Date().getFullYear()} APE — Apprenticeship Practice and Enhancement</p>
+        <p>© {new Date().getFullYear()} APE — Apprentice Practice & Enhancement</p>
         <nav className="flex flex-wrap gap-4">
           <Link to="/about" className="nav-link-animated hover:text-foreground">Sobre</Link>
           <Link to="/portal" className="nav-link-animated hover:text-foreground">Portal</Link>

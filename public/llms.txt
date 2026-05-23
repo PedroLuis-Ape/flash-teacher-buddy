@@ -1,4 +1,4 @@
-# APE - Apprenticeship Practice and Enhancement
+# APE — Apprentice Practice & Enhancement
 
 > Plataforma de flashcards e estudo ativo para alunos e professores. Permite criar coleções, organizar turmas e estudar com diversos modos interativos (Flip, Múltipla Escolha, Escrita, Pronúncia e mais).
 

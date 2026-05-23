@@ -130,7 +130,7 @@ const jsonLd = [
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "APE — Apprenticeship Practice and Enhancement",
+    name: "APE — Apprentice Practice & Enhancement",
     url: "https://www.apeeducation.org/",
     inLanguage: "pt-BR",
     potentialAction: {

@@ -254,7 +254,7 @@ const Auth = () => {
               Bem-vindo à APE
             </h1>
             <p className="text-muted-foreground text-base sm:text-lg">
-              Apprenticeship Practice and Enhancement
+              Apprentice Practice & Enhancement
             </p>
           </div>
         </Card>
