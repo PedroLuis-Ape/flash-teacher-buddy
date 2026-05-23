@@ -1,8 +1,6 @@
 /**
  * APE – Apprentice Practice & Enhancement
- * © 2025 Pedro Luis de Oliveira Silva. Todos os direitos reservados.
- * Este software é de uso exclusivo do autor e de seus alunos autorizados.
- * É proibida a cópia, redistribuição ou utilização comercial sem autorização por escrito.
+ * © 2025 APE Education. Todos os direitos reservados.
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,8 +48,7 @@ export default function About() {
           <CardContent className="space-y-4 text-muted-foreground">
             <p>
               O <strong className="text-foreground">APE (Apprentice Practice & Enhancement)</strong> é 
-              um aplicativo educacional focado em prática guiada de idiomas, desenvolvido por{" "}
-              <strong className="text-foreground">Pedro Luis de Oliveira Silva</strong>.
+              um aplicativo educacional focado em prática guiada de idiomas, desenvolvido pela equipe APE.
             </p>
             <p>
               Todos os materiais visuais, fluxo de estudo, lógica de gamificação e recursos de 
@@ -75,10 +72,10 @@ export default function About() {
           </CardHeader>
           <CardContent className="text-muted-foreground">
             <p>
-              <strong className="text-foreground">Pedro Luis de Oliveira Silva</strong>
+              <strong className="text-foreground">Equipe APE</strong>
             </p>
             <p className="text-sm mt-2">
-              Professor e desenvolvedor do aplicativo APE, dedicado a criar ferramentas 
+              Equipe dedicada a criar ferramentas 
               educacionais inovadoras para o ensino de idiomas.
             </p>
           </CardContent>
@@ -137,7 +134,7 @@ export default function About() {
             © 2025 APE – Apprentice Practice & Enhancement
           </p>
           <p>
-            Desenvolvido por Pedro Luis de Oliveira Silva. Todos os direitos reservados.
+            Desenvolvido pela equipe APE. Todos os direitos reservados.
           </p>
         </div>
       </div>

@@ -95,7 +95,7 @@ export default function KingdomImport() {
   const downloadTemplate = () => {
     const template = `kingdom_code,level_code,unit,activity_type,prompt,answer,choices,lang,points,tags
 K1,L1,Greetings,translate,Hello (cumprimento padrão),Hello,[Hi | Hello there],en-US,,
-K1,L1,Be-verb,multiple_choice,I ___ Pedro,[I am | I'm],*I am||I is||I'm not,en-US,,
+K1,L1,Be-verb,multiple_choice,I ___ Ana,[I am | I'm],*I am||I is||I'm not,en-US,,
 K1,L1,Feelings,translate,I am happy (estado emocional),I am happy,[I'm happy],en-US,,`;
 
     const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });

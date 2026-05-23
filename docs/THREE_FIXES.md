@@ -2,7 +2,7 @@
 
 ## Summary
 This document describes three critical fixes applied to the APE platform:
-1. **Store Curation** - Only approved items by Pedro shown in store
+1. **Store Curation** - Only approved items by the admin team shown in store
 2. **TTS Auto-Language** - Automatic language detection with parentheses removal
 3. **Parentheses as Annotations** - Content in parentheses not required in answers
 
@@ -11,7 +11,7 @@ This document describes three critical fixes applied to the APE platform:
 ## A) STORE CURATION
 
 ### Goal
-- Show only approved items by Pedro in store
+- Show only approved items by the admin team in store
 - Remove duplicates (e.g., "PITECO Vampiro" appeared 2x)
 - Quarantine unauthorized assets without deletion
 
@@ -167,7 +167,7 @@ Currently auto-detection is ALWAYS enabled. To use explicit language only:
 To add new items to store:
 1. Update `ALLOWED_SLUGS` in `src/lib/storeEngine.ts`
 2. Set item's `approved = true` and `slug` in database
-3. Ensure `approved_by = 'pedro'`
+3. Ensure `approved_by = 'admin'`
 
 ---
 
@@ -198,7 +198,7 @@ To add new items to store:
    - Restore or permanently delete
 
 2. **Upload Policy Enforcement**:
-   - Block uploads from non-Pedro accounts
+   - Block uploads from non-admin accounts
    - Pending review workflow
 
 3. **Annotation UI**:
