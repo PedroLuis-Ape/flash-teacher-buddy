@@ -2,7 +2,7 @@
 
 > Plataforma de flashcards e estudo ativo para alunos e professores. Permite criar coleções, organizar turmas e estudar com diversos modos interativos (Flip, Múltipla Escolha, Escrita, Pronúncia e mais).
 
-APE foi criada por Pedro Luis de Oliveira Silva. O sistema é voltado para o ensino de idiomas e outros conteúdos baseados em pares termo/definição, com gamificação, metas e acompanhamento de progresso.
+APE é uma plataforma voltada para o ensino de idiomas e outros conteúdos baseados em pares termo/definição, com gamificação, metas e acompanhamento de progresso.
 
 ## Pages
 
