@@ -291,10 +291,10 @@ CREATE POLICY "Anyone can view skins"
 #### Opção 2: Moderação Manual
 1. Aceitar upload de qualquer usuário
 2. Mover para pasta `pending_review/`
-3. Pedro aprova/rejeita via painel admin
+3. A equipe de administração aprova/rejeita via painel admin
 4. Aprovados vão para `/assets/market/`
 
-**Por enquanto não é necessário** — todas as skins são criadas manualmente por Pedro e já estão no repositório.
+**Por enquanto não é necessário** — todas as skins são criadas manualmente pela equipe APE e já estão no repositório.
 
 ---
 
