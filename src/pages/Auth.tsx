@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -349,6 +349,14 @@ const Auth = () => {
                 <Button type="button" variant="link" onClick={() => setIsSignUp(!isSignUp)} className="text-sm">
                   {isSignUp ? "Já tem uma conta? Entre aqui" : "Não tem conta? Crie uma"}
                 </Button>
+              </div>
+              <div className="flex justify-center w-full pt-1">
+                <Link
+                  to="/landing"
+                  className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                >
+                  ← Voltar para a página inicial
+                </Link>
               </div>
             </form>
           </CardContent>
