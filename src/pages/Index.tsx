@@ -273,7 +273,7 @@ const Index = () => {
           Feature cards grid — empilhado no mobile, 2 colunas em desktop
           para aproveitar melhor a largura sem mexer na lógica de cada card.
         */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 xl:gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 xl:gap-4">
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
             className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
@@ -439,7 +439,7 @@ const Index = () => {
               <Skeleton className="h-14 w-full" />
             </div>
           ) : myFolders.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-fr">
               {myFolders.map((folder) => (
                 <ApeCardFolder
                   key={folder.id}
@@ -478,7 +478,7 @@ const Index = () => {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-fr">
               {myLists
                 .filter((list) => typeof (list as any)?.id === "string")
                 .map((list) => (
