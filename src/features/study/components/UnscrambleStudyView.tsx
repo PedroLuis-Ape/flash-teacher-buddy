@@ -174,36 +174,45 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto px-2 sm:p-4">
-      <Card className={cn("w-full p-4 sm:p-6 bg-card relative", getRedListCardClass(isRedListed))}>
-        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
-          {onToggleFavorite && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleFavorite}
-              className={cn(
-                "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
-                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-              )}
-              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-            >
-              <Star className={cn("h-4 w-4 sm:h-5 sm:w-5", isFavorite && "fill-current")} />
-            </Button>
-          )}
-          <HintButton hint={hint} />
-          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
-        </div>
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
+      <Card className={cn("w-full p-4 sm:p-6 bg-card", getRedListCardClass(isRedListed))}>
+        {/*
+          Linha de controles do card: título à esquerda, ações em linha à direita.
+          Os botões (favorito, dica, lista vermelha, velocidade, áudio) ficam todos
+          no mesmo eixo horizontal para evitar sobreposição com o título/pergunta.
+        */}
+        <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4 flex-wrap">
           <h3 className="text-base sm:text-lg font-semibold">Organize as palavras:</h3>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+            {onToggleFavorite && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleFavorite}
+                className={cn(
+                  "h-8 w-8 transition-colors",
+                  isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
+                )}
+                title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+              >
+                <Star className={cn("h-4 w-4", isFavorite && "fill-current")} />
+              </Button>
+            )}
+            <HintButton hint={hint} />
+            <RedListIndicator
+              isRedListed={isRedListed}
+              isFavorite={isFavorite}
+              onToggleRedList={onToggleRedList}
+              size="sm"
+            />
             <SpeechRateControl />
             <Button
               variant="ghost"
               size="icon"
               onClick={handlePlayAudio}
               className="shrink-0 h-8 w-8"
+              title="Ouvir frase"
             >
-              <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Volume2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
