@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LogOut, User, Camera, Copy, Settings, Keyboard } from "lucide-react";
+import { LogOut, User, Camera, Copy, Settings, Keyboard, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { equipAvatarAsPhoto } from "@/lib/storeEngine";
@@ -26,6 +26,33 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [equippedAvatarSkinId, setEquippedAvatarSkinId] = useState<string | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+
+  const handleCheckForUpdates = async () => {
+    if (isCheckingUpdate) return;
+    setIsCheckingUpdate(true);
+    toast.info("Buscando atualizações...");
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (typeof caches !== "undefined") {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      }
+      try { localStorage.removeItem("app_build_id"); } catch { /* noop */ }
+      try { sessionStorage.removeItem("app_build_reload_guard"); } catch { /* noop */ }
+    } catch (err) {
+      console.warn("[Profile] Update check cleanup failed:", err);
+    } finally {
+      setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("_u", Date.now().toString());
+        window.location.replace(url.toString());
+      }, 400);
+    }
+  };
 
   useEffect(() => {
     loadProfile();
@@ -242,6 +269,16 @@ const Profile = () => {
       <GoogleAccountSection />
 
       <div className="space-y-3">
+        <Button
+          variant="outline"
+          className="w-full justify-start min-h-[44px]"
+          onClick={handleCheckForUpdates}
+          disabled={isCheckingUpdate}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingUpdate ? "animate-spin" : ""}`} />
+          {isCheckingUpdate ? "Atualizando..." : "Buscar atualizações"}
+        </Button>
+
         <Button
           variant="outline"
           className="w-full justify-start min-h-[44px]"
