@@ -131,7 +131,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
                 ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
                 : "bg-background"
             )}>
-              <div className="max-w-6xl mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">
+              <div className="max-w-[1600px] mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">
                 <div className="flex items-center gap-1 md:gap-2">
                   <AppSidebar />
                   <AdminButton />
