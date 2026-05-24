@@ -131,7 +131,7 @@ const Index = () => {
         showSearch
       />
 
-      <div className="max-w-7xl mx-auto space-y-6 px-4 lg:px-8 xl:px-12 pt-4">
+      <div className="max-w-[1600px] mx-auto space-y-6 px-4 lg:px-8 xl:px-12 pt-4">
         {/* Profile Header — premium welcome banner */}
         <Card
           className="welcome-banner cursor-pointer border-0"
