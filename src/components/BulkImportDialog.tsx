@@ -28,7 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { parseLayeredInput, type LayeredGroup } from "@/features/cards/lib/layeredImport";
+import { parseLayeredInput, extractCamadasBlock, type LayeredGroup } from "@/features/cards/lib/layeredImport";
 import { createLayeredCard } from "@/features/cards/lib/layeredCards";
 
 interface BulkImportDialogProps {
@@ -84,6 +84,7 @@ export const BulkImportDialog = ({
   const [preview, setPreview] = useState<FlashcardPair[]>([]);
   const [glossaryPreview, setGlossaryPreview] = useState<GlossaryParsed[]>([]);
   const [layeredGroups, setLayeredGroups] = useState<LayeredGroup[]>([]);
+  const [sentenceWarnings, setSentenceWarnings] = useState<string[]>([]);
   const [detectLayers, setDetectLayers] = useState<boolean>(FEATURE_FLAGS.layered_cards);
   const [stats, setStats] = useState({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0, glossaryNew: 0, glossaryDuplicates: 0, layeredGroups: 0, layeredCards: 0 });
   const [loading, setLoading] = useState(false);
@@ -169,23 +170,33 @@ export const BulkImportDialog = ({
     setIsParsing(true);
     requestAnimationFrame(() => {
       setTimeout(() => {
-        // ── Layered detection (opt-in via flag + toggle) ──
+        // ── Layered detection ──
+        // Priority 1: explicit `[CAMADAS]` block (works inside or outside the
+        // `=== CARDS ===` section). Lines in the block become layered cards;
+        // the rest of the input falls through to the normal flat parser.
+        //
+        // Priority 2 (legacy fallback, only when no explicit block found):
+        // implicit indentation / repeated-term heuristic via parseLayeredInput.
         let textForFlatParse = input;
         let detectedGroups: LayeredGroup[] = [];
+        let warnings: string[] = [];
         if (FEATURE_FLAGS.layered_cards && detectLayers) {
-          // parseLayeredInput operates on the GLOSSARY+CARDS text as-is. To
-          // avoid hijacking the "=== GLOSSÁRIO GLOBAL ===" section, we only
-          // run it against the CARDS section when the dual-section header is
-          // present.
-          const cardsSectionMatch = input.match(/===\s*CARDS\s*===([\s\S]*)$/i);
-          const layeredSource = cardsSectionMatch ? cardsSectionMatch[1] : input;
-          const layered = parseLayeredInput(layeredSource);
-          detectedGroups = layered.groups;
-          if (detectedGroups.length > 0) {
-            const leftoverText = layered.leftover.join("\n");
-            textForFlatParse = cardsSectionMatch
-              ? input.replace(cardsSectionMatch[1], "\n" + leftoverText)
-              : leftoverText;
+          const camadas = extractCamadasBlock(input);
+          if (camadas.found) {
+            detectedGroups = camadas.groups;
+            warnings = camadas.sentenceWarnings;
+            textForFlatParse = camadas.cleanedInput;
+          } else {
+            const cardsSectionMatch = input.match(/===\s*CARDS\s*===([\s\S]*)$/i);
+            const layeredSource = cardsSectionMatch ? cardsSectionMatch[1] : input;
+            const layered = parseLayeredInput(layeredSource);
+            detectedGroups = layered.groups;
+            if (detectedGroups.length > 0) {
+              const leftoverText = layered.leftover.join("\n");
+              textForFlatParse = cardsSectionMatch
+                ? input.replace(cardsSectionMatch[1], "\n" + leftoverText)
+                : leftoverText;
+            }
           }
         }
         const { glossaryLines, cards } = parseGlossaryAndCards(textForFlatParse);
@@ -201,6 +212,7 @@ export const BulkImportDialog = ({
         setGlossaryPreview(uniqueGlossary);
         setPreview(deduplicated);
         setLayeredGroups(detectedGroups);
+        setSentenceWarnings(warnings);
         setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates, layeredGroups: detectedGroups.length, layeredCards });
         setIsParsing(false);
       }, 0);
@@ -328,6 +340,7 @@ export const BulkImportDialog = ({
       setPreview([]);
       setGlossaryPreview([]);
       setLayeredGroups([]);
+      setSentenceWarnings([]);
       setInvertAB(false);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
@@ -374,19 +387,20 @@ export const BulkImportDialog = ({
             <CollapsibleContent className="mt-3 space-y-3">
               <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
                 <div className="text-sm space-y-2">
-                  <p className="font-medium">A IA gera duas seções automaticamente:</p>
+                  <p className="font-medium">A IA gera uma seção CARDS, com bloco [CAMADAS] opcional:</p>
                   <div className="bg-background p-2 rounded text-xs font-mono space-y-1">
-                    <p className="text-primary font-semibold">=== GLOSSÁRIO GLOBAL ===</p>
+                    <p className="text-primary font-semibold">=== CARDS ===</p>
+                    <p>house / casa</p>
+                    <p>I study English every day / Eu estudo inglês todos os dias.</p>
+                    <p className="text-primary font-semibold mt-2">[CAMADAS]</p>
                     <p>work / trabalhar</p>
-                    <p>late / atrasado</p>
-                    <p className="text-primary font-semibold mt-2">=== CARDS ===</p>
-                    <p>I work today / Eu trabalho hoje</p>
-                    <p>She is late / Ela está atrasada (informal) [Dica detalhada]</p>
+                    <p>work / funcionar</p>
+                    <p>look up / pesquisar</p>
                   </div>
                   <ul className="list-disc list-inside text-muted-foreground space-y-1 text-xs">
-                    <li><strong>Glossário:</strong> palavras soltas com tradução direta → ficam nas traduções globais da lista.</li>
-                    <li><strong>Cards:</strong> frases completas → ficam como flashcards de estudo.</li>
-                    <li>Você também pode colar <strong>só cards</strong> sem glossário (compatível com formato antigo).</li>
+                    <li><strong>Cards normais:</strong> palavras ou frases comuns → ficam acima do bloco [CAMADAS].</li>
+                    <li><strong>[CAMADAS]:</strong> palavras curtas / verbos frasais com múltiplos sentidos → o sistema agrupa termos repetidos em um único card com várias camadas.</li>
+                    <li>O bloco [CAMADAS] é opcional. Sem ele, tudo continua sendo importado como card normal (compatível com formato antigo).</li>
                   </ul>
                 </div>
                 
@@ -414,19 +428,23 @@ export const BulkImportDialog = ({
             <p className="text-sm text-muted-foreground">
               Formatos aceitos:<br />
               • Duas seções: <code>=== GLOSSÁRIO GLOBAL ===</code> + <code>=== CARDS ===</code><br />
-              • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code>
+              • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code><br />
+              • Bloco opcional <code>[CAMADAS]</code> dentro de CARDS: agrupa termos repetidos como camadas de um mesmo card.
             </p>
             <Textarea
               id="bulk-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={`=== GLOSSÁRIO GLOBAL ===
-work / trabalhar
-late / atrasado
+              placeholder={`=== CARDS ===
+house / casa
+I study English every day / Eu estudo inglês todos os dias.
 
-=== CARDS ===
-I work today / Eu trabalho hoje
-She is late / Ela está atrasada (informal)`}
+[CAMADAS]
+work / trabalhar
+work / funcionar
+work / dar certo
+look up / pesquisar
+look up / admirar`}
               rows={10}
               className="font-mono text-sm"
             />
@@ -543,6 +561,17 @@ She is late / Ela está atrasada (informal)`}
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-4 w-4 text-primary" />
                       <span>{stats.duplicates} cards duplicados (removidos)</span>
+                    </div>
+                  )}
+                  {sentenceWarnings.length > 0 && (
+                    <div className="flex items-start gap-2 text-warning">
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <div className="text-xs">
+                        <p className="font-medium">
+                          {sentenceWarnings.length} linha{sentenceWarnings.length !== 1 ? "s" : ""} dentro de [CAMADAS] parece{sentenceWarnings.length !== 1 ? "m" : ""} frase completa.
+                        </p>
+                        <p className="opacity-80">Recomenda-se mover para cards normais (acima do bloco [CAMADAS]).</p>
+                      </div>
                     </div>
                   )}
                 </AlertDescription>

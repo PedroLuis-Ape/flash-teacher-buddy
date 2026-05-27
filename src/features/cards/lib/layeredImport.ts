@@ -43,6 +43,17 @@ export interface LayeredParseResult {
   leftover: string[];
 }
 
+export interface CamadasBlockResult {
+  /** Original input with the `[CAMADAS] ... ` block removed. */
+  cleanedInput: string;
+  /** Layered groups extracted from inside `[CAMADAS]`. */
+  groups: LayeredGroup[];
+  /** Lines whose left side looks like a full sentence (≥ 4 words). */
+  sentenceWarnings: string[];
+  /** Whether a `[CAMADAS]` marker was found. */
+  found: boolean;
+}
+
 const INNER_SEPS = [" | ", " / ", "\t"];
 
 function splitInner(line: string): string[] {
@@ -176,4 +187,83 @@ export function suggestMainTitle(terms: string[]): string {
   while (i < first.length && first[i] === last[i]) i++;
   const common = first.slice(0, i).trim();
   return common.length >= 2 ? common : terms[0];
+}
+
+/**
+ * Extract the `[CAMADAS]` block from a CARDS section.
+ *
+ * Block format:
+ *   [CAMADAS]
+ *   work / trabalhar
+ *   work / funcionar
+ *   look up / pesquisar
+ *
+ * Lines are parsed as `term / translation`. Lines sharing the same `term`
+ * (case-insensitive) are grouped into a single layered card. Single-occurrence
+ * terms also become valid layered cards (1 layer).
+ *
+ * The block ends at the next `=== ... ===` marker, the next `[XYZ]`-style
+ * marker, or end-of-input.
+ *
+ * Returns the input with the block removed so the caller can run its normal
+ * flat parser on the remainder.
+ */
+export function extractCamadasBlock(input: string): CamadasBlockResult {
+  const lines = input.split(/\r?\n/);
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*\[CAMADAS\]\s*$/i.test(lines[i])) {
+      start = i;
+      break;
+    }
+  }
+  if (start === -1) {
+    return { cleanedInput: input, groups: [], sentenceWarnings: [], found: false };
+  }
+
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (/^===.*===$/.test(t) || /^\[[^\]]+\]$/.test(t)) {
+      end = i;
+      break;
+    }
+  }
+
+  const blockLines = lines.slice(start + 1, end);
+  const cleanedInput = [...lines.slice(0, start), ...lines.slice(end)].join("\n");
+
+  const map = new Map<string, LayeredGroup>();
+  const sentenceWarnings: string[] = [];
+
+  for (const raw of blockLines) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const parts = splitInner(trimmed);
+    if (parts.length < 2) continue;
+    const term = parts[0];
+    const layer = buildLayer(parts.slice(1));
+    if (!term || !layer) continue;
+
+    // Heuristic: warn if "term" is a full sentence (≥ 4 words). Phrasal verbs
+    // and short expressions are allowed.
+    if (term.split(/\s+/).length >= 4) {
+      sentenceWarnings.push(trimmed);
+    }
+
+    const key = term.toLowerCase();
+    const existing = map.get(key);
+    if (existing) {
+      existing.layers.push(layer);
+    } else {
+      map.set(key, { term, layers: [layer] });
+    }
+  }
+
+  return {
+    cleanedInput,
+    groups: Array.from(map.values()),
+    sentenceWarnings,
+    found: true,
+  };
 }

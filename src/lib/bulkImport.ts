@@ -364,69 +364,82 @@ A resposta deve seguir ESTRITAMENTE o formato descrito abaixo.
 
 PROIBIDO:
 - Não escreva nenhuma explicação, comentário ou texto fora do formato.
-- Não adicione títulos extras, cabeçalhos ou subtítulos além dos marcadores de seção.
+- Não adicione títulos extras, cabeçalhos ou subtítulos além dos marcadores permitidos.
 - Não numere as linhas (ex: "1.", "2)", "-").
 - Não use formatação markdown (ex: **negrito**, *itálico*, # título).
 - Não use bullets ou listas com prefixos.
 - Não adicione linhas em branco extras entre as entradas.
-- Cada entrada deve ser uma linha simples de texto puro.
+- Cada entrada deve ocupar UMA única linha simples de texto puro.
+- Cada linha tem exatamente DOIS campos: lado A / lado B. Nunca quatro campos.
+- Não escreva: termo / tradução / frase / tradução da frase.
 
-A saída deve conter exatamente DUAS SEÇÕES, nesta ordem:
+ESTRUTURA OBRIGATÓRIA:
 
-=== GLOSSÁRIO GLOBAL ===
+A saída terá UMA única seção principal:
 
 === CARDS ===
 
+Dentro dela, opcionalmente, pode existir UM bloco marcado por:
+
+[CAMADAS]
+
+NÃO crie uma seção separada chamada === CAMADAS === fora de CARDS.
+NÃO crie outras seções além de === CARDS === (e opcionalmente === GLOSSÁRIO GLOBAL === antes, se solicitado).
+
 -----------------------------------
-SEÇÃO 1 — GLOSSÁRIO GLOBAL
+PARTE 1 — CARDS NORMAIS (antes de [CAMADAS])
 -----------------------------------
 
-Nesta seção devem aparecer palavras ou expressões com tradução direta.
+Aqui ficam cards comuns: palavras avulsas com tradução direta OU frases completas com tradução.
 
 Formato obrigatório de cada linha:
-termo_original / tradução
-
-O separador é EXATAMENTE: espaço + barra + espaço ( / ).
-
-Regras:
-- Cada entrada deve ocupar apenas uma linha.
-- Use APENAS \` / \` (com espaço antes e depois) como separador.
-- Não use parênteses ou colchetes nesta seção.
-- Não escreva explicações nesta seção.
-- Não repita entradas idênticas dentro do glossário.
-- Não escreva frases completas aqui.
-
-Exemplo de formato correto:
-work / trabalhar
-late / atrasado
-look for / procurar
-home / casa
-
------------------------------------
-SEÇÃO 2 — CARDS
------------------------------------
-
-Nesta seção devem aparecer os flashcards.
-
-Formato obrigatório de cada linha:
-${hasLangs ? `${nameA}` : "LADO A"} / ${hasLangs ? `${nameB}` : "LADO B"} (observação opcional) [descrição opcional]
+${hasLangs ? nameA : "LADO A"} / ${hasLangs ? nameB : "LADO B"} (observação opcional) [descrição opcional]
 
 O separador entre os dois lados é EXATAMENTE: espaço + barra + espaço ( / ).
 
-Regras:
-- Tudo antes de \` / \` é o ${hasLangs ? nameA : "Lado A"}.
-- Tudo depois de \` / \` é o ${hasLangs ? nameB : "Lado B"}.
-- O que estiver entre parênteses \`( )\` é uma observação curta opcional.
-- O que estiver entre colchetes \`[ ]\` é uma descrição detalhada opcional.
-- Parênteses e colchetes são opcionais e só devem ser usados quando necessário.
-- Cada card deve ocupar uma única linha.
-- Não use nenhum outro separador além de \` / \`, \`( )\` e \`[ ]\`.
+Exemplos válidos:
+house / casa
+dog / cachorro
+I study English every day / Eu estudo inglês todos os dias.
+She looked up the word / Ela pesquisou a palavra.
 
-Exemplo de formato correto:
-I work today / Eu trabalho hoje
-She is late / Ela está atrasada
-They look for help / Eles procuram ajuda (informal)
-We go home now / Nós vamos para casa agora [Expressa ação imediata.]`;
+-----------------------------------
+PARTE 2 — BLOCO [CAMADAS] (opcional)
+-----------------------------------
+
+Use [CAMADAS] APENAS para palavras curtas, verbos frasais ou expressões curtas
+com MÚLTIPLOS sentidos / traduções importantes.
+
+Regras do bloco:
+- A linha do marcador é exatamente: [CAMADAS]
+- Cada linha dentro segue o formato: termo_curto / tradução
+- Repita o MESMO termo do lado esquerdo em linhas consecutivas para criar
+  camadas adicionais. O sistema agrupa automaticamente.
+- Aceita 2, 3, 4 ou mais camadas por termo.
+- NÃO use frases completas dentro de [CAMADAS]. Frases vão como cards normais.
+- NÃO repita em cards normais a mesma palavra que aparece em [CAMADAS],
+  a menos que o usuário peça explicitamente frases extras com essa palavra.
+
+Exemplo COMPLETO e correto:
+
+=== CARDS ===
+
+house / casa
+dog / cachorro
+I study English every day / Eu estudo inglês todos os dias.
+She looked up the word / Ela pesquisou a palavra.
+
+[CAMADAS]
+work / trabalhar
+work / funcionar
+work / dar certo
+look up / pesquisar
+look up / admirar
+
+Resultado interpretado pelo sistema:
+- 4 cards normais.
+- 1 card em camadas "work" com 3 camadas.
+- 1 card em camadas "look up" com 2 camadas.`;
 }
 
 // Legacy constant for backward compatibility
