@@ -43,6 +43,17 @@ export interface LayeredParseResult {
   leftover: string[];
 }
 
+export interface CamadasBlockResult {
+  /** Original input with the `[CAMADAS] ... ` block removed. */
+  cleanedInput: string;
+  /** Layered groups extracted from inside `[CAMADAS]`. */
+  groups: LayeredGroup[];
+  /** Lines whose left side looks like a full sentence (≥ 4 words). */
+  sentenceWarnings: string[];
+  /** Whether a `[CAMADAS]` marker was found. */
+  found: boolean;
+}
+
 const INNER_SEPS = [" | ", " / ", "\t"];
 
 function splitInner(line: string): string[] {
