@@ -219,7 +219,10 @@ export default function GlobalImport() {
       ? extractCamadasBlock(pastedText)
       : { found: false, cleanedInput: pastedText, groups: [] as any[] };
     const flatCount = parsePastedFlashcards(camadas.cleanedInput).length;
-    const layeredCount = camadas.groups.reduce((s: number, g: any) => s + g.layers.length, 0);
+    const layeredCount = camadas.groups.reduce<number>(
+      (s, g: any) => s + g.layers.length,
+      0,
+    );
     return flatCount + layeredCount;
   })();
 
