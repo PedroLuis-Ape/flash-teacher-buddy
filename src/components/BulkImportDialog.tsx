@@ -579,6 +579,20 @@ look up / admirar`}
                       </div>
                     </div>
                   )}
+                  {singletonWarnings.length > 0 && (
+                    <div className="flex items-start gap-2 text-warning">
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <div className="text-xs">
+                        <p className="font-medium">
+                          {singletonWarnings.length} termo{singletonWarnings.length !== 1 ? "s" : ""} em [CAMADAS] com apenas 1 tradução foi movido para cards normais.
+                        </p>
+                        <p className="opacity-80">
+                          Um card em camadas exige pelo menos 2 traduções para o mesmo termo
+                          ({singletonWarnings.slice(0, 5).join(", ")}{singletonWarnings.length > 5 ? "…" : ""}).
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
 
