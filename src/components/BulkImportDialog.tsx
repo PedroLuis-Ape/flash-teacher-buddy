@@ -427,19 +427,23 @@ export const BulkImportDialog = ({
             <p className="text-sm text-muted-foreground">
               Formatos aceitos:<br />
               • Duas seções: <code>=== GLOSSÁRIO GLOBAL ===</code> + <code>=== CARDS ===</code><br />
-              • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code>
+              • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code><br />
+              • Bloco opcional <code>[CAMADAS]</code> dentro de CARDS: agrupa termos repetidos como camadas de um mesmo card.
             </p>
             <Textarea
               id="bulk-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={`=== GLOSSÁRIO GLOBAL ===
-work / trabalhar
-late / atrasado
+              placeholder={`=== CARDS ===
+house / casa
+I study English every day / Eu estudo inglês todos os dias.
 
-=== CARDS ===
-I work today / Eu trabalho hoje
-She is late / Ela está atrasada (informal)`}
+[CAMADAS]
+work / trabalhar
+work / funcionar
+work / dar certo
+look up / pesquisar
+look up / admirar`}
               rows={10}
               className="font-mono text-sm"
             />
