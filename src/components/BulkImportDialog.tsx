@@ -28,7 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { parseLayeredInput, type LayeredGroup } from "@/features/cards/lib/layeredImport";
+import { parseLayeredInput, extractCamadasBlock, type LayeredGroup } from "@/features/cards/lib/layeredImport";
 import { createLayeredCard } from "@/features/cards/lib/layeredCards";
 
 interface BulkImportDialogProps {
@@ -84,6 +84,7 @@ export const BulkImportDialog = ({
   const [preview, setPreview] = useState<FlashcardPair[]>([]);
   const [glossaryPreview, setGlossaryPreview] = useState<GlossaryParsed[]>([]);
   const [layeredGroups, setLayeredGroups] = useState<LayeredGroup[]>([]);
+  const [sentenceWarnings, setSentenceWarnings] = useState<string[]>([]);
   const [detectLayers, setDetectLayers] = useState<boolean>(FEATURE_FLAGS.layered_cards);
   const [stats, setStats] = useState({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0, glossaryNew: 0, glossaryDuplicates: 0, layeredGroups: 0, layeredCards: 0 });
   const [loading, setLoading] = useState(false);
@@ -169,23 +170,33 @@ export const BulkImportDialog = ({
     setIsParsing(true);
     requestAnimationFrame(() => {
       setTimeout(() => {
-        // ── Layered detection (opt-in via flag + toggle) ──
+        // ── Layered detection ──
+        // Priority 1: explicit `[CAMADAS]` block (works inside or outside the
+        // `=== CARDS ===` section). Lines in the block become layered cards;
+        // the rest of the input falls through to the normal flat parser.
+        //
+        // Priority 2 (legacy fallback, only when no explicit block found):
+        // implicit indentation / repeated-term heuristic via parseLayeredInput.
         let textForFlatParse = input;
         let detectedGroups: LayeredGroup[] = [];
+        let warnings: string[] = [];
         if (FEATURE_FLAGS.layered_cards && detectLayers) {
-          // parseLayeredInput operates on the GLOSSARY+CARDS text as-is. To
-          // avoid hijacking the "=== GLOSSÁRIO GLOBAL ===" section, we only
-          // run it against the CARDS section when the dual-section header is
-          // present.
-          const cardsSectionMatch = input.match(/===\s*CARDS\s*===([\s\S]*)$/i);
-          const layeredSource = cardsSectionMatch ? cardsSectionMatch[1] : input;
-          const layered = parseLayeredInput(layeredSource);
-          detectedGroups = layered.groups;
-          if (detectedGroups.length > 0) {
-            const leftoverText = layered.leftover.join("\n");
-            textForFlatParse = cardsSectionMatch
-              ? input.replace(cardsSectionMatch[1], "\n" + leftoverText)
-              : leftoverText;
+          const camadas = extractCamadasBlock(input);
+          if (camadas.found) {
+            detectedGroups = camadas.groups;
+            warnings = camadas.sentenceWarnings;
+            textForFlatParse = camadas.cleanedInput;
+          } else {
+            const cardsSectionMatch = input.match(/===\s*CARDS\s*===([\s\S]*)$/i);
+            const layeredSource = cardsSectionMatch ? cardsSectionMatch[1] : input;
+            const layered = parseLayeredInput(layeredSource);
+            detectedGroups = layered.groups;
+            if (detectedGroups.length > 0) {
+              const leftoverText = layered.leftover.join("\n");
+              textForFlatParse = cardsSectionMatch
+                ? input.replace(cardsSectionMatch[1], "\n" + leftoverText)
+                : leftoverText;
+            }
           }
         }
         const { glossaryLines, cards } = parseGlossaryAndCards(textForFlatParse);
@@ -201,6 +212,7 @@ export const BulkImportDialog = ({
         setGlossaryPreview(uniqueGlossary);
         setPreview(deduplicated);
         setLayeredGroups(detectedGroups);
+        setSentenceWarnings(warnings);
         setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates, layeredGroups: detectedGroups.length, layeredCards });
         setIsParsing(false);
       }, 0);
@@ -328,6 +340,7 @@ export const BulkImportDialog = ({
       setPreview([]);
       setGlossaryPreview([]);
       setLayeredGroups([]);
+      setSentenceWarnings([]);
       setInvertAB(false);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
