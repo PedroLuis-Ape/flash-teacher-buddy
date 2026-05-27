@@ -562,6 +562,17 @@ look up / admirar`}
                       <span>{stats.duplicates} cards duplicados (removidos)</span>
                     </div>
                   )}
+                  {sentenceWarnings.length > 0 && (
+                    <div className="flex items-start gap-2 text-warning">
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <div className="text-xs">
+                        <p className="font-medium">
+                          {sentenceWarnings.length} linha{sentenceWarnings.length !== 1 ? "s" : ""} dentro de [CAMADAS] parece{sentenceWarnings.length !== 1 ? "m" : ""} frase completa.
+                        </p>
+                        <p className="opacity-80">Recomenda-se mover para cards normais (acima do bloco [CAMADAS]).</p>
+                      </div>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
 
