@@ -85,6 +85,7 @@ export const BulkImportDialog = ({
   const [glossaryPreview, setGlossaryPreview] = useState<GlossaryParsed[]>([]);
   const [layeredGroups, setLayeredGroups] = useState<LayeredGroup[]>([]);
   const [sentenceWarnings, setSentenceWarnings] = useState<string[]>([]);
+  const [singletonWarnings, setSingletonWarnings] = useState<string[]>([]);
   const [detectLayers, setDetectLayers] = useState<boolean>(FEATURE_FLAGS.layered_cards);
   const [stats, setStats] = useState({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0, glossaryNew: 0, glossaryDuplicates: 0, layeredGroups: 0, layeredCards: 0 });
   const [loading, setLoading] = useState(false);
@@ -180,11 +181,13 @@ export const BulkImportDialog = ({
         let textForFlatParse = input;
         let detectedGroups: LayeredGroup[] = [];
         let warnings: string[] = [];
+        let singletons: string[] = [];
         if (FEATURE_FLAGS.layered_cards && detectLayers) {
           const camadas = extractCamadasBlock(input);
           if (camadas.found) {
             detectedGroups = camadas.groups;
             warnings = camadas.sentenceWarnings;
+            singletons = camadas.singletonWarnings;
             textForFlatParse = camadas.cleanedInput;
           } else {
             const cardsSectionMatch = input.match(/===\s*CARDS\s*===([\s\S]*)$/i);
@@ -213,6 +216,7 @@ export const BulkImportDialog = ({
         setPreview(deduplicated);
         setLayeredGroups(detectedGroups);
         setSentenceWarnings(warnings);
+        setSingletonWarnings(singletons);
         setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates, layeredGroups: detectedGroups.length, layeredCards });
         setIsParsing(false);
       }, 0);
@@ -341,6 +345,7 @@ export const BulkImportDialog = ({
       setGlossaryPreview([]);
       setLayeredGroups([]);
       setSentenceWarnings([]);
+      setSingletonWarnings([]);
       setInvertAB(false);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
