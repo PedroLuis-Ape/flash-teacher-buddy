@@ -387,19 +387,20 @@ export const BulkImportDialog = ({
             <CollapsibleContent className="mt-3 space-y-3">
               <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
                 <div className="text-sm space-y-2">
-                  <p className="font-medium">A IA gera duas seções automaticamente:</p>
+                  <p className="font-medium">A IA gera uma seção CARDS, com bloco [CAMADAS] opcional:</p>
                   <div className="bg-background p-2 rounded text-xs font-mono space-y-1">
-                    <p className="text-primary font-semibold">=== GLOSSÁRIO GLOBAL ===</p>
+                    <p className="text-primary font-semibold">=== CARDS ===</p>
+                    <p>house / casa</p>
+                    <p>I study English every day / Eu estudo inglês todos os dias.</p>
+                    <p className="text-primary font-semibold mt-2">[CAMADAS]</p>
                     <p>work / trabalhar</p>
-                    <p>late / atrasado</p>
-                    <p className="text-primary font-semibold mt-2">=== CARDS ===</p>
-                    <p>I work today / Eu trabalho hoje</p>
-                    <p>She is late / Ela está atrasada (informal) [Dica detalhada]</p>
+                    <p>work / funcionar</p>
+                    <p>look up / pesquisar</p>
                   </div>
                   <ul className="list-disc list-inside text-muted-foreground space-y-1 text-xs">
-                    <li><strong>Glossário:</strong> palavras soltas com tradução direta → ficam nas traduções globais da lista.</li>
-                    <li><strong>Cards:</strong> frases completas → ficam como flashcards de estudo.</li>
-                    <li>Você também pode colar <strong>só cards</strong> sem glossário (compatível com formato antigo).</li>
+                    <li><strong>Cards normais:</strong> palavras ou frases comuns → ficam acima do bloco [CAMADAS].</li>
+                    <li><strong>[CAMADAS]:</strong> palavras curtas / verbos frasais com múltiplos sentidos → o sistema agrupa termos repetidos em um único card com várias camadas.</li>
+                    <li>O bloco [CAMADAS] é opcional. Sem ele, tudo continua sendo importado como card normal (compatível com formato antigo).</li>
                   </ul>
                 </div>
                 
