@@ -213,7 +213,15 @@ export default function GlobalImport() {
     }
   };
 
-  const previewCount = pastedText.trim() ? parsePastedFlashcards(pastedText).length : 0;
+  const previewCount = (() => {
+    if (!pastedText.trim()) return 0;
+    const camadas = FEATURE_FLAGS.layered_cards
+      ? extractCamadasBlock(pastedText)
+      : { found: false, cleanedInput: pastedText, groups: [] as any[] };
+    const flatCount = parsePastedFlashcards(camadas.cleanedInput).length;
+    const layeredCount = camadas.groups.reduce((s: number, g: any) => s + g.layers.length, 0);
+    return flatCount + layeredCount;
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-24">
