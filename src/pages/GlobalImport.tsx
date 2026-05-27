@@ -215,14 +215,13 @@ export default function GlobalImport() {
 
   const previewCount = (() => {
     if (!pastedText.trim()) return 0;
-    const camadas = FEATURE_FLAGS.layered_cards
-      ? extractCamadasBlock(pastedText)
-      : { found: false, cleanedInput: pastedText, groups: [] as any[] };
+    if (!FEATURE_FLAGS.layered_cards) {
+      return parsePastedFlashcards(pastedText).length;
+    }
+    const camadas = extractCamadasBlock(pastedText);
     const flatCount = parsePastedFlashcards(camadas.cleanedInput).length;
-    const layeredCount = camadas.groups.reduce<number>(
-      (s, g: any) => s + g.layers.length,
-      0,
-    );
+    let layeredCount = 0;
+    for (const g of camadas.groups) layeredCount += g.layers.length;
     return flatCount + layeredCount;
   })();
 
