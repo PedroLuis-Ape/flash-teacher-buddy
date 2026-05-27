@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { parsePastedFlashcards, deduplicateFlashcards } from "@/lib/bulkImport";
+import { extractCamadasBlock } from "@/features/cards/lib/layeredImport";
+import { createLayeredCard } from "@/features/cards/lib/layeredCards";
+import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
 const CHUNK_SIZE = 200;
 
@@ -98,10 +101,27 @@ export default function GlobalImport() {
     setProgressText("Processando texto...");
 
     try {
-      // Parse the pasted text
-      const parsed = parsePastedFlashcards(pastedText);
+      // ── Layered detection (explicit [CAMADAS] block) ──
+      // Mirrors BulkImportDialog: a [CAMADAS] block becomes layered cards,
+      // the remaining text is parsed as normal cards. Without [CAMADAS] or
+      // when the feature flag is off, behavior is identical to before.
+      let textForFlat = pastedText;
+      const camadas = FEATURE_FLAGS.layered_cards
+        ? extractCamadasBlock(pastedText)
+        : { found: false, groups: [], cleanedInput: pastedText, sentenceWarnings: [], singletonWarnings: [] };
+      if (camadas.found) {
+        textForFlat = camadas.cleanedInput;
+        if (camadas.singletonWarnings.length > 0) {
+          toast.info(
+            `${camadas.singletonWarnings.length} termo(s) com apenas 1 tradução em [CAMADAS] foram importados como cards normais.`,
+          );
+        }
+      }
+
+      // Parse the remaining text as flat cards
+      const parsed = parsePastedFlashcards(textForFlat);
       
-      if (parsed.length === 0) {
+      if (parsed.length === 0 && camadas.groups.length === 0) {
         toast.error("Nenhum card válido encontrado. Use o formato: Termo / Tradução");
         setIsImporting(false);
         return;
@@ -110,7 +130,7 @@ export default function GlobalImport() {
       // Deduplicate against existing cards
       const uniqueCards = deduplicateFlashcards(parsed, existingCards);
       
-      if (uniqueCards.length === 0) {
+      if (uniqueCards.length === 0 && camadas.groups.length === 0) {
         toast.warning("Todos os cards já existem na lista!");
         setIsImporting(false);
         return;
@@ -129,6 +149,25 @@ export default function GlobalImport() {
         translation: (card.pt || "").replace(/\n/g, " ").trim(),
         hint: card.detailedHint || card.shortObservation || null,
       }));
+
+      // ── Insert layered groups first (additive) ──
+      let layeredInsertedCards = 0;
+      if (camadas.groups.length > 0) {
+        setProgressText(`Salvando ${camadas.groups.length} card(s) em camadas...`);
+        for (const group of camadas.groups) {
+          try {
+            await createLayeredCard({
+              listId: selectedListId,
+              userId: userData.id,
+              group,
+            });
+            layeredInsertedCards += group.layers.length;
+          } catch (e: any) {
+            console.error("Layered insert error:", e);
+            throw new Error(`Erro ao salvar cards em camadas: ${e?.message ?? "desconhecido"}`);
+          }
+        }
+      }
 
       // Insert in chunks
       const totalChunks = Math.ceil(cardsToInsert.length / CHUNK_SIZE);
@@ -155,8 +194,13 @@ export default function GlobalImport() {
 
       setProgress(100);
       setProgressText("Concluído!");
-      
-      toast.success(`✅ ${insertedCount} cards importados com sucesso!`);
+
+      const parts: string[] = [];
+      if (insertedCount > 0) parts.push(`${insertedCount} cards`);
+      if (camadas.groups.length > 0) {
+        parts.push(`${camadas.groups.length} card(s) em camadas (${layeredInsertedCards})`);
+      }
+      toast.success(`✅ Importado: ${parts.join(" + ")}!`);
       setPastedText("");
       
       // Navigate to the list
@@ -169,7 +213,17 @@ export default function GlobalImport() {
     }
   };
 
-  const previewCount = pastedText.trim() ? parsePastedFlashcards(pastedText).length : 0;
+  const previewCount = (() => {
+    if (!pastedText.trim()) return 0;
+    if (!FEATURE_FLAGS.layered_cards) {
+      return parsePastedFlashcards(pastedText).length;
+    }
+    const camadas = extractCamadasBlock(pastedText);
+    const flatCount = parsePastedFlashcards(camadas.cleanedInput).length;
+    let layeredCount = 0;
+    for (const g of camadas.groups) layeredCount += g.layers.length;
+    return flatCount + layeredCount;
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-24">

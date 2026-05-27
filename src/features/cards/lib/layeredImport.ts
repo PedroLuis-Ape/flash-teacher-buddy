@@ -50,6 +50,12 @@ export interface CamadasBlockResult {
   groups: LayeredGroup[];
   /** Lines whose left side looks like a full sentence (≥ 4 words). */
   sentenceWarnings: string[];
+  /**
+   * Terms that appeared only once inside `[CAMADAS]` and were therefore
+   * moved back into the normal-cards stream (a layered card requires ≥ 2
+   * meanings for the same term). Useful for showing a clear preview hint.
+   */
+  singletonWarnings: string[];
   /** Whether a `[CAMADAS]` marker was found. */
   found: boolean;
 }
@@ -218,7 +224,13 @@ export function extractCamadasBlock(input: string): CamadasBlockResult {
     }
   }
   if (start === -1) {
-    return { cleanedInput: input, groups: [], sentenceWarnings: [], found: false };
+    return {
+      cleanedInput: input,
+      groups: [],
+      sentenceWarnings: [],
+      singletonWarnings: [],
+      found: false,
+    };
   }
 
   let end = lines.length;
@@ -231,9 +243,11 @@ export function extractCamadasBlock(input: string): CamadasBlockResult {
   }
 
   const blockLines = lines.slice(start + 1, end);
-  const cleanedInput = [...lines.slice(0, start), ...lines.slice(end)].join("\n");
 
-  const map = new Map<string, LayeredGroup>();
+  // Preserve insertion order while collecting per-term layers + the raw lines
+  // they came from (so we can re-emit singletons as normal cards).
+  type Bucket = { term: string; layers: LayerInput[]; rawLines: string[] };
+  const map = new Map<string, Bucket>();
   const sentenceWarnings: string[] = [];
 
   for (const raw of blockLines) {
@@ -255,15 +269,36 @@ export function extractCamadasBlock(input: string): CamadasBlockResult {
     const existing = map.get(key);
     if (existing) {
       existing.layers.push(layer);
+      existing.rawLines.push(trimmed);
     } else {
-      map.set(key, { term, layers: [layer] });
+      map.set(key, { term, layers: [layer], rawLines: [trimmed] });
     }
   }
 
+  // Enforce: a layered card REQUIRES ≥ 2 layers. Singletons fall back to
+  // normal cards (re-appended to the cleaned input) and are reported via
+  // `singletonWarnings` so the UI can explain what happened.
+  const groups: LayeredGroup[] = [];
+  const singletonWarnings: string[] = [];
+  const singletonLines: string[] = [];
+  for (const bucket of map.values()) {
+    if (bucket.layers.length >= 2) {
+      groups.push({ term: bucket.term, layers: bucket.layers });
+    } else {
+      singletonWarnings.push(bucket.term);
+      singletonLines.push(...bucket.rawLines);
+    }
+  }
+
+  const before = lines.slice(0, start);
+  const after = lines.slice(end);
+  const cleanedInput = [...before, ...singletonLines, ...after].join("\n");
+
   return {
     cleanedInput,
-    groups: Array.from(map.values()),
+    groups,
     sentenceWarnings,
+    singletonWarnings,
     found: true,
   };
 }

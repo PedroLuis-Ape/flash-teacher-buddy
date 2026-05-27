@@ -85,6 +85,7 @@ export const BulkImportDialog = ({
   const [glossaryPreview, setGlossaryPreview] = useState<GlossaryParsed[]>([]);
   const [layeredGroups, setLayeredGroups] = useState<LayeredGroup[]>([]);
   const [sentenceWarnings, setSentenceWarnings] = useState<string[]>([]);
+  const [singletonWarnings, setSingletonWarnings] = useState<string[]>([]);
   const [detectLayers, setDetectLayers] = useState<boolean>(FEATURE_FLAGS.layered_cards);
   const [stats, setStats] = useState({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0, glossaryNew: 0, glossaryDuplicates: 0, layeredGroups: 0, layeredCards: 0 });
   const [loading, setLoading] = useState(false);
@@ -180,11 +181,13 @@ export const BulkImportDialog = ({
         let textForFlatParse = input;
         let detectedGroups: LayeredGroup[] = [];
         let warnings: string[] = [];
+        let singletons: string[] = [];
         if (FEATURE_FLAGS.layered_cards && detectLayers) {
           const camadas = extractCamadasBlock(input);
           if (camadas.found) {
             detectedGroups = camadas.groups;
             warnings = camadas.sentenceWarnings;
+            singletons = camadas.singletonWarnings;
             textForFlatParse = camadas.cleanedInput;
           } else {
             const cardsSectionMatch = input.match(/===\s*CARDS\s*===([\s\S]*)$/i);
@@ -213,6 +216,7 @@ export const BulkImportDialog = ({
         setPreview(deduplicated);
         setLayeredGroups(detectedGroups);
         setSentenceWarnings(warnings);
+        setSingletonWarnings(singletons);
         setStats({ valid, incomplete, duplicates, withHints, glossaryNew: uniqueGlossary.length, glossaryDuplicates, layeredGroups: detectedGroups.length, layeredCards });
         setIsParsing(false);
       }, 0);
@@ -341,6 +345,7 @@ export const BulkImportDialog = ({
       setGlossaryPreview([]);
       setLayeredGroups([]);
       setSentenceWarnings([]);
+      setSingletonWarnings([]);
       setInvertAB(false);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
@@ -571,6 +576,20 @@ look up / admirar`}
                           {sentenceWarnings.length} linha{sentenceWarnings.length !== 1 ? "s" : ""} dentro de [CAMADAS] parece{sentenceWarnings.length !== 1 ? "m" : ""} frase completa.
                         </p>
                         <p className="opacity-80">Recomenda-se mover para cards normais (acima do bloco [CAMADAS]).</p>
+                      </div>
+                    </div>
+                  )}
+                  {singletonWarnings.length > 0 && (
+                    <div className="flex items-start gap-2 text-warning">
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <div className="text-xs">
+                        <p className="font-medium">
+                          {singletonWarnings.length} termo{singletonWarnings.length !== 1 ? "s" : ""} em [CAMADAS] com apenas 1 tradução foi movido para cards normais.
+                        </p>
+                        <p className="opacity-80">
+                          Um card em camadas exige pelo menos 2 traduções para o mesmo termo
+                          ({singletonWarnings.slice(0, 5).join(", ")}{singletonWarnings.length > 5 ? "…" : ""}).
+                        </p>
                       </div>
                     </div>
                   )}
