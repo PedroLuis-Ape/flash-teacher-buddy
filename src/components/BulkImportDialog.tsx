@@ -436,7 +436,7 @@ export const BulkImportDialog = ({
               Formatos aceitos:<br />
               • Duas seções: <code>=== GLOSSÁRIO GLOBAL ===</code> + <code>=== CARDS ===</code><br />
               • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code><br />
-              • Bloco opcional <code>[CAMADAS]</code> dentro de CARDS: agrupa termos repetidos como camadas de um mesmo card.
+              • Bloco opcional <code>[CAMADAS]</code> dentro de CARDS: agrupa <strong>frases</strong> sob um termo principal (o termo é só o título do grupo; as frases viram os cards jogáveis).
             </p>
             <Textarea
               id="bulk-input"
@@ -444,14 +444,18 @@ export const BulkImportDialog = ({
               onChange={(e) => setInput(e.target.value)}
               placeholder={`=== CARDS ===
 house / casa
-I study English every day / Eu estudo inglês todos os dias.
+dog / cachorro
 
 [CAMADAS]
-work / trabalhar
-work / funcionar
-work / dar certo
-look up / pesquisar
-look up / admirar`}
+look up
+I looked up the word online / Eu pesquisei a palavra online
+Things are finally looking up / As coisas finalmente estão melhorando
+She looks up to her older brother / Ela admira o irmão mais velho
+
+take off
+The plane took off at 8 a.m. / O avião decolou às 8 da manhã
+Please take off your shoes / Por favor, tire os sapatos
+His business took off last year / O negócio dele decolou no ano passado`}
               rows={10}
               className="font-mono text-sm"
             />
