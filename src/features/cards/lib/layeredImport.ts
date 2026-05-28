@@ -257,8 +257,32 @@ export function extractCamadasBlock(input: string): CamadasBlockResult {
 
   const blockLines = lines.slice(start + 1, end);
 
-  // Preserve insertion order while collecting per-term layers + the raw lines
-  // they came from (so we can re-emit singletons as normal cards).
+  // Detect format. NEW format ("header + phrases") is identified by the
+  // presence of at least one non-empty line WITHOUT an inner separator —
+  // that line is a group title (e.g. "look up"). LEGACY format uses
+  // `term / translation` on every line and groups by repeated term.
+  const hasHeaderLine = blockLines.some((l) => {
+    const t = l.trim();
+    if (!t) return false;
+    return splitInner(t).length < 2;
+  });
+
+  const before = lines.slice(0, start);
+  const after = lines.slice(end);
+
+  if (hasHeaderLine) {
+    const r = parseNewCamadasFormat(blockLines);
+    const cleanedInput = [...before, ...r.fallbackLines, ...after].join("\n");
+    return {
+      cleanedInput,
+      groups: r.groups,
+      sentenceWarnings: [],
+      singletonWarnings: r.singletonWarnings,
+      found: true,
+    };
+  }
+
+  // ── Legacy format: `term / translation` repeated for the same term. ──
   type Bucket = { term: string; layers: LayerInput[]; rawLines: string[] };
   const map = new Map<string, Bucket>();
   const sentenceWarnings: string[] = [];
@@ -288,9 +312,6 @@ export function extractCamadasBlock(input: string): CamadasBlockResult {
     }
   }
 
-  // Enforce: a layered card REQUIRES ≥ 2 layers. Singletons fall back to
-  // normal cards (re-appended to the cleaned input) and are reported via
-  // `singletonWarnings` so the UI can explain what happened.
   const groups: LayeredGroup[] = [];
   const singletonWarnings: string[] = [];
   const singletonLines: string[] = [];
@@ -303,8 +324,6 @@ export function extractCamadasBlock(input: string): CamadasBlockResult {
     }
   }
 
-  const before = lines.slice(0, start);
-  const after = lines.slice(end);
   const cleanedInput = [...before, ...singletonLines, ...after].join("\n");
 
   return {
@@ -314,4 +333,82 @@ export function extractCamadasBlock(input: string): CamadasBlockResult {
     singletonWarnings,
     found: true,
   };
+}
+
+/**
+ * NEW `[CAMADAS]` format parser.
+ *
+ * Block shape:
+ *   [CAMADAS]
+ *   look up
+ *   I looked up the word online / Eu pesquisei a palavra online
+ *   Things are finally looking up / As coisas finalmente estão melhorando
+ *   take off
+ *   The plane took off at 8 a.m. / O avião decolou às 8 da manhã
+ *   Please take off your shoes / Por favor, tire os sapatos
+ *
+ * Rules:
+ * - A line WITHOUT an inner separator opens a new group; its text becomes
+ *   the group title (purely a visual container — NOT a playable card).
+ * - Following lines WITH a separator are layers under the current group.
+ *   Each layer stores `term = phrase (side A)`, `translation = side B`.
+ * - A group needs ≥ 2 playable layers to be promoted. Groups with 0 or 1
+ *   layer are dropped; their phrase lines fall back to normal cards
+ *   (`fallbackLines`) so user input is never lost.
+ * - Phrase lines that appear before the first group title are also pushed
+ *   to `fallbackLines`.
+ */
+function parseNewCamadasFormat(blockLines: string[]): {
+  groups: LayeredGroup[];
+  fallbackLines: string[];
+  singletonWarnings: string[];
+} {
+  const groups: LayeredGroup[] = [];
+  const fallbackLines: string[] = [];
+  const singletonWarnings: string[] = [];
+
+  type Bucket = { term: string; layers: LayerInput[]; rawLines: string[] };
+  let current: Bucket | null = null;
+
+  const flush = () => {
+    if (!current) return;
+    if (current.layers.length >= 2) {
+      groups.push({ term: current.term, layers: current.layers });
+    } else {
+      singletonWarnings.push(current.term);
+      // 0 layers → nothing to keep. 1 layer → preserve the phrase line.
+      fallbackLines.push(...current.rawLines);
+    }
+    current = null;
+  };
+
+  for (const raw of blockLines) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const parts = splitInner(trimmed);
+    if (parts.length < 2) {
+      // Group title.
+      flush();
+      current = { term: trimmed, layers: [], rawLines: [] };
+      continue;
+    }
+    // Layer line: "frase / tradução [/ frase exemplo]"
+    const phrase = parts[0];
+    const translation = parts[1];
+    const example = parts[2];
+    if (!current) {
+      // Orphan layer line before any group title → keep as normal card.
+      fallbackLines.push(trimmed);
+      continue;
+    }
+    current.layers.push({
+      term: phrase,
+      translation,
+      example: example?.trim() || undefined,
+    });
+    current.rawLines.push(trimmed);
+  }
+  flush();
+
+  return { groups, fallbackLines, singletonWarnings };
 }
