@@ -24,6 +24,15 @@
  */
 
 export interface LayerInput {
+  /**
+   * Optional left-side ("side A") text of THIS specific layer.
+   *
+   * Used by the new `[CAMADAS]` format where each layer is a full phrase
+   * (e.g. "I looked up the word online") under a shared group title
+   * (e.g. "look up"). When omitted, callers fall back to the parent
+   * `LayeredGroup.term` for legacy compatibility.
+   */
+  term?: string;
   translation: string;
   example?: string;
   exampleTranslation?: string;
@@ -48,12 +57,16 @@ export interface CamadasBlockResult {
   cleanedInput: string;
   /** Layered groups extracted from inside `[CAMADAS]`. */
   groups: LayeredGroup[];
-  /** Lines whose left side looks like a full sentence (≥ 4 words). */
+  /**
+   * Lines whose left side looks like a full sentence (≥ 4 words).
+   * Only populated in the legacy format. In the new format, full sentences
+   * are EXPECTED as layer lines, so no warning is produced.
+   */
   sentenceWarnings: string[];
   /**
-   * Terms that appeared only once inside `[CAMADAS]` and were therefore
-   * moved back into the normal-cards stream (a layered card requires ≥ 2
-   * meanings for the same term). Useful for showing a clear preview hint.
+   * Group titles whose group ended up with fewer than 2 playable layers
+   * and were therefore not promoted to a layered card. Their phrase lines
+   * fall back to the normal-cards stream (so the user does not lose data).
    */
   singletonWarnings: string[];
   /** Whether a `[CAMADAS]` marker was found. */
