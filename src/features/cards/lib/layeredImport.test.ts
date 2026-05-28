@@ -168,3 +168,75 @@ describe("extractCamadasBlock", () => {
     expect(r.cleanedInput).toContain("house / casa");
   });
 });
+
+describe("extractCamadasBlock — NEW format (header + phrases)", () => {
+  it("parses a single group with phrase layers", () => {
+    const input = [
+      "[CAMADAS]",
+      "look up",
+      "I looked up the word online / Eu pesquisei a palavra online",
+      "Things are finally looking up / As coisas finalmente estão melhorando",
+      "She looks up to her older brother / Ela admira o irmão mais velho",
+    ].join("\n");
+
+    const r = extractCamadasBlock(input);
+    expect(r.found).toBe(true);
+    expect(r.groups).toHaveLength(1);
+    expect(r.groups[0].term).toBe("look up");
+    expect(r.groups[0].layers).toHaveLength(3);
+    expect(r.groups[0].layers[0].term).toBe("I looked up the word online");
+    expect(r.groups[0].layers[0].translation).toBe("Eu pesquisei a palavra online");
+    expect(r.groups[0].layers[2].term).toBe("She looks up to her older brother");
+  });
+
+  it("parses multiple groups in the same block", () => {
+    const input = [
+      "[CAMADAS]",
+      "look up",
+      "I looked up the word online / Eu pesquisei a palavra online",
+      "Things are finally looking up / As coisas finalmente estão melhorando",
+      "take off",
+      "The plane took off at 8 a.m. / O avião decolou às 8 da manhã",
+      "Please take off your shoes / Por favor, tire os sapatos",
+    ].join("\n");
+
+    const r = extractCamadasBlock(input);
+    expect(r.groups).toHaveLength(2);
+    const lookUp = r.groups.find((g) => g.term === "look up")!;
+    const takeOff = r.groups.find((g) => g.term === "take off")!;
+    expect(lookUp.layers).toHaveLength(2);
+    expect(takeOff.layers).toHaveLength(2);
+    expect(takeOff.layers[0].term).toBe("The plane took off at 8 a.m.");
+  });
+
+  it("does not promote a group with only 1 phrase; moves it back to normal cards", () => {
+    const input = [
+      "[CAMADAS]",
+      "look up",
+      "I looked up the word online / Eu pesquisei a palavra online",
+    ].join("\n");
+
+    const r = extractCamadasBlock(input);
+    expect(r.groups).toHaveLength(0);
+    expect(r.singletonWarnings).toContain("look up");
+    expect(r.cleanedInput).toContain("I looked up the word online / Eu pesquisei a palavra online");
+  });
+
+  it("preserves normal cards above [CAMADAS] and uses NEW format below", () => {
+    const input = [
+      "=== CARDS ===",
+      "house / casa",
+      "[CAMADAS]",
+      "take off",
+      "The plane took off at 8 a.m. / O avião decolou às 8 da manhã",
+      "Please take off your shoes / Por favor, tire os sapatos",
+    ].join("\n");
+
+    const r = extractCamadasBlock(input);
+    expect(r.cleanedInput).toContain("house / casa");
+    expect(r.cleanedInput).not.toContain("[CAMADAS]");
+    expect(r.groups).toHaveLength(1);
+    expect(r.groups[0].term).toBe("take off");
+    expect(r.groups[0].layers).toHaveLength(2);
+  });
+});

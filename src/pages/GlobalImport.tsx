@@ -286,7 +286,13 @@ Termo / Tradução
 Hello / Olá (cumprimento) [Usado para saudar alguém]
 Good morning / Bom dia
 
-Cada linha = um card`}
+Cada linha = um card
+
+Opcional — agrupar frases em camadas:
+[CAMADAS]
+look up
+I looked up the word online / Eu pesquisei a palavra online
+Things are finally looking up / As coisas finalmente estão melhorando`}
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
                 className="min-h-[200px] font-mono text-sm"

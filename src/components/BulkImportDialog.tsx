@@ -244,14 +244,16 @@ export const BulkImportDialog = ({
       // ── Layered groups first (additive; never touches existing cards) ──
       if (FEATURE_FLAGS.layered_cards && layeredGroups.length > 0) {
         for (const group of layeredGroups) {
-          // Respect invertAB: when inverted, layer.translation becomes the
-          // term and the (former) term becomes the translation side.
+          // Respect invertAB: each layer carries its own side-A / side-B,
+          // so we swap them per layer. The group title stays the same
+          // (it is only a visual container, not a playable card).
           const effectiveGroup: LayeredGroup = invertAB
             ? {
-                term: group.layers[0]?.translation ?? group.term,
+                term: group.term,
                 layers: group.layers.map((L) => ({
                   ...L,
-                  translation: group.term,
+                  term: L.translation,
+                  translation: L.term ?? group.term,
                 })),
               }
             : group;
@@ -434,7 +436,7 @@ export const BulkImportDialog = ({
               Formatos aceitos:<br />
               • Duas seções: <code>=== GLOSSÁRIO GLOBAL ===</code> + <code>=== CARDS ===</code><br />
               • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code><br />
-              • Bloco opcional <code>[CAMADAS]</code> dentro de CARDS: agrupa termos repetidos como camadas de um mesmo card.
+              • Bloco opcional <code>[CAMADAS]</code> dentro de CARDS: agrupa <strong>frases</strong> sob um termo principal (o termo é só o título do grupo; as frases viram os cards jogáveis).
             </p>
             <Textarea
               id="bulk-input"
@@ -442,14 +444,18 @@ export const BulkImportDialog = ({
               onChange={(e) => setInput(e.target.value)}
               placeholder={`=== CARDS ===
 house / casa
-I study English every day / Eu estudo inglês todos os dias.
+dog / cachorro
 
 [CAMADAS]
-work / trabalhar
-work / funcionar
-work / dar certo
-look up / pesquisar
-look up / admirar`}
+look up
+I looked up the word online / Eu pesquisei a palavra online
+Things are finally looking up / As coisas finalmente estão melhorando
+She looks up to her older brother / Ela admira o irmão mais velho
+
+take off
+The plane took off at 8 a.m. / O avião decolou às 8 da manhã
+Please take off your shoes / Por favor, tire os sapatos
+His business took off last year / O negócio dele decolou no ano passado`}
               rows={10}
               className="font-mono text-sm"
             />
@@ -609,11 +615,16 @@ look up / admirar`}
                   <ul className="space-y-2 text-sm">
                     {layeredGroups.slice(0, 10).map((g, i) => (
                       <li key={i} className="border-l-2 border-primary/40 pl-2">
-                        <div className="font-medium">{g.term}</div>
+                        <div className="font-medium">
+                          {g.term}
+                          <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+                            grupo (não jogável)
+                          </span>
+                        </div>
                         <ul className="ml-2 text-xs text-muted-foreground space-y-0.5">
                           {g.layers.map((L, j) => (
                             <li key={j} className="truncate">
-                              <span className="text-foreground">{j + 1}.</span> {L.translation}
+                              <span className="text-foreground">{j + 1}.</span> {L.term ?? g.term} <span className="opacity-60">/</span> {L.translation}
                               {L.example ? <span className="opacity-70"> — {L.example}</span> : null}
                             </li>
                           ))}

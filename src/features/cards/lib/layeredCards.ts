@@ -50,7 +50,10 @@ export async function createLayeredCard({
   const layerRows = group.layers.map((L, i) => ({
     list_id: listId,
     user_id: userId,
-    term: group.term,
+    // Each layer may carry its own side-A text (new `[CAMADAS]` format where
+    // layers are full phrases under a shared group title). Falls back to the
+    // group term for legacy compatibility.
+    term: L.term ?? group.term,
     translation: L.translation,
     example_text: L.example ?? null,
     example_translation: L.exampleTranslation ?? null,
