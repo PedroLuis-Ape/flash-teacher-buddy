@@ -615,11 +615,16 @@ His business took off last year / O negócio dele decolou no ano passado`}
                   <ul className="space-y-2 text-sm">
                     {layeredGroups.slice(0, 10).map((g, i) => (
                       <li key={i} className="border-l-2 border-primary/40 pl-2">
-                        <div className="font-medium">{g.term}</div>
+                        <div className="font-medium">
+                          {g.term}
+                          <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+                            grupo (não jogável)
+                          </span>
+                        </div>
                         <ul className="ml-2 text-xs text-muted-foreground space-y-0.5">
                           {g.layers.map((L, j) => (
                             <li key={j} className="truncate">
-                              <span className="text-foreground">{j + 1}.</span> {L.translation}
+                              <span className="text-foreground">{j + 1}.</span> {L.term ?? g.term} <span className="opacity-60">/</span> {L.translation}
                               {L.example ? <span className="opacity-70"> — {L.example}</span> : null}
                             </li>
                           ))}
