@@ -244,14 +244,16 @@ export const BulkImportDialog = ({
       // ── Layered groups first (additive; never touches existing cards) ──
       if (FEATURE_FLAGS.layered_cards && layeredGroups.length > 0) {
         for (const group of layeredGroups) {
-          // Respect invertAB: when inverted, layer.translation becomes the
-          // term and the (former) term becomes the translation side.
+          // Respect invertAB: each layer carries its own side-A / side-B,
+          // so we swap them per layer. The group title stays the same
+          // (it is only a visual container, not a playable card).
           const effectiveGroup: LayeredGroup = invertAB
             ? {
-                term: group.layers[0]?.translation ?? group.term,
+                term: group.term,
                 layers: group.layers.map((L) => ({
                   ...L,
-                  translation: group.term,
+                  term: L.translation,
+                  translation: L.term ?? group.term,
                 })),
               }
             : group;
