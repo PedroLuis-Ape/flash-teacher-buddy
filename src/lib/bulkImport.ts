@@ -407,18 +407,19 @@ She looked up the word / Ela pesquisou a palavra.
 PARTE 2 — BLOCO [CAMADAS] (opcional)
 -----------------------------------
 
-Use [CAMADAS] APENAS para palavras curtas, verbos frasais ou expressões curtas
-com MÚLTIPLOS sentidos / traduções importantes.
+Use [CAMADAS] para agrupar FRASES sob um termo principal (verbo frasal,
+palavra polissêmica, expressão curta). O termo principal é apenas o NOME
+do grupo — ele NÃO vira card jogável. Apenas as frases viram cards.
 
 Regras do bloco:
 - A linha do marcador é exatamente: [CAMADAS]
-- Cada linha dentro segue o formato: termo_curto / tradução
-- Repita o MESMO termo do lado esquerdo em linhas consecutivas para criar
-  camadas adicionais. O sistema agrupa automaticamente.
-- Aceita 2, 3, 4 ou mais camadas por termo.
-- NÃO use frases completas dentro de [CAMADAS]. Frases vão como cards normais.
-- NÃO repita em cards normais a mesma palavra que aparece em [CAMADAS],
-  a menos que o usuário peça explicitamente frases extras com essa palavra.
+- A linha do NOME DO GRUPO NÃO contém " / " (é só o título, ex: "look up").
+- Cada linha seguinte segue o formato: frase / tradução
+- Cada grupo precisa de PELO MENOS 2 frases.
+- Você pode criar vários grupos no mesmo bloco — basta começar um novo
+  título sem " / " e listar as frases dele logo abaixo.
+- NÃO escreva "termo / tradução" dentro de [CAMADAS]. Apenas frases.
+- NÃO repita em cards normais as mesmas frases que aparecem em [CAMADAS].
 
 Exemplo COMPLETO e correto:
 
@@ -426,20 +427,22 @@ Exemplo COMPLETO e correto:
 
 house / casa
 dog / cachorro
-I study English every day / Eu estudo inglês todos os dias.
-She looked up the word / Ela pesquisou a palavra.
 
 [CAMADAS]
-work / trabalhar
-work / funcionar
-work / dar certo
-look up / pesquisar
-look up / admirar
+look up
+I looked up the word online / Eu pesquisei a palavra online
+Things are finally looking up / As coisas finalmente estão melhorando
+She looks up to her older brother / Ela admira o irmão mais velho
+
+take off
+The plane took off at 8 a.m. / O avião decolou às 8 da manhã
+Please take off your shoes / Por favor, tire os sapatos
+His business took off last year / O negócio dele decolou no ano passado
 
 Resultado interpretado pelo sistema:
-- 4 cards normais.
-- 1 card em camadas "work" com 3 camadas.
-- 1 card em camadas "look up" com 2 camadas.`;
+- 2 cards normais.
+- 1 grupo "look up" com 3 frases jogáveis.
+- 1 grupo "take off" com 3 frases jogáveis.`;
 }
 
 // Legacy constant for backward compatibility
