@@ -65,14 +65,10 @@ export default function Search() {
 
       const clean = searchTerm.replace('@', '').trim().toUpperCase();
 
-      // Buscar por nome, @slug público ou APE ID
-      let query = supabase
-        .from("profiles")
-        .select("id, first_name, public_slug, ape_id, user_type, is_teacher")
-        .or(`first_name.ilike.%${clean}%,public_slug.ilike.%${clean}%,ape_id.ilike.%${clean}%`)
-        .limit(20);
-
-      const { data, error } = await query;
+      // Buscar via RPC segura (retorna apenas campos públicos seguros)
+      const { data, error } = await supabase.rpc("search_public_profiles", {
+        _q: clean,
+      });
 
       if (error) throw error;
 

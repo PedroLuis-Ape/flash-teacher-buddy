@@ -2717,7 +2717,23 @@ export type Database = {
           visibility: string
         }[]
       }
-      get_public_profile: { Args: { p_public_id: string }; Returns: Json }
+      get_public_profile:
+        | {
+            Args: { _id: string }
+            Returns: {
+              ape_id: string
+              avatar_skin_id: string
+              avatar_url: string
+              first_name: string
+              id: string
+              is_teacher: boolean
+              mascot_skin_id: string
+              public_slug: string
+              user_tag: string
+              user_type: string
+            }[]
+          }
+        | { Args: { p_public_id: string }; Returns: Json }
       get_rarity_fallback_price: { Args: { p_rarity: string }; Returns: number }
       get_safe_profile: { Args: { p_user_id: string }; Returns: Json }
       get_subscribed_teachers_with_stats: {
@@ -2791,6 +2807,21 @@ export type Database = {
       restore_list: {
         Args: { p_list_id: string; p_user_id: string }
         Returns: Json
+      }
+      search_public_profiles: {
+        Args: { _q: string }
+        Returns: {
+          ape_id: string
+          avatar_skin_id: string
+          avatar_url: string
+          first_name: string
+          id: string
+          is_teacher: boolean
+          mascot_skin_id: string
+          public_slug: string
+          user_tag: string
+          user_type: string
+        }[]
       }
       search_users: {
         Args: {
