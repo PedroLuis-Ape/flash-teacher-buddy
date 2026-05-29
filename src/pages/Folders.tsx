@@ -380,29 +380,53 @@ const Folders = () => {
   // Bulk delete folders
   const bulkDeleteFolders = async () => {
     if (selectedFolders.size === 0) return;
+    if (isDeleting) return;
 
     try {
       setIsDeleting(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const idsToDelete = Array.from(selectedFolders);
-      
-      // Soft delete each folder (cascade handled by RPC)
-      for (const folderId of idsToDelete) {
-        await supabase.rpc("soft_delete_folder" as any, {
-          p_folder_id: folderId,
+      const CHUNK = 100;
+      const totalChunks = Math.ceil(idsToDelete.length / CHUNK);
+      let totalFolders = 0;
+      let totalLists = 0;
+      let totalCards = 0;
+      for (let i = 0; i < idsToDelete.length; i += CHUNK) {
+        const chunkIndex = Math.floor(i / CHUNK) + 1;
+        const chunk = idsToDelete.slice(i, i + CHUNK);
+        const { data, error } = await supabase.rpc("bulk_soft_delete_folders" as any, {
+          p_folder_ids: chunk,
           p_user_id: session.user.id,
         } as any);
+        if (error) throw error;
+        const r = (data ?? {}) as {
+          deleted_folders_count?: number;
+          deleted_lists_count?: number;
+          deleted_cards_count?: number;
+        };
+        totalFolders += r.deleted_folders_count ?? 0;
+        totalLists += r.deleted_lists_count ?? 0;
+        totalCards += r.deleted_cards_count ?? 0;
+        if (chunkIndex < totalChunks) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
       }
 
-      toast.success(`📁 ${idsToDelete.length} pasta(s) enviada(s) para a lixeira!`);
+      toast.success(
+        `📁 ${totalFolders} pasta(s) enviada(s) para a lixeira` +
+          (totalLists || totalCards
+            ? ` (${totalLists} listas, ${totalCards} cards)`
+            : "") +
+          "!"
+      );
       setSelectedFolders(new Set());
       setSelectMode(false);
       setShowBulkDeleteDialog(false);
       loadData();
     } catch (error: any) {
       console.error("Error soft-deleting folders:", error);
-      toast.error("❌ Erro ao excluir pastas");
+      toast.error("❌ Erro ao excluir pastas: " + (error?.message || "desconhecido"));
     } finally {
       setIsDeleting(false);
     }
