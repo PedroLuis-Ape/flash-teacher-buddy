@@ -2508,6 +2508,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_soft_delete_folders: {
+        Args: { p_folder_ids: string[]; p_user_id: string }
+        Returns: Json
+      }
+      bulk_soft_delete_lists: {
+        Args: { p_list_ids: string[]; p_user_id: string }
+        Returns: Json
+      }
       can_access_thread: {
         Args: {
           _thread_chave: string

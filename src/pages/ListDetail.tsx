@@ -273,6 +273,11 @@ const ListDetail = () => {
   const [isCloning, setIsCloning] = useState(false);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [bulkDeleteProgress, setBulkDeleteProgress] = useState<string>("");
+  const isBulkDeletingRef = useRef(false);
+  // Pagination for very large lists: render in pages to avoid freezing the UI.
+  const PAGE_SIZE = 200;
+  const [visibleLimit, setVisibleLimit] = useState<number>(PAGE_SIZE);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportText, setExportText] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -424,8 +429,28 @@ const ListDetail = () => {
     () => new Set(filteredFlashcardIds),
     [filteredFlashcardIds]
   );
-  const selectedVisibleCount = selectedCards.filter((id) => filteredFlashcardIdSet.has(id)).length;
+  // Page-limited slice rendered in the DOM. Selection / bulk actions still
+  // operate on the full filtered set when "select all" is used.
+  const pagedFlashcards = useMemo(
+    () => filteredFlashcards.slice(0, visibleLimit),
+    [filteredFlashcards, visibleLimit]
+  );
+  const pagedIdSet = useMemo(
+    () => new Set(pagedFlashcards.map((f) => f.id)),
+    [pagedFlashcards]
+  );
+  const selectedSetMemo = useMemo(() => new Set(selectedCards), [selectedCards]);
+  const selectedVisibleCount = useMemo(() => {
+    let n = 0;
+    for (const cid of selectedCards) if (filteredFlashcardIdSet.has(cid)) n++;
+    return n;
+  }, [selectedCards, filteredFlashcardIdSet]);
   const allVisibleSelected = filteredFlashcardIds.length > 0 && selectedVisibleCount === filteredFlashcardIds.length;
+
+  // Reset pagination whenever the underlying filtered set changes shape.
+  useEffect(() => {
+    setVisibleLimit(PAGE_SIZE);
+  }, [cardSearch, flashcards.length]);
 
   const handleAddFlashcard = async (term: string, translation: string, hint?: string, imageUrlA?: string, imageUrlB?: string, wordHints?: unknown) => {
     try {
@@ -472,25 +497,50 @@ const ListDetail = () => {
   }, [loadFlashcards]);
 
   const handleBulkDelete = async () => {
+    if (isBulkDeletingRef.current) return;
     if (selectedCards.length === 0) return;
     const visibleSelection = selectedCards.filter((cardId) => filteredFlashcardIdSet.has(cardId));
     if (visibleSelection.length === 0) return;
-    
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase
-        .from("flashcards")
-        .update({ deleted_at: new Date().toISOString() })
-        .or(`id.in.(${visibleSelection.join(",")}),parent_card_id.in.(${visibleSelection.join(",")})`);
 
-      if (error) throw error;
-      toast.success(`🗂️ ${visibleSelection.length} cards enviados para a lixeira!`);
+    isBulkDeletingRef.current = true;
+    setIsDeleting(true);
+    setBulkDeleteProgress("Preparando exclusão...");
+    try {
+      const CHUNK = 100;
+      const nowIso = new Date().toISOString();
+      const total = visibleSelection.length;
+      const totalChunks = Math.ceil(total / CHUNK);
+      for (let i = 0; i < total; i += CHUNK) {
+        const chunkIndex = Math.floor(i / CHUNK) + 1;
+        const chunk = visibleSelection.slice(i, i + CHUNK);
+        setBulkDeleteProgress(`Excluindo bloco ${chunkIndex}/${totalChunks}...`);
+
+        // 1) soft delete the cards themselves
+        const { error: e1 } = await supabase
+          .from("flashcards")
+          .update({ deleted_at: nowIso })
+          .in("id", chunk);
+        if (e1) throw e1;
+
+        // 2) soft delete any child layers that referenced these as parents
+        const { error: e2 } = await supabase
+          .from("flashcards")
+          .update({ deleted_at: nowIso })
+          .in("parent_card_id", chunk);
+        if (e2) throw e2;
+
+        // yield to the event loop so the UI stays responsive
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      toast.success(`🗂️ ${total} cards enviados para a lixeira!`);
       setSelectedCards([]);
       loadFlashcards();
     } catch (error: any) {
-      toast.error("Erro ao excluir: " + error.message);
+      toast.error("Erro ao excluir: " + (error?.message || "desconhecido"));
     } finally {
+      setBulkDeleteProgress("");
       setIsDeleting(false);
+      isBulkDeletingRef.current = false;
     }
   };
 
@@ -521,6 +571,12 @@ const ListDetail = () => {
     if (allVisibleSelected) {
       setSelectedCards([]);
     } else {
+      if (filteredFlashcardIds.length > 500) {
+        const ok = window.confirm(
+          `Você está prestes a selecionar ${filteredFlashcardIds.length} cards. Continuar?`
+        );
+        if (!ok) return;
+      }
       setSelectedCards(filteredFlashcardIds);
     }
   }, [allVisibleSelected, filteredFlashcardIds]);
@@ -1199,7 +1255,7 @@ const ListDetail = () => {
 
               {/* ── PERF: Memoized filtered list + memoized card rows ── */}
               <MemoizedCardList
-                flashcards={filteredFlashcards}
+                flashcards={pagedFlashcards}
                 selectedCards={selectedCards}
                 canEdit={canEdit}
                 userId={userId}
@@ -1210,6 +1266,27 @@ const ListDetail = () => {
                 onDelete={handleDeleteFlashcard}
                 onUnmerge={handleUnmergeLayers}
               />
+
+              {filteredFlashcards.length > pagedFlashcards.length && (
+                <div className="flex flex-col items-center gap-2 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Exibindo {pagedFlashcards.length} de {filteredFlashcards.length} cards
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisibleLimit((v) => v + PAGE_SIZE)}
+                  >
+                    Carregar mais
+                  </Button>
+                </div>
+              )}
+
+              {isDeleting && bulkDeleteProgress && (
+                <p className="text-center text-xs text-muted-foreground" aria-live="polite">
+                  {bulkDeleteProgress}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -1233,7 +1310,7 @@ const ListDetail = () => {
           onOpenChange={setMergeLayersOpen}
           listId={id}
           candidates={flashcards
-            .filter((f) => selectedCards.includes(f.id) && filteredFlashcardIdSet.has(f.id))
+            .filter((f) => selectedSetMemo.has(f.id) && filteredFlashcardIdSet.has(f.id))
             .map((f) => ({ id: f.id, term: f.term, translation: f.translation }))}
           onMerged={() => {
             setSelectedCards([]);

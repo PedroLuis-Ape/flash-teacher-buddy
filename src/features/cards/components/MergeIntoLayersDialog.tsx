@@ -24,6 +24,8 @@ export interface MergeCandidate {
   translation: string;
 }
 
+const MAX_MERGE_LAYERS = 50;
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,16 +52,22 @@ export const MergeIntoLayersDialog = ({
   const savingRef = useRef(false);
 
   const suggested = useMemo(
-    () => suggestMainTitle(candidates.map((c) => c.term)),
+    () => suggestMainTitle(candidates.slice(0, MAX_MERGE_LAYERS).map((c) => c.term)),
     [candidates]
   );
 
+  const trimmedCandidates = useMemo(
+    () => candidates.slice(0, MAX_MERGE_LAYERS),
+    [candidates]
+  );
+  const omittedCount = Math.max(0, candidates.length - trimmedCandidates.length);
+
   useEffect(() => {
     if (open) {
-      setOrder(candidates);
+      setOrder(trimmedCandidates);
       setTitle(suggested);
     }
-  }, [open, candidates, suggested]);
+  }, [open, trimmedCandidates, suggested]);
 
   const move = (idx: number, delta: number) => {
     setOrder((prev) => {
@@ -148,6 +156,12 @@ export const MergeIntoLayersDialog = ({
 
           <div className="space-y-2">
             <Label>Ordem das camadas ({order.length})</Label>
+            {omittedCount > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Para estabilidade, mescle no máximo {MAX_MERGE_LAYERS} cards por vez.
+                {" "}{omittedCount} card(s) foram omitidos.
+              </p>
+            )}
             <ul className="space-y-1.5">
               {order.map((c, idx) => (
                 <li

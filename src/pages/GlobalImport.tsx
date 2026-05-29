@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -24,6 +24,8 @@ export default function GlobalImport() {
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
+  const [previewCount, setPreviewCount] = useState(0);
+  const [previewStatus, setPreviewStatus] = useState<string>("");
 
   // Fetch user's lists (where they are owner)
   const { data: userData } = useQuery({
@@ -213,17 +215,41 @@ export default function GlobalImport() {
     }
   };
 
-  const previewCount = (() => {
-    if (!pastedText.trim()) return 0;
-    if (!FEATURE_FLAGS.layered_cards) {
-      return parsePastedFlashcards(pastedText).length;
+  // Debounced, off-render preview computation. Skips heavy work for very
+  // large inputs so pasting big texts does not freeze the UI.
+  useEffect(() => {
+    const text = pastedText;
+    if (!text.trim()) {
+      setPreviewCount(0);
+      setPreviewStatus("");
+      return;
     }
-    const camadas = extractCamadasBlock(pastedText);
-    const flatCount = parsePastedFlashcards(camadas.cleanedInput).length;
-    let layeredCount = 0;
-    for (const g of camadas.groups) layeredCount += g.layers.length;
-    return flatCount + layeredCount;
-  })();
+    const lineCount = text.split("\n").length;
+    const tooLarge = lineCount > 3000 || text.length > 300_000;
+    if (tooLarge) {
+      setPreviewCount(0);
+      setPreviewStatus("Prévia grande — será calculada ao importar");
+      return;
+    }
+    setPreviewStatus("Calculando prévia...");
+    const handle = setTimeout(() => {
+      try {
+        if (!FEATURE_FLAGS.layered_cards) {
+          setPreviewCount(parsePastedFlashcards(text).length);
+        } else {
+          const camadas = extractCamadasBlock(text);
+          const flatCount = parsePastedFlashcards(camadas.cleanedInput).length;
+          let layeredCount = 0;
+          for (const g of camadas.groups) layeredCount += g.layers.length;
+          setPreviewCount(flatCount + layeredCount);
+        }
+        setPreviewStatus("");
+      } catch {
+        setPreviewStatus("");
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [pastedText]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-24">
@@ -298,9 +324,9 @@ Things are finally looking up / As coisas finalmente estão melhorando`}
                 className="min-h-[200px] font-mono text-sm"
                 disabled={isImporting}
               />
-              {previewCount > 0 && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {previewCount} cards detectados
+              {(previewCount > 0 || previewStatus) && (
+                <p className="text-sm text-muted-foreground mt-2" aria-live="polite">
+                  {previewStatus || `${previewCount} cards detectados`}
                 </p>
               )}
             </div>

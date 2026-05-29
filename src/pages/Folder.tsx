@@ -521,35 +521,45 @@ const Folder = () => {
   // Bulk delete
   const handleBulkDelete = async () => {
     if (selectedLists.size === 0) return;
-    
+    if (isBulkDeleting) return;
+
     setIsBulkDeleting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Chunked deletion to avoid blocking main thread
       const ids = Array.from(selectedLists);
-      const CHUNK = 10;
+      const CHUNK = 100;
+      const totalChunks = Math.ceil(ids.length / CHUNK);
+      let totalLists = 0;
+      let totalCards = 0;
       for (let i = 0; i < ids.length; i += CHUNK) {
+        const chunkIndex = Math.floor(i / CHUNK) + 1;
         const chunk = ids.slice(i, i + CHUNK);
-        await Promise.all(chunk.map(listId =>
-          supabase.rpc("soft_delete_list" as any, {
-            p_list_id: listId,
-            p_user_id: session.user.id,
-          } as any)
-        ));
-        if (i + CHUNK < ids.length) {
-          await new Promise(r => setTimeout(r, 0));
+        const { data, error } = await supabase.rpc("bulk_soft_delete_lists" as any, {
+          p_list_ids: chunk,
+          p_user_id: session.user.id,
+        } as any);
+        if (error) throw error;
+        const result = (data ?? {}) as { deleted_lists_count?: number; deleted_cards_count?: number };
+        totalLists += result.deleted_lists_count ?? 0;
+        totalCards += result.deleted_cards_count ?? 0;
+        if (chunkIndex < totalChunks) {
+          await new Promise((r) => setTimeout(r, 0));
         }
       }
-      
-      toast.success(`📋 ${selectedLists.size} lista(s) enviada(s) para a lixeira!`);
+
+      toast.success(
+        `📋 ${totalLists} lista(s) enviada(s) para a lixeira` +
+          (totalCards ? ` (${totalCards} cards)` : "") +
+          "!"
+      );
       setSelectedLists(new Set());
       setSelectionMode(false);
       setShowBulkDeleteDialog(false);
       loadLists();
     } catch (error: any) {
-      toast.error("Erro ao excluir: " + error.message);
+      toast.error("Erro ao excluir: " + (error?.message || "desconhecido"));
     } finally {
       setIsBulkDeleting(false);
     }
