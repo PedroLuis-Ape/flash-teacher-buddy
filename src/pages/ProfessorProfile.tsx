@@ -35,7 +35,7 @@ export default function ProfessorProfile() {
     queryFn: async () => {
       if (!professorId) throw new Error('Professor ID required');
       
-      const { data, error } = await supabase.rpc('get_public_profile', {
+      const { data, error } = await (supabase.rpc as any)('get_public_profile', {
         _id: professorId,
       });
 
@@ -43,7 +43,14 @@ export default function ProfessorProfile() {
       const row = Array.isArray(data) ? data[0] : data;
       if (!row) throw new Error('Professor não encontrado');
 
-      return row;
+      return row as {
+        id: string;
+        first_name: string | null;
+        user_tag: string | null;
+        avatar_skin_id: string | null;
+        public_slug: string | null;
+        is_teacher: boolean | null;
+      };
     },
     enabled: !!professorId && !!currentUserId,
     retry: 1,
