@@ -1255,7 +1255,7 @@ const ListDetail = () => {
 
               {/* ── PERF: Memoized filtered list + memoized card rows ── */}
               <MemoizedCardList
-                flashcards={filteredFlashcards}
+                flashcards={pagedFlashcards}
                 selectedCards={selectedCards}
                 canEdit={canEdit}
                 userId={userId}
@@ -1266,6 +1266,27 @@ const ListDetail = () => {
                 onDelete={handleDeleteFlashcard}
                 onUnmerge={handleUnmergeLayers}
               />
+
+              {filteredFlashcards.length > pagedFlashcards.length && (
+                <div className="flex flex-col items-center gap-2 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Exibindo {pagedFlashcards.length} de {filteredFlashcards.length} cards
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisibleLimit((v) => v + PAGE_SIZE)}
+                  >
+                    Carregar mais
+                  </Button>
+                </div>
+              )}
+
+              {isDeleting && bulkDeleteProgress && (
+                <p className="text-center text-xs text-muted-foreground" aria-live="polite">
+                  {bulkDeleteProgress}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -1289,7 +1310,7 @@ const ListDetail = () => {
           onOpenChange={setMergeLayersOpen}
           listId={id}
           candidates={flashcards
-            .filter((f) => selectedCards.includes(f.id) && filteredFlashcardIdSet.has(f.id))
+            .filter((f) => selectedSetMemo.has(f.id) && filteredFlashcardIdSet.has(f.id))
             .map((f) => ({ id: f.id, term: f.term, translation: f.translation }))}
           onMerged={() => {
             setSelectedCards([]);
