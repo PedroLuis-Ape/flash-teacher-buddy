@@ -35,17 +35,15 @@ export default function ProfessorProfile() {
     queryFn: async () => {
       if (!professorId) throw new Error('Professor ID required');
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, user_tag, public_access_enabled, avatar_skin_id')
-        .eq('id', professorId)
-        .eq('public_access_enabled', true)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_public_profile', {
+        _id: professorId,
+      });
 
       if (error) throw error;
-      if (!data) throw new Error('Professor não encontrado');
-      
-      return data;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error('Professor não encontrado');
+
+      return row;
     },
     enabled: !!professorId && !!currentUserId,
     retry: 1,
