@@ -389,6 +389,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "class_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       classes: {
@@ -425,6 +432,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -478,6 +492,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "collections_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       conversion_history: {
@@ -522,6 +543,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "conversion_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       daily_activity: {
@@ -555,6 +583,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -960,6 +995,13 @@ export type Database = {
             columns: ["recipient_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_offers_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1547,6 +1589,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pitecoin_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2495,6 +2544,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "videos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "videos_folder_id_fkey"
             columns: ["folder_id"]
             isOneToOne: false
@@ -2505,7 +2561,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          ape_id: string | null
+          avatar_skin_id: string | null
+          avatar_url: string | null
+          first_name: string | null
+          id: string | null
+          is_teacher: boolean | null
+          mascot_skin_id: string | null
+          public_access_enabled: boolean | null
+          public_slug: string | null
+          user_tag: string | null
+          user_type: Database["public"]["Enums"]["user_type"] | null
+        }
+        Insert: {
+          ape_id?: string | null
+          avatar_skin_id?: string | null
+          avatar_url?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_teacher?: boolean | null
+          mascot_skin_id?: string | null
+          public_access_enabled?: boolean | null
+          public_slug?: string | null
+          user_tag?: string | null
+          user_type?: Database["public"]["Enums"]["user_type"] | null
+        }
+        Update: {
+          ape_id?: string | null
+          avatar_skin_id?: string | null
+          avatar_url?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_teacher?: boolean | null
+          mascot_skin_id?: string | null
+          public_access_enabled?: boolean | null
+          public_slug?: string | null
+          user_tag?: string | null
+          user_type?: Database["public"]["Enums"]["user_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_avatar_skin_id_fkey"
+            columns: ["avatar_skin_id"]
+            isOneToOne: false
+            referencedRelation: "skins_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_mascot_skin_id_fkey"
+            columns: ["mascot_skin_id"]
+            isOneToOne: false
+            referencedRelation: "skins_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_access_thread: {
