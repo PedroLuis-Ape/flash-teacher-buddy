@@ -12,6 +12,7 @@ import {
 import { useTrash, TrashItem } from "@/hooks/useTrash";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 function daysUntilExpiry(deletedAt: string): number {
   const deleted = new Date(deletedAt);
@@ -29,20 +30,43 @@ const typeIcon = {
 const typeLabel = {
   folder: "Pasta",
   list: "Lista",
-  flashcard: "Card",
+  flashcard: "Palavra/Card",
 };
+
+function relativeDeletedAt(iso: string): string {
+  try {
+    return `apagado ${formatDistanceToNow(new Date(iso), { addSuffix: true, locale: ptBR })}`;
+  } catch {
+    return "apagado recentemente";
+  }
+}
+
+function absoluteDeletedAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("pt-BR");
+  } catch {
+    return iso;
+  }
+}
 
 export default function Trash() {
   const navigate = useNavigate();
-  const { items, loading, loadTrash, restoreItem, permanentDelete, emptyTrash } = useTrash();
+  const {
+    items,
+    folders,
+    lists,
+    flashcards,
+    recentItems,
+    loading,
+    loadTrash,
+    restoreItem,
+    permanentDelete,
+    emptyTrash,
+  } = useTrash();
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<TrashItem | null>(null);
 
   useEffect(() => { loadTrash(); }, [loadTrash]);
-
-  const folders = items.filter(i => i.type === "folder");
-  const lists = items.filter(i => i.type === "list");
-  const flashcards = items.filter(i => i.type === "flashcard");
 
   const renderItem = (item: TrashItem) => {
     const Icon = typeIcon[item.type];
@@ -67,8 +91,18 @@ export default function Trash() {
                 em {item.parent_title}
               </span>
             )}
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] text-muted-foreground cursor-help">
+                    {relativeDeletedAt(item.deleted_at)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{absoluteDeletedAt(item.deleted_at)}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span className="text-[10px] text-muted-foreground">
-              {days > 0 ? `Expira em ${days}d` : "Expirando..."}
+              · {days > 0 ? `expira em ${days}d` : "expirando..."}
             </span>
           </div>
         </div>
@@ -112,6 +146,30 @@ export default function Trash() {
     );
   };
 
+  const renderAllTab = () => {
+    if (items.length === 0) return renderList(items);
+    return (
+      <div className="space-y-6">
+        {recentItems.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold mb-2 px-1">Últimos apagados</h2>
+            <p className="text-[11px] text-muted-foreground mb-2 px-1">
+              Atalho rápido para os itens removidos por último.
+            </p>
+            <div className="space-y-2">{recentItems.map(renderItem)}</div>
+          </section>
+        )}
+        <section>
+          <h2 className="text-sm font-semibold mb-2 px-1">Tudo na lixeira</h2>
+          <p className="text-[11px] text-muted-foreground mb-2 px-1">
+            Mostrando os itens mais recentes da lixeira.
+          </p>
+          <div className="space-y-2">{items.map(renderItem)}</div>
+        </section>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background px-4 py-6 max-w-3xl mx-auto w-full">
       {/* Header */}
@@ -147,17 +205,17 @@ export default function Trash() {
               Tudo {items.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{items.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="folders">
-              Pastas {folders.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{folders.length}</Badge>}
+              Pastas apagadas {folders.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{folders.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="lists">
-              Listas {lists.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{lists.length}</Badge>}
+              Listas apagadas {lists.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{lists.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="cards">
-              Cards {flashcards.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{flashcards.length}</Badge>}
+              Palavras/Cards apagados {flashcards.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{flashcards.length}</Badge>}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all">{renderList(items)}</TabsContent>
+          <TabsContent value="all">{renderAllTab()}</TabsContent>
           <TabsContent value="folders">{renderList(folders)}</TabsContent>
           <TabsContent value="lists">{renderList(lists)}</TabsContent>
           <TabsContent value="cards">{renderList(flashcards)}</TabsContent>
