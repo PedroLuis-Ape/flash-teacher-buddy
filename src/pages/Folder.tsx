@@ -477,19 +477,11 @@ const Folder = () => {
 
       if (error) throw error;
 
-      toast.success("📋 Lista enviada para a lixeira!", {
-        action: {
-          label: "Desfazer",
-          onClick: async () => {
-            await supabase.rpc("restore_list" as any, {
-              p_list_id: listId,
-              p_user_id: session.user.id,
-            } as any);
-            loadLists();
-            toast.success("✅ Lista restaurada!");
-          },
-        },
-      });
+      const { showUndoDeleteToast } = await import("@/lib/deleteUndo");
+      showUndoDeleteToast(
+        { id: listId, type: "list" },
+        () => loadLists(),
+      );
       loadLists();
     } catch (error: any) {
       toast.error("Erro ao excluir lista: " + error.message);
@@ -549,11 +541,14 @@ const Folder = () => {
         }
       }
 
-      toast.success(
-        `📋 ${totalLists} lista(s) enviada(s) para a lixeira` +
-          (totalCards ? ` (${totalCards} cards)` : "") +
-          "!"
-      );
+      const { showBulkUndoDeleteToast } = await import("@/lib/deleteUndo");
+      const undoItems = ids.map((id) => ({ id, type: "list" as const }));
+      showBulkUndoDeleteToast(undoItems, () => loadLists());
+      if (totalCards) {
+        toast.message(
+          `📋 ${totalLists} lista(s) (${totalCards} cards) enviadas para a lixeira.`,
+        );
+      }
       setSelectedLists(new Set());
       setSelectionMode(false);
       setShowBulkDeleteDialog(false);

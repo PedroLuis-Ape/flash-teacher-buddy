@@ -341,19 +341,11 @@ const Folders = () => {
 
       if (error) throw error;
 
-      toast.success("📁 Pasta enviada para a lixeira!", {
-        action: {
-          label: "Desfazer",
-          onClick: async () => {
-            await supabase.rpc("restore_folder" as any, {
-              p_folder_id: folderToDelete,
-              p_user_id: session.user.id,
-            } as any);
-            loadData();
-            toast.success("✅ Pasta restaurada!");
-          },
-        },
-      });
+      const { showUndoDeleteToast } = await import("@/lib/deleteUndo");
+      showUndoDeleteToast(
+        { id: folderToDelete, type: "folder" },
+        () => loadData(),
+      );
       setFolderToDelete(null);
       loadData();
     } catch (error: any) {
@@ -413,13 +405,14 @@ const Folders = () => {
         }
       }
 
-      toast.success(
-        `📁 ${totalFolders} pasta(s) enviada(s) para a lixeira` +
-          (totalLists || totalCards
-            ? ` (${totalLists} listas, ${totalCards} cards)`
-            : "") +
-          "!"
-      );
+      const { showBulkUndoDeleteToast } = await import("@/lib/deleteUndo");
+      const undoItems = idsToDelete.map((id) => ({ id, type: "folder" as const }));
+      showBulkUndoDeleteToast(undoItems, () => loadData());
+      if (totalLists || totalCards) {
+        toast.message(
+          `📁 ${totalFolders} pasta(s) (${totalLists} listas, ${totalCards} cards) enviadas para a lixeira.`,
+        );
+      }
       setSelectedFolders(new Set());
       setSelectMode(false);
       setShowBulkDeleteDialog(false);
