@@ -405,13 +405,14 @@ const Folders = () => {
         }
       }
 
-      toast.success(
-        `📁 ${totalFolders} pasta(s) enviada(s) para a lixeira` +
-          (totalLists || totalCards
-            ? ` (${totalLists} listas, ${totalCards} cards)`
-            : "") +
-          "!"
-      );
+      const { showBulkUndoDeleteToast } = await import("@/lib/deleteUndo");
+      const undoItems = idsToDelete.map((id) => ({ id, type: "folder" as const }));
+      showBulkUndoDeleteToast(undoItems, () => loadData());
+      if (totalLists || totalCards) {
+        toast.message(
+          `📁 ${totalFolders} pasta(s) (${totalLists} listas, ${totalCards} cards) enviadas para a lixeira.`,
+        );
+      }
       setSelectedFolders(new Set());
       setSelectMode(false);
       setShowBulkDeleteDialog(false);
