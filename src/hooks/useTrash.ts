@@ -13,6 +13,10 @@ export interface TrashItem {
 
 export function useTrash() {
   const [items, setItems] = useState<TrashItem[]>([]);
+  const [folders, setFolders] = useState<TrashItem[]>([]);
+  const [lists, setLists] = useState<TrashItem[]>([]);
+  const [flashcards, setFlashcards] = useState<TrashItem[]>([]);
+  const [recentItems, setRecentItems] = useState<TrashItem[]>([]);
   const [loading, setLoading] = useState(false);
   const { selectedInstitution } = useInstitution();
 
@@ -25,13 +29,17 @@ export function useTrash() {
       const userId = session.user.id;
       const institutionId = selectedInstitution?.id || null;
 
+      // Safety cap per type to keep the trash page light.
+      const PER_TYPE_LIMIT = 200;
+
       // Build folder query with institution filter
       let foldersQuery = supabase
         .from("folders")
         .select("id, title, deleted_at")
         .eq("owner_id", userId)
         .not("deleted_at", "is", null)
-        .order("deleted_at", { ascending: false });
+        .order("deleted_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT);
 
       if (institutionId) {
         foldersQuery = foldersQuery.eq("institution_id", institutionId);
@@ -45,7 +53,8 @@ export function useTrash() {
         .select("id, title, deleted_at, folders!inner(title, institution_id)")
         .eq("owner_id", userId)
         .not("deleted_at", "is", null)
-        .order("deleted_at", { ascending: false });
+        .order("deleted_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT);
 
       if (institutionId) {
         listsQuery = listsQuery.eq("folders.institution_id", institutionId);
@@ -59,7 +68,8 @@ export function useTrash() {
         .select("id, term, translation, deleted_at, lists!inner(title, folders!inner(institution_id))")
         .eq("user_id", userId)
         .not("deleted_at", "is", null)
-        .order("deleted_at", { ascending: false });
+        .order("deleted_at", { ascending: false })
+        .limit(PER_TYPE_LIMIT);
 
       // For flashcards, filter client-side since nested filtering is complex
       const [foldersRes, listsRes, flashcardsRes] = await Promise.all([
@@ -69,26 +79,24 @@ export function useTrash() {
       ]);
 
       const result: TrashItem[] = [];
-
-      (foldersRes.data || []).forEach((f: any) =>
-        result.push({ id: f.id, type: "folder", title: f.title || "Pasta sem nome", deleted_at: f.deleted_at })
-      );
-
-      (listsRes.data || []).forEach((l: any) =>
-        result.push({
-          id: l.id,
-          type: "list",
-          title: l.title || "Lista sem nome",
-          deleted_at: l.deleted_at,
-          parent_title: l.folders?.title,
-        })
-      );
-
-      // Filter flashcards by institution client-side
+      const folderItems: TrashItem[] = (foldersRes.data || []).map((f: any) => ({
+        id: f.id,
+        type: "folder",
+        title: f.title || "Pasta sem nome",
+        deleted_at: f.deleted_at,
+      }));
+      const listItems: TrashItem[] = (listsRes.data || []).map((l: any) => ({
+        id: l.id,
+        type: "list",
+        title: l.title || "Lista sem nome",
+        deleted_at: l.deleted_at,
+        parent_title: l.folders?.title,
+      }));
+      const flashcardItems: TrashItem[] = [];
       (flashcardsRes.data || []).forEach((fc: any) => {
         const fcInst = fc.lists?.folders?.institution_id || null;
         if (institutionId ? fcInst === institutionId : fcInst === null) {
-          result.push({
+          flashcardItems.push({
             id: fc.id,
             type: "flashcard",
             title: `${fc.term || "?"} → ${fc.translation || "?"}`,
@@ -98,9 +106,14 @@ export function useTrash() {
         }
       });
 
-      // Sort by deleted_at descending
+      result.push(...folderItems, ...listItems, ...flashcardItems);
       result.sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime());
+
       setItems(result);
+      setFolders(folderItems);
+      setLists(listItems);
+      setFlashcards(flashcardItems);
+      setRecentItems(result.slice(0, 10));
     } catch (err) {
       console.error("Error loading trash:", err);
     } finally {
@@ -167,5 +180,16 @@ export function useTrash() {
     }
   }, []);
 
-  return { items, loading, loadTrash, restoreItem, permanentDelete, emptyTrash };
+  return {
+    items,
+    folders,
+    lists,
+    flashcards,
+    recentItems,
+    loading,
+    loadTrash,
+    restoreItem,
+    permanentDelete,
+    emptyTrash,
+  };
 }
