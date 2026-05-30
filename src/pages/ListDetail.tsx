@@ -493,7 +493,7 @@ const ListDetail = () => {
       const { showUndoDeleteToast } = await import("@/lib/deleteUndo");
       showUndoDeleteToast(
         { id: flashcardId, type: "flashcard" },
-        () => loadFlashcards(),
+        () => { loadFlashcards(); },
       );
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
@@ -540,7 +540,7 @@ const ListDetail = () => {
       loadFlashcards();
       const { showBulkUndoDeleteToast } = await import("@/lib/deleteUndo");
       const undoItems = visibleSelection.map((id) => ({ id, type: "flashcard" as const }));
-      showBulkUndoDeleteToast(undoItems, () => loadFlashcards());
+      showBulkUndoDeleteToast(undoItems, () => { loadFlashcards(); });
     } catch (error: any) {
       toast.error("Erro ao excluir: " + (error?.message || "desconhecido"));
     } finally {
