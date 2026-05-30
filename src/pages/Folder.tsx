@@ -477,19 +477,11 @@ const Folder = () => {
 
       if (error) throw error;
 
-      toast.success("📋 Lista enviada para a lixeira!", {
-        action: {
-          label: "Desfazer",
-          onClick: async () => {
-            await supabase.rpc("restore_list" as any, {
-              p_list_id: listId,
-              p_user_id: session.user.id,
-            } as any);
-            loadLists();
-            toast.success("✅ Lista restaurada!");
-          },
-        },
-      });
+      const { showUndoDeleteToast } = await import("@/lib/deleteUndo");
+      showUndoDeleteToast(
+        { id: listId, type: "list" },
+        () => loadLists(),
+      );
       loadLists();
     } catch (error: any) {
       toast.error("Erro ao excluir lista: " + error.message);
