@@ -438,6 +438,12 @@ export const BulkImportDialog = ({
               • Só cards: <code>{resolvedLabelA} / {resolvedLabelB} (obs) [dica]</code><br />
               • Bloco opcional <code>[CAMADAS]</code> dentro de CARDS: agrupa <strong>frases</strong> sob um termo principal (o termo é só o título do grupo; as frases viram os cards jogáveis).
             </p>
+            <div className="rounded-md bg-muted/40 border border-border/60 p-3 flex items-start gap-2">
+              <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                <strong>Padrão:</strong> cole apenas cards normais. Glossário, dicas detalhadas e camadas são opcionais — só inclua se realmente precisar deles.
+              </p>
+            </div>
             <Textarea
               id="bulk-input"
               value={input}
