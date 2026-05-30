@@ -489,8 +489,12 @@ const ListDetail = () => {
         .or(`id.eq.${flashcardId},parent_card_id.eq.${flashcardId}`);
 
       if (error) throw error;
-      toast.success("🗂️ Card enviado para a lixeira!");
       loadFlashcards();
+      const { showUndoDeleteToast } = await import("@/lib/deleteUndo");
+      showUndoDeleteToast(
+        { id: flashcardId, type: "flashcard" },
+        () => loadFlashcards(),
+      );
     } catch (error: any) {
       toast.error("Erro ao excluir: " + error.message);
     }
@@ -532,9 +536,11 @@ const ListDetail = () => {
         // yield to the event loop so the UI stays responsive
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
-      toast.success(`🗂️ ${total} cards enviados para a lixeira!`);
       setSelectedCards([]);
       loadFlashcards();
+      const { showBulkUndoDeleteToast } = await import("@/lib/deleteUndo");
+      const undoItems = visibleSelection.map((id) => ({ id, type: "flashcard" as const }));
+      showBulkUndoDeleteToast(undoItems, () => loadFlashcards());
     } catch (error: any) {
       toast.error("Erro ao excluir: " + (error?.message || "desconhecido"));
     } finally {
