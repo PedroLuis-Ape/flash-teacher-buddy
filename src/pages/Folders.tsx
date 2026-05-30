@@ -341,19 +341,11 @@ const Folders = () => {
 
       if (error) throw error;
 
-      toast.success("📁 Pasta enviada para a lixeira!", {
-        action: {
-          label: "Desfazer",
-          onClick: async () => {
-            await supabase.rpc("restore_folder" as any, {
-              p_folder_id: folderToDelete,
-              p_user_id: session.user.id,
-            } as any);
-            loadData();
-            toast.success("✅ Pasta restaurada!");
-          },
-        },
-      });
+      const { showUndoDeleteToast } = await import("@/lib/deleteUndo");
+      showUndoDeleteToast(
+        { id: folderToDelete, type: "folder" },
+        () => loadData(),
+      );
       setFolderToDelete(null);
       loadData();
     } catch (error: any) {
