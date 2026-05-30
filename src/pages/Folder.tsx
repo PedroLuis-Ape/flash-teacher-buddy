@@ -541,11 +541,14 @@ const Folder = () => {
         }
       }
 
-      toast.success(
-        `📋 ${totalLists} lista(s) enviada(s) para a lixeira` +
-          (totalCards ? ` (${totalCards} cards)` : "") +
-          "!"
-      );
+      const { showBulkUndoDeleteToast } = await import("@/lib/deleteUndo");
+      const undoItems = ids.map((id) => ({ id, type: "list" as const }));
+      showBulkUndoDeleteToast(undoItems, () => loadLists());
+      if (totalCards) {
+        toast.message(
+          `📋 ${totalLists} lista(s) (${totalCards} cards) enviadas para a lixeira.`,
+        );
+      }
       setSelectedLists(new Set());
       setSelectionMode(false);
       setShowBulkDeleteDialog(false);
