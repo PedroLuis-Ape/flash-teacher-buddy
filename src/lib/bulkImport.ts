@@ -605,7 +605,27 @@ Se o usuário pedir phrasal verbs com camadas, use [CAMADAS] e agrupe as frases 
 
 REGRA FINAL:
 Na dúvida, gere apenas cards normais.
-Só use glossário, dica detalhada ou camadas quando o usuário pedir claramente.`;
+Só use glossário, dica detalhada ou camadas quando o usuário pedir claramente.
+
+REGRA SOBRE CSV:
+CSV é opcional. Não gere CSV automaticamente.
+Use CSV somente quando o usuário pedir explicitamente ("gere em CSV", "quero CSV", "formato CSV", "arquivo CSV" ou equivalente).
+
+Quando o usuário pedir CSV, a saída deve ser texto puro em CSV, sem markdown, sem explicações e sem blocos de código.
+
+Formato CSV recomendado (apenas DUAS colunas):
+${sideA},${sideB}
+casa,house
+cachorro,dog
+Eu estudo inglês todos os dias.,I study English every day.
+
+Regras para CSV:
+- Use apenas duas colunas. Primeira coluna = Lado A. Segunda coluna = Lado B.
+- Nunca use quatro colunas. Não escreva termo,tradução,frase,tradução da frase.
+- Se uma célula tiver vírgula, coloque a célula entre aspas: "Sim, eu gosto.","Yes, I like it."
+- Se uma célula tiver aspas, escape duplicando: "ele disse ""oi""","he said ""hi"""
+- Não misture [CAMADAS] dentro de CSV. Não misture === CARDS === dentro de CSV.
+- CSV é apenas para cards simples. Para camadas, use o formato normal do app com [CAMADAS].`;
 }
 
 // Legacy constant for backward compatibility
