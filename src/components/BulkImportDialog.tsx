@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,14 @@ import {
   FlashcardPair,
   GlossaryParsed,
   buildAIHelperPrompt,
+  analyzeFlashcardDuplicates,
+  type DuplicateInfo,
 } from "@/lib/bulkImport";
+import {
+  convertFileToImportText,
+  detectKindFromName,
+  MAX_IMPORT_FILE_BYTES,
+} from "@/lib/fileImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQueryClient } from "@tanstack/react-query";
@@ -91,6 +98,9 @@ export const BulkImportDialog = ({
   const [loading, setLoading] = useState(false);
   const [showAIHelper, setShowAIHelper] = useState(false);
   const [invertAB, setInvertAB] = useState(false);
+  const [importDuplicatesAnyway, setImportDuplicatesAnyway] = useState(false);
+  const [duplicateInfos, setDuplicateInfos] = useState<DuplicateInfo[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const aiPrompt = useMemo(() => buildAIHelperPrompt(langA, langB), [langA, langB]);
 
@@ -205,15 +215,18 @@ export const BulkImportDialog = ({
         const { glossaryLines, cards } = parseGlossaryAndCards(textForFlatParse);
         const uniqueGlossary = deduplicateGlossary(glossaryLines, existingGlossary);
         const glossaryDuplicates = glossaryLines.length - uniqueGlossary.length;
-        const deduplicated = deduplicateFlashcards(cards, existingCards);
-        const valid = deduplicated.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
-        const incomplete = deduplicated.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
-        const duplicates = cards.length - deduplicated.length;
-        const withHints = deduplicated.filter(p => p.detailedHint).length;
+        // Visible duplicates: keep ALL cards in the preview and annotate them.
+        // The user decides via the "Importar duplicados mesmo assim" switch.
+        const dupInfos = analyzeFlashcardDuplicates(cards, existingCards);
+        const valid = cards.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
+        const incomplete = cards.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
+        const duplicates = dupInfos.filter(d => d.isDuplicateInBatch || d.isDuplicateExisting).length;
+        const withHints = cards.filter(p => p.detailedHint).length;
         const layeredCards = detectedGroups.reduce((s, g) => s + g.layers.length, 0);
 
         setGlossaryPreview(uniqueGlossary);
-        setPreview(deduplicated);
+        setPreview(cards);
+        setDuplicateInfos(dupInfos);
         setLayeredGroups(detectedGroups);
         setSentenceWarnings(warnings);
         setSingletonWarnings(singletons);
@@ -224,7 +237,33 @@ export const BulkImportDialog = ({
   };
 
   const handleImport = async () => {
-    const validPairs = preview.filter(p => (p.sideA && p.sideB) || (p.en && p.pt));
+    // Build duplicate lookup keyed by the same index as `preview`.
+    const dupByIndex = new Map<number, DuplicateInfo>();
+    duplicateInfos.forEach(d => dupByIndex.set(d.index, d));
+    const validPairs = preview.filter((p, idx) => {
+      const hasBoth = (p.sideA && p.sideB) || (p.en && p.pt);
+      if (!hasBoth) return false;
+      const info = dupByIndex.get(idx);
+      const isDup = !!info && (info.isDuplicateInBatch || info.isDuplicateExisting);
+      if (isDup && !importDuplicatesAnyway) return false;
+      return true;
+    });
+    // When "import duplicates" is OFF, also collapse same-key duplicates so we
+    // don't insert the same card twice from the batch itself.
+    if (!importDuplicatesAnyway) {
+      const seen = new Set<string>();
+      const collapsed: FlashcardPair[] = [];
+      for (const p of validPairs) {
+        const a = (p.sideA || p.en || "").toLowerCase().trim();
+        const b = (p.sideB || p.pt || "").toLowerCase().trim();
+        const key = `${a}|${b}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        collapsed.push(p);
+      }
+      validPairs.length = 0;
+      validPairs.push(...collapsed);
+    }
 
     if (validPairs.length === 0 && glossaryPreview.length === 0 && layeredGroups.length === 0) {
       toast.error("Nenhum item válido para importar");
@@ -344,11 +383,13 @@ export const BulkImportDialog = ({
       
       setInput("");
       setPreview([]);
+      setDuplicateInfos([]);
       setGlossaryPreview([]);
       setLayeredGroups([]);
       setSentenceWarnings([]);
       setSingletonWarnings([]);
       setInvertAB(false);
+      setImportDuplicatesAnyway(false);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
       onImported();
@@ -362,6 +403,44 @@ export const BulkImportDialog = ({
   const handleCopyAIPrompt = () => {
     navigator.clipboard.writeText(aiPrompt);
     toast.success("Prompt copiado para a área de transferência!");
+  };
+
+  const handlePickFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset value so picking the same file twice in a row still triggers change.
+    if (e.target) e.target.value = "";
+    if (!file) return;
+    const kind = detectKindFromName(file.name);
+    if (!kind) {
+      toast.error("Formato não suportado. Use .txt, .csv ou .tsv");
+      return;
+    }
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      toast.error("Arquivo muito grande. Divida em partes menores para evitar travamento.");
+      return;
+    }
+    try {
+      const content = await file.text();
+      const { text, cardCount } = convertFileToImportText(kind, content);
+      setInput(text);
+      // Clear previous preview so the user re-parses with the new content.
+      setPreview([]);
+      setDuplicateInfos([]);
+      setGlossaryPreview([]);
+      setLayeredGroups([]);
+      toast.success(
+        cardCount > 0
+          ? `Arquivo carregado (${cardCount} linhas). Revise antes de importar.`
+          : "Arquivo carregado. Revise antes de importar.",
+      );
+    } catch (err: any) {
+      console.error("File read error:", err);
+      toast.error("Erro ao ler arquivo: " + (err?.message ?? "desconhecido"));
+    }
   };
 
   const totalImportable = stats.valid + stats.glossaryNew + stats.layeredCards;
@@ -442,7 +521,27 @@ export const BulkImportDialog = ({
               <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
               <p className="text-xs text-muted-foreground">
                 <strong>Padrão:</strong> cole apenas cards normais. Glossário, dicas detalhadas e camadas são opcionais — só inclua se realmente precisar deles.
+                <br />
+                Você pode <strong>colar texto</strong> ou <strong>importar arquivo</strong> <code>.txt</code>, <code>.csv</code> ou <code>.tsv</code>. CSV deve ter duas colunas (Lado A, Lado B). Para camadas, use <code>[CAMADAS]</code> no formato de texto do app.
               </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handlePickFile}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar arquivo (.txt / .csv / .tsv)
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.csv,.tsv,text/plain,text/csv,text/tab-separated-values"
+                onChange={handleFileSelected}
+                className="hidden"
+              />
             </div>
             <Textarea
               id="bulk-input"
@@ -716,6 +815,31 @@ His business took off last year / O negócio dele decolou no ano passado`}
 
               {/* Cards Preview */}
               {preview.length > 0 && (
+                <>
+                {duplicateInfos.some(d => d.isDuplicateInBatch || d.isDuplicateExisting) && (
+                  <div className="flex items-center justify-between p-3 border border-amber-400/50 rounded-lg bg-amber-50/50 dark:bg-amber-500/10">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <div className="min-w-0">
+                        <Label htmlFor="import-dup-anyway" className="text-sm font-medium cursor-pointer">
+                          Importar duplicados mesmo assim
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {(() => {
+                            const inBatch = duplicateInfos.filter(d => d.isDuplicateInBatch && !d.isDuplicateExisting).length;
+                            const existing = duplicateInfos.filter(d => d.isDuplicateExisting).length;
+                            return `${inBatch} duplicado(s) nesta importação · ${existing} já existem na lista`;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="import-dup-anyway"
+                      checked={importDuplicatesAnyway}
+                      onCheckedChange={setImportDuplicatesAnyway}
+                    />
+                  </div>
+                )}
                 <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
                   <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
                     <span>Cards ({stats.valid} válidos)</span>
@@ -732,8 +856,20 @@ His business took off last year / O negócio dele decolou no ano passado`}
                       const termText = invertAB ? sideBVal : sideAVal;
                       const transText = invertAB ? sideAVal : sideBVal;
                       const isValid = (pair.sideA && pair.sideB) || (pair.en && pair.pt);
+                      const dup = duplicateInfos.find(d => d.index === idx);
+                      const isDup = !!dup && (dup.isDuplicateInBatch || dup.isDuplicateExisting);
+                      const dupClass = isDup
+                        ? "rounded-md border border-amber-400/60 bg-amber-100/40 dark:bg-amber-500/10 px-2 py-1"
+                        : "";
                       return (
-                        <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""}`}>
+                        <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""} ${dupClass}`}>
+                          {isDup && (
+                            <div className="mb-1 flex items-center gap-1">
+                              <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-300 text-[10px] px-1.5 py-0">
+                                {dup!.duplicateReason}
+                              </Badge>
+                            </div>
+                          )}
                           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-1 md:gap-2 items-center">
                             <span className="font-medium break-words flex items-center gap-1.5 min-w-0">
                               <SideBadge side="A" label={effectiveLabelA} lang={effectiveLangA} />
@@ -792,6 +928,7 @@ His business took off last year / O negócio dele decolou no ano passado`}
                     )}
                   </ul>
                 </div>
+                </>
               )}
 
               {/* Final confirmation summary */}

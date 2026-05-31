@@ -238,6 +238,66 @@ export function deduplicateFlashcards(
   });
 }
 
+// ---------- Duplicate Analysis (visible, non-destructive) ----------
+
+export type DuplicateInfo = {
+  pair: FlashcardPair;
+  index: number;
+  isDuplicateInBatch: boolean;
+  isDuplicateExisting: boolean;
+  /** Human-readable reason ("" when not a duplicate). */
+  duplicateReason: "" | "Duplicado nesta importação" | "Já existe na lista" | "Duplicado nesta importação + já existe na lista";
+};
+
+function normCell(s: string | undefined | null): string {
+  return (s ?? "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Annotate each card with duplicate metadata WITHOUT removing anything.
+ * The UI is responsible for highlighting and for deciding (via a switch)
+ * whether duplicates are actually inserted.
+ */
+export function analyzeFlashcardDuplicates(
+  pairs: FlashcardPair[],
+  existingCards: { term: string; translation: string }[],
+): DuplicateInfo[] {
+  const existingKeys = new Set<string>();
+  for (const c of existingCards) {
+    existingKeys.add(`${normCell(c.term)}|${normCell(c.translation)}`);
+  }
+  // First pass: count how many times each key appears in the batch.
+  const batchCounts = new Map<string, number>();
+  for (const p of pairs) {
+    const a = normCell(p.sideA || p.en);
+    const b = normCell(p.sideB || p.pt);
+    if (!a || !b) continue;
+    const key = `${a}|${b}`;
+    batchCounts.set(key, (batchCounts.get(key) ?? 0) + 1);
+  }
+  // Second pass: annotate every row (ALL duplicate occurrences are flagged,
+  // not just the second+, so the user sees both lines highlighted).
+  return pairs.map((pair, index) => {
+    const a = normCell(pair.sideA || pair.en);
+    const b = normCell(pair.sideB || pair.pt);
+    const key = `${a}|${b}`;
+    const hasBoth = !!a && !!b;
+    const inBatch = hasBoth && (batchCounts.get(key) ?? 0) > 1;
+    const inExisting = hasBoth && existingKeys.has(key);
+    let reason: DuplicateInfo["duplicateReason"] = "";
+    if (inBatch && inExisting) reason = "Duplicado nesta importação + já existe na lista";
+    else if (inExisting) reason = "Já existe na lista";
+    else if (inBatch) reason = "Duplicado nesta importação";
+    return {
+      pair,
+      index,
+      isDuplicateInBatch: inBatch,
+      isDuplicateExisting: inExisting,
+      duplicateReason: reason,
+    };
+  });
+}
+
 // ---------- Glossary-Aware Parser ----------
 
 export type GlossaryParsed = {
@@ -545,7 +605,27 @@ Se o usuário pedir phrasal verbs com camadas, use [CAMADAS] e agrupe as frases 
 
 REGRA FINAL:
 Na dúvida, gere apenas cards normais.
-Só use glossário, dica detalhada ou camadas quando o usuário pedir claramente.`;
+Só use glossário, dica detalhada ou camadas quando o usuário pedir claramente.
+
+REGRA SOBRE CSV:
+CSV é opcional. Não gere CSV automaticamente.
+Use CSV somente quando o usuário pedir explicitamente ("gere em CSV", "quero CSV", "formato CSV", "arquivo CSV" ou equivalente).
+
+Quando o usuário pedir CSV, a saída deve ser texto puro em CSV, sem markdown, sem explicações e sem blocos de código.
+
+Formato CSV recomendado (apenas DUAS colunas):
+${sideA},${sideB}
+casa,house
+cachorro,dog
+Eu estudo inglês todos os dias.,I study English every day.
+
+Regras para CSV:
+- Use apenas duas colunas. Primeira coluna = Lado A. Segunda coluna = Lado B.
+- Nunca use quatro colunas. Não escreva termo,tradução,frase,tradução da frase.
+- Se uma célula tiver vírgula, coloque a célula entre aspas: "Sim, eu gosto.","Yes, I like it."
+- Se uma célula tiver aspas, escape duplicando: "ele disse ""oi""","he said ""hi"""
+- Não misture [CAMADAS] dentro de CSV. Não misture === CARDS === dentro de CSV.
+- CSV é apenas para cards simples. Para camadas, use o formato normal do app com [CAMADAS].`;
 }
 
 // Legacy constant for backward compatibility
