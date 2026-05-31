@@ -215,15 +215,18 @@ export const BulkImportDialog = ({
         const { glossaryLines, cards } = parseGlossaryAndCards(textForFlatParse);
         const uniqueGlossary = deduplicateGlossary(glossaryLines, existingGlossary);
         const glossaryDuplicates = glossaryLines.length - uniqueGlossary.length;
-        const deduplicated = deduplicateFlashcards(cards, existingCards);
-        const valid = deduplicated.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
-        const incomplete = deduplicated.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
-        const duplicates = cards.length - deduplicated.length;
-        const withHints = deduplicated.filter(p => p.detailedHint).length;
+        // Visible duplicates: keep ALL cards in the preview and annotate them.
+        // The user decides via the "Importar duplicados mesmo assim" switch.
+        const dupInfos = analyzeFlashcardDuplicates(cards, existingCards);
+        const valid = cards.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
+        const incomplete = cards.filter(p => !((p.sideA && p.sideB) || (p.en && p.pt))).length;
+        const duplicates = dupInfos.filter(d => d.isDuplicateInBatch || d.isDuplicateExisting).length;
+        const withHints = cards.filter(p => p.detailedHint).length;
         const layeredCards = detectedGroups.reduce((s, g) => s + g.layers.length, 0);
 
         setGlossaryPreview(uniqueGlossary);
-        setPreview(deduplicated);
+        setPreview(cards);
+        setDuplicateInfos(dupInfos);
         setLayeredGroups(detectedGroups);
         setSentenceWarnings(warnings);
         setSingletonWarnings(singletons);
