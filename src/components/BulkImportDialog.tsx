@@ -237,7 +237,33 @@ export const BulkImportDialog = ({
   };
 
   const handleImport = async () => {
-    const validPairs = preview.filter(p => (p.sideA && p.sideB) || (p.en && p.pt));
+    // Build duplicate lookup keyed by the same index as `preview`.
+    const dupByIndex = new Map<number, DuplicateInfo>();
+    duplicateInfos.forEach(d => dupByIndex.set(d.index, d));
+    const validPairs = preview.filter((p, idx) => {
+      const hasBoth = (p.sideA && p.sideB) || (p.en && p.pt);
+      if (!hasBoth) return false;
+      const info = dupByIndex.get(idx);
+      const isDup = !!info && (info.isDuplicateInBatch || info.isDuplicateExisting);
+      if (isDup && !importDuplicatesAnyway) return false;
+      return true;
+    });
+    // When "import duplicates" is OFF, also collapse same-key duplicates so we
+    // don't insert the same card twice from the batch itself.
+    if (!importDuplicatesAnyway) {
+      const seen = new Set<string>();
+      const collapsed: FlashcardPair[] = [];
+      for (const p of validPairs) {
+        const a = (p.sideA || p.en || "").toLowerCase().trim();
+        const b = (p.sideB || p.pt || "").toLowerCase().trim();
+        const key = `${a}|${b}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        collapsed.push(p);
+      }
+      validPairs.length = 0;
+      validPairs.push(...collapsed);
+    }
 
     if (validPairs.length === 0 && glossaryPreview.length === 0 && layeredGroups.length === 0) {
       toast.error("Nenhum item válido para importar");
