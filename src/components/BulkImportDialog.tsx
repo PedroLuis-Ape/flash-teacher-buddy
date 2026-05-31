@@ -521,7 +521,27 @@ export const BulkImportDialog = ({
               <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
               <p className="text-xs text-muted-foreground">
                 <strong>Padrão:</strong> cole apenas cards normais. Glossário, dicas detalhadas e camadas são opcionais — só inclua se realmente precisar deles.
+                <br />
+                Você pode <strong>colar texto</strong> ou <strong>importar arquivo</strong> <code>.txt</code>, <code>.csv</code> ou <code>.tsv</code>. CSV deve ter duas colunas (Lado A, Lado B). Para camadas, use <code>[CAMADAS]</code> no formato de texto do app.
               </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handlePickFile}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar arquivo (.txt / .csv / .tsv)
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.csv,.tsv,text/plain,text/csv,text/tab-separated-values"
+                onChange={handleFileSelected}
+                className="hidden"
+              />
             </div>
             <Textarea
               id="bulk-input"
