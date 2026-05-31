@@ -815,6 +815,31 @@ His business took off last year / O negócio dele decolou no ano passado`}
 
               {/* Cards Preview */}
               {preview.length > 0 && (
+                <>
+                {duplicateInfos.some(d => d.isDuplicateInBatch || d.isDuplicateExisting) && (
+                  <div className="flex items-center justify-between p-3 border border-amber-400/50 rounded-lg bg-amber-50/50 dark:bg-amber-500/10">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <div className="min-w-0">
+                        <Label htmlFor="import-dup-anyway" className="text-sm font-medium cursor-pointer">
+                          Importar duplicados mesmo assim
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {(() => {
+                            const inBatch = duplicateInfos.filter(d => d.isDuplicateInBatch && !d.isDuplicateExisting).length;
+                            const existing = duplicateInfos.filter(d => d.isDuplicateExisting).length;
+                            return `${inBatch} duplicado(s) nesta importação · ${existing} já existem na lista`;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="import-dup-anyway"
+                      checked={importDuplicatesAnyway}
+                      onCheckedChange={setImportDuplicatesAnyway}
+                    />
+                  </div>
+                )}
                 <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
                   <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
                     <span>Cards ({stats.valid} válidos)</span>
