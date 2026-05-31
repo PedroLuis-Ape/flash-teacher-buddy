@@ -1256,6 +1256,15 @@ const Study = () => {
             </Button>
           </div>
         )}
+        {!hasLayers && displayedCard && (displayedCard as any).__groupTitle && (
+          <div className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs text-muted-foreground">
+            <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span>
+              Grupo: <span className="font-medium text-foreground">{(displayedCard as any).__groupTitle}</span>
+              {" "}— Camada {((displayedCard as any).__layerIndex ?? 0) + 1} de {(displayedCard as any).__layerCount ?? 1}
+            </span>
+          </div>
+        )}
 
         <div className="mb-6">
           {effectiveMode === "flip" && displayedCard && (
