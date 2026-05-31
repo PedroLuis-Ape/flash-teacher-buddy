@@ -928,6 +928,7 @@ His business took off last year / O negócio dele decolou no ano passado`}
                     )}
                   </ul>
                 </div>
+                </>
               )}
 
               {/* Final confirmation summary */}
