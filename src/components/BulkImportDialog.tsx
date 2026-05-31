@@ -405,6 +405,44 @@ export const BulkImportDialog = ({
     toast.success("Prompt copiado para a área de transferência!");
   };
 
+  const handlePickFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset value so picking the same file twice in a row still triggers change.
+    if (e.target) e.target.value = "";
+    if (!file) return;
+    const kind = detectKindFromName(file.name);
+    if (!kind) {
+      toast.error("Formato não suportado. Use .txt, .csv ou .tsv");
+      return;
+    }
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      toast.error("Arquivo muito grande. Divida em partes menores para evitar travamento.");
+      return;
+    }
+    try {
+      const content = await file.text();
+      const { text, cardCount } = convertFileToImportText(kind, content);
+      setInput(text);
+      // Clear previous preview so the user re-parses with the new content.
+      setPreview([]);
+      setDuplicateInfos([]);
+      setGlossaryPreview([]);
+      setLayeredGroups([]);
+      toast.success(
+        cardCount > 0
+          ? `Arquivo carregado (${cardCount} linhas). Revise antes de importar.`
+          : "Arquivo carregado. Revise antes de importar.",
+      );
+    } catch (err: any) {
+      console.error("File read error:", err);
+      toast.error("Erro ao ler arquivo: " + (err?.message ?? "desconhecido"));
+    }
+  };
+
   const totalImportable = stats.valid + stats.glossaryNew + stats.layeredCards;
 
   return (
