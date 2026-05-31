@@ -831,8 +831,20 @@ His business took off last year / O negócio dele decolou no ano passado`}
                       const termText = invertAB ? sideBVal : sideAVal;
                       const transText = invertAB ? sideAVal : sideBVal;
                       const isValid = (pair.sideA && pair.sideB) || (pair.en && pair.pt);
+                      const dup = duplicateInfos.find(d => d.index === idx);
+                      const isDup = !!dup && (dup.isDuplicateInBatch || dup.isDuplicateExisting);
+                      const dupClass = isDup
+                        ? "rounded-md border border-amber-400/60 bg-amber-100/40 dark:bg-amber-500/10 px-2 py-1"
+                        : "";
                       return (
-                        <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""}`}>
+                        <li key={idx} className={`${!isValid ? "text-muted-foreground" : ""} ${dupClass}`}>
+                          {isDup && (
+                            <div className="mb-1 flex items-center gap-1">
+                              <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-300 text-[10px] px-1.5 py-0">
+                                {dup!.duplicateReason}
+                              </Badge>
+                            </div>
+                          )}
                           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-1 md:gap-2 items-center">
                             <span className="font-medium break-words flex items-center gap-1.5 min-w-0">
                               <SideBadge side="A" label={effectiveLabelA} lang={effectiveLangA} />
