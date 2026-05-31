@@ -23,7 +23,14 @@ import {
   FlashcardPair,
   GlossaryParsed,
   buildAIHelperPrompt,
+  analyzeFlashcardDuplicates,
+  type DuplicateInfo,
 } from "@/lib/bulkImport";
+import {
+  convertFileToImportText,
+  detectKindFromName,
+  MAX_IMPORT_FILE_BYTES,
+} from "@/lib/fileImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQueryClient } from "@tanstack/react-query";
