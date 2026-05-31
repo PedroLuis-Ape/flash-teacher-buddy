@@ -383,11 +383,13 @@ export const BulkImportDialog = ({
       
       setInput("");
       setPreview([]);
+      setDuplicateInfos([]);
       setGlossaryPreview([]);
       setLayeredGroups([]);
       setSentenceWarnings([]);
       setSingletonWarnings([]);
       setInvertAB(false);
+      setImportDuplicatesAnyway(false);
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
       onImported();
