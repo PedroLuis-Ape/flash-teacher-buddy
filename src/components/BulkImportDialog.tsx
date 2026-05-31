@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -100,9 +100,7 @@ export const BulkImportDialog = ({
   const [invertAB, setInvertAB] = useState(false);
   const [importDuplicatesAnyway, setImportDuplicatesAnyway] = useState(false);
   const [duplicateInfos, setDuplicateInfos] = useState<DuplicateInfo[]>([]);
-  const fileInputRef = (typeof window !== "undefined")
-    ? (window as any).__bulkImportFileRef ?? ((window as any).__bulkImportFileRef = { current: null as HTMLInputElement | null })
-    : { current: null };
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const aiPrompt = useMemo(() => buildAIHelperPrompt(langA, langB), [langA, langB]);
 
