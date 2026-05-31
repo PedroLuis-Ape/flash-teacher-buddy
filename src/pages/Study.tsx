@@ -67,6 +67,10 @@ interface Flashcard {
   short_explanation?: string | null;
   /** When set, this card is the entry-point of a layered group; siblings hold all layers (including this one) sorted by layer_index. */
   __layers?: Flashcard[];
+  /** Visual-only metadata for layered cards (each layer is its own deck entry). */
+  __groupTitle?: string | null;
+  __layerIndex?: number;
+  __layerCount?: number;
   /** Pre-parsed word hints computed at load time to avoid Main Thread stalls */
   preParsedHints?: ReturnType<typeof parseExtendedWordHints>;
 }
