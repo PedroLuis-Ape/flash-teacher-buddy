@@ -98,6 +98,11 @@ export const BulkImportDialog = ({
   const [loading, setLoading] = useState(false);
   const [showAIHelper, setShowAIHelper] = useState(false);
   const [invertAB, setInvertAB] = useState(false);
+  const [importDuplicatesAnyway, setImportDuplicatesAnyway] = useState(false);
+  const [duplicateInfos, setDuplicateInfos] = useState<DuplicateInfo[]>([]);
+  const fileInputRef = (typeof window !== "undefined")
+    ? (window as any).__bulkImportFileRef ?? ((window as any).__bulkImportFileRef = { current: null as HTMLInputElement | null })
+    : { current: null };
   const queryClient = useQueryClient();
   const aiPrompt = useMemo(() => buildAIHelperPrompt(langA, langB), [langA, langB]);
 
