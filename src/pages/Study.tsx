@@ -495,10 +495,19 @@ const Study = () => {
     const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
-    const orderedData: Flashcard[] = rawData.map((card: any) => ({
-      ...card,
-      preParsedHints: card.word_hints ? parseExtendedWordHints(card.word_hints) : undefined,
-    }));
+    // Also pre-parse hints inside __layers, since the visible card may be
+    // a layer and rendering reads preParsedHints from it.
+    const preParse = (c: any) => ({
+      ...c,
+      preParsedHints: c.word_hints ? parseExtendedWordHints(c.word_hints) : undefined,
+    });
+    const orderedData: Flashcard[] = rawData.map((card: any) => {
+      const base = preParse(card);
+      if (Array.isArray(card.__layers)) {
+        base.__layers = card.__layers.map(preParse);
+      }
+      return base;
+    });
     
     const listData = listResult.data as any;
 
