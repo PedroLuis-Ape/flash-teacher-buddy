@@ -7,6 +7,7 @@ import { normalizeDirection, type Direction } from "@/features/study/lib/gameCor
 import { hashToBool } from "@/features/study/lib/gameCore";
 import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
 import { getOfflineList } from "@/lib/offlineStore";
+import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
