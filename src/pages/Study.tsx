@@ -1220,30 +1220,44 @@ const Study = () => {
         </div>
 
         {hasLayers && cardLayers && (
-          <div className="mb-3 flex items-center justify-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
             <Layers className="h-4 w-4 text-primary shrink-0" />
             <span className="font-medium">
-              Camada {safeLayerIdx + 1} de {cardLayers.length}
+              {(currentCard as any)?.__groupTitle ? (
+                <>
+                  Grupo:{" "}
+                  <span className="text-foreground">
+                    {(currentCard as any).__groupTitle}
+                  </span>{" "}— Camada {safeLayerIdx + 1} de {cardLayers.length}
+                </>
+              ) : (
+                <>Camada {safeLayerIdx + 1} de {cardLayers.length}</>
+              )}
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-8"
-              onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
-            >
-              Próxima camada
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        {!hasLayers && displayedCard && (displayedCard as any).__groupTitle && (
-          <div className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs text-muted-foreground">
-            <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>
-              Grupo: <span className="font-medium text-foreground">{(displayedCard as any).__groupTitle}</span>
-              {" "}— Camada {((displayedCard as any).__layerIndex ?? 0) + 1} de {(displayedCard as any).__layerCount ?? 1}
-            </span>
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() =>
+                  setLayerIdx((i) => (i - 1 + cardLayers.length) % cardLayers.length)
+                }
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Camada anterior
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
+              >
+                Próxima camada
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
