@@ -44,7 +44,7 @@ import { StudyCompletionModal } from "@/features/study/components/StudyCompletio
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 import { pageMount } from "@/lib/perfLog";
