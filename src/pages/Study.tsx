@@ -403,7 +403,8 @@ const Study = () => {
       try {
         const offlineData = await getOfflineList(resolvedId);
         if (offlineData) {
-          const orderedData = order === "random" ? shuffleArray([...offlineData.flashcards]) : offlineData.flashcards;
+          const grouped = prepareLayeredStudyDeck(offlineData.flashcards as any[]);
+          const orderedData = order === "random" ? shuffleArray([...grouped]) : grouped;
           setFlashcards(orderedData as Flashcard[]);
           setListTitle(offlineData.listMeta.title);
           setListSettings({
@@ -448,8 +449,9 @@ const Study = () => {
         return;
       }
 
-      const shuffled = order === "random" ? shuffleArray([...data]) : data;
-      setFlashcards(shuffled);
+      const grouped = prepareLayeredStudyDeck(data as any[]);
+      const shuffled = order === "random" ? shuffleArray([...grouped]) : grouped;
+      setFlashcards(shuffled as Flashcard[]);
       setLoading(false);
       return;
     }
