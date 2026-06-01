@@ -7,6 +7,7 @@ import { normalizeDirection, type Direction } from "@/features/study/lib/gameCor
 import { hashToBool } from "@/features/study/lib/gameCore";
 import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
 import { getOfflineList } from "@/lib/offlineStore";
+import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
@@ -44,7 +45,7 @@ import { StudyCompletionModal } from "@/features/study/components/StudyCompletio
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight } from "lucide-react";
+import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
 import { pageMount } from "@/lib/perfLog";
@@ -402,7 +403,8 @@ const Study = () => {
       try {
         const offlineData = await getOfflineList(resolvedId);
         if (offlineData) {
-          const orderedData = order === "random" ? shuffleArray([...offlineData.flashcards]) : offlineData.flashcards;
+          const grouped = prepareLayeredStudyDeck(offlineData.flashcards as any[]);
+          const orderedData = order === "random" ? shuffleArray([...grouped]) : grouped;
           setFlashcards(orderedData as Flashcard[]);
           setListTitle(offlineData.listMeta.title);
           setListSettings({
@@ -447,8 +449,9 @@ const Study = () => {
         return;
       }
 
-      const shuffled = order === "random" ? shuffleArray([...data]) : data;
-      setFlashcards(shuffled);
+      const grouped = prepareLayeredStudyDeck(data as any[]);
+      const shuffled = order === "random" ? shuffleArray([...grouped]) : grouped;
+      setFlashcards(shuffled as Flashcard[]);
       setLoading(false);
       return;
     }
@@ -484,53 +487,27 @@ const Study = () => {
       return;
     }
 
-    // Layered cards: principals (aggregator rows referenced as parent_card_id
-    // by other cards) are NEVER playable — they are visual group titles only.
-    // EVERY layer row is a real, independent playable flashcard in the deck.
-    // We attach lightweight metadata (__groupTitle, __layerIndex, __layerCount)
-    // so the view can show a discrete "Grupo: X — Camada Y de N" badge, but
-    // the engine treats each layer as a normal card (own id → own progress,
-    // own favorite, own red-list, own edit target).
-    const allCards = cardsResult.data as any[];
-    const principalById = new Map<string, any>();
-    const layersByPrincipal = new Map<string, any[]>();
-    for (const c of allCards) {
-      if (c.parent_card_id) {
-        const arr = layersByPrincipal.get(c.parent_card_id) ?? [];
-        arr.push(c);
-        layersByPrincipal.set(c.parent_card_id, arr);
-      } else {
-        principalById.set(c.id, c);
-      }
-    }
-    for (const arr of layersByPrincipal.values()) {
-      arr.sort((a, b) => (a.layer_index ?? 0) - (b.layer_index ?? 0));
-    }
-    const studyableCards: any[] = [];
-    for (const c of allCards) {
-      // Skip principal/aggregator rows when they actually group layers.
-      if (layersByPrincipal.has(c.id) && !c.parent_card_id) continue;
-      if (c.parent_card_id) {
-        const group = layersByPrincipal.get(c.parent_card_id) ?? [];
-        const idxInGroup = group.findIndex(g => g.id === c.id);
-        const principal = principalById.get(c.parent_card_id);
-        studyableCards.push({
-          ...c,
-          __groupTitle: principal?.term ?? null,
-          __layerIndex: idxInGroup >= 0 ? idxInGroup : 0,
-          __layerCount: group.length,
-        });
-      } else {
-        studyableCards.push(c);
-      }
-    }
+    // Layered cards: collapse each [CAMADAS] group into a SINGLE deck entry.
+    // The entry-point carries `__layers` with the full ordered group; the
+    // view then lets the user navigate "Camada anterior/Próxima camada"
+    // INSIDE the same deck position. Principals/aggregators never play.
+    const studyableCards = prepareLayeredStudyDeck(cardsResult.data as any[]);
     const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
-    const orderedData: Flashcard[] = rawData.map((card: any) => ({
-      ...card,
-      preParsedHints: card.word_hints ? parseExtendedWordHints(card.word_hints) : undefined,
-    }));
+    // Also pre-parse hints inside __layers, since the visible card may be
+    // a layer and rendering reads preParsedHints from it.
+    const preParse = (c: any) => ({
+      ...c,
+      preParsedHints: c.word_hints ? parseExtendedWordHints(c.word_hints) : undefined,
+    });
+    const orderedData: Flashcard[] = rawData.map((card: any) => {
+      const base = preParse(card);
+      if (Array.isArray(card.__layers)) {
+        base.__layers = card.__layers.map(preParse);
+      }
+      return base;
+    });
     
     const listData = listResult.data as any;
 
@@ -1179,11 +1156,11 @@ const Study = () => {
                 onRestart={handleRestartWithSettings}
                 showFastMode={effectiveMode === "flip"}
                 onEditCurrentCard={
-                  currentCard
-                    ? () => setEditingFlashcard(currentCard as Flashcard)
+                  displayedCard
+                    ? () => setEditingFlashcard(displayedCard as Flashcard)
                     : undefined
                 }
-                canEditCurrentCard={!!currentCard}
+                canEditCurrentCard={!!displayedCard}
               />
               
               {/* Direction selector for flip mode — uses dynamic labels */}
@@ -1243,30 +1220,44 @@ const Study = () => {
         </div>
 
         {hasLayers && cardLayers && (
-          <div className="mb-3 flex items-center justify-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
             <Layers className="h-4 w-4 text-primary shrink-0" />
             <span className="font-medium">
-              Camada {safeLayerIdx + 1} de {cardLayers.length}
+              {(currentCard as any)?.__groupTitle ? (
+                <>
+                  Grupo:{" "}
+                  <span className="text-foreground">
+                    {(currentCard as any).__groupTitle}
+                  </span>{" "}— Camada {safeLayerIdx + 1} de {cardLayers.length}
+                </>
+              ) : (
+                <>Camada {safeLayerIdx + 1} de {cardLayers.length}</>
+              )}
             </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-8"
-              onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
-            >
-              Próxima camada
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        {!hasLayers && displayedCard && (displayedCard as any).__groupTitle && (
-          <div className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs text-muted-foreground">
-            <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>
-              Grupo: <span className="font-medium text-foreground">{(displayedCard as any).__groupTitle}</span>
-              {" "}— Camada {((displayedCard as any).__layerIndex ?? 0) + 1} de {(displayedCard as any).__layerCount ?? 1}
-            </span>
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() =>
+                  setLayerIdx((i) => (i - 1 + cardLayers.length) % cardLayers.length)
+                }
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Camada anterior
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8"
+                onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
+              >
+                Próxima camada
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
