@@ -1156,11 +1156,11 @@ const Study = () => {
                 onRestart={handleRestartWithSettings}
                 showFastMode={effectiveMode === "flip"}
                 onEditCurrentCard={
-                  currentCard
-                    ? () => setEditingFlashcard(currentCard as Flashcard)
+                  displayedCard
+                    ? () => setEditingFlashcard(displayedCard as Flashcard)
                     : undefined
                 }
-                canEditCurrentCard={!!currentCard}
+                canEditCurrentCard={!!displayedCard}
               />
               
               {/* Direction selector for flip mode — uses dynamic labels */}
