@@ -485,46 +485,11 @@ const Study = () => {
       return;
     }
 
-    // Layered cards: principals (aggregator rows referenced as parent_card_id
-    // by other cards) are NEVER playable — they are visual group titles only.
-    // EVERY layer row is a real, independent playable flashcard in the deck.
-    // We attach lightweight metadata (__groupTitle, __layerIndex, __layerCount)
-    // so the view can show a discrete "Grupo: X — Camada Y de N" badge, but
-    // the engine treats each layer as a normal card (own id → own progress,
-    // own favorite, own red-list, own edit target).
-    const allCards = cardsResult.data as any[];
-    const principalById = new Map<string, any>();
-    const layersByPrincipal = new Map<string, any[]>();
-    for (const c of allCards) {
-      if (c.parent_card_id) {
-        const arr = layersByPrincipal.get(c.parent_card_id) ?? [];
-        arr.push(c);
-        layersByPrincipal.set(c.parent_card_id, arr);
-      } else {
-        principalById.set(c.id, c);
-      }
-    }
-    for (const arr of layersByPrincipal.values()) {
-      arr.sort((a, b) => (a.layer_index ?? 0) - (b.layer_index ?? 0));
-    }
-    const studyableCards: any[] = [];
-    for (const c of allCards) {
-      // Skip principal/aggregator rows when they actually group layers.
-      if (layersByPrincipal.has(c.id) && !c.parent_card_id) continue;
-      if (c.parent_card_id) {
-        const group = layersByPrincipal.get(c.parent_card_id) ?? [];
-        const idxInGroup = group.findIndex(g => g.id === c.id);
-        const principal = principalById.get(c.parent_card_id);
-        studyableCards.push({
-          ...c,
-          __groupTitle: principal?.term ?? null,
-          __layerIndex: idxInGroup >= 0 ? idxInGroup : 0,
-          __layerCount: group.length,
-        });
-      } else {
-        studyableCards.push(c);
-      }
-    }
+    // Layered cards: collapse each [CAMADAS] group into a SINGLE deck entry.
+    // The entry-point carries `__layers` with the full ordered group; the
+    // view then lets the user navigate "Camada anterior/Próxima camada"
+    // INSIDE the same deck position. Principals/aggregators never play.
+    const studyableCards = prepareLayeredStudyDeck(cardsResult.data as any[]);
     const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
