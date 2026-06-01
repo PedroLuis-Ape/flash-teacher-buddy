@@ -117,6 +117,23 @@ export const BulkImportDialog = ({
   const [isParsing, setIsParsing] = useState(false);
   const editableReview = FEATURE_FLAGS.bulk_import_v2;
 
+  const resetImportState = () => {
+    setInput("");
+    setPreview([]);
+    setGlossaryPreview([]);
+    setLayeredGroups([]);
+    setSentenceWarnings([]);
+    setSingletonWarnings([]);
+    setDuplicateInfos([]);
+    setImportDuplicatesAnyway(false);
+    setInvertAB(false);
+    setDetectLayers(FEATURE_FLAGS.layered_cards);
+    setShowAIHelper(false);
+    setStats({ valid: 0, incomplete: 0, duplicates: 0, withHints: 0, glossaryNew: 0, glossaryDuplicates: 0, layeredGroups: 0, layeredCards: 0 });
+    setIsParsing(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   // ── Recompute stats when preview/glossary edited inline (V2) ──
   const recomputeStats = (cards: FlashcardPair[], glossary: GlossaryParsed[]) => {
     const valid = cards.filter(p => (p.sideA && p.sideB) || (p.en && p.pt)).length;
@@ -380,16 +397,7 @@ export const BulkImportDialog = ({
       if (layeredGroups.length > 0) parts.push(`${layeredGroups.length} cards em camadas (${stats.layeredCards})`);
       if (glossaryPreview.length > 0) parts.push(`${glossaryPreview.length} termos no glossário`);
       toast.success(`✅ Importados: ${parts.join(" + ")}!`);
-      
-      setInput("");
-      setPreview([]);
-      setDuplicateInfos([]);
-      setGlossaryPreview([]);
-      setLayeredGroups([]);
-      setSentenceWarnings([]);
-      setSingletonWarnings([]);
-      setInvertAB(false);
-      setImportDuplicatesAnyway(false);
+      resetImportState();
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list-glossary", collectionId] });
       onImported();
@@ -445,8 +453,15 @@ export const BulkImportDialog = ({
 
   const totalImportable = stats.valid + stats.glossaryNew + stats.layeredCards;
 
+  const handleOpenChange = (value: boolean) => {
+    if (!value) {
+      resetImportState();
+    }
+    setOpen(value);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline">
           <Upload className="mr-2 h-4 w-4" />
@@ -946,13 +961,26 @@ His business took off last year / O negócio dele decolou no ano passado`}
                 </div>
               </div>
 
-              <Button 
-                onClick={handleImport} 
-                disabled={loading || totalImportable === 0}
-                className="w-full"
-              >
-                {loading ? "Importando..." : `Importar ${totalImportable} item${totalImportable !== 1 ? 's' : ''}`}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetImportState();
+                    setOpen(false);
+                  }}
+                  disabled={loading || isParsing}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={loading || isParsing || totalImportable === 0}
+                  className="flex-1"
+                >
+                  {loading ? "Importando..." : `Importar ${totalImportable} item${totalImportable !== 1 ? 's' : ''}`}
+                </Button>
+              </div>
             </>
           )}
         </div>
