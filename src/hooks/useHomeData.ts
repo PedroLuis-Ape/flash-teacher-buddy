@@ -430,20 +430,38 @@ async function fetchHomeData(
 
       // ── Build recentFolders (strict per-institution isolation) ──
       // Card counts per list come from the same RPC already used for stats — zero extra calls.
+      // Build a per-folder aggregation map from the dedicated lists fetch.
+      // This is independent of the embedded `lists:lists(...)` relation, which
+      // can return empty arrays in some PostgREST scenarios and was the root
+      // cause of "0 listas • 0 cards" rendering on the home folder cards.
+      const folderListsMap = new Map<string, string[]>();
+      for (const l of toArray<any>((allOwnListsResult as any)?.data as any[])) {
+        if (l && typeof l.id === 'string' && typeof l.folder_id === 'string') {
+          const arr = folderListsMap.get(l.folder_id) || [];
+          arr.push(l.id);
+          folderListsMap.set(l.folder_id, arr);
+        }
+      }
+
       const recentFoldersMapped: RecentFolder[] = toArray<any>(recentFoldersResult.data as any[])
         .filter((f) => typeof f?.id === "string")
         .map((f) => {
-          const lists = toArray<any>(f?.lists as any[]).filter(
-            (l) => l && l.deleted_at == null && typeof l.id === "string"
-          );
-          const cardCount = lists.reduce(
-            (sum, l) => sum + toNumber(perListCardCounts[l.id], 0),
+          // Prefer the dedicated lists map; fall back to embedded relation
+          // if the map is empty (defensive against future query changes).
+          const fromMap = folderListsMap.get(f.id);
+          const listIds: string[] = Array.isArray(fromMap) && fromMap.length > 0
+            ? fromMap
+            : toArray<any>(f?.lists as any[])
+                .filter((l) => l && l.deleted_at == null && typeof l.id === "string")
+                .map((l) => l.id as string);
+          const cardCount = listIds.reduce(
+            (sum, listId) => sum + toNumber(perListCardCounts[listId], 0),
             0
           );
           return {
             id: f.id,
             title: toText(f?.title, "Sem título"),
-            list_count: lists.length,
+            list_count: listIds.length,
             card_count: cardCount,
             last_activity: typeof f?.updated_at === "string" ? f.updated_at : null,
             institution_id: typeof f?.institution_id === "string" ? f.institution_id : null,
