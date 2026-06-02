@@ -767,7 +767,16 @@ const Study = () => {
   // Local state only — does NOT advance the engine index. When the engine
   // moves to a new card, layerIdx resets to 0.
   const [layerIdx, setLayerIdx] = useState(0);
+  // Track the last card id we synced layerIdx for. The sync effect below
+  // depends on favorites/redListIds so it can pick the right starting layer
+  // when the deck CARD changes, but it must NOT re-run when those arrays
+  // change in isolation — otherwise the user's manual "Próxima camada"
+  // navigation gets wiped on every favorite/red-list toggle re-render.
+  const lastSyncedCardIdRef = useRef<string | null>(null);
   useEffect(() => {
+    if (engineCurrentCardId === lastSyncedCardIdRef.current) return;
+    lastSyncedCardIdRef.current = engineCurrentCardId ?? null;
+
     // Default to layer 0. When the user is in Favorites mode (or Foco Vermelho),
     // try to start on the first layer that is favorited / red-listed so the
     // group opens on the layer the student actually starred.
@@ -792,6 +801,25 @@ const Study = () => {
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+
+  // Stable handlers for layer navigation. These NEVER touch the engine,
+  // currentIndex, progress, or session counters — they only flip the
+  // visible layer inside the current group.
+  const goToNextLayer = useCallback((e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const n = cardLayers?.length ?? 0;
+    if (n <= 1) return;
+    setLayerIdx((i) => (i + 1) % n);
+  }, [cardLayers]);
+  const goToPreviousLayer = useCallback((e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const n = cardLayers?.length ?? 0;
+    if (n <= 1) return;
+    setLayerIdx((i) => (i - 1 + n) % n);
+  }, [cardLayers]);
+
   // The "displayed" card is the active layer when the deck card is layered.
   // It carries the same shape as a normal flashcard, including its own id —
   // so progress, favorites, edit, etc. naturally target the visible layer.
