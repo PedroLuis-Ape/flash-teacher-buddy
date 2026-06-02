@@ -672,28 +672,69 @@ const Study = () => {
     ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
     : undefined;
 
+  // Resolve all IDs in the current layer group. For a non-layered card,
+  // returns the single displayed card id. For a layered card, returns ALL
+  // layer ids so favorite / red-list act on the whole group.
+  const getCurrentLayerGroupIds = (): string[] => {
+    const baseId = displayedCardIdRef.current ?? engineCurrentCard?.id;
+    if (!baseId) return [];
+    const entry = engineCurrentCardId
+      ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
+      : undefined;
+    const layers = (entry as any)?.__layers as Flashcard[] | undefined;
+    if (Array.isArray(layers) && layers.length > 1) {
+      return layers.map((l) => l.id).filter(Boolean);
+    }
+    return [baseId];
+  };
+
   const handleToggleFavorite = () => {
-    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
-    if (!targetId || !userId) return;
-    toggleFavorite.mutate({ 
-      resourceId: targetId,
-      resourceType: 'flashcard',
-      isFavorite: favorites.includes(targetId)
-    });
+    const ids = getCurrentLayerGroupIds();
+    if (ids.length === 0 || !userId) return;
+    const allFav = ids.every((id) => favorites.includes(id));
+    // If all are favorites -> remove all. Otherwise -> add the missing ones.
+    if (allFav) {
+      ids.forEach((id) => {
+        toggleFavorite.mutate({
+          resourceId: id,
+          resourceType: 'flashcard',
+          isFavorite: true,
+        });
+      });
+    } else {
+      ids.forEach((id) => {
+        if (!favorites.includes(id)) {
+          toggleFavorite.mutate({
+            resourceId: id,
+            resourceType: 'flashcard',
+            isFavorite: false,
+          });
+        }
+      });
+    }
   };
 
   const handleToggleRedList = () => {
-    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
-    if (!targetId || !userId) return;
-    // Only allow red-listing if it's a favorite
-    if (!favorites.includes(targetId)) {
+    const ids = getCurrentLayerGroupIds();
+    if (ids.length === 0 || !userId) return;
+    // Group is considered favorite if any layer is favorited.
+    const anyFav = ids.some((id) => favorites.includes(id));
+    if (!anyFav) {
       toast.error('Primeiro marque o card como favorito ⭐');
       return;
     }
-    toggleRedList.mutate({
-      flashcardId: targetId,
-      isRedListed: redListIds.includes(targetId),
-    });
+    const allRed = ids.every((id) => redListIds.includes(id));
+    if (allRed) {
+      ids.forEach((id) => {
+        toggleRedList.mutate({ flashcardId: id, isRedListed: true });
+      });
+    } else {
+      ids.forEach((id) => {
+        if (!redListIds.includes(id)) {
+          toggleRedList.mutate({ flashcardId: id, isRedListed: false });
+        }
+      });
+    }
   };
 
   // ── In-game card edit ──
@@ -811,6 +852,22 @@ const Study = () => {
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+
+  // Group-aware favorite / red-list state for layered cards. For a non-layered
+  // card, this collapses to the single displayed card id. For a layered card,
+  // the icon is "active" when ANY layer of the group is starred/red-listed.
+  const currentGroupIds = useMemo<string[]>(() => {
+    if (hasLayers && cardLayers) return cardLayers.map((l) => l.id).filter(Boolean);
+    return currentCard?.id ? [currentCard.id] : [];
+  }, [hasLayers, cardLayers, currentCard?.id]);
+  const isDisplayedGroupFavorite = useMemo(
+    () => currentGroupIds.some((id) => favorites.includes(id)),
+    [currentGroupIds, favorites]
+  );
+  const isDisplayedGroupRedListed = useMemo(
+    () => currentGroupIds.some((id) => redListIds.includes(id)),
+    [currentGroupIds, redListIds]
+  );
 
   // Stable handlers for layer navigation. These NEVER touch the engine,
   // currentIndex, progress, or session counters — they only flip the
@@ -1333,8 +1390,8 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onKnew={() => handleNext(true)}
@@ -1360,8 +1417,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1379,8 +1436,8 @@ const Study = () => {
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1400,8 +1457,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1421,8 +1478,8 @@ const Study = () => {
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onNext={() => handleNext(true)}
