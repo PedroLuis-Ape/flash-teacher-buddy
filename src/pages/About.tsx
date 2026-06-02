@@ -32,7 +32,7 @@ export default function About() {
       <PublicBackBar />
       <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">APE</h1>
+          <h1 className="text-4xl font-bold text-primary mb-2">Sobre o APE</h1>
           <p className="text-xl text-muted-foreground">
             Apprentice Practice & Enhancement
           </p>
@@ -40,9 +40,11 @@ export default function About() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle asChild>
+              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <BookOpen className="h-5 w-5 text-primary" />
               Sobre o APE
+              </h2>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
@@ -65,9 +67,11 @@ export default function About() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle asChild>
+              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <User className="h-5 w-5 text-primary" />
               Autor
+              </h2>
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground">
@@ -83,9 +87,11 @@ export default function About() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle asChild>
+              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <Shield className="h-5 w-5 text-primary" />
               Termos de Uso
+              </h2>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
@@ -103,9 +109,11 @@ export default function About() {
 
         <Card className="mb-6 border-primary/20">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle asChild>
+              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <Copyright className="h-5 w-5 text-primary" />
               Direitos Autorais
+              </h2>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
