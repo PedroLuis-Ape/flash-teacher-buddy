@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +40,27 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: require authenticated user to prevent paid-API abuse
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { text, voice_id, lang } = await req.json();
 
     if (!text || typeof text !== "string" || text.trim().length === 0) {
@@ -49,6 +71,14 @@ serve(async (req) => {
           status: 400, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         }
+      );
+    }
+
+    // Cap text length to limit per-request abuse cost
+    if (text.length > 2000) {
+      return new Response(
+        JSON.stringify({ error: "Text exceeds maximum length of 2000 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

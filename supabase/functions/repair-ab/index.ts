@@ -67,16 +67,27 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Fetch current values for logging
+        // SECURITY: only operate on cards belonging to lists owned by the caller.
         const { data: beforeCards } = await supabase
           .from("flashcards")
-          .select("id, term, translation")
+          .select("id, term, translation, list_id, lists!inner(owner_id)")
           .in("id", card_ids);
+
+        const ownedCards = (beforeCards || []).filter(
+          (c: any) => c.lists?.owner_id === user.id
+        );
+
+        if (ownedCards.length !== card_ids.length) {
+          return new Response(
+            JSON.stringify({ error: "Permission denied: one or more cards do not belong to you" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
 
         // Swap term ↔ translation for specified cards
         // We need to do this per-card since Supabase doesn't support swapping columns in bulk
         let swapped = 0;
-        for (const card of (beforeCards || [])) {
+        for (const card of ownedCards) {
           const { error } = await supabase
             .from("flashcards")
             .update({
@@ -97,7 +108,7 @@ Deno.serve(async (req: Request) => {
           details: {
             card_ids,
             cards_swapped: swapped,
-            before_samples: (beforeCards || []).slice(0, 5).map((c) => ({
+            before_samples: ownedCards.slice(0, 5).map((c: any) => ({
               id: c.id,
               term_was: c.term?.substring(0, 50),
               translation_was: c.translation?.substring(0, 50),
@@ -216,12 +227,19 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Get current for logging
+        // SECURITY: verify card belongs to a list owned by the caller before editing.
         const { data: before } = await supabase
           .from("flashcards")
-          .select("term, translation")
+          .select("term, translation, list_id, lists!inner(owner_id)")
           .eq("id", card_id)
           .single();
+
+        if (!before || (before as any).lists?.owner_id !== user.id) {
+          return new Response(
+            JSON.stringify({ error: "Permission denied" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
 
         const updateFields: any = { updated_at: new Date().toISOString() };
         if (new_term !== undefined) updateFields.term = new_term;
@@ -239,7 +257,7 @@ Deno.serve(async (req: Request) => {
           action: "repair_edit_card",
           target: card_id,
           details: {
-            before,
+            before: { term: (before as any).term, translation: (before as any).translation },
             after: { term: new_term, translation: new_translation },
           },
         });

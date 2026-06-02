@@ -135,7 +135,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const ownerFilter = body.owner_id || user.id; // default: audit own lists
+    // SECURITY: always audit the caller's own lists. Ignore any client-supplied owner_id
+    // to prevent IDOR — service-role client bypasses RLS, so we must enforce scope here.
+    const ownerFilter = user.id;
     const maxCardsPerList = body.max_sample || 10;
 
     // Fetch all language lists for this owner

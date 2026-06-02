@@ -1,16 +1,26 @@
 // Edge-TTS client for high-quality, free text-to-speech
 
+import { supabase } from "@/integrations/supabase/client";
+
 const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts`;
 
 export async function speak(text: string, voice = "en-US-JennyNeural") {
   try {
     console.log(`[Edge-TTS] Speaking: "${text.substring(0, 50)}..." with voice: ${voice}`);
-    
+
+    // Require an authenticated session — endpoint rejects anonymous callers.
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      throw new Error("Você precisa estar logado para usar o áudio.");
+    }
+
     const url = `${TTS_URL}?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`;
-    
+
     const res = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
     });
 
