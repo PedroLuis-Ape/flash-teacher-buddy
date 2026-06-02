@@ -840,6 +840,21 @@ const Study = () => {
     displayedCardIdRef.current = displayedCard?.id ?? null;
   }, [displayedCard?.id]);
 
+  // DEV-only diagnostic for layer navigation. Stripped in production builds.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    // eslint-disable-next-line no-console
+    console.debug("[LayerNav]", {
+      engineCurrentCardId,
+      groupTitle: (currentCard as any)?.__groupTitle,
+      layerIdx,
+      safeLayerIdx,
+      layerCount: cardLayers?.length,
+      displayedCardId: displayedCard?.id,
+      displayedTerm: displayedCard?.term,
+    });
+  }, [engineCurrentCardId, layerIdx, safeLayerIdx, cardLayers?.length, displayedCard?.id]);
+
   // ── DEV diagnostic: confirm the direction propagated from URL → prefs → engine
   // matches what the user picked in GamesHub. No-op in production builds.
   useEffect(() => {
