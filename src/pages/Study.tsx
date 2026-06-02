@@ -673,27 +673,52 @@ const Study = () => {
     : undefined;
 
   const handleToggleFavorite = () => {
-    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
-    if (!targetId || !userId) return;
-    toggleFavorite.mutate({ 
-      resourceId: targetId,
-      resourceType: 'flashcard',
-      isFavorite: favorites.includes(targetId)
-    });
+    const ids = getCurrentLayerGroupIds();
+    if (ids.length === 0 || !userId) return;
+    const allFav = ids.every((id) => favorites.includes(id));
+    // If all are favorites -> remove all. Otherwise -> add the missing ones.
+    if (allFav) {
+      ids.forEach((id) => {
+        toggleFavorite.mutate({
+          resourceId: id,
+          resourceType: 'flashcard',
+          isFavorite: true,
+        });
+      });
+    } else {
+      ids.forEach((id) => {
+        if (!favorites.includes(id)) {
+          toggleFavorite.mutate({
+            resourceId: id,
+            resourceType: 'flashcard',
+            isFavorite: false,
+          });
+        }
+      });
+    }
   };
 
   const handleToggleRedList = () => {
-    const targetId = displayedCardIdRef.current ?? engineCurrentCard?.id;
-    if (!targetId || !userId) return;
-    // Only allow red-listing if it's a favorite
-    if (!favorites.includes(targetId)) {
+    const ids = getCurrentLayerGroupIds();
+    if (ids.length === 0 || !userId) return;
+    // Group is considered favorite if any layer is favorited.
+    const anyFav = ids.some((id) => favorites.includes(id));
+    if (!anyFav) {
       toast.error('Primeiro marque o card como favorito ⭐');
       return;
     }
-    toggleRedList.mutate({
-      flashcardId: targetId,
-      isRedListed: redListIds.includes(targetId),
-    });
+    const allRed = ids.every((id) => redListIds.includes(id));
+    if (allRed) {
+      ids.forEach((id) => {
+        toggleRedList.mutate({ flashcardId: id, isRedListed: true });
+      });
+    } else {
+      ids.forEach((id) => {
+        if (!redListIds.includes(id)) {
+          toggleRedList.mutate({ flashcardId: id, isRedListed: false });
+        }
+      });
+    }
   };
 
   // ── In-game card edit ──
