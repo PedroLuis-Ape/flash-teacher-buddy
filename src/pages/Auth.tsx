@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { PitecoMascot } from "@/features/gamification/components/PitecoMascot";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import { toast } from "sonner";
@@ -219,7 +219,7 @@ const Auth = () => {
       }
     }
   };
-  return <div
+  return <main
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ background: "var(--gradient-auth)" }}
     >
@@ -273,8 +273,10 @@ const Auth = () => {
           style={{ boxShadow: "var(--shadow-card)" }}
         >
           <CardHeader>
-            <CardTitle className="text-2xl">{isSignUp ? "Criar Conta" : "Entrar"}</CardTitle>
-            <CardDescription>
+            <h2 className="text-2xl font-semibold leading-none tracking-tight text-foreground">
+              {isSignUp ? "Criar Conta" : "Entrar"}
+            </h2>
+            <CardDescription className="text-foreground/80">
               {isSignUp ? "Preencha seus dados para criar uma conta" : "Entre com suas credenciais"}
             </CardDescription>
           </CardHeader>
@@ -362,6 +364,6 @@ const Auth = () => {
           </CardContent>
         </Card>
       </div>
-    </div>;
+    </main>;
 };
 export default Auth;
