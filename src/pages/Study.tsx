@@ -731,27 +731,37 @@ const Study = () => {
 
       // In-place update: preserves session order + currentIndex.
       // Recomputes preParsedHints so the lightbulb / glossary react instantly.
+      // Apply update to either the top-level deck card OR any layer inside
+      // a grouped (__layers) entry. Without the deep walk, editing layer 2/3
+      // of a [CAMADAS] group wouldn't refresh the visible content.
+      const applyUpdate = (target: any) => ({
+        ...target,
+        term,
+        translation,
+        hint: hint || null,
+        image_url_a: imageUrlA || null,
+        image_url_b: imageUrlB || null,
+        word_hints:
+          wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+            ? wordHints
+            : null,
+        preParsedHints:
+          wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+            ? parseExtendedWordHints(wordHints)
+            : undefined,
+      });
       setFlashcards(prev =>
-        prev.map(card =>
-          card.id === flashcardId
-            ? {
-                ...card,
-                term,
-                translation,
-                hint: hint || null,
-                image_url_a: imageUrlA || null,
-                image_url_b: imageUrlB || null,
-                word_hints:
-                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
-                    ? wordHints
-                    : null,
-                preParsedHints:
-                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
-                    ? parseExtendedWordHints(wordHints)
-                    : undefined,
-              }
-            : card
-        )
+        prev.map(card => {
+          if (card.id === flashcardId) return applyUpdate(card) as Flashcard;
+          const layers = (card as any).__layers as Flashcard[] | undefined;
+          if (Array.isArray(layers) && layers.some(l => l.id === flashcardId)) {
+            return {
+              ...card,
+              __layers: layers.map(l => (l.id === flashcardId ? applyUpdate(l) : l)),
+            } as Flashcard;
+          }
+          return card;
+        })
       );
 
       toast.success("Card atualizado!");
