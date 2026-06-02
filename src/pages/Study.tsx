@@ -1290,7 +1290,7 @@ const Study = () => {
         <div className="mb-6">
           {effectiveMode === "flip" && displayedCard && (
             <FlipStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               hint={displayedCard.hint}
@@ -1322,7 +1322,7 @@ const Study = () => {
           )}
           {effectiveMode === "write" && displayedCard && (
             <WriteStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               hint={displayedCard.hint}
@@ -1346,7 +1346,7 @@ const Study = () => {
           )}
           {effectiveMode === "multiple-choice" && displayedCard && (
             <MultipleChoiceStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               currentCard={displayedCard}
               allCards={effectiveFlashcards}
               direction={resolvedDirection}
@@ -1364,7 +1364,7 @@ const Study = () => {
           )}
           {effectiveMode === "unscramble" && displayedCard && (
             <UnscrambleStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               hint={displayedCard.hint}
@@ -1386,7 +1386,7 @@ const Study = () => {
           )}
           {effectiveMode === "pronunciation" && displayedCard && (
             <PronunciationStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               wordHintsA={displayedCard.word_hints}
