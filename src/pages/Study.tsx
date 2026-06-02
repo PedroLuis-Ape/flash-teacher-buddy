@@ -731,27 +731,37 @@ const Study = () => {
 
       // In-place update: preserves session order + currentIndex.
       // Recomputes preParsedHints so the lightbulb / glossary react instantly.
+      // Apply update to either the top-level deck card OR any layer inside
+      // a grouped (__layers) entry. Without the deep walk, editing layer 2/3
+      // of a [CAMADAS] group wouldn't refresh the visible content.
+      const applyUpdate = (target: any) => ({
+        ...target,
+        term,
+        translation,
+        hint: hint || null,
+        image_url_a: imageUrlA || null,
+        image_url_b: imageUrlB || null,
+        word_hints:
+          wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+            ? wordHints
+            : null,
+        preParsedHints:
+          wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
+            ? parseExtendedWordHints(wordHints)
+            : undefined,
+      });
       setFlashcards(prev =>
-        prev.map(card =>
-          card.id === flashcardId
-            ? {
-                ...card,
-                term,
-                translation,
-                hint: hint || null,
-                image_url_a: imageUrlA || null,
-                image_url_b: imageUrlB || null,
-                word_hints:
-                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
-                    ? wordHints
-                    : null,
-                preParsedHints:
-                  wordHints && Array.isArray(wordHints) && (wordHints as unknown[]).length > 0
-                    ? parseExtendedWordHints(wordHints)
-                    : undefined,
-              }
-            : card
-        )
+        prev.map(card => {
+          if (card.id === flashcardId) return applyUpdate(card) as Flashcard;
+          const layers = (card as any).__layers as Flashcard[] | undefined;
+          if (Array.isArray(layers) && layers.some(l => l.id === flashcardId)) {
+            return {
+              ...card,
+              __layers: layers.map(l => (l.id === flashcardId ? applyUpdate(l) : l)),
+            } as Flashcard;
+          }
+          return card;
+        })
       );
 
       toast.success("Card atualizado!");
@@ -767,7 +777,16 @@ const Study = () => {
   // Local state only — does NOT advance the engine index. When the engine
   // moves to a new card, layerIdx resets to 0.
   const [layerIdx, setLayerIdx] = useState(0);
+  // Track the last card id we synced layerIdx for. The sync effect below
+  // depends on favorites/redListIds so it can pick the right starting layer
+  // when the deck CARD changes, but it must NOT re-run when those arrays
+  // change in isolation — otherwise the user's manual "Próxima camada"
+  // navigation gets wiped on every favorite/red-list toggle re-render.
+  const lastSyncedCardIdRef = useRef<string | null>(null);
   useEffect(() => {
+    if (engineCurrentCardId === lastSyncedCardIdRef.current) return;
+    lastSyncedCardIdRef.current = engineCurrentCardId ?? null;
+
     // Default to layer 0. When the user is in Favorites mode (or Foco Vermelho),
     // try to start on the first layer that is favorited / red-listed so the
     // group opens on the layer the student actually starred.
@@ -792,6 +811,25 @@ const Study = () => {
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+
+  // Stable handlers for layer navigation. These NEVER touch the engine,
+  // currentIndex, progress, or session counters — they only flip the
+  // visible layer inside the current group.
+  const goToNextLayer = useCallback((e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const n = cardLayers?.length ?? 0;
+    if (n <= 1) return;
+    setLayerIdx((i) => (i + 1) % n);
+  }, [cardLayers]);
+  const goToPreviousLayer = useCallback((e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const n = cardLayers?.length ?? 0;
+    if (n <= 1) return;
+    setLayerIdx((i) => (i - 1 + n) % n);
+  }, [cardLayers]);
+
   // The "displayed" card is the active layer when the deck card is layered.
   // It carries the same shape as a normal flashcard, including its own id —
   // so progress, favorites, edit, etc. naturally target the visible layer.
@@ -801,6 +839,21 @@ const Study = () => {
   useEffect(() => {
     displayedCardIdRef.current = displayedCard?.id ?? null;
   }, [displayedCard?.id]);
+
+  // DEV-only diagnostic for layer navigation. Stripped in production builds.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    // eslint-disable-next-line no-console
+    console.debug("[LayerNav]", {
+      engineCurrentCardId,
+      groupTitle: (currentCard as any)?.__groupTitle,
+      layerIdx,
+      safeLayerIdx,
+      layerCount: cardLayers?.length,
+      displayedCardId: displayedCard?.id,
+      displayedTerm: displayedCard?.term,
+    });
+  }, [engineCurrentCardId, layerIdx, safeLayerIdx, cardLayers?.length, displayedCard?.id]);
 
   // ── DEV diagnostic: confirm the direction propagated from URL → prefs → engine
   // matches what the user picked in GamesHub. No-op in production builds.
@@ -1240,9 +1293,7 @@ const Study = () => {
                 variant="ghost"
                 size="sm"
                 className="h-8"
-                onClick={() =>
-                  setLayerIdx((i) => (i - 1 + cardLayers.length) % cardLayers.length)
-                }
+                onClick={goToPreviousLayer}
               >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Camada anterior
@@ -1252,7 +1303,7 @@ const Study = () => {
                 variant="ghost"
                 size="sm"
                 className="h-8"
-                onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
+                onClick={goToNextLayer}
               >
                 Próxima camada
                 <ChevronRight className="ml-1 h-4 w-4" />
@@ -1264,7 +1315,7 @@ const Study = () => {
         <div className="mb-6">
           {effectiveMode === "flip" && displayedCard && (
             <FlipStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               hint={displayedCard.hint}
@@ -1296,7 +1347,7 @@ const Study = () => {
           )}
           {effectiveMode === "write" && displayedCard && (
             <WriteStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               hint={displayedCard.hint}
@@ -1320,7 +1371,7 @@ const Study = () => {
           )}
           {effectiveMode === "multiple-choice" && displayedCard && (
             <MultipleChoiceStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               currentCard={displayedCard}
               allCards={effectiveFlashcards}
               direction={resolvedDirection}
@@ -1338,7 +1389,7 @@ const Study = () => {
           )}
           {effectiveMode === "unscramble" && displayedCard && (
             <UnscrambleStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               hint={displayedCard.hint}
@@ -1360,7 +1411,7 @@ const Study = () => {
           )}
           {effectiveMode === "pronunciation" && displayedCard && (
             <PronunciationStudyView
-              key={`${displayedCard.id}-${currentIndex}`}
+              key={`${displayedCard.id}-${currentIndex}-${safeLayerIdx}`}
               front={displayedCard.term}
               back={displayedCard.translation}
               wordHintsA={displayedCard.word_hints}
