@@ -1268,9 +1268,7 @@ const Study = () => {
                 variant="ghost"
                 size="sm"
                 className="h-8"
-                onClick={() =>
-                  setLayerIdx((i) => (i - 1 + cardLayers.length) % cardLayers.length)
-                }
+                onClick={goToPreviousLayer}
               >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Camada anterior
@@ -1280,7 +1278,7 @@ const Study = () => {
                 variant="ghost"
                 size="sm"
                 className="h-8"
-                onClick={() => setLayerIdx((i) => (i + 1) % cardLayers.length)}
+                onClick={goToNextLayer}
               >
                 Próxima camada
                 <ChevronRight className="ml-1 h-4 w-4" />
