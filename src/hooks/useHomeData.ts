@@ -92,7 +92,7 @@ async function fetchHomeData(
   try {
 
       // Fetch in parallel
-      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult, statsCountResult, recentFoldersResult] = await Promise.all([
+      const [sessionResult, ownListsResult, subscriptionsResult, activityResult, turmaTeachersResult, statsCountResult, recentFoldersResult, allOwnListsResult] = await Promise.all([
         // Last study session — filtered by institution via lists→folders
         (async () => {
           const { data } = await supabase
@@ -222,6 +222,25 @@ async function fetchHomeData(
             .order("updated_at", { ascending: false })
             .limit(5);
 
+          if (institutionId) {
+            q = q.eq("institution_id", institutionId);
+          } else {
+            q = q.is("institution_id", null);
+          }
+          return q;
+        })(),
+
+        // All user lists with folder_id — used to robustly aggregate
+        // list_count / card_count per folder for the "Pastas recentes" cards.
+        // Independent of any embedded relation hint to avoid silent join issues.
+        (() => {
+          let q = supabase
+            .from("lists")
+            .select("id, folder_id, institution_id")
+            .eq("owner_id", userId)
+            .is("class_id", null)
+            .is("deleted_at", null)
+            .limit(500);
           if (institutionId) {
             q = q.eq("institution_id", institutionId);
           } else {
