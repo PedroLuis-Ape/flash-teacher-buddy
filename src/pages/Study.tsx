@@ -1390,8 +1390,8 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onKnew={() => handleNext(true)}
@@ -1417,8 +1417,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1436,8 +1436,8 @@ const Study = () => {
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1457,8 +1457,8 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onCorrect={() => handleNext(true)}
@@ -1478,8 +1478,8 @@ const Study = () => {
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
-              isFavorite={!!displayedCard.id && favorites.includes(displayedCard.id)}
-              isRedListed={!!displayedCard.id && redListIds.includes(displayedCard.id)}
+              isFavorite={isDisplayedGroupFavorite}
+              isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
               onNext={() => handleNext(true)}
