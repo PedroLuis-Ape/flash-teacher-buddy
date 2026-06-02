@@ -853,6 +853,22 @@ const Study = () => {
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
 
+  // Group-aware favorite / red-list state for layered cards. For a non-layered
+  // card, this collapses to the single displayed card id. For a layered card,
+  // the icon is "active" when ANY layer of the group is starred/red-listed.
+  const currentGroupIds = useMemo<string[]>(() => {
+    if (hasLayers && cardLayers) return cardLayers.map((l) => l.id).filter(Boolean);
+    return currentCard?.id ? [currentCard.id] : [];
+  }, [hasLayers, cardLayers, currentCard?.id]);
+  const isDisplayedGroupFavorite = useMemo(
+    () => currentGroupIds.some((id) => favorites.includes(id)),
+    [currentGroupIds, favorites]
+  );
+  const isDisplayedGroupRedListed = useMemo(
+    () => currentGroupIds.some((id) => redListIds.includes(id)),
+    [currentGroupIds, redListIds]
+  );
+
   // Stable handlers for layer navigation. These NEVER touch the engine,
   // currentIndex, progress, or session counters — they only flip the
   // visible layer inside the current group.
