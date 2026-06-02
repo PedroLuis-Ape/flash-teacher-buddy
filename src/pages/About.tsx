@@ -3,7 +3,7 @@
  * © 2025 APE Education. Todos os direitos reservados.
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Shield, BookOpen, Copyright, User } from "lucide-react";
 import { SEOHead } from "@/components/seo/SEOHead";
@@ -40,12 +40,10 @@ export default function About() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle asChild>
-              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <BookOpen className="h-5 w-5 text-primary" />
               Sobre o APE
-              </h2>
-            </CardTitle>
+            </h2>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
             <p>
@@ -67,12 +65,10 @@ export default function About() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle asChild>
-              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <User className="h-5 w-5 text-primary" />
               Autor
-              </h2>
-            </CardTitle>
+            </h2>
           </CardHeader>
           <CardContent className="text-muted-foreground">
             <p>
@@ -87,12 +83,10 @@ export default function About() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle asChild>
-              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <Shield className="h-5 w-5 text-primary" />
               Termos de Uso
-              </h2>
-            </CardTitle>
+            </h2>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
             <p>
@@ -109,12 +103,10 @@ export default function About() {
 
         <Card className="mb-6 border-primary/20">
           <CardHeader>
-            <CardTitle asChild>
-              <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <Copyright className="h-5 w-5 text-primary" />
               Direitos Autorais
-              </h2>
-            </CardTitle>
+            </h2>
           </CardHeader>
           <CardContent className="space-y-4 text-muted-foreground">
             <p>
