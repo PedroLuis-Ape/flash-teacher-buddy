@@ -672,6 +672,22 @@ const Study = () => {
     ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
     : undefined;
 
+  // Resolve all IDs in the current layer group. For a non-layered card,
+  // returns the single displayed card id. For a layered card, returns ALL
+  // layer ids so favorite / red-list act on the whole group.
+  const getCurrentLayerGroupIds = (): string[] => {
+    const baseId = displayedCardIdRef.current ?? engineCurrentCard?.id;
+    if (!baseId) return [];
+    const entry = engineCurrentCardId
+      ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
+      : undefined;
+    const layers = (entry as any)?.__layers as Flashcard[] | undefined;
+    if (Array.isArray(layers) && layers.length > 1) {
+      return layers.map((l) => l.id).filter(Boolean);
+    }
+    return [baseId];
+  };
+
   const handleToggleFavorite = () => {
     const ids = getCurrentLayerGroupIds();
     if (ids.length === 0 || !userId) return;
