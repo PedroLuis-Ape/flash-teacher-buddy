@@ -11,6 +11,7 @@ import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/r
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
+import { SpecialButton } from "./SpecialButton";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
@@ -39,6 +40,8 @@ interface WriteStudyViewProps {
   isRedListed?: boolean;
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
+  isSpecial?: boolean;
+  onToggleSpecial?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -61,6 +64,8 @@ export const WriteStudyView = ({
   isRedListed = false,
   onToggleFavorite,
   onToggleRedList,
+  isSpecial = false,
+  onToggleSpecial,
   onCorrect,
   onIncorrect,
   onSkip,
@@ -206,6 +211,7 @@ export const WriteStudyView = ({
           )}
           <HintButton hint={hint} />
           <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
+          {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
         </div>
         <div className="text-center">
           <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>

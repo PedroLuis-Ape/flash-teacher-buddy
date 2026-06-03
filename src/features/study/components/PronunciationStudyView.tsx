@@ -11,6 +11,7 @@ import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
+import { SpecialButton } from "./SpecialButton";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
@@ -28,10 +29,12 @@ interface PronunciationStudyViewProps {
   isRedListed?: boolean;
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
+  isSpecial?: boolean;
+  onToggleSpecial?: () => void;
   onNext: () => void;
 }
 
-export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, isRedListed = false, onToggleFavorite, onToggleRedList, onNext }: PronunciationStudyViewProps) {
+export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, isRedListed = false, onToggleFavorite, onToggleRedList, isSpecial = false, onToggleSpecial, onNext }: PronunciationStudyViewProps) {
   // --- Side A/B State Consolidation ---
   // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
@@ -211,6 +214,9 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
               <Star className={cn("h-4 w-4", isFavorite && "fill-current")} />
             </Button>
             <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
+            {onToggleSpecial && (
+              <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />
+            )}
           </div>
         )}
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">

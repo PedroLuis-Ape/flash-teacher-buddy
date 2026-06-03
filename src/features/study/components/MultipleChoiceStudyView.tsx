@@ -8,6 +8,7 @@ import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/r
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
+import { SpecialButton } from "./SpecialButton";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
@@ -40,6 +41,8 @@ interface MultipleChoiceStudyViewProps {
   isRedListed?: boolean;
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
+  isSpecial?: boolean;
+  onToggleSpecial?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
 }
@@ -56,6 +59,8 @@ export const MultipleChoiceStudyView = ({
   isRedListed = false,
   onToggleFavorite,
   onToggleRedList,
+  isSpecial = false,
+  onToggleSpecial,
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
@@ -197,6 +202,7 @@ export const MultipleChoiceStudyView = ({
           )}
           <HintButton hint={currentCard.hint} />
           <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
+          {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
         </div>
         <div className="text-center">
           <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>

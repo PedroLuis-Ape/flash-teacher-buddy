@@ -69,6 +69,7 @@ const Trash = lazy(() => import("./pages/Trash"));
 const PerformanceSettings = lazy(() => import("./pages/PerformanceSettings"));
 const AuditRepair = lazy(() => import("./pages/AuditRepair"));
 const KeyboardShortcutsPage = lazy(() => import("./pages/KeyboardShortcuts"));
+const SpecialCards = lazy(() => import("./pages/SpecialCards"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -167,6 +168,7 @@ const App = () => {
                   <Route path="/settings/performance" element={<PerformanceSettings />} />
                   <Route path="/settings/shortcuts" element={<KeyboardShortcutsPage />} />
                   <Route path="/audit" element={<AuditRepair />} />
+                  <Route path="/special-cards" element={<SpecialCards />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </PageTransition>

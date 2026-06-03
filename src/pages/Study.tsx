@@ -45,6 +45,7 @@ import { StudyCompletionModal } from "@/features/study/components/StudyCompletio
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
+import { useSpecialFlashcards, useToggleSpecialFlashcard } from "@/hooks/useSpecialFlashcards";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
@@ -193,6 +194,12 @@ const Study = () => {
   // Red list state (scoped to current list)
   const { data: redListIds = [] } = useRedList(userId, isListRoute ? resolvedId : undefined);
   const toggleRedList = useToggleRedList();
+
+  // Special cards (independent queue for IA explanation export). Scope-less:
+  // the list of special flashcard ids is global per user, but we still pass
+  // listId on insert for traceability.
+  const { data: specialIds = [] } = useSpecialFlashcards(userId);
+  const toggleSpecial = useToggleSpecialFlashcard();
 
   const listId = isListRoute ? resolvedId : undefined;
 
@@ -737,6 +744,15 @@ const Study = () => {
     }
   };
 
+  // Special cards: acts on the SINGLE displayed card/layer (never the group).
+  // Independent from favorites and red-list. Does NOT advance, count or skip.
+  const handleToggleSpecial = () => {
+    const id = displayedCardIdRef.current;
+    if (!id || !userId) return;
+    const isSpecial = specialIds.includes(id);
+    toggleSpecial.mutate({ flashcardId: id, listId: listId ?? null, isSpecial });
+  };
+
   // ── In-game card edit ──
   // Mirrors ListDetail's handleUpdateFlashcard but updates local `flashcards`
   // state (not React Query cache) so the current session sees changes
@@ -869,6 +885,8 @@ const Study = () => {
     [currentGroupIds, redListIds]
   );
 
+  // Special is single-card (never group). Computed once displayedCard exists below.
+
   // Stable handlers for layer navigation. These NEVER touch the engine,
   // currentIndex, progress, or session counters — they only flip the
   // visible layer inside the current group.
@@ -896,6 +914,11 @@ const Study = () => {
   useEffect(() => {
     displayedCardIdRef.current = displayedCard?.id ?? null;
   }, [displayedCard?.id]);
+
+  const isDisplayedSpecial = useMemo(
+    () => (displayedCard?.id ? specialIds.includes(displayedCard.id) : false),
+    [displayedCard?.id, specialIds]
+  );
 
   // DEV-only diagnostic for layer navigation. Stripped in production builds.
   useEffect(() => {
@@ -1394,6 +1417,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}
@@ -1421,6 +1446,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -1440,6 +1467,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
@@ -1461,6 +1490,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -1482,6 +1513,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onNext={() => handleNext(true)}
             />
           )}
