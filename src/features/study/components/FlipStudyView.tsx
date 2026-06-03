@@ -361,6 +361,7 @@ export const FlipStudyView = ({
             </Button>
           )}
           <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
+          {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
           <SpeechRateControl />
         </div>
       </div>
