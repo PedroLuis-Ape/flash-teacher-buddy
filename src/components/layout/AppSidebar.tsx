@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Menu, Building2, Plus, Check, Trash2, StickyNote, Target, ChevronRight,
-  Home, Library, Store, User, GraduationCap, Search, Globe
+  Home, Library, Store, User, GraduationCap, Search, Globe, Gem
 } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -162,6 +162,20 @@ export function AppSidebar() {
               >
                 <Search className="h-4 w-4" />
                 <span>{t('sidebar.search', 'Buscar')}</span>
+              </Button>
+              <Button
+                variant={location.pathname === '/special-cards' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname === '/special-cards' && "bg-primary/10 text-primary font-medium"
+                )}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/special-cards');
+                }}
+              >
+                <Gem className="h-4 w-4" />
+                <span>Especiais</span>
               </Button>
               <Button
                 variant={location.pathname.startsWith('/turmas') ? "secondary" : "ghost"}
