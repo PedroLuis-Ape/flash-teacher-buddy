@@ -19,9 +19,11 @@ import {
   Gem,
   Trash2,
   Layers,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
+import ImportExplanationsDialog from "@/components/ImportExplanationsDialog";
 
 const PROMPT_HEADER = `Você é uma IA especializada em ensino de inglês para brasileiros.
 Vou enviar uma lista de cards especiais do meu app de estudos.
@@ -100,6 +102,7 @@ export default function SpecialCards() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | undefined>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -201,6 +204,12 @@ export default function SpecialCards() {
         <div className="flex items-center gap-2">
           <Gem className="h-6 w-6 text-sky-500" />
           <h1 className="text-2xl sm:text-3xl font-bold">Especiais</h1>
+        </div>
+        <div className="ml-auto">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-1.5" />
+            Importar explicações da IA
+          </Button>
         </div>
       </div>
 
@@ -325,6 +334,12 @@ export default function SpecialCards() {
           </ScrollArea>
         </>
       )}
+
+      <ImportExplanationsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        userId={userId}
+      />
     </div>
   );
 }
