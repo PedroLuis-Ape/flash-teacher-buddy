@@ -147,7 +147,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
                 <div className="flex items-center gap-1.5 md:gap-2">
                   {showCurrencyHeader && <CurrencyHeader />}
                   {showSecondaryActions && FEATURE_FLAGS.classes_enabled && <NotificationBell />}
-                  {showSecondaryActions && FEATURE_FLAGS.present_inbox_visible && (
+                  {showSecondaryActions && !safeMode && FEATURE_FLAGS.present_inbox_visible && (
                     <Suspense fallback={null}><PresentBoxBadge /></Suspense>
                   )}
                 </div>
