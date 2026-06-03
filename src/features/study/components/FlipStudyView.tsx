@@ -17,6 +17,7 @@ import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
+import { SpecialButton } from "./SpecialButton";
 
 interface FlipStudyViewProps {
   front: string;
@@ -46,6 +47,8 @@ interface FlipStudyViewProps {
   isRedListed?: boolean;
   onToggleFavorite?: () => void;
   onToggleRedList?: () => void;
+  isSpecial?: boolean;
+  onToggleSpecial?: () => void;
 }
 
 export const FlipStudyView = ({
@@ -76,6 +79,8 @@ export const FlipStudyView = ({
   isRedListed = false,
   onToggleFavorite,
   onToggleRedList,
+  isSpecial = false,
+  onToggleSpecial,
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const { speak } = useTTS();
