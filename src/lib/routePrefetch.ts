@@ -6,6 +6,21 @@
 
 const prefetched = new Set<string>();
 
+import { isSafeModeEnabled } from "@/lib/safeMode";
+
+function isWeakDevice(): boolean {
+  try {
+    const nav = navigator as any;
+    const conn = nav.connection;
+    if (conn?.saveData) return true;
+    if (typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency <= 4) return true;
+    if (typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4) return true;
+    const effective = conn?.effectiveType as string | undefined;
+    if (effective && /(^|-)(2g|slow-2g)$/.test(effective)) return true;
+  } catch { /* noop */ }
+  return false;
+}
+
 const routeImportMap: Record<string, () => Promise<unknown>> = {
   '/': () => import('@/pages/Index'),
   '/folders': () => import('@/pages/Folders'),
@@ -23,6 +38,8 @@ const routeImportMap: Record<string, () => Promise<unknown>> = {
  * No-ops if already prefetched or route not in map.
  */
 export function prefetchRoute(path: string) {
+  if (isSafeModeEnabled()) return;
+  if (isWeakDevice()) return;
   if (prefetched.has(path)) return;
   const loader = routeImportMap[path];
   if (!loader) return;
