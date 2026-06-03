@@ -24,6 +24,9 @@ import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import { prefetchCommonRoutes } from "@/lib/routePrefetch";
 import { InstitutionBar } from "@/components/layout/InstitutionBar";
+import { useFreezeWatchdog } from "@/hooks/useFreezeWatchdog";
+import { isSafeModeEnabled } from "@/lib/safeMode";
+import { AppRecoveryBanner } from "@/components/AppRecoveryBanner";
 
 // Lazy-load heavy modals and badges (not needed for FCP)
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -39,6 +42,9 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const { user } = useAuthUser();
   const { refreshBalance } = useEconomy();
   const { settings: perfSettings } = usePerformance();
+  // Global freeze watchdog — mounted once, no-op when nothing freezes.
+  useFreezeWatchdog();
+  const safeMode = isSafeModeEnabled();
 
   // ── Defer secondary work so it never competes with first paint. ──
   // Modais, prefetch, refreshBalance e heartbeat só ligam alguns segundos
@@ -48,6 +54,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
 
   useEffect(() => {
     if (!user) return;
+    if (safeMode) return;
     let cancelled = false;
     const run = () => {
       if (cancelled) return;
@@ -71,14 +78,14 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, safeMode]);
 
   // Activity heartbeat — only after the page is interactive to avoid
   // competing with the initial Home load.
-  useActivityHeartbeat(secondaryReady ? user?.id : undefined);
+  useActivityHeartbeat(secondaryReady && !safeMode ? user?.id : undefined);
   
   // Swipe navigation - enabled on mobile (respects feature flag)
-  useSwipeNavigation({ enabled: !!user && FEATURE_FLAGS.swipe_navigation_enabled });
+  useSwipeNavigation({ enabled: !!user && !safeMode && FEATURE_FLAGS.swipe_navigation_enabled });
   
   // Don't show header/tabbar on auth pages
   const isAuthPage = location.pathname === '/auth';
@@ -123,6 +130,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   return (
     <InstitutionProvider>
       <div className="min-h-screen flex flex-col">
+          <AppRecoveryBanner />
           <OfflineIndicator />
         {FEATURE_FLAGS.currency_header_enabled && user && (
             <header className={cn(
@@ -160,10 +168,10 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
           
           {user && <ApeTabBar />}
           {user && secondaryReady && (
-            <Suspense fallback={null}><GiftNotificationModal /></Suspense>
+            !safeMode && <Suspense fallback={null}><GiftNotificationModal /></Suspense>
           )}
           {user && secondaryReady && FEATURE_FLAGS.classes_enabled && (
-            <Suspense fallback={null}><AnnouncementModal /></Suspense>
+            !safeMode && <Suspense fallback={null}><AnnouncementModal /></Suspense>
           )}
           
           {/* Version Badge — higher opacity so users can see the live build */}
