@@ -45,6 +45,7 @@ import { StudyCompletionModal } from "@/features/study/components/StudyCompletio
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
+import { useSpecialFlashcards, useToggleSpecialFlashcard } from "@/hooks/useSpecialFlashcards";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
@@ -193,6 +194,12 @@ const Study = () => {
   // Red list state (scoped to current list)
   const { data: redListIds = [] } = useRedList(userId, isListRoute ? resolvedId : undefined);
   const toggleRedList = useToggleRedList();
+
+  // Special cards (independent queue for IA explanation export). Scope-less:
+  // the list of special flashcard ids is global per user, but we still pass
+  // listId on insert for traceability.
+  const { data: specialIds = [] } = useSpecialFlashcards(userId);
+  const toggleSpecial = useToggleSpecialFlashcard();
 
   const listId = isListRoute ? resolvedId : undefined;
 
