@@ -752,11 +752,6 @@ const Study = () => {
     const isSpecial = specialIds.includes(id);
     toggleSpecial.mutate({ flashcardId: id, listId: listId ?? null, isSpecial });
   };
-  const isDisplayedSpecial = useMemo(
-    () => (displayedCard?.id ? specialIds.includes(displayedCard.id) : false),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayedCard?.id, specialIds]
-  );
 
   // ── In-game card edit ──
   // Mirrors ListDetail's handleUpdateFlashcard but updates local `flashcards`
