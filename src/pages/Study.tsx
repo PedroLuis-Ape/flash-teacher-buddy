@@ -38,6 +38,7 @@ import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
 import { UnscrambleStudyView } from "@/features/study/components/UnscrambleStudyView";
 import { PronunciationStudyView } from "@/features/study/components/PronunciationStudyView";
+import { DetailedExplanationPanel } from "@/features/study/components/DetailedExplanationPanel";
 import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
@@ -1522,6 +1523,14 @@ const Study = () => {
             />
           )}
         </div>
+
+        {displayedCard && (
+          <DetailedExplanationPanel
+            explanation={displayedCard.detailed_explanation}
+            usageNotes={displayedCard.usage_notes}
+            commonMistakes={displayedCard.common_mistakes}
+          />
+        )}
 
         {/* Previous card button (only for non-flip modes) */}
         {effectiveMode !== "flip" && currentIndex > 0 && (
