@@ -1,7 +1,8 @@
 import { Component, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { RefreshCcw, ArrowLeft } from "lucide-react";
+import { RefreshCcw, ArrowLeft, ShieldAlert } from "lucide-react";
+import { enableSafeMode } from "@/lib/safeMode";
 
 interface Props {
   children: ReactNode;
@@ -46,6 +47,11 @@ export class LazyErrorBoundary extends Component<Props, State> {
     window.location.href = "/";
   };
 
+  handleEnableSafeMode = () => {
+    enableSafeMode();
+    window.location.reload();
+  };
+
   render() {
     if (!this.state.hasError) return this.props.children;
 
@@ -62,14 +68,18 @@ export class LazyErrorBoundary extends Component<Props, State> {
               ? "Uma nova versão do app está disponível. Recarregue para continuar."
               : "Ocorreu um erro ao carregar esta página. Tente recarregar."}
           </p>
-          <div className="flex gap-3 justify-center">
+          <div className="flex gap-3 justify-center flex-wrap">
             <Button onClick={this.handleReload}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               Recarregar
             </Button>
             <Button variant="outline" onClick={this.handleGoHome}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Início
+              Dashboard
+            </Button>
+            <Button variant="outline" onClick={this.handleEnableSafeMode}>
+              <ShieldAlert className="mr-2 h-4 w-4" />
+              Modo seguro
             </Button>
           </div>
         </Card>

@@ -29,6 +29,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { getFreezeEvents, clearFreezeEvents } from '@/hooks/useFreezeWatchdog';
+import { isSafeModeEnabled, toggleSafeMode } from '@/lib/safeMode';
+import { useState } from 'react';
 
 const presetConfig: { key: PerformancePreset; label: string; desc: string; icon: typeof Zap }[] = [
   { key: 'high', label: 'Alto', desc: 'Todos os efeitos ativados', icon: Sparkles },
@@ -54,6 +57,20 @@ const toggleConfig: { key: ToggleKey; label: string; desc: string; icon: typeof 
 
 const PerformanceSettingsPage = () => {
   const { settings, applyPreset, toggleSetting, currentPreset, resetToDefault } = usePerformance();
+  const [freezes, setFreezes] = useState(() => getFreezeEvents());
+  const [safeMode, setSafeMode] = useState(() => isSafeModeEnabled());
+
+  const handleToggleSafe = () => {
+    const next = toggleSafeMode();
+    setSafeMode(next);
+    toast.success(next ? 'Modo seguro ativado' : 'Modo seguro desativado');
+  };
+
+  const handleClearFreezes = () => {
+    clearFreezeEvents();
+    setFreezes([]);
+    toast.success('Histórico de travamentos limpo');
+  };
 
   const handlePreset = (preset: PerformancePreset) => {
     applyPreset(preset);
@@ -153,6 +170,67 @@ const PerformanceSettingsPage = () => {
             Restaurar padrão
           </Button>
         </div>
+
+        {/* Safe Mode + Freeze Diagnostics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Estabilidade</CardTitle>
+            <CardDescription>
+              Modo seguro desliga efeitos opcionais (prefetch, modais secundários,
+              swipe). Use se o app travar com frequência.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm">
+                Modo seguro
+                <p className="text-xs text-muted-foreground">
+                  {safeMode ? 'Ativo' : 'Desligado'}
+                </p>
+              </div>
+              <Switch checked={safeMode} onCheckedChange={handleToggleSafe} />
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm">
+                Últimos travamentos detectados
+                <p className="text-xs text-muted-foreground">
+                  {freezes.length === 0
+                    ? 'Nenhum travamento registrado'
+                    : `${freezes.length} evento(s)`}
+                </p>
+              </div>
+              {freezes.length > 0 && (
+                <Button size="sm" variant="outline" onClick={handleClearFreezes}>
+                  Limpar
+                </Button>
+              )}
+            </div>
+
+            {freezes.length > 0 && (
+              <div className="space-y-1.5 text-xs">
+                {freezes.slice(-10).reverse().map((f, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-2 px-2 py-1.5 rounded border border-border"
+                  >
+                    <span className="font-mono text-muted-foreground truncate">
+                      {f.route}
+                    </span>
+                    <span className="shrink-0">
+                      {Math.round(f.delayMs / 1000)}s
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {new Date(f.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
