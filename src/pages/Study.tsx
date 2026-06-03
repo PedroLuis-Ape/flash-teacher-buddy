@@ -885,6 +885,8 @@ const Study = () => {
     [currentGroupIds, redListIds]
   );
 
+  // Special is single-card (never group). Computed once displayedCard exists below.
+
   // Stable handlers for layer navigation. These NEVER touch the engine,
   // currentIndex, progress, or session counters — they only flip the
   // visible layer inside the current group.
