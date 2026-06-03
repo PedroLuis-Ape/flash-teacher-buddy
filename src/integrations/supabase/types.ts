@@ -711,9 +711,11 @@ export type Database = {
           accepted_answers_pt: string[] | null
           audio_url: string | null
           collection_id: string | null
+          common_mistakes: string | null
           context_tag: string | null
           created_at: string
           deleted_at: string | null
+          detailed_explanation: string | null
           display_text: string | null
           eval_text: string | null
           example_text: string | null
@@ -731,6 +733,7 @@ export type Database = {
           term: string
           translation: string
           updated_at: string
+          usage_notes: string | null
           user_id: string
           word_hints: Json | null
         }
@@ -739,9 +742,11 @@ export type Database = {
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
           collection_id?: string | null
+          common_mistakes?: string | null
           context_tag?: string | null
           created_at?: string
           deleted_at?: string | null
+          detailed_explanation?: string | null
           display_text?: string | null
           eval_text?: string | null
           example_text?: string | null
@@ -759,6 +764,7 @@ export type Database = {
           term: string
           translation: string
           updated_at?: string
+          usage_notes?: string | null
           user_id: string
           word_hints?: Json | null
         }
@@ -767,9 +773,11 @@ export type Database = {
           accepted_answers_pt?: string[] | null
           audio_url?: string | null
           collection_id?: string | null
+          common_mistakes?: string | null
           context_tag?: string | null
           created_at?: string
           deleted_at?: string | null
+          detailed_explanation?: string | null
           display_text?: string | null
           eval_text?: string | null
           example_text?: string | null
@@ -787,6 +795,7 @@ export type Database = {
           term?: string
           translation?: string
           updated_at?: string
+          usage_notes?: string | null
           user_id?: string
           word_hints?: Json | null
         }
@@ -2635,9 +2644,11 @@ export type Database = {
           accepted_answers_pt: string[] | null
           audio_url: string | null
           collection_id: string | null
+          common_mistakes: string | null
           context_tag: string | null
           created_at: string
           deleted_at: string | null
+          detailed_explanation: string | null
           display_text: string | null
           eval_text: string | null
           example_text: string | null
@@ -2655,6 +2666,7 @@ export type Database = {
           term: string
           translation: string
           updated_at: string
+          usage_notes: string | null
           user_id: string
           word_hints: Json | null
         }[]
