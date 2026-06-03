@@ -67,6 +67,9 @@ interface Flashcard {
   example_translation?: string | null;
   context_tag?: string | null;
   short_explanation?: string | null;
+  detailed_explanation?: string | null;
+  usage_notes?: string | null;
+  common_mistakes?: string | null;
   /** When set, this card is the entry-point of a layered group; siblings hold all layers (including this one) sorted by layer_index. */
   __layers?: Flashcard[];
   /** Visual-only metadata for layered cards (each layer is its own deck entry). */
