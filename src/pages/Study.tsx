@@ -1417,6 +1417,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={navigateNext}
@@ -1444,6 +1446,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -1463,6 +1467,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
             />
@@ -1484,6 +1490,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -1505,6 +1513,8 @@ const Study = () => {
               isRedListed={isDisplayedGroupRedListed}
               onToggleFavorite={handleToggleFavorite}
               onToggleRedList={handleToggleRedList}
+              isSpecial={isDisplayedSpecial}
+              onToggleSpecial={handleToggleSpecial}
               onNext={() => handleNext(true)}
             />
           )}
