@@ -915,6 +915,11 @@ const Study = () => {
     displayedCardIdRef.current = displayedCard?.id ?? null;
   }, [displayedCard?.id]);
 
+  const isDisplayedSpecial = useMemo(
+    () => (displayedCard?.id ? specialIds.includes(displayedCard.id) : false),
+    [displayedCard?.id, specialIds]
+  );
+
   // DEV-only diagnostic for layer navigation. Stripped in production builds.
   useEffect(() => {
     if (!import.meta.env.DEV) return;
