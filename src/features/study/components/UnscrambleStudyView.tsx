@@ -207,6 +207,9 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
               onToggleRedList={onToggleRedList}
               size="sm"
             />
+            {onToggleSpecial && (
+              <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />
+            )}
             <SpeechRateControl />
             <Button
               variant="ghost"

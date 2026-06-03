@@ -211,6 +211,7 @@ export const WriteStudyView = ({
           )}
           <HintButton hint={hint} />
           <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
+          {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
         </div>
         <div className="text-center">
           <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>
