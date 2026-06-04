@@ -39,40 +39,59 @@ interface PreviewRow {
   reason?: string;
 }
 
-function normalizeItem(raw: any): ParsedItem | null {
-  if (!raw || typeof raw !== "object") return null;
-  const flashcard_id =
-    raw.flashcard_id ?? raw.flashcardId ?? raw.id ?? undefined;
+interface NormalizedResult {
+  item: ParsedItem | null;
+  invalidReason?: string;
+  raw: any;
+}
+
+function normalizeItem(raw: any): NormalizedResult {
+  if (!raw || typeof raw !== "object") {
+    return { item: null, invalidReason: "Item não é um objeto", raw };
+  }
+  // Strict: never accept raw.id silently as flashcard_id.
+  const flashcard_id = raw.flashcard_id ?? raw.flashcardId ?? undefined;
   const detailed_explanation =
     raw.detailed_explanation ?? raw.detailedExplanation ?? raw.explanation ?? undefined;
-  if (!flashcard_id || typeof flashcard_id !== "string") return null;
-  if (!detailed_explanation || typeof detailed_explanation !== "string") return null;
+  if (!flashcard_id || typeof flashcard_id !== "string") {
+    return { item: null, invalidReason: "Campo flashcard_id ausente", raw };
+  }
+  if (!detailed_explanation || typeof detailed_explanation !== "string") {
+    return { item: null, invalidReason: "Campo detailed_explanation ausente", raw };
+  }
   return {
-    flashcard_id,
-    term: raw.term,
-    translation: raw.translation,
-    detailed_explanation,
-    usage_notes: raw.usage_notes ?? raw.usageNotes ?? undefined,
-    common_mistakes: raw.common_mistakes ?? raw.commonMistakes ?? undefined,
-    example_text: raw.example_text ?? undefined,
-    example_translation: raw.example_translation ?? undefined,
-    examples: Array.isArray(raw.examples) ? raw.examples : undefined,
+    item: {
+      flashcard_id,
+      term: raw.term,
+      translation: raw.translation,
+      detailed_explanation,
+      usage_notes: raw.usage_notes ?? raw.usageNotes ?? undefined,
+      common_mistakes: raw.common_mistakes ?? raw.commonMistakes ?? undefined,
+      example_text: raw.example_text ?? undefined,
+      example_translation: raw.example_translation ?? undefined,
+      examples: Array.isArray(raw.examples) ? raw.examples : undefined,
+    },
+    raw,
   };
 }
 
-function tryParseJson(text: string): ParsedItem[] | null {
+function tryParseJson(text: string): NormalizedResult[] | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
-  // Tolerate markdown fences
+  // Tolerate markdown fences (```json ... ``` or bare ``` ... ```).
   const cleaned = trimmed
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/```\s*$/i, "")
     .trim();
   try {
     const parsed = JSON.parse(cleaned);
-    const arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : null;
+    const arr = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.items)
+        ? parsed.items
+        : null;
     if (!arr) return null;
-    return arr.map(normalizeItem).filter((v): v is ParsedItem => !!v);
+    return arr.map(normalizeItem);
   } catch {
     return null;
   }
@@ -121,38 +140,65 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
       found: preview.filter((r) => r.status === "found").length,
       hasExisting: preview.filter((r) => r.status === "has-existing").length,
       missing: preview.filter((r) => r.status === "missing").length,
+      invalid: preview.filter((r) => r.status === "invalid").length,
     };
   }, [preview]);
 
   const handleValidate = async () => {
     setReport(null);
-    const items = tryParseJson(raw);
-    if (!items) {
+    const results = tryParseJson(raw);
+    if (!results) {
       toast.error("JSON inválido. Cole a resposta da IA (array de objetos).");
       return;
     }
-    if (items.length === 0) {
-      toast.error("Nenhum item válido encontrado no JSON.");
+    if (results.length === 0) {
+      toast.error("JSON vazio.");
       return;
     }
     setValidating(true);
     try {
-      const ids = Array.from(new Set(items.map((i) => i.flashcard_id!).filter(Boolean)));
-      const { data, error } = await supabase
-        .from("flashcards")
-        .select("id, detailed_explanation")
-        .in("id", ids);
-      if (error) throw error;
-      const map = new Map<string, { detailed_explanation: string | null }>(
-        ((data as any[]) ?? []).map((r) => [r.id, { detailed_explanation: r.detailed_explanation ?? null }])
-      );
-      const rows: PreviewRow[] = items.map((item) => {
-        const existing = map.get(item.flashcard_id!);
-        if (!existing) return { item, status: "missing" };
-        if (existing.detailed_explanation && existing.detailed_explanation.trim().length > 0) {
-          return { item, status: "has-existing", existingExplanation: existing.detailed_explanation };
+      const validItems = results
+        .filter((r): r is NormalizedResult & { item: ParsedItem } => !!r.item);
+      const ids = Array.from(new Set(validItems.map((r) => r.item.flashcard_id!)));
+      let map = new Map<string, { detailed_explanation: string | null }>();
+      if (ids.length > 0) {
+        const { data, error } = await supabase
+          .from("flashcards")
+          .select("id, detailed_explanation")
+          .in("id", ids);
+        if (error) throw error;
+        map = new Map(
+          ((data as any[]) ?? []).map((r) => [
+            r.id,
+            { detailed_explanation: r.detailed_explanation ?? null },
+          ])
+        );
+      }
+      const rows: PreviewRow[] = results.map((r) => {
+        if (!r.item) {
+          return {
+            item: {
+              flashcard_id: r.raw?.flashcard_id ?? r.raw?.flashcardId ?? r.raw?.id,
+              term: r.raw?.term,
+              translation: r.raw?.translation,
+            },
+            status: "invalid",
+            reason: r.invalidReason ?? "Item inválido",
+          };
         }
-        return { item, status: "found" };
+        const existing = map.get(r.item.flashcard_id!);
+        if (!existing) return { item: r.item, status: "missing" };
+        if (
+          existing.detailed_explanation &&
+          existing.detailed_explanation.trim().length > 0
+        ) {
+          return {
+            item: r.item,
+            status: "has-existing",
+            existingExplanation: existing.detailed_explanation,
+          };
+        }
+        return { item: r.item, status: "found" };
       });
       setPreview(rows);
     } catch (e: any) {
@@ -281,6 +327,9 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
                     Já com explicação: {stats.hasExisting}
                   </Badge>
                   <Badge variant="destructive">Não encontrados: {stats.missing}</Badge>
+                  {stats.invalid > 0 && (
+                    <Badge variant="destructive">Inválidos: {stats.invalid}</Badge>
+                  )}
                 </div>
               )}
 
@@ -330,6 +379,9 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
                         {row.status === "missing" && (
                           <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
                         )}
+                        {row.status === "invalid" && (
+                          <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="font-medium break-words">
                             {row.item.term ?? "—"}{" "}
@@ -340,6 +392,11 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
                           <div className="text-[11px] text-muted-foreground font-mono break-all">
                             {row.item.flashcard_id}
                           </div>
+                          {row.reason && (
+                            <div className="text-xs text-destructive mt-1">
+                              {row.reason}
+                            </div>
+                          )}
                           {row.item.detailed_explanation && (
                             <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {row.item.detailed_explanation}
