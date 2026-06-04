@@ -164,9 +164,16 @@ export default function SpecialCards() {
       toast.error("Não foi possível copiar — copie manualmente");
       return;
     }
-    await removeMany.mutateAsync(target.map((c) => c.flashcard_id));
-    setSelected(new Set());
-    toast.success("Cards exportados e removidos dos especiais");
+    try {
+      await removeMany.mutateAsync(target.map((c) => c.flashcard_id));
+      setSelected(new Set());
+      toast.success("Cards exportados e removidos dos especiais");
+    } catch (e) {
+      console.error(e);
+      toast.error(
+        "Prompt copiado, mas não foi possível remover da fila. Tente remover manualmente."
+      );
+    }
   };
 
   const handleCopyPromptOnly = async () => {
