@@ -164,16 +164,12 @@ export default function SpecialCards() {
       toast.error("Não foi possível copiar — copie manualmente");
       return;
     }
-    try {
-      await removeMany.mutateAsync(target.map((c) => c.flashcard_id));
-      setSelected(new Set());
-      toast.success("Cards exportados e removidos dos especiais");
-    } catch (e) {
-      console.error(e);
-      toast.error(
-        "Prompt copiado, mas não foi possível remover da fila. Tente remover manualmente."
-      );
-    }
+    // Do NOT remove from queue on export. Cards only leave the special list
+    // after the IA explanations are imported and successfully applied.
+    setSelected(new Set());
+    toast.success(
+      "Prompt copiado. Os cards continuam nos especiais até a importação das explicações."
+    );
   };
 
   const handleCopyPromptOnly = async () => {
@@ -221,8 +217,8 @@ export default function SpecialCards() {
       </div>
 
       <p className="text-sm text-muted-foreground mb-6">
-        Fila temporária. Após exportar para a IA, os cards saem automaticamente
-        da lista. Para trabalhar de novo, marque como especial durante o estudo.
+        Os cards continuam aqui após exportar. Eles só saem dos especiais
+        depois que você importar e aplicar as explicações da IA.
       </p>
 
       {isLoading ? (

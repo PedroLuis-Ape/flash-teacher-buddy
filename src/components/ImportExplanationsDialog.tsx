@@ -124,7 +124,14 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
   const [validating, setValidating] = useState(false);
   const [applying, setApplying] = useState(false);
   const [conflictMode, setConflictMode] = useState<ConflictMode>("replace");
-  const [report, setReport] = useState<{ applied: number; skipped: number; errors: number } | null>(null);
+  const [report, setReport] = useState<{
+    applied: number;
+    removedFromSpecials: number;
+    skipped: number;
+    invalid: number;
+    missing: number;
+    errors: number;
+  } | null>(null);
 
   const reset = () => {
     setRaw("");
@@ -215,6 +222,9 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
     let applied = 0;
     let skipped = 0;
     let errors = 0;
+    const appliedFlashcardIds: string[] = [];
+    const invalidCount = preview.filter((r) => r.status === "invalid").length;
+    const missingCount = preview.filter((r) => r.status === "missing").length;
     try {
       for (const row of preview) {
         if (row.status === "missing" || row.status === "invalid") {
@@ -260,15 +270,49 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
           errors++;
         } else {
           applied++;
+          appliedFlashcardIds.push(item.flashcard_id!);
         }
       }
-      setReport({ applied, skipped, errors });
+      // Remove from user_special_flashcards ONLY the ids that were
+      // successfully applied. Skipped / invalid / missing / errored items stay.
+      let removedFromSpecials = 0;
+      if (appliedFlashcardIds.length > 0 && userId) {
+        const { error: delErr, count } = await supabase
+          .from("user_special_flashcards" as any)
+          .delete({ count: "exact" })
+          .eq("user_id", userId)
+          .in("flashcard_id", appliedFlashcardIds);
+        if (delErr) {
+          console.error("Failed to remove applied cards from specials", delErr);
+          toast.error(
+            "Explicações aplicadas, mas falhou ao remover dos especiais."
+          );
+        } else {
+          removedFromSpecials = count ?? appliedFlashcardIds.length;
+        }
+      }
+      setReport({
+        applied,
+        removedFromSpecials,
+        skipped,
+        invalid: invalidCount,
+        missing: missingCount,
+        errors,
+      });
       queryClient.invalidateQueries({ queryKey: ["flashcards"] });
       queryClient.invalidateQueries({ queryKey: ["list-flashcards"] });
       if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["special-flashcards", userId] });
+        queryClient.invalidateQueries({ queryKey: ["special-flashcards-count", userId] });
         queryClient.invalidateQueries({ queryKey: ["special-flashcards-details", userId] });
       }
-      toast.success(`Explicações importadas: ${applied} aplicadas, ${skipped} ignoradas, ${errors} com erro`);
+      if (applied > 0) {
+        toast.success(
+          `Explicações aplicadas. ${removedFromSpecials} card(s) com explicação aplicada saíram dos especiais.`
+        );
+      } else {
+        toast.message("Nenhuma explicação aplicada.");
+      }
     } catch (e: any) {
       console.error(e);
       toast.error("Erro ao aplicar: " + (e?.message ?? "desconhecido"));
@@ -412,7 +456,14 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
               {report && (
                 <div className="rounded-md border p-3 text-sm bg-muted/30">
                   <div className="font-medium mb-1">Resultado</div>
-                  <div>{report.applied} aplicadas · {report.skipped} ignoradas · {report.errors} com erro</div>
+                  <div className="space-y-0.5">
+                    <div>{report.applied} aplicada(s)</div>
+                    <div>{report.removedFromSpecials} removida(s) dos especiais</div>
+                    <div>{report.skipped} ignorada(s)</div>
+                    <div>{report.invalid} inválida(s)</div>
+                    <div>{report.missing} não encontrada(s)</div>
+                    <div>{report.errors} com erro</div>
+                  </div>
                 </div>
               )}
             </>
