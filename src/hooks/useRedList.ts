@@ -20,15 +20,22 @@ async function fetchRedList(
     return (data as any[])?.map((r: any) => r.flashcard_id) ?? [];
   }
 
-  // Scoped: only flashcard IDs that belong to this list
+  // Scoped: include card.id AND parent_card_id so red-list entries saved on
+  // the parent/aggregator id of layered cards are still recognized within
+  // this list.
   const { data: flashcards, error: fcError } = await supabase
     .from('flashcards')
-    .select('id')
+    .select('id, parent_card_id')
     .eq('list_id', listScope)
     .is('deleted_at', null);
 
   if (fcError) throw fcError;
-  const flashcardIds = flashcards?.map((f) => f.id) ?? [];
+  const idSet = new Set<string>();
+  for (const card of flashcards ?? []) {
+    if (card.id) idSet.add(card.id);
+    if ((card as any).parent_card_id) idSet.add((card as any).parent_card_id);
+  }
+  const flashcardIds = Array.from(idSet);
   if (flashcardIds.length === 0) return [];
 
   const { data, error } = await supabase
@@ -84,11 +91,11 @@ export function useToggleRedList() {
           .eq('flashcard_id', flashcardId);
         if (error) throw error;
       } else {
-        // Add to red list
+        // Add to red list — tolerate unique-violation races from rapid clicks.
         const { error } = await supabase
           .from('user_red_list' as any)
           .insert({ user_id: user.id, flashcard_id: flashcardId } as any);
-        if (error) throw error;
+        if (error && (error as any).code !== '23505') throw error;
       }
 
       return { flashcardId, isRedListed: !isRedListed, userId: user.id };
@@ -112,7 +119,7 @@ export function useToggleRedList() {
           if (isRedListed) {
             return old.filter((id) => id !== flashcardId);
           }
-          return [...old, flashcardId];
+          return old.includes(flashcardId) ? old : [...old, flashcardId];
         }
       );
 

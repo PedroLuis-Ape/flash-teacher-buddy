@@ -204,7 +204,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
             <Button
               variant="ghost"
               size="icon"
-              onClick={onToggleFavorite}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
               className={cn(
                 "h-8 w-8 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"

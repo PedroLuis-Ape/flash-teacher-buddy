@@ -216,7 +216,7 @@ export const FlipStudyView = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={onToggleFavorite}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
                 className={cn(
                   "transition-colors",
                   isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
@@ -351,7 +351,7 @@ export const FlipStudyView = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onToggleFavorite}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
               className={cn(
                 "transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"

@@ -199,7 +199,7 @@ export const WriteStudyView = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onToggleFavorite}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
               className={cn(
                 "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
                 isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"

@@ -28,6 +28,7 @@ export function RedListIndicator({
       variant="ghost"
       size={size === 'sm' ? 'icon' : 'sm'}
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         onToggleRedList();
       }}
