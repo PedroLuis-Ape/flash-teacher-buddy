@@ -804,36 +804,8 @@ const Study = () => {
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
 
-  // Group-aware favorite / red-list state for layered cards. For a non-layered
-  // card, this collapses to the single displayed card id. For a layered card,
-  // the icon is "active" when ANY layer of the group is starred/red-listed.
-  const currentGroupIds = useMemo<string[]>(() => {
-    const ids: string[] = [];
-    if (hasLayers && cardLayers) {
-      ids.push(...cardLayers.map((l) => l.id).filter(Boolean));
-    } else if (currentCard?.id) {
-      ids.push(currentCard.id);
-    }
-    // Include the parent/aggregator id so a favorite saved on the group id
-    // marks every layer of the group as favorited.
-    const parentId =
-      (currentCard as any)?.__parentCardId ||
-      (currentCard as any)?.parent_card_id ||
-      (cardLayers && (cardLayers[0] as any)?.parent_card_id) ||
-      null;
-    if (parentId && !ids.includes(parentId)) ids.push(parentId);
-    return ids;
-  }, [hasLayers, cardLayers, currentCard]);
-  const isDisplayedGroupFavorite = useMemo(
-    () => currentGroupIds.some((id) => favorites.includes(id)),
-    [currentGroupIds, favorites]
-  );
-  const isDisplayedGroupRedListed = useMemo(
-    () => currentGroupIds.some((id) => redListIds.includes(id)),
-    [currentGroupIds, redListIds]
-  );
-
-  // Special is single-card (never group). Computed once displayedCard exists below.
+  // Centralized status-target resolution lives further below (after
+  // `displayedCard` is defined) — see `currentStatusTargets`.
 
   // Stable handlers for layer navigation. These NEVER touch the engine,
   // currentIndex, progress, or session counters — they only flip the
@@ -863,10 +835,143 @@ const Study = () => {
     displayedCardIdRef.current = displayedCard?.id ?? null;
   }, [displayedCard?.id]);
 
-  const isDisplayedSpecial = useMemo(
-    () => (displayedCard?.id ? specialIds.includes(displayedCard.id) : false),
-    [displayedCard?.id, specialIds]
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Centralized status-target resolution for Favorite / Red List / Special.
+  //
+  // Single source of truth used by every button in study mode. Each system
+  // has different semantics:
+  //   - Favorite & Red List target the GROUP (parent_card_id when layered).
+  //   - Special targets the VISIBLE layer/card only.
+  // `compatibilityIds` lets the UI also recognize legacy per-layer marks.
+  // ─────────────────────────────────────────────────────────────────────────────
+  const currentStatusTargets = useMemo(() => {
+    const visibleCardId: string | null = displayedCard?.id ?? null;
+    const groupId: string | null =
+      (displayedCard as any)?.__parentCardId ||
+      (displayedCard as any)?.parent_card_id ||
+      (engineCurrentCard as any)?.__parentCardId ||
+      (engineCurrentCard as any)?.parent_card_id ||
+      (cardLayers && (cardLayers[0] as any)?.parent_card_id) ||
+      null;
+    const allLayerIds: string[] =
+      Array.isArray(cardLayers) && cardLayers.length > 1
+        ? cardLayers.map((l) => l.id).filter(Boolean)
+        : [];
+    const favoriteTargetId: string | null =
+      groupId || visibleCardId || engineCurrentCard?.id || null;
+    const redListTargetId: string | null = favoriteTargetId;
+    const specialTargetId: string | null = visibleCardId;
+    const compatibilityIds = Array.from(
+      new Set(
+        [
+          favoriteTargetId,
+          redListTargetId,
+          specialTargetId,
+          groupId,
+          visibleCardId,
+          engineCurrentCard?.id ?? null,
+          ...allLayerIds,
+        ].filter((v): v is string => !!v),
+      ),
+    );
+    return {
+      visibleCardId,
+      groupId,
+      allLayerIds,
+      favoriteTargetId,
+      redListTargetId,
+      specialTargetId,
+      compatibilityIds,
+    };
+  }, [displayedCard, engineCurrentCard, cardLayers]);
+
+  const isDisplayedGroupFavorite = useMemo(
+    () => currentStatusTargets.compatibilityIds.some((id) => favorites.includes(id)),
+    [currentStatusTargets, favorites],
   );
+  const isDisplayedGroupRedListed = useMemo(
+    () => currentStatusTargets.compatibilityIds.some((id) => redListIds.includes(id)),
+    [currentStatusTargets, redListIds],
+  );
+  const isDisplayedSpecial = useMemo(
+    () =>
+      currentStatusTargets.specialTargetId
+        ? specialIds.includes(currentStatusTargets.specialTargetId)
+        : false,
+    [currentStatusTargets, specialIds],
+  );
+
+  const handleToggleFavorite = () => {
+    if (!userId) return;
+    const targetId = currentStatusTargets.favoriteTargetId;
+    if (!targetId) return;
+    // Treat the group as favorited if ANY compat id (parent or legacy layer)
+    // exists in the favorites set. New writes always target the canonical id.
+    const legacyLayerFavs = currentStatusTargets.compatibilityIds.filter(
+      (id) => id !== targetId && favorites.includes(id),
+    );
+    const targetIsFav = favorites.includes(targetId);
+    const isCurrentlyFav = targetIsFav || legacyLayerFavs.length > 0;
+
+    toggleFavorite.mutate({
+      resourceId: targetId,
+      resourceType: 'flashcard',
+      // When unfavoriting, only flip the canonical target if it was actually
+      // stored; otherwise the legacy cleanup below will clear the group.
+      isFavorite: isCurrentlyFav && targetIsFav,
+    });
+    if (isCurrentlyFav && legacyLayerFavs.length > 0) {
+      legacyLayerFavs.forEach((id) => {
+        toggleFavorite.mutate({
+          resourceId: id,
+          resourceType: 'flashcard',
+          isFavorite: true,
+        });
+      });
+    }
+  };
+
+  const handleToggleRedList = () => {
+    if (!userId) return;
+    const targetId = currentStatusTargets.redListTargetId;
+    if (!targetId) return;
+    const anyFav = currentStatusTargets.compatibilityIds.some((id) =>
+      favorites.includes(id),
+    );
+    if (!anyFav) {
+      toast.error('Primeiro marque o card como favorito ⭐');
+      return;
+    }
+    const legacyLayerReds = currentStatusTargets.compatibilityIds.filter(
+      (id) => id !== targetId && redListIds.includes(id),
+    );
+    const targetIsRed = redListIds.includes(targetId);
+    const isCurrentlyRed = targetIsRed || legacyLayerReds.length > 0;
+
+    toggleRedList.mutate({
+      flashcardId: targetId,
+      isRedListed: isCurrentlyRed && targetIsRed,
+    });
+    if (isCurrentlyRed && legacyLayerReds.length > 0) {
+      legacyLayerReds.forEach((id) => {
+        toggleRedList.mutate({ flashcardId: id, isRedListed: true });
+      });
+    }
+  };
+
+  // Special targets ONLY the visible layer/card — never the group.
+  // Independent from favorites and red-list. Never advances / counts.
+  const handleToggleSpecial = () => {
+    if (!userId) return;
+    const targetId = currentStatusTargets.specialTargetId;
+    if (!targetId) return;
+    const isSpecial = specialIds.includes(targetId);
+    toggleSpecial.mutate({
+      flashcardId: targetId,
+      listId: listId ?? null,
+      isSpecial,
+    });
+  };
 
   // DEV-only diagnostic for layer navigation. Stripped in production builds.
   useEffect(() => {
