@@ -78,7 +78,8 @@ export function useToggleSpecialFlashcard() {
             flashcard_id: flashcardId,
             list_id: listId ?? null,
           } as any);
-        if (error) throw error;
+        // Tolerate unique-violation races (rapid clicks / concurrent tabs).
+        if (error && (error as any).code !== '23505') throw error;
       }
       return { flashcardId, isSpecial: !isSpecial, userId: user.id };
     },
