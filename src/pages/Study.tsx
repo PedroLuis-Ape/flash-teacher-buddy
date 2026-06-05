@@ -683,95 +683,10 @@ const Study = () => {
     ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
     : undefined;
 
-  // Resolve all IDs in the current layer group. For a non-layered card,
-  // returns the single displayed card id. For a layered card, returns ALL
-  // layer ids so favorite / red-list act on the whole group.
-  const getCurrentLayerGroupIds = (): string[] => {
-    const baseId = displayedCardIdRef.current ?? engineCurrentCard?.id;
-    if (!baseId) return [];
-    const entry = engineCurrentCardId
-      ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
-      : undefined;
-    const layers = (entry as any)?.__layers as Flashcard[] | undefined;
-    if (Array.isArray(layers) && layers.length > 1) {
-      return layers.map((l) => l.id).filter(Boolean);
-    }
-    return [baseId];
-  };
-
-  const handleToggleFavorite = () => {
-    if (!userId) return;
-    // Single canonical favorite target:
-    //  - layered card -> parent_card_id (group/aggregator id)
-    //  - normal card  -> the card's own id
-    // Falls back to the visible layer id only when no parent is known.
-    const baseEntry = engineCurrentCardId
-      ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
-      : undefined;
-    const parentId =
-      (displayedCard as any)?.__parentCardId ||
-      (displayedCard as any)?.parent_card_id ||
-      (baseEntry as any)?.__parentCardId ||
-      (baseEntry as any)?.parent_card_id ||
-      null;
-    const targetId: string | null =
-      parentId || displayedCardIdRef.current || engineCurrentCard?.id || null;
-    if (!targetId) return;
-
-    // Group is considered favorited when the parent id OR any layer id is
-    // already in favorites (backwards compat with legacy per-layer saves).
-    const groupIds = getCurrentLayerGroupIds();
-    const legacyFavLayerIds = groupIds.filter((id) => id !== targetId && favorites.includes(id));
-    const parentIsFav = favorites.includes(targetId);
-    const isCurrentlyFav = parentIsFav || legacyFavLayerIds.length > 0;
-
-    // Toggle the canonical target with a single mutation.
-    toggleFavorite.mutate({
-      resourceId: targetId,
-      resourceType: 'flashcard',
-      isFavorite: isCurrentlyFav && parentIsFav,
-    });
-
-    // Cleanup: when unfavoriting, also clear any legacy per-layer favorites
-    // so the group truly leaves the favorites set.
-    if (isCurrentlyFav) {
-      legacyFavLayerIds.forEach((id) => {
-        toggleFavorite.mutate({ resourceId: id, resourceType: 'flashcard', isFavorite: true });
-      });
-    }
-  };
-
-  const handleToggleRedList = () => {
-    const ids = getCurrentLayerGroupIds();
-    if (ids.length === 0 || !userId) return;
-    // Group is considered favorite if any layer is favorited.
-    const anyFav = ids.some((id) => favorites.includes(id));
-    if (!anyFav) {
-      toast.error('Primeiro marque o card como favorito ⭐');
-      return;
-    }
-    const allRed = ids.every((id) => redListIds.includes(id));
-    if (allRed) {
-      ids.forEach((id) => {
-        toggleRedList.mutate({ flashcardId: id, isRedListed: true });
-      });
-    } else {
-      ids.forEach((id) => {
-        if (!redListIds.includes(id)) {
-          toggleRedList.mutate({ flashcardId: id, isRedListed: false });
-        }
-      });
-    }
-  };
-
-  // Special cards: acts on the SINGLE displayed card/layer (never the group).
-  // Independent from favorites and red-list. Does NOT advance, count or skip.
-  const handleToggleSpecial = () => {
-    const id = displayedCardIdRef.current;
-    if (!id || !userId) return;
-    const isSpecial = specialIds.includes(id);
-    toggleSpecial.mutate({ flashcardId: id, listId: listId ?? null, isSpecial });
-  };
+  // Status target resolution (currentStatusTargets) is defined further below,
+  // after `displayedCard` is established. The handlers and derived flags for
+  // favorite / red-list / special live there so the entire button system has
+  // a single, predictable source of truth.
 
   // ── In-game card edit ──
   // Mirrors ListDetail's handleUpdateFlashcard but updates local `flashcards`
