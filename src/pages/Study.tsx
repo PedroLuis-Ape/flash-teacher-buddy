@@ -893,9 +893,22 @@ const Study = () => {
   // card, this collapses to the single displayed card id. For a layered card,
   // the icon is "active" when ANY layer of the group is starred/red-listed.
   const currentGroupIds = useMemo<string[]>(() => {
-    if (hasLayers && cardLayers) return cardLayers.map((l) => l.id).filter(Boolean);
-    return currentCard?.id ? [currentCard.id] : [];
-  }, [hasLayers, cardLayers, currentCard?.id]);
+    const ids: string[] = [];
+    if (hasLayers && cardLayers) {
+      ids.push(...cardLayers.map((l) => l.id).filter(Boolean));
+    } else if (currentCard?.id) {
+      ids.push(currentCard.id);
+    }
+    // Include the parent/aggregator id so a favorite saved on the group id
+    // marks every layer of the group as favorited.
+    const parentId =
+      (currentCard as any)?.__parentCardId ||
+      (currentCard as any)?.parent_card_id ||
+      (cardLayers && (cardLayers[0] as any)?.parent_card_id) ||
+      null;
+    if (parentId && !ids.includes(parentId)) ids.push(parentId);
+    return ids;
+  }, [hasLayers, cardLayers, currentCard]);
   const isDisplayedGroupFavorite = useMemo(
     () => currentGroupIds.some((id) => favorites.includes(id)),
     [currentGroupIds, favorites]
