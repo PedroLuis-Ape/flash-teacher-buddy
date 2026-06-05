@@ -700,27 +700,43 @@ const Study = () => {
   };
 
   const handleToggleFavorite = () => {
-    const ids = getCurrentLayerGroupIds();
-    if (ids.length === 0 || !userId) return;
-    const allFav = ids.every((id) => favorites.includes(id));
-    // If all are favorites -> remove all. Otherwise -> add the missing ones.
-    if (allFav) {
-      ids.forEach((id) => {
-        toggleFavorite.mutate({
-          resourceId: id,
-          resourceType: 'flashcard',
-          isFavorite: true,
-        });
-      });
-    } else {
-      ids.forEach((id) => {
-        if (!favorites.includes(id)) {
-          toggleFavorite.mutate({
-            resourceId: id,
-            resourceType: 'flashcard',
-            isFavorite: false,
-          });
-        }
+    if (!userId) return;
+    // Single canonical favorite target:
+    //  - layered card -> parent_card_id (group/aggregator id)
+    //  - normal card  -> the card's own id
+    // Falls back to the visible layer id only when no parent is known.
+    const baseEntry = engineCurrentCardId
+      ? (effectiveFlashcardById.get(engineCurrentCardId) || flashcardById.get(engineCurrentCardId))
+      : undefined;
+    const parentId =
+      (displayedCard as any)?.__parentCardId ||
+      (displayedCard as any)?.parent_card_id ||
+      (baseEntry as any)?.__parentCardId ||
+      (baseEntry as any)?.parent_card_id ||
+      null;
+    const targetId: string | null =
+      parentId || displayedCardIdRef.current || engineCurrentCard?.id || null;
+    if (!targetId) return;
+
+    // Group is considered favorited when the parent id OR any layer id is
+    // already in favorites (backwards compat with legacy per-layer saves).
+    const groupIds = getCurrentLayerGroupIds();
+    const legacyFavLayerIds = groupIds.filter((id) => id !== targetId && favorites.includes(id));
+    const parentIsFav = favorites.includes(targetId);
+    const isCurrentlyFav = parentIsFav || legacyFavLayerIds.length > 0;
+
+    // Toggle the canonical target with a single mutation.
+    toggleFavorite.mutate({
+      resourceId: targetId,
+      resourceType: 'flashcard',
+      isFavorite: isCurrentlyFav && parentIsFav,
+    });
+
+    // Cleanup: when unfavoriting, also clear any legacy per-layer favorites
+    // so the group truly leaves the favorites set.
+    if (isCurrentlyFav) {
+      legacyFavLayerIds.forEach((id) => {
+        toggleFavorite.mutate({ resourceId: id, resourceType: 'flashcard', isFavorite: true });
       });
     }
   };
@@ -877,9 +893,22 @@ const Study = () => {
   // card, this collapses to the single displayed card id. For a layered card,
   // the icon is "active" when ANY layer of the group is starred/red-listed.
   const currentGroupIds = useMemo<string[]>(() => {
-    if (hasLayers && cardLayers) return cardLayers.map((l) => l.id).filter(Boolean);
-    return currentCard?.id ? [currentCard.id] : [];
-  }, [hasLayers, cardLayers, currentCard?.id]);
+    const ids: string[] = [];
+    if (hasLayers && cardLayers) {
+      ids.push(...cardLayers.map((l) => l.id).filter(Boolean));
+    } else if (currentCard?.id) {
+      ids.push(currentCard.id);
+    }
+    // Include the parent/aggregator id so a favorite saved on the group id
+    // marks every layer of the group as favorited.
+    const parentId =
+      (currentCard as any)?.__parentCardId ||
+      (currentCard as any)?.parent_card_id ||
+      (cardLayers && (cardLayers[0] as any)?.parent_card_id) ||
+      null;
+    if (parentId && !ids.includes(parentId)) ids.push(parentId);
+    return ids;
+  }, [hasLayers, cardLayers, currentCard]);
   const isDisplayedGroupFavorite = useMemo(
     () => currentGroupIds.some((id) => favorites.includes(id)),
     [currentGroupIds, favorites]

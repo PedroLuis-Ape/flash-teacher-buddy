@@ -22,7 +22,7 @@ async function resolveScopedFlashcardIds(scope: FavoriteScope): Promise<string[]
   if (scope.listId || scope.collectionId) {
     let flashcardsQuery = supabase
       .from('flashcards')
-      .select('id')
+      .select('id, parent_card_id')
       .is('deleted_at', null);
 
     if (scope.listId) {
@@ -36,7 +36,14 @@ async function resolveScopedFlashcardIds(scope: FavoriteScope): Promise<string[]
     const { data: flashcards, error } = await flashcardsQuery;
     if (error) throw error;
 
-    return flashcards?.map((card) => card.id) ?? [];
+    // Include parent_card_id of layered cards so favorites saved on the
+    // group/aggregator id are also counted as scoped favorites.
+    const set = new Set<string>();
+    for (const card of flashcards ?? []) {
+      if (card.id) set.add(card.id);
+      if ((card as any).parent_card_id) set.add((card as any).parent_card_id);
+    }
+    return Array.from(set);
   }
 
   // Secondary scope: folder / institution -> resolve lists first
@@ -61,13 +68,18 @@ async function resolveScopedFlashcardIds(scope: FavoriteScope): Promise<string[]
 
   const { data: flashcards, error: flashcardsError } = await supabase
     .from('flashcards')
-    .select('id')
+    .select('id, parent_card_id')
     .in('list_id', listIds)
     .is('deleted_at', null);
 
   if (flashcardsError) throw flashcardsError;
 
-  return flashcards?.map((card) => card.id) ?? [];
+  const set = new Set<string>();
+  for (const card of flashcards ?? []) {
+    if (card.id) set.add(card.id);
+    if ((card as any).parent_card_id) set.add((card as any).parent_card_id);
+  }
+  return Array.from(set);
 }
 
 async function fetchFavoritesByScope(
@@ -157,15 +169,16 @@ export function useToggleFavorite() {
           await removeFromRedListIfNeeded(user.id, resourceId);
         }
       } else {
+        // Safe insert: tolerate duplicate-key races from rapid clicks or
+        // concurrent tabs. 23505 = unique_violation in Postgres.
         const { error } = await supabase
           .from('user_favorites')
-          .insert({ 
-            user_id: user.id, 
+          .insert({
+            user_id: user.id,
             resource_type: resourceType,
-            resource_id: resourceId 
+            resource_id: resourceId,
           });
-        
-        if (error) throw error;
+        if (error && (error as any).code !== '23505') throw error;
       }
       
       return { resourceId, resourceType, isFavorite: !isFavorite, userId: user.id };
@@ -192,7 +205,7 @@ export function useToggleFavorite() {
         if (isFavorite) {
           return old.filter((id) => id !== resourceId);
         }
-        return [...old, resourceId];
+        return old.includes(resourceId) ? old : [...old, resourceId];
       });
 
       // Optimistic update for favorites count
