@@ -391,7 +391,10 @@ export const FlipStudyView = ({
       {/* Flip card - can be flipped infinitely */}
       <div
         className={cn("flip-card w-full h-64 sm:h-80 cursor-pointer", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
-        onClick={handleFlip}
+        onClick={handleCardClick}
+        onTouchStart={onCardTouchStart}
+        onTouchEnd={onCardTouchEnd}
+        style={{ touchAction: "pan-y" }}
       >
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           {/* Front side */}
