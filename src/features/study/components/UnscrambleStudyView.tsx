@@ -7,7 +7,6 @@ import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySid
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
-import { getRedListCardClass as _unused1 } from "./RedListIndicator";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { cn } from "@/lib/utils";
