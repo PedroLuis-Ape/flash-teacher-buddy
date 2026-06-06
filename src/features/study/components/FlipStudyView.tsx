@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
+import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
-import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
-import { HintButton } from "./HintButton";
+import { getSpeechRate } from "./SpeechRateControl";
+import { StudyToolsMenu } from "./StudyToolsMenu";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
-import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
-import { SpecialButton } from "./SpecialButton";
+import { getRedListCardClass } from "./RedListIndicator";
 
 interface FlipStudyViewProps {
   front: string;
