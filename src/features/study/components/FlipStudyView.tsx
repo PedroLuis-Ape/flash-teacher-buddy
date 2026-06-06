@@ -83,6 +83,47 @@ export const FlipStudyView = ({
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const { speak } = useTTS();
+
+  // --- Swipe gesture (mobile-first) ---
+  // Esquerda→Direita = card anterior. Direita→Esquerda = próximo card.
+  // Threshold mínimo de 60px e tolerância vertical de 80px para evitar trocas
+  // acidentais. Respeita canGoPrevious/canGoNext (não passa do primeiro nem
+  // do último card). Não interfere com o tap-to-flip: se houve swipe, o
+  // próximo onClick é ignorado via ref.
+  const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const swipeConsumedRef = useRef(false);
+
+  const onCardTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+    swipeConsumedRef.current = false;
+  };
+
+  const onCardTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const elapsed = Date.now() - start.t;
+    // Ignore long-press drags and small jitter taps.
+    if (Math.abs(dx) < 60 || Math.abs(dy) > 80 || elapsed > 800) return;
+    swipeConsumedRef.current = true;
+    if (dx < 0) {
+      if (onNext && canGoNext) onNext();
+    } else {
+      if (onPrevious && canGoPrevious) onPrevious();
+    }
+  };
+
+  const handleCardClick = () => {
+    if (swipeConsumedRef.current) {
+      swipeConsumedRef.current = false;
+      return;
+    }
+    handleFlip();
+  };
   
   const handleKnew = async () => {
     playCorrect();
