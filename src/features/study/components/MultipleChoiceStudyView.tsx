@@ -10,7 +10,7 @@ import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
-import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
+import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
@@ -202,7 +202,6 @@ export const MultipleChoiceStudyView = ({
               <InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} />
             </p>
             <div className="flex items-center gap-1">
-              <SpeechRateControl />
               <Button
                 variant="ghost"
                 size="sm"
