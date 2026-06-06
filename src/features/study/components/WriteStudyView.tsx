@@ -3,20 +3,19 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lightbulb, Eye, SkipForward, Volume2, Star } from "lucide-react";
+import { Lightbulb, SkipForward, Volume2 } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
 import { getDiffTokens } from "@/lib/diffHighlighter";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
-import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
-import { SpecialButton } from "./SpecialButton";
+import { getRedListCardClass } from "./RedListIndicator";
 import { isAlmostCorrect } from "@/lib/levenshtein";
 import pitecoSad from "@/assets/piteco-sad.png";
 import pitecoHappy from "@/assets/piteco-happy.png";
-import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
-import { HintButton } from "./HintButton";
+import { getSpeechRate } from "./SpeechRateControl";
+import { StudyToolsMenu } from "./StudyToolsMenu";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
@@ -195,23 +194,15 @@ export const WriteStudyView = ({
     <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
       <Card className={cn("p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative", getRedListCardClass(isRedListed))}>
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
-          {onToggleFavorite && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
-              className={cn(
-                "h-8 w-8 sm:h-9 sm:w-9 transition-colors",
-                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-              )}
-              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-            >
-              <Star className={cn("h-4 w-4 sm:h-5 sm:w-5", isFavorite && "fill-current")} />
-            </Button>
-          )}
-          <HintButton hint={hint} />
-          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
-          {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
+          <StudyToolsMenu
+            hint={hint}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+            isRedListed={isRedListed}
+            onToggleRedList={onToggleRedList}
+            isSpecial={isSpecial}
+            onToggleSpecial={onToggleSpecial}
+          />
         </div>
         <div className="text-center">
           <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>
@@ -220,7 +211,6 @@ export const WriteStudyView = ({
               <InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} />
             </p>
             <div className="flex items-center gap-1">
-              <SpeechRateControl />
               <Button
                 variant="ghost"
                 size="sm"
