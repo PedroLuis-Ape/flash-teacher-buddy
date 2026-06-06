@@ -209,26 +209,16 @@ export const FlipStudyView = ({
       <div className="flex flex-col items-center gap-4 w-full max-w-2xl mx-auto">
         {/* Controls row */}
         <div className="w-full flex justify-between items-center mb-2">
-          <HintButton hint={hint} />
-          <div className="flex items-center gap-2">
-            {onToggleFavorite && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
-                className={cn(
-                  "transition-colors",
-                  isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-                )}
-                title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-              >
-                <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
-              </Button>
-            )}
-            <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
-            {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
-            <SpeechRateControl />
-          </div>
+          <span className="text-xs text-muted-foreground">Modo apresentação</span>
+          <StudyToolsMenu
+            hint={hint}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+            isRedListed={isRedListed}
+            onToggleRedList={onToggleRedList}
+            isSpecial={isSpecial}
+            onToggleSpecial={onToggleSpecial}
+          />
         </div>
 
         {/* Fast Mode Card - Two panels stacked */}
