@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Volume2, RotateCcw, Check, Star } from "lucide-react";
+import { Volume2, RotateCcw, Check } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
-import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
-import { SpecialButton } from "./SpecialButton";
-import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
-import { HintButton } from "./HintButton";
+import { getRedListCardClass } from "./RedListIndicator";
+import { getSpeechRate } from "./SpeechRateControl";
+import { StudyToolsMenu } from "./StudyToolsMenu";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
@@ -186,31 +185,6 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
         <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4 flex-wrap">
           <h3 className="text-base sm:text-lg font-semibold">Organize as palavras:</h3>
           <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            {onToggleFavorite && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
-                className={cn(
-                  "h-8 w-8 transition-colors",
-                  isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-                )}
-                title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-              >
-                <Star className={cn("h-4 w-4", isFavorite && "fill-current")} />
-              </Button>
-            )}
-            <HintButton hint={hint} />
-            <RedListIndicator
-              isRedListed={isRedListed}
-              isFavorite={isFavorite}
-              onToggleRedList={onToggleRedList}
-              size="sm"
-            />
-            {onToggleSpecial && (
-              <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />
-            )}
-            <SpeechRateControl />
             <Button
               variant="ghost"
               size="icon"
@@ -220,6 +194,15 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
             >
               <Volume2 className="w-4 h-4" />
             </Button>
+            <StudyToolsMenu
+              hint={hint}
+              isFavorite={isFavorite}
+              onToggleFavorite={onToggleFavorite}
+              isRedListed={isRedListed}
+              onToggleRedList={onToggleRedList}
+              isSpecial={isSpecial}
+              onToggleSpecial={onToggleSpecial}
+            />
           </div>
         </div>
         <p className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 break-words px-2">

@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check, Star } from "lucide-react";
+import { RotateCcw, Volume2, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
-import { SpeechRateControl, getSpeechRate } from "./SpeechRateControl";
-import { HintButton } from "./HintButton";
+import { getSpeechRate } from "./SpeechRateControl";
+import { StudyToolsMenu } from "./StudyToolsMenu";
 import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
-import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
-import { SpecialButton } from "./SpecialButton";
+import { getRedListCardClass } from "./RedListIndicator";
 
 interface FlipStudyViewProps {
   front: string;
@@ -84,6 +83,47 @@ export const FlipStudyView = ({
 }: FlipStudyViewProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const { speak } = useTTS();
+
+  // --- Swipe gesture (mobile-first) ---
+  // Esquerda→Direita = card anterior. Direita→Esquerda = próximo card.
+  // Threshold mínimo de 60px e tolerância vertical de 80px para evitar trocas
+  // acidentais. Respeita canGoPrevious/canGoNext (não passa do primeiro nem
+  // do último card). Não interfere com o tap-to-flip: se houve swipe, o
+  // próximo onClick é ignorado via ref.
+  const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const swipeConsumedRef = useRef(false);
+
+  const onCardTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+    swipeConsumedRef.current = false;
+  };
+
+  const onCardTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const elapsed = Date.now() - start.t;
+    // Ignore long-press drags and small jitter taps.
+    if (Math.abs(dx) < 60 || Math.abs(dy) > 80 || elapsed > 800) return;
+    swipeConsumedRef.current = true;
+    if (dx < 0) {
+      if (onNext && canGoNext) onNext();
+    } else {
+      if (onPrevious && canGoPrevious) onPrevious();
+    }
+  };
+
+  const handleCardClick = () => {
+    if (swipeConsumedRef.current) {
+      swipeConsumedRef.current = false;
+      return;
+    }
+    handleFlip();
+  };
   
   const handleKnew = async () => {
     playCorrect();
@@ -210,26 +250,16 @@ export const FlipStudyView = ({
       <div className="flex flex-col items-center gap-4 w-full max-w-2xl mx-auto">
         {/* Controls row */}
         <div className="w-full flex justify-between items-center mb-2">
-          <HintButton hint={hint} />
-          <div className="flex items-center gap-2">
-            {onToggleFavorite && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
-                className={cn(
-                  "transition-colors",
-                  isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-                )}
-                title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-              >
-                <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
-              </Button>
-            )}
-            <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
-            {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
-            <SpeechRateControl />
-          </div>
+          <span className="text-xs text-muted-foreground">Modo apresentação</span>
+          <StudyToolsMenu
+            hint={hint}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+            isRedListed={isRedListed}
+            onToggleRedList={onToggleRedList}
+            isSpecial={isSpecial}
+            onToggleSpecial={onToggleSpecial}
+          />
         </div>
 
         {/* Fast Mode Card - Two panels stacked */}
@@ -344,33 +374,27 @@ export const FlipStudyView = ({
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
       {/* Controls row */}
       <div className="w-full flex justify-between items-center mb-2">
-        <HintButton hint={hint} />
-        <div className="flex items-center gap-2">
-          {/* Favorite button in-game */}
-          {onToggleFavorite && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
-              className={cn(
-                "transition-colors",
-                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-              )}
-              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-            >
-              <Star className={cn("h-5 w-5", isFavorite && "fill-current")} />
-            </Button>
-          )}
-          <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
-          {onToggleSpecial && <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />}
-          <SpeechRateControl />
-        </div>
+        <span className="text-xs text-muted-foreground">
+          Deslize para navegar • toque para virar
+        </span>
+        <StudyToolsMenu
+          hint={hint}
+          isFavorite={isFavorite}
+          onToggleFavorite={onToggleFavorite}
+          isRedListed={isRedListed}
+          onToggleRedList={onToggleRedList}
+          isSpecial={isSpecial}
+          onToggleSpecial={onToggleSpecial}
+        />
       </div>
       
       {/* Flip card - can be flipped infinitely */}
       <div
         className={cn("flip-card w-full h-64 sm:h-80 cursor-pointer", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
-        onClick={handleFlip}
+        onClick={handleCardClick}
+        onTouchStart={onCardTouchStart}
+        onTouchEnd={onCardTouchEnd}
+        style={{ touchAction: "pan-y" }}
       >
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           {/* Front side */}

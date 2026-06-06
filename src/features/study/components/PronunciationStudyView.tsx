@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle, Star } from "lucide-react";
+import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
@@ -10,8 +10,8 @@ import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
-import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
-import { SpecialButton } from "./SpecialButton";
+import { getRedListCardClass } from "./RedListIndicator";
+import { StudyToolsMenu } from "./StudyToolsMenu";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
@@ -199,26 +199,16 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
       <Card className={cn("w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden", getRedListCardClass(isRedListed))}>
-        {onToggleFavorite && (
-          <div className="absolute top-3 right-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite?.(); }}
-              className={cn(
-                "h-8 w-8 transition-colors",
-                isFavorite ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500"
-              )}
-              title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-            >
-              <Star className={cn("h-4 w-4", isFavorite && "fill-current")} />
-            </Button>
-            <RedListIndicator isRedListed={isRedListed} isFavorite={isFavorite} onToggleRedList={onToggleRedList} size="sm" />
-            {onToggleSpecial && (
-              <SpecialButton isSpecial={isSpecial} onToggle={onToggleSpecial} />
-            )}
-          </div>
-        )}
+        <div className="absolute top-3 right-3">
+          <StudyToolsMenu
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+            isRedListed={isRedListed}
+            onToggleRedList={onToggleRedList}
+            isSpecial={isSpecial}
+            onToggleSpecial={onToggleSpecial}
+          />
+        </div>
         <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
           Fale em {speakSide.label}
         </p>
