@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Volume2, RotateCcw, Check, Star } from "lucide-react";
+import { Volume2, RotateCcw, Check } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
-import { RedListIndicator, getRedListCardClass } from "./RedListIndicator";
+import { getRedListCardClass } from "./RedListIndicator";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { cn } from "@/lib/utils";
