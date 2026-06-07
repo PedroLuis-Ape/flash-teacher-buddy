@@ -232,8 +232,10 @@ const Study = () => {
     const cardMatchesFav = (c: Flashcard) => {
       if (favSet.has(c.id)) return true;
       const layers = (c as any).__layers as Flashcard[] | undefined;
-      if (layers && layers.some(L => favSet.has(L.id))) return true;
+      if (layers && layers.some(L => favSet.has(L.id) || (L.parent_card_id && favSet.has(L.parent_card_id)))) return true;
       if (c.parent_card_id && favSet.has(c.parent_card_id)) return true;
+      const pgid = (c as any).__parentCardId as string | undefined;
+      if (pgid && favSet.has(pgid)) return true;
       return false;
     };
     const favOnly = flashcards.filter(cardMatchesFav);
@@ -241,8 +243,11 @@ const Study = () => {
     const redSet = new Set(redListIds);
     const cardMatchesRed = (c: Flashcard) => {
       if (redSet.has(c.id)) return true;
+      if (c.parent_card_id && redSet.has(c.parent_card_id)) return true;
+      const pgid = (c as any).__parentCardId as string | undefined;
+      if (pgid && redSet.has(pgid)) return true;
       const layers = (c as any).__layers as Flashcard[] | undefined;
-      if (layers && layers.some(L => redSet.has(L.id))) return true;
+      if (layers && layers.some(L => redSet.has(L.id) || (L.parent_card_id && redSet.has(L.parent_card_id)))) return true;
       return false;
     };
     return favOnly.filter(cardMatchesRed);
