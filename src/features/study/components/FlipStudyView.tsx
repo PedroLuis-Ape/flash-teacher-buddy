@@ -248,22 +248,19 @@ export const FlipStudyView = ({
   if (fastMode) {
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-2xl mx-auto">
-        {/* Controls row */}
-        <div className="w-full flex justify-between items-center mb-2">
-          <span className="text-xs text-muted-foreground">Modo apresentação</span>
-          <StudyToolsMenu
-            hint={hint}
-            isFavorite={isFavorite}
-            onToggleFavorite={onToggleFavorite}
-            isRedListed={isRedListed}
-            onToggleRedList={onToggleRedList}
-            isSpecial={isSpecial}
-            onToggleSpecial={onToggleSpecial}
-          />
-        </div>
-
         {/* Fast Mode Card - Two panels stacked */}
-        <Card className={cn("w-full overflow-hidden", getRedListCardClass(isRedListed))}>
+        <Card className={cn("w-full overflow-hidden relative", getRedListCardClass(isRedListed))}>
+          <div className="absolute top-2 right-2 z-10">
+            <StudyToolsMenu
+              hint={hint}
+              isFavorite={isFavorite}
+              onToggleFavorite={onToggleFavorite}
+              isRedListed={isRedListed}
+              onToggleRedList={onToggleRedList}
+              isSpecial={isSpecial}
+              onToggleSpecial={onToggleSpecial}
+            />
+          </div>
           {/* Top panel (question/origin) */}
           <div className="border-b border-border bg-gradient-to-br from-card to-muted/20 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
@@ -372,30 +369,29 @@ export const FlipStudyView = ({
   // Normal Flip Mode UI
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
-      {/* Controls row */}
-      <div className="w-full flex justify-between items-center mb-2">
-        <span className="text-xs text-muted-foreground">
-          Deslize para navegar • toque para virar
-        </span>
-        <StudyToolsMenu
-          hint={hint}
-          isFavorite={isFavorite}
-          onToggleFavorite={onToggleFavorite}
-          isRedListed={isRedListed}
-          onToggleRedList={onToggleRedList}
-          isSpecial={isSpecial}
-          onToggleSpecial={onToggleSpecial}
-        />
-      </div>
-      
       {/* Flip card - can be flipped infinitely */}
       <div
-        className={cn("flip-card w-full h-64 sm:h-80 cursor-pointer", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
+        className={cn("flip-card w-full h-64 sm:h-80 cursor-pointer relative", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
         onClick={handleCardClick}
         onTouchStart={onCardTouchStart}
         onTouchEnd={onCardTouchEnd}
         style={{ touchAction: "pan-y" }}
       >
+        {/* Discreet tools button anchored to the card */}
+        <div
+          className="absolute top-2 right-2 z-20"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <StudyToolsMenu
+            hint={hint}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+            isRedListed={isRedListed}
+            onToggleRedList={onToggleRedList}
+            isSpecial={isSpecial}
+            onToggleSpecial={onToggleSpecial}
+          />
+        </div>
         <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
           {/* Front side */}
           <div className="flip-card-front">
