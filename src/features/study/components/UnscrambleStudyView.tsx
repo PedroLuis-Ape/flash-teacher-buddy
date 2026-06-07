@@ -176,38 +176,40 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto px-2 sm:p-4">
-      <Card className={cn("w-full p-4 sm:p-6 bg-card", getRedListCardClass(isRedListed))}>
+      <Card className={cn("w-full p-4 sm:p-6 bg-card relative", getRedListCardClass(isRedListed))}>
         {/*
-          Linha de controles do card: título à esquerda, ações em linha à direita.
-          Os botões (favorito, dica, lista vermelha, velocidade, áudio) ficam todos
-          no mesmo eixo horizontal para evitar sobreposição com o título/pergunta.
+          Layout limpo: ferramentas secundárias ficam ancoradas no canto superior
+          direito do card (menu único). O áudio fica próximo ao enunciado como
+          ação primária. Título discreto no topo para não competir com a frase.
         */}
-        <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4 flex-wrap">
-          <h3 className="text-base sm:text-lg font-semibold">Organize as palavras:</h3>
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePlayAudio}
-              className="shrink-0 h-8 w-8"
-              title="Ouvir frase"
-            >
-              <Volume2 className="w-4 h-4" />
-            </Button>
-            <StudyToolsMenu
-              hint={hint}
-              isFavorite={isFavorite}
-              onToggleFavorite={onToggleFavorite}
-              isRedListed={isRedListed}
-              onToggleRedList={onToggleRedList}
-              isSpecial={isSpecial}
-              onToggleSpecial={onToggleSpecial}
-            />
-          </div>
+        <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+          <StudyToolsMenu
+            hint={hint}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+            isRedListed={isRedListed}
+            onToggleRedList={onToggleRedList}
+            isSpecial={isSpecial}
+            onToggleSpecial={onToggleSpecial}
+          />
         </div>
-        <p className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 break-words px-2">
-          <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} />
+        <p className="text-[11px] sm:text-xs uppercase tracking-wide text-muted-foreground mb-3 pr-20">
+          Organize as palavras
         </p>
+        <div className="flex items-start justify-center gap-2 mb-2">
+          <p className="text-xl sm:text-2xl font-bold text-center break-words px-1 flex-1">
+            <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} />
+          </p>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePlayAudio}
+            className="shrink-0 h-9 w-9 text-primary hover:text-primary/80 mt-0.5"
+            title="Ouvir frase"
+          >
+            <Volume2 className="w-5 h-5" />
+          </Button>
+        </div>
       </Card>
 
       {/* Selected words area — answer zone */}

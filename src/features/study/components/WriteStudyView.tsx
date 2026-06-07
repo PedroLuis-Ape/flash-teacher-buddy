@@ -349,18 +349,42 @@ export const WriteStudyView = ({
       </div>
 
       {feedback === null && (
-        <div className="grid grid-cols-[1fr_auto_1fr] sm:flex sm:flex-row gap-2 sm:gap-3 sticky bottom-4 bg-background/95 backdrop-blur-sm p-2 rounded-lg shadow-lg z-10 items-center">
-          <Button variant="outline" onClick={onSkip} className="min-h-[44px] text-sm">
-            <SkipForward className="mr-1 h-4 w-4" />
-            Pular
-          </Button>
-          <Button variant="secondary" onClick={handleHint} disabled={revealed} className="min-h-[44px] text-sm">
-            <Lightbulb className="mr-1 h-4 w-4" />
-            Dica
-          </Button>
-          <Button onClick={handleSubmit} className="min-h-[44px] text-sm sm:ml-auto" size="lg">
-            Corrigir
-          </Button>
+        <div className="sticky bottom-4 bg-background/95 backdrop-blur-sm p-2 rounded-lg shadow-lg z-10">
+          {/*
+            Ação primária ("Corrigir") ocupa o destaque visual. Pular e Dica
+            ficam compactas como ações secundárias ao lado, reduzindo o ruído
+            visual e deixando claro o caminho principal.
+          */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSkip}
+              className="shrink-0 h-11 px-3 text-muted-foreground"
+              title="Pular"
+            >
+              <SkipForward className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Pular</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleHint}
+              disabled={revealed}
+              className="shrink-0 h-11 px-3 text-muted-foreground"
+              title="Dica"
+            >
+              <Lightbulb className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Dica</span>
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              size="lg"
+              className="flex-1 min-h-[48px] text-base font-semibold shadow-md"
+            >
+              Corrigir
+            </Button>
+          </div>
         </div>
       )}
 
