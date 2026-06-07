@@ -910,30 +910,32 @@ const Study = () => {
     if (!userId) return;
     const targetId = currentStatusTargets.favoriteTargetId;
     if (!targetId) return;
-    // Treat the group as favorited if ANY compat id (parent or legacy layer)
-    // exists in the favorites set. New writes always target the canonical id.
-    const legacyLayerFavs = currentStatusTargets.compatibilityIds.filter(
-      (id) => id !== targetId && favorites.includes(id),
+    // UI-active state considers any compat id (group, visible layer, legacy
+    // per-layer marks). The action mirrors that state:
+    //   - inactive → ADD only the canonical id;
+    //   - active   → REMOVE every compat id that's currently favorited.
+    //                Never add the canonical during a removal.
+    const activeFavIds = currentStatusTargets.compatibilityIds.filter((id) =>
+      favorites.includes(id),
     );
-    const targetIsFav = favorites.includes(targetId);
-    const isCurrentlyFav = targetIsFav || legacyLayerFavs.length > 0;
+    const isCurrentlyFav = activeFavIds.length > 0;
 
-    toggleFavorite.mutate({
-      resourceId: targetId,
-      resourceType: 'flashcard',
-      // When unfavoriting, only flip the canonical target if it was actually
-      // stored; otherwise the legacy cleanup below will clear the group.
-      isFavorite: isCurrentlyFav && targetIsFav,
-    });
-    if (isCurrentlyFav && legacyLayerFavs.length > 0) {
-      legacyLayerFavs.forEach((id) => {
-        toggleFavorite.mutate({
-          resourceId: id,
-          resourceType: 'flashcard',
-          isFavorite: true,
-        });
+    if (!isCurrentlyFav) {
+      toggleFavorite.mutate({
+        resourceId: targetId,
+        resourceType: 'flashcard',
+        isFavorite: false,
       });
+      return;
     }
+    // Remove every favorited compat id (canonical + legacy).
+    activeFavIds.forEach((id) => {
+      toggleFavorite.mutate({
+        resourceId: id,
+        resourceType: 'flashcard',
+        isFavorite: true,
+      });
+    });
   };
 
   const handleToggleRedList = () => {
@@ -947,21 +949,18 @@ const Study = () => {
       toast.error('Primeiro marque o card como favorito ⭐');
       return;
     }
-    const legacyLayerReds = currentStatusTargets.compatibilityIds.filter(
-      (id) => id !== targetId && redListIds.includes(id),
+    const activeRedIds = currentStatusTargets.compatibilityIds.filter((id) =>
+      redListIds.includes(id),
     );
-    const targetIsRed = redListIds.includes(targetId);
-    const isCurrentlyRed = targetIsRed || legacyLayerReds.length > 0;
+    const isCurrentlyRed = activeRedIds.length > 0;
 
-    toggleRedList.mutate({
-      flashcardId: targetId,
-      isRedListed: isCurrentlyRed && targetIsRed,
-    });
-    if (isCurrentlyRed && legacyLayerReds.length > 0) {
-      legacyLayerReds.forEach((id) => {
-        toggleRedList.mutate({ flashcardId: id, isRedListed: true });
-      });
+    if (!isCurrentlyRed) {
+      toggleRedList.mutate({ flashcardId: targetId, isRedListed: false });
+      return;
     }
+    activeRedIds.forEach((id) => {
+      toggleRedList.mutate({ flashcardId: id, isRedListed: true });
+    });
   };
 
   // Special targets ONLY the visible layer/card — never the group.
