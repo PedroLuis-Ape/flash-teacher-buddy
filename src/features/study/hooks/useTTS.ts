@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { cleanTextForTTS } from "@/features/study/lib/speech";
+import { toBCP47, normalizeLangCode } from "@/features/study/lib/languages";
 
 export interface PlayOptions {
   langOverride?: string; // ISO code like "en-US", "pt-BR", "es", "fr", etc.
@@ -7,32 +8,23 @@ export interface PlayOptions {
   pitch?: number;  // default 1
 }
 
-// Map short ISO codes to BCP-47 codes
-const ISO_TO_BCP47: Record<string, string> = {
-  "en": "en-US",
-  "pt": "pt-BR",
-  "es": "es-ES",
-  "fr": "fr-FR",
-  "de": "de-DE",
-  "it": "it-IT",
-  "ja": "ja-JP",
-  "zh": "zh-CN",
-  "ko": "ko-KR",
-  "ru": "ru-RU",
-};
-
 /**
  * Smart Voice Selection Algorithm
- * Priority for English: en-US strict first, then quality tiers within en-US.
- * For other languages: Google > Microsoft/Natural > Exact locale > Prefix match.
+ * Order, for ANY language:
+ *   1. Exact BCP-47 locale match (e.g. en-GB, pt-PT, es-MX).
+ *   2. Canonical default for the short prefix (e.g. en→en-US, pt→pt-BR).
+ *   3. Any voice sharing the prefix (en-*, pt-*, ...).
+ * Inside each pool, prefer Google → Microsoft/Natural/Neural →
+ * Apple → first available.
  */
 function pickVoice(langCode: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   if (!voices || voices.length === 0) return null;
 
-  // Normalize language code
-  const normalizedLang = langCode.toLowerCase();
-  const prefix = normalizedLang.split("-")[0]; // "en" from "en-US"
-  const fullLocale = ISO_TO_BCP47[prefix] || langCode;
+  // Normalize to BCP-47 via the single source of truth
+  const requested = toBCP47(langCode);
+  const lowerReq = requested.toLowerCase();
+  const prefix = lowerReq.split("-")[0];
+  const canonical = toBCP47(prefix).toLowerCase();
 
   const voiceName = (v: SpeechSynthesisVoice) => v.name.toLowerCase();
 
@@ -57,105 +49,28 @@ function pickVoice(langCode: string, voices: SpeechSynthesisVoice[]): SpeechSynt
     return pool[0];
   };
 
-  // ── ENGLISH SPECIAL CASE ──────────────────────────────────────────────
-  // Always prefer en-US strictly, regardless of manufacturer ranking.
-  // Only fall back to other English variants if no en-US voice exists.
-  if (prefix === "en") {
-    const usVoices = voices.filter(v => v.lang.toLowerCase() === "en-us");
-    if (usVoices.length > 0) {
-      const picked = pickByQuality(usVoices) ?? usVoices[0];
-      if (import.meta.env.DEV) {
-        console.debug("[TTS]", {
-          requestedLang: langCode,
-          normalizedLang: "en-US",
-          selectedVoice: picked.name,
-          selectedVoiceLang: picked.lang,
-        });
-      }
-      return picked;
-    }
+  // Pool 1: exact locale (preserves en-GB, pt-PT, es-MX, ...)
+  const exact = voices.filter(v => v.lang.toLowerCase() === lowerReq);
+  const exactPick = pickByQuality(exact);
+  if (exactPick) return exactPick;
 
-    // No en-US voice — fall back to any English voice but warn.
-    const anyEnglish = voices.filter(v => v.lang.toLowerCase().startsWith("en"));
-    if (anyEnglish.length > 0) {
-      const picked = pickByQuality(anyEnglish) ?? anyEnglish[0];
-      if (import.meta.env.DEV) {
-        console.warn("[TTS] English fallback is not en-US", {
-          selectedVoice: picked.name,
-          selectedVoiceLang: picked.lang,
-        });
-      }
-      return picked;
-    }
-
-    console.warn(`[TTS] No English voice found for: ${langCode}`);
-    return null;
+  // Pool 2: canonical default for the short prefix (en→en-US, pt→pt-BR)
+  if (canonical !== lowerReq) {
+    const canon = voices.filter(v => v.lang.toLowerCase() === canonical);
+    const canonPick = pickByQuality(canon);
+    if (canonPick) return canonPick;
   }
-  // ──────────────────────────────────────────────────────────────────────
 
-  // Filter voices that match our language
-  const matchingVoices = voices.filter(v => {
-    const voiceLang = v.lang.toLowerCase();
-    return voiceLang === normalizedLang || 
-           voiceLang === fullLocale.toLowerCase() ||
-           voiceLang.startsWith(prefix + "-") ||
-           voiceLang.startsWith(prefix);
+  // Pool 3: any voice sharing the prefix
+  const prefixed = voices.filter(v => {
+    const vl = v.lang.toLowerCase();
+    return vl === prefix || vl.startsWith(prefix + "-");
   });
+  const prefixPick = pickByQuality(prefixed);
+  if (prefixPick) return prefixPick;
 
-  if (matchingVoices.length === 0) {
-    console.warn(`[TTS] No voices found for language: ${langCode}`);
-    return null;
-  }
-
-  // Tier 1: Google voices (highest quality on Chrome)
-  const googleVoice = matchingVoices.find(v => 
-    voiceName(v).includes('google')
-  );
-  if (googleVoice) {
-    console.log(`[TTS] Selected TIER 1 (Google) voice for ${langCode}: ${googleVoice.name}`);
-    return googleVoice;
-  }
-
-  // Tier 2: Microsoft or Natural voices (high quality)
-  const premiumVoice = matchingVoices.find(v => 
-    voiceName(v).includes('microsoft') || 
-    voiceName(v).includes('natural') ||
-    voiceName(v).includes('neural') ||
-    voiceName(v).includes('enhanced')
-  );
-  if (premiumVoice) {
-    console.log(`[TTS] Selected TIER 2 (Premium) voice for ${langCode}: ${premiumVoice.name}`);
-    return premiumVoice;
-  }
-
-  // Tier 3: Apple voices (good quality on Safari/iOS)
-  const appleVoice = matchingVoices.find(v => 
-    voiceName(v).includes('samantha') || 
-    voiceName(v).includes('alex') ||
-    voiceName(v).includes('victoria') ||
-    voiceName(v).includes('luciana') || // Portuguese
-    voiceName(v).includes('mónica') ||  // Spanish
-    voiceName(v).includes('thomas') ||  // French
-    voiceName(v).includes('anna')       // German
-  );
-  if (appleVoice) {
-    console.log(`[TTS] Selected TIER 3 (Apple) voice for ${langCode}: ${appleVoice.name}`);
-    return appleVoice;
-  }
-
-  // Tier 4: Exact locale match
-  const exactMatch = matchingVoices.find(v => 
-    v.lang.toLowerCase() === fullLocale.toLowerCase()
-  );
-  if (exactMatch) {
-    console.log(`[TTS] Selected TIER 4 (Exact locale) voice for ${langCode}: ${exactMatch.name}`);
-    return exactMatch;
-  }
-
-  // Tier 5: Any matching voice (fallback)
-  const fallback = matchingVoices[0];
-  console.log(`[TTS] Selected TIER 5 (Fallback) voice for ${langCode}: ${fallback.name}`);
-  return fallback;
+  console.warn(`[TTS] No voice found for language: ${langCode}`);
+  return null;
 }
 
 /**
@@ -228,17 +143,12 @@ export function useTTS() {
 
       // Get voices - use cached or fetch fresh
       const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
-      
-      // Determine language
-      let lang = options?.langOverride ?? "en-US";
-      if (lang.length === 2) {
-        lang = ISO_TO_BCP47[lang] || `${lang}-${lang.toUpperCase()}`;
-      }
 
-      // English must always normalize to en-US (never en-GB, en-AU, etc.)
-      if (lang.toLowerCase().startsWith("en")) {
-        lang = "en-US";
-      }
+      // Determine language via single source of truth.
+      // Short codes ("en", "pt") map to canonical BCP-47 ("en-US", "pt-BR").
+      // Regional tags ("en-GB", "pt-PT", "es-MX") are preserved.
+      const requested = normalizeLangCode(options?.langOverride ?? "en");
+      const lang = toBCP47(requested);
 
       // Find the best voice using smart algorithm
       const voice = pickVoice(lang, currentVoices);
@@ -249,9 +159,9 @@ export function useTTS() {
       // Apply voice if found
       if (voice) {
         utterance.voice = voice;
-        // Force en-US tag when speaking English, even if the voice reports a different sub-tag.
-        // This nudges engines that honor utterance.lang over voice.lang.
-        utterance.lang = lang === "en-US" ? "en-US" : voice.lang;
+        // Honour the requested locale tag so engines speaking via
+        // utterance.lang respect regional variants (en-GB, pt-PT, ...).
+        utterance.lang = voice.lang || lang;
       } else {
         utterance.lang = lang;
         console.warn('[TTS] No voice found for', lang, '- using browser default');
