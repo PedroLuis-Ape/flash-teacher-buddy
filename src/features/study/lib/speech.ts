@@ -1,5 +1,7 @@
 // Text-to-Speech utilities (browser-native speech synthesis only)
 
+import { toBCP47 } from "@/features/study/lib/languages";
+
 /**
  * Limpa o texto para TTS:
  * - Remove parênteses e conteúdo entre eles (anotações pedagógicas)
@@ -143,17 +145,20 @@ export function pickLang(
   langA?: string,
   langB?: string
 ): string {
-  const resolvedA = langA || "en-US";
-  const resolvedB = langB || "pt-BR";
-  
-  if (direction === "pt-en" || direction === "forward") {
+  // Prefer the list's configured languages — never guess when the
+  // caller already knows langA/langB.
+  const resolvedA = toBCP47(langA || "en");
+  const resolvedB = toBCP47(langB || "pt");
+
+  if (direction === "a-b" || direction === "pt-en" || direction === "forward") {
     return resolvedA;
-  } else if (direction === "en-pt" || direction === "backward") {
-    return resolvedB;
-  } else {
-    // "any" or fallback: auto-detect
-    return detectLanguage(text);
   }
+  if (direction === "b-a" || direction === "en-pt" || direction === "backward") {
+    return resolvedB;
+  }
+  // "any" or unknown direction: only auto-detect as a true last resort.
+  if (langA || langB) return resolvedA;
+  return toBCP47(detectLanguage(text));
 }
 
 // Export for use in other modules

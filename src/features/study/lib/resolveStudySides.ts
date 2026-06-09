@@ -88,30 +88,12 @@ export function resolveStudySides(
 }
 
 /**
- * Shared BCP-47 mapper – avoids duplicating the map in every component.
+ * BCP-47 mapping and language labels are now centralised in
+ * `./languages.ts`. We re-export the helpers here for backwards-compat
+ * with the many call sites that still import from this module.
  */
-const BCP47_MAP: Record<string, string> = {
-  en: "en-US", pt: "pt-BR", es: "es-ES", fr: "fr-FR",
-  de: "de-DE", it: "it-IT", ja: "ja-JP", zh: "zh-CN",
-  ko: "ko-KR", ru: "ru-RU", ar: "ar-SA", hi: "hi-IN",
-};
-
-export function toBCP47(code: string): string {
-  return BCP47_MAP[code] || code;
-}
-
-/**
- * Shared label mapper – avoids duplicating the map in every component.
- */
-const LANG_LABELS: Record<string, string> = {
-  en: "English", pt: "Português", es: "Español", fr: "Français",
-  de: "Deutsch", it: "Italiano", ja: "日本語", zh: "中文",
-  ko: "한국어", ru: "Русский", ar: "العربية", hi: "हिन्दी",
-};
-
-export function getLangLabel(code: string): string {
-  return LANG_LABELS[code] || code.toUpperCase();
-}
+import { toBCP47, getLangLabel } from "./languages";
+export { toBCP47, getLangLabel };
 
 // ─── Effective List Settings Resolution ────────────────────────────
 // Single source of truth for resolving a list's language config with folder fallback.

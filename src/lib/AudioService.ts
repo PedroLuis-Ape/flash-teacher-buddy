@@ -1,6 +1,13 @@
 /**
- * AudioService - Robust Web Speech API TTS Engine
- * Replaces ElevenLabs with browser-native speech synthesis
+ * @deprecated LEGACY — do NOT use in study/game flows.
+ *
+ * This service is hard-coded to en-US / pt-BR and is not multilingual.
+ * All study modes must use `useTTS` (src/features/study/hooks/useTTS.ts),
+ * which delegates language handling to the central registry in
+ * `src/features/study/lib/languages.ts`.
+ *
+ * Kept only for non-study/legacy call sites. Will be removed once nothing
+ * imports it.
  */
 
 export type CardSide = 'front' | 'back';

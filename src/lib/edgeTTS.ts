@@ -1,3 +1,10 @@
+/**
+ * @deprecated LEGACY — do NOT use in study/game flows.
+ *
+ * This client only ships pt-BR and en-US voices and is not multilingual.
+ * Study/game flows must use `useTTS` (browser-native, multilingual) which
+ * delegates to `src/features/study/lib/languages.ts`.
+ */
 // Edge-TTS client for high-quality, free text-to-speech
 
 import { supabase } from "@/integrations/supabase/client";

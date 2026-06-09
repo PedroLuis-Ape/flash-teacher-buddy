@@ -318,23 +318,5 @@ export function getMixedMode(
 }
 
 // ─── BCP-47 Mapping (shared) ────────────────────────────────────────
-
-const BCP47_MAP: Record<string, string> = {
-  en: "en-US", pt: "pt-BR", es: "es-ES", fr: "fr-FR",
-  de: "de-DE", it: "it-IT", ja: "ja-JP", zh: "zh-CN",
-  ko: "ko-KR", ru: "ru-RU", ar: "ar-SA", hi: "hi-IN",
-};
-
-export function toBCP47(code: string): string {
-  return BCP47_MAP[code] || code;
-}
-
-const LANG_LABELS: Record<string, string> = {
-  en: "English", pt: "Português", es: "Español", fr: "Français",
-  de: "Deutsch", it: "Italiano", ja: "日本語", zh: "中文",
-  ko: "한국어", ru: "Русский", ar: "العربية", hi: "हिन्दी",
-};
-
-export function getLangLabel(code: string): string {
-  return LANG_LABELS[code] || code.toUpperCase();
-}
+// Re-export the canonical helpers from `./languages` for backwards-compat.
+export { toBCP47, getLangLabel } from "./languages";
