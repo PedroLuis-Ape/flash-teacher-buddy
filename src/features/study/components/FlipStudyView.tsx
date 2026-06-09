@@ -396,28 +396,30 @@ export const FlipStudyView = ({
           {/* Front side */}
           <div className="flip-card-front">
            <Card className="w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-card to-muted/20 overflow-auto">
-              <p className="text-xs sm:text-sm text-muted-foreground mb-2">{firstSide.label}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">{firstSide.label}</p>
+                {ttsEnabled && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlayTop();
+                    }}
+                    className="h-7 w-7"
+                    title="Ouvir áudio"
+                  >
+                    <Volume2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               {firstSideImage && (
                 <ImageCard src={firstSideImage} alt={firstSide.text} className="mb-2 sm:mb-3" maxHeight="100px" />
               )}
               <p className="text-xl sm:text-3xl font-semibold text-center leading-relaxed px-2 sm:px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 <InteractiveText text={firstSide.text} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={firstSideLang} />
               </p>
-              {ttsEnabled && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayTop();
-                  }}
-                  className="mt-4"
-                >
-                  <Volume2 className="mr-2 h-4 w-4" />
-                  Ouvir
-                </Button>
-              )}
-              <p className="text-sm text-muted-foreground mt-4">
+              <p className="text-xs text-muted-foreground/70 mt-4">
                 Clique para revelar
               </p>
             </Card>
@@ -426,27 +428,29 @@ export const FlipStudyView = ({
           {/* Back side */}
           <div className="flip-card-back">
             <Card className="w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-primary/10 to-accent/10 overflow-auto">
-              <p className="text-xs sm:text-sm text-muted-foreground mb-2">{secondSide.label}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">{secondSide.label}</p>
+                {ttsEnabled && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlayBottom();
+                    }}
+                    className="h-7 w-7"
+                    title="Ouvir áudio"
+                  >
+                    <Volume2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               {secondSideImage && (
                 <ImageCard src={secondSideImage} alt={secondSide.text} className="mb-2 sm:mb-3" maxHeight="100px" />
               )}
               <p className="text-xl sm:text-3xl font-semibold text-center leading-relaxed px-2 sm:px-4" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
                 <InteractiveText text={secondSide.text} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakOnHintClick={ttsEnabled} speakLang={secondSideLang} />
               </p>
-              {ttsEnabled && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayBottom();
-                  }}
-                  className="mt-4"
-                >
-                  <Volume2 className="mr-2 h-4 w-4" />
-                  Ouvir novamente
-                </Button>
-              )}
             </Card>
           </div>
         </div>
