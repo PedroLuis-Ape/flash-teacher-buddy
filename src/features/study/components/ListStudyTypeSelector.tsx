@@ -7,21 +7,15 @@ import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, Volume2, VolumeX, BookOpen, Calculator, Image } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { STUDY_TYPE_CONFIG, supportsTTS } from "@/features/study/lib/studyTypeConfig";
+import {
+  SUPPORTED_LANGUAGES,
+  getLangLabel,
+  normalizeLangCode,
+} from "@/features/study/lib/languages";
 
-// Common language options
+// Common language options come from the single source of truth.
 const LANGUAGES = [
-  { code: "en", name: "English", flag: "🇺🇸" },
-  { code: "pt", name: "Português", flag: "🇧🇷" },
-  { code: "es", name: "Español", flag: "🇪🇸" },
-  { code: "fr", name: "Français", flag: "🇫🇷" },
-  { code: "de", name: "Deutsch", flag: "🇩🇪" },
-  { code: "it", name: "Italiano", flag: "🇮🇹" },
-  { code: "ja", name: "日本語", flag: "🇯🇵" },
-  { code: "zh", name: "中文", flag: "🇨🇳" },
-  { code: "ko", name: "한국어", flag: "🇰🇷" },
-  { code: "ru", name: "Русский", flag: "🇷🇺" },
-  { code: "ar", name: "العربية", flag: "🇸🇦" },
-  { code: "hi", name: "हिन्दी", flag: "🇮🇳" },
+  ...SUPPORTED_LANGUAGES.map((l) => ({ code: l.code, name: l.label, flag: l.flag })),
   { code: "other", name: "Outro...", flag: "🌍" },
 ];
 
@@ -40,8 +34,7 @@ interface ListStudyTypeSelectorProps {
 }
 
 function getLanguageName(code: string): string {
-  const lang = LANGUAGES.find(l => l.code === code);
-  return lang?.name || code.toUpperCase();
+  return getLangLabel(code);
 }
 
 const STUDY_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -123,19 +116,21 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
 
   const handleCustomLangA = (customCode: string) => {
     setCustomLangA(customCode);
+    const normalized = normalizeLangCode(customCode);
     onChange({
       ...value,
-      langA: customCode.toLowerCase().trim(),
-      labelsA: customCode.trim(),
+      langA: normalized,
+      labelsA: getLangLabel(normalized) || customCode.trim(),
     });
   };
 
   const handleCustomLangB = (customCode: string) => {
     setCustomLangB(customCode);
+    const normalized = normalizeLangCode(customCode);
     onChange({
       ...value,
-      langB: customCode.toLowerCase().trim(),
-      labelsB: customCode.trim(),
+      langB: normalized,
+      labelsB: getLangLabel(normalized) || customCode.trim(),
     });
   };
 
