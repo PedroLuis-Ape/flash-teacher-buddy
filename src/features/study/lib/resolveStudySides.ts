@@ -92,7 +92,8 @@ export function resolveStudySides(
  * `./languages.ts`. We re-export the helpers here for backwards-compat
  * with the many call sites that still import from this module.
  */
-export { toBCP47, getLangLabel } from "./languages";
+import { toBCP47, getLangLabel } from "./languages";
+export { toBCP47, getLangLabel };
 
 // ─── Effective List Settings Resolution ────────────────────────────
 // Single source of truth for resolving a list's language config with folder fallback.
