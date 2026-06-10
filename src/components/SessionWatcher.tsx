@@ -64,10 +64,27 @@ export function SessionWatcher() {
       // Route guard — redirect logged-out users away from protected routes.
       // Runs on INITIAL_SESSION too: if the user opened a protected URL directly
       // without a session, send them to /auth instead of leaving them on a blank
-      // protected page. Safe because Supabase already hydrated from localStorage
-      // before firing INITIAL_SESSION.
+      // protected page.
+      //
+      // Hardened against hydration races: Supabase can fire INITIAL_SESSION
+      // with `null` while storage is still being read. Re-check via getSession()
+      // on the next tick before redirecting; if a session shows up, abort the
+      // redirect.
       if (!session && isProtectedPath(window.location.pathname)) {
-        navigate('/auth', { replace: true });
+        if (!wasInitialized) {
+          setTimeout(() => {
+            supabase.auth.getSession().then(({ data }) => {
+              if (!data.session && isProtectedPath(window.location.pathname)) {
+                navigate('/auth', { replace: true });
+              }
+            }).catch(() => {
+              // best-effort: fall back to redirect
+              navigate('/auth', { replace: true });
+            });
+          }, 0);
+        } else {
+          navigate('/auth', { replace: true });
+        }
       }
 
       initializedRef.current = true;

@@ -59,7 +59,13 @@ function trackFatalBurst() {
   }
 }
 
+let lastSaveAt = 0;
+const SAVE_THROTTLE_MS = 1000;
+
 function saveError(label: string, err: unknown) {
+  const now = Date.now();
+  if (now - lastSaveAt < SAVE_THROTTLE_MS) return;
+  lastSaveAt = now;
   try {
     const msg = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack?.slice(0, 800) : "";
@@ -69,12 +75,29 @@ function saveError(label: string, err: unknown) {
         label,
         message: msg,
         stack,
-        time: Date.now(),
+        time: now,
       })
     );
   } catch {
     // ignore storage failures
   }
+}
+
+function classifyError(err: unknown): "chunk" | "network" | "render" {
+  const msg = (err instanceof Error ? err.message : String(err ?? "")).toLowerCase();
+  const name = err instanceof Error ? err.name : "";
+  if (
+    name === "ChunkLoadError" ||
+    msg.includes("loading chunk") ||
+    msg.includes("loading css chunk") ||
+    msg.includes("dynamically imported module")
+  ) return "chunk";
+  if (
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("network request failed")
+  ) return "network";
+  return "render";
 }
 
 function notifyZombieState(detail: ZombieDetail) {
@@ -108,7 +131,18 @@ function isIgnorablePromiseRejection(reason: unknown): boolean {
 
 // Apenas erros síncronos reais alimentam o burst fatal
 window.addEventListener("error", (e) => {
-  saveError("uncaught", e.error ?? e.message);
+  const err = e.error ?? e.message;
+  const kind = classifyError(err);
+
+  // Chunk/network errors são tratados por boundaries específicos — não
+  // contam para o burst fatal e não viram crash persistido como fatal.
+  if (kind === "chunk" || kind === "network") {
+    saveError(kind, err);
+    console.warn(`[ErrorCapture] ${kind} error (não fatal):`, err);
+    return;
+  }
+
+  saveError("render", err);
 
   const isZombie = trackFatalBurst();
   if (isZombie) {
@@ -120,11 +154,15 @@ window.addEventListener("error", (e) => {
   }
 });
 
-// Promessas rejeitadas continuam sendo registradas, mas NÃO derrubam a UI
+// Promessas rejeitadas: NUNCA derrubam a UI. Filtramos ruído de rede.
 window.addEventListener("unhandledrejection", (e) => {
-  saveError("unhandled_promise", e.reason);
-  // Apenas avisa no console, SEM derrubar a UI ou somar burst
-  console.warn("[ErrorCapture] Requisição assíncrona falhou (Ignorado pelo SafeMode):", e.reason);
+  if (isIgnorablePromiseRejection(e.reason)) {
+    console.warn("[ErrorCapture] Rejeição assíncrona ignorada (network/abort):", e.reason);
+    return;
+  }
+  const kind = classifyError(e.reason);
+  saveError(`unhandled_${kind}`, e.reason);
+  console.warn(`[ErrorCapture] Unhandled promise (${kind}):`, e.reason);
 });
 
 export function getLastCrash(): { label: string; message: string; time: number } | null {

@@ -12,10 +12,14 @@ import "./i18n/config"; // i18n initialization
 import { SafeMode } from "./components/SafeMode";
 import { HelmetProvider } from "react-helmet-async";
 import { bootPalette } from "./lib/palettes";
+import { runBootStability } from "./lib/bootStability";
 
 // Apply user's saved palette BEFORE first paint to avoid a color flash.
 // The boot splash also covers the moment of palette/theme switch.
 try { bootPalette(); } catch { /* noop */ }
+
+// Centralized, idempotent boot cleanup. Safe in preview/iframe (no-ops).
+try { runBootStability(); } catch { /* noop */ }
 
 // ── Boot progress reporter ────────────────────────────────────────────
 // The HTML inline script defines window.__apeBootProgress(value, label?)
@@ -31,32 +35,7 @@ const splashLog = (...args: unknown[]) => {
 };
 splashLog("mounted");
 
-// ── Always-on Service Worker neutralizer ──
-// The app does NOT use a PWA / SW. Any SW found is a leftover from older
-// builds (or a stale install on mobile) and MUST be unregistered every load
-// to prevent the device from being stuck on an old shell/cache.
-// IMPORTANT: do NOT auto-reload on `controllerchange`. In iframe/preview
-// contexts (Lovable editor) this causes blank-screen reload loops that
-// prevent the app from ever finishing boot — which also hides the
-// version badge that lives in GlobalLayout.
-try {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then((regs) => {
-      if (regs.length > 0) {
-        console.log("[PWA Cleanup] Unregistering", regs.length, "service worker(s)");
-        regs.forEach((r) => r.unregister());
-      }
-    });
-  }
-  if ("caches" in window) {
-    caches.keys().then((names) => {
-      if (names.length > 0) {
-        console.log("[PWA Cleanup] Deleting", names.length, "stale cache(s)");
-        names.forEach((n) => caches.delete(n));
-      }
-    });
-  }
-} catch { /* best-effort */ }
+// Note: legacy SW + cache cleanup is now owned by `runBootStability()` above.
 
 // Clear boot timeout — app JS loaded successfully
 if ((window as any).__apeBootTimer) {
