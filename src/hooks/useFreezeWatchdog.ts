@@ -8,12 +8,14 @@
  */
 
 import { useEffect } from "react";
-import { isSafeModeEnabled } from "@/lib/safeMode";
+import { isSafeModeEnabled, enableSafeMode } from "@/lib/safeMode";
 
 const STORAGE_KEY = "ape_freeze_events";
 const CHECK_MS = 2000;
 const THRESHOLD_MS = 8000;
 const MAX_EVENTS = 20;
+const AUTO_SAFE_MODE_FREEZE_COUNT = 3;
+const AUTO_SAFE_MODE_WINDOW_MS = 10 * 60 * 1000;
 
 export interface FreezeEvent {
   timestamp: number;
@@ -98,6 +100,19 @@ function recordFreeze(delayMs: number): void {
     const events = readEvents();
     events.push(event);
     writeEvents(events);
+
+    // Auto-activate Safe Mode if main thread froze repeatedly in a short window.
+    if (!isSafeModeEnabled()) {
+      const cutoff = Date.now() - AUTO_SAFE_MODE_WINDOW_MS;
+      const recent = events.filter((e) => e.timestamp >= cutoff);
+      if (recent.length >= AUTO_SAFE_MODE_FREEZE_COUNT) {
+        console.warn(
+          "[FreezeWatchdog] Repeated freezes — auto-enabling safe mode",
+          recent.length
+        );
+        enableSafeMode();
+      }
+    }
 
     if (import.meta.env.DEV) {
       console.warn("[FreezeWatchdog] Main-thread freeze detected", event);

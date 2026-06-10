@@ -12,14 +12,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/branding/icon.png" />
     <link rel="shortcut icon" href="/favicon.png" type="image/png" />
 
-    <!-- PWA manifest (installable on Android/desktop) -->
-    <link rel="manifest" href="/manifest.webmanifest" />
-
-    <!-- iOS standalone install (Add to Home Screen) -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="APE" />
+    <!-- PWA temporarily disabled to stabilize boot and flush stale caches.
+         Do NOT re-enable the manifest link or standalone meta tags until
+         the controlled PWA path is fully restored. -->
 
     <!-- Preload splash images so they appear instantly -->
     <link rel="preload" as="image" href="/branding/splash-mobile.png" media="(max-width: 767px)" />

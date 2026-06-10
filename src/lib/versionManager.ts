@@ -35,44 +35,26 @@ export function formatVersionShort(): string {
   return `v${APP_VERSION}`;
 }
 
+/**
+ * Pure check: did the build id change since the last time we recorded it?
+ * Side-effect free except for updating the stored build id. NEVER reloads.
+ * Real cleanup is owned by `src/lib/bootStability.ts`.
+ */
 export function checkAppBuildVersion(): boolean {
   try {
     const stored = localStorage.getItem(VERSION_KEY);
-
-    if (!stored) {
-      localStorage.setItem(VERSION_KEY, BUILD_ID);
-      return false;
+    if (stored === BUILD_ID) return false;
+    localStorage.setItem(VERSION_KEY, BUILD_ID);
+    if (stored) {
+      console.log(`[VersionManager] Nova build detectada: ${BUILD_ID} (era ${stored})`);
     }
-
-    if (stored !== BUILD_ID) {
-      console.log(`[VersionManager] Nova build detectada: ${BUILD_ID}`);
-      localStorage.setItem(VERSION_KEY, BUILD_ID);
-      // Guard against reload loops: only force one reload per new build.
-      // Drop any leftover SW caches before reloading so mobile picks up
-      // fresh hashed assets instead of the previous shell's chunks.
-      try {
-        const guard = sessionStorage.getItem(RELOAD_GUARD_KEY);
-        if (guard !== BUILD_ID) {
-          sessionStorage.setItem(RELOAD_GUARD_KEY, BUILD_ID);
-          const reload = () => window.location.reload();
-          if (typeof caches !== "undefined") {
-            caches.keys()
-              .then((names) => Promise.all(names.map((n) => caches.delete(n))))
-              .finally(reload);
-          } else {
-            reload();
-          }
-        }
-      } catch { /* best-effort */ }
-      return true;
-    }
-
-    return false;
+    // Touch the reload guard key purely for diagnostics — no behavior here.
+    try { sessionStorage.setItem(RELOAD_GUARD_KEY, BUILD_ID); } catch { /* noop */ }
+    return true;
   } catch (error) {
     console.warn("[VersionManager] Falha ao verificar build:", error);
     return false;
   }
 }
 
-checkAppBuildVersion();
 console.log("[APE BUILD]", formatVersionLabel());

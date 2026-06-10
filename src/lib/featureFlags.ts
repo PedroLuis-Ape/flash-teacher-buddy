@@ -124,3 +124,25 @@ export const SAFE_MODE_PRESET = {
   currency_header_enabled: false,
   present_inbox_visible: false,
 } as const;
+
+import { isSafeModeEnabled } from "./safeMode";
+
+/**
+ * Read a feature flag with Safe Mode overrides applied.
+ * When Safe Mode is enabled, any flag listed in SAFE_MODE_PRESET is forced
+ * to its safe value (typically false). Otherwise, returns the configured
+ * value from FEATURE_FLAGS.
+ *
+ * Prefer this over reading FEATURE_FLAGS directly for performance-sensitive
+ * call sites so Safe Mode can actually disable them at runtime.
+ */
+export function getFlag<K extends keyof typeof FEATURE_FLAGS>(
+  name: K
+): (typeof FEATURE_FLAGS)[K] {
+  if (isSafeModeEnabled() && name in SAFE_MODE_PRESET) {
+    return (SAFE_MODE_PRESET as Record<string, unknown>)[
+      name as string
+    ] as (typeof FEATURE_FLAGS)[K];
+  }
+  return FEATURE_FLAGS[name];
+}

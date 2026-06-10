@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { isSafeModeEnabled } from "@/lib/safeMode";
 
 const SWIPE_THRESHOLD = 100;
 const SWIPE_VELOCITY_THRESHOLD = 0.3;
@@ -20,6 +21,26 @@ const SCROLL_CONTAINER_SELECTORS = [
   '.overflow-x-scroll',
   '[data-no-swipe]',
 ];
+
+// Rotas onde o swipe global NÃO deve competir com gestos internos
+// (modos de estudo, jogos, cards, carrosséis de coleção, etc).
+const SWIPE_BLOCKED_PREFIXES = [
+  "/study",
+  "/list/",
+  "/collection/",
+  "/portal/list/",
+  "/portal/collection/",
+  "/folder/",
+  "/turmas/",
+  "/reino/",
+  "/notes/",
+];
+
+function isRouteBlocked(pathname: string): boolean {
+  if (pathname.includes("/study")) return true;
+  if (pathname.includes("/games")) return true;
+  return SWIPE_BLOCKED_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 interface UseSwipeNavigationOptions {
   enabled?: boolean;
@@ -56,8 +77,10 @@ export function useSwipeNavigation({ enabled = true }: UseSwipeNavigationOptions
   }, []);
 
   useEffect(() => {
-    // Skip entirely if no touch support or disabled
+    // Skip entirely if no touch support, disabled, safe mode, or blocked route
     if (!enabled || !hasTouchSupport) return;
+    if (isSafeModeEnabled()) return;
+    if (isRouteBlocked(location.pathname)) return;
 
     const handleTouchStart = (e: TouchEvent) => {
       if (isInsideScrollContainer(e.target)) {
@@ -128,7 +151,7 @@ export function useSwipeNavigation({ enabled = true }: UseSwipeNavigationOptions
       document.removeEventListener("touchmove", handleTouchMove);
       document.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [enabled, hasTouchSupport, navigate, getCurrentRouteIndex, isInsideScrollContainer]);
+  }, [enabled, hasTouchSupport, navigate, getCurrentRouteIndex, isInsideScrollContainer, location.pathname]);
 
   return { currentRouteIndex: getCurrentRouteIndex() };
 }

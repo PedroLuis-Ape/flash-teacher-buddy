@@ -9,11 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { checkDailyLogin } from "@/lib/rewardEngine";
 import { checkAndPerformConversion } from "@/lib/conversionEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { isSafeModeEnabled } from "@/lib/safeMode";
 import { toast } from "sonner";
 
 export function EconomyInitializer() {
   useEffect(() => {
     if (!FEATURE_FLAGS.economy_enabled) return;
+    if (isSafeModeEnabled()) return;
 
     // Skip on public/auth routes — economy work is only meaningful for
     // authenticated users inside the app shell.
