@@ -153,20 +153,30 @@ export function useToggleRedList() {
 }
 
 /**
- * Utility: remove flashcard from red list when it's unfavorited.
- * Called from the favorites toggle mutation.
+ * Utility: remove flashcard(s) from red list when they get unfavorited.
+ * Called from the favorites toggle mutation. Accepts a single id or a
+ * batch of legacy ids (canonical + per-layer) so cleanup is atomic from
+ * the user's perspective — one DELETE, no loops.
  */
 export async function removeFromRedListIfNeeded(
   userId: string,
-  flashcardId: string
+  flashcardId: string | string[]
 ) {
+  const ids = Array.isArray(flashcardId) ? flashcardId : [flashcardId];
+  const unique = Array.from(new Set(ids.filter((id): id is string => !!id)));
+  if (unique.length === 0) return;
   try {
-    await supabase
+    const { error } = await supabase
       .from('user_red_list' as any)
       .delete()
       .eq('user_id', userId)
-      .eq('flashcard_id', flashcardId);
-  } catch {
-    // Non-blocking: red-list cleanup is best-effort
+      .in('flashcard_id', unique);
+    // Non-blocking: red-list cleanup is best-effort. We still log unexpected
+    // errors so the caller can react (e.g. trigger an invalidate).
+    if (error && (error as any).code !== 'PGRST116') {
+      console.warn('[redList] cleanup error', error);
+    }
+  } catch (err) {
+    console.warn('[redList] cleanup threw', err);
   }
 }
