@@ -197,17 +197,22 @@ const Study = () => {
     return isListRoute ? { listId: resolvedId } : { collectionId: resolvedId };
   }, [resolvedId, isListRoute]);
   const { data: favorites = [], isLoading: favoritesLoading } = useFavorites(userId, 'flashcard', favoritesScope);
+  // `toggleFavorite` (per-id, legacy) still used outside the study flow.
+  // Study itself now uses the atomic group-aware mutation below.
   const toggleFavorite = useToggleFavorite();
+  const setFavoriteGroup = useSetFavoriteGroup();
 
   // Red list state (scoped to current list)
   const { data: redListIds = [] } = useRedList(userId, isListRoute ? resolvedId : undefined);
   const toggleRedList = useToggleRedList();
+  const setRedListGroup = useSetRedListGroup();
 
   // Special cards (independent queue for IA explanation export). Scope-less:
   // the list of special flashcard ids is global per user, but we still pass
   // listId on insert for traceability.
   const { data: specialIds = [] } = useSpecialFlashcards(userId);
   const toggleSpecial = useToggleSpecialFlashcard();
+  const setSpecialLayer = useSetSpecialLayer();
 
   const listId = isListRoute ? resolvedId : undefined;
 
