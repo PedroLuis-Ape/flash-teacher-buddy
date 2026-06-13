@@ -52,13 +52,15 @@ export function resolveCardStatusIdentity(
   const hasLayers = layerList.length > 1;
 
   // Canonical group: parent_card_id when layered, otherwise the card itself.
-  const canonicalGroupId: string | null =
+  const explicitCanonical: string | null =
     (displayedCard as any)?.__parentCardId ??
     displayedCard?.parent_card_id ??
     (engineCard as any)?.__parentCardId ??
     engineCard?.parent_card_id ??
-    (layerList[0]?.parent_card_id ?? null) ??
-    (hasLayers ? null : visibleLayerId);
+    layerList[0]?.parent_card_id ??
+    null;
+  const canonicalGroupId: string | null =
+    explicitCanonical ?? (hasLayers ? null : visibleLayerId);
 
   // Engine entry-point: when layered, first layer; otherwise the card itself.
   const playableEntryId: string | null = hasLayers
