@@ -12,6 +12,10 @@ import {
   reinjectFailedCard,
   type CardProgressLike,
 } from "@/features/study/lib/intelligenceScoring";
+import {
+  buildCanonicalToPlayableMap,
+  mapCanonicalIdsToPlayable,
+} from "@/features/cards/lib/cardStatusIdentity";
 
 export interface StudyResult {
   flashcardId: string;
@@ -91,7 +95,12 @@ function injectRedListRepetitions(
 
 export function useStudyEngine(
   listId: string | undefined,
-  flashcards: { id: string; term: string; translation: string }[],
+  flashcards: {
+    id: string;
+    term: string;
+    translation: string;
+    parent_card_id?: string | null;
+  }[],
   mode: "flip" | "multiple-choice" | "write" | "unscramble" | "mixed" | "pronunciation",
   unlimitedMode: boolean = false,
   favoriteIds: string[] = [],
@@ -145,6 +154,20 @@ export function useStudyEngine(
   const cardsSignature = useMemo(() => 
     flashcards.map(c => c.id).sort().join("|"), 
     [flashcards]
+  );
+
+  // Canonical→playable mapping for the current deck. Favorites & Red List are
+  // stored under the canonical group id (parent_card_id), but cardsOrder is
+  // built from the playable entry id (layers[0].id). Without this translation
+  // step, layered groups marked as red would never get the spaced-repetition
+  // injection because their canonical id is absent from cardsOrder.
+  const canonicalToPlayable = useMemo(
+    () => buildCanonicalToPlayableMap(flashcards),
+    [flashcards],
+  );
+  const effectiveRedPlayableIds = useMemo(
+    () => mapCanonicalIdsToPlayable(redListIds, canonicalToPlayable),
+    [redListIds, canonicalToPlayable],
   );
 
   // Scope key — separates persisted sessions per (subset / order / redFocus).
@@ -449,7 +472,11 @@ export function useStudyEngine(
       // Create new session with ALL flashcards (straight-through, no batching)
       let orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, true);
       // Inject red-list spaced repetitions when studying favorites
-      orderedCards = injectRedListRepetitions(orderedCards, redListIds, gameSettings.subset === 'favorites');
+      orderedCards = injectRedListRepetitions(
+        orderedCards,
+        effectiveRedPlayableIds,
+        gameSettings.subset === 'favorites',
+      );
       
       const { data: newSession, error } = await supabase
         .from('study_sessions')
@@ -483,7 +510,7 @@ export function useStudyEngine(
     }
     // Includes gameSettings.subset and redListIds because they materially affect
     // the cardsOrder shape (favorites scope + red-list spaced repetition injection).
-  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, redListIds, sessionScopeKey]);
+  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey]);
   
   // Store flashcards in a ref for stable access
   const flashcardsRef = useRef(flashcards);
@@ -511,7 +538,10 @@ export function useStudyEngine(
         const progressMap = new Map<string, CardProgressLike>(
           (progressData ?? []).map(p => [p.flashcard_id, p as CardProgressLike])
         );
-        const redSet = new Set(redListIds);
+        // Score with the playable ids the engine actually orders — see
+        // canonicalToPlayable above. Canonical group ids would never match
+        // cards[i].id for layered entries.
+        const redSet = new Set(effectiveRedPlayableIds);
         const ordered = orderByIntelligence(cards, progressMap, redSet);
         return useAll ? ordered : ordered.slice(0, BATCH_SIZE);
       }
@@ -898,7 +928,11 @@ export function useStudyEngine(
     }
 
     // Inject red-list spaced repetitions when studying favorites
-    cardIds = injectRedListRepetitions(cardIds, redListIds, settings.subset === 'favorites');
+    cardIds = injectRedListRepetitions(
+      cardIds,
+      effectiveRedPlayableIds,
+      settings.subset === 'favorites',
+    );
 
     // Reset state
     if (listId && isFlipMode) {
@@ -915,7 +949,7 @@ export function useStudyEngine(
     setIsFinished(false);
 
     toast.success('Jogo reiniciado!');
-  }, [gameSettings, flashcards, redListIds, listId, isFlipMode, flipProgressKey]);
+  }, [gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey]);
 
   // Initialize session on mount
   useEffect(() => {
