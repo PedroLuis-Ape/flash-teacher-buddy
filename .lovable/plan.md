@@ -1,110 +1,104 @@
-## Diagnóstico
+# Diagnóstico
 
-O app tem várias fontes de instabilidade que se acumulam no boot:
+Confirmado o que o pedido descreve:
 
-1. **PWA contraditório**: `vite.config.ts` não tem mais VitePWA, mas `index.html` mantém manifest, `App.tsx` monta `InstallPWA`, `public/sw.js` ainda existe, e `main.tsx` + `versionManager.ts` fazem cleanup/reload agressivo a cada abertura — causando potencial loop de reload e cache imprevisível.
-2. **Boot duplicado**: `versionManager.ts` é importado e executa side-effects no import (reload + cache clear), enquanto `main.tsx` faz o mesmo cleanup de SW. Duas fontes de reload competindo.
-3. **Auth com risco de race**: `SessionWatcher` redireciona em qualquer evento, inclusive `INITIAL_SESSION` antes da hidratação consolidada. `useAuthUser` (não vi) pode chamar `getSession` em paralelo.
-4. **Errors globais ruidosos**: `errorCapture.ts` salva toda promise rejection como crash, mesmo sabendo filtrar — `isIgnorablePromiseRejection` existe mas não é usada para gatear o `saveError`.
-5. **Swipe global** ativo em rotas onde não deveria (study/games) — conflito com gestos internos.
-6. **Safe Mode** é mais banner do que kill switch real: não desabilita heartbeat/prefetch/swipe automaticamente quando ativado.
+1. **`prepareLayeredStudyDeck`** (`src/lib/studyDeck.ts`) usa a **primeira camada** como `entryPoint`, então o motor (`useStudyEngine`) trabalha com `playableEntryId = layers[0].id`, enquanto Favoritos/Lista Vermelha guardam o `parent_card_id`. `injectRedListRepetitions` compara `redListIds` direto contra `cardsOrder` — grupos em camadas marcados como vermelhos **não recebem repetição/prioridade**.
+2. **`Study.tsx`** monta `compatibilityIds` (principal + 1ª camada + camada visível + demais) e chama `toggleFavorite.mutate(...)` / `toggleRedList.mutate(...)` num `forEach`. Isso causa N mutations paralelas → race, flicker, múltiplos toasts, snapshots concorrentes.
+3. **`useRedList.removeFromRedListIfNeeded`** deleta apenas o ID passado (não cobre IDs antigos por camada) e silencia erros sem checar `error.code`.
+4. **`useFavorites.useToggleFavorite`** faz `setQueriesData` em *todos* os escopos (qualquer `listId`) com prefixo `['favorites', user.id, type]` — pode mexer no estado de listas que nem contêm o card.
+5. **Especiais** já estão por camada no banco, mas a UI atual também tenta tratá-los via `compatibilityIds`, podendo marcar a primeira camada como "especial" indevidamente.
 
-## Plano de Estabilização (incremental, conservador)
+# O que será feito
 
-### 1. PWA desligado de verdade
-- `public/sw.js` → substituir por **kill-switch worker idempotente** (já está nesse formato, manter, mas garantir que `main.tsx` não re-registre).
-- `index.html`: remover `<link rel="manifest">` e metatags `theme-color`/`apple-touch-icon` que sinalizam PWA instalável. Manter favicon.
-- `App.tsx`: remover `<InstallPWA />` do render (manter o arquivo no repo, só não montar).
-- `main.tsx`: **não** rodar `caches.keys()...delete` em todo boot. Mover essa limpeza para `bootStability.ts` com guard `sessionStorage` (uma vez por build).
+## 1. Resolvedor central de identidade
+Criar `src/features/cards/lib/cardStatusIdentity.ts` com:
+```ts
+resolveCardStatusIdentity({ displayedCard, engineCard, layers }) => {
+  visibleLayerId, canonicalGroupId, playableEntryId, legacyIds
+}
+```
+Regras conforme pedido (canonical = `parent_card_id` em layered, próprio ID em normal; playable = `layers[0].id`; legacy = união de IDs antigos para limpeza/migration).
 
-### 2. Novo módulo `src/lib/bootStability.ts`
-- Função `runBootStability()` única, idempotente, chamada uma vez de `main.tsx`.
-- Detecta iframe/preview Lovable e **não** faz cleanup nesses contextos.
-- Roda cleanup legado de SW + caches **apenas se** `localStorage.ape_boot_cleanup_build !== BUILD_ID`.
-- Logs úteis (`[BootStability]`), sem reload automático.
-- Expõe `isPreviewContext()` para outros módulos.
+## 2. `Study.tsx`
+- Substituir todo o cálculo `currentStatusTargets`/`compatibilityIds` por `resolveCardStatusIdentity(...)`.
+- `favoriteTargetId = redListTargetId = canonicalGroupId`; `specialTargetId = visibleLayerId`.
+- `isFavorite` / `isRedListed`: preferem `canonicalGroupId`, mas também reconhecem `legacyIds` (período de migração).
+- `isSpecial`: só `visibleLayerId`.
+- Handlers passam a chamar **uma única** mutation por ação (ver §3).
+- Em "Modo Favoritos", desfavoritar **não remove o card atual no meio do clique** — finaliza a animação/toast, e só avança quando o usuário navegar (filtro reativo passa a aplicar no próximo `goNext`).
 
-### 3. `versionManager.ts` neutralizado
-- Manter `APP_VERSION`, `APP_BUILD_ID`, `formatVersionLabel()`.
-- **Remover** o `checkAppBuildVersion()` que faz `window.location.reload()` no import. Substituir por função pura que retorna boolean (sem side-effect). O reload de nova build agora fica a cargo do `bootStability` (e mesmo lá, só limpa cache — sem reload forçado, deixa o usuário recarregar).
+## 3. Mutations atômicas (sem `forEach`)
+Criar em `src/hooks/`:
+- `useSetFavoriteGroup()` — `{ canonicalId, cleanupIds, enabled }`.
+  - **enable=false**: 1 `DELETE ... in('resource_id', cleanupIds)` em `user_favorites` (type='flashcard') **+** 1 `DELETE ... in('flashcard_id', cleanupIds)` em `user_red_list`. Sequência simples (sem RPC nova; mantém compatibilidade com banco atual).
+  - **enable=true**: 1 `DELETE in(cleanupIds \ canonicalId)` para limpar marcações legadas por camada; `INSERT` apenas do `canonicalId` (tolera 23505).
+- `useSetRedListGroup()` — análogo em `user_red_list`. Antes de habilitar, verifica se `canonicalId` está nos favoritos; senão bloqueia com toast claro.
+- `useSetSpecialLayer()` — opera só com `visibleLayerId` em `user_special_flashcards`.
 
-### 4. `main.tsx` simplificado
-- Importa `bootStability` e chama `runBootStability()` antes de montar React.
-- Remove bloco inline de SW cleanup e cache cleanup (movido).
-- Mantém splash e progress bar.
+`useToggleFavorite`/`useToggleRedList`/`useToggleSpecialFlashcard` atuais ficam preservados (usados por `ListDetail.tsx`, `SpecialCards.tsx`, `ImportExplanationsDialog.tsx`), apenas o `Study.tsx` migra. O `removeFromRedListIfNeeded` passa a aceitar `string | string[]` e usar `.in(...)`.
 
-### 5. Auth sem race
-- `SessionWatcher`: já tem guard `initializedRef`, mas o redirect no `INITIAL_SESSION` sem sessão dispara antes do React Query hidratar. Ajustar para: no `INITIAL_SESSION`, se `!session` E rota é protegida, aguardar 1 tick (`setTimeout 0`) e re-checar `supabase.auth.getSession()` antes de navegar — evita falso negativo durante hidratação.
-- Auditar `useAuthUser`: garantir um único `getSession` + uso do listener compartilhado (sem duplicar chamadas concorrentes).
-- `EconomyInitializer`: gatear init com `isReady` do auth para não disparar antes da sessão.
+## 4. Invariante Favorito × Lista Vermelha
+- `useSetFavoriteGroup({enabled:false})` sempre limpa Lista Vermelha do grupo na mesma operação (duas chamadas, mas atômicas do ponto de vista do usuário; rollback em caso de erro).
+- `useSetRedListGroup` rejeita ativação sem favorito.
 
-### 6. Safe Mode kill-switch real
-- `featureFlags.ts`: adicionar helper `isSafeMode()` que lê `ape_safe_mode` do localStorage e força flags falsy para `economy_enabled`, `heartbeat_enabled`, `swipe_navigation_enabled`, `present_inbox_visible`, `study_images_enabled`, `glossary_enabled`, `word_hints_enabled`.
-- `useActivityHeartbeat`, `useSwipeNavigation`, `routePrefetch`, `InstallPWA` (caso volte), modais de present box: gatear com `isSafeMode()`.
-- `AppRecoveryBanner`: adicionar botão "Sair do modo seguro" que limpa flag + reload manual.
-- `useFreezeWatchdog`: quando detectar freezes repetidos, ativar `ape_safe_mode` automaticamente.
+## 5. Motor da Lista Vermelha
+Em `useStudyEngine.ts`:
+- Construir `canonicalToPlayableMap: Map<canonicalId, playableEntryId>` a partir de `flashcards` (camada agrupada via `prepareLayeredStudyDeck`). Para cards normais, `canonical === playable`.
+- Antes de chamar `injectRedListRepetitions` e `orderByIntelligence`, mapear `redListIds → effectiveRedPlayableIds` usando o mapa. Banco continua guardando o canonical.
+- Aplicar o mesmo mapeamento em qualquer outro ponto que compare `redListIds` com `cardsOrder` (Foco Vermelho / priorização).
 
-### 7. `errorCapture.ts` menos ruidoso
-- `unhandledrejection`: usar `isIgnorablePromiseRejection` para **não** chamar `saveError` em falhas de network/abort.
-- Throttle: `saveError` só escreve se `Date.now() - lastWrite > 1000ms`.
-- Separar tipos via label (`network`, `chunk`, `supabase`, `render`).
-- Detectar erros de chunk lazy (`ChunkLoadError`, `Loading chunk * failed`) e marcar separadamente — `LazyErrorBoundary` exibe fallback.
+## 6. Migração SQL (idempotente)
+Nova migration `supabase/migrations/<ts>_canonicalize_favorites_redlist.sql`:
+- Para cada `user_favorites` com `resource_type='flashcard'` cujo `resource_id` aponte para flashcard com `parent_card_id IS NOT NULL`:
+  - `INSERT ... (user_id, 'flashcard', parent_card_id) ON CONFLICT DO NOTHING`;
+  - `DELETE` do registro original da camada.
+- Mesma lógica para `user_red_list` (usar `flashcard_id` → `parent_card_id`).
+- **Não tocar** em `user_special_flashcards`.
+- Tudo num único migration com CTEs/`WITH`, idempotente (rodável várias vezes).
 
-### 8. Swipe restrito
-- `useSwipeNavigation`: adicionar lista negra de rotas — desativar se `pathname` começa com `/study`, `/games`, `/folders/`, `/collections/`, `/turmas/`.
-- Já desativa via `isSafeMode()` também.
+## 7. React Query
+- Nas novas mutations: `setQueriesData` apenas em chaves que contenham o `listId` do escopo atual (verificar via `queryKey[3] === listId` ou refazer fetch). Demais escopos são apenas invalidados em `onSettled` (sem mutação otimista cruzada).
+- Snapshot único por mutation → rollback consistente.
 
-### 9. Build checks
-- `package.json`: scripts `typecheck`, `check` (a Lovable já roda build).
-- Rodar `tsc --noEmit` e `vitest` para validar sem regressão.
+## 8. Estado pendente
+- Novas mutations expõem `isPending` por **grupo** (`canonicalId`) e por **camada** (`visibleLayerId`). `Study.tsx` desabilita os botões correspondentes e ignora clique duplo. `toast` único por ação (já garantido por mutation única).
 
-### 10. Não tocar
-- Lógica de estudo, cards, favoritos, lista vermelha, gameCore, hooks de TTS, layout visual, rotas, schema de DB.
+## 9. Modo somente Favoritos
+- Em `Study.tsx`, ao desfavoritar o card atual, **não** recomputar `cardsOrder` imediatamente. Marcar `pendingFavoritesRefilter=true` e aplicar o filtro só no próximo `goNext` ou ao concluir a sessão. Evita salto/tela vazia.
 
-## Arquivos a alterar
+## 10. Testes
+Adicionar:
+- `src/features/cards/lib/cardStatusIdentity.test.ts` — 6 casos (normal, layered 1ª/2ª/3ª camada, sem layers, legacy mistura).
+- `src/features/study/lib/redListMapping.test.ts` — mapeamento canonical→playable em `injectRedListRepetitions`.
+- `src/hooks/__tests__/setFavoriteGroup.test.ts` (mock supabase) — enable/disable, cleanup de legacy, propagação para red list.
+- Smoke test de "modo favoritos não pula card" via teste unitário do reducer/derived state.
 
-**Novos:**
-- `src/lib/bootStability.ts`
+Rodar com `bunx vitest run`.
 
-**Editar:**
-- `src/main.tsx` (simplificar)
-- `src/lib/versionManager.ts` (remover side-effect de reload)
-- `src/App.tsx` (remover InstallPWA do render)
-- `index.html` (remover manifest link e metatags PWA)
-- `src/components/SessionWatcher.tsx` (guard de hidratação)
-- `src/components/EconomyInitializer.tsx` (gatear por auth ready)
-- `src/lib/errorCapture.ts` (filtrar + throttle)
-- `src/hooks/useSwipeNavigation.ts` (blacklist + safe mode)
-- `src/hooks/useActivityHeartbeat.ts` (gatear por safe mode)
-- `src/lib/routePrefetch.ts` (gatear por safe mode)
-- `src/lib/featureFlags.ts` (helper `isSafeMode` + overrides)
-- `src/components/AppRecoveryBanner.tsx` (botão sair safe mode)
-- `src/hooks/useFreezeWatchdog.ts` (auto-ativar safe mode)
-- `src/components/SafeMode.tsx` (expor estado)
-- `src/components/LazyErrorBoundary.tsx` (fallback chunk error)
-- `package.json` (scripts typecheck/check)
+# Arquivos a criar/editar
 
-**Não tocar:**
-- `public/sw.js` (já é kill-switch correto)
-- `src/components/InstallPWA.tsx` (deixa o arquivo mas não monta)
-- Qualquer arquivo de study/cards/economy lógica
+**Criar**
+- `src/features/cards/lib/cardStatusIdentity.ts` + `.test.ts`
+- `src/hooks/useSetFavoriteGroup.ts`
+- `src/hooks/useSetRedListGroup.ts`
+- `src/hooks/useSetSpecialLayer.ts`
+- `src/features/study/lib/redListMapping.ts` (+ teste)
+- `supabase/migrations/<ts>_canonicalize_favorites_redlist.sql`
 
-## Como testar
+**Editar**
+- `src/pages/Study.tsx` (substituir bloco `currentStatusTargets` + handlers + modo favoritos)
+- `src/features/study/hooks/useStudyEngine.ts` (canonical→playable map antes de `injectRedListRepetitions`/`orderByIntelligence`)
+- `src/hooks/useRedList.ts` (`removeFromRedListIfNeeded` aceita array, usa `.in(...)`)
+- (sem alterações em `ListDetail.tsx`, `SpecialCards.tsx`, `ImportExplanationsDialog.tsx`, `FavoriteButton.tsx`, `RedListButton.tsx`, `StudyToolsMenu.tsx`, `studyDeck.ts`)
 
-1. **Boot frio**: limpar storage → abrir `/` → deve ir para `/auth` sem flicker.
-2. **Boot logado**: estar logado → recarregar → splash → home, sem reload extra.
-3. **Atualização de build**: simular mudando `BUILD_ID` → cleanup roda uma vez, sem reload automático em loop.
-4. **Mobile / atalho antigo**: abrir PWA instalado antigo → kill-switch SW desregistra na próxima visita.
-5. **Safe Mode**: setar `localStorage.ape_safe_mode='1'` → recarregar → sem heartbeat, sem swipe, sem prefetch. Banner com botão de sair.
-6. **Network offline**: provocar fetch fail → console warn, **não** salvar como crash, banner não aparece.
-7. **Chunk fail**: simular import lazy quebrado → fallback amigável via LazyErrorBoundary.
-8. **Study**: abrir `/study/...` → swipe global desativado, gestos internos funcionam.
-9. **Build**: `npm run typecheck` e `npm run build` passam sem novos erros.
+# Restrições respeitadas
+- Sistema de camadas **não** muda.
+- Especiais permanecem **por camada**.
+- Aparência geral preservada (apenas comportamento dos botões/handlers).
+- Mudanças incrementais; hooks antigos seguem em uso fora de `Study.tsx`.
 
-## Riscos restantes
-
-- Usuários com **PWA instalado antigo** (tela inicial) verão o kill-switch worker rodar uma vez antes de pegar a versão nova — pode parecer um reload extra no primeiro acesso pós-deploy. Aceitável.
-- `useAuthUser` não foi mostrado; se ele tiver lógica própria de race, a correção em `SessionWatcher` pode não cobrir 100%. Vou ler antes de editar.
-- Desabilitar heartbeat em safe mode pode atrasar contagem de atividade do dia se o usuário ficar preso em safe mode — mitigado pelo botão "Sair do modo seguro".
-- `featureFlags` overrides afetam telas que checam flags em runtime; se alguma feature for assumida como sempre-ligada, pode mudar comportamento. Mitigação: só forço overrides quando safe mode está ativo.
-- Não toco no banco, RLS, ou lógica de estudo — risco zero nessas áreas.
+# Riscos restantes
+- A operação `disable favorite` faz dois `DELETE`s (favoritos + red list) sem RPC transacional; em falha do 2º, o 1º já efetivou. Mitigado com `onSettled` invalidando ambos. Se necessário, posso adicionar uma RPC `unset_favorite_group(canonical_id, cleanup_ids[])` em iteração futura.
+- Migration assume que `parent_card_id` aponta sempre para um flashcard existente; registros órfãos são mantidos como estão (não migram, não quebram).
+- Mapa canonical→playable é recalculado a cada mudança de `flashcards`; em listas muito grandes (>2k cards) custa O(n), aceitável.
+- Componentes fora do Study (`ListDetail`) ainda chamam `useToggleFavorite` por ID exibido — em listas isso normalmente já é o canonical/principal, então segue correto; pode ser unificado depois.
