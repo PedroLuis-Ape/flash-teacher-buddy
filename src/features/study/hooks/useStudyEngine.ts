@@ -12,6 +12,10 @@ import {
   reinjectFailedCard,
   type CardProgressLike,
 } from "@/features/study/lib/intelligenceScoring";
+import {
+  buildCanonicalToPlayableMap,
+  mapCanonicalIdsToPlayable,
+} from "@/features/cards/lib/cardStatusIdentity";
 
 export interface StudyResult {
   flashcardId: string;
@@ -91,7 +95,12 @@ function injectRedListRepetitions(
 
 export function useStudyEngine(
   listId: string | undefined,
-  flashcards: { id: string; term: string; translation: string }[],
+  flashcards: {
+    id: string;
+    term: string;
+    translation: string;
+    parent_card_id?: string | null;
+  }[],
   mode: "flip" | "multiple-choice" | "write" | "unscramble" | "mixed" | "pronunciation",
   unlimitedMode: boolean = false,
   favoriteIds: string[] = [],
