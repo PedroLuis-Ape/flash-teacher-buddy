@@ -394,10 +394,18 @@ const Study = () => {
   // Order/direction/favorites are applied locally (in effectiveFlashcards or by
   // shuffling) — they must NOT trigger a fresh DB query, which would reset the
   // session and re-init the engine for free.
+  // Clara Master P0 — we ALSO wait for auth to resolve before loading. On a
+  // private route, loadFlashcards needs the session to either (a) hit the
+  // authenticated table query or (b) fall back to the portal RPC. Firing
+  // before AuthContext resolves caused the cold-restart favorites race.
   useEffect(() => {
+    const isPortalRoute = typeof window !== "undefined"
+      && window.location.pathname.startsWith("/portal/");
+    const access = resolveStudyAccess({ authStatus, isPortalRoute, userId: authUserId });
+    if (access === "wait") return;
     loadFlashcards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedId]);
+  }, [resolvedId, authStatus, authUserId]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -1025,15 +1033,23 @@ const Study = () => {
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
   }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
 
-  // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
-  // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
-  // Este efeito desativa o flag persistido para limpar o estado herdado.
+  // Clara Master P0 — NEVER auto-persist `favoritesOnly: false` just because
+  // the favorites query came back empty. Auth races, fetching states, and
+  // placeholder data would all wipe the user's preference on cold restart.
+  //
+  // When the filter genuinely falls back (confirmed-zero favorites for the
+  // authenticated user), we surface a one-shot toast and rely on the
+  // existing "Estudar todos" button (handleDisableFavoritesFilter) for the
+  // explicit user action. Persistent prefs only change on explicit action.
+  const fallbackToastShownRef = useRef(false);
   useEffect(() => {
-    if (favoritesFilterFellBack) {
-      toast.info("Nenhum favorito encontrado. Exibindo todos os cards.");
-      updatePrefs({ favoritesOnly: false });
+    if (favoritesFilterFellBack && !fallbackToastShownRef.current) {
+      fallbackToastShownRef.current = true;
+      toast.info("Nenhum favorito nesta lista. Estudando todos os cards.");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!favoritesFilterFellBack) {
+      fallbackToastShownRef.current = false;
+    }
   }, [favoritesFilterFellBack]);
 
   // Helper to disable favorites filter and restart with all cards
