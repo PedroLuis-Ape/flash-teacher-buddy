@@ -58,8 +58,13 @@ export function prefetchRoute(path: string) {
 
 /**
  * Prefetch the most common destinations from the current page.
+ *
+ * @deprecated Phase 6 (Clara Master): batch prefetching pulled 5 chunks
+ * unconditionally and competed with first paint. Prefer intent-based
+ * prefetch via `prefetchRoute(path)` on hover/focus/touchstart, or use
+ * the `<PrefetchLink>` wrapper. Kept as a no-op for backwards-compat —
+ * remove call sites in follow-up phases.
  */
 export function prefetchCommonRoutes() {
-  const common = ['/', '/folders', '/goals', '/store', '/profile'];
-  common.forEach(prefetchRoute);
+  // Intentional no-op. See deprecation note above.
 }
