@@ -106,6 +106,22 @@ export const FEATURE_FLAGS = {
    * Scope: useStudyEngine. Safe to toggle at runtime.
    */
   intelligent_study_engine: false,
+
+  /**
+   * Clara Master — new flashcard group status pipeline.
+   *
+   *   "off"    → legacy code path only (user_favorites / user_red_list).
+   *   "shadow" → legacy still owns the UI, but reads also fetch from the new
+   *              `user_flashcard_group_status` table and emit drift telemetry
+   *              via `statusTelemetry.reportDrift`. Zero behavioural change.
+   *   "on"     → new pipeline owns reads & writes for callers that pass a
+   *              `statusGroupUid`. Callers without a uid silently fall back
+   *              to legacy (back-compat).
+   *
+   * Default: "off". Promotion to "shadow" / "on" is a deliberate QA pass and
+   * MUST be backed by cold-mount evidence (Clara Master, Phase 5.b).
+   */
+  new_status_pipeline: "off" as "off" | "shadow" | "on",
 } as const;
 
 /**

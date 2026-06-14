@@ -304,3 +304,55 @@ Excluir os 4 novos arquivos. Nenhum schema foi tocado. Nenhum consumidor existen
 
 ### Próximo (Phase 5.b — substituição de call sites, sub-fase separada)
 Migrar `FavoriteButton` + `RedListButton` para o pipeline novo atrás de um feature flag interno; manter `useFavorites`/`useRedList` rodando em paralelo com telemetria `reportDrift` durante 1 ciclo de QA real; só então desativar o caminho legado.
+
+---
+
+## Phase 5.b — Botões aceitam o pipeline novo via feature flag — COMPLETED
+
+### Estratégia
+Em vez de migrar call site por call site (alto risco sem QA real com camadas), os botões passam a aceitar opcionalmente um `statusGroupUid`. Sem esse prop, o caminho é byte-idêntico ao legado. O comportamento só muda quando:
+1. A flag `new_status_pipeline` ∈ `{"shadow","on"}`, **e**
+2. O caller passa um `statusGroupUid`, **e**
+3. O usuário está autenticado.
+
+### Mudanças
+- **`src/lib/featureFlags.ts`** — nova flag `new_status_pipeline: "off" | "shadow" | "on"`, default `"off"`. Documentada com o contrato de cada modo.
+- **`src/features/cards/lib/groupStatusGate.ts`** (novo) — função pura `resolveGateMode({authStatus, statusGroupUid, flagValue})` retorna `legacy | shadow | new`. Vive em `/lib` (sem dependência de React/AuthContext) para ser testável.
+- **`src/features/cards/hooks/useGroupStatusGate.ts`** (novo) — hook que liga `useAuth + getFlag + useFlashcardGroupStatus` e, em modo `shadow`, chama `reportDrift` (Phase 5.a) sempre que o valor legado diverge do novo.
+- **`src/features/study/components/FavoriteButton.tsx`** — adiciona props opcionais `statusGroupUid` + `isRedListed`. Quando o gate decide `mode === "new"`, a mutação vai pela `useSetFlashcardGroupStatus` (outbox + RPC idempotente). Caso contrário, `useToggleFavorite` legada — exatamente como antes. Estado visual lê de `gate.effectiveIsFavorite`, que cai para o valor legado nos modos `legacy/shadow`.
+- **`src/features/study/components/RedListButton.tsx`** — idem, com a invariante CHECK aplicada localmente (Red implica Favorite).
+
+### Invariantes garantidas
+1. **Nenhuma alteração visível por default.** Default `off` → mode `legacy` → caminho legado em 100% dos cliques.
+2. **Conservador na ativação.** Mesmo com a flag ativa, sem `statusGroupUid` o gate força `legacy`. Nenhum caller pode ser trocado por acidente.
+3. **Sem mistura de fontes durante shadow.** Em `shadow`, legado dirige a UI; o novo é apenas comparado. Drift é logado em `console.warn` via `reportDrift`.
+4. **Hook order estável.** `useFlashcardGroupStatus` é chamado em toda render; só auto-desabilita pelo `enabled` quando o `statusGroupUid` não está liberado.
+5. **CHECK do banco respeitada no cliente.** Em `mode === "new"`, desfavoritar dispara `set_flashcard_group_status(isFavorite: false, isRedList: false)`. Toggling red sempre força `isFavorite: true`.
+
+### Testes adicionados
+**`src/features/cards/lib/__tests__/groupStatusGate.test.ts`** — 5 testes:
+1. `statusGroupUid` ausente → `legacy` (mesmo com flag `on`).
+2. Auth não autenticada (initializing/anonymous/error) → `legacy`.
+3. Flag `off` → `legacy`.
+4. Flag `shadow` + condições atendidas → `shadow`.
+5. Flag `on` + condições atendidas → `new`.
+
+### Validação executada
+```
+npx vitest run     → 16 arquivos, 354/354 passando
+npx tsc --noEmit   → 0 erros
+```
+
+### O que NÃO mudou
+- Call sites de `FavoriteButton` / `RedListButton` em `Study.tsx`, `GamesHub.tsx`, `ListDetail.tsx`, `SpecialCards.tsx`, `Folders.tsx`, `useStudyEngine` — nenhum passa `statusGroupUid` ainda. Comportamento em produção é o atual.
+- `useFavorites`, `useRedList`, `useSetFavoriteGroup`, `useSetRedListGroup`, `useSpecialFlashcards` — intactos.
+
+### Riscos restantes
+- Promoção da flag para `shadow` ou `on` em produção exige QA manual em pelo menos: (a) card normal, (b) card com 5 camadas favoritando camada 2 + cold reload, (c) Lista Vermelha sobre grupo com camadas, (d) login de outra conta no mesmo navegador (verificar isolamento de outbox).
+- A migração de Especiais ainda usa o caminho legado (sem RPC idempotente própria) — fora do escopo desta sub-fase.
+
+### Rollback
+Reverter os 4 arquivos modificados/criados. Como a flag default é `off`, basta o revert; nenhum dado precisa ser tocado.
+
+### Próximo (Phase 5.c — passar `statusGroupUid` aos botões nos call sites)
+Plumbing seletivo de `flashcards.status_group_uid` pelos componentes que renderizam `FavoriteButton`/`RedListButton`. Pode ser feito sem mudar a flag (que continua `off`), preparando o terreno para um dia de QA dedicado.
