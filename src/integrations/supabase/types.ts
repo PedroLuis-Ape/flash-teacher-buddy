@@ -256,6 +256,36 @@ export type Database = {
         }
         Relationships: []
       }
+      clara_favorites_backfill_report: {
+        Row: {
+          favorites_layer_deleted: number
+          favorites_orphan_deleted: number
+          favorites_principal_inserted: number
+          id: string
+          ran_at: string
+          red_layer_deleted: number
+          red_principal_inserted: number
+        }
+        Insert: {
+          favorites_layer_deleted: number
+          favorites_orphan_deleted: number
+          favorites_principal_inserted: number
+          id?: string
+          ran_at?: string
+          red_layer_deleted: number
+          red_principal_inserted: number
+        }
+        Update: {
+          favorites_layer_deleted?: number
+          favorites_orphan_deleted?: number
+          favorites_principal_inserted?: number
+          id?: string
+          ran_at?: string
+          red_layer_deleted?: number
+          red_principal_inserted?: number
+        }
+        Relationships: []
+      }
       class_goal_assignments: {
         Row: {
           aluno_id: string
@@ -2860,6 +2890,28 @@ export type Database = {
         | { Args: { p_public_id: string }; Returns: Json }
       get_rarity_fallback_price: { Args: { p_rarity: string }; Returns: number }
       get_safe_profile: { Args: { p_user_id: string }; Returns: Json }
+      get_scoped_flashcard_favorites: {
+        Args: {
+          p_collection_id?: string
+          p_folder_id?: string
+          p_institution_id?: string
+          p_list_id?: string
+        }
+        Returns: {
+          group_id: string
+        }[]
+      }
+      get_scoped_flashcard_red_list: {
+        Args: {
+          p_collection_id?: string
+          p_folder_id?: string
+          p_institution_id?: string
+          p_list_id?: string
+        }
+        Returns: {
+          group_id: string
+        }[]
+      }
       get_subscribed_teachers_with_stats: {
         Args: { _student_id: string }
         Returns: {

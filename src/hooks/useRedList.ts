@@ -20,32 +20,19 @@ async function fetchRedList(
     return (data as any[])?.map((r: any) => r.flashcard_id) ?? [];
   }
 
-  // Scoped: include card.id AND parent_card_id so red-list entries saved on
-  // the parent/aggregator id of layered cards are still recognized within
-  // this list.
-  const { data: flashcards, error: fcError } = await supabase
-    .from('flashcards')
-    .select('id, parent_card_id')
-    .eq('list_id', listScope)
-    .is('deleted_at', null);
-
-  if (fcError) throw fcError;
-  const idSet = new Set<string>();
-  for (const card of flashcards ?? []) {
-    if (card.id) idSet.add(card.id);
-    if ((card as any).parent_card_id) idSet.add((card as any).parent_card_id);
-  }
-  const flashcardIds = Array.from(idSet);
-  if (flashcardIds.length === 0) return [];
-
-  const { data, error } = await supabase
-    .from('user_red_list' as any)
-    .select('flashcard_id')
-    .eq('user_id', userId)
-    .in('flashcard_id', flashcardIds);
-
+  // CLARA MASTER P0 — server-side RPC returns canonical group ids only.
+  const { data, error } = await (supabase as any).rpc('get_scoped_flashcard_red_list', {
+    p_list_id: listScope,
+    p_collection_id: null,
+    p_folder_id: null,
+    p_institution_id: null,
+  });
   if (error) throw error;
-  return (data as any[])?.map((r: any) => r.flashcard_id) ?? [];
+  const seen = new Set<string>();
+  for (const row of (data ?? []) as Array<{ group_id: string }>) {
+    if (row?.group_id) seen.add(row.group_id);
+  }
+  return Array.from(seen);
 }
 
 /**

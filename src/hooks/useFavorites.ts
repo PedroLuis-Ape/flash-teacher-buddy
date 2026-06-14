@@ -15,71 +15,26 @@ export interface FavoriteScope {
 const hasScope = (scope?: FavoriteScope) =>
   Boolean(scope?.listId || scope?.collectionId || scope?.folderId || scope?.institutionId);
 
-async function resolveScopedFlashcardIds(scope: FavoriteScope): Promise<string[]> {
-  if (!hasScope(scope)) return [];
-
-  // Primary scope: list or collection
-  if (scope.listId || scope.collectionId) {
-    let flashcardsQuery = supabase
-      .from('flashcards')
-      .select('id, parent_card_id')
-      .is('deleted_at', null);
-
-    if (scope.listId) {
-      flashcardsQuery = flashcardsQuery.eq('list_id', scope.listId);
-    }
-
-    if (scope.collectionId) {
-      flashcardsQuery = flashcardsQuery.eq('collection_id', scope.collectionId);
-    }
-
-    const { data: flashcards, error } = await flashcardsQuery;
-    if (error) throw error;
-
-    // Include parent_card_id of layered cards so favorites saved on the
-    // group/aggregator id are also counted as scoped favorites.
-    const set = new Set<string>();
-    for (const card of flashcards ?? []) {
-      if (card.id) set.add(card.id);
-      if ((card as any).parent_card_id) set.add((card as any).parent_card_id);
-    }
-    return Array.from(set);
+/**
+ * CLARA MASTER P0 — flashcard+scope favorites are read SERVER-SIDE via the
+ * `get_scoped_flashcard_favorites` RPC. It returns ONLY canonical group ids
+ * (parent_card_id ?? id), regardless of whether the legacy favorite row was
+ * written against a layer or the principal. No `.in(longArray)` from the
+ * client, no missing layered favorites after a cold restart.
+ */
+async function fetchScopedFlashcardGroupIds(scope: FavoriteScope): Promise<string[]> {
+  const { data, error } = await (supabase as any).rpc('get_scoped_flashcard_favorites', {
+    p_list_id: scope.listId ?? null,
+    p_collection_id: scope.collectionId ?? null,
+    p_folder_id: scope.folderId ?? null,
+    p_institution_id: scope.institutionId ?? null,
+  });
+  if (error) throw error;
+  const seen = new Set<string>();
+  for (const row of (data ?? []) as Array<{ group_id: string }>) {
+    if (row?.group_id) seen.add(row.group_id);
   }
-
-  // Secondary scope: folder / institution -> resolve lists first
-  let listsQuery = supabase
-    .from('lists')
-    .select('id')
-    .is('deleted_at', null);
-
-  if (scope.folderId) {
-    listsQuery = listsQuery.eq('folder_id', scope.folderId);
-  }
-
-  if (scope.institutionId) {
-    listsQuery = listsQuery.eq('institution_id', scope.institutionId);
-  }
-
-  const { data: lists, error: listsError } = await listsQuery;
-  if (listsError) throw listsError;
-
-  const listIds = lists?.map((list) => list.id) ?? [];
-  if (listIds.length === 0) return [];
-
-  const { data: flashcards, error: flashcardsError } = await supabase
-    .from('flashcards')
-    .select('id, parent_card_id')
-    .in('list_id', listIds)
-    .is('deleted_at', null);
-
-  if (flashcardsError) throw flashcardsError;
-
-  const set = new Set<string>();
-  for (const card of flashcards ?? []) {
-    if (card.id) set.add(card.id);
-    if ((card as any).parent_card_id) set.add((card as any).parent_card_id);
-  }
-  return Array.from(set);
+  return Array.from(seen);
 }
 
 async function fetchFavoritesByScope(
@@ -98,18 +53,7 @@ async function fetchFavoritesByScope(
     return data?.map((favorite) => favorite.resource_id) ?? [];
   }
 
-  const scopedFlashcardIds = await resolveScopedFlashcardIds(scope!);
-  if (scopedFlashcardIds.length === 0) return [];
-
-  const { data, error } = await supabase
-    .from('user_favorites')
-    .select('resource_id')
-    .eq('user_id', userId)
-    .eq('resource_type', resourceType)
-    .in('resource_id', scopedFlashcardIds);
-
-  if (error) throw error;
-  return data?.map((favorite) => favorite.resource_id) ?? [];
+  return fetchScopedFlashcardGroupIds(scope!);
 }
 
 export function useFavorites(
@@ -273,8 +217,8 @@ export function useFavoritesCount(
       if (!userId) return 0;
 
       if (resourceType === 'flashcard' && hasScope(scope)) {
-        const scopedFavorites = await fetchFavoritesByScope(userId, resourceType, scope);
-        return scopedFavorites.length;
+        const scopedGroups = await fetchScopedFlashcardGroupIds(scope!);
+        return scopedGroups.length;
       }
       
       const { count, error } = await supabase
