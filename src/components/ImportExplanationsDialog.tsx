@@ -17,6 +17,11 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
+import {
+  APPLY_BATCH,
+  VALIDATE_LOOKUP_BATCH,
+  runInBatches,
+} from "@/features/special-import/lib/chunking";
 
 type ConflictMode = "replace" | "append" | "skip";
 
@@ -123,6 +128,11 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
   const [preview, setPreview] = useState<PreviewRow[] | null>(null);
   const [validating, setValidating] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [progress, setProgress] = useState<{
+    phase: "validate" | "apply";
+    processed: number;
+    total: number;
+  } | null>(null);
   const [conflictMode, setConflictMode] = useState<ConflictMode>("replace");
   const [report, setReport] = useState<{
     applied: number;
@@ -138,6 +148,7 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
     setPreview(null);
     setReport(null);
     setConflictMode("replace");
+    setProgress(null);
   };
 
   const stats = useMemo(() => {
@@ -163,23 +174,40 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
       return;
     }
     setValidating(true);
+    setProgress({ phase: "validate", processed: 0, total: 0 });
     try {
       const validItems = results
         .filter((r): r is NormalizedResult & { item: ParsedItem } => !!r.item);
       const ids = Array.from(new Set(validItems.map((r) => r.item.flashcard_id!)));
       let map = new Map<string, { detailed_explanation: string | null }>();
       if (ids.length > 0) {
-        const { data, error } = await supabase
-          .from("flashcards")
-          .select("id, detailed_explanation")
-          .in("id", ids);
-        if (error) throw error;
-        map = new Map(
-          ((data as any[]) ?? []).map((r) => [
-            r.id,
-            { detailed_explanation: r.detailed_explanation ?? null },
-          ])
+        // Lookup em lotes de 100 — evita uma única consulta com milhares de
+        // ids no .in() (causa long task no parser do PostgREST e no cliente).
+        const batchResults = await runInBatches(
+          ids,
+          VALIDATE_LOOKUP_BATCH,
+          async (batchIds) => {
+            const { data, error } = await supabase
+              .from("flashcards")
+              .select("id, detailed_explanation")
+              .in("id", batchIds);
+            if (error) throw error;
+            return (data as any[]) ?? [];
+          },
+          {
+            onProgress: (p) =>
+              setProgress({
+                phase: "validate",
+                processed: p.processed,
+                total: p.total,
+              }),
+          }
         );
+        for (const rows of batchResults) {
+          for (const r of rows) {
+            map.set(r.id, { detailed_explanation: r.detailed_explanation ?? null });
+          }
+        }
       }
       const rows: PreviewRow[] = results.map((r) => {
         if (!r.item) {
@@ -213,12 +241,14 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
       toast.error("Erro ao validar: " + (e?.message ?? "desconhecido"));
     } finally {
       setValidating(false);
+      setProgress(null);
     }
   };
 
   const handleApply = async () => {
     if (!preview) return;
     setApplying(true);
+    setProgress({ phase: "apply", processed: 0, total: 0 });
     const invalidCount = preview.filter((r) => r.status === "invalid").length;
     const missingCount = preview.filter((r) => r.status === "missing").length;
     try {
@@ -241,12 +271,28 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
             example_translation: firstEx?.pt ?? item.example_translation ?? null,
           };
         });
-      const { data, error } = await (supabase as any).rpc(
-        'apply_special_flashcard_explanations',
-        { p_items: items, p_conflict_mode: conflictMode },
+      // Aplica em lotes pequenos contra a RPC existente. A RPC já é
+      // idempotente por item (somente status === 'applied' remove dos
+      // Especiais), portanto uma divisão em lotes preserva o contrato.
+      const allResults: Array<{ flashcard_id: string; status: string; message?: string }> = [];
+      await runInBatches(
+        items,
+        APPLY_BATCH,
+        async (batch) => {
+          const { data, error } = await (supabase as any).rpc(
+            'apply_special_flashcard_explanations',
+            { p_items: batch, p_conflict_mode: conflictMode },
+          );
+          if (error) throw error;
+          const partial = (data?.results ?? []) as typeof allResults;
+          allResults.push(...partial);
+        },
+        {
+          onProgress: (p) =>
+            setProgress({ phase: "apply", processed: p.processed, total: p.total }),
+        }
       );
-      if (error) throw error;
-      const results = (data?.results ?? []) as Array<{ flashcard_id: string; status: string; message?: string }>;
+      const results = allResults;
       const applied = results.filter((r) => r.status === 'applied').length;
       const skipped = results.filter((r) => r.status === 'skipped').length;
       const permission = results.filter((r) => r.status === 'permission_denied').length;
@@ -280,8 +326,28 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
         missing: missingCount + notFoundFromRpc,
         errors: errors + permission,
       });
-      queryClient.invalidateQueries({ queryKey: ["flashcards"] });
-      queryClient.invalidateQueries({ queryKey: ["list-flashcards"] });
+      // Invalidações direcionadas — apenas listas afetadas, não o app todo.
+      const appliedIdsSet = new Set(
+        results.filter((r) => r.status === 'applied').map((r) => r.flashcard_id)
+      );
+      if (appliedIdsSet.size > 0) {
+        try {
+          const { data: affected } = await supabase
+            .from("flashcards")
+            .select("list_id")
+            .in("id", Array.from(appliedIdsSet));
+          const listIds = Array.from(
+            new Set(((affected as any[]) ?? []).map((r) => r.list_id).filter(Boolean))
+          );
+          for (const lid of listIds) {
+            queryClient.invalidateQueries({ queryKey: ["list-flashcards", lid] });
+            queryClient.invalidateQueries({ queryKey: ["flashcards", lid] });
+          }
+        } catch (err) {
+          // fallback discreto — não derrubar o fluxo por causa de cache stale
+          console.warn("[Import] invalidação direcionada falhou", err);
+        }
+      }
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ["special-flashcards", userId] });
         queryClient.invalidateQueries({ queryKey: ["special-flashcards-count", userId] });
@@ -308,6 +374,7 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
       toast.error("Erro ao aplicar: " + (e?.message ?? "desconhecido"));
     } finally {
       setApplying(false);
+      setProgress(null);
     }
   };
 
@@ -329,6 +396,12 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-3">
+          {progress && progress.total > 0 && (
+            <div className="text-xs text-muted-foreground">
+              {progress.phase === "validate" ? "Validando" : "Aplicando"}:{" "}
+              {progress.processed}/{progress.total}
+            </div>
+          )}
           {!preview && (
             <>
               <Textarea
