@@ -228,6 +228,7 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
         .filter((v): v is SpecialFlashcardDetail => !!v);
     },
     enabled: !!userId,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
