@@ -262,8 +262,9 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
       try {
         const appliedIds = results.filter((r) => r.status === 'applied').map((r) => r.flashcard_id);
         if (appliedIds.length > 0 && typeof window !== 'undefined') {
-          if ('BroadcastChannel' in window) {
-            const ch = new BroadcastChannel('flashcard-explanations');
+          const BC = (window as any).BroadcastChannel;
+          if (typeof BC === 'function') {
+            const ch = new BC('flashcard-explanations');
             ch.postMessage({ type: 'applied', ids: appliedIds });
             ch.close();
           } else {
