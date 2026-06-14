@@ -730,6 +730,7 @@ export type Database = {
           note_text: string[] | null
           parent_card_id: string | null
           short_explanation: string | null
+          status_group_uid: string | null
           term: string
           translation: string
           updated_at: string
@@ -761,6 +762,7 @@ export type Database = {
           note_text?: string[] | null
           parent_card_id?: string | null
           short_explanation?: string | null
+          status_group_uid?: string | null
           term: string
           translation: string
           updated_at?: string
@@ -792,6 +794,7 @@ export type Database = {
           note_text?: string[] | null
           parent_card_id?: string | null
           short_explanation?: string | null
+          status_group_uid?: string | null
           term?: string
           translation?: string
           updated_at?: string
@@ -2667,6 +2670,7 @@ export type Database = {
           note_text: string[] | null
           parent_card_id: string | null
           short_explanation: string | null
+          status_group_uid: string | null
           term: string
           translation: string
           updated_at: string
