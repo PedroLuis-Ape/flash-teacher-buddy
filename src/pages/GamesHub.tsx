@@ -18,7 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { isPortalPath, buildBasePath } from "@/lib/utils";
-import { useFavoritesCount } from "@/hooks/useFavorites";
+import { useFavorites } from "@/hooks/useFavorites";
+import { useIsMutating } from "@tanstack/react-query";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
@@ -147,16 +148,40 @@ const GamesHub = () => {
     return isListRoute ? { listId: id } : { collectionId: id };
   }, [id, isListRoute]);
 
-  const { data: favoritesCount = 0, isLoading: favoritesCountLoading } = useFavoritesCount(userId, 'flashcard', favoritesScope);
+  // Single source of truth: list of IDs + count come from the SAME query.
+  const favoritesQuery = useFavorites(userId, 'flashcard', favoritesScope);
+  const favorites = favoritesQuery.data ?? [];
+  const favoritesCount = favorites.length;
+  const favoritesLoading = favoritesQuery.isLoading;
+  const favoritesSyncing =
+    favoritesQuery.isLoading ||
+    favoritesQuery.isFetching ||
+    favoritesQuery.isPlaceholderData;
+  // Any in-flight favorite-related mutation blocks the auto-reset too.
+  const favoritesMutating = useIsMutating({
+    predicate: (m) => {
+      const k = m.options.mutationKey as unknown[] | undefined;
+      const key = Array.isArray(k) ? String(k[0] ?? '') : '';
+      return key.startsWith('favorite') || key.startsWith('red');
+    },
+  }) > 0;
 
-  // Auto-reset favoritesOnly when current list/collection has 0 favorites
-  // Prevents a stale `favoritesOnly=true` from a previous list bleeding into the current one.
+  // Auto-reset only on confirmed empty result, never on placeholder/fetching state.
   useEffect(() => {
-    if (favoritesCountLoading) return;
+    if (!favoritesQuery.isSuccess) return;
+    if (favoritesSyncing) return;
+    if (favoritesMutating) return;
     if (prefs.favoritesOnly && favoritesCount === 0) {
       updatePrefs({ favoritesOnly: false });
     }
-  }, [favoritesCount, favoritesCountLoading, prefs.favoritesOnly, updatePrefs]);
+  }, [
+    favoritesQuery.isSuccess,
+    favoritesSyncing,
+    favoritesMutating,
+    favoritesCount,
+    prefs.favoritesOnly,
+    updatePrefs,
+  ]);
 
   const startGame = (rawMode: StudyMode | "multiple") => {
     // Normalize any alias (e.g. "multiple" → "multiple-choice") before persisting.
@@ -283,7 +308,9 @@ const GamesHub = () => {
                 <Label htmlFor="favorites-only" className="cursor-pointer">
                   <span className="font-medium">Estudar apenas favoritos</span>
                   <p className="text-xs text-muted-foreground">
-                    {favoritesCount > 0
+                    {favoritesSyncing
+                      ? "Atualizando favoritos..."
+                      : favoritesCount > 0
                       ? `${favoritesCount} cards marcados como favorito`
                       : "Nenhum favorito nesta lista"}
                   </p>
@@ -291,7 +318,7 @@ const GamesHub = () => {
               </div>
               <Switch
                 id="favorites-only"
-                disabled={favoritesCount === 0}
+                disabled={favoritesSyncing || favoritesCount === 0}
                 checked={prefs.favoritesOnly && favoritesCount > 0}
                 onCheckedChange={(v) => updatePrefs({ favoritesOnly: v })}
               />

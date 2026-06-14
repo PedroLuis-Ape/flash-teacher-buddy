@@ -2,14 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-/**
- * Set the Red-List state of a GROUP atomically.
- *
- *   - enable = true  → DELETE legacy per-layer marks + INSERT canonical id.
- *                      Caller is responsible for ensuring the canonical id
- *                      is favorited first (the hook re-checks defensively).
- *   - enable = false → DELETE every legacy red mark of the group.
- */
+/** Set Red-List of a GROUP transactionally via RPC, with optimistic UI. */
 export function useSetRedListGroup() {
   const qc = useQueryClient();
   return useMutation({
@@ -24,49 +17,31 @@ export function useSetRedListGroup() {
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
-      const allIds = Array.from(new Set([canonicalId, ...cleanupIds].filter(Boolean)));
-
-      if (!enable) {
-        const { error } = await supabase
-          .from('user_red_list' as any)
-          .delete()
-          .eq('user_id', user.id)
-          .in('flashcard_id', allIds);
-        if (error) throw error;
-        return { enabled: false, userId: user.id };
-      }
-
-      // Defensive: refuse to add to red list if the group is not favorited.
-      const { data: favRow, error: favErr } = await supabase
-        .from('user_favorites')
-        .select('resource_id')
-        .eq('user_id', user.id)
-        .eq('resource_type', 'flashcard')
-        .in('resource_id', allIds)
-        .limit(1)
-        .maybeSingle();
-      if (favErr) throw favErr;
-      if (!favRow) {
-        throw new Error('Marque o card como favorito antes de adicionar à Lista Vermelha.');
-      }
-
-      const legacy = allIds.filter((id) => id !== canonicalId);
-      if (legacy.length > 0) {
-        const { error: scrubErr } = await supabase
-          .from('user_red_list' as any)
-          .delete()
-          .eq('user_id', user.id)
-          .in('flashcard_id', legacy);
-        if (scrubErr) throw scrubErr;
-      }
-      const { error: insErr } = await supabase
-        .from('user_red_list' as any)
-        .insert({ user_id: user.id, flashcard_id: canonicalId } as any);
-      if (insErr && (insErr as any).code !== '23505') throw insErr;
-      return { enabled: true, userId: user.id };
+      const { data, error } = await (supabase as any).rpc('set_flashcard_group_red_list', {
+        p_canonical_id: canonicalId,
+        p_cleanup_ids: cleanupIds ?? [],
+        p_enabled: enable,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message || data.error || 'Falha ao atualizar Lista Vermelha');
+      return { enabled: enable, userId: user.id };
     },
 
-    onError: (err: any) => {
+    onMutate: async ({ canonicalId, cleanupIds, enable }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const allIds = Array.from(new Set([canonicalId, ...(cleanupIds ?? [])].filter(Boolean)));
+      await qc.cancelQueries({ queryKey: ['red-list', user.id] });
+      const prev = qc.getQueriesData<string[]>({ queryKey: ['red-list', user.id] });
+      qc.setQueriesData<string[]>({ queryKey: ['red-list', user.id] }, (old = []) => {
+        const without = old.filter((id) => !allIds.includes(id));
+        return enable ? [...without, canonicalId] : without;
+      });
+      return { prev };
+    },
+
+    onError: (err: any, _v, ctx) => {
+      ctx?.prev?.forEach(([k, v]) => qc.setQueryData(k, v));
       console.error('[redListGroup] error', err);
       toast.error(err?.message ?? 'Erro ao atualizar Lista Vermelha');
     },

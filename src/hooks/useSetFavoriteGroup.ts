@@ -3,17 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 /**
- * Set the favorite state of a layered-or-normal card GROUP in a single
- * atomic-ish operation. Replaces N parallel useToggleFavorite calls from
- * Study.tsx.
- *
- *   - enable = true  → DELETE legacy per-layer marks + INSERT canonical id
- *   - enable = false → DELETE every legacy mark of the group AND every
- *                      matching red-list entry (Favorite × RedList invariant)
- *
- * `cleanupIds` should include every id that could legitimately hold an old
- * mark for this group (canonical + per-layer + visible-layer). The hook
- * sends a single `.in(...)` per table.
+ * Set the favorite state of a layered-or-normal card GROUP via the
+ * server-side RPC `set_flashcard_group_favorite`. Single transaction,
+ * optimistic UI on top of every favorites/favorites-count cache scope.
  */
 export function useSetFavoriteGroup() {
   const qc = useQueryClient();
@@ -29,63 +21,58 @@ export function useSetFavoriteGroup() {
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
-
-      const allIds = Array.from(new Set([canonicalId, ...cleanupIds].filter(Boolean)));
-
-      if (!enable) {
-        // 1) remove every favorite mark of the group (canonical + legacy)
-        const { error: favErr } = await supabase
-          .from('user_favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('resource_type', 'flashcard')
-          .in('resource_id', allIds);
-        if (favErr) throw favErr;
-        // 2) Favorite×RedList invariant: drop every red-list entry of the group
-        const { error: redErr } = await supabase
-          .from('user_red_list' as any)
-          .delete()
-          .eq('user_id', user.id)
-          .in('flashcard_id', allIds);
-        if (redErr) console.warn('[favoriteGroup] red cleanup error', redErr);
-        return { enabled: false, userId: user.id };
-      }
-
-      // ENABLE: scrub legacy per-layer marks first (everything except canonical),
-      // then insert the canonical one. Tolerate unique-violation races.
-      const legacy = allIds.filter((id) => id !== canonicalId);
-      if (legacy.length > 0) {
-        const { error: scrubErr } = await supabase
-          .from('user_favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('resource_type', 'flashcard')
-          .in('resource_id', legacy);
-        if (scrubErr) throw scrubErr;
-      }
-      const { error: insErr } = await supabase
-        .from('user_favorites')
-        .insert({
-          user_id: user.id,
-          resource_type: 'flashcard',
-          resource_id: canonicalId,
-        });
-      if (insErr && (insErr as any).code !== '23505') throw insErr;
-      return { enabled: true, userId: user.id };
+      const { data, error } = await (supabase as any).rpc('set_flashcard_group_favorite', {
+        p_canonical_id: canonicalId,
+        p_cleanup_ids: cleanupIds ?? [],
+        p_enabled: enable,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.message || data.error || 'Falha ao atualizar favorito');
+      return { enabled: enable, userId: user.id };
     },
 
-    onError: (err) => {
+    onMutate: async ({ canonicalId, cleanupIds, enable }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const allIds = Array.from(new Set([canonicalId, ...(cleanupIds ?? [])].filter(Boolean)));
+
+      await qc.cancelQueries({ queryKey: ['favorites', user.id, 'flashcard'] });
+      await qc.cancelQueries({ queryKey: ['favorites-count', user.id, 'flashcard'] });
+      await qc.cancelQueries({ queryKey: ['red-list', user.id] });
+
+      const prevFavs = qc.getQueriesData<string[]>({ queryKey: ['favorites', user.id, 'flashcard'] });
+      const prevCount = qc.getQueriesData<number>({ queryKey: ['favorites-count', user.id, 'flashcard'] });
+      const prevRed = qc.getQueriesData<string[]>({ queryKey: ['red-list', user.id] });
+
+      qc.setQueriesData<string[]>({ queryKey: ['favorites', user.id, 'flashcard'] }, (old = []) => {
+        const without = old.filter((id) => !allIds.includes(id));
+        return enable ? [...without, canonicalId] : without;
+      });
+      qc.setQueriesData<number>({ queryKey: ['favorites-count', user.id, 'flashcard'] }, (old = 0) => {
+        // Count change is at most 1 per group toggle (canonical replaces legacy).
+        return enable ? old + 1 : Math.max(0, old - 1);
+      });
+      if (!enable) {
+        qc.setQueriesData<string[]>({ queryKey: ['red-list', user.id] }, (old = []) =>
+          old.filter((id) => !allIds.includes(id)),
+        );
+      }
+      return { prevFavs, prevCount, prevRed };
+    },
+
+    onError: (err, _vars, ctx) => {
+      ctx?.prevFavs?.forEach(([k, v]) => qc.setQueryData(k, v));
+      ctx?.prevCount?.forEach(([k, v]) => qc.setQueryData(k, v));
+      ctx?.prevRed?.forEach(([k, v]) => qc.setQueryData(k, v));
       console.error('[favoriteGroup] error', err);
-      toast.error('Erro ao atualizar favorito');
+      toast.error((err as any)?.message ?? 'Erro ao atualizar favorito');
     },
     onSuccess: (data) => {
       toast.success(
         data.enabled ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos',
       );
     },
-    onSettled: (_d, _e, _v, _ctx) => {
-      // Invalidate every scope — cheap, and guarantees consistency without
-      // touching unrelated optimistic caches.
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['favorites'] });
       qc.invalidateQueries({ queryKey: ['favorites-count'] });
       qc.invalidateQueries({ queryKey: ['red-list'] });

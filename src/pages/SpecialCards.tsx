@@ -119,7 +119,10 @@ export default function SpecialCards() {
     };
   }, [navigate]);
 
-  const { data: cards = [], isLoading } = useSpecialFlashcardsDetails(userId);
+  const detailsQuery = useSpecialFlashcardsDetails(userId);
+  const cards = detailsQuery.data ?? [];
+  const isLoading = detailsQuery.isLoading;
+  const isSyncing = detailsQuery.isFetching && !detailsQuery.isLoading;
   const removeMany = useRemoveSpecialFlashcards();
 
   // Drop selections that no longer exist
@@ -223,6 +226,8 @@ export default function SpecialCards() {
 
       {isLoading ? (
         <LoadingSpinner message="Carregando especiais..." />
+      ) : cards.length === 0 && isSyncing ? (
+        <LoadingSpinner message="Sincronizando Especiais..." />
       ) : cards.length === 0 ? (
         <Card className="p-8 text-center">
           <Gem className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
