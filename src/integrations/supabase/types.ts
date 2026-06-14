@@ -2559,6 +2559,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_special_flashcard_explanations: {
+        Args: { p_conflict_mode?: string; p_items: Json }
+        Returns: Json
+      }
       bulk_soft_delete_folders: {
         Args: { p_folder_ids: string[]; p_user_id: string }
         Returns: Json
@@ -2891,6 +2895,22 @@ export type Database = {
           p_offset?: number
           p_query: string
           p_user_type?: string
+        }
+        Returns: Json
+      }
+      set_flashcard_group_favorite: {
+        Args: {
+          p_canonical_id: string
+          p_cleanup_ids: string[]
+          p_enabled: boolean
+        }
+        Returns: Json
+      }
+      set_flashcard_group_red_list: {
+        Args: {
+          p_canonical_id: string
+          p_cleanup_ids: string[]
+          p_enabled: boolean
         }
         Returns: Json
       }
