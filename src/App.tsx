@@ -11,8 +11,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
-import { EconomyInitializer } from "@/components/EconomyInitializer";
-import { EconomyProvider } from "@/contexts/EconomyContext";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
@@ -20,8 +18,6 @@ import { LazyErrorBoundary } from "@/components/LazyErrorBoundary";
 import { PageTransition } from "@/components/PageTransition";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteSuspense } from "@/components/RouteSuspense";
-import { BrowserCheck } from "@/components/BrowserCheck";
-import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
 
 const Index = lazy(() => import("./pages/Index"));
 import Auth from "./pages/Auth"; // Eagerly loaded — critical first paint for unauthenticated users
@@ -101,16 +97,12 @@ const App = () => {
   <QueryClientProvider client={queryClient}>
     <PerformanceProvider>
     <AuthProvider>
-    <EconomyProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <LazyErrorBoundary>
           <BrowserRouter>
             <SessionWatcher />
-            <EconomyInitializer />
-            <BrowserCheck />
-            <GoogleConnectPrompt />
             <GlobalLayout>
               <RouteErrorBoundary>
                 <RouteSuspense>
@@ -181,7 +173,6 @@ const App = () => {
           </BrowserRouter>
         </LazyErrorBoundary>
       </TooltipProvider>
-    </EconomyProvider>
     </AuthProvider>
     </PerformanceProvider>
   </QueryClientProvider>
