@@ -1,21 +1,26 @@
 /**
- * Freeze Watchdog — detects main-thread stalls.
+ * Freeze Watchdog — detects *real* main-thread stalls (conservative).
  *
- * A timer is scheduled every CHECK_MS. If the actual delay between
- * fires exceeds THRESHOLD_MS, we consider the main thread to have
- * been frozen for (delay - CHECK_MS) ms and record an event in
- * localStorage. Nothing is sent to the server in this version.
+ * Conservative rules:
+ *  - Uses `performance.now()` (monotonic) instead of `Date.now()`,
+ *    so system clock changes / sleep don't masquerade as freezes.
+ *  - Completely ignores ticks while the tab is hidden — background
+ *    timer throttling is normal browser behavior, not a freeze.
+ *  - Resets the baseline on `visibilitychange→visible` and `pageshow`,
+ *    so returning from another tab or bfcache never triggers a false
+ *    positive.
+ *  - Records `suspected_stall` only as telemetry. Auto Safe Mode is
+ *    disabled in this delivery; the recovery banner only *suggests*
+ *    enabling it.
  */
 
 import { useEffect } from "react";
-import { isSafeModeEnabled, enableSafeMode } from "@/lib/safeMode";
+import { isSafeModeEnabled } from "@/lib/safeMode";
 
 const STORAGE_KEY = "ape_freeze_events";
 const CHECK_MS = 2000;
 const THRESHOLD_MS = 8000;
 const MAX_EVENTS = 20;
-const AUTO_SAFE_MODE_FREEZE_COUNT = 3;
-const AUTO_SAFE_MODE_WINDOW_MS = 10 * 60 * 1000;
 
 export interface FreezeEvent {
   timestamp: number;
@@ -101,21 +106,9 @@ function recordFreeze(delayMs: number): void {
     events.push(event);
     writeEvents(events);
 
-    // Auto-activate Safe Mode if main thread froze repeatedly in a short window.
-    if (!isSafeModeEnabled()) {
-      const cutoff = Date.now() - AUTO_SAFE_MODE_WINDOW_MS;
-      const recent = events.filter((e) => e.timestamp >= cutoff);
-      if (recent.length >= AUTO_SAFE_MODE_FREEZE_COUNT) {
-        console.warn(
-          "[FreezeWatchdog] Repeated freezes — auto-enabling safe mode",
-          recent.length
-        );
-        enableSafeMode();
-      }
-    }
-
+    // Auto Safe Mode is disabled in this delivery — the banner only suggests it.
     if (import.meta.env.DEV) {
-      console.warn("[FreezeWatchdog] Main-thread freeze detected", event);
+      console.warn("[FreezeWatchdog] Suspected main-thread stall", event);
     }
   } catch (err) {
     if (import.meta.env.DEV) console.warn("[FreezeWatchdog] record failed", err);
@@ -128,15 +121,36 @@ function recordFreeze(delayMs: number): void {
  */
 export function useFreezeWatchdog(): void {
   useEffect(() => {
-    let lastTick = Date.now();
+    if (typeof window === "undefined") return;
+    let lastTick = performance.now();
+
     const id = window.setInterval(() => {
-      const now = Date.now();
+      // Ignore background ticks entirely — throttled timers are not freezes.
+      if (document.visibilityState !== "visible") {
+        lastTick = performance.now();
+        return;
+      }
+      const now = performance.now();
       const delay = now - lastTick;
       lastTick = now;
       if (delay > THRESHOLD_MS) {
         recordFreeze(delay);
       }
     }, CHECK_MS);
-    return () => window.clearInterval(id);
+
+    const reset = () => { lastTick = performance.now(); };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") reset();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", reset);
+    window.addEventListener("focus", reset);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", reset);
+      window.removeEventListener("focus", reset);
+    };
   }, []);
 }
