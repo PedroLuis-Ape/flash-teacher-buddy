@@ -40,24 +40,36 @@ export interface GateResult {
   syncState?: "salvo" | "salvando" | "aguardando" | "erro";
 }
 
+/**
+ * Pure decision function — exposed so it can be unit-tested without React.
+ * Returns the *mode* given the gating inputs. The hook layer applies it.
+ */
+export function resolveGateMode(args: {
+  authStatus: "initializing" | "authenticated" | "anonymous" | "error";
+  statusGroupUid?: string | null;
+  flagValue: "off" | "shadow" | "on";
+}): GateMode {
+  if (args.authStatus !== "authenticated") return "legacy";
+  if (!args.statusGroupUid) return "legacy";
+  if (args.flagValue === "off") return "legacy";
+  return args.flagValue === "on" ? "new" : "shadow";
+}
+
 export function useGroupStatusGate(input: GateInput): GateResult {
   const { status } = useAuth();
   const flagValue = getFlag("new_status_pipeline") as "off" | "shadow" | "on";
 
-  const canActivate =
-    status === "authenticated" &&
-    !!input.statusGroupUid &&
-    flagValue !== "off";
+  const mode = resolveGateMode({
+    authStatus: status,
+    statusGroupUid: input.statusGroupUid,
+    flagValue,
+  });
+
+  const canActivate = mode !== "legacy";
 
   // Always call the hook to keep hook order stable; it self-disables when
   // statusGroupUid / userId are missing.
   const newQuery = useFlashcardGroupStatus(canActivate ? input.statusGroupUid : null);
-
-  const mode: GateMode = !canActivate
-    ? "legacy"
-    : flagValue === "on"
-      ? "new"
-      : "shadow";
 
   // In shadow mode we compare and emit drift exactly once per change.
   useEffect(() => {
