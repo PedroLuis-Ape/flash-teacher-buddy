@@ -232,6 +232,30 @@ export type Database = {
           },
         ]
       }
+      clara_backfill_phase4_report: {
+        Row: {
+          detail: Json | null
+          id: string
+          metric: string
+          ran_at: string
+          value_bigint: number | null
+        }
+        Insert: {
+          detail?: Json | null
+          id?: string
+          metric: string
+          ran_at?: string
+          value_bigint?: number | null
+        }
+        Update: {
+          detail?: Json | null
+          id?: string
+          metric?: string
+          ran_at?: string
+          value_bigint?: number | null
+        }
+        Relationships: []
+      }
       class_goal_assignments: {
         Row: {
           aluno_id: string

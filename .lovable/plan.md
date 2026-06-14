@@ -199,3 +199,55 @@ DROP FUNCTION IF EXISTS public.ufgs_touch_updated_at();
 DROP TABLE IF EXISTS public.user_flashcard_group_status;
 ```
 Legacy tables are untouched, so the app continues to work after rollback.
+
+---
+
+## Phase 4 — Backfill auditado para `user_flashcard_group_status` — COMPLETED
+
+### Migration aplicada
+- Cria `public.clara_backfill_phase4_report` (RLS ligada, sem policies, só `service_role` lê — auditoria persistente).
+- Backfill **idempotente** (`ON CONFLICT DO NOTHING / DO UPDATE` que só ativa flags faltantes) de:
+  - `user_favorites` (resource_type='flashcard') agrupado por `(user_id, status_group_uid)`.
+  - `user_red_list` idem, com `is_favorite=true` forçado para satisfazer a CHECK.
+- **Não toca** em `user_favorites`, `user_red_list`, `user_special_flashcards`. Leitura dupla continua possível.
+
+### Resultados reais (consultados via `SELECT * FROM clara_backfill_phase4_report`)
+| Métrica | Valor |
+|---|---|
+| pre.user_favorites_flashcards | 825 |
+| pre.user_favorites_orphans (card apagado) | 170 |
+| pre.user_red_list | 29 |
+| pre.user_flashcard_group_status | 0 |
+| **backfill.favorites_groups_written** | **294** |
+| **backfill.red_list_groups_written** | **29** |
+| post.user_flashcard_group_status_total | 294 |
+| post.ufgs_favorites | 294 |
+| post.ufgs_red_list | 29 |
+| **recon.legacy_fav_groups_missing_in_new** | **0** |
+| **recon.legacy_red_groups_missing_in_new** | **0** |
+| audit.orphan_favorites_skipped | 170 |
+
+Interpretação: 825 linhas legadas − 170 órfãs = 655 linhas válidas, que colapsam corretamente em 294 grupos distintos `(user_id, status_group_uid)` (várias camadas do mesmo grupo passam a contar como uma). Zero divergência entre legado e novo.
+
+### Invariantes pós-execução
+1. Todo grupo favorito no legado existe no novo (recon = 0).
+2. Todo grupo na Lista Vermelha do legado existe no novo (recon = 0).
+3. CHECK `is_red_list ⇒ is_favorite` válida para 100% das 294 linhas.
+4. 170 favoritos órfãos (flashcard apagado) **ignorados e listados** no relatório — não são re-criados.
+5. Re-executar a migration não duplica nem regride dados (idempotente).
+
+### Riscos restantes
+- Cliente ainda lê do legado (`useFavorites`, `useRedList`). Leitura dupla / corte para a nova tabela é Fase 5.
+- 123 warnings de linter pré-existentes (mesmos das fases anteriores, não introduzidos aqui).
+
+### Rollback
+```sql
+TRUNCATE public.user_flashcard_group_status;       -- só apaga o que o backfill criou (cliente ainda escreve no legado)
+DROP TABLE public.clara_backfill_phase4_report;
+```
+
+### Próximo (Fase 5 — não executada ainda)
+- `useFlashcardGroupStatus(statusGroupUid)` + `useSetFlashcardGroupStatus` consumindo a RPC `set_flashcard_group_status` com `operationId` gerado no cliente.
+- Outbox IndexedDB por usuário (`ape_outbox_<userId>`) drenando pendências em background — sem rede em `onMutate`.
+- Leitura dupla temporária: novo hook é fonte de verdade; fallback ao legado só se o novo retornar 0 linhas para o grupo (instrumentado com telemetria).
+- Sem remoção de `useSetFavoriteGroup`/`useSetRedListGroup` nesta fase — substituição gradual, call site por call site.
