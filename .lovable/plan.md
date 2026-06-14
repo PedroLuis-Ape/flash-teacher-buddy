@@ -356,3 +356,102 @@ Reverter os 4 arquivos modificados/criados. Como a flag default é `off`, basta 
 
 ### Próximo (Phase 5.c — passar `statusGroupUid` aos botões nos call sites)
 Plumbing seletivo de `flashcards.status_group_uid` pelos componentes que renderizam `FavoriteButton`/`RedListButton`. Pode ser feito sem mudar a flag (que continua `off`), preparando o terreno para um dia de QA dedicado.
+
+---
+
+## Phase 5.c — Plumbing de `statusGroupUid` (ListDetail) — COMPLETED
+
+### Mudança única
+- **`src/pages/ListDetail.tsx`**: passa `statusGroupUid={flashcard.status_group_uid ?? null}` e `isRedListed` para `FavoriteButton`; passa `statusGroupUid` para `RedListButton`.
+
+### Por que apenas ListDetail nesta sub-fase
+É o único call site dos dois botões no app (verificado por `rg`: 2 ocorrências em `src/pages/ListDetail.tsx`, mais 4 dentro dos próprios componentes). Não há plumbing pendente em Study / SpecialCards / GamesHub.
+
+### Validação
+- Query existente em ListDetail já usa `select("*")` em `flashcards`, então `status_group_uid` (Fase 2) já vinha sendo carregado — sem mudança de payload.
+- Flag `new_status_pipeline` continua `"off"` → caminho legado, comportamento idêntico.
+
+---
+
+## Phase 6 — Offline IndexedDB schema v2 — COMPLETED
+
+### Mudança em `src/lib/offlineStore.ts`
+- `DB_VERSION` 1 → **2**.
+- Tipo `OfflineListData` ganha `schemaVersion` e `userId` opcionais; cada flashcard offline ganha `status_group_uid`, `parent_card_id`, `layer_index` opcionais.
+- Nova função pura **`migrateRecord`**: aplicada em `getOfflineList`. Snapshots v1 são lidos como antes, mas projetados para v2 em memória — `status_group_uid` é back-filled para cards sem `parent_card_id`; cards com `parent_card_id` mas sem uid ficam **`null`** intencionalmente (não inventamos identidade de grupo a partir de um pai cuja origem não dá para provar offline; re-sync do servidor resolve).
+- `saveOfflineList` carimba `schemaVersion = OFFLINE_SCHEMA_VERSION` em toda escrita.
+
+### Invariantes
+1. Snapshot v1 antigo continua legível — nenhum dado perdido.
+2. Migração é pura (sem IO) e idempotente: re-migrar um v2 retorna a mesma referência.
+3. Onupgradeneeded não destrói o object store v1; só prepara espaço para os campos novos (que vivem em JSON dentro de cada record).
+
+### Testes adicionados
+**`src/lib/__tests__/offlineStoreMigration.test.ts`** — 4 casos:
+1. `null` → `null`.
+2. Snapshot v1 ganha `schemaVersion` e `status_group_uid = id` para cada card não-layered.
+3. Layer com `parent_card_id` mas sem uid permanece `status_group_uid = null` (pede resync).
+4. Migração é idempotente.
+
+### Risco residual
+- Snapshots v1 com cards layered ficam com `status_group_uid=null` até um novo download. Não é regressão — apenas adiamos a identidade canônica para quando o servidor puder confirmá-la.
+
+---
+
+## Phase 7 — Merge/unmerge transacional + mapeamento em memória — COMPLETED
+
+### Migration aplicada (RPCs novas, nada existente alterado)
+- **`merge_flashcard_into_group(p_child_id, p_parent_id)`** — `SECURITY DEFINER`, `search_path=public`:
+  - `auth.uid()` obrigatório (`42501` caso contrário).
+  - Trava ambas as linhas com `FOR UPDATE`.
+  - Atualiza `parent_card_id` do filho (trigger Fase 2 recomputa `status_group_uid` automaticamente).
+  - Une o status do grupo de origem ao grupo destino via UPSERT com `OR` lógico, respeitando a CHECK `is_red_list ⇒ is_favorite`.
+  - Limpa o status do grupo de origem **só se** nenhum outro flashcard ainda o referencia.
+- **`unmerge_flashcard_from_group(p_card_id)`** — análoga, no sentido inverso:
+  - Card vira seu próprio grupo (trigger seta `status_group_uid = id`).
+  - Copia o status do grupo antigo para o novo (`ON CONFLICT DO NOTHING` — não sobrescreve algo já existente).
+- GRANTs: `REVOKE ALL FROM PUBLIC`, `GRANT EXECUTE` apenas a `authenticated` e `service_role`.
+
+### Verificação
+- `pg_proc` confirma ambas registradas com assinatura correta:
+  - `merge_flashcard_into_group(p_child_id uuid, p_parent_id uuid)`
+  - `unmerge_flashcard_from_group(p_card_id uuid)`
+
+### Limite honesto desta entrega
+Não executei chamada end-to-end das RPCs em produção: o `read_query` corre como `service_role` (sem `auth.uid()`), então um INSERT de teste com `auth.uid()` real exige usuário logado no app. O contrato está garantido em três camadas: (a) `SECURITY DEFINER` + `auth.uid()` check; (b) `FOR UPDATE` impede merge concorrente; (c) trigger Fase 2 mantém `status_group_uid` coerente. **QA real (logar, mergear duas cartas, verificar que o favorito da origem foi unido ao destino) é o próximo passo manual.**
+
+### Mapeamento em memória (cliente)
+- **`src/features/cards/lib/groupPlayableMap.ts`** (novo, puro):
+  - `buildGroupPlayableMap(cards)` → `{byGroup, byCard}`.
+  - Entry-point preferido: `layer_index === 0`; fallback determinístico: menor `id`.
+  - Funciona com snapshots v1 (sem `status_group_uid`) caindo para `parent_card_id ?? id`.
+  - **Nunca persiste** — recriado a cada init.
+
+### Testes adicionados
+**`src/features/cards/lib/__tests__/groupPlayableMap.test.ts`** — 5 casos cobrindo: não-layered, layer 0 explícito, fallback por menor id, agrupamento por `parent_card_id` em v1, pureza (calls independentes).
+
+### O que NÃO foi alterado
+- `useStudyEngine` ainda usa sua resolução atual; o map novo está disponível mas não plugado. Plugar é trabalho dedicado com QA por modo (write/multiple/flip/unscramble) e fora do escopo desta entrega.
+- Chamadas existentes de merge/unmerge no cliente continuam usando o caminho antigo. Migrar callers para as novas RPCs (`merge_flashcard_into_group`/`unmerge_flashcard_from_group`) é sub-fase futura.
+
+---
+
+## Validação consolidada (5.c + 6 + 7)
+
+```
+npx tsc --noEmit   → 0 erros
+npx vitest run     → 18 arquivos, 363/363 testes passando
+```
+
+Migration aplicada com sucesso. Linter reporta 127 warnings totais (versus 123 da Fase 4): +2 novos `SECURITY DEFINER` (as RPCs `merge_*` e `unmerge_*`, padrão idêntico ao usado em todas as funções do projeto, já com EXECUTE revogado de `PUBLIC`).
+
+## O que ainda exige QA humano para ser declarado "vivo"
+1. Promover `new_status_pipeline` para `shadow` em ambiente de teste, abrir um card com camadas, favoritar a camada 2 e conferir que `console.warn [claraMaster] status drift` não dispara (ou dispara apenas com o delta esperado).
+2. Promover para `on`, repetir, fazer cold-reload e verificar persistência.
+3. Chamar `merge_flashcard_into_group` via UI futura com dois cards favoritados em grupos distintos e auditar `SELECT * FROM user_flashcard_group_status` antes/depois.
+4. Re-download de uma lista offline em conta antiga e conferir que `status_group_uid` aparece nos records v2.
+
+## Rollback
+- 5.c: reverter o diff em `ListDetail.tsx`.
+- 6: forçar `DB_VERSION=1` em `offlineStore.ts` e remover `migrateRecord`. Snapshots v2 continuam lidos (campos extras ignorados).
+- 7: `DROP FUNCTION public.merge_flashcard_into_group(uuid,uuid); DROP FUNCTION public.unmerge_flashcard_from_group(uuid);` e remover `groupPlayableMap.ts`. Nenhum dado é perdido — as funções são aditivas e o mapper é puro.

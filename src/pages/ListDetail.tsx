@@ -170,12 +170,15 @@ const FlashcardRow = memo(({
               resourceId={flashcard.id}
               resourceType="flashcard"
               isFavorite={isFavorite}
+              statusGroupUid={(flashcard as any).status_group_uid ?? null}
+              isRedListed={isRedListed}
               size="sm"
             />
             <RedListButton
               flashcardId={flashcard.id}
               isFavorite={isFavorite}
               isRedListed={isRedListed}
+              statusGroupUid={(flashcard as any).status_group_uid ?? null}
               size="sm"
             />
           </>
