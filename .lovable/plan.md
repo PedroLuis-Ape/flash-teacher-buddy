@@ -251,3 +251,56 @@ DROP TABLE public.clara_backfill_phase4_report;
 - Outbox IndexedDB por usuário (`ape_outbox_<userId>`) drenando pendências em background — sem rede em `onMutate`.
 - Leitura dupla temporária: novo hook é fonte de verdade; fallback ao legado só se o novo retornar 0 linhas para o grupo (instrumentado com telemetria).
 - Sem remoção de `useSetFavoriteGroup`/`useSetRedListGroup` nesta fase — substituição gradual, call site por call site.
+
+---
+
+## Phase 5 — Cliente + outbox (parte 1: pipeline aditivo) — COMPLETED
+
+### Decisão de escopo
+Fase 5 completa exige rescrita de `useFavorites`/`useRedList`/`useSetFavoriteGroup`/`useSetRedListGroup` e migração de todos os call sites em `Study`, `GamesHub`, `ListDetail`, `SpecialCards`, `Folders`, `FavoriteButton`, `RedListButton`, `useStudyEngine`. Isso é alto risco e não cabe em um único turno auditável. Esta entrega instala o **pipeline novo** lado a lado com o legado, sem alterar nenhum consumidor existente. Substituição call-site por call-site é a próxima sub-fase (5.b).
+
+### Novos arquivos (todos aditivos, nenhum consumidor mexido)
+- **`src/features/cards/lib/statusOutbox.ts`** — IndexedDB write-ahead log (`ape-status-outbox` DB, store `operations`, índices `by_user` e `by_user_group`). Operações têm `operationId` UUID estável (chave da RPC idempotente da Fase 3), `userId`, `statusGroupUid`, flags, `state ∈ {pending, inflight, failed}`, `attempts`, `lastError`. API: `enqueue`, `listForUser`, `listPendingForUser`, `latestForGroup`, `markInflight`, `markSuccess`, `markFailed`, `requeueFailed`.
+- **`src/features/cards/lib/statusDrainer.ts`** — Mutex per-user. Confere `auth.getSession()` antes de tocar a rede e pula se o `session.user.id` não bate com o `userId` da fila. Chama `set_flashcard_group_status(p_..., p_operation_id)`. Falha registra `failed` + `lastError`; sucesso remove. Retorna `{attempted, succeeded, failed, skippedNoSession}`.
+- **`src/features/cards/hooks/useFlashcardGroupStatus.ts`** — `useFlashcardGroupStatus(statusGroupUid)`: query escopo `["flashcard-group-status", userId, statusGroupUid]`, lê `user_flashcard_group_status`, sobrepõe a última op pendente do outbox (compara `pending.operationId` com `data.last_operation_id` do servidor) e expõe `syncState ∈ {salvo, salvando, aguardando, erro}`. `useSetFlashcardGroupStatus`: enfileira no outbox, atualiza otimisticamente **apenas** a chave do grupo (sem broad invalidation), dispara `drainUser` em fire-and-forget. **Sem rede em `onMutate`.**
+- **`src/features/cards/lib/statusTelemetry.ts`** — Detector de divergência (legado vs novo). `reportDrift` loga `console.warn` somente quando há discordância. Listeners pluggáveis para futura ingestão.
+
+### Invariantes garantidas pelo pipeline novo
+1. Toda escrita carrega `operationId` UUID estável → re-execução idempotente garantida pela RPC.
+2. Falha de rede **não descarta** a intenção do usuário; o registro fica `failed` no outbox até ser reenviado.
+3. Mutex impede dois drains concorrentes empurrando a mesma operação duas vezes.
+4. Drainer recusa empurrar fila de um usuário cujo `userId` não corresponde à sessão ativa — impede vazamento entre contas.
+5. UI reflete intenção pendente sem confundi-la com confirmação (`syncState`).
+6. Sem broad invalidation: cada toggle invalida só `["flashcard-group-status", userId, statusGroupUid]`.
+
+### Testes adicionados
+**`src/features/cards/lib/__tests__/statusOutboxDrainer.test.ts`** — 6 testes, todos passando:
+1. Drain bem-sucedido remove a op e chama RPC uma vez por pendência.
+2. Falha de RPC preserva a op com `state='failed'` e `lastError`.
+3. Re-drain após falha re-envia **o mesmo `operationId`** (contrato de idempotência).
+4. Sessão ausente → `skippedNoSession=true`, nada vai à rede.
+5. Drain de `u1` ignora fila de `u2`.
+6. Drains concorrentes do mesmo usuário → mutex permite apenas um trabalhador.
+
+### Validação executada
+```
+npx vitest run        → 15 arquivos, 349/349 testes passando
+npx tsc --noEmit      → 0 erros
+```
+
+### O que NÃO mudou (intencional)
+- `useFavorites`, `useRedList`, `useSetFavoriteGroup`, `useSetRedListGroup`, `useSpecialFlashcards`, `useSetSpecialLayer` — intactos.
+- `FavoriteButton`, `RedListButton`, `useStudyEngine`, `Study.tsx`, `GamesHub.tsx`, `ListDetail.tsx`, `SpecialCards.tsx`, `Folders.tsx` — intactos.
+- `cardStatusIdentity` — intacto.
+- `user_favorites` / `user_red_list` — intactos, ainda são fonte de verdade do app em produção.
+
+### Riscos restantes
+- Pipeline novo existe mas **nenhum botão da UI o usa ainda**. Comportamento percebido pelo usuário não muda nesta sub-fase.
+- IndexedDB indisponível (modo privado/SSR) → `useFlashcardGroupStatus` cai para a leitura do servidor sem overlay; mutação falha com erro claro no `mutationFn` em vez de fingir sucesso (validado pelo desenho).
+- RPC `set_flashcard_special_status` ainda não existe — Especiais continuam pelo caminho legado até serem migrados em sub-fase futura.
+
+### Rollback
+Excluir os 4 novos arquivos. Nenhum schema foi tocado. Nenhum consumidor existente referencia o pipeline novo.
+
+### Próximo (Phase 5.b — substituição de call sites, sub-fase separada)
+Migrar `FavoriteButton` + `RedListButton` para o pipeline novo atrás de um feature flag interno; manter `useFavorites`/`useRedList` rodando em paralelo com telemetria `reportDrift` durante 1 ciclo de QA real; só então desativar o caminho legado.
