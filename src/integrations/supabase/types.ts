@@ -2227,6 +2227,36 @@ export type Database = {
           },
         ]
       }
+      user_flashcard_group_status: {
+        Row: {
+          created_at: string
+          is_favorite: boolean
+          is_red_list: boolean
+          last_operation_id: string | null
+          status_group_uid: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          is_favorite?: boolean
+          is_red_list?: boolean
+          last_operation_id?: string | null
+          status_group_uid: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          is_favorite?: boolean
+          is_red_list?: boolean
+          last_operation_id?: string | null
+          status_group_uid?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_goal_step_completions: {
         Row: {
           created_at: string
@@ -2917,6 +2947,29 @@ export type Database = {
           p_enabled: boolean
         }
         Returns: Json
+      }
+      set_flashcard_group_status: {
+        Args: {
+          p_is_favorite: boolean
+          p_is_red_list: boolean
+          p_operation_id: string
+          p_status_group_uid: string
+        }
+        Returns: {
+          created_at: string
+          is_favorite: boolean
+          is_red_list: boolean
+          last_operation_id: string | null
+          status_group_uid: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_flashcard_group_status"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       soft_delete_folder: {
         Args: { p_folder_id: string; p_user_id: string }
