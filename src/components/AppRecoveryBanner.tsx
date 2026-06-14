@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  isSafeModeEnabled,
+  useSafeMode,
   enableSafeMode,
   disableSafeMode,
 } from "@/lib/safeMode";
@@ -12,34 +12,36 @@ import { AlertTriangle, X } from "lucide-react";
  * Discreet banner shown when:
  *  - a freeze was recorded in the last 5 minutes, OR
  *  - safe mode is currently enabled.
+ *
+ * Safe mode state is reactive via `useSafeMode()` — no polling.
+ * Freeze state is checked on mount + on tab focus / pageshow only.
  */
 export function AppRecoveryBanner() {
-  const [safe, setSafe] = useState(false);
+  const safe = useSafeMode();
   const [freeze, setFreeze] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    const update = () => {
-      setSafe(isSafeModeEnabled());
-      setFreeze(hasRecentFreeze());
-    };
+    const update = () => setFreeze(hasRecentFreeze());
     update();
-    const id = window.setInterval(update, 5000);
-    return () => window.clearInterval(id);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") update();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", update);
+    window.addEventListener("focus", update);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", update);
+      window.removeEventListener("focus", update);
+    };
   }, []);
 
   if (dismissed) return null;
   if (!safe && !freeze) return null;
 
-  const handleEnableSafe = () => {
-    enableSafeMode();
-    setSafe(true);
-  };
-  const handleDisableSafe = () => {
-    disableSafeMode();
-    setSafe(false);
-    window.location.reload();
-  };
+  const handleEnableSafe = () => { enableSafeMode(); };
+  const handleDisableSafe = () => { disableSafeMode(); };
   const handleReload = () => window.location.reload();
 
   return (
