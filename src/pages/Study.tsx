@@ -475,10 +475,10 @@ const Study = () => {
       return;
     }
     
-    const { data: { session } } = await supabase.auth.getSession();
-    setUserId(session?.user?.id);
-    setAuthUserId(session?.user?.id);
-    
+    // Clara Master P0 — auth is owned by AuthContext. No local re-fetch here.
+    // `authSession` from useAuth() is the single source of truth.
+    const session = authSession;
+
     if (isListRoute && !session) {
       const { data, error } = await supabase.rpc('get_portal_flashcards', { 
         _list_id: resolvedId 
