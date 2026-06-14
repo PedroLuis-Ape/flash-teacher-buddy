@@ -170,6 +170,12 @@ window.addEventListener("error", (e) => {
     return;
   }
 
+  // Dedupe identical sync errors firing in a tight loop. Without this
+  // a single broken render can artificially trip the fatal burst.
+  if (isDuplicate(err)) {
+    return;
+  }
+
   saveError("render", err);
 
   const isZombie = trackFatalBurst();
@@ -188,6 +194,7 @@ window.addEventListener("unhandledrejection", (e) => {
     console.warn("[ErrorCapture] Rejeição assíncrona ignorada (network/abort):", e.reason);
     return;
   }
+  if (isDuplicate(e.reason)) return;
   const kind = classifyError(e.reason);
   saveError(`unhandled_${kind}`, e.reason);
   console.warn(`[ErrorCapture] Unhandled promise (${kind}):`, e.reason);
