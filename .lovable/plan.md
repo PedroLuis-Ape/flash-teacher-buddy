@@ -104,3 +104,47 @@ Aprovo executar **apenas a Fase 0** (auditoria + matriz + teste de cold-mount + 
 
 ### Rollback
 Revert the listed files; AuthProvider is additive and can be removed without DB changes. No migrations were introduced in this phase.
+
+---
+
+## Phase 2 — Stable status identity (`flashcards.status_group_uid`) — COMPLETED
+
+### Migration
+- **`supabase/migrations/.../phase2_status_group_uid.sql`** (timestamped, applied):
+  - `ALTER TABLE public.flashcards ADD COLUMN status_group_uid uuid` (nullable).
+  - Backfill: `status_group_uid = COALESCE(parent_card_id, id)` — layers inherit parent id, parents/standalone keep their own id.
+  - `CREATE INDEX idx_flashcards_status_group_uid`.
+  - Trigger `flashcards_sync_status_group_uid` (BEFORE INSERT OR UPDATE OF parent_card_id):
+    - INSERT → fills `status_group_uid` if null.
+    - UPDATE → recomputes only when `parent_card_id` actually changes (merge/unmerge), so callers cannot orphan a status group.
+  - `COMMENT ON COLUMN` documenting intent + Phase 3 plan.
+
+### Audit results (real, post-migration)
+| Check | Result |
+|---|---|
+| Total cards (non-deleted) | **3752** |
+| `status_group_uid` filled | **3752 / 3752** (100%) |
+| Rows where `status_group_uid = COALESCE(parent_card_id, id)` | **3752 / 3752** |
+| Orphan layers (parent_card_id pointing to missing row) | **0** |
+| Distribution by group size | 2737 groups of size 1, 1×3, 94×4, 36×5, 45×6, 16×7, 7×8, 2×9 |
+
+### Why NOT NULL is deferred
+Coverage is 100% and orphans are zero, so `SET NOT NULL` would succeed today. We still defer it to a later phase per the Clara Master contract: a constraint added now would block any race between Phase 3 RPC writes and the trigger if a future patch removed the trigger. The trigger + index already guarantee correctness in practice.
+
+### Risks remaining
+- 121 security linter warnings exist project-wide (pre-existing — SECURITY DEFINER functions, public buckets). **Not introduced by this migration.**
+- The new trigger function is `SECURITY DEFINER`; it's a trigger (not callable as RPC), so the linter warning does not apply to caller-side exploitation, but we should review its grant footprint in Phase 3.
+
+### Rollback
+```sql
+DROP TRIGGER IF EXISTS trg_flashcards_sync_status_group_uid ON public.flashcards;
+DROP FUNCTION IF EXISTS public.flashcards_sync_status_group_uid();
+DROP INDEX IF EXISTS public.idx_flashcards_status_group_uid;
+ALTER TABLE public.flashcards DROP COLUMN IF EXISTS status_group_uid;
+```
+No data is destroyed by rollback — `status_group_uid` is purely derived.
+
+### Validation
+- Backfill consistency query: 0 mismatches.
+- Orphan query: 0 rows.
+- `npx tsc --noEmit` (re-checked after types regeneration): pending types regen.
