@@ -57,7 +57,7 @@ export function useAuthUser() {
     refetchOnWindowFocus: false,
     retry: 1,
     // Provide synchronous initial data from localStorage so isLoading starts as false
-    ...(optimistic ? { initialData: { user: optimistic.user, session: optimistic } } : {}),
+    ...(optimistic ? { initialData: optimistic } : {}),
     // When AuthProvider is mounted (status !== 'initializing'), we don't
     // need React Query to fetch independently — disable the network query.
     enabled: ctx.status === "initializing" && !ctx.user,
