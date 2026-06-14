@@ -95,15 +95,30 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
 
   handleClearAndReload = async () => {
     try {
-      const authKeys: [string, string][] = [];
+      // Namespace-scoped cleanup. We intentionally do NOT call
+      // localStorage.clear() — that would wipe Supabase auth tokens
+      // (sb-*) and the offline outbox (ape_outbox_*) that the user
+      // needs to recover gracefully.
+      //
+      // Preserved prefixes:
+      //   - sb-*           → Supabase auth session
+      //   - ape_outbox_*   → pending offline mutations (Phase 5)
+      //   - ape_pref_*     → user preferences that survive recovery
+      const PRESERVE_PREFIXES = ["sb-", "ape_outbox_", "ape_pref_"];
+      const shouldPreserve = (key: string) =>
+        PRESERVE_PREFIXES.some((p) => key.startsWith(p));
+
+      const toRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith("sb-")) {
-          const value = localStorage.getItem(k);
-          if (value) authKeys.push([k, value]);
-        }
+        if (k && !shouldPreserve(k)) toRemove.push(k);
       }
+      toRemove.forEach((k) => {
+        try { localStorage.removeItem(k); } catch { /* ignore */ }
+      });
 
+      // Service workers and HTTP caches are safe to wipe — they are
+      // owned by the build, not by the user's data.
       if ("serviceWorker" in navigator) {
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.allSettled(regs.map((r) => r.unregister()));
@@ -114,9 +129,7 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
         await Promise.allSettled(names.map((n) => caches.delete(n)));
       }
 
-      localStorage.clear();
-      authKeys.forEach(([k, v]) => localStorage.setItem(k, v));
-
+      // sessionStorage is per-tab and transient — safe to clear fully.
       sessionStorage.clear();
     } catch (error) {
       console.warn("[SafeMode] Falha ao limpar cache:", error);
