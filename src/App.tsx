@@ -3,7 +3,7 @@
  * © 2025 APE Education. Todos os direitos reservados.
  */
 
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, useEffect } from "react";
 import { perfTelemetry } from "@/lib/perfTelemetry";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -16,9 +16,10 @@ import { EconomyProvider } from "@/contexts/EconomyContext";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { LazyErrorBoundary } from "@/components/LazyErrorBoundary";
 import { PageTransition } from "@/components/PageTransition";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { RouteSuspense } from "@/components/RouteSuspense";
 import { BrowserCheck } from "@/components/BrowserCheck";
 import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
 
@@ -104,7 +105,6 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <Suspense fallback={<LoadingSpinner message="Carregando página..." variant="skeleton" />}>
         <LazyErrorBoundary>
           <BrowserRouter>
             <SessionWatcher />
@@ -112,8 +112,10 @@ const App = () => {
             <BrowserCheck />
             <GoogleConnectPrompt />
             <GlobalLayout>
-              <PageTransition>
-                <Routes>
+              <RouteErrorBoundary>
+                <RouteSuspense>
+                  <PageTransition>
+                    <Routes>
                   <Route path="/" element={<RootEntry />} />
                   <Route path="/landing" element={<LandingPage />} />
                   <Route path="/dashboard" element={<Index />} />
@@ -170,13 +172,14 @@ const App = () => {
                   <Route path="/settings/shortcuts" element={<KeyboardShortcutsPage />} />
                   <Route path="/audit" element={<AuditRepair />} />
                   <Route path="/special-cards" element={<SpecialCards />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </PageTransition>
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </PageTransition>
+                </RouteSuspense>
+              </RouteErrorBoundary>
             </GlobalLayout>
           </BrowserRouter>
         </LazyErrorBoundary>
-        </Suspense>
       </TooltipProvider>
     </EconomyProvider>
     </AuthProvider>
