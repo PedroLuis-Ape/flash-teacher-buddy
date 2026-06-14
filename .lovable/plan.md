@@ -1,99 +1,74 @@
-## Plano de correção: Favoritos, Lista Vermelha, Especiais e Importação
 
-Escopo: eliminar divergências entre UI, cache e banco em cards com camadas, e tornar a importação de explicações realmente transacional. Sem mexer em layout geral, sem alterar o significado dos Especiais, sem permitir que estudantes editem cards alheios.
+# Plano — Clara Master no App Piteco
 
-### 1. Banco de dados (migrations)
+Execução **estritamente faseada**. Cada fase tem commits independentes, evidência real e validação antes de avançar. Esta proposta cobre apenas até o fim da **Fase 0 (Auditoria + Repro)** e o desenho contratual das fases seguintes — não vou executar Fase 1+ sem você aprovar o diagnóstico produzido na Fase 0.
 
-Criar 3 RPCs `SECURITY DEFINER` com `search_path = public`, validando `auth.uid()`:
+## Princípios que vou respeitar
 
-- `set_flashcard_group_favorite(p_canonical_id uuid, p_cleanup_ids uuid[], p_enabled boolean)`
-  - `enable=true`: DELETE legados em `user_favorites` (resource_type='flashcard', resource_id IN cleanup_ids \ canonical) → INSERT canonical (ON CONFLICT DO NOTHING).
-  - `enable=false`: DELETE em `user_favorites` IN cleanup_ids + DELETE em `user_red_list` IN cleanup_ids (invariante Fav×Red).
-  - Tudo em uma transação. Retorna `{ success, enabled }`.
+- Nenhuma mudança visual ou estado em cache é prova de funcionamento.
+- Identidade persistente nunca derivada de `parent_card_id`, índice de camada, primeira camada ou card visível.
+- Nenhuma fase avança sem typecheck/test/build reais e teste de cold-mount (desmontar app + destruir QueryClient + remontar + ler servidor).
+- Compatibilidade temporária só com prazo, telemetria e plano de remoção.
+- Migrations destrutivas: nunca nesta entrega. Tabelas legadas (`user_favorites`, `user_red_list`, `user_favorites_old`) permanecem.
 
-- `set_flashcard_group_red_list(p_canonical_id uuid, p_cleanup_ids uuid[], p_enabled boolean)`
-  - `enable=true`: exige existir favorito de algum id do grupo; se favorito está legado, normaliza para canonical; limpa vermelhos legados; INSERT canonical.
-  - `enable=false`: DELETE vermelhos IN cleanup_ids.
+## Escopo desta entrega (Fase 0 apenas)
 
-- `apply_special_flashcard_explanations(p_items jsonb, p_conflict_mode text)`
-  - Para cada item: valida flashcard, checa permissão de edição (owner do flashcard OU dono da turma do `list.class_id`), UPDATE retornando `ROW_COUNT`. Apenas se `ROW_COUNT = 1` → DELETE de `user_special_flashcards` para `(user_id=auth.uid(), flashcard_id=item.id)`. Caso contrário, mantém na fila.
-  - Retorna `{ success, results: [{flashcard_id, status}], applied_count, kept_in_specials_count }` com status `applied|permission_denied|not_found|invalid|error`.
-  - Toda a operação em uma transação por chamada; itens com `permission_denied` retornam status sem abortar a transação dos outros (loop interno com SAVEPOINT por item ou try/catch por item).
+Quero entregar primeiro o diagnóstico, porque a skill exige fatos confirmados antes de qualquer alteração estrutural. Concretamente:
 
-Nenhuma alteração de RLS em `flashcards`. Sem alterar shape das tabelas.
+1. **`docs/CLARA_MASTER_STABILITY_STATUS_AUDIT.md`** com:
+   - Mapa do boot: `main.tsx`, `bootStability`, `versionManager`, `errorCapture`, `SafeMode`, `useFreezeWatchdog`, service worker (`public/sw.js`), `EconomyInitializer`, `SessionWatcher`, `RootEntry`, `useAuthUser`.
+   - Inventário de side-effects globais em rota pública vs privada.
+   - Origem de todo `window.location.reload`, `caches.delete`, `localStorage.clear`.
+   - Fontes de verdade concorrentes para Favorito/Vermelho/Especial: `useFavorites`, `useFavoritesCount` (residual), `useRedList`, `useSpecialFlashcards`, `useSetFavoriteGroup`, `useSetRedListGroup`, `useSetSpecialLayer`, RPCs `set_flashcard_group_favorite`, `set_flashcard_group_red_list`, `apply_special_flashcard_explanations`, resolver `cardStatusIdentity`.
+   - Lista de migrations que existem em `supabase/migrations/` e confirmação (via `supabase--read_query` em `pg_proc`, `information_schema`, `pg_policies`) do que está realmente aplicado em produção: RPCs presentes, colunas existentes, RLS ativa.
+   - Estado do offline (`offlineStore`, schema IndexedDB) frente ao modelo de status atual.
+   - Comportamento de merge/unmerge sobre `parent_card_id` e o impacto em status já gravados como canônico.
 
-### 2. Hooks (substituir o "atomic-ish")
+2. **Matriz de identidade** (Conceito × Identidade atual × Persistência × Leitura fria × Cache × Offline × Problema) para: card normal, principal, primeira camada, camada visível, grupo, entrada jogável.
 
-- `useSetFavoriteGroup`, `useSetRedListGroup`: trocar implementação interna por chamada às novas RPCs. Adicionar `onMutate` otimista (atualizar `['favorites', ...]` e `['red-list', ...]` no escopo) e rollback em `onError`. Manter assinaturas atuais.
-- `useSetSpecialLayer`: adicionar `onMutate` otimista em `['special-flashcards']` e `['special-flashcards-count']`.
-- Novo hook composto `useCardStatuses({ userId, listId, canonicalGroupId, visibleLayerId, cleanupIds })` que retorna `{ isFavorite, isRedListed, isSpecial, favoritePending, redListPending, specialPending, setFavorite, setRedList, setSpecial }`. Usado por Study.
-- `cardStatusKeys` helper em `src/features/cards/lib/cardStatusKeys.ts`.
+3. **Teste de reprodução de cold-mount** em `src/features/cards/lib/__tests__/favoriteColdMount.test.ts`:
+   - Favorita camada 2 via mutation real (mock `supabase.rpc`).
+   - Aguarda confirmação.
+   - Destrói `QueryClient`, desmonta árvore React.
+   - Remonta com novo `QueryClient`, força fetch do servidor (sem hidratação de cache).
+   - Asserta: `is_favorite === true` em **todas** as camadas do grupo.
+   - Versão paralela para Especial: marcar camada 2 não pode tornar camada 1/3 especiais.
 
-### 3. GamesHub — fonte única de verdade
+4. **Relatório de divergências detectadas** entre o que `cardStatusIdentity` resolve hoje (`parent_card_id`) e o que as RPCs realmente exigem, incluindo cenários onde merge/unmerge muda `parent_card_id` após o status já existir.
 
-- Substituir `useFavoritesCount(..., 'flashcard', scope)` por `useFavorites(userId, 'flashcard', scope)` e usar `data.length`.
-- Não desligar `favoritesOnly` enquanto `isLoading || isFetching || isPlaceholderData || qualquer mutation pendente`. Só quando `isSuccess && !isFetching && !isPlaceholderData && data.length === 0`.
-- Texto "Atualizando favoritos..." durante refetch.
+Nenhum código de produção é alterado nesta fase. Nenhuma migration é criada.
 
-### 4. StudyToolsMenu
+## Validação da Fase 0
 
-- Sempre renderiza as 3 ações na ordem Favorito → Lista Vermelha → Especial.
-- Lista Vermelha visível mas `disabled` quando `!isFavorite`, com label "Lista Vermelha — favorite primeiro" e tooltip.
-- Spinner inline por ação pendente, desabilita só a ação correspondente.
-- Item extra "Ver explicação detalhada" (com ícone Sparkles) quando a camada visível tiver `detailed_explanation`, abrindo `DetailedExplanationPanel` da camada atual.
+```
+npm run typecheck
+npm run test -- favoriteColdMount
+npm run lint
+npm run build
+```
 
-### 5. SpecialCards
+Saída real colada no relatório. Sem isso, a fase não é considerada concluída.
 
-- Query da fila com `refetchOnMount: 'always'`, `staleTime: 0`.
-- Empty state só quando `isSuccess && !isFetching && data.length === 0`. Caso contrário "Sincronizando Especiais...".
+## Fases seguintes (apenas contrato, execução depende da sua aprovação após o diagnóstico)
 
-### 6. ImportExplanationsDialog
+Listadas para alinhamento, **não serão executadas neste turno**:
 
-- Remover loop client-side de UPDATE por card e o DELETE separado da fila.
-- Chamar `apply_special_flashcard_explanations` uma vez com todos os itens.
-- Mostrar relatório por status, com cópia/baixar lista de não aplicados, sem auto-fechar se houver falhas.
-- Invalidate exato: `['flashcards', listId]`, `['special-flashcards', userId]`, contagens.
+- **Fase 1 — Ciclo de vida.** `AuthProvider` central (`initializing | authenticated | anonymous | error`). `SessionWatcher` vira consumidor. `EconomyInitializer` recebe `userId` confirmado e só monta em rota privada. Safe Mode com limpeza por namespace (nunca apaga `auth`, `outbox`, snapshots). `errorCapture` com dedupe por fingerprint. Splash mínimo de 3s reavaliado contra métrica real. Sem tocar em status nesta fase.
+- **Fase 2 — Identidade permanente.** Migration adicionando `flashcards.status_group_uid uuid`, backfill auditado, relatório de órfãos antes de qualquer `NOT NULL`. Sem dropar nada.
+- **Fase 3 — Novo modelo.** Tabela `public.user_flashcard_group_status` com PK `(user_id, status_group_uid)` e CHECK `is_red_list = false OR is_favorite = true`, RLS completa, GRANTs. RPC idempotente `set_flashcard_group_status(..., p_operation_id uuid)` retornando estado confirmado. Especial mantém `user_special_flashcards` por `flashcard_id` com sua própria RPC idempotente.
+- **Fase 4 — Migração sem perda.** Backfill de `user_favorites`/`user_red_list` (principais, camadas, duplicatas, órfãos) com relatório. Leitura dupla temporária com telemetria.
+- **Fase 5 — Cliente + outbox.** `useFlashcardGroupStatus` / `useSpecialLayerStatus`. Outbox IndexedDB por usuário com `operationId`. Sem rede em `onMutate`. UI distingue salvando/salvo/aguardando/erro. Remoção gradual de `compatibilityIds`, `legacyIds` e `setQueriesData` em escopo amplo.
+- **Fase 6 — Offline v2.** Schema IndexedDB com `status_group_uid`, `parent_card_id`, `layer_index`, `schemaVersion`, `userId`. Restaurar auth antes do snapshot. Migração explícita de snapshots antigos.
+- **Fase 7 — Merge/unmerge e motor.** Merge/unmerge transferem status na mesma transação. Motor mapeia `status_group_uid → playableEntryId` em memória, nunca persiste. Testes em todos os modos. "Somente Favoritos" não reconstrói no meio da sessão.
 
-### 7. Study.tsx — visibilidade imediata da explicação
+## O que NÃO faço
 
-Correção mínima (não migrar todo o Study para React Query agora):
+- Não crio `user_flashcard_group_status` agora.
+- Não removo `cardStatusIdentity` agora.
+- Não mexo em `useSetFavoriteGroup` / `useSetRedListGroup` / `useSetSpecialLayer` agora.
+- Não toco em layout, palette, rotas, autenticação social, public portal.
+- Não declaro nenhuma fase concluída sem saída real de typecheck/test/build + teste de cold-mount passando.
 
-- Função `applyImportedExplanationToLocalDeck(updatedCards)` que faz deep merge dos campos de explicação no deck local e em `__layers`, sem tocar em `cardsOrder`, `currentIndex`, resultados ou progresso.
-- `BroadcastChannel('flashcard-explanations')` enviado pelo dialog após sucesso; Study escuta e aplica o merge.
-- Limpar imports não usados (`useToggleFavorite`/`useToggleRedList`/`useToggleSpecialFlashcard` se não forem mais referenciados) — verificação file-by-file antes de remover.
+## Pergunta de aprovação
 
-### 8. Testes
-
-Adicionar testes Vitest novos (sem reescrever existentes):
-
-- `cardStatusIdentity` cobertura de grupo canonical.
-- Optimistic update e rollback dos 3 hooks (mock supabase).
-- GamesHub: não desliga favoritesOnly em placeholder/fetching.
-- StudyToolsMenu: 3 ações sempre presentes, Lista Vermelha desabilitada sem favorito.
-- Import: card sem permissão fica na fila; card aplicado sai.
-
-Rodar `npx vitest run` e reportar resultado real. Build/typecheck rodam automaticamente pela plataforma.
-
-### Arquivos
-
-Novos:
-- `supabase/migrations/<ts>_card_status_rpcs.sql`
-- `src/features/cards/lib/cardStatusKeys.ts`
-- `src/hooks/useCardStatuses.ts`
-- Testes correspondentes em `__tests__/`.
-
-Editados (cirurgicamente):
-- `src/hooks/useSetFavoriteGroup.ts`, `useSetRedListGroup.ts`, `useSetSpecialLayer.ts`
-- `src/pages/Study.tsx`, `src/pages/GamesHub.tsx`, `src/pages/SpecialCards.tsx`
-- `src/features/study/components/StudyToolsMenu.tsx`
-- `src/components/ImportExplanationsDialog.tsx`
-
-Não tocados: layout geral, RLS de `flashcards`, semântica dos Especiais, schema das tabelas.
-
-### Riscos / pontos de atenção
-
-- A RPC de importação precisa de SAVEPOINT por item para que um `permission_denied` não derrube os demais. Vou usar bloco `BEGIN ... EXCEPTION` por item dentro do loop PL/pgSQL.
-- BroadcastChannel não funciona em Safari < 15.4 e SSR; fallback via `window` event.
-- Optimistic updates exigem snapshot fiel das query keys com escopo `listId` — usarei `queryClient.getQueriesData` com matcher.
-
-Aprova para eu executar?
+Aprovo executar **apenas a Fase 0** (auditoria + matriz + teste de cold-mount + validação) e voltar com o diagnóstico real antes de qualquer alteração estrutural?
