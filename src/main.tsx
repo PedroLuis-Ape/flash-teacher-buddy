@@ -50,7 +50,12 @@ reportBoot(35, "Preparando interface…");
 // 99999 in index.html) and is dismissed when:
 //   (minimum time elapsed) AND (app is ready)
 //   OR maximum timeout reached (safety release).
-const SPLASH_MIN_MS = (window as any).__APE_SPLASH_MIN_MS ?? 3000;
+// Phase 1 (Clara Master): the previous 3000ms minimum was an arbitrary
+// padding, not a measurement. Real boot-ready (first React commit) lands
+// well under 1s on warm loads. We keep a small floor (800ms) so the
+// splash never flashes in/out, but no longer hold the app hostage for
+// a fixed 3s window. The HTML can still override via __APE_SPLASH_MIN_MS.
+const SPLASH_MIN_MS = (window as any).__APE_SPLASH_MIN_MS ?? 800;
 const SPLASH_MAX_MS = (window as any).__APE_SPLASH_MAX_MS_HARD ?? 9000;
 const startedAt: number = (window as any).__apeSplashStart || Date.now();
 

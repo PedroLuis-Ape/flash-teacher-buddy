@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Read Supabase session from localStorage synchronously.
@@ -36,6 +37,12 @@ function getOptimisticSession() {
  * already has user/session (no loading flash).
  */
 export function useAuthUser() {
+  // Phase 1 (Clara Master): AuthProvider is the single source of truth.
+  // We always read from it. The legacy React Query path is preserved
+  // only as a passive cache (queryClient.setQueryData is kept in sync
+  // by AuthProvider) so existing code that reads ['auth-user'] still
+  // works. Hooks are called unconditionally to respect React's rules.
+  const ctx = useAuth();
   const optimistic = getOptimisticSession();
 
   const { data, isLoading } = useQuery({
@@ -51,7 +58,21 @@ export function useAuthUser() {
     retry: 1,
     // Provide synchronous initial data from localStorage so isLoading starts as false
     ...(optimistic ? { initialData: optimistic } : {}),
+    // When AuthProvider is mounted (status !== 'initializing'), we don't
+    // need React Query to fetch independently — disable the network query.
+    enabled: ctx.status === "initializing" && !ctx.user,
   });
+
+  // Prefer the provider value when it has resolved or already has a user.
+  if (ctx.status !== "initializing" || ctx.user) {
+    return {
+      user: ctx.user,
+      session: ctx.session,
+      isLoading: ctx.status === "initializing",
+      userId: ctx.userId,
+      accessToken: ctx.accessToken,
+    };
+  }
 
   return {
     user: data?.user ?? null,

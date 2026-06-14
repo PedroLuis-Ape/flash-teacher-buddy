@@ -14,6 +14,7 @@ import { SessionWatcher } from "@/components/SessionWatcher";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
 import { EconomyProvider } from "@/contexts/EconomyContext";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { LazyErrorBoundary } from "@/components/LazyErrorBoundary";
@@ -98,6 +99,7 @@ const App = () => {
   return (
   <QueryClientProvider client={queryClient}>
     <PerformanceProvider>
+    <AuthProvider>
     <EconomyProvider>
       <TooltipProvider>
         <Toaster />
@@ -177,6 +179,7 @@ const App = () => {
         </Suspense>
       </TooltipProvider>
     </EconomyProvider>
+    </AuthProvider>
     </PerformanceProvider>
   </QueryClientProvider>
   );

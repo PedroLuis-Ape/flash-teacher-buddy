@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Rotas públicas que não exigem sessão.
 // Prefixos: qualquer rota que comece com um destes é pública.
@@ -23,80 +22,40 @@ function isProtectedPath(pathname: string) {
   return !PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * SessionWatcher — Route guard only.
+ *
+ * Phase 1 (Clara Master): the Supabase auth subscription was moved into
+ * AuthProvider, so this component is now a pure consumer that reacts to
+ * status transitions:
+ *   - authenticated + on /auth  → /dashboard
+ *   - anonymous + on protected  → /auth
+ *
+ * It NEVER redirects while status === 'initializing', so the hydration
+ * race that previously sent logged-in users to /auth on cold load is gone.
+ */
 export function SessionWatcher() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  // Track whether we've received the first auth event to avoid premature redirects
-  const initializedRef = useRef(false);
+  const { status } = useAuth();
+  const lastStatusRef = useRef(status);
 
   useEffect(() => {
-    // Single reactive listener — Supabase's autoRefreshToken handles token renewal
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Mark as initialized AFTER processing this event (so the first event
-      // — typically INITIAL_SESSION — does not itself trigger a guard redirect).
-      const wasInitialized = initializedRef.current;
+    if (status === "initializing") return;
 
-      if (event === 'SIGNED_IN') {
-        // Invalidate auth-user query so useAuthUser picks up the new session
-        queryClient.invalidateQueries({ queryKey: ['auth-user'] });
-        if (window.location.pathname.startsWith('/auth')) {
-          navigate('/dashboard', { replace: true });
-        }
-        initializedRef.current = true;
-        return;
+    const path = window.location.pathname;
+
+    if (status === "authenticated") {
+      if (path.startsWith("/auth") && !path.startsWith("/auth/callback")) {
+        navigate("/dashboard", { replace: true });
       }
-
-      if (event === 'SIGNED_OUT') {
-        // Clear all queries on logout so stale data doesn't persist
-        queryClient.clear();
-        navigate('/auth', { replace: true });
-        initializedRef.current = true;
-        return;
+    } else if (status === "anonymous") {
+      if (isProtectedPath(path)) {
+        navigate("/auth", { replace: true });
       }
+    }
 
-      if (event === 'TOKEN_REFRESHED' && !session) {
-        console.warn('[SessionWatcher] Token refresh lost session');
-        navigate('/auth', { replace: true });
-        initializedRef.current = true;
-        return;
-      }
-
-      // Route guard — redirect logged-out users away from protected routes.
-      // Runs on INITIAL_SESSION too: if the user opened a protected URL directly
-      // without a session, send them to /auth instead of leaving them on a blank
-      // protected page.
-      //
-      // Hardened against hydration races: Supabase can fire INITIAL_SESSION
-      // with `null` while storage is still being read. Re-check via getSession()
-      // on the next tick before redirecting; if a session shows up, abort the
-      // redirect.
-      if (!session && isProtectedPath(window.location.pathname)) {
-        if (!wasInitialized) {
-          setTimeout(() => {
-            supabase.auth.getSession().then(({ data }) => {
-              if (!data.session && isProtectedPath(window.location.pathname)) {
-                navigate('/auth', { replace: true });
-              }
-            }).catch(() => {
-              // best-effort: fall back to redirect
-              navigate('/auth', { replace: true });
-            });
-          }, 0);
-        } else {
-          navigate('/auth', { replace: true });
-        }
-      }
-
-      initializedRef.current = true;
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-    // navigate/queryClient are stable across renders; we deliberately
-    // mount this listener exactly once to avoid duplicate subscriptions.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    lastStatusRef.current = status;
+  }, [status, navigate]);
 
   return null;
 }

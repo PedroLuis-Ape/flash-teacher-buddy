@@ -10,6 +10,34 @@ const CRASH_KEY = "ape_last_crash";
 const FATAL_BURST_KEY = "ape_fatal_error_burst";
 const BURST_WINDOW_MS = 10_000; // 10s
 const BURST_THRESHOLD = 5; // 5 erros síncronos reais em 10s
+const DEDUPE_WINDOW_MS = 1_500; // 1.5s — colapsa repetições do mesmo erro
+
+// Dedupe runtime errors by fingerprint (message + first stack frame).
+// Without this, a single broken render can fire dozens of identical events
+// in a few hundred ms, falsely tripping the fatal burst threshold.
+const recentFingerprints = new Map<string, number>();
+
+function fingerprint(err: unknown): string {
+  if (err instanceof Error) {
+    const firstFrame = (err.stack ?? "").split("\n")[1]?.trim() ?? "";
+    return `${err.name}:${err.message}|${firstFrame}`;
+  }
+  return String(err);
+}
+
+function isDuplicate(err: unknown): boolean {
+  const fp = fingerprint(err);
+  const now = Date.now();
+  const last = recentFingerprints.get(fp);
+  // Periodic GC so the map cannot grow without bound.
+  if (recentFingerprints.size > 50) {
+    for (const [key, ts] of recentFingerprints) {
+      if (now - ts > DEDUPE_WINDOW_MS * 4) recentFingerprints.delete(key);
+    }
+  }
+  recentFingerprints.set(fp, now);
+  return last !== undefined && now - last < DEDUPE_WINDOW_MS;
+}
 
 interface ErrorBurst {
   count: number;
@@ -142,6 +170,12 @@ window.addEventListener("error", (e) => {
     return;
   }
 
+  // Dedupe identical sync errors firing in a tight loop. Without this
+  // a single broken render can artificially trip the fatal burst.
+  if (isDuplicate(err)) {
+    return;
+  }
+
   saveError("render", err);
 
   const isZombie = trackFatalBurst();
@@ -160,6 +194,7 @@ window.addEventListener("unhandledrejection", (e) => {
     console.warn("[ErrorCapture] Rejeição assíncrona ignorada (network/abort):", e.reason);
     return;
   }
+  if (isDuplicate(e.reason)) return;
   const kind = classifyError(e.reason);
   saveError(`unhandled_${kind}`, e.reason);
   console.warn(`[ErrorCapture] Unhandled promise (${kind}):`, e.reason);
