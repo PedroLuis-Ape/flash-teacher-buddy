@@ -98,11 +98,12 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Initial HUD load + realtime channel — driven by the canonical auth state.
-  // No extra getSession() / onAuthStateChange here.
+  // Effect deps are only `status` and `userId`; the access token is read via
+  // ref so periodic token refreshes do NOT tear down the realtime channel.
   useEffect(() => {
     if (status === "initializing") return;
 
-    if (!userId || !accessToken) {
+    if (!userId) {
       // Anonymous: reset to defaults and stop loading.
       setState(INITIAL_STATE);
       consecutiveFailures.current = 0;
@@ -115,7 +116,9 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
-        const { data, error } = await fetchHudSummary(accessToken);
+        const token = accessTokenRef.current;
+        if (!token) { if (mounted) setLoading(false); return; }
+        const { data, error } = await fetchHudSummary(token);
         if (!mounted || ac.signal.aborted) return;
         if (error) {
           console.warn('[EconomyContext] Initial HUD load failed:', error.message);
@@ -183,7 +186,7 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('online', handleOnline);
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
-  }, [status, userId, accessToken, refreshBalance]);
+  }, [status, userId, refreshBalance]);
 
   const contextValue = useMemo(() => ({
     ...state, refreshBalance, updateBalance, loading,
