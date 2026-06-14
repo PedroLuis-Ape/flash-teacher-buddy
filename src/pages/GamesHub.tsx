@@ -22,6 +22,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useIsMutating } from "@tanstack/react-query";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/contexts/AuthContext";
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
 
 interface Collection {
@@ -55,6 +56,9 @@ const GamesHub = () => {
   // PERF: centralized auth (no redundant getUser() / getSession() calls)
   const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
+  // Clara Master P0 — authStatus is the ONLY gate for "we know who the
+  // user is". `userId` alone may be undefined during the auth race window.
+  const { status: authStatus } = useAuth();
 
   // ── Persistent study preferences (single source of truth) ──
   const { prefs, updatePrefs } = useStudyPreferences(userId);
@@ -166,22 +170,19 @@ const GamesHub = () => {
     },
   }) > 0;
 
-  // Auto-reset only on confirmed empty result, never on placeholder/fetching state.
-  useEffect(() => {
-    if (!favoritesQuery.isSuccess) return;
-    if (favoritesSyncing) return;
-    if (favoritesMutating) return;
-    if (prefs.favoritesOnly && favoritesCount === 0) {
-      updatePrefs({ favoritesOnly: false });
-    }
-  }, [
-    favoritesQuery.isSuccess,
-    favoritesSyncing,
-    favoritesMutating,
-    favoritesCount,
-    prefs.favoritesOnly,
-    updatePrefs,
-  ]);
+  // Clara Master P0 — DO NOT auto-reset `favoritesOnly`. The previous logic
+  // silently rewrote the user's persistent preference whenever the query
+  // came back empty for any reason (auth race, fetching, placeholder,
+  // outbox pending). The user perceived this as "favorites lost on
+  // cold restart". The empty state is now shown in the UI and the user
+  // toggles the filter off explicitly when they want to study all cards.
+  //
+  // Keeping the previous variables (favoritesSyncing, favoritesMutating)
+  // referenced so future contributors can re-enable a guarded reset behind
+  // an explicit product decision — but they are intentionally unused now.
+  void favoritesSyncing;
+  void favoritesMutating;
+  void authStatus;
 
   const startGame = (rawMode: StudyMode | "multiple") => {
     // Normalize any alias (e.g. "multiple" → "multiple-choice") before persisting.
