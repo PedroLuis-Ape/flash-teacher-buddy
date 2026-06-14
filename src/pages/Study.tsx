@@ -51,6 +51,8 @@ import { useSetFavoriteGroup } from "@/hooks/useSetFavoriteGroup";
 import { useSetRedListGroup } from "@/hooks/useSetRedListGroup";
 import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
 import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
+import { useAuth } from "@/contexts/AuthContext";
+import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
@@ -123,8 +125,11 @@ const Study = () => {
   }, [resolvedId]);
 
   // ── Persistent study preferences ──
-  // userId is set later after auth; prefs load with anon key initially
-  const [authUserId, setAuthUserId] = useState<string | undefined>();
+  // Clara Master P0 — single source of truth for auth. Local userId/authUserId
+  // state previously caused a cold-restart race: useFavorites was disabled
+  // while auth resolved, returned [], and a fallback effect persisted
+  // `favoritesOnly:false` to localStorage. See docs/COLD_RESTART_FAVORITES_P0.md.
+  const { status: authStatus, userId: authUserId, session: authSession } = useAuth();
   const { prefs, updatePrefs } = useStudyPreferences(authUserId);
   // URL overrides are applied at load time inside useStudyPreferences,
   // but the URL is ALSO read directly here as the canonical SSOT for the
@@ -164,7 +169,9 @@ const Study = () => {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [listTitle, setListTitle] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
-  const [userId, setUserId] = useState<string | undefined>();
+  // userId mirrors authUserId from AuthContext (single source of truth).
+  // Keeping the same local name minimizes diff to call sites below.
+  const userId = authUserId;
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
   // In-game card editor (uses the same EditFlashcardDialog as ListDetail)
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
@@ -196,7 +203,19 @@ const Study = () => {
     if (!resolvedId) return undefined;
     return isListRoute ? { listId: resolvedId } : { collectionId: resolvedId };
   }, [resolvedId, isListRoute]);
-  const { data: favorites = [], isLoading: favoritesLoading } = useFavorites(userId, 'flashcard', favoritesScope);
+  const favoritesQuery = useFavorites(userId, 'flashcard', favoritesScope);
+  const favorites = favoritesQuery.data ?? [];
+  const favoritesLoading = favoritesQuery.isLoading;
+  // Confirmed-zero requires success for the CURRENT user, no in-flight fetch,
+  // and no placeholder data. `data.length === 0` alone is NOT evidence —
+  // disabled queries also produce [].
+  const favoritesConfirmedZero =
+    authStatus === "authenticated" &&
+    !!userId &&
+    favoritesQuery.isSuccess &&
+    favoritesQuery.fetchStatus !== "fetching" &&
+    !favoritesQuery.isPlaceholderData &&
+    favorites.length === 0;
   // `toggleFavorite` (per-id, legacy) still used outside the study flow.
   // Study itself now uses the atomic group-aware mutation below.
   const toggleFavorite = useToggleFavorite();
@@ -223,7 +242,11 @@ const Study = () => {
   // FALLBACK SEGURO: se favoritesOnly estiver ativo mas a lista não tem nenhum favorito,
   // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
   // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
-  const favoritesFilterFellBack = urlFavoritesOnly && !favoritesLoading && favorites.length === 0 && flashcards.length > 0;
+  // Only treat the filter as "fell back" when we have a CONFIRMED empty
+  // result for the signed-in user. During auth race / fetching / placeholder
+  // we must not interpret an empty array as evidence of zero favorites.
+  const favoritesFilterFellBack =
+    urlFavoritesOnly && favoritesConfirmedZero && flashcards.length > 0;
   // redFocus is session-scoped (NOT persisted in prefs). It lives on the
   // engine's gameSettings; we use a small local state mirror so we can derive
   // `effectiveFlashcards` without a circular dependency on the engine's output.
@@ -371,10 +394,18 @@ const Study = () => {
   // Order/direction/favorites are applied locally (in effectiveFlashcards or by
   // shuffling) — they must NOT trigger a fresh DB query, which would reset the
   // session and re-init the engine for free.
+  // Clara Master P0 — we ALSO wait for auth to resolve before loading. On a
+  // private route, loadFlashcards needs the session to either (a) hit the
+  // authenticated table query or (b) fall back to the portal RPC. Firing
+  // before AuthContext resolves caused the cold-restart favorites race.
   useEffect(() => {
+    const isPortalRoute = typeof window !== "undefined"
+      && window.location.pathname.startsWith("/portal/");
+    const access = resolveStudyAccess({ authStatus, isPortalRoute, userId: authUserId });
+    if (access === "wait") return;
     loadFlashcards();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedId]);
+  }, [resolvedId, authStatus, authUserId]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -452,10 +483,10 @@ const Study = () => {
       return;
     }
     
-    const { data: { session } } = await supabase.auth.getSession();
-    setUserId(session?.user?.id);
-    setAuthUserId(session?.user?.id);
-    
+    // Clara Master P0 — auth is owned by AuthContext. No local re-fetch here.
+    // `authSession` from useAuth() is the single source of truth.
+    const session = authSession;
+
     if (isListRoute && !session) {
       const { data, error } = await supabase.rpc('get_portal_flashcards', { 
         _list_id: resolvedId 
@@ -1002,15 +1033,23 @@ const Study = () => {
     return mergeGlossaryAndManual(currentTranslation, "B", activeGlossary, manual, langCtx);
   }, [currentCardId, currentTranslation, activeGlossary, getParsedHints, displayedCard, listSettings.langA, listSettings.langB]);
 
-  // FALLBACK: se o filtro de favoritos estava ativo mas a lista não tem favoritos,
-  // não bloqueamos a sessão — estudamos todos os cards e mostramos um aviso curto.
-  // Este efeito desativa o flag persistido para limpar o estado herdado.
+  // Clara Master P0 — NEVER auto-persist `favoritesOnly: false` just because
+  // the favorites query came back empty. Auth races, fetching states, and
+  // placeholder data would all wipe the user's preference on cold restart.
+  //
+  // When the filter genuinely falls back (confirmed-zero favorites for the
+  // authenticated user), we surface a one-shot toast and rely on the
+  // existing "Estudar todos" button (handleDisableFavoritesFilter) for the
+  // explicit user action. Persistent prefs only change on explicit action.
+  const fallbackToastShownRef = useRef(false);
   useEffect(() => {
-    if (favoritesFilterFellBack) {
-      toast.info("Nenhum favorito encontrado. Exibindo todos os cards.");
-      updatePrefs({ favoritesOnly: false });
+    if (favoritesFilterFellBack && !fallbackToastShownRef.current) {
+      fallbackToastShownRef.current = true;
+      toast.info("Nenhum favorito nesta lista. Estudando todos os cards.");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!favoritesFilterFellBack) {
+      fallbackToastShownRef.current = false;
+    }
   }, [favoritesFilterFellBack]);
 
   // Helper to disable favorites filter and restart with all cards

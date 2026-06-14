@@ -142,6 +142,10 @@ export function useToggleFavorite() {
   const queryClient = useQueryClient();
   
   return useMutation({
+    // Clara Master P0 — explicit key so `useIsMutating` in GamesHub /
+    // Study can detect in-flight favorite writes and avoid acting on
+    // stale empty reads during the optimistic window.
+    mutationKey: ['favorite-toggle'],
     mutationFn: async ({ 
       resourceId, 
       resourceType, 
