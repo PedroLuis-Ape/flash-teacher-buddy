@@ -65,7 +65,10 @@ export function useFlashcardGroupStatus(statusGroupUid: string | null | undefine
       // Overlay pending outbox intent (if any) so the UI is consistent.
       try {
         const pending = await latestForGroup(userId, statusGroupUid);
-        if (pending && pending.last_operation_id !== data?.last_operation_id) {
+        // If the most recent outbox op for this group has not yet been
+        // confirmed by the server (server's `last_operation_id` differs),
+        // surface the user's pending intent.
+        if (pending && pending.operationId !== (data as any)?.last_operation_id) {
           return {
             isFavorite: pending.isFavorite,
             isRedList: pending.isRedList,
