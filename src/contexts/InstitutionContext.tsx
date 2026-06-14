@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const STORAGE_KEY = "selectedInstitutionId";
 
@@ -29,7 +30,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
   const [selectedInstitution, setSelectedInstitutionRaw] = useState<Institution | null>(null);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
-  const didRestoreRef = useRef(false);
+  const { userId, status } = useAuth();
 
   // Single setter that always persists to localStorage
   const setSelectedInstitution = useCallback((institution: Institution | null) => {
@@ -74,15 +75,15 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshInstitutions = useCallback(async () => {
+    // Consumes the canonical auth state — no extra getSession() call.
+    if (!userId) {
+      setInstitutions([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setInstitutions([]);
-        return;
-      }
-
-      const list = await fetchInstitutions(session.user.id);
+      const list = await fetchInstitutions(userId);
       setInstitutions(list);
       restoreSavedSelection(list);
     } catch (error) {
@@ -91,7 +92,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [fetchInstitutions, restoreSavedSelection]);
+  }, [userId, fetchInstitutions, restoreSavedSelection]);
 
   const deleteInstitution = useCallback(async (id: string) => {
     try {
@@ -119,29 +120,26 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     }
   }, [setSelectedInstitution]);
 
-  // Listen for auth state changes to re-fetch institutions
+  // React to canonical auth state instead of owning a parallel subscription.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        const list = await fetchInstitutions(session.user.id);
-        setInstitutions(list);
-        restoreSavedSelection(list);
-        setLoading(false);
-      } else if (event === "SIGNED_OUT") {
-        setInstitutions([]);
-        setSelectedInstitutionRaw(null);
-        setLoading(false);
-      }
-    });
-
-    // Initial load
-    refreshInstitutions();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (status === "initializing") return;
+    if (status === "authenticated" && userId) {
+      let cancelled = false;
+      setLoading(true);
+      fetchInstitutions(userId)
+        .then((list) => {
+          if (cancelled) return;
+          setInstitutions(list);
+          restoreSavedSelection(list);
+        })
+        .finally(() => { if (!cancelled) setLoading(false); });
+      return () => { cancelled = true; };
+    }
+    // anonymous or error — reset
+    setInstitutions([]);
+    setSelectedInstitutionRaw(null);
+    setLoading(false);
+  }, [status, userId, fetchInstitutions, restoreSavedSelection]);
 
   const contextValue = useMemo(() => ({
     selectedInstitution,

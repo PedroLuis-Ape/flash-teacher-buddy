@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EconomyState {
   balance_pitecoin: number;
@@ -56,6 +57,9 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const consecutiveFailures = useRef(0);
+  const { userId, accessToken, status } = useAuth();
+  const accessTokenRef = useRef<string | undefined>(accessToken);
+  useEffect(() => { accessTokenRef.current = accessToken; }, [accessToken]);
 
   const refreshBalance = useCallback(async () => {
     // If economy has failed too many times in a row, stop retrying automatically
@@ -65,11 +69,10 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
 
     refreshTimeoutRef.current = setTimeout(async () => {
+      const token = accessTokenRef.current;
+      if (!token) return;
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const { data, error } = await fetchHudSummary(session.access_token);
+        const { data, error } = await fetchHudSummary(token);
 
         if (error) {
           consecutiveFailures.current++;
@@ -94,75 +97,71 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, balance_pitecoin: newBalance }));
   }, []);
 
+  // Initial HUD load + realtime channel — driven by the canonical auth state.
+  // Effect deps are only `status` and `userId`; the access token is read via
+  // ref so periodic token refreshes do NOT tear down the realtime channel.
   useEffect(() => {
+    if (status === "initializing") return;
+
+    if (!userId) {
+      // Anonymous: reset to defaults and stop loading.
+      setState(INITIAL_STATE);
+      consecutiveFailures.current = 0;
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
+    const ac = new AbortController();
 
-    const loadInitialData = async () => {
+    (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session || !mounted) {
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await fetchHudSummary(session.access_token);
-
+        const token = accessTokenRef.current;
+        if (!token) { if (mounted) setLoading(false); return; }
+        const { data, error } = await fetchHudSummary(token);
+        if (!mounted || ac.signal.aborted) return;
         if (error) {
-          // Economy init failure is non-fatal — log and continue with defaults
           console.warn('[EconomyContext] Initial HUD load failed:', error.message);
           return;
         }
-
-        if (data?.ok && mounted) setState(hudToState(data));
-      } catch (error) {
-        // Swallow — economy must never crash the app
-        console.warn('[EconomyContext] Error loading initial data:', error);
+        if (data?.ok) setState(hudToState(data));
+      } catch (e) {
+        console.warn('[EconomyContext] Error loading initial data:', e);
       } finally {
         if (mounted) setLoading(false);
       }
-    };
+    })();
 
-    loadInitialData();
-
-    // Realtime subscription — set up only after initial load settles
+    // One realtime channel per userId, torn down on user change / logout.
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`profile-${userId}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        }, (payload) => {
+          if (!mounted || !payload.new) return;
+          setState(prev => ({
+            ...prev,
+            balance_pitecoin: payload.new.balance_pitecoin || 0,
+            pts_weekly: payload.new.pts_weekly || 0,
+            xp_total: payload.new.xp_total || 0,
+            level: payload.new.level || 0,
+            current_streak: payload.new.current_streak || 0,
+          }));
+        })
+        .subscribe((chStatus) => {
+          if (chStatus === 'CHANNEL_ERROR') {
+            console.warn('[EconomyContext] Realtime channel error — degrading gracefully');
+          }
+        });
+    } catch (e) {
+      console.warn('[EconomyContext] Realtime setup failed:', e);
+    }
 
-    supabase.auth.getSession().then(({ data: { session: initSession } }) => {
-      if (!initSession || !mounted) return;
-      try {
-        channel = supabase
-          .channel(`profile-${initSession.user.id}`)
-          .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${initSession.user.id}`,
-          }, (payload) => {
-            if (mounted && payload.new) {
-              setState(prev => ({
-                ...prev,
-                balance_pitecoin: payload.new.balance_pitecoin || 0,
-                pts_weekly: payload.new.pts_weekly || 0,
-                xp_total: payload.new.xp_total || 0,
-                level: payload.new.level || 0,
-                current_streak: payload.new.current_streak || 0,
-              }));
-            }
-          })
-          .subscribe((status) => {
-            if (status === 'CHANNEL_ERROR') {
-              console.warn('[EconomyContext] Realtime channel error — degrading gracefully');
-            }
-          });
-      } catch (e) {
-        console.warn('[EconomyContext] Realtime setup failed:', e);
-        // Non-fatal — app works without realtime economy updates
-      }
-    }).catch(() => {
-      // Swallow — if we can't even check session for realtime, just skip it
-    });
-
-    // Debounce visibility refresh
     let visibilityTimer: NodeJS.Timeout | null = null;
     const handleVisibilityChange = () => {
       if (visibilityTimer) clearTimeout(visibilityTimer);
@@ -171,7 +170,6 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
       }
     };
     const handleOnline = () => {
-      // Reset failure counter when network comes back
       consecutiveFailures.current = 0;
       refreshBalance();
     };
@@ -181,13 +179,14 @@ export function EconomyProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      ac.abort();
       try { if (channel) channel.unsubscribe(); } catch {}
       if (visibilityTimer) clearTimeout(visibilityTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
       if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
     };
-  }, [refreshBalance]);
+  }, [status, userId, refreshBalance]);
 
   const contextValue = useMemo(() => ({
     ...state, refreshBalance, updateBalance, loading,
