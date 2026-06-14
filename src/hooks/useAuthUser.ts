@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Read Supabase session from localStorage synchronously.
@@ -36,6 +37,20 @@ function getOptimisticSession() {
  * already has user/session (no loading flash).
  */
 export function useAuthUser() {
+  // Prefer the centralized AuthProvider when present (Phase 1 Clara
+  // Master). Falls back to the legacy React Query path for trees that
+  // are rendered outside the provider (e.g. isolated tests).
+  const ctx = useAuth();
+  if (ctx.status !== "initializing" || ctx.user) {
+    return {
+      user: ctx.user,
+      session: ctx.session,
+      isLoading: ctx.status === "initializing",
+      userId: ctx.userId,
+      accessToken: ctx.accessToken,
+    };
+  }
+
   const optimistic = getOptimisticSession();
 
   const { data, isLoading } = useQuery({
