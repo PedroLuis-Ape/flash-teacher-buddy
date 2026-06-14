@@ -219,85 +219,65 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
   const handleApply = async () => {
     if (!preview) return;
     setApplying(true);
-    let applied = 0;
-    let skipped = 0;
-    let errors = 0;
-    const appliedFlashcardIds: string[] = [];
     const invalidCount = preview.filter((r) => r.status === "invalid").length;
     const missingCount = preview.filter((r) => r.status === "missing").length;
     try {
-      for (const row of preview) {
-        if (row.status === "missing" || row.status === "invalid") {
-          skipped++;
-          continue;
-        }
-        if (row.status === "has-existing" && conflictMode === "skip") {
-          skipped++;
-          continue;
-        }
-        const item = row.item;
-        let explanation = item.detailed_explanation ?? "";
-        explanation = explanation + buildExtraFromExamples(item);
-        if (row.status === "has-existing" && conflictMode === "append" && row.existingExplanation) {
-          explanation = `${row.existingExplanation}\n\n---\n\n${explanation}`;
-        }
-        const patch: Record<string, any> = {
-          detailed_explanation: explanation,
-        };
-        if (item.usage_notes != null) patch.usage_notes = item.usage_notes;
-        if (item.common_mistakes != null) patch.common_mistakes = item.common_mistakes;
-        // First example -> example_text/example_translation only if empty
-        const firstEx = item.examples?.[0];
-        if (firstEx?.en || item.example_text) {
-          const { data: existing } = await supabase
-            .from("flashcards")
-            .select("example_text, example_translation")
-            .eq("id", item.flashcard_id!)
-            .maybeSingle();
-          if (existing && !existing.example_text && (firstEx?.en || item.example_text)) {
-            patch.example_text = firstEx?.en ?? item.example_text ?? null;
+      // Build the items payload sent to the RPC. Each row carries the parsed
+      // explanation already extended with extra examples (kept here, since the
+      // RPC only handles textual append/replace via conflict mode).
+      const items = preview
+        .filter((r) => r.status === "found" || r.status === "has-existing")
+        .map((row) => {
+          const item = row.item;
+          let explanation = item.detailed_explanation ?? "";
+          explanation = explanation + buildExtraFromExamples(item);
+          const firstEx = item.examples?.[0];
+          return {
+            flashcard_id: item.flashcard_id,
+            detailed_explanation: explanation,
+            usage_notes: item.usage_notes ?? null,
+            common_mistakes: item.common_mistakes ?? null,
+            example_text: firstEx?.en ?? item.example_text ?? null,
+            example_translation: firstEx?.pt ?? item.example_translation ?? null,
+          };
+        });
+      const { data, error } = await (supabase as any).rpc(
+        'apply_special_flashcard_explanations',
+        { p_items: items, p_conflict_mode: conflictMode },
+      );
+      if (error) throw error;
+      const results = (data?.results ?? []) as Array<{ flashcard_id: string; status: string; message?: string }>;
+      const applied = results.filter((r) => r.status === 'applied').length;
+      const skipped = results.filter((r) => r.status === 'skipped').length;
+      const permission = results.filter((r) => r.status === 'permission_denied').length;
+      const notFoundFromRpc = results.filter((r) => r.status === 'not_found').length;
+      const invalidFromRpc = results.filter((r) => r.status === 'invalid').length;
+      const errors = results.filter((r) => r.status === 'error').length;
+      const removedFromSpecials = applied; // RPC only deletes when applied
+      try {
+        const failed = results.filter((r) => r.status !== 'applied' && r.status !== 'skipped');
+        if (failed.length > 0) console.warn('[Import] não aplicados', failed);
+      } catch {}
+      // Notify open Study sessions so they refresh the explanation without resetting state.
+      try {
+        const appliedIds = results.filter((r) => r.status === 'applied').map((r) => r.flashcard_id);
+        if (appliedIds.length > 0 && typeof window !== 'undefined') {
+          if ('BroadcastChannel' in window) {
+            const ch = new BroadcastChannel('flashcard-explanations');
+            ch.postMessage({ type: 'applied', ids: appliedIds });
+            ch.close();
+          } else {
+            window.dispatchEvent(new CustomEvent('flashcard-explanations-applied', { detail: { ids: appliedIds } }));
           }
-          if (existing && !existing.example_translation && (firstEx?.pt || item.example_translation)) {
-            patch.example_translation = firstEx?.pt ?? item.example_translation ?? null;
-          }
         }
-        const { error } = await supabase
-          .from("flashcards")
-          .update(patch)
-          .eq("id", item.flashcard_id!);
-        if (error) {
-          console.error("Update failed for", item.flashcard_id, error);
-          errors++;
-        } else {
-          applied++;
-          appliedFlashcardIds.push(item.flashcard_id!);
-        }
-      }
-      // Remove from user_special_flashcards ONLY the ids that were
-      // successfully applied. Skipped / invalid / missing / errored items stay.
-      let removedFromSpecials = 0;
-      if (appliedFlashcardIds.length > 0 && userId) {
-        const { error: delErr, count } = await supabase
-          .from("user_special_flashcards" as any)
-          .delete({ count: "exact" })
-          .eq("user_id", userId)
-          .in("flashcard_id", appliedFlashcardIds);
-        if (delErr) {
-          console.error("Failed to remove applied cards from specials", delErr);
-          toast.error(
-            "Explicações aplicadas, mas falhou ao remover dos especiais."
-          );
-        } else {
-          removedFromSpecials = count ?? appliedFlashcardIds.length;
-        }
-      }
+      } catch {}
       setReport({
         applied,
         removedFromSpecials,
         skipped,
-        invalid: invalidCount,
-        missing: missingCount,
-        errors,
+        invalid: invalidCount + invalidFromRpc,
+        missing: missingCount + notFoundFromRpc,
+        errors: errors + permission,
       });
       queryClient.invalidateQueries({ queryKey: ["flashcards"] });
       queryClient.invalidateQueries({ queryKey: ["list-flashcards"] });
@@ -310,7 +290,16 @@ export default function ImportExplanationsDialog({ open, onOpenChange, userId }:
         toast.success(
           `Explicações aplicadas. ${removedFromSpecials} card(s) com explicação aplicada saíram dos especiais.`
         );
-      } else {
+      }
+      if (permission > 0) {
+        toast.error(
+          `${permission} card(s) não atualizados — você não tem permissão de edição. Eles continuam nos especiais.`
+        );
+      }
+      if (notFoundFromRpc > 0) {
+        toast.message(`${notFoundFromRpc} card(s) não encontrado(s) — mantidos nos especiais.`);
+      }
+      if (applied === 0 && permission === 0 && notFoundFromRpc === 0) {
         toast.message("Nenhuma explicação aplicada.");
       }
     } catch (e: any) {
