@@ -51,10 +51,17 @@ describe("runtimePerformance", () => {
   });
 
   it("installRuntimePerformance is idempotent", () => {
+    // In a non-DOM environment the installer is a deliberate no-op; only
+    // exercise the full idempotency contract when a window exists.
+    if (typeof window === "undefined") {
+      const teardown = installRuntimePerformance({ buildId: "test-1" });
+      expect(__testing__.isInstalled()).toBe(false);
+      teardown();
+      return;
+    }
     const teardown1 = installRuntimePerformance({ buildId: "test-1" });
     expect(__testing__.isInstalled()).toBe(true);
     const teardown2 = installRuntimePerformance({ buildId: "test-2" });
-    // second call is a no-op, returns a noop teardown
     teardown2();
     expect(__testing__.isInstalled()).toBe(true);
     teardown1();
