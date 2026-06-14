@@ -1,120 +1,108 @@
+## Diagnóstico inicial
 
-# Estabilização CLARA MASTER — Plano de Execução
+Regressão P0: favoritos somem após fechar/reabrir o app, principalmente em cards com camadas. A skill CLARA MASTER exige **evidência antes de código** — não vou tocar em nada sem antes provar o que está acontecendo no banco e isolar causa raiz vs. sintoma.
 
-Entrega focada em fluidez, recuperação e redução de tarefas globais. Cada fase é commit-sized, reversível, com testes e evidência. Nada de redesign, nada de migrations de cards, nada de alterar Favoritos/Especiais/Lista Vermelha.
+A entrega é grande (14 blocos) e mistura **hotfix urgente** (blocos 1–7) com **refatorações estruturais** (blocos 8–12). Vou executar em ondas, cada onda fechada e validada antes da próxima, para respeitar a regra de "não implementar pela metade" sem virar um big-bang de 30+ arquivos numa tacada só.
 
-## Princípios desta entrega
+---
 
-- Mudanças mínimas, verticais, testadas.
-- Shell sempre vivo. Erros e suspense isolados ao conteúdo da rota.
-- Auth com fonte única. Providers privados só em rotas privadas.
-- Watchdog conservador. Safe Mode reativo, sem polling.
-- Prefetch sob intenção.
-- Cada fase só avança após typecheck + testes + smoke real no preview.
+## Onda 1 — Diagnóstico (sem código de produção)
 
-## Baseline (Fase 0, obrigatória)
+**Objetivo:** confirmar se é perda de dado, falha de leitura, corrida de auth, ou snapshot offline.
 
-Antes de qualquer alteração comportamental:
+1. Pedir ao usuário o `user_tag` (ou email) de um aluno afetado para rodar `supabase--read_query` sobre:
+   - `user_favorites` (count, resource_ids recentes)
+   - `user_flashcard_group_status` (count, status_group_uid, last_operation_id)
+   - `user_red_list`
+   - `flashcards` correspondentes (parent_card_id, status_group_uid, layer_index)
+   - órfãos: favorites apontando para flashcards deletados / status_group_uid nulo
+   - registros do trigger `flashcards_sync_status_group_uid` que possam ter reescrito identidades
+2. Inspecionar `Study.tsx`, `useFavorites`, `useStudyPreferences`, `GamesHub`, `useOffline`, `statusOutbox`, `statusDrainer` antes de mudar qualquer linha.
+3. Entregar `docs/COLD_RESTART_FAVORITES_P0.md` classificando cada favorito perdido em uma das categorias A–F do brief.
 
-- `docs/FLUIDITY_STABILITY_REPORT.md` com SHA, BUILD_ID, tamanho de chunks, tempos de boot/navegação, long tasks, erros recentes.
-- `src/lib/runtimePerformance.ts`: PerformanceObserver (longtask), navigation/resource timing, marks/measures, visibilitychange, pageshow/pagehide. Buffer em memória (últimas 50), flush em `requestIdleCallback`. Nunca registra tokens, e-mails, conteúdo de cards.
-- Executar `typecheck`, `test`, `lint`, `build` e gravar saída real no relatório.
+**Critério de saída:** relatório commitado, causa raiz nomeada por arquivo/linha. Sem isso, qualquer "correção" é gambiarra.
 
-## Fase 1 — Isolar erros e suspense por rota
+---
 
-Problema: `LazyErrorBoundary` + `Suspense` envolvem o `BrowserRouter` inteiro. Qualquer erro/chunk derruba shell e exige F5.
+## Onda 2 — Hotfix de leitura (blocos 2, 3, 4, 5, 6)
 
-Mudanças:
+Não toca em schema. Não ativa flag nova. Restaura confiabilidade do caminho legado (`user_favorites` + `user_red_list`).
 
-- `SafeMode` permanece como último boundary global.
-- Novo `RouteErrorBoundary` montado **dentro** do shell, ao redor do `Outlet`. Reset automático em mudança de `location.key`.
-- Fallback dentro da área de conteúdo, com botões: Tentar novamente, Voltar, Dashboard (via `navigate`, nunca `window.location`).
-- Chunk error: 1 retry controlado por sessionStorage `chunkRetry:${BUILD_ID}:${chunkId}`, sem limpar caches automaticamente, sem loop.
-- Novo `RouteSuspense` com fallback atrasado (~150 ms) só na área de conteúdo. Header/tab bar/sidebar nunca somem.
-- Testes: erro em rota A não derruba shell; chunk lento mostra skeleton; chunk rápido não pisca.
+1. **`src/lib/resolveStudyAccess.ts`** (novo, puro): `({authStatus, isPortalRoute, userId}) → "wait" | "authenticated" | "public" | "denied"`. Testes unitários.
+2. **`src/pages/Study.tsx`**: remover `authUserId`/`userId` locais e o `supabase.auth.getSession()` dentro de `loadFlashcards`. Consumir só `useAuth()`. `loadFlashcards` reage a `resolvedId` + estado `authenticated` confirmado. Cancelar resposta antiga ao trocar rota/usuário (AbortController + ref de geração).
+3. **`src/hooks/useFavorites.ts`** (e equivalente para red list): expor `favoritesState` derivado dos sinais explícitos (`isSuccess && !isFetching && !isPlaceholderData && authStatus==='authenticated' && userId && !pendingMutations && !pendingOutbox`). `data` default continua `[]` mas consumidores devem usar `favoritesState`, não `length===0`.
+4. **`src/pages/Study.tsx` + `GamesHub.tsx`**: remover qualquer `useEffect` que faça `updatePrefs({favoritesOnly:false})` por causa de `favoritesFilterFellBack`. Em vez disso, renderizar empty state com botão "Estudar todos" (ação explícita).
+5. **GamesHub**: adicionar `mutationKey: ["favorite-group", userId, canonicalId]`, `["red-list-group", userId, canonicalId]`, `["special-layer", userId, visibleLayerId]` nos hooks legados ativos, para o `useIsMutating` existente parar de retornar 0 falsamente.
+6. **Feature flag**: confirmar `new_status_pipeline = "off"` em `src/lib/featureFlags.ts` e travar até o final do hotfix.
 
-## Fase 2 — Transição de página segura
+**Testes adicionados** (`src/features/study/__tests__/coldRestart.test.tsx`): cenários 1, 2, 3 do bloco 7 (auth atrasada, primeira leitura nula com evento posterior, query com erro). Cenários 4 e 5 (cold restart real e camadas) entram como testes de integração com mock de QueryClient remontado.
 
-Problema: antiga `PageTransition` retinha `children` em state → React #300.
+**Critério de saída:** `npm run check` verde + os 5 cenários do bloco 7 passando + smoke manual no preview confirmando que toggle "somente favoritos" sobrevive a F5 e a fechar/abrir aba.
 
-Mudanças:
+---
 
-- Wrapper simples com `key={location.pathname}`, sem retenção de árvore anterior, sem dupla renderização.
-- CSS-only: `opacity` + `translateY(5px)`, 160 ms, respeita `prefers-reduced-motion`, `PerformanceContext.animations`, Safe Mode.
-- Aplicado **só** ao conteúdo da rota, não ao GlobalLayout.
-- View Transition API só como progressive enhancement, fora de Study/jogos.
+## Onda 3 — Outbox com lease (bloco 10)
 
-## Fase 3 — Freeze watchdog conservador + Safe Mode reativo
+Sem isso, qualquer operação que feche o app durante `markInflight` fica presa, e o sintoma volta.
 
-Problema: watchdog gera falso positivo em aba escondida/suspensão; Safe Mode é polled.
+1. Migration: adicionar `lease_owner`, `lease_expires_at`, `attempts`, `updated_at` em `user_flashcard_group_status_outbox` (IndexedDB-only hoje — provavelmente a mudança é em `src/features/cards/lib/statusOutbox.ts`, não SQL). Reavaliar ao ler o código.
+2. `listPendingForUser` passa a incluir `inflight` com `lease_expires_at < now()`.
+3. `markInflight` atribui lease curto (ex.: 30s).
+4. Startup: `AuthProvider` autenticado → requeue de inflight expirado + failed recuperável → `drainUser` único (mutex já existe).
+5. Triggers de drain: `online`, `pageshow`, `focus` (debounced), `SIGNED_IN`, botão manual.
+6. Teste: simular fechamento depois de `markInflight`, reabrir, lease expira, mesma `operationId` é reenviada, RPC idempotente confirma.
 
-Mudanças em `useFreezeWatchdog`:
+---
 
-- `performance.now()` em vez de `Date.now()`.
-- Ignora completamente `document.visibilityState !== 'visible'`.
-- Reset em `visibilitychange→visible` e `pageshow`.
-- 1 atraso de timer = `suspected_stall` (registra apenas). Auto Safe Mode **desativado** nesta entrega; banner apenas sugere ao usuário.
-- Long tasks reais via PerformanceObserver são a evidência principal.
+## Onda 4 — Identidade imutável (bloco 8)
 
-Safe Mode reativo:
+**Migration corretiva** sem destruir registros:
+- Alterar `flashcards_sync_status_group_uid` para só definir em `INSERT`. Remover a recomputação em `UPDATE` quando `parent_card_id` muda.
+- Merge/unmerge passam a decidir identidade transacionalmente dentro das RPCs (bloco 11).
+- Auditoria: query que lista grupos cujo `status_group_uid` foi reescrito desde a versão atual do trigger; relatório em `docs/STATUS_GROUP_UID_AUDIT.md`.
 
-- `SafeModeStore` com `useSyncExternalStore`.
-- `AppRecoveryBanner` deixa de fazer `setInterval(5s)`; consome a store.
-- `enable()/disable()` atualiza consumidores sem F5.
+---
 
-## Fase 4 — Autenticação centralizada
+## Onda 5 — RPCs de merge/unmerge definitivas (bloco 11)
 
-Auditar e ajustar para que `AuthProvider` seja a única autoridade global:
+Criar `merge_cards_transactional(card_ids[], destination_principal_id?)` e `unmerge_group_transactional(principal_id)` que:
+- preservam conteúdo,
+- atribuem/preservam `status_group_uid` imutável,
+- transferem favorito/red list para o novo grupo,
+- preservam Especiais por `flashcard_id`,
+- retornam principal + grupos afetados.
 
-- `InstitutionProvider`: consome `useAuth()`, remove `onAuthStateChange` próprio e `getSession`. Reseta em logout.
-- `EconomyProvider`: consome `useAuth()`. `refreshBalance` recebe `userId`/token; nada de `getSession` na carga inicial nem antes do realtime. 1 canal por userId, fechamento em troca/logout. `AbortController` para corridas.
-- `useAuthUser`: marcado deprecated; cada call site migrado em PRs futuros (não nesta entrega; apenas mapeado).
-- Teste vitest: contar assinaturas globais `onAuthStateChange` = 1.
+Substituir chamadas em `LayeredCardEditor`, `MergeIntoLayersDialog`. Manter as RPCs antigas como deprecated por 1 release.
 
-## Fase 5 — PublicShell vs PrivateShell
+---
 
-Hoje providers privados (Economy, Institution) montam em landing/auth/SEO/portal.
+## Onda 6 — Offline V2 real (bloco 12)
 
-Mudanças:
+`src/hooks/useOffline.ts` (`download`) passa a selecionar `status_group_uid, parent_card_id, layer_index` e a salvar `schemaVersion:2, userId, favoriteGroupUids, redListGroupUids, specialLayerIds`. Snapshots v1 sem identidade comprovável → marcar `needsResync=true` ao ler; Study força redownload. Study restaura auth antes de escolher snapshot.
 
-- `PublicShell`: landing, SEO, `/auth`, `/portal`. Sem Economy, Institution, heartbeat, notificações privadas.
-- `PrivateShell`: requer sessão; monta Economy + Institution + GlobalLayout + heartbeat + notificações.
-- Componentes desnecessários **não** são montados (não basta early return).
-- `AppRoutes` reorganiza apenas o aninhamento; URLs e nomes de rota inalterados.
+---
 
-## Fase 6 — Prefetch por intenção + redução de tarefas globais
+## Onda 7 — Migração da arquitetura-alvo (bloco 9)
 
-- Remover/limitar `prefetchCommonRoutes` (cinco imports em lote).
-- `PrefetchLink`: `onPointerEnter` / `onFocus` / `onTouchStart`, dedup, respeita `saveData`, `connection.effectiveType`, `deviceMemory`, Safe Mode.
-- `GoogleConnectPrompt` e `BrowserCheck`: lazy + montados só em PrivateShell.
-- Avaliar consolidação Toaster/Sonner (manter ambos se houver consumidor; só remover com prova).
-- `AppLifecycleCoordinator` leve: publica `visible/hidden/online/offline/pageshow/pagehide`. Cada serviço se inscreve, deduplica, escalona. Não é God Object.
+Só depois de tudo acima estável. Migrar **todos** os consumidores (Study, GamesHub, ListDetail, FavoriteButton, RedListButton, filtros, contagens, motor, Foco Vermelho, exportações, admin) para `user_flashcard_group_status` + `user_special_flashcards` num único PR, com:
+- leitura nova primeiro + fallback legado controlado + telemetria de divergência,
+- flip de `new_status_pipeline` para `"on"` no fim,
+- data definida de remoção dos fallbacks e das tabelas `user_favorites` / `user_red_list`.
 
-## Fase 7 — Validação obrigatória
+---
 
-- Atualizar script `check`: `"check": "npm run typecheck && npm run test && npm run lint && npm run build"`.
-- Rodar e colar saída real no `FLUIDITY_STABILITY_REPORT.md`.
-- Smoke manual (desktop + mobile viewport): 20 navegações rápidas, aba escondida 1 min, voltar/avançar, erro controlado de rota, chunk lento simulado. Registrar long tasks/erros/requests.
+## Verificação final (bloco 13/14)
 
-## Critérios de aceitação
+`typecheck`, `test`, `lint`, `build`, `check`. Smoke real no preview com matriz: card normal/camadas × Favorito/Red/Especial × F5/fechar-abrir/nova aba/rede lenta/offline/fechar-durante-save/merge/unmerge. Evidência de banco antes/depois anexada ao relatório final.
 
-- Erro de página não exige F5.
-- Shell nunca desaparece em navegação ou suspense.
-- Aba escondida e `pageshow` não disparam freeze.
-- Rota pública não inicializa Economy/Institution.
-- Uma única assinatura global de auth.
-- Prefetch dedicado por intenção; nenhum lote de 5 imports.
-- Safe Mode reativo sem polling.
-- Study não perde estado.
-- Zero alteração em Favoritos/Especiais/Lista Vermelha/`status_group_uid`.
-- `typecheck`, `test`, `lint`, `build` verdes com saída anexada.
+Critério de aceitação = os 9 pontos do bloco 14 cumpridos com evidência, não com toast verde.
 
-## Forma de entrega
+---
 
-Vou propor **uma fase por turno**, apresentando ao final de cada uma: arquivos alterados, diff conceitual, saída real dos testes, próximos passos. Você aprova cada fase antes da seguinte. Rollback de qualquer fase é git revert do commit correspondente.
+## O que preciso de você antes de começar
 
-## Confirmação que preciso
+1. **Confirmação de prosseguir onda a onda** (Onda 1 primeiro, sem código). Cada onda termina com evidência e só então abro a próxima. Alternativa: você autoriza eu agrupar Ondas 1+2 numa entrega só (diagnóstico + hotfix de leitura) — é o mínimo para parar o sangramento em produção.
+2. **`user_tag` ou email de 1–2 alunos afetados** para a consulta de diagnóstico da Onda 1. Sem isso, o relatório vira hipótese.
+3. **Janela de risco**: as Ondas 4 e 5 (trigger + RPCs de merge) são mudanças estruturais no banco. Quer que eu execute em horário de menor uso, ou tanto faz?
 
-1. Aprova o plano em 7 fases nesta ordem?
-2. Posso começar pela **Fase 0 (Baseline + instrumentação)** agora?
-3. Algum bloqueio quanto a tocar `App.tsx`, `LazyErrorBoundary`, `useFreezeWatchdog`, `AppRecoveryBanner`, `InstitutionProvider`, `EconomyProvider`, `prefetchCommonRoutes`?
+Não vou começar a editar até você responder. CLARA MASTER proíbe começar enquanto a regra tiver ambiguidade material.
