@@ -148,3 +148,54 @@ No data is destroyed by rollback — `status_group_uid` is purely derived.
 - Backfill consistency query: 0 mismatches.
 - Orphan query: 0 rows.
 - `npx tsc --noEmit` (re-checked after types regeneration): pending types regen.
+
+---
+
+## Phase 3 — `user_flashcard_group_status` + RPC idempotente — COMPLETED
+
+### Migrations applied
+1. Table `public.user_flashcard_group_status`:
+   - PK `(user_id, status_group_uid)`.
+   - `is_favorite`, `is_red_list`, `last_operation_id`, `created_at`, `updated_at`.
+   - CHECK `user_flashcard_group_status_red_requires_fav`: `is_red_list = false OR is_favorite = true`.
+   - FK `user_id → auth.users(id) ON DELETE CASCADE`.
+   - Partial indexes for the two hot paths (favorited / red-listed per user).
+   - `BEFORE UPDATE` trigger `trg_ufgs_touch_updated_at`.
+2. RLS enabled with four restrictive policies (`select/insert/update/delete own`) scoped to `auth.uid() = user_id`. No anon grant.
+3. RPC `public.set_flashcard_group_status(p_status_group_uid uuid, p_is_favorite boolean, p_is_red_list boolean, p_operation_id uuid)`:
+   - `SECURITY DEFINER`, `SET search_path = public`.
+   - Rejects unauthenticated callers (`42501`).
+   - Rejects unknown `status_group_uid` (`23503`).
+   - Rejects null `p_operation_id` (`22023`).
+   - Idempotency: if existing row already has `last_operation_id = p_operation_id`, returns it unchanged.
+   - Normalization: `is_red_list := is_red_list AND is_favorite` before upsert.
+   - GRANT EXECUTE only to `authenticated` (revoked from PUBLIC/anon).
+4. Search-path hardening on `ufgs_touch_updated_at`.
+
+### Real validation (executed against the live DB)
+| Test | Result |
+|---|---|
+| CHECK blocks red-without-fav direct INSERT | **PASS** (`check_violation` raised as expected) |
+| RPC: duplicate `p_operation_id` does NOT overwrite existing row | **PASS** |
+| RPC: `is_favorite=false, is_red_list=true` normalizes red to `false` | **PASS** |
+| RPC grants visible in `pg_proc.proacl` | `authenticated EXECUTE`, `service_role EXECUTE`, no anon |
+| RLS policies present | `select/insert/update/delete own` (4 rows in `pg_policy`) |
+| Linter delta vs Phase 2 | +1 warning (pre-existing SECURITY DEFINER pattern; function already revoked from anon) |
+
+### What did NOT change (intentional)
+- `user_favorites` / `user_red_list` / `user_special_flashcards` legacy tables are untouched.
+- No app code reads from the new table yet — that lands in Phase 4 (backfill) and Phase 5 (hooks).
+
+### Risks remaining
+- Single linter warning for "SECURITY DEFINER callable without signing in" — the grant table shows it is **not** callable by anon; this is a known false-positive for the pattern, consistent with ~100 other functions in the project.
+- App code still writes to legacy tables; reads will diverge until Phase 4 backfills.
+
+### Rollback
+```sql
+REVOKE EXECUTE ON FUNCTION public.set_flashcard_group_status(uuid, boolean, boolean, uuid) FROM authenticated, service_role;
+DROP FUNCTION IF EXISTS public.set_flashcard_group_status(uuid, boolean, boolean, uuid);
+DROP TRIGGER IF EXISTS trg_ufgs_touch_updated_at ON public.user_flashcard_group_status;
+DROP FUNCTION IF EXISTS public.ufgs_touch_updated_at();
+DROP TABLE IF EXISTS public.user_flashcard_group_status;
+```
+Legacy tables are untouched, so the app continues to work after rollback.
