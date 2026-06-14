@@ -28,7 +28,6 @@ import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { usePerformance } from "@/contexts/PerformanceContext";
-import { prefetchCommonRoutes } from "@/lib/routePrefetch";
 import { InstitutionBar } from "@/components/layout/InstitutionBar";
 import { isSafeModeEnabled } from "@/lib/safeMode";
 import { AppRecoveryBanner } from "@/components/AppRecoveryBanner";
@@ -62,7 +61,6 @@ function PrivateShellInner({ children }: PrivateShellProps) {
     const run = () => {
       if (cancelled) return;
       try { refreshBalance(); } catch { /* noop */ }
-      try { prefetchCommonRoutes(); } catch { /* noop */ }
       setSecondaryReady(true);
     };
     const ric = (window as any).requestIdleCallback as
