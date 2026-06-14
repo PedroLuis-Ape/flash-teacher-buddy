@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Settings2, Star, Flame, Gem, Lightbulb, Gauge } from "lucide-react";
+import { Settings2, Star, Flame, Gem, Lightbulb, Gauge, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HintModal } from "./HintModal";
 
@@ -37,6 +37,11 @@ interface StudyToolsMenuProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  favoritePending?: boolean;
+  redListPending?: boolean;
+  specialPending?: boolean;
+  hasDetailedExplanation?: boolean;
+  onShowDetailedExplanation?: () => void;
   className?: string;
 }
 
@@ -48,6 +53,11 @@ export function StudyToolsMenu({
   onToggleRedList,
   isSpecial,
   onToggleSpecial,
+  favoritePending,
+  redListPending,
+  specialPending,
+  hasDetailedExplanation,
+  onShowDetailedExplanation,
   className,
 }: StudyToolsMenuProps) {
   const [showHint, setShowHint] = useState(false);
@@ -113,56 +123,89 @@ export function StudyToolsMenu({
 
           {onToggleFavorite && (
             <DropdownMenuItem
+              disabled={favoritePending}
               onSelect={(e) => {
                 e.preventDefault();
+                if (favoritePending) return;
                 onToggleFavorite();
               }}
             >
-              <Star
+              {favoritePending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Star
                 className={cn(
                   "mr-2 h-4 w-4",
                   isFavorite ? "text-yellow-500 fill-current" : "text-muted-foreground",
                 )}
-              />
+                />
+              )}
               {isFavorite ? "Remover dos favoritos" : "Favoritar"}
             </DropdownMenuItem>
           )}
 
-          {isFavorite && onToggleRedList && (
+          {onToggleRedList && (
             <DropdownMenuItem
+              disabled={redListPending || !isFavorite}
               onSelect={(e) => {
                 e.preventDefault();
+                if (redListPending || !isFavorite) return;
                 onToggleRedList();
               }}
+              title={!isFavorite ? "Favorite o card primeiro para usar a Lista Vermelha" : undefined}
             >
-              <Flame
+              {redListPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Flame
                 className={cn(
                   "mr-2 h-4 w-4",
                   isRedListed ? "text-red-500 fill-current" : "text-muted-foreground",
                 )}
-              />
-              {isRedListed ? "Sair da Lista Vermelha" : "Lista Vermelha"}
+                />
+              )}
+              {!isFavorite
+                ? "Lista Vermelha — favorite primeiro"
+                : isRedListed ? "Sair da Lista Vermelha" : "Lista Vermelha"}
             </DropdownMenuItem>
           )}
 
           {onToggleSpecial && (
             <DropdownMenuItem
+              disabled={specialPending}
               onSelect={(e) => {
                 e.preventDefault();
+                if (specialPending) return;
                 onToggleSpecial();
               }}
             >
-              <Gem
+              {specialPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Gem
                 className={cn(
                   "mr-2 h-4 w-4",
                   isSpecial ? "text-sky-500 fill-current" : "text-muted-foreground",
                 )}
-              />
+                />
+              )}
               {isSpecial ? "Remover dos especiais" : "Salvar como especial"}
             </DropdownMenuItem>
           )}
 
           {(onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
+
+          {hasDetailedExplanation && onShowDetailedExplanation && (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                onShowDetailedExplanation();
+              }}
+            >
+              <Sparkles className="mr-2 h-4 w-4 text-sky-500" />
+              Ver explicação detalhada
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuItem
             disabled={!hasHint}
