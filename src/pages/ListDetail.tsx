@@ -25,6 +25,7 @@ import { FavoriteButton } from "@/features/study/components/FavoriteButton";
 import { RedListButton } from "@/features/study/components/RedListButton";
 import { useFavorites, useFavoritesCount } from "@/hooks/useFavorites";
 import { useRedList } from "@/hooks/useRedList";
+import { resolveLegacyFlashcardGroupId } from "@/lib/resolveFlashcardGroupId";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -242,19 +243,25 @@ const MemoizedCardList = memo(({
   return (
     <>
       {flashcards.map((flashcard) => (
-        <FlashcardRow
-          key={flashcard.id}
-          flashcard={flashcard}
-          isSelected={selectedSet.has(flashcard.id)}
-          canEdit={canEdit}
-          userId={userId}
-          isFavorite={favSet.has(flashcard.id)}
-          isRedListed={redSet.has(flashcard.id)}
-          onToggleSelection={onToggleSelection}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onUnmerge={onUnmerge}
-        />
+        (() => {
+          // CLARA MASTER P0 — Favorite/Red list live on the canonical group id.
+          const groupId = resolveLegacyFlashcardGroupId(flashcard) ?? flashcard.id;
+          return (
+            <FlashcardRow
+              key={flashcard.id}
+              flashcard={flashcard}
+              isSelected={selectedSet.has(flashcard.id)}
+              canEdit={canEdit}
+              userId={userId}
+              isFavorite={favSet.has(groupId)}
+              isRedListed={redSet.has(groupId)}
+              onToggleSelection={onToggleSelection}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onUnmerge={onUnmerge}
+            />
+          );
+        })()
       ))}
     </>
   );

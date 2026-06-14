@@ -833,17 +833,12 @@ const Study = () => {
       setLayerIdx(0);
       return;
     }
-    if (urlFavoritesOnly && favorites.length > 0) {
-      const favSet = new Set(favorites);
-      const redSet = new Set(redListIds);
-      const wantRed = redFocusActiveForDeck;
-      const idx = layers.findIndex(L =>
-        wantRed ? redSet.has(L.id) : favSet.has(L.id)
-      );
-      setLayerIdx(idx >= 0 ? idx : 0);
-      return;
-    }
+    // CLARA MASTER P0 — Favorite/Red list live on the canonical group id, not
+    // per layer. Always start on layer 0 and let the user navigate; we no
+    // longer try to pick "the layer the user starred" because that concept
+    // does not exist anymore (a group has a single favorite mark).
     setLayerIdx(0);
+    return;
   }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck]);
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
