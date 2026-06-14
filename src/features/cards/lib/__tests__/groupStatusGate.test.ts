@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { resolveGateMode } from "../../hooks/useGroupStatusGate";
+import { resolveGateMode } from "../groupStatusGate";
 
 describe("resolveGateMode", () => {
   it("returns legacy when statusGroupUid is missing, even with flag=on", () => {
