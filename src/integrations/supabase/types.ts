@@ -2905,6 +2905,10 @@ export type Database = {
         Args: { _card_ids: string[]; _list_id: string; _title: string }
         Returns: Json
       }
+      merge_flashcard_into_group: {
+        Args: { p_child_id: string; p_parent_id: string }
+        Returns: Json
+      }
       process_exchange: {
         Args: { p_operation_id: string; p_pts: number; p_user_id: string }
         Returns: Json
@@ -3005,6 +3009,10 @@ export type Database = {
       }
       swap_flashcards_sides: { Args: { _list_id: string }; Returns: Json }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
+      unmerge_flashcard_from_group: {
+        Args: { p_card_id: string }
+        Returns: Json
+      }
       unmerge_layered_card: { Args: { _principal_id: string }; Returns: Json }
       update_own_profile: {
         Args: {
