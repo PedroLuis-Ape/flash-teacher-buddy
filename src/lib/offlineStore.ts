@@ -114,7 +114,7 @@ export async function getOfflineList(listId: string): Promise<OfflineListData | 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
     const req = tx.objectStore(STORE_NAME).get(listId);
-    req.onsuccess = () => resolve(req.result ?? null);
+    req.onsuccess = () => resolve(migrateRecord(req.result ?? null));
     req.onerror = () => reject(req.error);
   });
 }
