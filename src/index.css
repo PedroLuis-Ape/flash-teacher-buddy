@@ -596,6 +596,28 @@ All colors MUST be HSL.
 
 /* ── Performance overrides: Light mode kills ALL motion ── */
 
+/* ── Page transition (route content only) ── */
+.page-transition {
+  animation: page-fade-in 160ms ease-out both;
+  will-change: opacity, transform;
+}
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+[data-perf-no-anim] .page-transition {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* Kill every transition & animation globally */
 [data-perf-no-anim] *,
 [data-perf-no-anim] *::before,
