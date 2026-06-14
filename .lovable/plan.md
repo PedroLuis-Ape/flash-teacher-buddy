@@ -72,3 +72,35 @@ Listadas para alinhamento, **não serão executadas neste turno**:
 ## Pergunta de aprovação
 
 Aprovo executar **apenas a Fase 0** (auditoria + matriz + teste de cold-mount + validação) e voltar com o diagnóstico real antes de qualquer alteração estrutural?
+
+---
+
+## Phase 1 — Lifecycle (AuthProvider central) — COMPLETED
+
+### Changes
+- **NEW** `src/contexts/AuthContext.tsx`: central provider owning the single Supabase `onAuthStateChange` subscription + `getSession()` reconciliation. Exposes discrete `status: 'initializing' | 'authenticated' | 'anonymous' | 'error'`.
+- **`src/components/SessionWatcher.tsx`**: rewritten as a pure route-guard consumer of `useAuth()`. Never redirects while `status === 'initializing'` (eliminates hydration-race redirects to `/auth`).
+- **`src/components/EconomyInitializer.tsx`**: consumes `useAuth()`; only runs when `status === 'authenticated'` with a confirmed `userId`, guarded by a per-user `ranForRef` (no duplicate runs).
+- **`src/components/SafeMode.tsx`**: `handleClearAndReload` no longer calls `localStorage.clear()`. Cleanup is namespace-scoped, preserving `sb-*` (auth), `ape_outbox_*` (reserved for Phase 5 offline outbox), and `ape_pref_*` (user prefs).
+- **`src/lib/errorCapture.ts`**: added fingerprint-based dedupe (message + first stack frame, 1.5s window) for both `error` and `unhandledrejection` listeners — prevents a single broken render from artificially tripping the fatal burst.
+- **`src/main.tsx`**: splash `SPLASH_MIN_MS` floor reduced from 3000ms → 800ms (override via `__APE_SPLASH_MIN_MS` still respected).
+- **`src/hooks/useAuthUser.ts`**: now prefers `useAuth()`; legacy React Query path kept as fallback (cache is kept in sync by AuthProvider).
+- **`src/App.tsx`**: wraps the tree with `<AuthProvider>` inside `QueryClientProvider`.
+
+### Validation
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → **343 / 343 passed** across 14 test files (including the Phase 0 `favoriteColdMount` and `cardStatusIdentity` suites).
+
+### Invariants enforced
+1. Exactly one `onAuthStateChange` subscription per session.
+2. Route guard cannot fire on optimistic / pre-confirmed state.
+3. Economy side-effects cannot run for an anonymous user.
+4. Safe Mode recovery cannot wipe auth tokens or pending offline writes.
+5. Fatal-burst detector is immune to repeated identical errors.
+
+### Risks remaining
+- `useAuthUser` still keeps the legacy React Query fallback path; safe to remove only after all call sites are audited (Phase 5).
+- Splash 800ms floor is a heuristic; should be replaced by a real "first meaningful paint" signal in a future polish pass.
+
+### Rollback
+Revert the listed files; AuthProvider is additive and can be removed without DB changes. No migrations were introduced in this phase.
