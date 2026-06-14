@@ -22,8 +22,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getFlag } from "@/lib/featureFlags";
 import { useFlashcardGroupStatus } from "./useFlashcardGroupStatus";
 import { reportDrift } from "../lib/statusTelemetry";
+import { resolveGateMode, type GateMode } from "../lib/groupStatusGate";
 
-export type GateMode = "legacy" | "shadow" | "new";
+export type { GateMode };
 
 export interface GateInput {
   statusGroupUid?: string | null;
@@ -40,20 +41,7 @@ export interface GateResult {
   syncState?: "salvo" | "salvando" | "aguardando" | "erro";
 }
 
-/**
- * Pure decision function — exposed so it can be unit-tested without React.
- * Returns the *mode* given the gating inputs. The hook layer applies it.
- */
-export function resolveGateMode(args: {
-  authStatus: "initializing" | "authenticated" | "anonymous" | "error";
-  statusGroupUid?: string | null;
-  flagValue: "off" | "shadow" | "on";
-}): GateMode {
-  if (args.authStatus !== "authenticated") return "legacy";
-  if (!args.statusGroupUid) return "legacy";
-  if (args.flagValue === "off") return "legacy";
-  return args.flagValue === "on" ? "new" : "shadow";
-}
+// resolveGateMode lives in ../lib/groupStatusGate (pure, testable).
 
 export function useGroupStatusGate(input: GateInput): GateResult {
   const { status } = useAuth();
