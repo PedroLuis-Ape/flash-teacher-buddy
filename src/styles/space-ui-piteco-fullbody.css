@@ -1,0 +1,24 @@
+/* Temporary full-body hero positioning. Asset source can be swapped without changing layout. */
+.space-ui .welcome-banner::before {
+  right: clamp(1.2rem, 5vw, 5.5rem) !important;
+  bottom: -1.2rem !important;
+  width: clamp(8rem, 14vw, 11.5rem) !important;
+  height: clamp(12rem, 21vw, 17rem) !important;
+  background-repeat: no-repeat !important;
+  background-position: center bottom !important;
+  background-size: contain !important;
+}
+
+.space-ui .space-y-3 > .welcome-banner::before {
+  content: none !important;
+  display: none !important;
+}
+
+@media (max-width: 639px) {
+  .space-ui .welcome-banner::before {
+    right: -0.1rem !important;
+    bottom: -0.55rem !important;
+    width: 5.8rem !important;
+    height: 9rem !important;
+  }
+}
