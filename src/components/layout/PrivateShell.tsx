@@ -39,6 +39,7 @@ import "@/styles/space-ui-reference-match.css";
 import "@/styles/space-ui-glitter.css";
 import "@/styles/space-ui-piteco-fullbody.css";
 import "@/styles/space-ui-live-stars.css";
+import "@/styles/space-ui-performance.css";
 
 // Lazy-load everything that is not needed for the authenticated first paint.
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
