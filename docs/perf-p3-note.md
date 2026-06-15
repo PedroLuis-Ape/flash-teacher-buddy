@@ -1,1 +1,0 @@
-Study components are split into lazy implementation chunks.
