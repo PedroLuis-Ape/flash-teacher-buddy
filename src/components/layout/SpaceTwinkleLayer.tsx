@@ -4,6 +4,33 @@ import { usePalette } from "@/hooks/usePalette";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import "@/styles/space-layouts.css";
 
+const DRAWER_LAYOUT_CSS = `
+[role="dialog"][class~="left-0"][class~="inset-y-0"] {
+  width:min(88vw,360px)!important;max-width:360px!important;height:100dvh!important;
+  overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  background:hsl(var(--background)/.99)!important;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] > [class~="flex-1"][class~="overflow-y-auto"] {
+  min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] [class~="space-y-1"] {
+  display:flex!important;flex-direction:column!important;gap:.35rem!important;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] [class~="space-y-1"] > button {
+  width:100%!important;min-height:44px!important;justify-content:flex-start!important;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] [data-radix-scroll-area-viewport] {
+  max-height:220px;overscroll-behavior:contain;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] > [class~="mt-auto"] {
+  flex:0 0 auto;padding-bottom:max(1rem,env(safe-area-inset-bottom));
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] button[class*="opacity-0"] {opacity:.72;}
+.space-ui-brand-title{font-size:0!important}.space-ui-brand-title::after{content:"APE";font-size:.9rem}
+@media(max-width:359px){[role="dialog"][class~="left-0"][class~="inset-y-0"]{width:94vw!important}}
+@media(prefers-reduced-motion:reduce){[role="dialog"][class~="left-0"][class~="inset-y-0"]{transition-duration:0ms!important}}
+`;
+
 type TwinkleStar = {
   left: string;
   top: string;
@@ -63,7 +90,7 @@ export function SpaceTwinkleLayer() {
           { opacity: 0, transform: "translate3d(0,0,0) rotate(-24deg)" },
           { opacity: 1, offset: 0.12 },
           { opacity: 0.95, offset: 0.72 },
-          { opacity: 0, transform: "translate3d(calc(100vw + 22rem),52vh,0) rotate(-24deg)" },
+          { opacity: 0, transform: "translate3d(140vw,52vh,0) rotate(-24deg)" },
         ],
         { duration: mobile ? 1500 : 1250, easing: "cubic-bezier(.2,.65,.35,1)" },
       );
@@ -79,6 +106,7 @@ export function SpaceTwinkleLayer() {
 
   return (
     <Fragment>
+      <style>{DRAWER_LAYOUT_CSS}</style>
       <PitecoHeroAssetBridge />
       {isGalaxy && (
         <div aria-hidden="true" className="space-galaxy-effects">
