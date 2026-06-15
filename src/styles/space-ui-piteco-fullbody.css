@@ -1,5 +1,6 @@
-/* Temporary full-body hero positioning. Asset source can be swapped without changing layout. */
+/* Full-body Piteco in the Home hero, based on the supplied turnaround. */
 .space-ui .welcome-banner::before {
+  background-image: url("../assets/piteco-fullbody.svg") !important;
   right: clamp(1.2rem, 5vw, 5.5rem) !important;
   bottom: -1.2rem !important;
   width: clamp(8rem, 14vw, 11.5rem) !important;
@@ -7,11 +8,21 @@
   background-repeat: no-repeat !important;
   background-position: center bottom !important;
   background-size: contain !important;
+  opacity: 1 !important;
+  filter:
+    drop-shadow(0 18px 28px hsl(var(--primary) / 0.42))
+    drop-shadow(0 0 18px hsl(var(--primary-glow) / 0.22));
 }
 
-.space-ui .space-y-3 > .welcome-banner::before {
+/* The class panel reused the hero class; it must not duplicate the mascot. */
+.space-ui .space-y-3 > .welcome-banner::before,
+.space-ui .space-y-3 > .welcome-banner::after {
   content: none !important;
   display: none !important;
+}
+
+.space-ui .space-y-3 > .welcome-banner {
+  min-height: auto !important;
 }
 
 @media (max-width: 639px) {
