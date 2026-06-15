@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
+import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge";
+import "@/styles/space-ui-piteco-heart-override.css";
 
 type TwinkleStar = {
   left: string;
@@ -69,32 +71,35 @@ export function SpaceTwinkleLayer() {
   }, []);
 
   return (
-    <div
-      ref={layerRef}
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 overflow-hidden"
-      style={{ zIndex: 35 }}
-    >
-      {STARS.map((star) => (
-        <span
-          key={`${star.left}-${star.top}`}
-          data-space-twinkle
-          className={star.desktopOnly ? "hidden md:block" : undefined}
-          style={{
-            position: "absolute",
-            left: star.left,
-            top: star.top,
-            width: star.size,
-            height: star.size,
-            borderRadius: 999,
-            background: star.glow,
-            boxShadow: `0 0 ${star.size * 3}px ${star.size}px ${star.glow}`,
-            opacity: 0.2,
-            transformOrigin: "center",
-            willChange: "opacity, transform",
-          }}
-        />
-      ))}
-    </div>
+    <Fragment>
+      <PitecoHeroAssetBridge />
+      <div
+        ref={layerRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 overflow-hidden"
+        style={{ zIndex: 35 }}
+      >
+        {STARS.map((star) => (
+          <span
+            key={`${star.left}-${star.top}`}
+            data-space-twinkle
+            className={star.desktopOnly ? "hidden md:block" : undefined}
+            style={{
+              position: "absolute",
+              left: star.left,
+              top: star.top,
+              width: star.size,
+              height: star.size,
+              borderRadius: 999,
+              background: star.glow,
+              boxShadow: `0 0 ${star.size * 3}px ${star.size}px ${star.glow}`,
+              opacity: 0.2,
+              transformOrigin: "center",
+              willChange: "opacity, transform",
+            }}
+          />
+        ))}
+      </div>
+    </Fragment>
   );
 }
