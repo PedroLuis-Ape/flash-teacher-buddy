@@ -1,6 +1,16 @@
 import { useEffect, useRef } from "react";
 
-const STARS = [
+type TwinkleStar = {
+  left: string;
+  top: string;
+  size: number;
+  duration: number;
+  delay: number;
+  glow: string;
+  desktopOnly?: boolean;
+};
+
+const STARS: readonly TwinkleStar[] = [
   { left: "7%", top: "14%", size: 3, duration: 2400, delay: 150, glow: "rgba(255,255,255,.95)" },
   { left: "18%", top: "66%", size: 2, duration: 3100, delay: 800, glow: "rgba(220,190,255,.95)" },
   { left: "29%", top: "31%", size: 4, duration: 3900, delay: 1250, glow: "rgba(195,225,255,.95)" },
@@ -15,14 +25,14 @@ const STARS = [
   { left: "33%", top: "59%", size: 3, duration: 2800, delay: 300, glow: "rgba(255,255,255,.95)", desktopOnly: true },
   { left: "62%", top: "37%", size: 2, duration: 4050, delay: 1550, glow: "rgba(225,195,255,.95)", desktopOnly: true },
   { left: "88%", top: "84%", size: 3, duration: 3200, delay: 900, glow: "rgba(200,225,255,.95)", desktopOnly: true },
-] as const;
+];
 
 export function SpaceTwinkleLayer() {
   const layerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const layer = layerRef.current;
-    if (!layer || typeof Element.prototype.animate !== "function") return;
+    if (!layer) return;
 
     const stars = Array.from(layer.querySelectorAll<HTMLElement>("[data-space-twinkle]"));
     const animations = stars.map((star, index) => {
@@ -65,7 +75,7 @@ export function SpaceTwinkleLayer() {
       className="pointer-events-none fixed inset-0 overflow-hidden"
       style={{ zIndex: 35 }}
     >
-      {STARS.map((star, index) => (
+      {STARS.map((star) => (
         <span
           key={`${star.left}-${star.top}`}
           data-space-twinkle
