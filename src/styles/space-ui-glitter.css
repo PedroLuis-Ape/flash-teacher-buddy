@@ -1,0 +1,62 @@
+/* Subtle foreground glitter and more transparent glass surfaces. */
+.space-ui-main { isolation: isolate; }
+
+.space-ui-main::after {
+  content: "";
+  position: fixed;
+  inset: 4rem 0 4.5rem;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0.15;
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(circle at 8% 18%, hsl(0 0% 100% / 0.9) 0 1px, transparent 2px),
+    radial-gradient(circle at 26% 72%, hsl(280 100% 91% / 0.8) 0 1px, transparent 2px),
+    radial-gradient(circle at 47% 32%, hsl(222 100% 92% / 0.75) 0 1px, transparent 2px),
+    radial-gradient(circle at 68% 78%, hsl(0 0% 100% / 0.82) 0 1px, transparent 2px),
+    radial-gradient(circle at 89% 24%, hsl(292 100% 91% / 0.8) 0 1px, transparent 2px);
+  background-size: 360px 360px, 440px 440px, 520px 520px, 610px 610px, 470px 470px;
+  animation: glitter-pulse 5s ease-in-out infinite alternate;
+}
+
+.space-ui :is(.stat-tile,.card-premium,.glass-panel,.space-ui-list-card,.space-ui-folder-card,.space-ui-class-card,.space-ui-class-row) {
+  background:
+    radial-gradient(circle at 15% 25%, hsl(0 0% 100% / 0.24) 0 0.8px, transparent 1.8px),
+    radial-gradient(circle at 80% 20%, hsl(var(--primary-glow) / 0.24) 0 0.9px, transparent 2px),
+    linear-gradient(145deg, hsl(251 46% 13% / 0.68), hsl(248 48% 8% / 0.74)) !important;
+  background-size: 180px 180px, 250px 250px, 100% 100% !important;
+  backdrop-filter: blur(14px) saturate(128%);
+  -webkit-backdrop-filter: blur(14px) saturate(128%);
+}
+
+.space-ui :is(button.bg-primary,.btn-premium,.space-ui-play-button,.space-ui-tab-active,.study-tools-floating-trigger) {
+  position: relative;
+  overflow: hidden;
+}
+
+.space-ui :is(button.bg-primary,.btn-premium,.space-ui-play-button,.space-ui-tab-active,.study-tools-floating-trigger)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.28;
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(circle at 20% 35%, hsl(0 0% 100% / 0.85) 0 0.8px, transparent 1.7px),
+    radial-gradient(circle at 72% 25%, hsl(var(--primary-glow) / 0.82) 0 0.8px, transparent 1.7px),
+    radial-gradient(circle at 58% 76%, hsl(0 0% 100% / 0.68) 0 0.7px, transparent 1.6px);
+  background-size: 120px 120px, 170px 170px, 210px 210px;
+}
+
+@keyframes glitter-pulse {
+  from { opacity: 0.1; }
+  to { opacity: 0.2; }
+}
+
+@media (max-width: 767px) {
+  .space-ui-main::after { opacity: 0.1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-ui-main::after { animation: none; }
+}
