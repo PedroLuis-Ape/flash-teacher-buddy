@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalFooter } from "@/components/layout/GlobalFooter";
+import { SpaceTwinkleLayer } from "@/components/layout/SpaceTwinkleLayer";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -102,6 +103,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
 
   return (
     <div className="space-ui space-ui-shell min-h-screen flex flex-col">
+      <SpaceTwinkleLayer />
       <AppRecoveryBanner />
       <OfflineIndicator />
       {FEATURE_FLAGS.currency_header_enabled && user && (
