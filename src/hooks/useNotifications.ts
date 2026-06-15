@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { toast as sonnerToast } from 'sonner';
+import { useAuthUser } from '@/hooks/useAuthUser';
+import { usePerformance } from '@/contexts/PerformanceContext';
 
-// Alert sound URL
 const ALERT_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
 
 export interface Notification {
@@ -23,41 +24,48 @@ export function useNotifications() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const { userId } = useAuthUser();
+  const { settings } = usePerformance();
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSoundPlayedRef = useRef<number>(0);
 
-  // Initialize audio element
   useEffect(() => {
-    audioRef.current = new Audio(ALERT_SOUND_URL);
-    audioRef.current.volume = 0.5;
-    
-    // Check notification permission
     if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
     } else {
       setNotificationPermission('unsupported');
     }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current = null;
+      }
+    };
   }, []);
 
-  // Play alert sound with debounce
   const playAlertSound = useCallback(() => {
-    const now = Date.now();
-    // Debounce: don't play if last sound was less than 2 seconds ago
-    if (now - lastSoundPlayedRef.current < 2000) return;
-    
-    lastSoundPlayedRef.current = now;
-    
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(err => {
-        console.log('Could not play notification sound:', err);
-      });
-    }
-  }, []);
+    if (!settings.soundEffects) return;
 
-  // Request notification permission
+    const now = Date.now();
+    if (now - lastSoundPlayedRef.current < 2000) return;
+    lastSoundPlayedRef.current = now;
+
+    if (!audioRef.current) {
+      const audio = new Audio(ALERT_SOUND_URL);
+      audio.preload = 'none';
+      audio.volume = 0.5;
+      audioRef.current = audio;
+    }
+
+    audioRef.current.currentTime = 0;
+    audioRef.current.play().catch(() => {
+      // Mobile browsers can reject autoplay until the next user gesture.
+    });
+  }, [settings.soundEffects]);
+
   const requestNotificationPermission = useCallback(async () => {
     if (!('Notification' in window)) {
       sonnerToast.error('Seu navegador não suporta notificações nativas.');
@@ -67,13 +75,13 @@ export function useNotifications() {
     try {
       const permission = await Notification.requestPermission();
       setNotificationPermission(permission);
-      
+
       if (permission === 'granted') {
         sonnerToast.success('Notificações ativadas!');
       } else if (permission === 'denied') {
         sonnerToast.error('Permissão de notificações negada.');
       }
-      
+
       return permission;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -81,7 +89,96 @@ export function useNotifications() {
     }
   }, []);
 
-  // Show browser notification
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ['notifications', userId],
+    enabled: !!userId,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (!userId) return [];
+
+      const { data, error } = await supabase
+        .from('notificacoes')
+        .select('*')
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      return data as Notification[];
+    },
+  });
+
+  const unreadCount = notifications.reduce((count, notification) => (
+    notification.lida ? count : count + 1
+  ), 0);
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase
+        .from('notificacoes')
+        .update({ lida: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    },
+  });
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) return;
+
+      const { error } = await supabase
+        .from('notificacoes')
+        .update({ lida: true })
+        .eq('recipient_id', userId)
+        .eq('lida', false);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+      toast({
+        title: 'Todas as notificações foram marcadas como lidas',
+      });
+    },
+  });
+
+  const handleNotificationClick = useCallback((notification: Notification) => {
+    if (!notification.lida) {
+      markAsReadMutation.mutate(notification.id);
+    }
+
+    const metadata = notification.metadata || {};
+
+    if (notification.tipo === 'atribuicao_concluida' && metadata.turma_id) {
+      navigate(`/turmas/${metadata.turma_id}`);
+    } else if (notification.tipo === 'mensagem_recebida' && metadata.turma_id) {
+      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&sender=${metadata.sender_id}`);
+    } else if (notification.tipo === 'aluno_inscrito') {
+      navigate('/professor/alunos');
+    } else if (notification.tipo === 'aviso' && metadata.turma_id) {
+      navigate(`/turmas/${metadata.turma_id}`);
+    } else if (notification.tipo === 'aviso_atribuicao') {
+      const fonteId = metadata.fonte_id;
+      const fonteTipo = metadata.fonte_tipo;
+
+      if (fonteId && fonteTipo === 'lista') {
+        navigate(`/list/${fonteId}/games`);
+      } else if (fonteId && fonteTipo === 'pasta') {
+        navigate(`/folder/${fonteId}`);
+      } else if (metadata.turma_id) {
+        navigate(`/turmas/${metadata.turma_id}`);
+      }
+    } else if (notification.tipo === 'dm' && metadata.turma_id) {
+      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&sender=${metadata.sender_id}`);
+    }
+  }, [markAsReadMutation, navigate]);
+
   const showBrowserNotification = useCallback((notification: Notification) => {
     if (notificationPermission !== 'granted') return;
 
@@ -89,7 +186,7 @@ export function useNotifications() {
       const browserNotif = new window.Notification(notification.titulo, {
         body: notification.mensagem,
         icon: '/favicon.png',
-        tag: notification.id, // Prevent duplicate notifications
+        tag: notification.id,
         data: {
           assignment_id: notification.metadata?.assignment_id,
           turma_id: notification.metadata?.turma_id,
@@ -104,173 +201,50 @@ export function useNotifications() {
     } catch (error) {
       console.error('Error showing browser notification:', error);
     }
-  }, [notificationPermission]);
+  }, [handleNotificationClick, notificationPermission]);
 
-  // Fetch notifications
-  const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return [];
-
-      const { data, error } = await supabase
-        .from('notificacoes')
-        .select('*')
-        .eq('recipient_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      return data as Notification[];
-    },
-  });
-
-  // Count unread notifications
-  const unreadCount = notifications.filter(n => !n.lida).length;
-
-  // Mark as read mutation
-  const markAsReadMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notificacoes')
-        .update({ lida: true })
-        .eq('id', notificationId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
-
-  // Mark all as read mutation
-  const markAllAsReadMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-
-      const { error } = await supabase
-        .from('notificacoes')
-        .update({ lida: true })
-        .eq('recipient_id', session.user.id)
-        .eq('lida', false);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast({
-        title: 'Todas as notificações foram marcadas como lidas',
-      });
-    },
-  });
-
-  // Handle notification click
-  const handleNotificationClick = useCallback((notification: Notification) => {
-    // Mark as read
-    if (!notification.lida) {
-      markAsReadMutation.mutate(notification.id);
-    }
-
-    // Navigate based on notification type
-    const metadata = notification.metadata || {};
-    
-    if (notification.tipo === 'atribuicao_concluida' && metadata.turma_id) {
-      // Navigate to turma page (assignment detail removed)
-      navigate(`/turmas/${metadata.turma_id}`);
-    } else if (notification.tipo === 'mensagem_recebida' && metadata.turma_id) {
-      // Old message notification format - also navigate to DM
-      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&sender=${metadata.sender_id}`);
-    } else if (notification.tipo === 'aluno_inscrito') {
-      navigate('/professor/alunos');
-    } else if (notification.tipo === 'aviso' && metadata.turma_id) {
-      // General announcement - navigate to turma
-      navigate(`/turmas/${metadata.turma_id}`);
-    } else if (notification.tipo === 'aviso_atribuicao') {
-      // Direct assignment - navigate directly to content
-      const fonteId = metadata.fonte_id;
-      const fonteTipo = metadata.fonte_tipo;
-      
-      if (fonteId && fonteTipo === 'lista') {
-        navigate(`/list/${fonteId}/games`);
-      } else if (fonteId && fonteTipo === 'pasta') {
-        navigate(`/folder/${fonteId}`);
-      } else if (metadata.turma_id) {
-        // Fallback to turma if fonte info not available
-        navigate(`/turmas/${metadata.turma_id}`);
-      }
-    } else if (notification.tipo === 'dm' && metadata.turma_id) {
-      // Direct message - navigate to turma with DM tab open and sender param for auto-open
-      navigate(`/turmas/${metadata.turma_id}?tab=mensagens&sender=${metadata.sender_id}`);
-    }
-  }, [navigate, markAsReadMutation]);
-
-  // Refs for stable handler references in realtime subscription
   const handlersRef = useRef({ playAlertSound, showBrowserNotification, handleNotificationClick });
   useEffect(() => {
     handlersRef.current = { playAlertSound, showBrowserNotification, handleNotificationClick };
   }, [playAlertSound, showBrowserNotification, handleNotificationClick]);
 
-  // Set up realtime subscription - stable deps to prevent reconnects
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let mounted = true;
+    if (!userId) return;
 
-    const setupRealtimeSubscription = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user || !mounted) return;
-      const user = session.user;
+    const channel = supabase
+      .channel(`notifications-changes-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notificacoes',
+          filter: `recipient_id=eq.${userId}`,
+        },
+        (payload) => {
+          const newNotification = payload.new as Notification;
+          handlersRef.current.playAlertSound();
+          handlersRef.current.showBrowserNotification(newNotification);
 
-      channel = supabase
-        .channel('notifications-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notificacoes',
-            filter: `recipient_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newNotification = payload.new as Notification;
-            console.log('New notification received:', newNotification);
-            
-            // Use refs for stable handlers
-            handlersRef.current.playAlertSound();
-            handlersRef.current.showBrowserNotification(newNotification);
-            
-            const isAssignmentNotification = newNotification.tipo === 'aviso_atribuicao';
-            const isDMNotification = newNotification.tipo === 'dm';
-            
-            sonnerToast(newNotification.titulo, {
-              description: newNotification.mensagem,
-              duration: 8000,
-              action: (isAssignmentNotification || isDMNotification) ? {
-                label: isDMNotification ? 'Abrir Conversa' : 'Abrir Atribuição',
-                onClick: () => handlersRef.current.handleNotificationClick(newNotification),
-              } : undefined,
-            });
+          const actionable = newNotification.tipo === 'aviso_atribuicao' || newNotification.tipo === 'dm';
+          sonnerToast(newNotification.titulo, {
+            description: newNotification.mensagem,
+            duration: 8000,
+            action: actionable ? {
+              label: newNotification.tipo === 'dm' ? 'Abrir Conversa' : 'Abrir Atribuição',
+              onClick: () => handlersRef.current.handleNotificationClick(newNotification),
+            } : undefined,
+          });
 
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
-          }
-        )
-        .subscribe();
-
-      // Mark as initialized
-      setTimeout(() => {
-        if (mounted) setIsInitialized(true);
-      }, 1000);
-    };
-
-    setupRealtimeSubscription();
+          queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+        }
+      )
+      .subscribe();
 
     return () => {
-      mounted = false;
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
-  }, [queryClient]); // Minimal stable deps
+  }, [queryClient, userId]);
 
   return {
     notifications,

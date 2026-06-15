@@ -1,69 +1,74 @@
 import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 /**
- * Hook to track user activity on lists (open/study)
- * Uses debouncing to avoid excessive DB writes
+ * Hook to track user activity on lists (open/study).
+ * Uses the centralized auth context and debouncing to avoid extra auth reads
+ * and excessive database writes during a study session.
  */
 export function useListActivity() {
+  const { userId } = useAuthUser();
   const lastUpdateRef = useRef<Record<string, number>>({});
-  const DEBOUNCE_MS = 30000; // 30 seconds minimum between updates per list
+  const DEBOUNCE_MS = 30000;
 
   const trackListOpened = useCallback(async (listId: string) => {
-    if (!listId) return;
+    if (!listId || !userId) return;
+
+    const now = Date.now();
+    const key = `open_${listId}`;
+    const lastUpdate = lastUpdateRef.current[key] || 0;
+    if (now - lastUpdate < DEBOUNCE_MS) return;
+    lastUpdateRef.current[key] = now;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Debounce check
-      const now = Date.now();
-      const lastUpdate = lastUpdateRef.current[`open_${listId}`] || 0;
-      if (now - lastUpdate < DEBOUNCE_MS) return;
-      lastUpdateRef.current[`open_${listId}`] = now;
-
-      await supabase
+      const { error } = await supabase
         .from('user_list_activity')
         .upsert({
-          user_id: user.id,
+          user_id: userId,
           list_id: listId,
           last_opened_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,list_id'
         });
+
+      if (error) throw error;
     } catch (error) {
+      // Permit a retry after a failed network write instead of suppressing the
+      // event for the full debounce window.
+      delete lastUpdateRef.current[key];
       console.error('[useListActivity] Error tracking open:', error);
     }
-  }, []);
+  }, [userId]);
 
   const trackListStudied = useCallback(async (listId: string) => {
-    if (!listId) return;
+    if (!listId || !userId) return;
+
+    const now = Date.now();
+    const key = `study_${listId}`;
+    const lastUpdate = lastUpdateRef.current[key] || 0;
+    if (now - lastUpdate < DEBOUNCE_MS) return;
+    lastUpdateRef.current[key] = now;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Debounce check
-      const now = Date.now();
-      const lastUpdate = lastUpdateRef.current[`study_${listId}`] || 0;
-      if (now - lastUpdate < DEBOUNCE_MS) return;
-      lastUpdateRef.current[`study_${listId}`] = now;
-
-      await supabase
+      const { error } = await supabase
         .from('user_list_activity')
         .upsert({
-          user_id: user.id,
+          user_id: userId,
           list_id: listId,
           last_studied_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,list_id'
         });
+
+      if (error) throw error;
     } catch (error) {
+      delete lastUpdateRef.current[key];
       console.error('[useListActivity] Error tracking study:', error);
     }
-  }, []);
+  }, [userId]);
 
   return { trackListOpened, trackListStudied };
 }

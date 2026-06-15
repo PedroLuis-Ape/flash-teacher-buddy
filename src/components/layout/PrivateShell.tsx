@@ -14,11 +14,10 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { CurrencyHeader } from "@/components/CurrencyHeader";
-import { NotificationBell } from "@/components/NotificationBell";
 import { AdminButton } from "@/components/AdminButton";
 import { ApeTabBar } from "@/components/ape/ApeTabBar";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
-import { EconomyProvider, useEconomy } from "@/contexts/EconomyContext";
+import { EconomyProvider } from "@/contexts/EconomyContext";
 import { formatVersionLabel } from "@/lib/versionManager";
 import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -43,6 +42,7 @@ import "@/styles/space-ui-live-stars.css";
 import "@/styles/space-ui-performance.css";
 
 // Lazy-load everything that is not needed for the authenticated first paint.
+const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
 const GiftNotificationModal = lazy(() => import("@/components/GiftNotificationModal").then(m => ({ default: m.GiftNotificationModal })));
 const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal").then(m => ({ default: m.AnnouncementModal })));
@@ -57,28 +57,26 @@ interface PrivateShellProps {
 function PrivateShellInner({ children }: PrivateShellProps) {
   const location = useLocation();
   const { user } = useAuthUser();
-  const { refreshBalance } = useEconomy();
   const { settings: perfSettings } = usePerformance();
   const safeMode = isSafeModeEnabled();
 
-  // Defer secondary work so it never competes with first paint.
+  // Defer secondary work so it never competes with first paint. EconomyProvider
+  // already loads the balance once authentication resolves, so this shell must
+  // not trigger a second identical request.
   const [secondaryReady, setSecondaryReady] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    if (safeMode) return;
+    if (!user || safeMode) return;
     let cancelled = false;
     const run = () => {
-      if (cancelled) return;
-      try { refreshBalance(); } catch { /* noop */ }
-      setSecondaryReady(true);
+      if (!cancelled) setSecondaryReady(true);
     };
     const ric = (window as any).requestIdleCallback as
       | ((cb: () => void, opts?: { timeout: number }) => number)
       | undefined;
     const handle = ric
       ? ric(run, { timeout: 2500 })
-      : (setTimeout(run, 1500) as unknown as number);
+      : (setTimeout(run, 1200) as unknown as number);
     return () => {
       cancelled = true;
       if (ric && (window as any).cancelIdleCallback) {
@@ -87,7 +85,6 @@ function PrivateShellInner({ children }: PrivateShellProps) {
         clearTimeout(handle as unknown as ReturnType<typeof setTimeout>);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, safeMode]);
 
   useActivityHeartbeat(secondaryReady && !safeMode ? user?.id : undefined);
@@ -116,10 +113,10 @@ function PrivateShellInner({ children }: PrivateShellProps) {
           <div className="max-w-[1600px] mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">
             <div className="flex min-w-0 items-center gap-1 md:gap-2">
               <AppSidebar />
-              <div className="space-ui-brand" aria-label="Flash Teacher Buddy">
+              <div className="space-ui-brand" aria-label="APE">
                 <PitecoLogo className="h-9 w-9" />
                 <div className="space-ui-brand-copy">
-                  <span className="space-ui-brand-title">Flash Teacher Buddy</span>
+                  <span className="space-ui-brand-title">APE</span>
                   <span className="space-ui-brand-subtitle">Aprenda. Pratique. Conquiste.</span>
                 </div>
               </div>
@@ -127,7 +124,9 @@ function PrivateShellInner({ children }: PrivateShellProps) {
             </div>
             <div className="flex items-center gap-1.5 md:gap-2">
               {showCurrencyHeader && <CurrencyHeader />}
-              {showSecondaryActions && FEATURE_FLAGS.classes_enabled && <NotificationBell />}
+              {showSecondaryActions && FEATURE_FLAGS.classes_enabled && (
+                <Suspense fallback={null}><NotificationBell /></Suspense>
+              )}
               {showSecondaryActions && !safeMode && FEATURE_FLAGS.present_inbox_visible && (
                 <Suspense fallback={null}><PresentBoxBadge /></Suspense>
               )}
