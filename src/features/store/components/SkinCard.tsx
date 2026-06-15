@@ -30,12 +30,18 @@ export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border-2" onClick={() => setShowDetail(true)}>
+      <Card
+        className="overflow-hidden cursor-pointer border-2 transition-shadow duration-150 motion-safe:hover:shadow-xl md:motion-safe:hover:scale-[1.02]"
+        onClick={() => setShowDetail(true)}
+      >
         <CardHeader className="p-0">
           <div className="aspect-[3/4] bg-gradient-to-br from-muted/50 to-muted relative overflow-hidden">
             <img
               src={skin.card_final}
               alt={skin.name}
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
               className="w-full h-full object-contain p-2"
             />
             {owned && (
@@ -43,8 +49,8 @@ export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
                 ✓ Possui
               </div>
             )}
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={`absolute top-3 left-3 ${getRarityColor(skin.rarity)} font-bold shadow-md`}
             >
               {getRarityLabel(skin.rarity)}
@@ -56,7 +62,7 @@ export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
             {skin.name}
           </CardTitle>
           <div className="flex items-center justify-center gap-2 pt-3 border-t mt-3">
-            <img src={pitecoinIcon} alt="PITECOIN" className="w-5 h-5 shrink-0" />
+            <img src={pitecoinIcon} alt="PITECOIN" decoding="async" className="w-5 h-5 shrink-0" />
             <span className="text-base font-bold">
               {skin.price_pitecoin === 0 ? 'GRÁTIS' : `₱${skin.price_pitecoin}`}
             </span>
@@ -81,12 +87,13 @@ export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
               <img
                 src={skin.card_final}
                 alt={skin.name}
+                decoding="async"
                 className="w-full h-full object-contain p-4"
               />
             </div>
 
             <div className="flex items-center justify-center gap-3 text-2xl font-bold bg-muted/30 rounded-lg p-4">
-              <img src={pitecoinIcon} alt="PITECOIN" className="w-8 h-8" />
+              <img src={pitecoinIcon} alt="PITECOIN" decoding="async" className="w-8 h-8" />
               <span>{skin.price_pitecoin === 0 ? 'GRÁTIS' : `₱${skin.price_pitecoin}`}</span>
             </div>
 
