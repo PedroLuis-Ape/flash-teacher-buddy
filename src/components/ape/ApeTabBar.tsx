@@ -3,11 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 import { usePerformance } from "@/contexts/PerformanceContext";
-import "@/styles/space-ui-widgets.css";
-import "@/styles/space-ui-reference-match.css";
-import "@/styles/space-ui-glitter.css";
-import "@/styles/space-ui-piteco-fullbody.css";
-import "@/styles/space-ui-live-stars.css";
 
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/dashboard" },
@@ -45,7 +40,7 @@ export function ApeTabBar() {
     )}>
       <div className="relative flex items-center justify-around h-[4.5rem] max-w-screen-xl mx-auto px-2 md:px-6">
         {settings.tabBarAnimations && activeIndex >= 0 && (
-          <div 
+          <div
             className="space-ui-tabbar-indicator absolute top-0 h-[3px] rounded-b-full transition-all duration-300 ease-out"
             style={{
               width: `${100 / tabs.length}%`,
@@ -53,11 +48,11 @@ export function ApeTabBar() {
             }}
           />
         )}
-        
+
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = isActive(tab.path);
-          
+
           return (
             <button
               key={tab.id}
