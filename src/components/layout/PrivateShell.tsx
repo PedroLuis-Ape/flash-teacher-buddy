@@ -34,6 +34,8 @@ import { AppRecoveryBanner } from "@/components/AppRecoveryBanner";
 import { EconomyInitializer } from "@/components/EconomyInitializer";
 import { BrowserCheck } from "@/components/BrowserCheck";
 import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
+import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
+import "@/styles/space-ui-v1.css";
 
 // Lazy-load heavy modals and badges (not needed for FCP)
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -92,19 +94,26 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   const showInstitutionBar = isHome;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="space-ui space-ui-shell min-h-screen flex flex-col">
       <AppRecoveryBanner />
       <OfflineIndicator />
       {FEATURE_FLAGS.currency_header_enabled && user && (
         <header className={cn(
-          "sticky top-0 z-50 w-full border-b",
+          "space-ui-header sticky top-0 z-50 w-full border-b",
           perfSettings.backdropBlur
             ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
             : "bg-background"
         )}>
           <div className="max-w-[1600px] mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">
-            <div className="flex items-center gap-1 md:gap-2">
+            <div className="flex min-w-0 items-center gap-1 md:gap-2">
               <AppSidebar />
+              <div className="space-ui-brand" aria-label="Flash Teacher Buddy">
+                <PitecoLogo className="h-9 w-9" />
+                <div className="space-ui-brand-copy">
+                  <span className="space-ui-brand-title">Flash Teacher Buddy</span>
+                  <span className="space-ui-brand-subtitle">Aprenda. Pratique. Conquiste.</span>
+                </div>
+              </div>
               <AdminButton />
             </div>
             <div className="flex items-center gap-1.5 md:gap-2">
@@ -118,12 +127,12 @@ function PrivateShellInner({ children }: PrivateShellProps) {
           {showInstitutionBar && <InstitutionBar />}
         </header>
       )}
-      <main className="flex-1">
+      <main className="space-ui-main flex-1">
         {children}
       </main>
 
       {user && !isFullScreenPage && (
-        <div className="pb-24 md:pb-20">
+        <div className="space-ui-footer-wrap pb-24 md:pb-20">
           <GlobalFooter />
         </div>
       )}
