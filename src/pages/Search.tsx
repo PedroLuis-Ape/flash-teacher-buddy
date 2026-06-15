@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search as SearchIcon, FolderOpen, FileText, CreditCard, User, UserPlus, UserCheck, ArrowLeft, GraduationCap, BookOpen } from "lucide-react";
+import { Search as SearchIcon, FolderOpen, FileText, CreditCard, User, UserPlus, UserCheck, ArrowLeft, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useAuthUser } from "@/hooks/useAuthUser";
 
 interface Profile {
   id: string;
@@ -31,6 +32,7 @@ interface Folder {
 
 export default function Search() {
   const navigate = useNavigate();
+  const { userId, isLoading: authLoading } = useAuthUser();
   const [searchTerm, setSearchTerm] = useState("");
   const [searching, setSearching] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -39,76 +41,68 @@ export default function Search() {
   const [searchType, setSearchType] = useState<'todos' | 'professor' | 'aluno'>('todos');
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
+    if (!authLoading && !userId) navigate("/auth", { replace: true });
+  }, [authLoading, navigate, userId]);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
       toast.error("Digite um nome ou APE ID para buscar");
       return;
     }
+    if (!userId) return;
 
     setSearching(true);
     setSelectedProfile(null);
     setFolders([]);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
       const clean = searchTerm.replace('@', '').trim().toUpperCase();
-
-      // Buscar via RPC segura (retorna apenas campos públicos seguros)
-      const { data, error } = await supabase.rpc("search_public_profiles", {
-        _q: clean,
-      });
-
+      const { data, error } = await supabase.rpc("search_public_profiles", { _q: clean });
       if (error) throw error;
 
-      // Filtrar por tipo se necessário
-      let filteredData = data || [];
+      let filteredData = (data || []) as Profile[];
       if (searchType === 'professor') {
-        filteredData = filteredData.filter(p => p.is_teacher || p.user_type === 'professor');
+        filteredData = filteredData.filter((profile) => profile.is_teacher || profile.user_type === 'professor');
       } else if (searchType === 'aluno') {
-        filteredData = filteredData.filter(p => !p.is_teacher && p.user_type !== 'professor');
+        filteredData = filteredData.filter((profile) => !profile.is_teacher && profile.user_type !== 'professor');
       }
 
-      const profilesWithCounts = await Promise.all(
-        filteredData.map(async (profile) => {
-          const { count } = await supabase
-            .from("folders")
-            .select("*", { count: "exact", head: true })
-            .eq("owner_id", profile.id)
-            .eq("visibility", "class");
-
-          const { data: subData } = await supabase
-            .from("subscriptions")
-            .select("id")
-            .eq("teacher_id", profile.id)
-            .eq("student_id", session.user.id)
-            .maybeSingle();
-          
-          return { 
-            ...profile, 
-            folder_count: count || 0,
-            isSubscribed: !!subData
-          };
-        })
-      );
-
-      setProfiles(profilesWithCounts);
-
-      if (profilesWithCounts.length === 0) {
+      const profileIds = filteredData.map((profile) => profile.id);
+      if (profileIds.length === 0) {
+        setProfiles([]);
         toast.info("Nenhum usuário encontrado");
+        return;
       }
-    } catch (error: any) {
+
+      const [folderRows, subscriptionRows] = await Promise.all([
+        supabase
+          .from("folders")
+          .select("owner_id")
+          .in("owner_id", profileIds)
+          .eq("visibility", "class")
+          .is("deleted_at", null),
+        supabase
+          .from("subscriptions")
+          .select("teacher_id")
+          .eq("student_id", userId)
+          .in("teacher_id", profileIds),
+      ]);
+
+      if (folderRows.error) throw folderRows.error;
+      if (subscriptionRows.error) throw subscriptionRows.error;
+
+      const folderCountMap = new Map<string, number>();
+      for (const folder of folderRows.data || []) {
+        folderCountMap.set(folder.owner_id, (folderCountMap.get(folder.owner_id) || 0) + 1);
+      }
+      const subscribedIds = new Set((subscriptionRows.data || []).map((row) => row.teacher_id));
+
+      setProfiles(filteredData.map((profile) => ({
+        ...profile,
+        folder_count: folderCountMap.get(profile.id) || 0,
+        isSubscribed: subscribedIds.has(profile.id),
+      })));
+    } catch (error) {
       console.error("Erro na busca:", error);
       toast.error("Erro ao buscar usuários");
     } finally {
@@ -117,33 +111,30 @@ export default function Search() {
   };
 
   const handleSubscription = async (teacherId: string, currentlySubscribed: boolean) => {
+    if (!userId) return;
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      const query = supabase
+        .from("subscriptions")
+        .delete()
+        .eq("teacher_id", teacherId)
+        .eq("student_id", userId);
 
       if (currentlySubscribed) {
-        const { error } = await supabase
-          .from("subscriptions")
-          .delete()
-          .eq("teacher_id", teacherId)
-          .eq("student_id", session.user.id);
-
+        const { error } = await query;
         if (error) throw error;
         toast.success("Inscrição cancelada");
       } else {
-        const { error } = await supabase
-          .from("subscriptions")
-          .insert({
-            teacher_id: teacherId,
-            student_id: session.user.id,
-          });
-
+        const { error } = await supabase.from("subscriptions").insert({
+          teacher_id: teacherId,
+          student_id: userId,
+        });
         if (error) throw error;
         toast.success("Inscrito com sucesso!");
       }
 
-      setProfiles(prev => prev.map(p => 
-        p.id === teacherId ? { ...p, isSubscribed: !currentlySubscribed } : p
+      setProfiles((previous) => previous.map((profile) =>
+        profile.id === teacherId ? { ...profile, isSubscribed: !currentlySubscribed } : profile
       ));
     } catch (error: any) {
       toast.error("Erro ao gerenciar inscrição: " + error.message);
@@ -152,44 +143,62 @@ export default function Search() {
 
   const loadFolders = async (profile: Profile) => {
     try {
-      const { data, error } = await supabase
+      const { data: folderData, error: folderError } = await supabase
         .from("folders")
-        .select("*")
+        .select("id, title, description, owner_id")
         .eq("owner_id", profile.id)
         .eq("visibility", "class")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (folderError) throw folderError;
+      const safeFolders = (folderData || []) as Folder[];
+      const folderIds = safeFolders.map((folder) => folder.id);
 
-      const foldersWithCounts = await Promise.all(
-        (data || []).map(async (folder) => {
-          const { count: listCount } = await supabase
-            .from("lists")
-            .select("*", { count: "exact", head: true })
-            .eq("folder_id", folder.id);
+      if (folderIds.length === 0) {
+        setFolders([]);
+        setSelectedProfile(profile);
+        return;
+      }
 
-          const { count: cardCount } = await supabase
-            .from("flashcards")
-            .select("*", { count: "exact", head: true })
-            .in("list_id", 
-              await supabase
-                .from("lists")
-                .select("id")
-                .eq("folder_id", folder.id)
-                .then(res => (res.data || []).map(l => l.id))
-            );
+      const { data: listData, error: listError } = await supabase
+        .from("lists")
+        .select("id, folder_id")
+        .in("folder_id", folderIds)
+        .is("deleted_at", null);
+      if (listError) throw listError;
 
-          return {
-            ...folder,
-            list_count: listCount || 0,
-            card_count: cardCount || 0,
-          };
-        })
-      );
+      const lists = listData || [];
+      const listIds = lists.map((list) => list.id);
+      const listFolderMap = new Map(lists.map((list) => [list.id, list.folder_id]));
+      const listCountMap = new Map<string, number>();
+      for (const list of lists) {
+        if (!list.folder_id) continue;
+        listCountMap.set(list.folder_id, (listCountMap.get(list.folder_id) || 0) + 1);
+      }
 
-      setFolders(foldersWithCounts);
+      const cardCountMap = new Map<string, number>();
+      if (listIds.length > 0) {
+        const { data: cardData, error: cardError } = await supabase
+          .from("flashcards")
+          .select("list_id")
+          .in("list_id", listIds);
+        if (cardError) throw cardError;
+
+        for (const card of cardData || []) {
+          const folderId = listFolderMap.get(card.list_id);
+          if (!folderId) continue;
+          cardCountMap.set(folderId, (cardCountMap.get(folderId) || 0) + 1);
+        }
+      }
+
+      setFolders(safeFolders.map((folder) => ({
+        ...folder,
+        list_count: listCountMap.get(folder.id) || 0,
+        card_count: cardCountMap.get(folder.id) || 0,
+      })));
       setSelectedProfile(profile);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao carregar pastas:", error);
       toast.error("Erro ao carregar pastas");
     }
@@ -215,17 +224,17 @@ export default function Search() {
               <Input
                 placeholder="Nome ou APE ID..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                onKeyDown={(event) => event.key === "Enter" && void handleSearch()}
                 className="flex-1"
               />
-              <Button onClick={handleSearch} disabled={searching} className="w-full sm:w-auto">
+              <Button onClick={() => void handleSearch()} disabled={searching || authLoading} className="w-full sm:w-auto">
                 <SearchIcon className="mr-2 h-4 w-4" />
                 {searching ? "Buscando..." : "Buscar"}
               </Button>
             </div>
-            
-            <Tabs value={searchType} onValueChange={(v: any) => setSearchType(v)}>
+
+            <Tabs value={searchType} onValueChange={(value) => setSearchType(value as typeof searchType)}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="todos">Todos</TabsTrigger>
                 <TabsTrigger value="professor">Professores</TabsTrigger>
@@ -237,35 +246,27 @@ export default function Search() {
 
         {profiles.length > 0 && !selectedProfile && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">
-              Resultados ({profiles.length})
-            </h2>
+            <h2 className="text-lg font-semibold">Resultados ({profiles.length})</h2>
             <div className="grid gap-3">
               {profiles.map((profile) => (
                 <Card
                   key={profile.id}
                   className="hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => isTeacher(profile) && profile.folder_count && profile.folder_count > 0 ? loadFolders(profile) : null}
+                  onClick={() => isTeacher(profile) && (profile.folder_count || 0) > 0 ? void loadFolders(profile) : undefined}
                 >
                   <CardHeader className="py-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isTeacher(profile) ? 'bg-primary/10' : 'bg-secondary'}`}>
-                          {isTeacher(profile) ? (
-                            <GraduationCap className="h-5 w-5 text-primary" />
-                          ) : (
-                            <User className="h-5 w-5 text-muted-foreground" />
-                          )}
+                          {isTeacher(profile)
+                            ? <GraduationCap className="h-5 w-5 text-primary" />
+                            : <User className="h-5 w-5 text-muted-foreground" />}
                         </div>
                         <div className="min-w-0">
-                          <CardTitle className="text-base truncate">
-                            {profile.first_name || "Sem nome"}
-                          </CardTitle>
+                          <CardTitle className="text-base truncate">{profile.first_name || "Sem nome"}</CardTitle>
                           <CardDescription className="text-xs">
                             <span className="font-mono">APE: {profile.ape_id || 'N/A'}</span>
-                            {profile.public_slug && (
-                              <span className="ml-2 text-primary">@{profile.public_slug}</span>
-                            )}
+                            {profile.public_slug && <span className="ml-2 text-primary">@{profile.public_slug}</span>}
                           </CardDescription>
                         </div>
                       </div>
@@ -275,18 +276,16 @@ export default function Search() {
                         </Badge>
                         {isTeacher(profile) && (profile.folder_count || 0) > 0 && (
                           <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSubscription(profile.id, profile.isSubscribed || false);
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSubscription(profile.id, profile.isSubscribed || false);
                             }}
                             variant={profile.isSubscribed ? "outline" : "default"}
                             size="sm"
                           >
-                            {profile.isSubscribed ? (
-                              <><UserCheck className="mr-1 h-4 w-4" />Inscrito</>
-                            ) : (
-                              <><UserPlus className="mr-1 h-4 w-4" />Seguir</>
-                            )}
+                            {profile.isSubscribed
+                              ? <><UserCheck className="mr-1 h-4 w-4" />Inscrito</>
+                              : <><UserPlus className="mr-1 h-4 w-4" />Seguir</>}
                           </Button>
                         )}
                       </div>
@@ -307,17 +306,8 @@ export default function Search() {
         {selectedProfile && (
           <>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                Pastas de {selectedProfile.first_name}
-              </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedProfile(null);
-                  setFolders([]);
-                }}
-              >
+              <h2 className="text-lg font-semibold">Pastas de {selectedProfile.first_name}</h2>
+              <Button variant="outline" size="sm" onClick={() => { setSelectedProfile(null); setFolders([]); }}>
                 Voltar à Busca
               </Button>
             </div>
@@ -325,9 +315,7 @@ export default function Search() {
             {folders.length === 0 ? (
               <Card className="p-8 text-center">
                 <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  Este professor ainda não compartilhou nenhuma pasta.
-                </p>
+                <p className="text-muted-foreground">Este professor ainda não compartilhou nenhuma pasta.</p>
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
@@ -341,11 +329,7 @@ export default function Search() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <CardTitle className="text-lg mb-1">{folder.title}</CardTitle>
-                          {folder.description && (
-                            <CardDescription className="text-sm">
-                              {folder.description}
-                            </CardDescription>
-                          )}
+                          {folder.description && <CardDescription className="text-sm">{folder.description}</CardDescription>}
                         </div>
                         <FolderOpen className="h-6 w-6 text-primary ml-2" />
                       </div>
