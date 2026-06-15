@@ -1,5 +1,5 @@
 /**
- * Reward Engine - Handles PTS, XP, and PITECOIN logic
+ * Reward Engine - Handles PTS, XP, and PITECOIN logic.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -13,9 +13,9 @@ export const REWARD_AMOUNTS = {
   WEEKLY_CHALLENGE: 100,
   DAILY_LOGIN: 10,
   STREAK_DAILY: 5,
-  MAX_STREAK_BONUS: 35, // 7 days × 5
-  DAILY_CAP: 500, // PTS cap per day
-  CONVERSION_RATE: 100, // 100 PTS => 1 PITECOIN
+  MAX_STREAK_BONUS: 35,
+  DAILY_CAP: 500,
+  CONVERSION_RATE: 100,
 } as const;
 
 export interface EconomyProfile {
@@ -29,26 +29,70 @@ export interface EconomyProfile {
   last_conversion: string | null;
 }
 
-/**
- * Award PTS and XP to user
- * Respects daily cap for PTS (but XP always increases)
- */
-export async function awardPoints(
+interface RewardResult {
+  success: boolean;
+  ptsAwarded: number;
+  xpAwarded: number;
+}
+
+interface PendingReward {
+  pts: number;
+  actions: number;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+const pendingRewards = new Map<string, PendingReward>();
+const flushChains = new Map<string, Promise<RewardResult>>();
+const REWARD_FLUSH_DELAY_MS = 5000;
+const REWARD_FLUSH_ACTION_THRESHOLD = 10;
+const EMPTY_RESULT: RewardResult = { success: true, ptsAwarded: 0, xpAwarded: 0 };
+
+function isCorrectAnswerReward(ptsAmount: number, source: string): boolean {
+  const normalized = source.toLocaleLowerCase();
+  return ptsAmount === REWARD_AMOUNTS.CORRECT_ANSWER && (
+    normalized.includes('resposta correta') || normalized.includes('flashcard_correct')
+  );
+}
+
+function scheduleRewardFlush(userId: string): void {
+  const pending = pendingRewards.get(userId);
+  if (!pending) return;
+  if (pending.timer) clearTimeout(pending.timer);
+  pending.timer = setTimeout(() => {
+    void flushAwardQueue(userId);
+  }, REWARD_FLUSH_DELAY_MS);
+}
+
+function enqueueCorrectAnswer(userId: string, ptsAmount: number): RewardResult {
+  const pending = pendingRewards.get(userId) ?? { pts: 0, actions: 0, timer: null };
+  pending.pts += ptsAmount;
+  pending.actions += 1;
+  pendingRewards.set(userId, pending);
+
+  if (pending.actions >= REWARD_FLUSH_ACTION_THRESHOLD) {
+    void flushAwardQueue(userId);
+  } else {
+    scheduleRewardFlush(userId);
+  }
+
+  return { success: true, ptsAwarded: ptsAmount, xpAwarded: ptsAmount };
+}
+
+async function awardPointsImmediate(
   userId: string,
   ptsAmount: number,
-  source: string
-): Promise<{ success: boolean; ptsAwarded: number; xpAwarded: number }> {
-  if (!FEATURE_FLAGS.economy_enabled) {
+  source: string,
+  actionsCount = 1,
+): Promise<RewardResult> {
+  if (!FEATURE_FLAGS.economy_enabled || ptsAmount <= 0) {
     return { success: false, ptsAwarded: 0, xpAwarded: 0 };
   }
 
   try {
     const today = new Date().toISOString().split('T')[0];
-
-    // Get or create today's activity record
     const { data: activity, error: activityError } = await supabase
       .from('daily_activity')
-      .select('*')
+      .select('id, pts_earned, actions_count')
       .eq('user_id', userId)
       .eq('activity_date', today)
       .maybeSingle();
@@ -57,79 +101,118 @@ export async function awardPoints(
 
     const currentPts = activity?.pts_earned || 0;
     const cappedPts = Math.min(ptsAmount, Math.max(0, REWARD_AMOUNTS.DAILY_CAP - currentPts));
-    const xpAwarded = ptsAmount; // XP always increases
+    const xpAwarded = ptsAmount;
 
-    if (cappedPts === 0 && currentPts >= REWARD_AMOUNTS.DAILY_CAP) {
-      // Cap reached, only award XP
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('xp_total')
-        .eq('id', userId)
-        .single();
-
-      if (currentProfile) {
-        await supabase
-          .from('profiles')
-          .update({
-            xp_total: (currentProfile.xp_total || 0) + xpAwarded,
-          })
-          .eq('id', userId);
-      }
-
-      return { success: true, ptsAwarded: 0, xpAwarded };
-    }
-
-    // Update daily activity
     if (activity) {
-      await supabase
+      const { error } = await supabase
         .from('daily_activity')
         .update({
           pts_earned: currentPts + cappedPts,
-          actions_count: (activity.actions_count || 0) + 1,
+          actions_count: (activity.actions_count || 0) + actionsCount,
         })
         .eq('id', activity.id);
+      if (error) throw error;
     } else {
-      await supabase
-        .from('daily_activity')
-        .insert({
-          user_id: userId,
-          activity_date: today,
-          pts_earned: cappedPts,
-          actions_count: 1,
-        });
+      const { error } = await supabase.from('daily_activity').insert({
+        user_id: userId,
+        activity_date: today,
+        pts_earned: cappedPts,
+        actions_count: actionsCount,
+      });
+      if (error) throw error;
     }
 
-    // Update profile (fetch current values first to increment properly)
-    const { data: currentProfile } = await supabase
+    const { data: currentProfile, error: profileError } = await supabase
       .from('profiles')
       .select('pts_weekly, xp_total')
       .eq('id', userId)
       .single();
+    if (profileError) throw profileError;
 
-    if (currentProfile) {
-      await supabase
-        .from('profiles')
-        .update({
-          pts_weekly: (currentProfile.pts_weekly || 0) + cappedPts,
-          xp_total: (currentProfile.xp_total || 0) + xpAwarded,
-        })
-        .eq('id', userId);
-    }
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        pts_weekly: (currentProfile.pts_weekly || 0) + cappedPts,
+        xp_total: (currentProfile.xp_total || 0) + xpAwarded,
+      })
+      .eq('id', userId);
+    if (updateError) throw updateError;
 
     return { success: true, ptsAwarded: cappedPts, xpAwarded };
   } catch (error) {
-    console.error('[RewardEngine] Error awarding points:', error);
+    console.error(`[RewardEngine] Error awarding points (${source}):`, error);
     return { success: false, ptsAwarded: 0, xpAwarded: 0 };
   }
 }
 
 /**
- * Convert points to PITECOIN automatically
+ * Flushes queued correct-answer rewards for one user. Writes are serialized per
+ * user so a slow request cannot overlap with the next batch in the same tab.
  */
+export async function flushAwardQueue(userId: string): Promise<RewardResult> {
+  const pending = pendingRewards.get(userId);
+  if (!pending || pending.actions === 0) {
+    return flushChains.get(userId) ?? EMPTY_RESULT;
+  }
+
+  if (pending.timer) clearTimeout(pending.timer);
+  pendingRewards.delete(userId);
+
+  const previous = flushChains.get(userId) ?? Promise.resolve(EMPTY_RESULT);
+  const next = previous
+    .catch(() => EMPTY_RESULT)
+    .then(() => awardPointsImmediate(
+      userId,
+      pending.pts,
+      'Respostas corretas (lote)',
+      pending.actions,
+    ));
+
+  flushChains.set(userId, next);
+  const result = await next;
+  if (flushChains.get(userId) === next) flushChains.delete(userId);
+  return result;
+}
+
+export function flushAllAwardQueues(): void {
+  for (const userId of pendingRewards.keys()) {
+    void flushAwardQueue(userId);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushAllAwardQueues);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushAllAwardQueues();
+  });
+}
+
+/**
+ * Correct-answer rewards are queued. Other rewards flush the queue first and
+ * are then written immediately, preserving the expected order.
+ */
+export async function awardPoints(
+  userId: string,
+  ptsAmount: number,
+  source: string,
+): Promise<RewardResult> {
+  if (!FEATURE_FLAGS.economy_enabled) {
+    return { success: false, ptsAwarded: 0, xpAwarded: 0 };
+  }
+
+  if (isCorrectAnswerReward(ptsAmount, source)) {
+    return enqueueCorrectAnswer(userId, ptsAmount);
+  }
+
+  await flushAwardQueue(userId);
+  return awardPointsImmediate(userId, ptsAmount, source);
+}
+
 export async function convertPointsIfNeeded(userId: string): Promise<void> {
   if (!FEATURE_FLAGS.economy_enabled) return;
 
   try {
+    await flushAwardQueue(userId);
     const { data: profile } = await supabase
       .from('profiles')
       .select('pts_weekly, balance_pitecoin')
@@ -139,38 +222,29 @@ export async function convertPointsIfNeeded(userId: string): Promise<void> {
     if (!profile) return;
 
     const ptsToConvert = Math.floor(profile.pts_weekly / REWARD_AMOUNTS.CONVERSION_RATE) * REWARD_AMOUNTS.CONVERSION_RATE;
-    
     if (ptsToConvert === 0) return;
 
     const pitecoinToAdd = ptsToConvert / REWARD_AMOUNTS.CONVERSION_RATE;
     const newBalance = profile.balance_pitecoin + pitecoinToAdd;
     const remainingPts = profile.pts_weekly - ptsToConvert;
 
-    // Update profile
     await supabase
       .from('profiles')
-      .update({
-        pts_weekly: remainingPts,
-        balance_pitecoin: newBalance,
-      })
+      .update({ pts_weekly: remainingPts, balance_pitecoin: newBalance })
       .eq('id', userId);
 
-    // Log transaction
     await supabase.from('pitecoin_transactions').insert({
       user_id: userId,
       amount: pitecoinToAdd,
       balance_after: newBalance,
       type: 'conversion',
-      source: 'auto_convert'
+      source: 'auto_convert',
     });
-  } catch (err) {
-    console.error('[RewardEngine] Error converting points:', err);
+  } catch (error) {
+    console.error('[RewardEngine] Error converting points:', error);
   }
 }
 
-/**
- * Check and award daily login bonus
- */
 export async function checkDailyLogin(userId: string): Promise<boolean> {
   if (!FEATURE_FLAGS.economy_enabled) return false;
 
@@ -189,21 +263,16 @@ export async function checkDailyLogin(userId: string): Promise<boolean> {
       ? new Date(profile.last_daily_reward).toISOString().split('T')[0]
       : null;
 
-    if (lastReward === today) return false; // Already claimed today
+    if (lastReward === today) return false;
 
-    // Check if streak continues
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    const streakContinues = lastReward === yesterdayStr;
-
+    const streakContinues = lastReward === yesterday.toISOString().split('T')[0];
     const newStreak = streakContinues ? profile.current_streak + 1 : 1;
     const streakBonus = Math.min(newStreak - 1, 7) * REWARD_AMOUNTS.STREAK_DAILY;
 
-    // Award daily login + streak bonus
     await awardPoints(userId, REWARD_AMOUNTS.DAILY_LOGIN + streakBonus, 'Daily login');
 
-    // Update streak
     await supabase
       .from('profiles')
       .update({
@@ -220,9 +289,6 @@ export async function checkDailyLogin(userId: string): Promise<boolean> {
   }
 }
 
-/**
- * Get user's economy profile
- */
 export async function getEconomyProfile(userId: string): Promise<EconomyProfile | null> {
   try {
     const { data, error } = await supabase
@@ -239,24 +305,16 @@ export async function getEconomyProfile(userId: string): Promise<EconomyProfile 
   }
 }
 
-/**
- * Calculate next conversion date (Sunday 23:59 São Paulo time)
- */
 export function getNextConversionDate(): Date {
   const now = new Date();
   const spTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-  
   const daysUntilSunday = (7 - spTime.getDay()) % 7 || 7;
   const nextSunday = new Date(spTime);
   nextSunday.setDate(spTime.getDate() + daysUntilSunday);
   nextSunday.setHours(23, 59, 0, 0);
-  
   return nextSunday;
 }
 
-/**
- * Format PITECOIN amount with symbol
- */
 export function formatPitecoin(amount: number): string {
   return `₱${amount}`;
 }
