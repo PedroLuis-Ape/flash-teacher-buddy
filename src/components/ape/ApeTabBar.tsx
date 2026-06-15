@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import "@/styles/space-ui-widgets.css";
+import "@/styles/space-ui-reference-match.css";
 
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/dashboard" },
