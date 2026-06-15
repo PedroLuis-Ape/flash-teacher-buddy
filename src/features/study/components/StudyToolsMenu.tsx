@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Settings2, Star, Flame, Gem, Lightbulb, Gauge, Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HintModal } from "./HintModal";
+import "./study-tools-menu.css";
 
 /**
  * StudyToolsMenu — agrupa as ações secundárias do jogo (favorito, lista vermelha,
@@ -92,7 +93,7 @@ export function StudyToolsMenu({
             variant="outline"
             size="sm"
             className={cn(
-              "h-8 gap-1.5 px-2.5 relative shrink-0",
+              "study-tools-floating-trigger h-8 gap-1.5 px-2.5 shrink-0",
               anyActive && "border-primary/60",
               className,
             )}
