@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import pitecoBase64 from "@/assets/piteco-heart-hero.webp.b64?raw";
 
 type TwinkleStar = {
   left: string;
@@ -31,8 +32,21 @@ export function SpaceTwinkleLayer() {
   const layerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const binary = window.atob(pitecoBase64.trim());
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    const pitecoUrl = URL.createObjectURL(new Blob([bytes], { type: "image/webp" }));
+    document.documentElement.style.setProperty("--piteco-heart-hero", `url("${pitecoUrl}")`);
+
     const layer = layerRef.current;
-    if (!layer) return;
+    if (!layer) {
+      return () => {
+        document.documentElement.style.removeProperty("--piteco-heart-hero");
+        URL.revokeObjectURL(pitecoUrl);
+      };
+    }
 
     const stars = Array.from(layer.querySelectorAll<HTMLElement>("[data-space-twinkle]"));
     const animations = stars.map((star, index) => {
@@ -65,6 +79,8 @@ export function SpaceTwinkleLayer() {
     return () => {
       document.removeEventListener("visibilitychange", syncVisibility);
       for (const animation of animations) animation.cancel();
+      document.documentElement.style.removeProperty("--piteco-heart-hero");
+      URL.revokeObjectURL(pitecoUrl);
     };
   }, []);
 
