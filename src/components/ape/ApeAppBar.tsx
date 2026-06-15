@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ArrowLeft, Gift, Search } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -55,7 +55,6 @@ export function ApeAppBar({
   // Variant-driven defaults — keep behavior previsível por tela.
   // Cada variant define um padrão; props explícitas sempre vencem.
   const isGame = variant === "game";
-  const isHome = variant === "home";
   const resolvedShowBack =
     typeof showBack === "boolean"
       ? showBack
@@ -78,7 +77,7 @@ export function ApeAppBar({
 
   return (
     <header className={cn(
-      "sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border",
+      "space-ui-pagebar sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border",
       className
     )}>
       <div className={cn(
