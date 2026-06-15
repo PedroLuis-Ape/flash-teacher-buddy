@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalFooter } from "@/components/layout/GlobalFooter";
+import { SpaceTwinkleLayer } from "@/components/layout/SpaceTwinkleLayer";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -31,14 +32,23 @@ import { usePerformance } from "@/contexts/PerformanceContext";
 import { InstitutionBar } from "@/components/layout/InstitutionBar";
 import { isSafeModeEnabled } from "@/lib/safeMode";
 import { AppRecoveryBanner } from "@/components/AppRecoveryBanner";
-import { EconomyInitializer } from "@/components/EconomyInitializer";
-import { BrowserCheck } from "@/components/BrowserCheck";
-import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
+import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
+import "@/styles/space-ui-v1.css";
+import "@/styles/space-ui-components.css";
+import "@/styles/space-ui-widgets.css";
+import "@/styles/space-ui-reference-match.css";
+import "@/styles/space-ui-glitter.css";
+import "@/styles/space-ui-piteco-fullbody.css";
+import "@/styles/space-ui-live-stars.css";
+import "@/styles/space-ui-performance.css";
 
-// Lazy-load heavy modals and badges (not needed for FCP)
+// Lazy-load everything that is not needed for the authenticated first paint.
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
 const GiftNotificationModal = lazy(() => import("@/components/GiftNotificationModal").then(m => ({ default: m.GiftNotificationModal })));
 const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal").then(m => ({ default: m.AnnouncementModal })));
+const EconomyInitializer = lazy(() => import("@/components/EconomyInitializer").then(m => ({ default: m.EconomyInitializer })));
+const BrowserCheck = lazy(() => import("@/components/BrowserCheck").then(m => ({ default: m.BrowserCheck })));
+const GoogleConnectPrompt = lazy(() => import("@/features/auth/components/GoogleConnectPrompt").then(m => ({ default: m.GoogleConnectPrompt })));
 
 interface PrivateShellProps {
   children: ReactNode;
@@ -92,19 +102,27 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   const showInstitutionBar = isHome;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="space-ui space-ui-shell min-h-screen flex flex-col">
+      <SpaceTwinkleLayer />
       <AppRecoveryBanner />
       <OfflineIndicator />
       {FEATURE_FLAGS.currency_header_enabled && user && (
         <header className={cn(
-          "sticky top-0 z-50 w-full border-b",
+          "space-ui-header sticky top-0 z-50 w-full border-b",
           perfSettings.backdropBlur
             ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
             : "bg-background"
         )}>
           <div className="max-w-[1600px] mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">
-            <div className="flex items-center gap-1 md:gap-2">
+            <div className="flex min-w-0 items-center gap-1 md:gap-2">
               <AppSidebar />
+              <div className="space-ui-brand" aria-label="Flash Teacher Buddy">
+                <PitecoLogo className="h-9 w-9" />
+                <div className="space-ui-brand-copy">
+                  <span className="space-ui-brand-title">Flash Teacher Buddy</span>
+                  <span className="space-ui-brand-subtitle">Aprenda. Pratique. Conquiste.</span>
+                </div>
+              </div>
               <AdminButton />
             </div>
             <div className="flex items-center gap-1.5 md:gap-2">
@@ -118,28 +136,28 @@ function PrivateShellInner({ children }: PrivateShellProps) {
           {showInstitutionBar && <InstitutionBar />}
         </header>
       )}
-      <main className="flex-1">
+      <main className="space-ui-main flex-1">
         {children}
       </main>
 
       {user && !isFullScreenPage && (
-        <div className="pb-24 md:pb-20">
+        <div className="space-ui-footer-wrap pb-24 md:pb-20">
           <GlobalFooter />
         </div>
       )}
 
       {user && <ApeTabBar />}
       {user && secondaryReady && !safeMode && (
-        <Suspense fallback={null}><GiftNotificationModal /></Suspense>
+        <Suspense fallback={null}>
+          <GiftNotificationModal />
+          <EconomyInitializer />
+          <BrowserCheck />
+          <GoogleConnectPrompt />
+        </Suspense>
       )}
       {user && secondaryReady && FEATURE_FLAGS.classes_enabled && !safeMode && (
         <Suspense fallback={null}><AnnouncementModal /></Suspense>
       )}
-
-      {/* Side-effect components — only mounted on private routes */}
-      <EconomyInitializer />
-      <BrowserCheck />
-      <GoogleConnectPrompt />
 
       <div className="fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
         <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">

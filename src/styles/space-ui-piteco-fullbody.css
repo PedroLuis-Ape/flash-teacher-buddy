@@ -1,0 +1,31 @@
+.space-ui .welcome-banner::before {
+  background-image: var(--piteco-heart-hero, url("../assets/piteco-fullbody.svg")) !important;
+  right: 1rem !important;
+  bottom: -0.45rem !important;
+  width: 9rem !important;
+  height: 12rem !important;
+  background-repeat: no-repeat !important;
+  background-position: center bottom !important;
+  background-size: contain !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 12px 20px hsl(var(--primary) / 0.3));
+}
+
+.space-ui .space-y-3 > .welcome-banner::before,
+.space-ui .space-y-3 > .welcome-banner::after {
+  content: none !important;
+  display: none !important;
+}
+
+.space-ui .space-y-3 > .welcome-banner {
+  min-height: auto !important;
+}
+
+@media (max-width: 639px) {
+  .space-ui .welcome-banner::before {
+    right: 0.1rem !important;
+    bottom: -0.2rem !important;
+    width: 6.1rem !important;
+    height: 7.9rem !important;
+  }
+}

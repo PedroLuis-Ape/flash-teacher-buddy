@@ -20,8 +20,8 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteSuspense } from "@/components/RouteSuspense";
 
 const Index = lazy(() => import("./pages/Index"));
-import Auth from "./pages/Auth"; // Eagerly loaded — critical first paint for unauthenticated users
-import LandingPage from "./pages/LandingPage"; // Public landing — eager so SEO/visitor first paint is instant
+const Auth = lazy(() => import("./pages/Auth"));
+import LandingPage from "./pages/LandingPage"; // Public landing remains eager for SEO and visitor first paint
 import RootEntry from "./components/RootEntry"; // Smart "/" gate: guests → landing, logged-in → /dashboard
 const InglesParaIniciantes = lazy(() => import("./pages/seo/InglesParaIniciantes"));
 const AtividadesDeIngles = lazy(() => import("./pages/seo/AtividadesDeIngles"));
@@ -77,7 +77,6 @@ const queryClient = new QueryClient({
       retry: 1,
     },
     mutations: {
-      // Global mutation error handler — prevent unhandled rejections from mutations
       onError: (error) => {
         console.warn('[QueryClient] Mutation error (handled globally):', error);
       },
@@ -85,8 +84,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Global query cache error handler — logs failed queries so they don't become
-// unhandled rejections that poison the app
 queryClient.getQueryCache().config.onError = (error, query) => {
   console.warn('[QueryClient] Query failed:', query.queryKey, error);
 };

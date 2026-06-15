@@ -1,0 +1,147 @@
+@import "./space-ui-stars.css";
+@import "./space-ui-game.css";
+
+/* Final visual pass to move the implementation closer to the approved mockup. */
+
+.space-ui .welcome-banner::before {
+  background-image: url("../assets/piteco-happy.png") !important;
+  right: clamp(1rem, 5vw, 5rem) !important;
+  bottom: -1.2rem !important;
+  width: clamp(8rem, 17vw, 13rem) !important;
+  height: clamp(8rem, 17vw, 13rem) !important;
+  filter:
+    drop-shadow(0 18px 28px hsl(var(--primary) / 0.42))
+    drop-shadow(0 0 18px hsl(var(--primary-glow) / 0.2));
+}
+
+.space-ui .welcome-banner {
+  border-color: hsl(var(--primary-glow) / 0.48) !important;
+  background:
+    radial-gradient(ellipse 46% 90% at 72% 92%, hsl(var(--primary) / 0.34), transparent 65%),
+    radial-gradient(circle at 84% 10%, hsl(var(--primary-glow) / 0.14), transparent 32%),
+    linear-gradient(145deg, hsl(251 48% 13% / 0.94), hsl(247 52% 7% / 0.94)) !important;
+  box-shadow:
+    0 26px 72px -48px hsl(var(--primary) / 0.98),
+    inset 0 1px 0 hsl(0 0% 100% / 0.06),
+    0 0 0 1px hsl(var(--primary) / 0.08) !important;
+}
+
+.space-ui .welcome-banner::after {
+  right: -4% !important;
+  bottom: -68% !important;
+  width: 60% !important;
+  background:
+    radial-gradient(ellipse at 50% 0%, hsl(274 92% 56% / 0.48), transparent 58%),
+    linear-gradient(180deg, hsl(270 90% 52% / 0.24), transparent 64%) !important;
+  box-shadow: 0 -22px 64px -26px hsl(var(--primary-glow) / 0.82) !important;
+}
+
+.space-ui .stat-tile {
+  border-color: hsl(var(--primary) / 0.3) !important;
+  background:
+    radial-gradient(circle at 90% 18%, hsl(var(--primary) / 0.1), transparent 34%),
+    linear-gradient(145deg, hsl(251 44% 13% / 0.9), hsl(248 47% 8% / 0.94)) !important;
+}
+
+.space-ui .space-ui-header {
+  min-height: 4rem;
+}
+
+.space-ui .space-ui-brand-title {
+  font-size: 1rem;
+}
+
+.space-ui .space-ui-brand-subtitle {
+  font-size: 0.68rem;
+}
+
+@media (min-width: 1024px) {
+  .space-ui .space-ui-tabbar {
+    top: 7rem;
+    right: auto;
+    bottom: 2rem;
+    left: 1.5rem;
+    width: 7rem;
+    border: 1px solid hsl(var(--primary) / 0.28) !important;
+    border-radius: 1.35rem;
+    overflow: hidden;
+  }
+
+  .space-ui .space-ui-tabbar > div {
+    height: 100% !important;
+    max-width: none !important;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    padding: 0.8rem 0.55rem !important;
+  }
+
+  .space-ui .space-ui-tabbar-indicator {
+    display: none;
+  }
+
+  .space-ui .space-ui-tab {
+    width: 100%;
+    min-width: 0;
+    height: 4.3rem;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    padding-inline: 0.8rem;
+    border-radius: 1rem;
+  }
+
+  .space-ui .space-ui-tab span {
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .space-ui .space-ui-tab-active::after {
+    inset: 18% auto 18% -0.1rem;
+    width: 0.2rem;
+    height: auto;
+  }
+
+  .space-ui .space-ui-main,
+  .space-ui .space-ui-footer-wrap {
+    padding-left: 8.7rem;
+  }
+
+  .space-ui .space-ui-main > .min-h-screen > .max-w-[1600px] {
+    max-width: 1480px;
+  }
+
+  .space-ui .welcome-banner {
+    min-height: 13rem;
+  }
+
+  .space-ui .welcome-banner h2 {
+    font-size: clamp(2rem, 3vw, 3.15rem);
+  }
+
+  .space-ui .welcome-banner p {
+    font-size: 1.08rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .space-ui .space-ui-tabbar {
+    left: 2rem;
+    width: 8rem;
+  }
+
+  .space-ui .space-ui-main,
+  .space-ui .space-ui-footer-wrap {
+    padding-left: 10rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .space-ui .welcome-banner::before {
+    right: -0.6rem !important;
+    bottom: -0.4rem !important;
+    width: 7.3rem !important;
+    height: 7.3rem !important;
+    opacity: 0.9 !important;
+  }
+}

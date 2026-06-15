@@ -1,0 +1,116 @@
+/* Brighter star field refinement for Space UI v1. */
+
+/*
+ * The original pages still mount opaque `bg-background` wrappers. They were
+ * covering the cosmic layer, which is why the stars only appeared briefly
+ * during route transitions. Keep the stars inside the shell stacking context
+ * and make only full-page route canvases transparent; cards, dialogs and game
+ * surfaces remain opaque for readability.
+ */
+.space-ui-shell::before,
+.space-ui-shell::after {
+  z-index: 0 !important;
+}
+
+.space-ui-header,
+.space-ui-main,
+.space-ui-footer-wrap,
+.space-ui-tabbar {
+  position: relative;
+  z-index: 1;
+}
+
+.space-ui-main > [class*="min-h-screen"][class*="bg-background"],
+.space-ui-main > [class*="min-h-dvh"][class*="bg-background"],
+.space-ui-main > [class*="min-h-full"][class*="bg-background"],
+.space-ui-main > .min-h-screen,
+.space-ui-main > .min-h-dvh {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+.space-ui-shell::before {
+  opacity: 0.95 !important;
+  background-image:
+    radial-gradient(circle at 7% 14%, hsl(0 0% 100% / 0.98) 0 1.2px, transparent 2.1px),
+    radial-gradient(circle at 17% 71%, hsl(278 100% 91% / 0.94) 0 1.1px, transparent 2px),
+    radial-gradient(circle at 28% 28%, hsl(0 0% 100% / 0.9) 0 1.4px, transparent 2.3px),
+    radial-gradient(circle at 39% 88%, hsl(219 100% 91% / 0.88) 0 1.1px, transparent 2px),
+    radial-gradient(circle at 51% 42%, hsl(0 0% 100% / 0.92) 0 1.2px, transparent 2.1px),
+    radial-gradient(circle at 63% 9%, hsl(294 100% 91% / 0.94) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 76% 74%, hsl(0 0% 100% / 0.88) 0 1.2px, transparent 2.1px),
+    radial-gradient(circle at 91% 34%, hsl(266 100% 92% / 0.92) 0 1.3px, transparent 2.2px),
+    radial-gradient(circle at 14% 44%, hsl(0 0% 100% / 0.78) 0 0.8px, transparent 1.6px),
+    radial-gradient(circle at 34% 58%, hsl(226 100% 92% / 0.72) 0 0.9px, transparent 1.7px),
+    radial-gradient(circle at 57% 83%, hsl(0 0% 100% / 0.76) 0 0.8px, transparent 1.6px),
+    radial-gradient(circle at 84% 18%, hsl(285 100% 91% / 0.8) 0 0.9px, transparent 1.8px) !important;
+  background-size:
+    220px 220px,
+    280px 280px,
+    340px 340px,
+    410px 410px,
+    260px 260px,
+    370px 370px,
+    310px 310px,
+    460px 460px,
+    180px 180px,
+    240px 240px,
+    300px 300px,
+    390px 390px !important;
+  filter: drop-shadow(0 0 3px hsl(280 100% 88% / 0.34));
+  animation: space-stars-drift 34s linear infinite, space-stars-pulse 5.5s ease-in-out infinite alternate;
+}
+
+.space-ui-shell::after {
+  opacity: 0.48 !important;
+  background:
+    radial-gradient(circle at 12% 22%, hsl(0 0% 100% / 0.98) 0 1.8px, hsl(282 100% 86% / 0.45) 2px, transparent 5px),
+    radial-gradient(circle at 72% 18%, hsl(0 0% 100% / 0.94) 0 1.7px, hsl(224 100% 88% / 0.42) 2px, transparent 5px),
+    radial-gradient(circle at 88% 68%, hsl(0 0% 100% / 0.9) 0 1.6px, hsl(286 100% 87% / 0.38) 2px, transparent 5px),
+    radial-gradient(circle at 33% 78%, hsl(0 0% 100% / 0.9) 0 1.5px, hsl(226 100% 88% / 0.35) 2px, transparent 5px),
+    linear-gradient(transparent 95%, hsl(var(--primary) / 0.14) 100%),
+    radial-gradient(circle at 16% 46%, transparent 0 4rem, hsl(var(--primary) / 0.1) 4.1rem 4.18rem, transparent 4.25rem),
+    radial-gradient(circle at 88% 62%, transparent 0 5rem, hsl(var(--secondary) / 0.09) 5.1rem 5.18rem, transparent 5.25rem) !important;
+  background-size:
+    520px 520px,
+    620px 620px,
+    700px 700px,
+    580px 580px,
+    100% 100%,
+    100% 100%,
+    100% 100% !important;
+  animation: space-stars-twinkle 4.2s ease-in-out infinite alternate;
+}
+
+@keyframes space-stars-drift {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 22px 12px, -18px 20px, 15px -14px, -20px -16px, 12px 18px, -14px 12px, 18px -20px, -16px 14px, 10px 8px, -8px 12px, 12px -10px, -10px -8px; }
+}
+
+@keyframes space-stars-pulse {
+  from { opacity: 0.76; }
+  to { opacity: 1; }
+}
+
+@keyframes space-stars-twinkle {
+  from { opacity: 0.28; filter: brightness(0.9); }
+  to { opacity: 0.6; filter: brightness(1.35); }
+}
+
+@media (max-width: 767px) {
+  .space-ui-shell::before {
+    opacity: 0.86 !important;
+    animation-duration: 46s, 6.5s;
+  }
+
+  .space-ui-shell::after {
+    opacity: 0.4 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-ui-shell::before,
+  .space-ui-shell::after {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,331 @@
+/*
+ * Space UI v1
+ * Scoped to .space-ui so the entire redesign can be removed by deleting one
+ * import and one className. No game, auth or persistence logic lives here.
+ */
+
+.space-ui {
+  --background: 248 52% 6%;
+  --foreground: 258 33% 96%;
+  --card: 251 43% 10%;
+  --card-foreground: 258 33% 96%;
+  --popover: 250 42% 9%;
+  --popover-foreground: 258 33% 96%;
+  --primary: 267 92% 66%;
+  --primary-foreground: 0 0% 100%;
+  --primary-glow: 286 95% 70%;
+  --secondary: 224 88% 66%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 250 28% 17%;
+  --muted-foreground: 256 20% 72%;
+  --accent: 292 86% 64%;
+  --accent-foreground: 0 0% 100%;
+  --border: 267 52% 27%;
+  --input: 251 35% 15%;
+  --ring: 267 92% 66%;
+  --radius: 1.15rem;
+
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+.space-ui-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(ellipse 85% 52% at 50% -8%, hsl(273 90% 44% / 0.25), transparent 68%),
+    radial-gradient(ellipse 60% 48% at 92% 22%, hsl(223 88% 42% / 0.17), transparent 72%),
+    radial-gradient(ellipse 55% 45% at 10% 72%, hsl(294 86% 39% / 0.15), transparent 74%),
+    linear-gradient(180deg, hsl(248 52% 5%), hsl(251 54% 7%) 48%, hsl(247 52% 5%));
+}
+
+.space-ui-shell::before,
+.space-ui-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.space-ui-shell::before {
+  opacity: 0.72;
+  background-image:
+    radial-gradient(circle at 5% 15%, hsl(0 0% 100% / 0.9) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 18% 67%, hsl(276 100% 86% / 0.8) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 29% 24%, hsl(0 0% 100% / 0.8) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 43% 84%, hsl(224 100% 86% / 0.65) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 56% 38%, hsl(0 0% 100% / 0.75) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 68% 10%, hsl(292 100% 86% / 0.8) 0 1.3px, transparent 2.1px),
+    radial-gradient(circle at 79% 72%, hsl(0 0% 100% / 0.72) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 93% 31%, hsl(267 100% 88% / 0.75) 0 1px, transparent 1.9px);
+  background-size: 320px 320px, 420px 420px, 520px 520px, 620px 620px,
+    390px 390px, 560px 560px, 470px 470px, 680px 680px;
+}
+
+.space-ui-shell::after {
+  opacity: 0.24;
+  background:
+    linear-gradient(transparent 95%, hsl(var(--primary) / 0.12) 100%),
+    radial-gradient(circle at 16% 46%, transparent 0 4rem, hsl(var(--primary) / 0.08) 4.1rem 4.18rem, transparent 4.25rem),
+    radial-gradient(circle at 88% 62%, transparent 0 5rem, hsl(var(--secondary) / 0.07) 5.1rem 5.18rem, transparent 5.25rem);
+}
+
+.space-ui-main {
+  position: relative;
+  z-index: 1;
+}
+
+.space-ui-header {
+  border-bottom-color: hsl(var(--primary) / 0.22) !important;
+  background:
+    linear-gradient(180deg, hsl(249 54% 7% / 0.94), hsl(251 48% 8% / 0.82)) !important;
+  box-shadow:
+    0 12px 30px -22px hsl(var(--primary) / 0.78),
+    inset 0 -1px 0 hsl(var(--primary-glow) / 0.08);
+  backdrop-filter: blur(20px) saturate(135%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(135%) !important;
+}
+
+.space-ui-brand {
+  display: none;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.space-ui-brand-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.space-ui-brand-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, hsl(0 0% 100%), hsl(var(--primary-glow)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.space-ui-brand-subtitle {
+  margin-top: 0.2rem;
+  font-size: 0.62rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Shared shadcn surfaces */
+.space-ui .bg-card,
+.space-ui [class*="bg-card/"] {
+  background-color: hsl(var(--card) / 0.82) !important;
+}
+
+.space-ui .rounded-lg.border,
+.space-ui .rounded-xl.border,
+.space-ui .rounded-2xl.border,
+.space-ui [class*="border-border"] {
+  border-color: hsl(var(--primary) / 0.2) !important;
+}
+
+.space-ui .rounded-lg.border,
+.space-ui .rounded-xl.border,
+.space-ui .rounded-2xl.border {
+  box-shadow:
+    0 16px 46px -34px hsl(var(--primary) / 0.75),
+    inset 0 1px 0 hsl(0 0% 100% / 0.035);
+}
+
+.space-ui .card-premium,
+.space-ui .glass-panel,
+.space-ui .stat-tile,
+.space-ui .welcome-banner {
+  border: 1px solid hsl(var(--primary) / 0.3) !important;
+  background:
+    radial-gradient(circle at 86% 12%, hsl(var(--primary-glow) / 0.1), transparent 32%),
+    linear-gradient(145deg, hsl(251 45% 13% / 0.94), hsl(248 45% 8% / 0.9)) !important;
+  box-shadow:
+    0 20px 60px -42px hsl(var(--primary) / 0.9),
+    inset 0 1px 0 hsl(0 0% 100% / 0.05) !important;
+}
+
+.space-ui .welcome-banner {
+  min-height: 8.5rem;
+  overflow: hidden;
+}
+
+.space-ui .welcome-banner::after {
+  content: "";
+  position: absolute;
+  right: -7%;
+  bottom: -62%;
+  width: 54%;
+  aspect-ratio: 1.9;
+  border-radius: 50%;
+  border-top: 1px solid hsl(var(--primary-glow) / 0.45);
+  background:
+    radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.35), transparent 58%),
+    linear-gradient(180deg, hsl(var(--primary) / 0.18), transparent 62%);
+  box-shadow: 0 -16px 50px -24px hsl(var(--primary-glow) / 0.72);
+  pointer-events: none;
+}
+
+.space-ui .stat-tile {
+  min-height: 7.25rem;
+}
+
+.space-ui .icon-tile {
+  border-color: hsl(var(--primary) / 0.38) !important;
+  background: linear-gradient(145deg, hsl(var(--primary) / 0.24), hsl(var(--secondary) / 0.12)) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.08),
+    0 10px 30px -20px hsl(var(--primary) / 0.9) !important;
+}
+
+/* Buttons and controls */
+.space-ui button,
+.space-ui [role="button"] {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.space-ui button:not(:disabled):active,
+.space-ui [role="button"]:not([aria-disabled="true"]):active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.space-ui .bg-primary,
+.space-ui .btn-premium {
+  background-image: linear-gradient(135deg, hsl(276 92% 60%), hsl(229 88% 62%)) !important;
+  border-color: hsl(var(--primary-glow) / 0.42) !important;
+  box-shadow:
+    0 13px 32px -18px hsl(var(--primary) / 0.95),
+    inset 0 1px 0 hsl(0 0% 100% / 0.15) !important;
+}
+
+.space-ui input,
+.space-ui textarea,
+.space-ui [role="combobox"] {
+  border-color: hsl(var(--primary) / 0.25) !important;
+  background-color: hsl(250 40% 8% / 0.78) !important;
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.025);
+}
+
+.space-ui input:focus,
+.space-ui textarea:focus,
+.space-ui [role="combobox"]:focus {
+  border-color: hsl(var(--primary) / 0.7) !important;
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.14) !important;
+}
+
+/* Radix overlays */
+.space-ui [role="dialog"],
+.space-ui [role="menu"],
+.space-ui [data-radix-popper-content-wrapper] > div {
+  border-color: hsl(var(--primary) / 0.3) !important;
+  background:
+    radial-gradient(circle at 85% 0%, hsl(var(--primary) / 0.12), transparent 30%),
+    linear-gradient(145deg, hsl(251 46% 12% / 0.98), hsl(248 48% 7% / 0.98)) !important;
+  box-shadow: 0 26px 80px -34px hsl(var(--primary) / 0.86) !important;
+}
+
+/* Progress bars */
+.space-ui [role="progressbar"] {
+  overflow: hidden;
+  background: hsl(250 24% 18% / 0.9) !important;
+  box-shadow: inset 0 1px 4px hsl(0 0% 0% / 0.35);
+}
+
+.space-ui [role="progressbar"] > div {
+  background-image: linear-gradient(90deg, hsl(278 94% 65%), hsl(220 90% 64%)) !important;
+  box-shadow: 0 0 18px hsl(var(--primary) / 0.45);
+}
+
+/* Study session */
+.space-ui [data-red-focus="true"] {
+  background:
+    radial-gradient(ellipse 70% 35% at 50% 0%, hsl(0 78% 46% / 0.18), transparent 72%),
+    transparent !important;
+}
+
+.space-ui .flip-card-front > *,
+.space-ui .flip-card-back > * {
+  border-color: hsl(var(--primary) / 0.36) !important;
+  background:
+    radial-gradient(circle at 84% 14%, hsl(var(--primary) / 0.13), transparent 34%),
+    linear-gradient(145deg, hsl(252 46% 13% / 0.98), hsl(248 46% 8% / 0.98)) !important;
+  box-shadow: 0 24px 70px -44px hsl(var(--primary) / 0.96) !important;
+}
+
+.space-ui .study-tools-floating-trigger {
+  border-color: hsl(var(--primary-glow) / 0.55) !important;
+  background:
+    radial-gradient(circle at 50% 0%, hsl(var(--primary-glow) / 0.24), transparent 70%),
+    linear-gradient(145deg, hsl(252 45% 16% / 0.98), hsl(249 45% 9% / 0.98)) !important;
+  box-shadow:
+    0 16px 35px -20px hsl(var(--primary) / 0.95),
+    0 0 0 1px hsl(var(--primary) / 0.13) !important;
+}
+
+/* Bottom navigation */
+.space-ui .tab-bar-premium,
+.space-ui nav[class*="fixed"] {
+  border-color: hsl(var(--primary) / 0.24) !important;
+  background:
+    linear-gradient(180deg, hsl(250 48% 9% / 0.9), hsl(247 52% 5% / 0.98)) !important;
+  box-shadow: 0 -18px 48px -35px hsl(var(--primary) / 0.9) !important;
+  backdrop-filter: blur(22px) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(145%) !important;
+}
+
+.space-ui-footer-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 768px) {
+  .space-ui-brand {
+    display: flex;
+  }
+
+  .space-ui-main {
+    padding-inline: clamp(0rem, 1vw, 1rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .space-ui-shell::after {
+    opacity: 0.14;
+  }
+
+  .space-ui .welcome-banner {
+    min-height: 7.25rem;
+  }
+
+  .space-ui .stat-tile {
+    min-height: 6.4rem;
+  }
+
+  .space-ui .study-tools-floating-trigger {
+    top: calc(env(safe-area-inset-top, 0px) + 4.25rem);
+    right: 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-ui *,
+  .space-ui *::before,
+  .space-ui *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

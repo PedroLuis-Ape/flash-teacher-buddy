@@ -32,7 +32,6 @@ interface PerformanceContextValue {
 const PerformanceContext = createContext<PerformanceContextValue | null>(null);
 
 export function PerformanceProvider({ children }: { children: ReactNode }) {
-  // Read from localStorage synchronously — user sees correct state immediately
   const [settings, setSettings] = useState<PerformanceSettings>(() => readPerformanceSettings());
 
   const persist = useCallback((s: PerformanceSettings) => {
@@ -65,13 +64,32 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
 
   const currentPreset = detectPreset(settings);
 
-  // Sync performance flags to <html> so global CSS can kill animations/hovers
+  // Keep CSS performance switches deterministic and in sync with both the
+  // selected preset and the operating-system reduced-motion preference.
   useEffect(() => {
     const el = document.documentElement;
-    el.toggleAttribute('data-perf-no-anim', !settings.animations);
-    el.toggleAttribute('data-perf-no-hover', !settings.hoverEffects);
-    el.toggleAttribute('data-perf-no-decor', !settings.decorativeEffects);
-  }, [settings.animations, settings.hoverEffects, settings.decorativeEffects]);
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const syncFlags = () => {
+      const motionAllowed = settings.animations && !settings.reduceMotion && !media.matches;
+
+      el.toggleAttribute('data-perf-no-anim', !motionAllowed);
+      el.toggleAttribute('data-perf-no-hover', !settings.hoverEffects);
+      el.toggleAttribute('data-perf-no-decor', !settings.decorativeEffects);
+      el.toggleAttribute('data-perf-space-stars', motionAllowed);
+      el.toggleAttribute('data-perf-backdrop', settings.backdropBlur);
+    };
+
+    syncFlags();
+    media.addEventListener?.('change', syncFlags);
+    return () => media.removeEventListener?.('change', syncFlags);
+  }, [
+    settings.animations,
+    settings.reduceMotion,
+    settings.hoverEffects,
+    settings.decorativeEffects,
+    settings.backdropBlur,
+  ]);
 
   const contextValue = useMemo(() => ({
     settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset,
