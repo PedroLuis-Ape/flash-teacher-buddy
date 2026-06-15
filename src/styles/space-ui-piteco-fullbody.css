@@ -1,20 +1,16 @@
-/* Stable Piteco hero asset. */
 .space-ui .welcome-banner::before {
-  background-image: url("../assets/piteco-fullbody.svg") !important;
-  right: clamp(0.75rem, 3.5vw, 3rem) !important;
-  bottom: -1.75rem !important;
-  width: clamp(9rem, 16vw, 13.5rem) !important;
-  height: clamp(12rem, 21vw, 18rem) !important;
+  background-image: var(--piteco-heart-hero, url("../assets/piteco-fullbody.svg")) !important;
+  right: 1rem !important;
+  bottom: -0.45rem !important;
+  width: 9rem !important;
+  height: 12rem !important;
   background-repeat: no-repeat !important;
   background-position: center bottom !important;
   background-size: contain !important;
   opacity: 1 !important;
-  filter:
-    drop-shadow(0 16px 24px hsl(var(--primary) / 0.38))
-    drop-shadow(0 0 14px hsl(var(--primary-glow) / 0.18));
+  filter: drop-shadow(0 12px 20px hsl(var(--primary) / 0.3));
 }
 
-/* The class panel reused the hero class; it must not duplicate the mascot. */
 .space-ui .space-y-3 > .welcome-banner::before,
 .space-ui .space-y-3 > .welcome-banner::after {
   content: none !important;
@@ -27,9 +23,9 @@
 
 @media (max-width: 639px) {
   .space-ui .welcome-banner::before {
-    right: -0.35rem !important;
-    bottom: -1.05rem !important;
-    width: 7.2rem !important;
-    height: 10.6rem !important;
+    right: 0.1rem !important;
+    bottom: -0.2rem !important;
+    width: 6.1rem !important;
+    height: 7.9rem !important;
   }
 }
