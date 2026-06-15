@@ -1,6 +1,6 @@
-/* Piteco hero supplied by Pedro: transparent heart pose, fitted to the banner. */
+/* Stable Piteco hero asset. */
 .space-ui .welcome-banner::before {
-  background-image: var(--piteco-heart-hero) !important;
+  background-image: url("../assets/piteco-fullbody.svg") !important;
   right: clamp(0.75rem, 3.5vw, 3rem) !important;
   bottom: -1.75rem !important;
   width: clamp(9rem, 16vw, 13.5rem) !important;
