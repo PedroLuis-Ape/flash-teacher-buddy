@@ -10,7 +10,6 @@ interface ApeCardFolderProps {
   isLocked?: boolean;
   onClick?: () => void;
   className?: string;
-  /** Disable scroll reveal animation for performance in large lists */
   disableAnimation?: boolean;
 }
 
@@ -31,11 +30,9 @@ export function ApeCardFolder({
       onClick={onClick}
       disabled={isLocked}
       className={cn(
-        "group card-3d ape-card-row rounded-xl",
+        "space-ui-folder-card group card-3d ape-card-row rounded-2xl",
         "bg-card transition-all duration-200",
-        "border border-border",
-        "text-left shadow-sm",
-        // Use @media(hover:hover) to only apply hover styles on non-touch devices
+        "border border-border text-left shadow-sm",
         "md:hover:shadow-md md:hover:border-primary/30 md:hover:translate-y-[-2px]",
         "active:scale-[0.98] active:shadow-sm active:translate-y-0",
         !disableAnimation && "scroll-reveal",
@@ -44,18 +41,19 @@ export function ApeCardFolder({
         className
       )}
     >
-      <div className="shrink-0 w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center transition-all duration-200 group-hover:bg-primary/20 group-hover:scale-105">
+      <div className="space-ui-card-icon relative shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center transition-all duration-200 group-hover:bg-primary/20 group-hover:scale-105">
+        <span aria-hidden className="absolute inset-1 rounded-full border border-primary/15" />
         {isLocked ? (
-          <Lock className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+          <Lock className="relative h-5 w-5 text-primary transition-transform group-hover:scale-110" />
         ) : (
-          <Folder className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+          <Folder className="relative h-5 w-5 text-primary transition-transform group-hover:scale-110" />
         )}
       </div>
 
       <div className="flex-1 min-w-0">
         <ScrollingTitle text={title} className="ape-card-title" />
         {(listCount !== undefined || cardCount !== undefined) && (
-          <p className="text-xs text-muted-foreground leading-tight mt-0.5 truncate">
+          <p className="text-xs text-muted-foreground leading-tight mt-1 truncate">
             {[
               listCount !== undefined && `${listCount} ${listCount === 1 ? 'lista' : 'listas'}`,
               cardCount !== undefined && `${cardCount} ${cardCount === 1 ? 'card' : 'cards'}`
