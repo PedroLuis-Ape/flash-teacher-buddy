@@ -1,0 +1,28 @@
+/*
+ * Keep the study tools available outside the flashcard surface.
+ * The menu is rendered by every study mode, so a fixed trigger gives all
+ * modes the same predictable placement without changing their game logic.
+ */
+.study-tools-floating-trigger {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
+  z-index: 40;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.22);
+  background: hsl(var(--background) / 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (min-width: 640px) {
+  .study-tools-floating-trigger {
+    right: 1.25rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .study-tools-floating-trigger {
+    width: 2.25rem;
+    padding-inline: 0;
+  }
+}
