@@ -8,11 +8,11 @@ import {
   type PerformanceSettings,
   type PerformancePreset,
   PRESETS,
-  PRESET_HIGH,
   readPerformanceSettings,
   writePerformanceSettings,
   detectPreset,
   updatePerfSettingsCache,
+  getRecommendedPerformanceSettings,
 } from '@/lib/performanceSettings';
 
 interface PerformanceContextValue {
@@ -23,7 +23,7 @@ interface PerformanceContextValue {
   toggleSetting: (key: keyof Omit<PerformanceSettings, 'preset'>, value: boolean) => void;
   /** Apply a full settings object */
   applySettings: (s: PerformanceSettings) => void;
-  /** Reset to default (High) */
+  /** Reset to the recommended default for this device */
   resetToDefault: () => void;
   /** Detected preset name or 'custom' */
   currentPreset: PerformancePreset | 'custom';
@@ -59,7 +59,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   }, [persist]);
 
   const resetToDefault = useCallback(() => {
-    persist({ ...PRESET_HIGH });
+    persist(getRecommendedPerformanceSettings());
   }, [persist]);
 
   const currentPreset = detectPreset(settings);
@@ -76,7 +76,7 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
       el.toggleAttribute('data-perf-no-anim', !motionAllowed);
       el.toggleAttribute('data-perf-no-hover', !settings.hoverEffects);
       el.toggleAttribute('data-perf-no-decor', !settings.decorativeEffects);
-      el.toggleAttribute('data-perf-space-stars', motionAllowed);
+      el.toggleAttribute('data-perf-space-stars', motionAllowed && settings.decorativeEffects);
       el.toggleAttribute('data-perf-backdrop', settings.backdropBlur);
     };
 
