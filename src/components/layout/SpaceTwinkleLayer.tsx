@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useRef } from "react";
 import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge";
-import "@/styles/space-ui-piteco-heart-override.css";
 
 type TwinkleStar = {
   left: string;
@@ -37,21 +36,42 @@ export function SpaceTwinkleLayer() {
     if (!layer) return;
 
     const stars = Array.from(layer.querySelectorAll<HTMLElement>("[data-space-twinkle]"));
-    const animations = stars.map((star, index) => {
+    const animations: Animation[] = [];
+    const timers: number[] = [];
+
+    stars.forEach((star, index) => {
       const config = STARS[index];
-      return star.animate(
-        [
-          { opacity: 0.12, transform: "scale(.62)" },
-          { opacity: 0.95, transform: "scale(1.45)", offset: 0.48 },
-          { opacity: 0.18, transform: "scale(.75)" },
-        ],
-        {
-          duration: config.duration,
-          delay: -config.delay,
-          iterations: Infinity,
-          easing: "ease-in-out",
-        },
-      );
+
+      try {
+        if (typeof star.animate === "function") {
+          animations.push(
+            star.animate(
+              [
+                { opacity: 0.12, transform: "scale(.62)" },
+                { opacity: 0.95, transform: "scale(1.45)", offset: 0.48 },
+                { opacity: 0.18, transform: "scale(.75)" },
+              ],
+              {
+                duration: config.duration,
+                delay: -config.delay,
+                iterations: Infinity,
+                easing: "ease-in-out",
+              },
+            ),
+          );
+          return;
+        }
+      } catch (error) {
+        console.warn("[SpaceTwinkleLayer] Animation fallback enabled", error);
+      }
+
+      let visible = false;
+      const tick = () => {
+        visible = !visible;
+        star.style.opacity = visible ? "0.95" : "0.15";
+        star.style.transform = visible ? "scale(1.35)" : "scale(.7)";
+      };
+      timers.push(window.setInterval(tick, Math.max(1400, config.duration / 2)));
     });
 
     const syncVisibility = () => {
@@ -67,6 +87,7 @@ export function SpaceTwinkleLayer() {
     return () => {
       document.removeEventListener("visibilitychange", syncVisibility);
       for (const animation of animations) animation.cancel();
+      for (const timer of timers) window.clearInterval(timer);
     };
   }, []);
 
@@ -95,7 +116,7 @@ export function SpaceTwinkleLayer() {
               boxShadow: `0 0 ${star.size * 3}px ${star.size}px ${star.glow}`,
               opacity: 0.2,
               transformOrigin: "center",
-              willChange: "opacity, transform",
+              transition: "opacity .6s ease, transform .6s ease",
             }}
           />
         ))}
