@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeGrid } from "@/components/ape/ApeGrid";
 import { SkinCard } from "@/features/store/components/SkinCard";
@@ -7,39 +7,28 @@ import { ExchangeTab } from "@/components/ExchangeTab";
 import { InventoryTab } from "@/components/InventoryTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSkinsCaltalog, getUserInventory, purchaseSkin, type SkinItem } from "@/lib/storeEngine";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useEconomy } from "@/contexts/EconomyContext";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { Loader2, ShoppingBag, ArrowRightLeft, Package } from "lucide-react";
 
 const Store = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { refreshBalance } = useEconomy();
+  const { userId, isLoading: authLoading } = useAuthUser();
   const [skins, setSkins] = useState<SkinItem[]>([]);
   const [ownedSkinIds, setOwnedSkinIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [purchasingItems, setPurchasingItems] = useState<Set<string>>(new Set());
-  const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadStoreData();
-  }, []);
-
-  const loadStoreData = async () => {
+  const loadStoreData = useCallback(async (activeUserId: string) => {
+    setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/auth');
-        return;
-      }
-
-      setUserId(session.user.id);
-
       const [catalogData, inventoryData] = await Promise.all([
         getSkinsCaltalog(),
-        getUserInventory(session.user.id),
+        getUserInventory(activeUserId),
       ]);
 
       setSkins(catalogData);
@@ -54,16 +43,25 @@ const Store = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (!FEATURE_FLAGS.store_visible || authLoading) return;
+    if (!userId) {
+      navigate('/auth', { replace: true });
+      return;
+    }
+    void loadStoreData(userId);
+  }, [authLoading, loadStoreData, navigate, userId]);
 
   const handlePurchase = async (skinId: string, price: number) => {
     if (!userId || purchasingItems.has(skinId)) return;
 
     setPurchasingItems(prev => new Set(prev).add(skinId));
-    
+
     try {
       const result = await purchaseSkin(userId, skinId, price);
-      
+
       if (result.success) {
         toast({
           title: "✅ Compra realizada!",
@@ -96,13 +94,11 @@ const Store = () => {
   };
 
   if (!FEATURE_FLAGS.store_visible) {
-    navigate('/folders');
-    return null;
+    return <Navigate to="/folders" replace />;
   }
 
-  // Detect initial tab from URL
   const location = window.location.pathname;
-  const initialTab = location.includes('/exchange') ? 'cambio' : 
+  const initialTab = location.includes('/exchange') ? 'cambio' :
                      location.includes('/inventory') ? 'inventario' : 'pacotes';
 
   return (
@@ -131,7 +127,7 @@ const Store = () => {
 
         <TabsContent value="pacotes" className="mt-0">
           <div className="container mx-auto px-4 py-6">
-            {loading ? (
+            {loading || authLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
