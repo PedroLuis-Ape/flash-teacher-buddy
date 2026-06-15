@@ -47,11 +47,17 @@ const REWARD_FLUSH_DELAY_MS = 5000;
 const REWARD_FLUSH_ACTION_THRESHOLD = 10;
 const EMPTY_RESULT: RewardResult = { success: true, ptsAwarded: 0, xpAwarded: 0 };
 
+function normalizeRewardSource(source: string): string {
+  return source.trim().toLocaleLowerCase();
+}
+
+function isLegacyFlipReward(source: string): boolean {
+  return normalizeRewardSource(source).includes('flashcard_correct');
+}
+
 function isCorrectAnswerReward(ptsAmount: number, source: string): boolean {
-  const normalized = source.toLocaleLowerCase();
-  return ptsAmount === REWARD_AMOUNTS.CORRECT_ANSWER && (
-    normalized.includes('resposta correta') || normalized.includes('flashcard_correct')
-  );
+  return ptsAmount === REWARD_AMOUNTS.CORRECT_ANSWER
+    && normalizeRewardSource(source).includes('resposta correta');
 }
 
 function scheduleRewardFlush(userId: string): void {
@@ -198,6 +204,14 @@ export async function awardPoints(
 ): Promise<RewardResult> {
   if (!FEATURE_FLAGS.economy_enabled) {
     return { success: false, ptsAwarded: 0, xpAwarded: 0 };
+  }
+
+  // FlipStudyView historically awarded points before delegating to the central
+  // study engine, which awarded the same answer again. The engine is now the
+  // single source of truth; this legacy call is accepted as a no-op so older
+  // component paths cannot double the user's reward.
+  if (isLegacyFlipReward(source)) {
+    return EMPTY_RESULT;
   }
 
   if (isCorrectAnswerReward(ptsAmount, source)) {
