@@ -31,17 +31,22 @@ import { usePerformance } from "@/contexts/PerformanceContext";
 import { InstitutionBar } from "@/components/layout/InstitutionBar";
 import { isSafeModeEnabled } from "@/lib/safeMode";
 import { AppRecoveryBanner } from "@/components/AppRecoveryBanner";
-import { EconomyInitializer } from "@/components/EconomyInitializer";
-import { BrowserCheck } from "@/components/BrowserCheck";
-import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import "@/styles/space-ui-v1.css";
 import "@/styles/space-ui-components.css";
+import "@/styles/space-ui-widgets.css";
+import "@/styles/space-ui-reference-match.css";
+import "@/styles/space-ui-glitter.css";
+import "@/styles/space-ui-piteco-fullbody.css";
+import "@/styles/space-ui-live-stars.css";
 
-// Lazy-load heavy modals and badges (not needed for FCP)
+// Lazy-load everything that is not needed for the authenticated first paint.
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
 const GiftNotificationModal = lazy(() => import("@/components/GiftNotificationModal").then(m => ({ default: m.GiftNotificationModal })));
 const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal").then(m => ({ default: m.AnnouncementModal })));
+const EconomyInitializer = lazy(() => import("@/components/EconomyInitializer").then(m => ({ default: m.EconomyInitializer })));
+const BrowserCheck = lazy(() => import("@/components/BrowserCheck").then(m => ({ default: m.BrowserCheck })));
+const GoogleConnectPrompt = lazy(() => import("@/features/auth/components/GoogleConnectPrompt").then(m => ({ default: m.GoogleConnectPrompt })));
 
 interface PrivateShellProps {
   children: ReactNode;
@@ -140,16 +145,16 @@ function PrivateShellInner({ children }: PrivateShellProps) {
 
       {user && <ApeTabBar />}
       {user && secondaryReady && !safeMode && (
-        <Suspense fallback={null}><GiftNotificationModal /></Suspense>
+        <Suspense fallback={null}>
+          <GiftNotificationModal />
+          <EconomyInitializer />
+          <BrowserCheck />
+          <GoogleConnectPrompt />
+        </Suspense>
       )}
       {user && secondaryReady && FEATURE_FLAGS.classes_enabled && !safeMode && (
         <Suspense fallback={null}><AnnouncementModal /></Suspense>
       )}
-
-      {/* Side-effect components — only mounted on private routes */}
-      <EconomyInitializer />
-      <BrowserCheck />
-      <GoogleConnectPrompt />
 
       <div className="fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
         <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
