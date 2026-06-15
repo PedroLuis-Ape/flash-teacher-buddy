@@ -6,6 +6,7 @@ import { usePerformance } from "@/contexts/PerformanceContext";
 import "@/styles/space-ui-widgets.css";
 import "@/styles/space-ui-reference-match.css";
 import "@/styles/space-ui-glitter.css";
+import "@/styles/space-ui-piteco-fullbody.css";
 
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/dashboard" },
