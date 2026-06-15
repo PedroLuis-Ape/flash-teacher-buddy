@@ -24,10 +24,10 @@ export function PaletteSelector({ compact = false, className }: PaletteSelectorP
       {!compact && (
         <div className="flex items-center gap-2">
           <Palette className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">Paleta de cores</span>
+          <span className="text-sm font-medium">Layout do aplicativo</span>
         </div>
       )}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {PALETTES.map((p) => {
           const active = p.id === palette;
           return (
@@ -55,7 +55,7 @@ export function PaletteSelector({ compact = false, className }: PaletteSelectorP
                 ))}
               </div>
               <span className="text-[11px] font-medium leading-tight text-center">
-                {p.name.replace("APE ", "")}
+                {p.shortName}
               </span>
               {active && (
                 <span className="absolute top-1 right-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">

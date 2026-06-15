@@ -1,5 +1,35 @@
 import { Fragment, useEffect, useRef } from "react";
 import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge";
+import { usePalette } from "@/hooks/usePalette";
+import { usePerformance } from "@/contexts/PerformanceContext";
+import "@/styles/space-layouts.css";
+
+const DRAWER_LAYOUT_CSS = `
+[role="dialog"][class~="left-0"][class~="inset-y-0"] {
+  width:min(88vw,360px)!important;max-width:360px!important;height:100dvh!important;
+  overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  background:hsl(var(--background)/.99)!important;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] > [class~="flex-1"][class~="overflow-y-auto"] {
+  min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] [class~="space-y-1"] {
+  display:flex!important;flex-direction:column!important;gap:.35rem!important;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] [class~="space-y-1"] > button {
+  width:100%!important;min-height:44px!important;justify-content:flex-start!important;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] [data-radix-scroll-area-viewport] {
+  max-height:220px;overscroll-behavior:contain;
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] > [class~="mt-auto"] {
+  flex:0 0 auto;padding-bottom:max(1rem,env(safe-area-inset-bottom));
+}
+[role="dialog"][class~="left-0"][class~="inset-y-0"] button[class*="opacity-0"] {opacity:.72;}
+.space-ui-brand-title{font-size:0!important}.space-ui-brand-title::after{content:"APE";font-size:.9rem}
+@media(max-width:359px){[role="dialog"][class~="left-0"][class~="inset-y-0"]{width:94vw!important}}
+@media(prefers-reduced-motion:reduce){[role="dialog"][class~="left-0"][class~="inset-y-0"]{transition-duration:0ms!important}}
+`;
 
 type TwinkleStar = {
   left: string;
@@ -12,115 +42,95 @@ type TwinkleStar = {
 };
 
 const STARS: readonly TwinkleStar[] = [
-  { left: "7%", top: "14%", size: 3, duration: 2400, delay: 150, glow: "rgba(255,255,255,.95)" },
-  { left: "18%", top: "66%", size: 2, duration: 3100, delay: 800, glow: "rgba(220,190,255,.95)" },
-  { left: "29%", top: "31%", size: 4, duration: 3900, delay: 1250, glow: "rgba(195,225,255,.95)" },
-  { left: "38%", top: "81%", size: 2, duration: 2700, delay: 450, glow: "rgba(255,255,255,.95)" },
-  { left: "49%", top: "18%", size: 3, duration: 3500, delay: 1700, glow: "rgba(235,200,255,.95)" },
-  { left: "57%", top: "53%", size: 2, duration: 2850, delay: 1050, glow: "rgba(255,255,255,.95)" },
-  { left: "67%", top: "76%", size: 4, duration: 4200, delay: 200, glow: "rgba(200,225,255,.95)" },
-  { left: "75%", top: "27%", size: 2, duration: 2600, delay: 1450, glow: "rgba(255,255,255,.95)" },
-  { left: "84%", top: "58%", size: 3, duration: 3300, delay: 650, glow: "rgba(230,190,255,.95)" },
-  { left: "93%", top: "19%", size: 2, duration: 3000, delay: 1900, glow: "rgba(255,255,255,.95)" },
-  { left: "12%", top: "43%", size: 2, duration: 3650, delay: 1100, glow: "rgba(195,225,255,.95)", desktopOnly: true },
-  { left: "33%", top: "59%", size: 3, duration: 2800, delay: 300, glow: "rgba(255,255,255,.95)", desktopOnly: true },
-  { left: "62%", top: "37%", size: 2, duration: 4050, delay: 1550, glow: "rgba(225,195,255,.95)", desktopOnly: true },
-  { left: "88%", top: "84%", size: 3, duration: 3200, delay: 900, glow: "rgba(200,225,255,.95)", desktopOnly: true },
+  { left: "7%", top: "14%", size: 3, duration: 2600, delay: -150, glow: "rgba(255,255,255,.95)" },
+  { left: "18%", top: "66%", size: 2, duration: 3400, delay: -800, glow: "rgba(220,190,255,.95)" },
+  { left: "38%", top: "81%", size: 2, duration: 2900, delay: -450, glow: "rgba(255,255,255,.95)" },
+  { left: "57%", top: "53%", size: 2, duration: 3100, delay: -1050, glow: "rgba(255,255,255,.95)" },
+  { left: "75%", top: "27%", size: 2, duration: 2800, delay: -1450, glow: "rgba(255,255,255,.95)" },
+  { left: "93%", top: "19%", size: 2, duration: 3200, delay: -1900, glow: "rgba(255,255,255,.95)" },
+  { left: "29%", top: "31%", size: 4, duration: 4100, delay: -1250, glow: "rgba(195,225,255,.95)", desktopOnly: true },
+  { left: "67%", top: "76%", size: 4, duration: 4400, delay: -200, glow: "rgba(200,225,255,.95)", desktopOnly: true },
+  { left: "84%", top: "58%", size: 3, duration: 3500, delay: -650, glow: "rgba(230,190,255,.95)", desktopOnly: true },
 ];
 
 export function SpaceTwinkleLayer() {
-  const layerRef = useRef<HTMLDivElement>(null);
+  const { palette } = usePalette();
+  const { settings } = usePerformance();
+  const shootingStarRef = useRef<HTMLSpanElement>(null);
+  const isGalaxy = palette === "galaxy";
+  const motionAllowed = settings.animations && !settings.reduceMotion && settings.decorativeEffects;
 
   useEffect(() => {
-    const layer = layerRef.current;
-    if (!layer) return;
+    if (!isGalaxy || !motionAllowed) return;
+    const star = shootingStarRef.current;
+    if (!star || typeof star.animate !== "function") return;
 
-    const stars = Array.from(layer.querySelectorAll<HTMLElement>("[data-space-twinkle]"));
-    const animations: Animation[] = [];
-    const timers: number[] = [];
+    let timer: number | undefined;
+    let cancelled = false;
+    const mobile = window.matchMedia("(max-width: 767px), (update: slow)").matches;
 
-    stars.forEach((star, index) => {
-      const config = STARS[index];
-
-      try {
-        if (typeof star.animate === "function") {
-          animations.push(
-            star.animate(
-              [
-                { opacity: 0.12, transform: "scale(.62)" },
-                { opacity: 0.95, transform: "scale(1.45)", offset: 0.48 },
-                { opacity: 0.18, transform: "scale(.75)" },
-              ],
-              {
-                duration: config.duration,
-                delay: -config.delay,
-                iterations: Infinity,
-                easing: "ease-in-out",
-              },
-            ),
-          );
-          return;
-        }
-      } catch (error) {
-        console.warn("[SpaceTwinkleLayer] Animation fallback enabled", error);
-      }
-
-      let visible = false;
-      const tick = () => {
-        visible = !visible;
-        star.style.opacity = visible ? "0.95" : "0.15";
-        star.style.transform = visible ? "scale(1.35)" : "scale(.7)";
-      };
-      timers.push(window.setInterval(tick, Math.max(1400, config.duration / 2)));
-    });
-
-    const syncVisibility = () => {
-      for (const animation of animations) {
-        if (document.hidden) animation.pause();
-        else animation.play();
-      }
+    const schedule = (first = false) => {
+      if (cancelled) return;
+      const min = first ? 9000 : mobile ? 35000 : 24000;
+      const variation = first ? 7000 : mobile ? 25000 : 22000;
+      timer = window.setTimeout(run, min + Math.random() * variation);
     };
 
-    document.addEventListener("visibilitychange", syncVisibility);
-    syncVisibility();
+    const run = () => {
+      if (cancelled) return;
+      if (document.hidden) {
+        schedule();
+        return;
+      }
+      const top = 8 + Math.random() * 42;
+      star.style.top = `${top}%`;
+      star.style.left = "-12rem";
+      const animation = star.animate(
+        [
+          { opacity: 0, transform: "translate3d(0,0,0) rotate(-24deg)" },
+          { opacity: 1, offset: 0.12 },
+          { opacity: 0.95, offset: 0.72 },
+          { opacity: 0, transform: "translate3d(140vw,52vh,0) rotate(-24deg)" },
+        ],
+        { duration: mobile ? 1500 : 1250, easing: "cubic-bezier(.2,.65,.35,1)" },
+      );
+      animation.finished.catch(() => undefined).finally(() => schedule());
+    };
 
+    schedule(true);
     return () => {
-      document.removeEventListener("visibilitychange", syncVisibility);
-      for (const animation of animations) animation.cancel();
-      for (const timer of timers) window.clearInterval(timer);
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
     };
-  }, []);
+  }, [isGalaxy, motionAllowed]);
 
   return (
     <Fragment>
+      <style>{DRAWER_LAYOUT_CSS}</style>
       <PitecoHeroAssetBridge />
-      <div
-        ref={layerRef}
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 overflow-hidden"
-        style={{ zIndex: 35 }}
-      >
-        {STARS.map((star) => (
-          <span
-            key={`${star.left}-${star.top}`}
-            data-space-twinkle
-            className={star.desktopOnly ? "hidden md:block" : undefined}
-            style={{
-              position: "absolute",
-              left: star.left,
-              top: star.top,
-              width: star.size,
-              height: star.size,
-              borderRadius: 999,
-              background: star.glow,
-              boxShadow: `0 0 ${star.size * 3}px ${star.size}px ${star.glow}`,
-              opacity: 0.2,
-              transformOrigin: "center",
-              transition: "opacity .6s ease, transform .6s ease",
-            }}
-          />
-        ))}
-      </div>
+      {isGalaxy && (
+        <div aria-hidden="true" className="space-galaxy-effects">
+          <span className="space-galaxy-arm" />
+          {settings.decorativeEffects && STARS.map((star) => (
+            <span
+              key={`${star.left}-${star.top}`}
+              data-space-twinkle
+              className={`space-twinkle-star${star.desktopOnly ? " space-twinkle-star--desktop" : ""}`}
+              style={{
+                left: star.left,
+                top: star.top,
+                width: star.size,
+                height: star.size,
+                background: star.glow,
+                boxShadow: `0 0 ${star.size * 3}px ${star.size}px ${star.glow}`,
+                "--twinkle-duration": `${star.duration}ms`,
+                "--twinkle-delay": `${star.delay}ms`,
+              } as React.CSSProperties}
+            />
+          ))}
+          {motionAllowed && <span ref={shootingStarRef} className="space-shooting-star" />}
+        </div>
+      )}
     </Fragment>
   );
 }

@@ -1,42 +1,30 @@
 /**
  * Performance Settings Store
- * 
+ *
  * Synchronous localStorage-based settings for performance/quality presets.
- * Reads BEFORE React renders to avoid flash of wrong settings.
  */
 
-const STORAGE_KEY = 'ape-performance-settings';
+const STORAGE_KEY = "ape-performance-settings";
 
-export type PerformancePreset = 'high' | 'balanced' | 'light';
+export type PerformancePreset = "high" | "balanced" | "light";
 
 export interface PerformanceSettings {
   preset: PerformancePreset;
-  /** Sound effects in study games */
   soundEffects: boolean;
-  /** Page transition animations (fade/scale) */
   animations: boolean;
-  /** Hover effects on cards and interactive elements */
   hoverEffects: boolean;
-  /** Word-level tooltips in study views */
   wordTooltips: boolean;
-  /** Decorative visual effects (glow, gradients, blur) */
   decorativeEffects: boolean;
-  /** Advanced visual feedback (scale on press, ripples) */
   visualFeedback: boolean;
-  /** High quality images vs optimized/compressed */
   highQualityImages: boolean;
-  /** Aggressive prefetching of routes/data */
   prefetching: boolean;
-  /** Reduce motion (respects OS preference too) */
   reduceMotion: boolean;
-  /** Tab bar animated indicator */
   tabBarAnimations: boolean;
-  /** Backdrop blur effects */
   backdropBlur: boolean;
 }
 
 export const PRESET_HIGH: PerformanceSettings = {
-  preset: 'high',
+  preset: "high",
   soundEffects: true,
   animations: true,
   hoverEffects: true,
@@ -51,7 +39,7 @@ export const PRESET_HIGH: PerformanceSettings = {
 };
 
 export const PRESET_BALANCED: PerformanceSettings = {
-  preset: 'balanced',
+  preset: "balanced",
   soundEffects: true,
   animations: true,
   hoverEffects: true,
@@ -66,7 +54,7 @@ export const PRESET_BALANCED: PerformanceSettings = {
 };
 
 export const PRESET_LIGHT: PerformanceSettings = {
-  preset: 'light',
+  preset: "light",
   soundEffects: false,
   animations: false,
   hoverEffects: false,
@@ -86,50 +74,53 @@ export const PRESETS: Record<PerformancePreset, PerformanceSettings> = {
   light: PRESET_LIGHT,
 };
 
-/** Read settings synchronously from localStorage — safe to call before React mounts */
+function shouldPreferBalanced(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(max-width: 767px), (pointer: coarse), (update: slow)").matches;
+}
+
+export function getRecommendedPerformanceSettings(): PerformanceSettings {
+  return { ...(shouldPreferBalanced() ? PRESET_BALANCED : PRESET_HIGH) };
+}
+
 export function readPerformanceSettings(): PerformanceSettings {
-  if (typeof window === 'undefined') return PRESET_HIGH;
+  if (typeof window === "undefined") return { ...PRESET_BALANCED };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return PRESET_HIGH;
+    if (!raw) return getRecommendedPerformanceSettings();
     const parsed = JSON.parse(raw) as Partial<PerformanceSettings>;
-    // Merge with defaults to handle new keys added in future versions
-    return { ...PRESET_HIGH, ...parsed };
+    return { ...getRecommendedPerformanceSettings(), ...parsed };
   } catch {
-    return PRESET_HIGH;
+    return getRecommendedPerformanceSettings();
   }
 }
 
-/** Write settings to localStorage */
 export function writePerformanceSettings(settings: PerformanceSettings): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   } catch {
-    // quota exceeded — silently fail
+    // Best effort only.
   }
 }
 
-/** Detect which preset matches the current toggles, or 'custom' */
-export function detectPreset(settings: PerformanceSettings): PerformancePreset | 'custom' {
+export function detectPreset(settings: PerformanceSettings): PerformancePreset | "custom" {
   for (const [key, preset] of Object.entries(PRESETS) as [PerformancePreset, PerformanceSettings][]) {
     const match = (Object.keys(preset) as (keyof PerformanceSettings)[])
-      .filter(k => k !== 'preset')
-      .every(k => settings[k] === preset[k]);
+      .filter((settingKey) => settingKey !== "preset")
+      .every((settingKey) => settings[settingKey] === preset[settingKey]);
     if (match) return key;
   }
-  return 'custom';
+  return "custom";
 }
 
-// ── Global synchronous getter (for non-React code like sfx.ts) ──
-let _cached: PerformanceSettings | null = null;
+let cachedSettings: PerformanceSettings | null = null;
 
 export function getPerfSettings(): PerformanceSettings {
-  if (!_cached) _cached = readPerformanceSettings();
-  return _cached;
+  if (!cachedSettings) cachedSettings = readPerformanceSettings();
+  return cachedSettings;
 }
 
-/** Called by context when settings change, so global getter stays in sync */
-export function updatePerfSettingsCache(s: PerformanceSettings): void {
-  _cached = s;
+export function updatePerfSettingsCache(settings: PerformanceSettings): void {
+  cachedSettings = settings;
 }
