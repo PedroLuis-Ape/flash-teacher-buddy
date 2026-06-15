@@ -1,4 +1,9 @@
-/* Animated star layers for the reversible Space UI redesign. */
+/*
+ * Optimized live stars for Space UI.
+ * Two opacity-only compositor layers: more visible than the previous version,
+ * but without full-screen transform, filter or blend-mode animations.
+ */
+
 .space-ui-main {
   position: relative;
   isolation: isolate;
@@ -10,40 +15,50 @@
   position: fixed;
   inset: 4rem 0 4.5rem;
   pointer-events: none;
-  mix-blend-mode: screen;
+  background-repeat: repeat;
+  animation: none;
+  will-change: opacity;
 }
 
 .space-ui-main::before {
   z-index: 18;
-  opacity: .15;
+  opacity: 0.2;
   background-image:
-    radial-gradient(circle at 8% 18%, rgb(255 255 255 / .96) 0 1.2px, transparent 2.4px),
-    radial-gradient(circle at 26% 72%, rgb(230 188 255 / .84) 0 1px, transparent 2px),
-    radial-gradient(circle at 47% 32%, rgb(194 224 255 / .82) 0 1.1px, transparent 2.2px),
-    radial-gradient(circle at 68% 78%, rgb(255 255 255 / .93) 0 1.2px, transparent 2.4px),
-    radial-gradient(circle at 89% 24%, rgb(239 188 255 / .82) 0 1px, transparent 2px),
-    radial-gradient(circle at 15% 54%, rgb(255 255 255 / .9) 0 .9px, transparent 1.9px),
-    radial-gradient(circle at 59% 14%, rgb(255 255 255 / .88) 0 1px, transparent 2px),
-    radial-gradient(circle at 83% 61%, rgb(198 226 255 / .8) 0 1px, transparent 2px);
+    radial-gradient(circle at 8% 18%, rgb(255 255 255 / 1) 0 1.4px, transparent 2.8px),
+    radial-gradient(circle at 26% 72%, rgb(230 188 255 / .95) 0 1.2px, transparent 2.5px),
+    radial-gradient(circle at 47% 32%, rgb(194 224 255 / .95) 0 1.3px, transparent 2.6px),
+    radial-gradient(circle at 68% 78%, rgb(255 255 255 / 1) 0 1.4px, transparent 2.8px),
+    radial-gradient(circle at 89% 24%, rgb(239 188 255 / .94) 0 1.2px, transparent 2.5px),
+    radial-gradient(circle at 15% 54%, rgb(255 255 255 / .96) 0 1px, transparent 2.1px),
+    radial-gradient(circle at 59% 14%, rgb(255 255 255 / .96) 0 1.1px, transparent 2.3px),
+    radial-gradient(circle at 83% 61%, rgb(198 226 255 / .92) 0 1.1px, transparent 2.3px);
   background-size: 360px 360px, 440px 440px, 520px 520px, 610px 610px, 470px 470px, 390px 390px, 560px 560px, 480px 480px;
-  animation: space-live-stars-a 6.5s ease-in-out infinite alternate;
 }
 
 .space-ui-main::after {
   z-index: 19;
-  opacity: .09;
+  opacity: 0.12;
   background-image:
-    radial-gradient(circle at 12% 38%, rgb(255 255 255 / .95) 0 .9px, transparent 1.9px),
-    radial-gradient(circle at 34% 16%, rgb(224 196 255 / .82) 0 1px, transparent 2px),
-    radial-gradient(circle at 51% 84%, rgb(255 255 255 / .9) 0 1px, transparent 2px),
-    radial-gradient(circle at 72% 28%, rgb(189 222 255 / .84) 0 .95px, transparent 2px),
-    radial-gradient(circle at 94% 72%, rgb(255 255 255 / .93) 0 1px, transparent 2px),
-    radial-gradient(circle at 41% 58%, rgb(255 255 255 / .9) 0 .85px, transparent 1.8px),
-    radial-gradient(circle at 77% 86%, rgb(231 191 255 / .8) 0 .95px, transparent 1.9px);
+    radial-gradient(circle at 12% 38%, rgb(255 255 255 / 1) 0 1px, transparent 2.2px),
+    radial-gradient(circle at 34% 16%, rgb(224 196 255 / .94) 0 1.1px, transparent 2.3px),
+    radial-gradient(circle at 51% 84%, rgb(255 255 255 / .98) 0 1.1px, transparent 2.3px),
+    radial-gradient(circle at 72% 28%, rgb(189 222 255 / .96) 0 1.05px, transparent 2.2px),
+    radial-gradient(circle at 94% 72%, rgb(255 255 255 / 1) 0 1.1px, transparent 2.3px),
+    radial-gradient(circle at 41% 58%, rgb(255 255 255 / .96) 0 .95px, transparent 2px),
+    radial-gradient(circle at 77% 86%, rgb(231 191 255 / .92) 0 1px, transparent 2.1px);
   background-size: 430px 430px, 570px 570px, 620px 620px, 500px 500px, 680px 680px, 360px 360px, 520px 520px;
-  animation: space-live-stars-b 9s ease-in-out infinite alternate;
 }
 
+/* Motion is opt-in from PerformanceContext, so Light/reduced-motion stays static. */
+html[data-perf-space-stars] .space-ui-main::before {
+  animation: space-live-stars-a 4.8s ease-in-out infinite alternate;
+}
+
+html[data-perf-space-stars] .space-ui-main::after {
+  animation: space-live-stars-b 7.2s ease-in-out 1.4s infinite alternate;
+}
+
+/* Let the galaxy show through while avoiding expensive blur on every device. */
 .space-ui .bg-card,
 .space-ui .stat-tile,
 .space-ui .card-premium,
@@ -55,60 +70,74 @@
   background:
     radial-gradient(circle at 14% 22%, rgb(255 255 255 / .18) 0 .8px, transparent 1.8px),
     radial-gradient(circle at 78% 18%, hsl(var(--primary-glow) / .16) 0 .9px, transparent 2px),
-    linear-gradient(145deg, hsl(251 46% 13% / .44), hsl(248 48% 8% / .52)) !important;
+    linear-gradient(145deg, hsl(251 46% 13% / .46), hsl(248 48% 8% / .54)) !important;
   background-size: 180px 180px, 250px 250px, 100% 100% !important;
-  backdrop-filter: blur(12px) saturate(122%);
-  -webkit-backdrop-filter: blur(12px) saturate(122%);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.space-ui main button:not([role="switch"]),
-.space-ui .study-tools-floating-trigger {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
+html[data-perf-backdrop] .space-ui .bg-card,
+html[data-perf-backdrop] .space-ui .stat-tile,
+html[data-perf-backdrop] .space-ui .card-premium,
+html[data-perf-backdrop] .space-ui .glass-panel,
+html[data-perf-backdrop] .space-ui .space-ui-list-card,
+html[data-perf-backdrop] .space-ui .space-ui-folder-card,
+html[data-perf-backdrop] .space-ui .space-ui-class-card {
+  backdrop-filter: blur(7px) saturate(116%) !important;
+  -webkit-backdrop-filter: blur(7px) saturate(116%) !important;
 }
 
+/* Rows and buttons keep static stars; animating every control was costly. */
 .space-ui main button:not([role="switch"])::before,
 .space-ui .study-tools-floating-trigger::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: .12;
-  mix-blend-mode: screen;
-  background-image:
-    radial-gradient(circle at 18% 30%, rgb(255 255 255 / .9) 0 .7px, transparent 1.5px),
-    radial-gradient(circle at 74% 24%, hsl(var(--primary-glow) / .78) 0 .8px, transparent 1.7px),
-    radial-gradient(circle at 58% 76%, rgb(255 255 255 / .66) 0 .7px, transparent 1.5px);
-  background-size: 112px 112px, 168px 168px, 204px 204px;
-  animation: space-live-button 7s ease-in-out infinite alternate;
+  animation: none !important;
+  opacity: .1;
+  mix-blend-mode: normal;
 }
 
 @keyframes space-live-stars-a {
-  from { opacity: .07; transform: translateY(0) scale(1); filter: brightness(.95); }
-  to { opacity: .18; transform: translateY(-1px) scale(1.008); filter: brightness(1.15); }
+  from { opacity: .08; }
+  42% { opacity: .34; }
+  to { opacity: .14; }
 }
 
 @keyframes space-live-stars-b {
-  from { opacity: .04; transform: translateY(0) scale(1); filter: brightness(.95); }
-  to { opacity: .13; transform: translateY(1px) scale(1.006); filter: brightness(1.18); }
-}
-
-@keyframes space-live-button {
-  from { opacity: .05; filter: brightness(.95); }
-  to { opacity: .14; filter: brightness(1.1); }
+  from { opacity: .05; }
+  58% { opacity: .28; }
+  to { opacity: .1; }
 }
 
 @media (max-width: 767px) {
   .space-ui-main::before,
-  .space-ui-main::after { inset: 3.5rem 0 4.25rem; }
-  .space-ui-main::before { opacity: .1; }
-  .space-ui-main::after { opacity: .06; }
+  .space-ui-main::after {
+    inset: 3.5rem 0 4.25rem;
+  }
+
+  .space-ui-main::before {
+    opacity: .14;
+    background-size: 420px 420px, 520px 520px, 610px 610px, 680px 680px, 560px 560px, 460px 460px, 650px 650px, 580px 580px;
+  }
+
+  /* One animated layer on mobile cuts compositor work roughly in half. */
+  .space-ui-main::after {
+    display: none;
+  }
+
+  html[data-perf-backdrop] .space-ui .bg-card,
+  html[data-perf-backdrop] .space-ui .stat-tile,
+  html[data-perf-backdrop] .space-ui .card-premium,
+  html[data-perf-backdrop] .space-ui .glass-panel,
+  html[data-perf-backdrop] .space-ui .space-ui-list-card,
+  html[data-perf-backdrop] .space-ui .space-ui-folder-card,
+  html[data-perf-backdrop] .space-ui .space-ui-class-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .space-ui-main::before,
-  .space-ui-main::after,
-  .space-ui main button:not([role="switch"])::before,
-  .space-ui .study-tools-floating-trigger::before { animation: none !important; }
+  .space-ui-main::after {
+    animation: none !important;
+  }
 }
