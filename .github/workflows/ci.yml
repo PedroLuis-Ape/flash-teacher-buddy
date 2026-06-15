@@ -36,7 +36,17 @@ jobs:
         run: npm run test
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint -- --format json --output-file lint-report.json
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: lint-report.json
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Production build
+        if: always()
         run: npm run build
