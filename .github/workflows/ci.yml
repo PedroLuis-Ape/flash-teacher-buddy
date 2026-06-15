@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Typecheck, test, lint and build
+    name: Publication validation
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -29,5 +29,14 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Run full validation
-        run: npm run check
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm run test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
