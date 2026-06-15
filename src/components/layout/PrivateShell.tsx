@@ -36,6 +36,7 @@ import { BrowserCheck } from "@/components/BrowserCheck";
 import { GoogleConnectPrompt } from "@/features/auth/components/GoogleConnectPrompt";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import "@/styles/space-ui-v1.css";
+import "@/styles/space-ui-components.css";
 
 // Lazy-load heavy modals and badges (not needed for FCP)
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
