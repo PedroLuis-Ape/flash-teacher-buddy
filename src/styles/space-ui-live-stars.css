@@ -1,0 +1,134 @@
+/*
+ * Galaxy-only live stars.
+ * Standard palettes must never inherit space textures or animated layers.
+ */
+
+.space-ui-main {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-palette="galaxy"] .space-ui-main::before,
+html[data-palette="galaxy"] .space-ui-main::after {
+  content: "";
+  position: fixed;
+  inset: 4rem 0 4.5rem;
+  pointer-events: none;
+  background-repeat: repeat;
+  animation: none;
+}
+
+html[data-palette="galaxy"] .space-ui-main::before {
+  z-index: 0;
+  opacity: 0.16;
+  background-image:
+    radial-gradient(circle at 8% 18%, rgb(255 255 255 / .95) 0 1.2px, transparent 2.5px),
+    radial-gradient(circle at 28% 72%, rgb(230 188 255 / .84) 0 1px, transparent 2.2px),
+    radial-gradient(circle at 49% 32%, rgb(194 224 255 / .86) 0 1.1px, transparent 2.3px),
+    radial-gradient(circle at 72% 78%, rgb(255 255 255 / .92) 0 1.2px, transparent 2.5px),
+    radial-gradient(circle at 91% 24%, rgb(239 188 255 / .82) 0 1px, transparent 2.2px);
+  background-size: 420px 420px, 520px 520px, 610px 610px, 700px 700px, 560px 560px;
+}
+
+html[data-palette="galaxy"] .space-ui-main::after {
+  z-index: 0;
+  opacity: 0.08;
+  background-image:
+    radial-gradient(circle at 14% 38%, rgb(255 255 255 / .9) 0 .9px, transparent 2px),
+    radial-gradient(circle at 38% 16%, rgb(224 196 255 / .82) 0 1px, transparent 2.1px),
+    radial-gradient(circle at 58% 84%, rgb(255 255 255 / .88) 0 1px, transparent 2.1px),
+    radial-gradient(circle at 82% 28%, rgb(189 222 255 / .84) 0 .95px, transparent 2px);
+  background-size: 560px 560px, 680px 680px, 760px 760px, 620px 620px;
+}
+
+html[data-palette="galaxy"][data-perf-space-stars] .space-ui-main::before {
+  animation: space-live-stars-a 12s ease-in-out infinite alternate;
+}
+
+html[data-palette="galaxy"][data-perf-space-stars] .space-ui-main::after {
+  animation: space-live-stars-b 18s ease-in-out 2s infinite alternate;
+}
+
+html[data-palette="galaxy"] .space-ui .bg-card,
+html[data-palette="galaxy"] .space-ui .stat-tile,
+html[data-palette="galaxy"] .space-ui .card-premium,
+html[data-palette="galaxy"] .space-ui .glass-panel,
+html[data-palette="galaxy"] .space-ui .space-ui-list-card,
+html[data-palette="galaxy"] .space-ui .space-ui-folder-card,
+html[data-palette="galaxy"] .space-ui .space-ui-class-card,
+html[data-palette="galaxy"] .space-ui .space-ui-class-row {
+  background:
+    radial-gradient(circle at 14% 22%, rgb(255 255 255 / .11) 0 .7px, transparent 1.6px),
+    linear-gradient(145deg, hsl(251 42% 13% / .9), hsl(248 46% 8% / .94)) !important;
+  background-size: 220px 220px, 100% 100% !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-palette="galaxy"][data-perf-backdrop] .space-ui .bg-card,
+html[data-palette="galaxy"][data-perf-backdrop] .space-ui .stat-tile,
+html[data-palette="galaxy"][data-perf-backdrop] .space-ui .card-premium,
+html[data-palette="galaxy"][data-perf-backdrop] .space-ui .glass-panel,
+html[data-palette="galaxy"][data-perf-backdrop] .space-ui .space-ui-list-card,
+html[data-palette="galaxy"][data-perf-backdrop] .space-ui .space-ui-folder-card,
+html[data-palette="galaxy"][data-perf-backdrop] .space-ui .space-ui-class-card {
+  backdrop-filter: blur(5px) saturate(108%) !important;
+  -webkit-backdrop-filter: blur(5px) saturate(108%) !important;
+}
+
+html[data-palette="galaxy"] .space-ui main button:not([role="switch"])::before,
+html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger::before {
+  animation: none !important;
+  opacity: .06;
+  mix-blend-mode: normal;
+}
+
+@keyframes space-live-stars-a {
+  from { opacity: .08; }
+  50% { opacity: .2; }
+  to { opacity: .11; }
+}
+
+@keyframes space-live-stars-b {
+  from { opacity: .04; }
+  55% { opacity: .12; }
+  to { opacity: .06; }
+}
+
+@media (max-width: 767px), (update: slow) {
+  html[data-palette="galaxy"] .space-ui-main::before,
+  html[data-palette="galaxy"] .space-ui-main::after {
+    inset: 3.5rem 0 4.25rem;
+    animation: none !important;
+  }
+
+  html[data-palette="galaxy"] .space-ui-main::before {
+    opacity: .1;
+    background-size: 540px 540px, 660px 660px, 760px 760px, 860px 860px, 700px 700px;
+  }
+
+  html[data-palette="galaxy"] .space-ui-main::after {
+    display: none;
+  }
+
+  html[data-palette="galaxy"] .space-ui .bg-card,
+  html[data-palette="galaxy"] .space-ui .stat-tile,
+  html[data-palette="galaxy"] .space-ui .card-premium,
+  html[data-palette="galaxy"] .space-ui .glass-panel,
+  html[data-palette="galaxy"] .space-ui .space-ui-list-card,
+  html[data-palette="galaxy"] .space-ui .space-ui-folder-card,
+  html[data-palette="galaxy"] .space-ui .space-ui-class-card,
+  html[data-palette="galaxy"] .space-ui .space-ui-class-row {
+    background: linear-gradient(145deg, hsl(251 40% 12%), hsl(248 42% 8%)) !important;
+    background-size: 100% 100% !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-palette="galaxy"] .space-ui-main::before,
+  html[data-palette="galaxy"] .space-ui-main::after {
+    animation: none !important;
+  }
+}
