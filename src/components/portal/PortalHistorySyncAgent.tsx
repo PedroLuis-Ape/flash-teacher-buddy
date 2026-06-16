@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useGuestHistory } from '@/hooks/useGuestHistory';
 import {
@@ -21,41 +21,53 @@ function fingerprint(items: unknown[]) {
 export function PortalHistorySyncAgent() {
   const { user, isLoading } = useAuthUser();
   const { items } = useGuestHistory();
-  const bootstrappedRef = useRef(false);
+  const modeKey = useMemo(() => user?.id || 'guest', [user?.id]);
+  const readyModeRef = useRef('');
   const lastSyncedFingerprintRef = useRef('');
 
   useEffect(() => {
-    if (isLoading || bootstrappedRef.current) return;
-    bootstrappedRef.current = true;
+    if (isLoading || readyModeRef.current === modeKey) return;
+    let cancelled = false;
 
     const bootstrap = async () => {
       try {
         if (user?.id) {
-          await migrateAnonymousPortalHistoryToAccount(user.id);
-          lastSyncedFingerprintRef.current = fingerprint(items);
+          const merged = await migrateAnonymousPortalHistoryToAccount(user.id);
+          if (cancelled) return;
+          lastSyncedFingerprintRef.current = fingerprint(merged);
+          readyModeRef.current = modeKey;
           return;
         }
 
         const syncState = getGuestServerSyncState();
         if (syncState.enabled) {
           const restored = await restoreAnonymousPortalHistory();
+          if (cancelled) return;
           lastSyncedFingerprintRef.current = fingerprint(restored);
+        } else {
+          lastSyncedFingerprintRef.current = fingerprint(items);
         }
+        readyModeRef.current = modeKey;
       } catch (error: any) {
+        if (cancelled) return;
         const current = getGuestServerSyncState();
         setGuestServerSyncState({
           ...current,
           lastError: error?.message || 'SYNC_BOOTSTRAP_FAILED',
         });
+        readyModeRef.current = modeKey;
         console.warn('[PortalHistorySync] bootstrap failed:', error);
       }
     };
 
     void bootstrap();
-  }, [isLoading, items, user?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, items, modeKey, user?.id]);
 
   useEffect(() => {
-    if (isLoading || !bootstrappedRef.current) return;
+    if (isLoading || readyModeRef.current !== modeKey) return;
     const currentFingerprint = fingerprint(items);
     if (currentFingerprint === lastSyncedFingerprintRef.current) return;
 
@@ -68,7 +80,10 @@ export function PortalHistorySyncAgent() {
         }
 
         const syncState = getGuestServerSyncState();
-        if (!syncState.enabled) return;
+        if (!syncState.enabled) {
+          lastSyncedFingerprintRef.current = currentFingerprint;
+          return;
+        }
         const merged = await syncAnonymousPortalHistory(items);
         lastSyncedFingerprintRef.current = fingerprint(merged);
       } catch (error: any) {
@@ -82,7 +97,7 @@ export function PortalHistorySyncAgent() {
     }, 800);
 
     return () => window.clearTimeout(timer);
-  }, [isLoading, items, user?.id]);
+  }, [isLoading, items, modeKey, user?.id]);
 
   return null;
 }
