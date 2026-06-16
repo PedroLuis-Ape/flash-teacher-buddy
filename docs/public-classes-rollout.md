@@ -30,3 +30,7 @@ This branch introduces public, read-only classroom sharing and a persisted landi
 - Galaxy selector persists after reload;
 - mobile Galaxy renders without animated stars;
 - `/health.json` returns the static shell health payload.
+
+## Preview limitation
+
+The Netlify preview validates the web build and interface. Public classroom records will appear there only after the migration and Edge Functions are also available in the connected Supabase environment.
