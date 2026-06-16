@@ -31,7 +31,7 @@ serve(async (req) => {
       );
     }
 
-    const { nome, descricao } = await req.json();
+    const { nome, descricao, public: isPublic = false } = await req.json();
 
     if (!nome || nome.trim().length === 0) {
       return new Response(
@@ -47,6 +47,7 @@ serve(async (req) => {
         nome: nome.trim(),
         descricao: descricao?.trim() || null,
         ativo: true,
+        public: isPublic === true,
       })
       .select()
       .single();
