@@ -31,6 +31,14 @@ type TwinkleStar = {
   glow: string;
 };
 
+type CometLane = {
+  top: number;
+  delay: number;
+  travelX: string;
+  travelY: string;
+  durationScale: number;
+};
+
 const STARS: readonly TwinkleStar[] = [
   { left: "7%", top: "14%", size: 3, duration: 11_400, delay: -1_350, glow: "rgba(255,255,255,.9)" },
   { left: "38%", top: "81%", size: 2, duration: 8_900, delay: -5_200, glow: "rgba(224,196,255,.86)" },
@@ -44,6 +52,17 @@ const STARS: readonly TwinkleStar[] = [
   { left: "66%", top: "72%", size: 3, duration: 13_800, delay: -4_600, glow: "rgba(205,228,255,.82)" },
 ];
 
+const FULL_COMET_LANES: readonly CometLane[] = [
+  { top: 3, delay: 0, travelX: "134vw", travelY: "44vh", durationScale: 1 },
+  { top: 20, delay: 1_200, travelX: "136vw", travelY: "43vh", durationScale: 1.03 },
+  { top: 38, delay: 2_400, travelX: "138vw", travelY: "42vh", durationScale: 1.06 },
+  { top: 56, delay: 3_600, travelX: "140vw", travelY: "41vh", durationScale: 1.09 },
+];
+
+const BALANCED_COMET_LANES: readonly CometLane[] = [
+  { top: 20, delay: 0, travelX: "128vw", travelY: "38vh", durationScale: 1 },
+];
+
 interface NavigatorWithConnection extends Navigator {
   connection?: EventTarget;
 }
@@ -55,7 +74,7 @@ function motionClass(tier: GalaxyMotionTier) {
 export function SpaceTwinkleLayer() {
   const { palette } = usePalette();
   const { settings } = usePerformance();
-  const shootingStarRef = useRef<HTMLSpanElement>(null);
+  const cometRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const [motionTier, setMotionTier] = useState<GalaxyMotionTier>(() => detectGalaxyMotionTier());
   const isGalaxy = palette === "galaxy";
   const motionAllowed = settings.animations && !settings.reduceMotion && motionTier !== "static";
@@ -63,6 +82,7 @@ export function SpaceTwinkleLayer() {
   const armMotionAllowed = starMotionAllowed && motionTier === "full";
   const shootingStarAllowed = motionAllowed && settings.decorativeEffects;
   const visibleStars = STARS.slice(0, getGalaxyStarLimit(motionTier));
+  const cometLanes = motionTier === "full" ? FULL_COMET_LANES : BALANCED_COMET_LANES;
 
   useEffect(() => {
     const mediaQueries = [
@@ -107,70 +127,92 @@ export function SpaceTwinkleLayer() {
 
   useEffect(() => {
     if (!isGalaxy || !shootingStarAllowed || motionTier === "static") return;
-    const star = shootingStarRef.current;
-    if (!star || typeof star.animate !== "function") return;
 
     const timing = getShootingStarTiming(motionTier);
-    let timer: number | undefined;
-    let activeAnimation: Animation | null = null;
+    const lanes = motionTier === "full" ? FULL_COMET_LANES : BALANCED_COMET_LANES;
+    let groupTimer: number | undefined;
+    const laneTimers = new Set<number>();
+    const activeAnimations = new Set<Animation>();
     let cancelled = false;
 
-    const clearTimer = () => {
-      if (timer) window.clearTimeout(timer);
-      timer = undefined;
+    const clearTimers = () => {
+      if (groupTimer) window.clearTimeout(groupTimer);
+      groupTimer = undefined;
+      laneTimers.forEach((timer) => window.clearTimeout(timer));
+      laneTimers.clear();
     };
 
-    const schedule = (first = false) => {
-      if (cancelled || document.hidden) return;
-      clearTimer();
-      const min = first ? timing.firstDelayMin : timing.repeatDelayMin;
-      const variation = first ? timing.firstDelayVariation : timing.repeatDelayVariation;
-      timer = window.setTimeout(run, min + Math.random() * variation);
+    const cancelAnimations = () => {
+      activeAnimations.forEach((animation) => animation.cancel());
+      activeAnimations.clear();
     };
 
-    const run = () => {
-      timer = undefined;
+    const animateLane = (lane: CometLane, index: number) => {
       if (cancelled || document.hidden) return;
+      const comet = cometRefs.current[index];
+      if (!comet || typeof comet.animate !== "function") return;
 
-      star.style.top = `${10 + Math.random() * 36}%`;
-      star.style.left = "-14rem";
-      const travelX = motionTier === "balanced" ? "122vw" : "130vw";
-      const travelY = motionTier === "balanced" ? "34vh" : "40vh";
+      comet.style.top = `${lane.top}%`;
+      comet.style.left = "-16rem";
+      const duration = Math.round(timing.duration * lane.durationScale);
 
-      activeAnimation = star.animate(
+      const animation = comet.animate(
         [
-          { opacity: 0, transform: "translate3d(0,0,0) rotate(-22deg)" },
-          { opacity: .48, offset: .16 },
-          { opacity: .88, offset: .42 },
-          { opacity: .58, offset: .72 },
-          { opacity: 0, transform: `translate3d(${travelX},${travelY},0) rotate(-22deg)` },
+          { opacity: 0, transform: "translate3d(0,0,0) rotate(-22deg) scale(.94)" },
+          { opacity: .56, offset: .12 },
+          { opacity: 1, offset: .34, transform: "translate3d(36vw,11vh,0) rotate(-22deg) scale(1)" },
+          { opacity: .82, offset: .72 },
+          { opacity: 0, transform: `translate3d(${lane.travelX},${lane.travelY},0) rotate(-22deg) scale(.98)` },
         ],
-        { duration: timing.duration, easing: "cubic-bezier(.22,.58,.34,1)" },
+        { duration, easing: "cubic-bezier(.18,.55,.28,1)" },
       );
 
-      activeAnimation.finished.catch(() => undefined).finally(() => {
-        activeAnimation = null;
-        schedule();
+      activeAnimations.add(animation);
+      animation.finished.catch(() => undefined).finally(() => activeAnimations.delete(animation));
+    };
+
+    const runGroup = () => {
+      groupTimer = undefined;
+      if (cancelled || document.hidden) return;
+
+      lanes.forEach((lane, index) => {
+        const timer = window.setTimeout(() => {
+          laneTimers.delete(timer);
+          animateLane(lane, index);
+        }, lane.delay);
+        laneTimers.add(timer);
       });
+
+      groupTimer = window.setTimeout(
+        runGroup,
+        timing.repeatDelayMin + Math.random() * timing.repeatDelayVariation,
+      );
+    };
+
+    const scheduleFirstGroup = () => {
+      if (cancelled || document.hidden) return;
+      groupTimer = window.setTimeout(
+        runGroup,
+        timing.firstDelayMin + Math.random() * timing.firstDelayVariation,
+      );
     };
 
     const handleVisibility = () => {
       if (document.hidden) {
-        clearTimer();
-        activeAnimation?.cancel();
-        activeAnimation = null;
+        clearTimers();
+        cancelAnimations();
         return;
       }
-      schedule(true);
+      scheduleFirstGroup();
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
-    schedule(true);
+    scheduleFirstGroup();
 
     return () => {
       cancelled = true;
-      clearTimer();
-      activeAnimation?.cancel();
+      clearTimers();
+      cancelAnimations();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [isGalaxy, motionTier, shootingStarAllowed]);
@@ -205,7 +247,15 @@ export function SpaceTwinkleLayer() {
               } as React.CSSProperties}
             />
           ))}
-          {shootingStarAllowed && <span ref={shootingStarRef} className="space-shooting-star" />}
+          {shootingStarAllowed && cometLanes.map((_, index) => (
+            <span
+              key={`comet-${motionTier}-${index}`}
+              ref={(node) => {
+                cometRefs.current[index] = node;
+              }}
+              className={`space-shooting-star space-shooting-star--${index + 1}`}
+            />
+          ))}
         </div>
       )}
     </Fragment>
