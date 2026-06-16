@@ -4,12 +4,39 @@ html[data-palette="galaxy"] .space-ui-shell::after {
   z-index: 0 !important;
 }
 
+/* Keep content above the decorative galaxy layers without changing the
+ * navigation positioning model. In particular, `.space-ui-tabbar` must stay
+ * fixed on mobile and sticky on desktop; forcing it to `position: relative`
+ * makes it enter the shell flex flow and pushes the Home off-screen. */
 html[data-palette="galaxy"] .space-ui-header,
 html[data-palette="galaxy"] .space-ui-main,
-html[data-palette="galaxy"] .space-ui-footer-wrap,
-html[data-palette="galaxy"] .space-ui-tabbar {
+html[data-palette="galaxy"] .space-ui-footer-wrap {
   position: relative;
   z-index: 1;
+}
+
+html[data-palette="galaxy"] .space-ui-tabbar {
+  z-index: 50;
+}
+
+/* Defensive mobile guard: the bottom navigation must never become a normal
+ * flex child, even if another Galaxy rule gains more specificity later. */
+@media (max-width: 1023px) {
+  html[data-palette="galaxy"] .space-ui-tabbar {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+  }
+
+  html[data-palette="galaxy"] .space-ui-app-frame,
+  html[data-palette="galaxy"] .space-ui-content,
+  html[data-palette="galaxy"] .space-ui-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 
 html[data-palette="galaxy"] .space-ui-main > [class*="min-h-screen"][class*="bg-background"],
@@ -67,6 +94,7 @@ html[data-palette="galaxy"] .space-ui-shell::after {
   from { background-position: 0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0; }
   to { background-position: 22px 12px,-18px 20px,15px -14px,-20px -16px,12px 18px,-14px 12px,18px -20px,-16px 14px,10px 8px,-8px 12px,12px -10px,-10px -8px; }
 }
+
 @keyframes space-stars-pulse { from { opacity:.76; } to { opacity:1; } }
 @keyframes space-stars-twinkle { from { opacity:.28;filter:brightness(.9); } to { opacity:.6;filter:brightness(1.35); } }
 
