@@ -9,7 +9,7 @@
 .space-galaxy-effects .space-galaxy-arm,
 .space-galaxy-effects .space-twinkle-star,
 .space-galaxy-effects .space-shooting-star {
-  animation: none;
+  animation: none !important;
 }
 
 .space-galaxy-effects--full .space-galaxy-arm {
