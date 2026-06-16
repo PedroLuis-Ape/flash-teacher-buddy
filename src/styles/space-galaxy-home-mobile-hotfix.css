@@ -1,17 +1,12 @@
 /*
- * Hotfix: Home mobile quebrava somente no tema Galáxia.
+ * Final mobile layout guard for the Galaxy palette.
  *
- * A combinação de backdrop-filter, mix-blend-mode, pseudo-elementos fixos,
- * isolamento e camadas decorativas pode causar corrupção de composição em
- * navegadores mobile. O DOM continua correto, mas cards, textos e botões
- * aparecem comprimidos ou sobrepostos.
- *
- * Este arquivo é carregado por último no PrivateShell. Ele mantém as cores do
- * Galáxia, mas usa uma única pintura estática na Home mobile e restaura a
- * geometria normal dos componentes.
+ * This file is loaded last by PrivateShell, but the selectors also protect
+ * PublicShell routes because the CSS bundle is shared. The goal is simple:
+ * Galaxy may change paint, never geometry.
  */
 
-@media (max-width: 767px) {
+@media (max-width: 767px), (update: slow) {
   html[data-palette="galaxy"],
   html[data-palette="galaxy"] body,
   html[data-palette="galaxy"] #root {
@@ -22,152 +17,120 @@
     overscroll-behavior-x: none;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route {
+  html[data-palette="galaxy"] .space-ui-shell {
     width: 100%;
     min-width: 0;
-    max-width: 100vw;
-    min-height: 100dvh;
+    max-width: 100%;
     overflow-x: hidden;
-    isolation: auto;
-    contain: none;
-    transform: none;
+    isolation: auto !important;
+    contain: none !important;
+    transform: none !important;
+    filter: none !important;
+    perspective: none !important;
   }
 
-  /* A paleta já fornece um fundo galáctico estático. A camada fixa adicional
-     é removida apenas da Home mobile. */
-  html[data-palette="galaxy"] .space-ui-home-route .space-galaxy-effects {
-    display: none !important;
+  /* The private app frame must not remain a horizontal flex row on mobile.
+     ApeTabBar is fixed and therefore does not need a sibling flex column. */
+  html[data-palette="galaxy"] .space-ui-app-frame {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    transform: none !important;
+    contain: none !important;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-app-frame,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-content,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > div,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > [class*="min-h-"],
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > div > [class*="min-h-"] {
-    position: relative;
+  html[data-palette="galaxy"] .space-ui-content,
+  html[data-palette="galaxy"] .space-ui-main,
+  html[data-palette="galaxy"] .space-ui-footer-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    transform: none !important;
+    contain: none !important;
+    filter: none !important;
+    perspective: none !important;
+  }
+
+  html[data-palette="galaxy"] .space-ui-main > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Restore the component's intended mobile behavior explicitly. */
+  html[data-palette="galaxy"] .space-ui-tabbar {
+    position: fixed !important;
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
     height: auto !important;
-    min-height: 0;
-    overflow: visible !important;
-    isolation: auto !important;
-    contain: none !important;
+    margin: 0 !important;
+    z-index: 50 !important;
     transform: none !important;
+    contain: none !important;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > .min-h-screen,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > div > .min-h-screen {
-    min-height: 100dvh !important;
+  html[data-palette="galaxy"] .space-ui-tabbar > div {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin-inline: auto !important;
   }
 
-  /* Remove o overlay fixo de glitter aplicado sobre toda a Home. */
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main::before,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main::after {
+  /* One static background is enough on mobile. */
+  html[data-palette="galaxy"] .space-galaxy-effects,
+  html[data-palette="galaxy"] .space-ui-main::before,
+  html[data-palette="galaxy"] .space-ui-main::after {
+    content: none !important;
+    display: none !important;
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+  }
+
+  /* Remove GPU composition from cards and buttons without changing sizing. */
+  html[data-palette="galaxy"] .space-ui .bg-card,
+  html[data-palette="galaxy"] .space-ui [class*="bg-card/"],
+  html[data-palette="galaxy"] .space-ui .welcome-banner,
+  html[data-palette="galaxy"] .space-ui .stat-tile,
+  html[data-palette="galaxy"] .space-ui .card-premium,
+  html[data-palette="galaxy"] .space-ui .glass-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    mix-blend-mode: normal !important;
+    transform: none !important;
+    contain: none !important;
+  }
+
+  html[data-palette="galaxy"] .space-ui main button:not([role="switch"])::before,
+  html[data-palette="galaxy"] .space-ui main button:not([role="switch"])::after,
+  html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger::before,
+  html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger::after {
     content: none !important;
     display: none !important;
     animation: none !important;
     background: none !important;
-    mix-blend-mode: normal !important;
     filter: none !important;
   }
 
-  /* Superfícies principais mantêm largura natural e recebem uma pintura
-     simples, sem cada card virar uma camada GPU independente. */
-  html[data-palette="galaxy"] .space-ui-home-route .welcome-banner,
-  html[data-palette="galaxy"] .space-ui-home-route .stat-tile,
-  html[data-palette="galaxy"] .space-ui-home-route .card-premium,
-  html[data-palette="galaxy"] .space-ui-home-route .glass-panel,
-  html[data-palette="galaxy"] .space-ui-home-route .bg-card {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    height: auto;
-    min-height: 0;
-    isolation: auto !important;
-    contain: none !important;
-    transform: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    mix-blend-mode: normal !important;
-    background-image: none !important;
-    background: linear-gradient(145deg, hsl(251 42% 12% / .98), hsl(248 46% 8% / .99)) !important;
-    border-color: hsl(var(--primary) / .24) !important;
-    box-shadow: 0 8px 24px -20px hsl(267 80% 50% / .5) !important;
+  /* Keep fixed controls tied to the viewport on public/auth routes. */
+  html[data-palette="galaxy"] .space-ui-main > main,
+  html[data-palette="galaxy"] .space-ui-main > main > * {
+    transform: none;
+    contain: none;
+    perspective: none;
   }
 
-  /* Elementos menores com borda só perdem os filtros; sua largura original
-     é preservada para não esticar chips, ícones ou badges. */
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-lg.border,
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-xl.border,
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-2xl.border {
-    min-width: 0;
-    isolation: auto !important;
-    contain: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    mix-blend-mode: normal !important;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .welcome-banner {
-    overflow: hidden;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .welcome-banner::before {
-    filter: none !important;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .stat-tile {
-    overflow: visible;
-  }
-
-  /* Preserva explicitamente a largura do bloco de turmas e de cada linha. */
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut,
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut > *,
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner,
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner > * {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-
-  /* O glitter era aplicado por pseudo-elemento em todos os botões da Home. */
-  html[data-palette="galaxy"] .space-ui-home-route main button:not([role="switch"]) {
-    min-width: 0;
-    max-width: 100%;
-    isolation: auto !important;
-    contain: none !important;
-    mix-blend-mode: normal !important;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route main button:not([role="switch"])::before,
-  html[data-palette="galaxy"] .space-ui-home-route main button:not([role="switch"])::after {
-    content: none !important;
+  /* Avoid the version chip covering mobile controls or cards. */
+  html[data-palette="galaxy"] .space-ui-version-badge {
     display: none !important;
-    background: none !important;
-    animation: none !important;
-    filter: none !important;
-  }
-
-  /* O selo fixo aparecia em cima do último botão quando a pintura falhava. */
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-version-badge {
-    display: none !important;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-content,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main {
-    z-index: 1;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-tabbar,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-header {
-    z-index: 50;
   }
 }
