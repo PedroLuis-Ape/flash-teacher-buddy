@@ -44,8 +44,8 @@ import "@/styles/mobile-layout-guard.css";
 
 const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
-const GiftNotificationModal = lazy(() => import("@/components/GiftNotificationModal"));
-const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal"));
+const GiftNotificationModal = lazy(() => import("@/components/GiftNotificationModal").then(m => ({ default: m.GiftNotificationModal })));
+const AnnouncementModal = lazy(() => import("@/components/AnnouncementModal").then(m => ({ default: m.AnnouncementModal })));
 const EconomyInitializer = lazy(() => import("@/components/EconomyInitializer").then(m => ({ default: m.EconomyInitializer })));
 const BrowserCheck = lazy(() => import("@/components/BrowserCheck").then(m => ({ default: m.BrowserCheck })));
 const GoogleConnectPrompt = lazy(() => import("@/features/auth/components/GoogleConnectPrompt").then(m => ({ default: m.GoogleConnectPrompt })));
