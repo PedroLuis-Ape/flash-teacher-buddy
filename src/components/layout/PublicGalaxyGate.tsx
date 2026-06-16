@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { usePalette } from '@/hooks/usePalette';
 
 const SpaceTwinkleLayer = lazy(() =>
@@ -7,13 +7,30 @@ const SpaceTwinkleLayer = lazy(() =>
   })),
 );
 
-/**
- * Keeps the standard public theme lightweight. The animated galaxy bundle is
- * downloaded only after the visitor explicitly selects the galaxy palette.
- */
 export function PublicGalaxyGate() {
   const { palette } = usePalette();
+  const [useStaticBackdrop, setUseStaticBackdrop] = useState(true);
+
+  useEffect(() => {
+    const media = window.matchMedia(
+      '(max-width: 767px), (update: slow), (prefers-reduced-motion: reduce)',
+    );
+    const sync = () => setUseStaticBackdrop(media.matches);
+
+    sync();
+    media.addEventListener?.('change', sync);
+    return () => media.removeEventListener?.('change', sync);
+  }, []);
+
   if (palette !== 'galaxy') return null;
+
+  if (useStaticBackdrop) {
+    return (
+      <div aria-hidden="true" className="space-galaxy-effects">
+        <span className="space-galaxy-arm" />
+      </div>
+    );
+  }
 
   return (
     <Suspense fallback={null}>
