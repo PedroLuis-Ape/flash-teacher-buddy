@@ -34,6 +34,7 @@ const ListDetail = lazy(() => import("./pages/ListDetail"));
 const Collection = lazy(() => import("./pages/Collection"));
 const PublicCollection = lazy(() => import("./pages/PublicCollection"));
 const PublicPortal = lazy(() => import("./pages/PublicPortal"));
+const PublicTeacherProfile = lazy(() => import("./pages/PublicTeacherProfile"));
 const GamesHub = lazy(() => import("./pages/GamesHub"));
 const Study = lazy(() => import("./pages/Study"));
 const Search = lazy(() => import("./pages/Search"));
@@ -125,6 +126,7 @@ const App = () => {
                   <Route path="/collection/:id/games" element={<GamesHub />} />
                   <Route path="/collection/:id/study" element={<Study />} />
                   <Route path="/portal" element={<PublicPortal />} />
+                  <Route path="/portal/professor/:slug" element={<PublicTeacherProfile />} />
                   <Route path="/portal/folder/:id" element={<Folder />} />
                   <Route path="/portal/list/:id/games" element={<GamesHub />} />
                   <Route path="/portal/list/:id/study" element={<Study />} />
