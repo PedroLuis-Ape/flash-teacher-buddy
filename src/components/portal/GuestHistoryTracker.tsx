@@ -56,15 +56,22 @@ export function GuestHistoryTracker() {
     const type = inferType(location.pathname);
     if (!type) return;
 
-    const timer = window.setTimeout(() => {
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const entityId = pathParts[pathParts.length - 1];
+
+    const recordCurrentPage = () => {
       recordGuestHistory({
         type,
         path,
         title: cleanDocumentTitle(type),
-        entityId: location.pathname.split('/').filter(Boolean).at(-1),
+        entityId,
         scrollY: window.scrollY,
         progressLabel: readProgressLabel(),
       });
+    };
+
+    const timer = window.setTimeout(() => {
+      recordCurrentPage();
 
       if (consumeGuestResume(path)) {
         const saved = getGuestHistory().find((item) => item.path === path);
@@ -75,6 +82,12 @@ export function GuestHistoryTracker() {
         }
       }
     }, 450);
+
+    const titleNode = document.querySelector('title');
+    const titleObserver = titleNode
+      ? new MutationObserver(() => recordCurrentPage())
+      : null;
+    titleObserver?.observe(titleNode as Node, { childList: true, subtree: true, characterData: true });
 
     let scrollTimer: number | undefined;
     const savePosition = () => {
@@ -88,6 +101,7 @@ export function GuestHistoryTracker() {
     return () => {
       window.clearTimeout(timer);
       if (scrollTimer) window.clearTimeout(scrollTimer);
+      titleObserver?.disconnect();
       window.removeEventListener('scroll', savePosition);
       updateGuestHistoryPosition(path, window.scrollY, readProgressLabel());
     };
