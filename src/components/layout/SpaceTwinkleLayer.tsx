@@ -3,6 +3,7 @@ import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge
 import { usePalette } from "@/hooks/usePalette";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import "@/styles/space-layouts.css";
+import "@/styles/theme-layout-fixes.css";
 
 const DRAWER_LAYOUT_CSS = `
 [role="dialog"][class~="left-0"][class~="inset-y-0"] {
