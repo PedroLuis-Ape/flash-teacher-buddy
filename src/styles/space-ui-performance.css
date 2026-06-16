@@ -1,3 +1,5 @@
+@import "./theme-layout-final.css";
+
 /* Rendering safeguards for the authenticated Space UI. */
 
 /* The shell already paints its own galaxy; do not paint the global body nebula too. */
