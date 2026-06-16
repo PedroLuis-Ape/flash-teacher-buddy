@@ -103,6 +103,13 @@ export async function syncAnonymousPortalHistory(items = getGuestHistory()) {
     .maybeSingle();
   if (readError) throw readError;
 
+  // An expired row is hidden by the SELECT policy but remains deletable by
+  // its owner. Removing it allows a clean insert with a renewed expiry.
+  if (!existing) {
+    const { error: deleteError } = await table.delete().eq('owner_id', ownerId);
+    if (deleteError) throw deleteError;
+  }
+
   const merged = mergeGuestHistories(items, normalizeRemoteHistory(existing?.history));
   const { error: writeError } = await table.upsert(
     {
@@ -130,7 +137,10 @@ export async function restoreAnonymousPortalHistory() {
     .eq('owner_id', session.user.id)
     .maybeSingle();
   if (error) throw error;
-  if (!data) return getGuestHistory();
+
+  if (!data) {
+    return syncAnonymousPortalHistory(getGuestHistory());
+  }
 
   const merged = mergeGuestHistories(getGuestHistory(), normalizeRemoteHistory(data.history));
   replaceGuestHistory(merged);
@@ -200,7 +210,8 @@ export async function migrateAnonymousPortalHistoryToAccount(userId: string) {
 
   if (anonymousSession) {
     const table = (guestSyncClient.from as any)('anonymous_portal_history');
-    await table.delete().eq('owner_id', anonymousSession.user.id);
+    const { error: deleteError } = await table.delete().eq('owner_id', anonymousSession.user.id);
+    if (deleteError) console.warn('[PortalHistorySync] anonymous cleanup failed:', deleteError);
     await guestSyncClient.auth.signOut({ scope: 'local' });
   }
 
