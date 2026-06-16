@@ -1,0 +1,170 @@
+/* Final adaptive Galaxy motion layer.
+   Imported after the legacy Galaxy styles so tier classes own the animation
+   budget without changing palette variables used by the rest of the app. */
+
+.space-galaxy-effects {
+  isolation: isolate;
+}
+
+.space-galaxy-effects .space-galaxy-arm,
+.space-galaxy-effects .space-twinkle-star,
+.space-galaxy-effects .space-shooting-star {
+  animation: none;
+}
+
+.space-galaxy-effects--full .space-galaxy-arm {
+  opacity: .34;
+}
+
+.space-galaxy-effects--balanced .space-galaxy-arm {
+  top: 34%;
+  height: 18rem;
+  opacity: .28;
+}
+
+.space-galaxy-effects--arm-motion .space-galaxy-arm {
+  animation: ape-galaxy-drift-final 34s cubic-bezier(.45,.05,.55,.95) infinite alternate !important;
+  will-change: transform, opacity;
+}
+
+.space-galaxy-effects--stars-motion .space-twinkle-star {
+  animation: ape-star-twinkle-final var(--twinkle-duration,12000ms) ease-in-out var(--twinkle-delay,0ms) infinite !important;
+  will-change: transform, opacity;
+}
+
+.space-galaxy-effects--balanced.space-galaxy-effects--stars-motion .space-twinkle-star {
+  animation-name: ape-star-twinkle-balanced !important;
+}
+
+.space-galaxy-effects .space-twinkle-star--static {
+  opacity: .54;
+  animation: none !important;
+  will-change: auto;
+}
+
+.space-galaxy-effects--balanced .space-shooting-star,
+.space-galaxy-effects--full .space-shooting-star {
+  width: 13rem;
+  height: 1.5px;
+  transform: rotate(-22deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(276 100% 88% / .12) 20%,
+    hsl(213 100% 92% / .62) 72%,
+    hsl(0 0% 100% / .94)
+  );
+  box-shadow: 0 0 10px hsl(268 100% 84% / .38);
+  will-change: transform, opacity;
+}
+
+.space-galaxy-effects--balanced .space-shooting-star {
+  width: 10rem;
+  box-shadow: 0 0 8px hsl(268 100% 84% / .28);
+}
+
+@keyframes ape-galaxy-drift-final {
+  0% {
+    opacity: .30;
+    transform: rotate(-13deg) translate3d(-.3%, .15%, 0) scale(1);
+  }
+  48% {
+    opacity: .37;
+    transform: rotate(-13deg) translate3d(.15%, -.2%, 0) scale(1.008);
+  }
+  100% {
+    opacity: .33;
+    transform: rotate(-13deg) translate3d(.45%, -.35%, 0) scale(1.004);
+  }
+}
+
+@keyframes ape-star-twinkle-final {
+  0%, 100% {
+    opacity: .20;
+    transform: scale(.91);
+  }
+  34% {
+    opacity: .48;
+    transform: scale(1.02);
+  }
+  61% {
+    opacity: .76;
+    transform: scale(1.11);
+  }
+  82% {
+    opacity: .38;
+    transform: scale(.98);
+  }
+}
+
+@keyframes ape-star-twinkle-balanced {
+  0%, 100% {
+    opacity: .26;
+    transform: scale(.95);
+  }
+  55% {
+    opacity: .62;
+    transform: scale(1.07);
+  }
+}
+
+/* Static tier: small screens, reduced motion, data saver or limited hardware. */
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-ui {
+  --ape-page:
+    radial-gradient(circle at 14% 22%, hsl(0 0% 100% / .62) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 76% 31%, hsl(282 90% 86% / .48) 0 1px, transparent 1.9px),
+    radial-gradient(ellipse 90% 48% at 50% -8%, hsl(273 88% 42% / .22), transparent 68%),
+    linear-gradient(180deg, hsl(248 54% 4%), hsl(251 54% 7%) 52%, hsl(247 54% 4%));
+  --ape-shadow: 0 14px 36px -32px hsl(267 82% 48% / .42);
+}
+
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-galaxy-effects {
+  contain: paint;
+}
+
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-galaxy-arm {
+  left: 0 !important;
+  right: 0 !important;
+  top: 38% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 9rem !important;
+  opacity: .16 !important;
+  transform: none !important;
+  animation: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  background:
+    radial-gradient(ellipse at 52% 50%, hsl(286 92% 76% / .14), transparent 46%),
+    linear-gradient(90deg, transparent, hsl(224 88% 66% / .10), transparent) !important;
+}
+
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-galaxy-arm::before,
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-galaxy-arm::after {
+  display: none !important;
+}
+
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-twinkle-star {
+  opacity: .48 !important;
+  animation: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-shooting-star {
+  display: none !important;
+}
+
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-ui [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-galaxy-effects .space-galaxy-arm,
+  .space-galaxy-effects .space-twinkle-star,
+  .space-galaxy-effects .space-shooting-star {
+    animation: none !important;
+    will-change: auto !important;
+  }
+}
