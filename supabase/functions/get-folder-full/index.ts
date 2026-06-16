@@ -83,71 +83,31 @@ serve(async (req) => {
     const isOwner = folder.owner_id === user.id;
     let hasAccess = isOwner;
 
-    if (!hasAccess) {
-      // Verificar se o usuário é aluno de alguma turma do professor dono da pasta
-      const { data: teacherTurmas } = await adminClient
-        .from('turmas')
+    // SEGURANÇA: respeitar folder.visibility.
+    // Pastas 'private' só podem ser lidas pelo owner.
+    // Pastas 'class' exigem class_id correspondente a uma turma/classe da qual o usuário faz parte.
+    if (!hasAccess && folder.visibility === 'class' && folder.class_id) {
+      // turma_membros (modelo novo)
+      const { data: turmaMembership } = await adminClient
+        .from('turma_membros')
         .select('id')
-        .eq('owner_teacher_id', folder.owner_id);
+        .eq('turma_id', folder.class_id)
+        .eq('user_id', user.id)
+        .eq('ativo', true)
+        .maybeSingle();
 
-      if (teacherTurmas && teacherTurmas.length > 0) {
-        const turmaIds = teacherTurmas.map(t => t.id);
-        
-        const { data: membership } = await adminClient
-          .from('turma_membros')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('ativo', true)
-          .in('turma_id', turmaIds)
-          .limit(1)
-          .single();
-
-        if (membership) {
-          hasAccess = true;
-        }
-      }
-    }
-
-    if (!hasAccess) {
-      // Verificar subscription direta professor-aluno
-      const { data: subscription } = await adminClient
-        .from('subscriptions')
-        .select('id')
-        .eq('student_id', user.id)
-        .eq('teacher_id', folder.owner_id)
-        .single();
-
-      if (subscription) {
+      if (turmaMembership) {
         hasAccess = true;
-      }
-    }
-
-    if (!hasAccess) {
-      // Verificar se a pasta é de uma classe que o usuário faz parte
-      if (folder.class_id) {
+      } else {
+        // class_members (modelo legado)
         const { data: classMembership } = await adminClient
           .from('class_members')
           .select('user_id')
           .eq('class_id', folder.class_id)
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (classMembership) {
-          hasAccess = true;
-        }
-      }
-    }
-
-    if (!hasAccess) {
-      // Última verificação: pasta com visibilidade 'class' e usuário tem public_access
-      if (folder.visibility === 'class') {
-        const { data: ownerProfile } = await adminClient
-          .from('profiles')
-          .select('public_access_enabled')
-          .eq('id', folder.owner_id)
-          .single();
-
-        if (ownerProfile?.public_access_enabled) {
           hasAccess = true;
         }
       }
