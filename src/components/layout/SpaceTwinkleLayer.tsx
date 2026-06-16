@@ -3,9 +3,10 @@ import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge
 import { usePalette } from "@/hooks/usePalette";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import "@/styles/space-layouts.css";
+import "@/styles/space-galaxy-mobile-guard.css";
 
 const DRAWER_LAYOUT_CSS = `
-[role="dialog"][class~="left-0"][class~="inset-y-0"]{width:min(88vw,360px)!important;max-width:360px!important;height:100dvh!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-overflow-scrolling:touch;background:hsl(var(--background))!important}
+[role="dialog"][class~="left-0"][class~="inset-y-0"]{width:min(88vw,360px)!important;max-width:360px!important;height:100dvh!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:hsl(var(--background))!important}
 [role="dialog"][class~="left-0"][class~="inset-y-0"]>[class~="flex-1"][class~="overflow-y-auto"]{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 [role="dialog"][class~="left-0"][class~="inset-y-0"] [class~="space-y-1"]{display:flex!important;flex-direction:column!important;gap:.35rem!important}
 [role="dialog"][class~="left-0"][class~="inset-y-0"] [class~="space-y-1"]>button{width:100%!important;min-height:44px!important;justify-content:flex-start!important}
