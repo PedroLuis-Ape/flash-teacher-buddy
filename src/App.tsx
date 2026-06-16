@@ -35,6 +35,7 @@ const Collection = lazy(() => import("./pages/Collection"));
 const PublicCollection = lazy(() => import("./pages/PublicCollection"));
 const PublicPortal = lazy(() => import("./pages/PublicPortal"));
 const PublicTeacherProfile = lazy(() => import("./pages/PublicTeacherProfile"));
+const PublicProfileSettings = lazy(() => import("./pages/PublicProfileSettings"));
 const GamesHub = lazy(() => import("./pages/GamesHub"));
 const Study = lazy(() => import("./pages/Study"));
 const Search = lazy(() => import("./pages/Search"));
@@ -152,6 +153,7 @@ const App = () => {
                   <Route path="/professores/:professorId" element={<ProfessorProfile />} />
                   <Route path="/my-teachers" element={<MyTeachers />} />
                   <Route path="/painel-professor" element={<PainelProfessor />} />
+                  <Route path="/settings/public-profile" element={<PublicProfileSettings />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/notes" element={<Notes />} />
                   <Route path="/notes/:id" element={<NoteEditor />} />
