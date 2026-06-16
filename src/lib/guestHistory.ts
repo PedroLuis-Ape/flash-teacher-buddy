@@ -47,10 +47,37 @@ function sanitizePath(path: string) {
   return path.slice(0, 500);
 }
 
+function sanitizeItem(item: GuestHistoryItem): GuestHistoryItem | null {
+  if (!item || typeof item !== 'object') return null;
+  if (!item.path?.startsWith('/portal')) return null;
+  if (!['teacher', 'folder', 'list', 'study', 'activity'].includes(item.type)) return null;
+
+  return {
+    id: String(item.id || `${item.type}:${item.entityId || item.path}`).slice(0, 180),
+    type: item.type,
+    path: sanitizePath(String(item.path)),
+    title: String(item.title || 'Material público').trim().slice(0, 120) || 'Material público',
+    subtitle: item.subtitle ? String(item.subtitle).trim().slice(0, 160) : undefined,
+    teacherSlug: item.teacherSlug ? String(item.teacherSlug).slice(0, 100) : undefined,
+    entityId: item.entityId ? String(item.entityId).slice(0, 100) : undefined,
+    visitedAt: Number.isFinite(Number(item.visitedAt)) ? Number(item.visitedAt) : Date.now(),
+    scrollY: Number.isFinite(Number(item.scrollY)) ? Math.max(0, Math.round(Number(item.scrollY))) : 0,
+    progressLabel: item.progressLabel ? String(item.progressLabel).slice(0, 80) : undefined,
+  };
+}
+
 function prune(items: GuestHistoryItem[]) {
   const cutoff = Date.now() - MAX_AGE_MS;
-  return items
-    .filter((item) => item.visitedAt >= cutoff && item.path.startsWith('/portal'))
+  const deduped = new Map<string, GuestHistoryItem>();
+
+  for (const rawItem of items) {
+    const item = sanitizeItem(rawItem);
+    if (!item || item.visitedAt < cutoff) continue;
+    const existing = deduped.get(item.path);
+    if (!existing || item.visitedAt >= existing.visitedAt) deduped.set(item.path, item);
+  }
+
+  return Array.from(deduped.values())
     .sort((a, b) => b.visitedAt - a.visitedAt)
     .slice(0, MAX_ITEMS);
 }
@@ -67,14 +94,12 @@ function readStore(): GuestHistoryStore {
     }
 
     const parsed = JSON.parse(raw) as Partial<GuestHistoryStore>;
-    const store: GuestHistoryStore = {
+    return {
       version: 1,
       guestId: typeof parsed.guestId === 'string' && parsed.guestId ? parsed.guestId : createGuestId(),
       updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : Date.now(),
       items: Array.isArray(parsed.items) ? prune(parsed.items as GuestHistoryItem[]) : [],
     };
-
-    return store;
   } catch {
     return emptyStore();
   }
@@ -102,8 +127,21 @@ export function getGuestHistory() {
   return readStore().items;
 }
 
+export function getGuestHistorySnapshot() {
+  return readStore();
+}
+
 export function getGuestId() {
   return readStore().guestId;
+}
+
+export function mergeGuestHistories(...sources: GuestHistoryItem[][]) {
+  return prune(sources.flat());
+}
+
+export function replaceGuestHistory(items: GuestHistoryItem[]) {
+  const store = readStore();
+  writeStore({ ...store, items: prune(items) });
 }
 
 export function recordGuestHistory(
