@@ -41,7 +41,6 @@ import "@/styles/space-ui-piteco-fullbody.css";
 import "@/styles/space-ui-live-stars.css";
 import "@/styles/space-ui-performance.css";
 
-// Lazy-load everything that is not needed for the authenticated first paint.
 const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
 const GiftNotificationModal = lazy(() => import("@/components/GiftNotificationModal").then(m => ({ default: m.GiftNotificationModal })));
@@ -59,10 +58,6 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   const { user } = useAuthUser();
   const { settings: perfSettings } = usePerformance();
   const safeMode = isSafeModeEnabled();
-
-  // Defer secondary work so it never competes with first paint. EconomyProvider
-  // already loads the balance once authentication resolves, so this shell must
-  // not trigger a second identical request.
   const [secondaryReady, setSecondaryReady] = useState(false);
 
   useEffect(() => {
@@ -90,10 +85,9 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   useActivityHeartbeat(secondaryReady && !safeMode ? user?.id : undefined);
   useSwipeNavigation({ enabled: !!user && !safeMode && FEATURE_FLAGS.swipe_navigation_enabled });
 
-  const isFullScreenPage = location.pathname.includes('/study');
-  const isHome = location.pathname === '/dashboard';
-  const isGameRoute =
-    location.pathname.includes('/study') || location.pathname.includes('/games');
+  const isFullScreenPage = location.pathname.includes("/study");
+  const isHome = location.pathname === "/dashboard";
+  const isGameRoute = location.pathname.includes("/study") || location.pathname.includes("/games");
   const showSecondaryActions = !isGameRoute && !isHome;
   const showCurrencyHeader = !isHome && !isGameRoute;
   const showInstitutionBar = isHome;
@@ -103,13 +97,16 @@ function PrivateShellInner({ children }: PrivateShellProps) {
       <SpaceTwinkleLayer />
       <AppRecoveryBanner />
       <OfflineIndicator />
+
       {FEATURE_FLAGS.currency_header_enabled && user && (
-        <header className={cn(
-          "space-ui-header sticky top-0 z-50 w-full border-b",
-          perfSettings.backdropBlur
-            ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
-            : "bg-background"
-        )}>
+        <header
+          className={cn(
+            "space-ui-header sticky top-0 z-50 w-full border-b",
+            perfSettings.backdropBlur
+              ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+              : "bg-background",
+          )}
+        >
           <div className="max-w-[1600px] mx-auto w-full flex h-12 md:h-14 items-center justify-between gap-2 md:gap-4 px-3 md:px-4 lg:px-8">
             <div className="flex min-w-0 items-center gap-1 md:gap-2">
               <AppSidebar />
@@ -135,17 +132,23 @@ function PrivateShellInner({ children }: PrivateShellProps) {
           {showInstitutionBar && <InstitutionBar />}
         </header>
       )}
-      <main className="space-ui-main flex-1">
-        {children}
-      </main>
 
-      {user && !isFullScreenPage && (
-        <div className="space-ui-footer-wrap pb-24 md:pb-20">
-          <GlobalFooter />
+      <div className="space-ui-app-frame flex min-w-0 flex-1 items-start">
+        {user && <ApeTabBar />}
+
+        <div className="space-ui-content flex min-h-0 min-w-0 flex-1 flex-col">
+          <main className="space-ui-main min-w-0 flex-1">
+            {children}
+          </main>
+
+          {user && !isFullScreenPage && (
+            <div className="space-ui-footer-wrap pb-24 md:pb-20">
+              <GlobalFooter />
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {user && <ApeTabBar />}
       {user && secondaryReady && !safeMode && (
         <Suspense fallback={null}>
           <GiftNotificationModal />
