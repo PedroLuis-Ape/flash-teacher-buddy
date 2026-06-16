@@ -60,20 +60,20 @@ export function getGalaxyStarLimit(tier: GalaxyMotionTier): number {
 export function getShootingStarTiming(tier: Exclude<GalaxyMotionTier, 'static'>): ShootingStarTiming {
   if (tier === 'balanced') {
     return {
-      firstDelayMin: 40_000,
-      firstDelayVariation: 30_000,
-      repeatDelayMin: 95_000,
-      repeatDelayVariation: 70_000,
-      duration: 3_800,
+      firstDelayMin: 35_000,
+      firstDelayVariation: 20_000,
+      repeatDelayMin: 70_000,
+      repeatDelayVariation: 30_000,
+      duration: 8_000,
     };
   }
 
   return {
-    firstDelayMin: 25_000,
-    firstDelayVariation: 20_000,
-    repeatDelayMin: 65_000,
-    repeatDelayVariation: 55_000,
-    duration: 3_200,
+    firstDelayMin: 8_000,
+    firstDelayVariation: 4_000,
+    repeatDelayMin: 30_000,
+    repeatDelayVariation: 3_000,
+    duration: 7_200,
   };
 }
 
