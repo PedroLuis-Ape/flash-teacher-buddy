@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, ArrowLeft } from 'lucide-react';
+import { Plus, Users, ArrowLeft, Globe2, Lock, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useTurmasMine, useCreateTurma, useEnrollAluno } from '@/features/classroom/hooks/useTurmas';
+import { Switch } from '@/components/ui/switch';
+import { useTurmasMine, useCreateTurma, useEnrollAluno, useUpdateTurma } from '@/features/classroom/hooks/useTurmas';
 import { toast } from 'sonner';
 
 export default function TurmasProfessor() {
@@ -15,6 +17,7 @@ export default function TurmasProfessor() {
   const { data, isLoading } = useTurmasMine();
   const createTurma = useCreateTurma();
   const enrollAluno = useEnrollAluno();
+  const updateTurma = useUpdateTurma();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
@@ -22,6 +25,7 @@ export default function TurmasProfessor() {
 
   const [newTurmaNome, setNewTurmaNome] = useState('');
   const [newTurmaDesc, setNewTurmaDesc] = useState('');
+  const [newTurmaPublic, setNewTurmaPublic] = useState(false);
   const [enrollApeId, setEnrollApeId] = useState('');
 
   const handleCreateTurma = async () => {
@@ -34,13 +38,14 @@ export default function TurmasProfessor() {
       const result = await createTurma.mutateAsync({
         nome: newTurmaNome,
         descricao: newTurmaDesc,
+        public: newTurmaPublic,
       });
       toast.success('✅ Turma criada com sucesso!');
       setCreateDialogOpen(false);
       setNewTurmaNome('');
       setNewTurmaDesc('');
-      
-      // Redirect to turma detail page
+      setNewTurmaPublic(false);
+
       if (result?.turma?.id) {
         navigate(`/turmas/${result.turma.id}`);
       }
@@ -66,6 +71,28 @@ export default function TurmasProfessor() {
       setSelectedTurmaId(null);
     } catch (error: any) {
       toast.error(error.message || 'Erro ao matricular aluno');
+    }
+  };
+
+  const handleTogglePublic = async (turma: any) => {
+    try {
+      await updateTurma.mutateAsync({
+        turma_id: turma.id,
+        public: !turma.public,
+      });
+      toast.success(turma.public ? 'Turma agora é privada.' : 'Turma publicada com sucesso!');
+    } catch {
+      toast.error('Não foi possível alterar a visibilidade da turma.');
+    }
+  };
+
+  const handleCopyPublicLink = async (turmaId: string) => {
+    const url = `${window.location.origin}/turmas/${turmaId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link público copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o link.');
     }
   };
 
@@ -119,6 +146,23 @@ export default function TurmasProfessor() {
                   placeholder="Descrição da turma..."
                 />
               </div>
+              <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+                <div className="space-y-1">
+                  <Label htmlFor="turma-publica" className="flex items-center gap-2">
+                    <Globe2 className="h-4 w-4 text-primary" />
+                    Turma pública
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Qualquer pessoa com o link poderá ver as atividades em modo somente leitura.
+                  </p>
+                </div>
+                <Switch
+                  id="turma-publica"
+                  checked={newTurmaPublic}
+                  onCheckedChange={setNewTurmaPublic}
+                  aria-label="Permitir acesso público à turma"
+                />
+              </div>
               <Button onClick={handleCreateTurma} disabled={createTurma.isPending} className="w-full">
                 {createTurma.isPending ? 'Criando...' : 'Criar Turma'}
               </Button>
@@ -157,9 +201,15 @@ export default function TurmasProfessor() {
           ) : (
             turmas.map((turma: any) => (
               <Card key={turma.id} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold">{turma.nome}</h3>
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold">{turma.nome}</h3>
+                      <Badge variant={turma.public ? 'default' : 'secondary'}>
+                        {turma.public ? <Globe2 className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
+                        {turma.public ? 'Pública' : 'Privada'}
+                      </Badge>
+                    </div>
                     {turma.descricao && (
                       <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
                     )}
@@ -168,7 +218,22 @@ export default function TurmasProfessor() {
                       <span>{turma.turma_membros?.[0]?.count || 0} alunos</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={updateTurma.isPending}
+                      onClick={() => handleTogglePublic(turma)}
+                    >
+                      {turma.public ? <Lock className="h-4 w-4 mr-1" /> : <Globe2 className="h-4 w-4 mr-1" />}
+                      {turma.public ? 'Tornar privada' : 'Publicar'}
+                    </Button>
+                    {turma.public && (
+                      <Button size="sm" variant="outline" onClick={() => handleCopyPublicLink(turma.id)}>
+                        <Copy className="h-4 w-4 mr-1" />
+                        Copiar link
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -180,10 +245,7 @@ export default function TurmasProfessor() {
                       <Plus className="h-4 w-4 mr-1" />
                       Aluno
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/turmas/${turma.id}`)}
-                    >
+                    <Button size="sm" onClick={() => navigate(`/turmas/${turma.id}`)}>
                       Gerenciar
                     </Button>
                   </div>
