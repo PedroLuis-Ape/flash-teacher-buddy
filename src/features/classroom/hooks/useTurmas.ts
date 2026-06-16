@@ -50,12 +50,12 @@ export function useCreateTurma() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ nome, descricao }: { nome: string; descricao?: string }) => {
+    mutationFn: async ({ nome, descricao, public: isPublic }: { nome: string; descricao?: string; public?: boolean }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
       const { data, error } = await supabase.functions.invoke('turmas-create', {
-        body: { nome, descricao },
+        body: { nome, descricao, public: isPublic === true },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -98,12 +98,12 @@ export function useUpdateTurma() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ turma_id, nome, descricao }: { turma_id: string; nome?: string; descricao?: string }) => {
+    mutationFn: async ({ turma_id, nome, descricao, public: isPublic }: { turma_id: string; nome?: string; descricao?: string; public?: boolean }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
       const { data, error } = await supabase.functions.invoke('turmas-update', {
-        body: { turma_id, nome, descricao },
+        body: { turma_id, nome, descricao, public: isPublic },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -115,6 +115,7 @@ export function useUpdateTurma() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['turmas'] });
       queryClient.invalidateQueries({ queryKey: ['turma'] });
+      queryClient.invalidateQueries({ queryKey: ['public-turma'] });
     },
   });
 }

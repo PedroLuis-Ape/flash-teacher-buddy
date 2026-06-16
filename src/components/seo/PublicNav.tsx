@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
+import { PublicThemeToggle } from "@/components/seo/PublicThemeToggle";
 
 const NAV_LINKS = [
   { to: "/", label: "Início" },
@@ -23,27 +24,28 @@ export function PublicNav() {
   const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="max-w-6xl mx-auto w-full flex h-14 items-center justify-between gap-3 px-4 md:px-6">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+      <div className="max-w-6xl mx-auto w-full flex h-14 items-center justify-between gap-2 px-4 md:px-6">
+        <Link to="/" className="flex items-center gap-2 font-bold text-lg shrink-0">
           <PitecoLogo className="h-8 w-8" />
           <span>APE</span>
         </Link>
-        <nav className="hidden md:flex items-center gap-1 text-sm">
+        <nav className="hidden md:flex items-center gap-1 text-sm min-w-0">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.to}
               to={l.to}
-              className="nav-link-animated px-3 py-2 rounded-md text-muted-foreground hover:text-foreground"
+              className="nav-link-animated px-2 lg:px-3 py-2 rounded-md text-muted-foreground hover:text-foreground"
             >
               {l.label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
-          <AuthAwareCTA variant="ghost" size="sm" className="hidden sm:inline-flex">
+        <div className="flex items-center gap-2 shrink-0">
+          <PublicThemeToggle />
+          <AuthAwareCTA variant="ghost" size="sm" className="hidden lg:inline-flex">
             Entrar
           </AuthAwareCTA>
-          <AuthAwareCTA size="sm" className="hidden sm:inline-flex">
+          <AuthAwareCTA size="sm" className="hidden lg:inline-flex">
             Começar agora
           </AuthAwareCTA>
           <Sheet open={open} onOpenChange={setOpen}>
