@@ -7,24 +7,23 @@ Status: concluída.
 Status: concluída.
 
 ## Etapa 3 — Configuração pública pelo professor
-Status: implementada nesta branch, aguardando validação e merge.
+Status: concluída.
 
-- Editar bio pública.
-- Editar até 8 especialidades.
-- Ativar ou ocultar o perfil público.
-- Ativar ou ocultar a presença na pesquisa.
-- Manter o perfil acessível apenas por link quando desejado.
-- Conferir uma prévia local antes de publicar.
-- Copiar e abrir o link público.
-- Publicar ou remover pastas individualmente.
+- Bio pública e especialidades.
+- Controle de perfil público e presença na pesquisa.
+- Prévia local, link público e publicação individual de pastas.
 
 ## Etapa 4 — Histórico local do visitante
-Status: pendente.
+Status: implementada nesta branch, aguardando validação e merge.
 
-- Identificador anônimo local.
-- Professores e materiais visitados recentemente.
-- Retomada do último conteúdo e posição.
-- Opção para apagar o histórico.
+- Identificador anônimo aleatório salvo somente no navegador.
+- Histórico limitado a 12 itens.
+- Expiração automática após 90 dias.
+- Professores, pastas, listas, estudos e atividades visitados recentemente.
+- Rota, posição de rolagem e progresso visível salvos localmente.
+- Seção “Continue de onde parou” no Portal Público.
+- Remoção individual ou limpeza completa do histórico.
+- Nenhum uso de IP e nenhum envio ao servidor.
 
 ## Etapa 5 — Sincronização anônima opcional no servidor
 Status: pendente e opcional.
@@ -42,6 +41,6 @@ Status: pendente e reservado para o final.
 
 ## Progresso
 
-- Etapas concluídas: 1 e 2.
-- Etapa atual: 3.
-- Etapas restantes depois do merge desta branch: 4, 5 e 6.
+- Etapas concluídas: 1, 2 e 3.
+- Etapa atual: 4.
+- Etapas restantes depois do merge desta branch: 5 e 6.
