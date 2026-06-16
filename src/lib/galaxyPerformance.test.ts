@@ -47,6 +47,13 @@ describe('galaxy animation budgets', () => {
     expect(getGalaxyStarLimit('full')).toBe(10);
   });
 
+  it('keeps the desktop comet formation slow and close to a 30-second cycle', () => {
+    const full = getShootingStarTiming('full');
+    expect(full.duration).toBeGreaterThanOrEqual(7_000);
+    expect(full.repeatDelayMin).toBe(30_000);
+    expect(full.repeatDelayVariation).toBeLessThanOrEqual(5_000);
+  });
+
   it('uses slower and less frequent shooting stars in balanced mode', () => {
     const full = getShootingStarTiming('full');
     const balanced = getShootingStarTiming('balanced');
