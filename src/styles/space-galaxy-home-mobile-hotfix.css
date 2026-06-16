@@ -1,15 +1,14 @@
 /*
  * Hotfix: Home mobile quebrava somente no tema Galáxia.
  *
- * Causa provável: composição de várias camadas GPU ao mesmo tempo
- * (backdrop-filter, mix-blend-mode, pseudo-elementos fixos, isolamento e
- * elementos decorativos fora do viewport). Em alguns navegadores mobile,
- * principalmente Chrome Android, isso pode corromper a pintura e fazer cards,
- * textos e botões parecerem comprimidos ou sobrepostos sem que o DOM esteja
- * realmente colapsado.
+ * A combinação de backdrop-filter, mix-blend-mode, pseudo-elementos fixos,
+ * isolamento e camadas decorativas pode causar corrupção de composição em
+ * navegadores mobile. O DOM continua correto, mas cards, textos e botões
+ * aparecem comprimidos ou sobrepostos.
  *
- * O hotfix mantém as cores do tema Galáxia, mas usa uma única camada estática
- * na Home mobile e restaura a geometria normal dos componentes.
+ * Este arquivo é carregado por último no PrivateShell. Ele mantém as cores do
+ * Galáxia, mas usa uma única pintura estática na Home mobile e restaura a
+ * geometria normal dos componentes.
  */
 
 @media (max-width: 767px) {
@@ -34,8 +33,8 @@
     transform: none;
   }
 
-  /* A própria paleta já fornece um fundo galáctico estático. A camada fixa
-     extra não é necessária na Home mobile e era o maior risco de composição. */
+  /* A paleta já fornece um fundo galáctico estático. A camada fixa adicional
+     é removida apenas da Home mobile. */
   html[data-palette="galaxy"] .space-ui-home-route .space-galaxy-effects {
     display: none !important;
   }
@@ -63,25 +62,24 @@
     min-height: 100dvh !important;
   }
 
-  /* Remove o overlay fixo de glitter que criava uma camada de composição
-     acima de toda a Home. */
+  /* Remove o overlay fixo de glitter aplicado sobre toda a Home. */
+  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main::before,
   html[data-palette="galaxy"] .space-ui-home-route .space-ui-main::after {
     content: none !important;
     display: none !important;
     animation: none !important;
     background: none !important;
     mix-blend-mode: normal !important;
+    filter: none !important;
   }
 
-  /* Na Home mobile, nenhum card deve virar uma superfície de blur isolada. */
+  /* Superfícies principais mantêm largura natural e recebem uma pintura
+     simples, sem cada card virar uma camada GPU independente. */
   html[data-palette="galaxy"] .space-ui-home-route .welcome-banner,
   html[data-palette="galaxy"] .space-ui-home-route .stat-tile,
   html[data-palette="galaxy"] .space-ui-home-route .card-premium,
   html[data-palette="galaxy"] .space-ui-home-route .glass-panel,
-  html[data-palette="galaxy"] .space-ui-home-route .bg-card,
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-lg.border,
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-xl.border,
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-2xl.border {
+  html[data-palette="galaxy"] .space-ui-home-route .bg-card {
     width: 100%;
     min-width: 0;
     max-width: 100%;
@@ -93,35 +91,54 @@
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     mix-blend-mode: normal !important;
+    background-image: none !important;
+    background: linear-gradient(145deg, hsl(251 42% 12% / .98), hsl(248 46% 8% / .99)) !important;
+    border-color: hsl(var(--primary) / .24) !important;
+    box-shadow: 0 8px 24px -20px hsl(267 80% 50% / .5) !important;
+  }
+
+  /* Elementos menores com borda só perdem os filtros; sua largura original
+     é preservada para não esticar chips, ícones ou badges. */
+  html[data-palette="galaxy"] .space-ui-home-route main .rounded-lg.border,
+  html[data-palette="galaxy"] .space-ui-home-route main .rounded-xl.border,
+  html[data-palette="galaxy"] .space-ui-home-route main .rounded-2xl.border {
+    min-width: 0;
+    isolation: auto !important;
+    contain: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    mix-blend-mode: normal !important;
   }
 
   html[data-palette="galaxy"] .space-ui-home-route .welcome-banner {
     overflow: hidden;
   }
 
+  html[data-palette="galaxy"] .space-ui-home-route .welcome-banner::before {
+    filter: none !important;
+  }
+
   html[data-palette="galaxy"] .space-ui-home-route .stat-tile {
     overflow: visible;
   }
 
-  /* Preserva o layout natural do atalho de turmas. */
-  html[data-palette="galaxy"] .space-ui-home-route .space-y-3,
-  html[data-palette="galaxy"] .space-ui-home-route .space-y-3 > *,
-  html[data-palette="galaxy"] .space-ui-home-route .space-y-3 > .welcome-banner,
-  html[data-palette="galaxy"] .space-ui-home-route .space-y-3 > .welcome-banner > * {
+  /* Preserva explicitamente a largura do bloco de turmas e de cada linha. */
+  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut,
+  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut > *,
+  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner,
+  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner > * {
+    width: 100%;
     min-width: 0;
     max-width: 100%;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route .space-y-3 > .welcome-banner {
-    width: 100%;
+  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner {
     height: auto !important;
     min-height: 0 !important;
     overflow: hidden !important;
   }
 
-  /* O glitter dos botões usava pseudo-elementos absolutos em todos os botões
-     da Home. No mobile ele é removido e o conteúdo volta a ocupar sua caixa
-     normal. */
+  /* O glitter era aplicado por pseudo-elemento em todos os botões da Home. */
   html[data-palette="galaxy"] .space-ui-home-route main button:not([role="switch"]) {
     min-width: 0;
     max-width: 100%;
@@ -135,14 +152,15 @@
     content: none !important;
     display: none !important;
     background: none !important;
+    animation: none !important;
+    filter: none !important;
   }
 
-  /* Evita que o selo de versão fique por cima do último card/botão da Home. */
+  /* O selo fixo aparecia em cima do último botão quando a pintura falhava. */
   html[data-palette="galaxy"] .space-ui-home-route .space-ui-version-badge {
     display: none !important;
   }
 
-  /* Mantém o conteúdo acima do fundo e a navegação acima do conteúdo. */
   html[data-palette="galaxy"] .space-ui-home-route .space-ui-content,
   html[data-palette="galaxy"] .space-ui-home-route .space-ui-main {
     z-index: 1;
