@@ -45,7 +45,7 @@ export function GuestServerSyncPanel() {
   const enable = async () => {
     setBusyAction('enable');
     try {
-      await syncAnonymousPortalHistory(items);
+      await syncAnonymousPortalHistory(items, { mergeRemote: true });
       toast.success('Backup anônimo ativado!');
     } catch (error) {
       toast.error(friendlyError(error));
