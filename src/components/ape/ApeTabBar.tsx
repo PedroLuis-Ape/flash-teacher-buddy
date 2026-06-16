@@ -32,12 +32,13 @@ export function ApeTabBar() {
   };
 
   return (
-    <nav className={cn(
-      "space-ui-tabbar fixed bottom-0 left-0 right-0 z-50 safe-area-pb",
-      settings.backdropBlur
-        ? "tab-bar-premium"
-        : "bg-background border-t border-border"
-    )}>
+    <nav
+      className={cn(
+        "space-ui-tabbar fixed bottom-0 left-0 right-0 z-50 safe-area-pb",
+        "lg:sticky lg:top-[7rem] lg:bottom-auto lg:left-auto lg:right-auto lg:z-30 lg:self-start lg:shrink-0 lg:safe-area-pb-0",
+        settings.backdropBlur ? "tab-bar-premium" : "bg-background border-t border-border",
+      )}
+    >
       <div className="relative flex items-center justify-around h-[4.5rem] max-w-screen-xl mx-auto px-2 md:px-6">
         {settings.tabBarAnimations && activeIndex >= 0 && (
           <div
@@ -61,26 +62,30 @@ export function ApeTabBar() {
                 "space-ui-tab relative flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[76px] h-[3.55rem] rounded-2xl px-2",
                 settings.animations && "transition-all duration-200",
                 settings.visualFeedback && "active:scale-95",
-                active ? "space-ui-tab-active text-primary" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground")
+                active ? "space-ui-tab-active text-primary" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground"),
               )}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
             >
-              <div className={cn(
-                "relative z-10",
-                settings.animations && "transition-transform duration-200",
-                active && settings.visualFeedback && "scale-110"
-              )}>
+              <div
+                className={cn(
+                  "relative z-10",
+                  settings.animations && "transition-transform duration-200",
+                  active && settings.visualFeedback && "scale-110",
+                )}
+              >
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
                 {active && settings.decorativeEffects && (
                   <div className="absolute inset-0 -z-10 bg-primary/30 blur-md rounded-full" />
                 )}
               </div>
-              <span className={cn(
-                "relative z-10 text-[11px] sm:text-xs",
-                settings.animations && "transition-all duration-200",
-                active ? "font-semibold" : "font-normal"
-              )}>
+              <span
+                className={cn(
+                  "relative z-10 text-[11px] sm:text-xs",
+                  settings.animations && "transition-all duration-200",
+                  active ? "font-semibold" : "font-normal",
+                )}
+              >
                 {tab.label}
               </span>
             </button>
