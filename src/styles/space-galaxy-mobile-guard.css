@@ -1,0 +1,47 @@
+/* Galaxy-only mobile containment.
+   The animated comet used transforms beyond the viewport and could make
+   Chrome Android expose a horizontal scroll area. Mobile Galaxy is static. */
+
+@media (max-width: 767px), (update: slow), (prefers-reduced-motion: reduce) {
+  html[data-palette="galaxy"],
+  html[data-palette="galaxy"] body,
+  html[data-palette="galaxy"] #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  html[data-palette="galaxy"] .space-galaxy-effects--mobile {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    overflow: hidden;
+    contain: paint;
+    transform: none;
+  }
+
+  html[data-palette="galaxy"] .space-galaxy-effects--mobile .space-galaxy-arm {
+    left: 0 !important;
+    right: 0 !important;
+    top: 38% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 11rem !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  html[data-palette="galaxy"] .space-galaxy-effects--mobile .space-twinkle-star {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  html[data-palette="galaxy"] .space-galaxy-effects--mobile .space-shooting-star {
+    display: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}

@@ -3,6 +3,7 @@ import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge
 import { usePalette } from "@/hooks/usePalette";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import "@/styles/space-layouts.css";
+import "@/styles/space-galaxy-mobile-guard.css";
 
 const DRAWER_LAYOUT_CSS = `
 [role="dialog"][class~="left-0"][class~="inset-y-0"]{width:min(88vw,360px)!important;max-width:360px!important;height:100dvh!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:hsl(var(--background))!important}
@@ -34,7 +35,7 @@ const STARS: readonly TwinkleStar[] = [
   { left: "82%", top: "86%", size: 2, duration: 6800, delay: -2600, glow: "rgba(255,255,255,.84)" },
 ];
 
-const MOBILE_QUERY = "(max-width: 767px), (update: slow)";
+const MOBILE_QUERY = "(max-width: 767px), (update: slow), (prefers-reduced-motion: reduce)";
 
 export function SpaceTwinkleLayer() {
   const { palette } = usePalette();
@@ -45,8 +46,8 @@ export function SpaceTwinkleLayer() {
   );
   const isGalaxy = palette === "galaxy";
   const starMotionAllowed = settings.animations && !settings.reduceMotion && settings.decorativeEffects && !mobileLite;
-  const shootingStarAllowed = settings.animations && !settings.reduceMotion;
-  const visibleStars = mobileLite ? STARS.slice(0, 5) : STARS;
+  const shootingStarAllowed = settings.animations && !settings.reduceMotion && !mobileLite;
+  const visibleStars = mobileLite ? STARS.slice(0, 4) : STARS;
 
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
@@ -62,12 +63,13 @@ export function SpaceTwinkleLayer() {
     if (!star || typeof star.animate !== "function") return;
 
     let timer: number | undefined;
+    let activeAnimation: Animation | null = null;
     let cancelled = false;
 
     const schedule = (first = false) => {
       if (cancelled) return;
-      const min = first ? (mobileLite ? 30000 : 20000) : (mobileLite ? 65000 : 45000);
-      const variation = first ? (mobileLite ? 20000 : 15000) : (mobileLite ? 35000 : 30000);
+      const min = first ? 20000 : 45000;
+      const variation = first ? 15000 : 30000;
       timer = window.setTimeout(run, min + Math.random() * variation);
     };
 
@@ -79,31 +81,35 @@ export function SpaceTwinkleLayer() {
       }
       star.style.top = `${8 + Math.random() * 40}%`;
       star.style.left = "-12rem";
-      const animation = star.animate(
+      activeAnimation = star.animate(
         [
           { opacity: 0, transform: "translate3d(0,0,0) rotate(-24deg)" },
           { opacity: .92, offset: .14 },
           { opacity: .72, offset: .72 },
           { opacity: 0, transform: "translate3d(140vw,52vh,0) rotate(-24deg)" },
         ],
-        { duration: mobileLite ? 1700 : 1450, easing: "cubic-bezier(.2,.65,.35,1)" },
+        { duration: 1450, easing: "cubic-bezier(.2,.65,.35,1)" },
       );
-      animation.finished.catch(() => undefined).finally(() => schedule());
+      activeAnimation.finished.catch(() => undefined).finally(() => {
+        activeAnimation = null;
+        schedule();
+      });
     };
 
     schedule(true);
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
+      activeAnimation?.cancel();
     };
-  }, [isGalaxy, shootingStarAllowed, mobileLite]);
+  }, [isGalaxy, shootingStarAllowed]);
 
   return (
     <Fragment>
       <style>{DRAWER_LAYOUT_CSS}</style>
       <PitecoHeroAssetBridge />
       {isGalaxy && (
-        <div aria-hidden="true" className="space-galaxy-effects">
+        <div aria-hidden="true" className={`space-galaxy-effects${mobileLite ? " space-galaxy-effects--mobile" : ""}`}>
           <span className="space-galaxy-arm" />
           {visibleStars.map((star) => (
             <span
