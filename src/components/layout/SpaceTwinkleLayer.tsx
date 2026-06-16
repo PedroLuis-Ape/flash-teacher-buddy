@@ -2,8 +2,15 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge";
 import { usePalette } from "@/hooks/usePalette";
 import { usePerformance } from "@/contexts/PerformanceContext";
+import {
+  detectGalaxyMotionTier,
+  getGalaxyStarLimit,
+  getShootingStarTiming,
+  type GalaxyMotionTier,
+} from "@/lib/galaxyPerformance";
 import "@/styles/space-layouts.css";
 import "@/styles/space-galaxy-mobile-guard.css";
+import "@/styles/space-galaxy-motion.css";
 
 const DRAWER_LAYOUT_CSS = `
 [role="dialog"][class~="left-0"][class~="inset-y-0"]{width:min(88vw,360px)!important;max-width:360px!important;height:100dvh!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:hsl(var(--background))!important}
@@ -25,91 +32,162 @@ type TwinkleStar = {
 };
 
 const STARS: readonly TwinkleStar[] = [
-  { left: "7%", top: "14%", size: 3, duration: 5200, delay: -150, glow: "rgba(255,255,255,.92)" },
-  { left: "38%", top: "81%", size: 2, duration: 6100, delay: -800, glow: "rgba(224,196,255,.9)" },
-  { left: "75%", top: "27%", size: 2, duration: 5800, delay: -450, glow: "rgba(255,255,255,.9)" },
-  { left: "18%", top: "66%", size: 2, duration: 6600, delay: -1050, glow: "rgba(255,255,255,.86)" },
-  { left: "57%", top: "53%", size: 3, duration: 6300, delay: -1450, glow: "rgba(195,225,255,.9)" },
-  { left: "90%", top: "58%", size: 2, duration: 7000, delay: -1900, glow: "rgba(235,202,255,.88)" },
-  { left: "28%", top: "34%", size: 2, duration: 7400, delay: -2100, glow: "rgba(205,228,255,.84)" },
-  { left: "82%", top: "86%", size: 2, duration: 6800, delay: -2600, glow: "rgba(255,255,255,.84)" },
+  { left: "7%", top: "14%", size: 3, duration: 11_400, delay: -1_350, glow: "rgba(255,255,255,.9)" },
+  { left: "38%", top: "81%", size: 2, duration: 8_900, delay: -5_200, glow: "rgba(224,196,255,.86)" },
+  { left: "75%", top: "27%", size: 2, duration: 13_200, delay: -2_700, glow: "rgba(255,255,255,.86)" },
+  { left: "18%", top: "66%", size: 2, duration: 10_300, delay: -7_100, glow: "rgba(255,255,255,.82)" },
+  { left: "57%", top: "53%", size: 3, duration: 14_600, delay: -8_900, glow: "rgba(195,225,255,.86)" },
+  { left: "90%", top: "58%", size: 2, duration: 9_700, delay: -3_850, glow: "rgba(235,202,255,.84)" },
+  { left: "28%", top: "34%", size: 2, duration: 12_100, delay: -10_200, glow: "rgba(205,228,255,.8)" },
+  { left: "82%", top: "86%", size: 2, duration: 15_400, delay: -6_450, glow: "rgba(255,255,255,.8)" },
+  { left: "48%", top: "18%", size: 2, duration: 10_900, delay: -9_300, glow: "rgba(230,214,255,.82)" },
+  { left: "66%", top: "72%", size: 3, duration: 13_800, delay: -4_600, glow: "rgba(205,228,255,.82)" },
 ];
 
-const MOBILE_QUERY = "(max-width: 767px), (update: slow), (prefers-reduced-motion: reduce)";
+interface NavigatorWithConnection extends Navigator {
+  connection?: EventTarget;
+}
+
+function motionClass(tier: GalaxyMotionTier) {
+  return `space-galaxy-effects--${tier}`;
+}
 
 export function SpaceTwinkleLayer() {
   const { palette } = usePalette();
   const { settings } = usePerformance();
   const shootingStarRef = useRef<HTMLSpanElement>(null);
-  const [mobileLite, setMobileLite] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches,
-  );
+  const [motionTier, setMotionTier] = useState<GalaxyMotionTier>(() => detectGalaxyMotionTier());
   const isGalaxy = palette === "galaxy";
-  const starMotionAllowed = settings.animations && !settings.reduceMotion && settings.decorativeEffects && !mobileLite;
-  const shootingStarAllowed = settings.animations && !settings.reduceMotion && !mobileLite;
-  const visibleStars = mobileLite ? STARS.slice(0, 4) : STARS;
+  const motionAllowed = settings.animations && !settings.reduceMotion && motionTier !== "static";
+  const starMotionAllowed = motionAllowed && settings.decorativeEffects;
+  const armMotionAllowed = starMotionAllowed && motionTier === "full";
+  const shootingStarAllowed = motionAllowed && settings.decorativeEffects;
+  const visibleStars = STARS.slice(0, getGalaxyStarLimit(motionTier));
 
   useEffect(() => {
-    const media = window.matchMedia(MOBILE_QUERY);
-    const sync = () => setMobileLite(media.matches);
+    const mediaQueries = [
+      window.matchMedia("(prefers-reduced-motion: reduce)"),
+      window.matchMedia("(update: slow)"),
+      window.matchMedia("(pointer: coarse)"),
+      window.matchMedia("(max-width: 1199px)"),
+    ];
+    const connection = (navigator as NavigatorWithConnection).connection;
+    let frame: number | undefined;
+
+    const sync = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => setMotionTier(detectGalaxyMotionTier()));
+    };
+
+    mediaQueries.forEach((media) => media.addEventListener?.("change", sync));
+    connection?.addEventListener?.("change", sync);
+    window.addEventListener("resize", sync, { passive: true });
     sync();
-    media.addEventListener?.("change", sync);
-    return () => media.removeEventListener?.("change", sync);
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      mediaQueries.forEach((media) => media.removeEventListener?.("change", sync));
+      connection?.removeEventListener?.("change", sync);
+      window.removeEventListener("resize", sync);
+    };
   }, []);
 
   useEffect(() => {
-    if (!isGalaxy || !shootingStarAllowed) return;
+    const root = document.documentElement;
+    if (!isGalaxy) {
+      if (root.dataset.galaxyMotion === motionTier) delete root.dataset.galaxyMotion;
+      return;
+    }
+
+    root.dataset.galaxyMotion = motionTier;
+    return () => {
+      if (root.dataset.galaxyMotion === motionTier) delete root.dataset.galaxyMotion;
+    };
+  }, [isGalaxy, motionTier]);
+
+  useEffect(() => {
+    if (!isGalaxy || !shootingStarAllowed || motionTier === "static") return;
     const star = shootingStarRef.current;
     if (!star || typeof star.animate !== "function") return;
 
+    const timing = getShootingStarTiming(motionTier);
     let timer: number | undefined;
     let activeAnimation: Animation | null = null;
     let cancelled = false;
 
+    const clearTimer = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = undefined;
+    };
+
     const schedule = (first = false) => {
-      if (cancelled) return;
-      const min = first ? 20000 : 45000;
-      const variation = first ? 15000 : 30000;
+      if (cancelled || document.hidden) return;
+      clearTimer();
+      const min = first ? timing.firstDelayMin : timing.repeatDelayMin;
+      const variation = first ? timing.firstDelayVariation : timing.repeatDelayVariation;
       timer = window.setTimeout(run, min + Math.random() * variation);
     };
 
     const run = () => {
-      if (cancelled) return;
-      if (document.hidden) {
-        schedule();
-        return;
-      }
-      star.style.top = `${8 + Math.random() * 40}%`;
-      star.style.left = "-12rem";
+      timer = undefined;
+      if (cancelled || document.hidden) return;
+
+      star.style.top = `${10 + Math.random() * 36}%`;
+      star.style.left = "-14rem";
+      const travelX = motionTier === "balanced" ? "122vw" : "130vw";
+      const travelY = motionTier === "balanced" ? "34vh" : "40vh";
+
       activeAnimation = star.animate(
         [
-          { opacity: 0, transform: "translate3d(0,0,0) rotate(-24deg)" },
-          { opacity: .92, offset: .14 },
-          { opacity: .72, offset: .72 },
-          { opacity: 0, transform: "translate3d(140vw,52vh,0) rotate(-24deg)" },
+          { opacity: 0, transform: "translate3d(0,0,0) rotate(-22deg)" },
+          { opacity: .48, offset: .16 },
+          { opacity: .88, offset: .42 },
+          { opacity: .58, offset: .72 },
+          { opacity: 0, transform: `translate3d(${travelX},${travelY},0) rotate(-22deg)` },
         ],
-        { duration: 1450, easing: "cubic-bezier(.2,.65,.35,1)" },
+        { duration: timing.duration, easing: "cubic-bezier(.22,.58,.34,1)" },
       );
+
       activeAnimation.finished.catch(() => undefined).finally(() => {
         activeAnimation = null;
         schedule();
       });
     };
 
+    const handleVisibility = () => {
+      if (document.hidden) {
+        clearTimer();
+        activeAnimation?.cancel();
+        activeAnimation = null;
+        return;
+      }
+      schedule(true);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
     schedule(true);
+
     return () => {
       cancelled = true;
-      if (timer) window.clearTimeout(timer);
+      clearTimer();
       activeAnimation?.cancel();
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [isGalaxy, shootingStarAllowed]);
+  }, [isGalaxy, motionTier, shootingStarAllowed]);
+
+  const effectClasses = [
+    "space-galaxy-effects",
+    motionClass(motionTier),
+    starMotionAllowed ? "space-galaxy-effects--stars-motion" : "",
+    armMotionAllowed ? "space-galaxy-effects--arm-motion" : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <Fragment>
       <style>{DRAWER_LAYOUT_CSS}</style>
       <PitecoHeroAssetBridge />
       {isGalaxy && (
-        <div aria-hidden="true" className={`space-galaxy-effects${mobileLite ? " space-galaxy-effects--mobile" : ""}`}>
+        <div aria-hidden="true" className={effectClasses}>
           <span className="space-galaxy-arm" />
           {visibleStars.map((star) => (
             <span
@@ -121,7 +199,7 @@ export function SpaceTwinkleLayer() {
                 width: star.size,
                 height: star.size,
                 background: star.glow,
-                boxShadow: `0 0 ${star.size * 3}px ${star.size}px ${star.glow}`,
+                boxShadow: motionTier === "static" ? "none" : `0 0 ${star.size * 2.5}px ${star.size * .7}px ${star.glow}`,
                 "--twinkle-duration": `${star.duration}ms`,
                 "--twinkle-delay": `${star.delay}ms`,
               } as React.CSSProperties}
