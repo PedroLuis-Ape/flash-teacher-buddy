@@ -91,7 +91,10 @@ export async function ensureAnonymousHistorySession() {
   return data.session;
 }
 
-export async function syncAnonymousPortalHistory(items = getGuestHistory()) {
+export async function syncAnonymousPortalHistory(
+  items = getGuestHistory(),
+  options?: { mergeRemote?: boolean },
+) {
   const session = await ensureAnonymousHistorySession();
   const expiresAt = new Date(Date.now() + NINETY_DAYS_MS).toISOString();
   const ownerId = session.user.id;
@@ -110,11 +113,14 @@ export async function syncAnonymousPortalHistory(items = getGuestHistory()) {
     if (deleteError) throw deleteError;
   }
 
-  const merged = mergeGuestHistories(items, normalizeRemoteHistory(existing?.history));
+  const nextHistory = options?.mergeRemote
+    ? mergeGuestHistories(items, normalizeRemoteHistory(existing?.history))
+    : mergeGuestHistories(items);
+
   const { error: writeError } = await table.upsert(
     {
       owner_id: ownerId,
-      history: merged,
+      history: nextHistory,
       updated_at: new Date().toISOString(),
       expires_at: expiresAt,
     },
@@ -122,9 +128,9 @@ export async function syncAnonymousPortalHistory(items = getGuestHistory()) {
   );
   if (writeError) throw writeError;
 
-  replaceGuestHistory(merged);
+  replaceGuestHistory(nextHistory);
   setGuestServerSyncState({ enabled: true, lastSyncAt: Date.now(), expiresAt });
-  return merged;
+  return nextHistory;
 }
 
 export async function restoreAnonymousPortalHistory() {
@@ -154,13 +160,17 @@ export async function restoreAnonymousPortalHistory() {
 
 export async function disableAnonymousPortalHistorySync(options?: { deleteRemote?: boolean }) {
   const session = await getExistingAnonymousSession();
+  let deleteError: unknown = null;
+
   if (session && options?.deleteRemote) {
     const table = (guestSyncClient.from as any)('anonymous_portal_history');
-    const { error } = await table.delete().eq('owner_id', session.user.id);
-    if (error) throw error;
+    const result = await table.delete().eq('owner_id', session.user.id);
+    deleteError = result.error;
   }
+
   await guestSyncClient.auth.signOut({ scope: 'local' });
   setGuestServerSyncState({ enabled: false });
+  if (deleteError) throw deleteError;
 }
 
 export async function readAccountPortalHistory(userId: string) {
@@ -174,20 +184,19 @@ export async function readAccountPortalHistory(userId: string) {
 }
 
 export async function syncAccountPortalHistory(userId: string, items = getGuestHistory()) {
-  const remote = await readAccountPortalHistory(userId);
-  const merged = mergeGuestHistories(items, remote);
+  const nextHistory = mergeGuestHistories(items);
   const table = (supabase.from as any)('user_portal_history');
   const { error } = await table.upsert(
     {
       user_id: userId,
-      history: merged,
+      history: nextHistory,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id' },
   );
   if (error) throw error;
-  replaceGuestHistory(merged);
-  return merged;
+  replaceGuestHistory(nextHistory);
+  return nextHistory;
 }
 
 export async function migrateAnonymousPortalHistoryToAccount(userId: string) {
