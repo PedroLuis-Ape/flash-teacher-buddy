@@ -31,7 +31,7 @@ serve(async (req) => {
       );
     }
 
-    const { turma_id, nome, descricao } = await req.json();
+    const { turma_id, nome, descricao, public: isPublic } = await req.json();
 
     if (!turma_id) {
       return new Response(
@@ -55,9 +55,10 @@ serve(async (req) => {
     }
 
     // Update turma
-    const updates: any = { updated_at: new Date().toISOString() };
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (nome !== undefined) updates.nome = nome.trim();
     if (descricao !== undefined) updates.descricao = descricao?.trim() || null;
+    if (isPublic !== undefined) updates.public = isPublic === true;
 
     const { data: updated, error: updateError } = await supabaseClient
       .from('turmas')
