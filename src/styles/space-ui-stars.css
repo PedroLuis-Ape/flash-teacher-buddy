@@ -4,12 +4,18 @@ html[data-palette="galaxy"] .space-ui-shell::after {
   z-index: 0 !important;
 }
 
+/* Do not override the tab bar position here. On mobile ApeTabBar is fixed;
+   changing it to relative makes it participate in the app-frame flex row and
+   pushes every page to the right. */
 html[data-palette="galaxy"] .space-ui-header,
 html[data-palette="galaxy"] .space-ui-main,
-html[data-palette="galaxy"] .space-ui-footer-wrap,
-html[data-palette="galaxy"] .space-ui-tabbar {
+html[data-palette="galaxy"] .space-ui-footer-wrap {
   position: relative;
   z-index: 1;
+}
+
+html[data-palette="galaxy"] .space-ui-tabbar {
+  z-index: 50;
 }
 
 html[data-palette="galaxy"] .space-ui-main > [class*="min-h-screen"][class*="bg-background"],
@@ -71,14 +77,15 @@ html[data-palette="galaxy"] .space-ui-shell::after {
 @keyframes space-stars-twinkle { from { opacity:.28;filter:brightness(.9); } to { opacity:.6;filter:brightness(1.35); } }
 
 @media (max-width:767px),(update:slow) {
-  html[data-palette="galaxy"] .space-ui-shell::before {
-    opacity:.88 !important;
-    animation:none !important;
-    filter:none;
-  }
+  /* Mobile already receives a static galaxy through --ape-page. Removing the
+     shell pseudo-layers avoids duplicated fixed surfaces and keeps all fixed
+     UI anchored to the viewport. */
+  html[data-palette="galaxy"] .space-ui-shell::before,
   html[data-palette="galaxy"] .space-ui-shell::after {
-    opacity:.42 !important;
-    animation:none !important;
+    content: none !important;
+    display: none !important;
+    animation: none !important;
+    filter: none !important;
   }
 }
 

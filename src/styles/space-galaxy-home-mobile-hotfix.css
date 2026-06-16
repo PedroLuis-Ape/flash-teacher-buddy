@@ -1,17 +1,5 @@
-/*
- * Hotfix: Home mobile quebrava somente no tema Galáxia.
- *
- * A combinação de backdrop-filter, mix-blend-mode, pseudo-elementos fixos,
- * isolamento e camadas decorativas pode causar corrupção de composição em
- * navegadores mobile. O DOM continua correto, mas cards, textos e botões
- * aparecem comprimidos ou sobrepostos.
- *
- * Este arquivo é carregado por último no PrivateShell. Ele mantém as cores do
- * Galáxia, mas usa uma única pintura estática na Home mobile e restaura a
- * geometria normal dos componentes.
- */
-
-@media (max-width: 767px) {
+/* Galaxy may change paint, never mobile geometry. */
+@media (max-width: 767px), (update: slow) {
   html[data-palette="galaxy"],
   html[data-palette="galaxy"] body,
   html[data-palette="galaxy"] #root {
@@ -19,155 +7,85 @@
     min-width: 0;
     max-width: 100%;
     overflow-x: hidden;
-    overscroll-behavior-x: none;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route {
+  html[data-palette="galaxy"] .space-ui-shell {
     width: 100%;
     min-width: 0;
-    max-width: 100vw;
-    min-height: 100dvh;
+    max-width: 100%;
     overflow-x: hidden;
-    isolation: auto;
-    contain: none;
-    transform: none;
+    transform: none !important;
+    filter: none !important;
+    contain: none !important;
+    isolation: auto !important;
   }
 
-  /* A paleta já fornece um fundo galáctico estático. A camada fixa adicional
-     é removida apenas da Home mobile. */
-  html[data-palette="galaxy"] .space-ui-home-route .space-galaxy-effects {
-    display: none !important;
+  html[data-palette="galaxy"] .space-ui-app-frame {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-app-frame,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-content,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > div,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > [class*="min-h-"],
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > div > [class*="min-h-"] {
-    position: relative;
+  html[data-palette="galaxy"] .space-ui-content,
+  html[data-palette="galaxy"] .space-ui-main,
+  html[data-palette="galaxy"] .space-ui-footer-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    transform: none !important;
+    filter: none !important;
+    contain: none !important;
+  }
+
+  html[data-palette="galaxy"] .space-ui-tabbar {
+    position: fixed !important;
+    inset: auto 0 0 !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
     height: auto !important;
-    min-height: 0;
-    overflow: visible !important;
-    isolation: auto !important;
-    contain: none !important;
-    transform: none !important;
+    margin: 0 !important;
+    z-index: 50 !important;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > .min-h-screen,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main > div > .min-h-screen {
-    min-height: 100dvh !important;
-  }
-
-  /* Remove o overlay fixo de glitter aplicado sobre toda a Home. */
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main::before,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main::after {
-    content: none !important;
-    display: none !important;
-    animation: none !important;
-    background: none !important;
-    mix-blend-mode: normal !important;
-    filter: none !important;
-  }
-
-  /* Superfícies principais mantêm largura natural e recebem uma pintura
-     simples, sem cada card virar uma camada GPU independente. */
-  html[data-palette="galaxy"] .space-ui-home-route .welcome-banner,
-  html[data-palette="galaxy"] .space-ui-home-route .stat-tile,
-  html[data-palette="galaxy"] .space-ui-home-route .card-premium,
-  html[data-palette="galaxy"] .space-ui-home-route .glass-panel,
-  html[data-palette="galaxy"] .space-ui-home-route .bg-card {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    height: auto;
-    min-height: 0;
-    isolation: auto !important;
-    contain: none !important;
-    transform: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    mix-blend-mode: normal !important;
-    background-image: none !important;
-    background: linear-gradient(145deg, hsl(251 42% 12% / .98), hsl(248 46% 8% / .99)) !important;
-    border-color: hsl(var(--primary) / .24) !important;
-    box-shadow: 0 8px 24px -20px hsl(267 80% 50% / .5) !important;
-  }
-
-  /* Elementos menores com borda só perdem os filtros; sua largura original
-     é preservada para não esticar chips, ícones ou badges. */
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-lg.border,
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-xl.border,
-  html[data-palette="galaxy"] .space-ui-home-route main .rounded-2xl.border {
-    min-width: 0;
-    isolation: auto !important;
-    contain: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    mix-blend-mode: normal !important;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .welcome-banner {
-    overflow: hidden;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .welcome-banner::before {
-    filter: none !important;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .stat-tile {
-    overflow: visible;
-  }
-
-  /* Preserva explicitamente a largura do bloco de turmas e de cada linha. */
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut,
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut > *,
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner,
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner > * {
+  html[data-palette="galaxy"] .space-ui-tabbar > div,
+  html[data-palette="galaxy"] .space-ui-main > * {
     width: 100%;
     min-width: 0;
     max-width: 100%;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route .home-turma-shortcut .welcome-banner {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
+  html[data-palette="galaxy"] .space-galaxy-effects,
+  html[data-palette="galaxy"] .space-ui-shell::before,
+  html[data-palette="galaxy"] .space-ui-shell::after,
+  html[data-palette="galaxy"] .space-ui-main::before,
+  html[data-palette="galaxy"] .space-ui-main::after {
+    content: none !important;
+    display: none !important;
+    animation: none !important;
   }
 
-  /* O glitter era aplicado por pseudo-elemento em todos os botões da Home. */
-  html[data-palette="galaxy"] .space-ui-home-route main button:not([role="switch"]) {
-    min-width: 0;
-    max-width: 100%;
-    isolation: auto !important;
-    contain: none !important;
+  html[data-palette="galaxy"] .space-ui .bg-card,
+  html[data-palette="galaxy"] .space-ui [class*="bg-card/"],
+  html[data-palette="galaxy"] .space-ui .welcome-banner,
+  html[data-palette="galaxy"] .space-ui .stat-tile,
+  html[data-palette="galaxy"] .space-ui .card-premium,
+  html[data-palette="galaxy"] .space-ui .glass-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     mix-blend-mode: normal !important;
   }
 
-  html[data-palette="galaxy"] .space-ui-home-route main button:not([role="switch"])::before,
-  html[data-palette="galaxy"] .space-ui-home-route main button:not([role="switch"])::after {
+  html[data-palette="galaxy"] .space-ui main button::before,
+  html[data-palette="galaxy"] .space-ui main button::after {
     content: none !important;
     display: none !important;
-    background: none !important;
-    animation: none !important;
-    filter: none !important;
   }
 
-  /* O selo fixo aparecia em cima do último botão quando a pintura falhava. */
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-version-badge {
+  html[data-palette="galaxy"] .space-ui-version-badge {
     display: none !important;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-content,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-main {
-    z-index: 1;
-  }
-
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-tabbar,
-  html[data-palette="galaxy"] .space-ui-home-route .space-ui-header {
-    z-index: 50;
   }
 }

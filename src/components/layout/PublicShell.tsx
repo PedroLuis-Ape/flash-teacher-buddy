@@ -12,6 +12,7 @@ import { GuestHistoryTracker } from "@/components/portal/GuestHistoryTracker";
 import { formatVersionLabel } from "@/lib/versionManager";
 import "@/styles/space-ui-v1.css";
 import "@/styles/space-layouts.css";
+import "@/styles/space-galaxy-home-mobile-hotfix.css";
 
 interface PublicShellProps {
   children: ReactNode;
@@ -25,7 +26,7 @@ export function PublicShell({ children }: PublicShellProps) {
       <div className="space-ui-main min-h-screen">
         {children}
       </div>
-      <div className="fixed bottom-3 right-3 z-50 pointer-events-none">
+      <div className="space-ui-version-badge fixed bottom-3 right-3 z-50 pointer-events-none">
         <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
           {formatVersionLabel()}
         </Badge>
