@@ -41,18 +41,22 @@ export function GuestContinueSection() {
   const { items, clear, remove } = useGuestHistory();
   const visibleItems = items.slice(0, 4);
 
-  if (isLoading || user || visibleItems.length === 0) return null;
+  if (isLoading || visibleItems.length === 0) return null;
 
   return (
     <section aria-labelledby="guest-continue-title" className="mb-12 space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-primary">Seu histórico neste navegador</p>
+          <p className="text-sm font-medium text-primary">
+            {user ? 'Histórico da sua conta' : 'Seu histórico neste navegador'}
+          </p>
           <h2 id="guest-continue-title" className="text-2xl font-bold">
             Continue de onde parou
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Salvo somente neste dispositivo. Nenhum IP ou dado pessoal é usado.
+            {user
+              ? 'Seus acessos públicos recentes são sincronizados com sua conta.'
+              : 'O histórico local funciona sem conta. O backup no servidor é opcional e não usa IP.'}
           </p>
         </div>
         <Button type="button" variant="ghost" size="sm" className="self-start gap-2 text-muted-foreground" onClick={clear}>
