@@ -15,7 +15,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
   const teacherQuery = useTurmasMine();
 
   const query = isTeacher ? teacherQuery : studentQuery;
-  const turmas = (isTeacher ? query.data?.turmas : query.data?.turmas) || [];
+  const turmas = query.data?.turmas || [];
 
   // Don't render anything if loading or no turmas
   if (query.isLoading || turmas.length === 0) return null;
@@ -27,61 +27,66 @@ export function TurmaShortcut({ isTeacher }: Props) {
   const title = isTeacher ? "Minhas Turmas" : "Suas Turmas";
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <ApeSectionTitle>{title}</ApeSectionTitle>
+    <section className="home-turma-shortcut w-full min-w-0 space-y-3" aria-label={title}>
+      <div className="flex w-full min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+          <div className="min-w-0 truncate">
+            <ApeSectionTitle>{title}</ApeSectionTitle>
+          </div>
         </div>
         {hasMore && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(viewAllRoute)}
-            className="min-h-[36px] px-3 text-primary hover:text-primary"
+            className="min-h-[36px] shrink-0 px-3 text-primary hover:text-primary"
           >
             Ver todas ({turmas.length})
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <ChevronRight className="ml-1 h-4 w-4 shrink-0" />
           </Button>
         )}
       </div>
 
-      <Card className="welcome-banner border-0 overflow-hidden">
-        <CardContent className="p-4 space-y-3">
+      <Card className="welcome-banner w-full min-w-0 overflow-hidden border-0">
+        <CardContent className="w-full min-w-0 space-y-3 p-4">
           {visibleTurmas.map((turma: any) => (
-            <div
+            <button
+              type="button"
               key={turma.id}
-              className="flex items-center gap-4 p-3 rounded-xl bg-background/80 border border-primary/15 cursor-pointer hover:bg-primary/[0.06] hover:border-primary/30 transition-all duration-200 active:scale-[0.98]"
+              className="flex w-full min-w-0 items-center gap-4 rounded-xl border border-primary/15 bg-background/80 p-3 text-left transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.06] active:scale-[0.98]"
               onClick={() => navigate(`/turmas/${turma.id}`)}
             >
-              <div className="shrink-0 w-11 h-11 rounded-lg bg-primary/15 flex items-center justify-center">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15">
                 <Icon className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-sm truncate">
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">
                   {turma.nome || "Turma"}
-                </h4>
+                </span>
                 {turma.descricao && (
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                     {turma.descricao}
-                  </p>
+                  </span>
                 )}
-              </div>
-              <ChevronRight className="h-4 w-4 text-primary/60 shrink-0" />
-            </div>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-primary/60" />
+            </button>
           ))}
 
           {turmas.length === 1 && (
             <Button
-              className="w-full mt-1 min-h-[44px]"
+              className="mt-1 min-h-[44px] w-full min-w-0"
               onClick={() => navigate(`/turmas/${turmas[0].id}`)}
             >
-              <Icon className="h-4 w-4 mr-2" />
-              {isTeacher ? "Gerenciar turma" : "Abrir turma"}
+              <Icon className="mr-2 h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {isTeacher ? "Gerenciar turma" : "Abrir turma"}
+              </span>
             </Button>
           )}
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }
