@@ -48,11 +48,11 @@ function readProgressLabel() {
 
 export function GuestHistoryTracker() {
   const location = useLocation();
-  const { user, isLoading } = useAuthUser();
+  const { isLoading } = useAuthUser();
   const path = `${location.pathname}${location.search}`;
 
   useEffect(() => {
-    if (isLoading || user || location.pathname === '/portal') return;
+    if (isLoading || location.pathname === '/portal') return;
     const type = inferType(location.pathname);
     if (!type) return;
 
@@ -105,7 +105,7 @@ export function GuestHistoryTracker() {
       window.removeEventListener('scroll', savePosition);
       updateGuestHistoryPosition(path, window.scrollY, readProgressLabel());
     };
-  }, [isLoading, location.pathname, path, user]);
+  }, [isLoading, location.pathname, path]);
 
   return null;
 }

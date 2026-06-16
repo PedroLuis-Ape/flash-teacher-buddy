@@ -4,6 +4,7 @@ import { useFreezeWatchdog } from "@/hooks/useFreezeWatchdog";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
+import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -38,9 +39,14 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const { user } = useAuthUser();
   useFreezeWatchdog();
 
-  if (isPublicRoute(location.pathname, !user)) {
-    return <PublicShell>{children}</PublicShell>;
-  }
+  const content = isPublicRoute(location.pathname, !user)
+    ? <PublicShell>{children}</PublicShell>
+    : <PrivateShell>{children}</PrivateShell>;
 
-  return <PrivateShell>{children}</PrivateShell>;
+  return (
+    <>
+      <PortalHistorySyncAgent />
+      {content}
+    </>
+  );
 }
