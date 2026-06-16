@@ -35,17 +35,21 @@ interface RewardResult {
   xpAwarded: number;
 }
 
+type RewardWaiter = (result: RewardResult) => void;
+
 interface PendingReward {
   pts: number;
   actions: number;
   timer: ReturnType<typeof setTimeout> | null;
+  waiters: RewardWaiter[];
 }
 
 const pendingRewards = new Map<string, PendingReward>();
 const flushChains = new Map<string, Promise<RewardResult>>();
-const REWARD_FLUSH_DELAY_MS = 5000;
+const REWARD_FLUSH_DELAY_MS = 1500;
 const REWARD_FLUSH_ACTION_THRESHOLD = 10;
 const EMPTY_RESULT: RewardResult = { success: true, ptsAwarded: 0, xpAwarded: 0 };
+const FAILED_RESULT: RewardResult = { success: false, ptsAwarded: 0, xpAwarded: 0 };
 
 function normalizeRewardSource(source: string): string {
   return source.trim().toLocaleLowerCase();
@@ -69,19 +73,26 @@ function scheduleRewardFlush(userId: string): void {
   }, REWARD_FLUSH_DELAY_MS);
 }
 
-function enqueueCorrectAnswer(userId: string, ptsAmount: number): RewardResult {
-  const pending = pendingRewards.get(userId) ?? { pts: 0, actions: 0, timer: null };
-  pending.pts += ptsAmount;
-  pending.actions += 1;
-  pendingRewards.set(userId, pending);
+function enqueueCorrectAnswer(userId: string, ptsAmount: number): Promise<RewardResult> {
+  return new Promise<RewardResult>((resolve) => {
+    const pending = pendingRewards.get(userId) ?? {
+      pts: 0,
+      actions: 0,
+      timer: null,
+      waiters: [],
+    };
 
-  if (pending.actions >= REWARD_FLUSH_ACTION_THRESHOLD) {
-    void flushAwardQueue(userId);
-  } else {
-    scheduleRewardFlush(userId);
-  }
+    pending.pts += ptsAmount;
+    pending.actions += 1;
+    pending.waiters.push(resolve);
+    pendingRewards.set(userId, pending);
 
-  return { success: true, ptsAwarded: ptsAmount, xpAwarded: ptsAmount };
+    if (pending.actions >= REWARD_FLUSH_ACTION_THRESHOLD) {
+      void flushAwardQueue(userId);
+    } else {
+      scheduleRewardFlush(userId);
+    }
+  });
 }
 
 async function awardPointsImmediate(
@@ -91,7 +102,7 @@ async function awardPointsImmediate(
   actionsCount = 1,
 ): Promise<RewardResult> {
   if (!FEATURE_FLAGS.economy_enabled || ptsAmount <= 0) {
-    return { success: false, ptsAwarded: 0, xpAwarded: 0 };
+    return FAILED_RESULT;
   }
 
   try {
@@ -147,13 +158,15 @@ async function awardPointsImmediate(
     return { success: true, ptsAwarded: cappedPts, xpAwarded };
   } catch (error) {
     console.error(`[RewardEngine] Error awarding points (${source}):`, error);
-    return { success: false, ptsAwarded: 0, xpAwarded: 0 };
+    return FAILED_RESULT;
   }
 }
 
 /**
  * Flushes queued correct-answer rewards for one user. Writes are serialized per
  * user so a slow request cannot overlap with the next batch in the same tab.
+ * Every caller waiting on the batch is resolved only after Supabase confirms
+ * the write, so the function never reports a false success for queued points.
  */
 export async function flushAwardQueue(userId: string): Promise<RewardResult> {
   const pending = pendingRewards.get(userId);
@@ -166,13 +179,22 @@ export async function flushAwardQueue(userId: string): Promise<RewardResult> {
 
   const previous = flushChains.get(userId) ?? Promise.resolve(EMPTY_RESULT);
   const next = previous
-    .catch(() => EMPTY_RESULT)
+    .catch(() => FAILED_RESULT)
     .then(() => awardPointsImmediate(
       userId,
       pending.pts,
       'Respostas corretas (lote)',
       pending.actions,
-    ));
+    ))
+    .then((result) => {
+      for (const resolve of pending.waiters) resolve(result);
+      return result;
+    })
+    .catch((error) => {
+      console.error('[RewardEngine] Unexpected queue flush error:', error);
+      for (const resolve of pending.waiters) resolve(FAILED_RESULT);
+      return FAILED_RESULT;
+    });
 
   flushChains.set(userId, next);
   const result = await next;
@@ -194,8 +216,9 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Correct-answer rewards are queued. Other rewards flush the queue first and
- * are then written immediately, preserving the expected order.
+ * Correct-answer rewards are queued and their promises resolve after the batch
+ * is persisted. Other rewards flush the queue first and are written
+ * immediately, preserving the expected order.
  */
 export async function awardPoints(
   userId: string,
@@ -203,13 +226,12 @@ export async function awardPoints(
   source: string,
 ): Promise<RewardResult> {
   if (!FEATURE_FLAGS.economy_enabled) {
-    return { success: false, ptsAwarded: 0, xpAwarded: 0 };
+    return FAILED_RESULT;
   }
 
   // FlipStudyView historically awarded points before delegating to the central
   // study engine, which awarded the same answer again. The engine is now the
-  // single source of truth; this legacy call is accepted as a no-op so older
-  // component paths cannot double the user's reward.
+  // single source of truth; this legacy call remains a no-op for compatibility.
   if (isLegacyFlipReward(source)) {
     return EMPTY_RESULT;
   }
