@@ -47,7 +47,7 @@ WITH CHECK (
   owner_id = auth.uid()
   AND COALESCE((auth.jwt()->>'is_anonymous')::boolean, false) = true
   AND expires_at > now()
-  AND expires_at <= now() + interval '90 days'
+  AND expires_at <= now() + interval '91 days'
 );
 
 DROP POLICY IF EXISTS "Anonymous session updates own portal history" ON public.anonymous_portal_history;
@@ -64,7 +64,7 @@ WITH CHECK (
   owner_id = auth.uid()
   AND COALESCE((auth.jwt()->>'is_anonymous')::boolean, false) = true
   AND expires_at > now()
-  AND expires_at <= now() + interval '90 days'
+  AND expires_at <= now() + interval '91 days'
 );
 
 DROP POLICY IF EXISTS "Anonymous session deletes own portal history" ON public.anonymous_portal_history;
