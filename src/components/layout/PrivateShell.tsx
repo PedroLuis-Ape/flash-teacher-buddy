@@ -40,6 +40,7 @@ import "@/styles/space-ui-glitter.css";
 import "@/styles/space-ui-piteco-fullbody.css";
 import "@/styles/space-ui-live-stars.css";
 import "@/styles/space-ui-performance.css";
+import "@/styles/space-galaxy-home-mobile-hotfix.css";
 
 const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -93,7 +94,12 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   const showInstitutionBar = isHome;
 
   return (
-    <div className="space-ui space-ui-shell min-h-screen flex flex-col">
+    <div
+      className={cn(
+        "space-ui space-ui-shell min-h-screen flex flex-col",
+        isHome && "space-ui-home-route",
+      )}
+    >
       <SpaceTwinkleLayer />
       <AppRecoveryBanner />
       <OfflineIndicator />
@@ -161,7 +167,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
         <Suspense fallback={null}><AnnouncementModal /></Suspense>
       )}
 
-      <div className="fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
+      <div className="space-ui-version-badge fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
         <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
           {formatVersionLabel()}
         </Badge>
