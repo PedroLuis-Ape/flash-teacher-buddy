@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, BookOpen, GraduationCap, Search, Sparkles, UserRound } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthAwareCTA } from '@/components/auth/AuthAwareLink';
+import { GuestContinueSection } from '@/components/portal/GuestContinueSection';
 import { PublicPageHeader } from '@/components/seo/PublicPageHeader';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -136,6 +137,8 @@ const PublicPortal = () => {
             Pesquise por nome ou especialidade. Os materiais públicos ficam organizados dentro do perfil de cada professor.
           </p>
         </section>
+
+        <GuestContinueSection />
 
         <section aria-labelledby="teacher-search-title" className="mx-auto mb-12 max-w-3xl">
           <Card className="border-primary/20 bg-card/80 p-4 shadow-sm backdrop-blur sm:p-6">

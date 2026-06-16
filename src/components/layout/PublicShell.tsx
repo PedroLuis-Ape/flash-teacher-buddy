@@ -8,6 +8,7 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PublicGalaxyGate } from "@/components/layout/PublicGalaxyGate";
+import { GuestHistoryTracker } from "@/components/portal/GuestHistoryTracker";
 import { formatVersionLabel } from "@/lib/versionManager";
 import "@/styles/space-ui-v1.css";
 import "@/styles/space-layouts.css";
@@ -20,6 +21,7 @@ export function PublicShell({ children }: PublicShellProps) {
   return (
     <div className="space-ui space-ui-shell min-h-screen">
       <PublicGalaxyGate />
+      <GuestHistoryTracker />
       <div className="space-ui-main min-h-screen">
         {children}
       </div>
