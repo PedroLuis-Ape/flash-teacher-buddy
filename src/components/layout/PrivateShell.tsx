@@ -40,7 +40,6 @@ import "@/styles/space-ui-glitter.css";
 import "@/styles/space-ui-piteco-fullbody.css";
 import "@/styles/space-ui-live-stars.css";
 import "@/styles/space-ui-performance.css";
-import "@/styles/mobile-layout-guard.css";
 
 const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -94,7 +93,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   const showInstitutionBar = isHome;
 
   return (
-    <div className="space-ui space-ui-shell min-h-screen w-full max-w-full overflow-x-clip flex flex-col">
+    <div className="space-ui space-ui-shell min-h-screen flex flex-col">
       <SpaceTwinkleLayer />
       <AppRecoveryBanner />
       <OfflineIndicator />
@@ -102,7 +101,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
       {FEATURE_FLAGS.currency_header_enabled && user && (
         <header
           className={cn(
-            "space-ui-header sticky top-0 z-50 w-full max-w-full border-b",
+            "space-ui-header sticky top-0 z-50 w-full border-b",
             perfSettings.backdropBlur
               ? "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
               : "bg-background",
@@ -134,16 +133,16 @@ function PrivateShellInner({ children }: PrivateShellProps) {
         </header>
       )}
 
-      <div className="space-ui-app-frame flex w-full max-w-full min-w-0 flex-1 items-start overflow-x-clip">
+      <div className="space-ui-app-frame flex min-w-0 flex-1 items-start">
         {user && <ApeTabBar />}
 
-        <div className="space-ui-content flex w-full max-w-full min-h-0 min-w-0 flex-1 flex-col overflow-x-clip">
-          <main className="space-ui-main w-full max-w-full min-w-0 flex-1 overflow-x-clip">
+        <div className="space-ui-content flex min-h-0 min-w-0 flex-1 flex-col">
+          <main className="space-ui-main min-w-0 flex-1">
             {children}
           </main>
 
           {user && !isFullScreenPage && (
-            <div className="space-ui-footer-wrap w-full max-w-full pb-24 md:pb-20">
+            <div className="space-ui-footer-wrap pb-24 md:pb-20">
               <GlobalFooter />
             </div>
           )}
@@ -162,7 +161,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
         <Suspense fallback={null}><AnnouncementModal /></Suspense>
       )}
 
-      <div className="fixed bottom-6 right-3 z-50 hidden pointer-events-none sm:block">
+      <div className="fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
         <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
           {formatVersionLabel()}
         </Badge>
