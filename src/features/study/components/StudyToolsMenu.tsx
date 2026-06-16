@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,13 +15,11 @@ import { HintModal } from "./HintModal";
 import "./study-tools-menu.css";
 
 /**
- * StudyToolsMenu — agrupa as ações secundárias do jogo (favorito, lista vermelha,
- * especial, dica, velocidade de áudio) em um único botão "Ferramentas".
- * Reduz a poluição visual mantendo as ações principais (responder, áudio,
- * navegar) visíveis no card.
+ * StudyToolsMenu — agrupa as ações secundárias do jogo em um único botão.
  *
- * Importante: este componente NÃO altera a lógica dos botões — apenas concentra
- * a UI. Cada toggle continua chamando os mesmos callbacks já validados.
+ * O botão é renderizado por portal em um slot estático acima da superfície do
+ * jogo. Isso evita que transforms do flip-card convertam `position: fixed` em
+ * posicionamento relativo ao card e coloquem o botão sobre o texto.
  */
 
 const SPEECH_RATE_KEY = "speechRate";
@@ -63,11 +62,29 @@ export function StudyToolsMenu({
 }: StudyToolsMenuProps) {
   const [showHint, setShowHint] = useState(false);
   const [rate, setRate] = useState<number>(() => readRate());
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
 
-  // Sync external changes to localStorage rate (other components may toggle it).
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    const modeRoot = anchor?.closest(".max-w-2xl");
+    if (!modeRoot) return;
+
+    const host = document.createElement("div");
+    host.className = "study-tools-portal-slot";
+    host.setAttribute("data-study-tools-slot", "true");
+    modeRoot.insertBefore(host, modeRoot.firstChild);
+    setPortalHost(host);
+
+    return () => {
+      setPortalHost(null);
+      host.remove();
+    };
+  }, []);
+
   useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<number>).detail;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<number>).detail;
       if (typeof detail === "number") setRate(detail);
     };
     window.addEventListener("speechRateChanged", handler as EventListener);
@@ -84,158 +101,164 @@ export function StudyToolsMenu({
   const hasHint = !!hint && hint.trim().length > 0;
   const anyActive = !!isFavorite || !!isRedListed || !!isSpecial;
 
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn(
-              "study-tools-floating-trigger h-8 gap-1.5 px-2.5 shrink-0",
-              anyActive && "border-primary/60",
-              className,
-            )}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            title="Ferramentas"
-            aria-label="Ferramentas"
-          >
-            <Settings2 className="h-4 w-4" />
-            <span className="text-xs font-medium hidden sm:inline">Ferramentas</span>
-            {anyActive && (
-              <span
-                aria-hidden
-                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary"
-              />
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="w-56"
-          onClick={(e) => e.stopPropagation()}
+  const trigger = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(
+            "study-tools-floating-trigger h-9 gap-1.5 px-3 shrink-0",
+            anyActive && "border-primary/60",
+            className,
+          )}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          title="Ferramentas do card"
+          aria-label="Ferramentas do card"
         >
-          <DropdownMenuLabel>Ferramentas</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+          <Settings2 className="h-4 w-4" />
+          <span className="text-xs font-medium hidden sm:inline">Ferramentas</span>
+          {anyActive && (
+            <span
+              aria-hidden
+              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary"
+            />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-56"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <DropdownMenuLabel>Ferramentas</DropdownMenuLabel>
+        <DropdownMenuSeparator />
 
-          {onToggleFavorite && (
-            <DropdownMenuItem
-              disabled={favoritePending}
-              onSelect={(e) => {
-                e.preventDefault();
-                if (favoritePending) return;
-                onToggleFavorite();
-              }}
-            >
-              {favoritePending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Star
+        {onToggleFavorite && (
+          <DropdownMenuItem
+            disabled={favoritePending}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (favoritePending) return;
+              onToggleFavorite();
+            }}
+          >
+            {favoritePending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Star
                 className={cn(
                   "mr-2 h-4 w-4",
                   isFavorite ? "text-yellow-500 fill-current" : "text-muted-foreground",
                 )}
-                />
-              )}
-              {isFavorite ? "Remover dos favoritos" : "Favoritar"}
-            </DropdownMenuItem>
-          )}
+              />
+            )}
+            {isFavorite ? "Remover dos favoritos" : "Favoritar"}
+          </DropdownMenuItem>
+        )}
 
-          {onToggleRedList && (
-            <DropdownMenuItem
-              disabled={redListPending || !isFavorite}
-              onSelect={(e) => {
-                e.preventDefault();
-                if (redListPending || !isFavorite) return;
-                onToggleRedList();
-              }}
-              title={!isFavorite ? "Favorite o card primeiro para usar a Lista Vermelha" : undefined}
-            >
-              {redListPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Flame
+        {onToggleRedList && (
+          <DropdownMenuItem
+            disabled={redListPending || !isFavorite}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (redListPending || !isFavorite) return;
+              onToggleRedList();
+            }}
+            title={!isFavorite ? "Favorite o card primeiro para usar a Lista Vermelha" : undefined}
+          >
+            {redListPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Flame
                 className={cn(
                   "mr-2 h-4 w-4",
                   isRedListed ? "text-red-500 fill-current" : "text-muted-foreground",
                 )}
-                />
-              )}
-              {!isFavorite
-                ? "Lista Vermelha — favorite primeiro"
-                : isRedListed ? "Sair da Lista Vermelha" : "Lista Vermelha"}
-            </DropdownMenuItem>
-          )}
+              />
+            )}
+            {!isFavorite
+              ? "Lista Vermelha — favorite primeiro"
+              : isRedListed
+                ? "Sair da Lista Vermelha"
+                : "Lista Vermelha"}
+          </DropdownMenuItem>
+        )}
 
-          {onToggleSpecial && (
-            <DropdownMenuItem
-              disabled={specialPending}
-              onSelect={(e) => {
-                e.preventDefault();
-                if (specialPending) return;
-                onToggleSpecial();
-              }}
-            >
-              {specialPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Gem
+        {onToggleSpecial && (
+          <DropdownMenuItem
+            disabled={specialPending}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (specialPending) return;
+              onToggleSpecial();
+            }}
+          >
+            {specialPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Gem
                 className={cn(
                   "mr-2 h-4 w-4",
                   isSpecial ? "text-sky-500 fill-current" : "text-muted-foreground",
                 )}
-                />
-              )}
-              {isSpecial ? "Remover dos especiais" : "Salvar como especial"}
-            </DropdownMenuItem>
-          )}
+              />
+            )}
+            {isSpecial ? "Remover dos especiais" : "Salvar como especial"}
+          </DropdownMenuItem>
+        )}
 
-          {(onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
+        {(onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
 
-          {hasDetailedExplanation && onShowDetailedExplanation && (
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                onShowDetailedExplanation();
-              }}
-            >
-              <Sparkles className="mr-2 h-4 w-4 text-sky-500" />
-              Ver explicação detalhada
-            </DropdownMenuItem>
-          )}
-
+        {hasDetailedExplanation && onShowDetailedExplanation && (
           <DropdownMenuItem
-            disabled={!hasHint}
-            onSelect={(e) => {
-              e.preventDefault();
-              if (hasHint) setShowHint(true);
+            onSelect={(event) => {
+              event.preventDefault();
+              onShowDetailedExplanation();
             }}
           >
-            <Lightbulb
-              className={cn(
-                "mr-2 h-4 w-4",
-                hasHint ? "text-warning" : "text-muted-foreground",
-              )}
-            />
-            {hasHint ? "Ver dica" : "Sem dica"}
+            <Sparkles className="mr-2 h-4 w-4 text-sky-500" />
+            Ver explicação detalhada
           </DropdownMenuItem>
+        )}
 
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              toggleRate();
-            }}
-          >
-            <Gauge className="mr-2 h-4 w-4" />
-            Velocidade: {rate === 1 ? "Normal (1x)" : "Lenta (0.5x)"}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenuItem
+          disabled={!hasHint}
+          onSelect={(event) => {
+            event.preventDefault();
+            if (hasHint) setShowHint(true);
+          }}
+        >
+          <Lightbulb
+            className={cn(
+              "mr-2 h-4 w-4",
+              hasHint ? "text-warning" : "text-muted-foreground",
+            )}
+          />
+          {hasHint ? "Ver dica" : "Sem dica"}
+        </DropdownMenuItem>
 
+        <DropdownMenuItem
+          onSelect={(event) => {
+            event.preventDefault();
+            toggleRate();
+          }}
+        >
+          <Gauge className="mr-2 h-4 w-4" />
+          Velocidade: {rate === 1 ? "Normal (1x)" : "Lenta (0.5x)"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  return (
+    <>
+      <span ref={anchorRef} className="study-tools-anchor-placeholder" aria-hidden="true" />
+      {portalHost ? createPortal(trigger, portalHost) : null}
       <HintModal hint={hint} isOpen={showHint} onClose={() => setShowHint(false)} />
     </>
   );
