@@ -15,80 +15,73 @@ export function TurmaShortcut({ isTeacher }: Props) {
   const teacherQuery = useTurmasMine();
 
   const query = isTeacher ? teacherQuery : studentQuery;
-  const turmas = query.data?.turmas || [];
+  const turmas = (isTeacher ? query.data?.turmas : query.data?.turmas) || [];
 
+  // Don't render anything if loading or no turmas
   if (query.isLoading || turmas.length === 0) return null;
 
   const visibleTurmas = turmas.slice(0, 3);
   const hasMore = turmas.length > 3;
-  const viewAllRoute = isTeacher ? "/turmas/professor" : "/turmas/aluno";
+  const viewAllRoute = isTeacher ? "/turmas-professor" : "/turmas";
   const Icon = isTeacher ? Users : BookOpen;
   const title = isTeacher ? "Minhas Turmas" : "Suas Turmas";
 
   return (
-    <section className="min-w-0 max-w-full space-y-3 overflow-hidden" aria-labelledby="home-turmas-title">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-          <div id="home-turmas-title" className="min-w-0">
-            <ApeSectionTitle>{title}</ApeSectionTitle>
-          </div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <ApeSectionTitle>{title}</ApeSectionTitle>
         </div>
-
         {hasMore && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(viewAllRoute)}
-            className="min-h-[36px] max-w-full shrink-0 px-2 text-primary hover:text-primary sm:px-3"
+            className="min-h-[36px] px-3 text-primary hover:text-primary"
           >
-            <span className="truncate">Ver todas ({turmas.length})</span>
-            <ChevronRight className="ml-1 h-4 w-4 shrink-0" />
+            Ver todas ({turmas.length})
+            <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         )}
       </div>
 
-      <Card className="welcome-banner min-w-0 max-w-full overflow-hidden border-0">
-        <CardContent className="min-w-0 space-y-3 p-3 sm:p-4">
+      <Card className="welcome-banner border-0 overflow-hidden">
+        <CardContent className="p-4 space-y-3">
           {visibleTurmas.map((turma: any) => (
-            <button
-              type="button"
+            <div
               key={turma.id}
-              className="grid w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-primary/15 bg-background/80 p-3 text-left transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.06] active:scale-[0.99]"
+              className="flex items-center gap-4 p-3 rounded-xl bg-background/80 border border-primary/15 cursor-pointer hover:bg-primary/[0.06] hover:border-primary/30 transition-all duration-200 active:scale-[0.98]"
               onClick={() => navigate(`/turmas/${turma.id}`)}
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+              <div className="shrink-0 w-11 h-11 rounded-lg bg-primary/15 flex items-center justify-center">
                 <Icon className="h-5 w-5 text-primary" />
-              </span>
-
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold">
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-sm truncate">
                   {turma.nome || "Turma"}
-                </span>
+                </h4>
                 {turma.descricao && (
-                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
                     {turma.descricao}
-                  </span>
+                  </p>
                 )}
-              </span>
-
-              <ChevronRight className="h-4 w-4 shrink-0 text-primary/60" />
-            </button>
+              </div>
+              <ChevronRight className="h-4 w-4 text-primary/60 shrink-0" />
+            </div>
           ))}
 
           {turmas.length === 1 && (
             <Button
-              className="mt-1 h-auto min-h-[44px] w-full max-w-full whitespace-normal px-4 py-3 text-center leading-tight"
+              className="w-full mt-1 min-h-[44px]"
               onClick={() => navigate(`/turmas/${turmas[0].id}`)}
             >
-              <Icon className="mr-2 h-4 w-4 shrink-0" />
-              <span className="min-w-0 break-words">
-                {isTeacher ? "Gerenciar turma" : "Abrir turma"}
-              </span>
+              <Icon className="h-4 w-4 mr-2" />
+              {isTeacher ? "Gerenciar turma" : "Abrir turma"}
             </Button>
           )}
         </CardContent>
       </Card>
-    </section>
+    </div>
   );
 }
