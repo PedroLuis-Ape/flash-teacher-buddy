@@ -24,12 +24,14 @@ type TwinkleStar = {
 };
 
 const STARS: readonly TwinkleStar[] = [
-  { left: "7%", top: "14%", size: 2, duration: 5200, delay: -150, glow: "rgba(255,255,255,.82)" },
-  { left: "38%", top: "81%", size: 2, duration: 6100, delay: -800, glow: "rgba(220,190,255,.78)" },
-  { left: "75%", top: "27%", size: 2, duration: 5800, delay: -450, glow: "rgba(255,255,255,.8)" },
-  { left: "18%", top: "66%", size: 2, duration: 6600, delay: -1050, glow: "rgba(255,255,255,.76)" },
-  { left: "57%", top: "53%", size: 2, duration: 6300, delay: -1450, glow: "rgba(195,225,255,.78)" },
-  { left: "90%", top: "58%", size: 2, duration: 7000, delay: -1900, glow: "rgba(230,190,255,.76)" },
+  { left: "7%", top: "14%", size: 3, duration: 5200, delay: -150, glow: "rgba(255,255,255,.92)" },
+  { left: "38%", top: "81%", size: 2, duration: 6100, delay: -800, glow: "rgba(224,196,255,.9)" },
+  { left: "75%", top: "27%", size: 2, duration: 5800, delay: -450, glow: "rgba(255,255,255,.9)" },
+  { left: "18%", top: "66%", size: 2, duration: 6600, delay: -1050, glow: "rgba(255,255,255,.86)" },
+  { left: "57%", top: "53%", size: 3, duration: 6300, delay: -1450, glow: "rgba(195,225,255,.9)" },
+  { left: "90%", top: "58%", size: 2, duration: 7000, delay: -1900, glow: "rgba(235,202,255,.88)" },
+  { left: "28%", top: "34%", size: 2, duration: 7400, delay: -2100, glow: "rgba(205,228,255,.84)" },
+  { left: "82%", top: "86%", size: 2, duration: 6800, delay: -2600, glow: "rgba(255,255,255,.84)" },
 ];
 
 const MOBILE_QUERY = "(max-width: 767px), (update: slow)";
@@ -42,8 +44,9 @@ export function SpaceTwinkleLayer() {
     typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches,
   );
   const isGalaxy = palette === "galaxy";
-  const motionAllowed = settings.animations && !settings.reduceMotion && settings.decorativeEffects && !mobileLite;
-  const visibleStars = mobileLite ? STARS.slice(0, 3) : STARS;
+  const starMotionAllowed = settings.animations && !settings.reduceMotion && settings.decorativeEffects && !mobileLite;
+  const shootingStarAllowed = settings.animations && !settings.reduceMotion;
+  const visibleStars = mobileLite ? STARS.slice(0, 5) : STARS;
 
   useEffect(() => {
     const media = window.matchMedia(MOBILE_QUERY);
@@ -54,7 +57,7 @@ export function SpaceTwinkleLayer() {
   }, []);
 
   useEffect(() => {
-    if (!isGalaxy || !motionAllowed) return;
+    if (!isGalaxy || !shootingStarAllowed) return;
     const star = shootingStarRef.current;
     if (!star || typeof star.animate !== "function") return;
 
@@ -63,8 +66,8 @@ export function SpaceTwinkleLayer() {
 
     const schedule = (first = false) => {
       if (cancelled) return;
-      const min = first ? 18000 : 38000;
-      const variation = first ? 12000 : 26000;
+      const min = first ? (mobileLite ? 30000 : 20000) : (mobileLite ? 65000 : 45000);
+      const variation = first ? (mobileLite ? 20000 : 15000) : (mobileLite ? 35000 : 30000);
       timer = window.setTimeout(run, min + Math.random() * variation);
     };
 
@@ -74,16 +77,16 @@ export function SpaceTwinkleLayer() {
         schedule();
         return;
       }
-      star.style.top = `${8 + Math.random() * 42}%`;
+      star.style.top = `${8 + Math.random() * 40}%`;
       star.style.left = "-12rem";
       const animation = star.animate(
         [
           { opacity: 0, transform: "translate3d(0,0,0) rotate(-24deg)" },
-          { opacity: .75, offset: .16 },
-          { opacity: .55, offset: .7 },
+          { opacity: .92, offset: .14 },
+          { opacity: .72, offset: .72 },
           { opacity: 0, transform: "translate3d(140vw,52vh,0) rotate(-24deg)" },
         ],
-        { duration: 1500, easing: "cubic-bezier(.2,.65,.35,1)" },
+        { duration: mobileLite ? 1700 : 1450, easing: "cubic-bezier(.2,.65,.35,1)" },
       );
       animation.finished.catch(() => undefined).finally(() => schedule());
     };
@@ -93,7 +96,7 @@ export function SpaceTwinkleLayer() {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [isGalaxy, motionAllowed]);
+  }, [isGalaxy, shootingStarAllowed, mobileLite]);
 
   return (
     <Fragment>
@@ -102,23 +105,23 @@ export function SpaceTwinkleLayer() {
       {isGalaxy && (
         <div aria-hidden="true" className="space-galaxy-effects">
           <span className="space-galaxy-arm" />
-          {settings.decorativeEffects && visibleStars.map((star) => (
+          {visibleStars.map((star) => (
             <span
               key={`${star.left}-${star.top}`}
-              className="space-twinkle-star"
+              className={`space-twinkle-star${starMotionAllowed ? "" : " space-twinkle-star--static"}`}
               style={{
                 left: star.left,
                 top: star.top,
                 width: star.size,
                 height: star.size,
                 background: star.glow,
-                boxShadow: `0 0 ${star.size * 2}px ${star.size}px ${star.glow}`,
+                boxShadow: `0 0 ${star.size * 3}px ${star.size}px ${star.glow}`,
                 "--twinkle-duration": `${star.duration}ms`,
                 "--twinkle-delay": `${star.delay}ms`,
               } as React.CSSProperties}
             />
           ))}
-          {motionAllowed && <span ref={shootingStarRef} className="space-shooting-star" />}
+          {shootingStarAllowed && <span ref={shootingStarRef} className="space-shooting-star" />}
         </div>
       )}
     </Fragment>
