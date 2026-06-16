@@ -25,7 +25,7 @@ Status: concluída.
 - Nenhum uso de IP.
 
 ## Etapa 5 — Sincronização anônima opcional no servidor
-Status: implementada nesta branch, aguardando validação e merge.
+Status: concluída.
 
 - Desligada por padrão.
 - Ativação explícita pelo visitante.
@@ -38,13 +38,19 @@ Status: implementada nesta branch, aguardando validação e merge.
 - Controle para sincronizar, desativar e apagar a cópia do servidor.
 
 ## Etapa 6 — Ajuste das animações do modo galáctico
-Status: pendente e reservado para o final.
+Status: implementada nesta branch, aguardando validação e merge.
 
-- Desktop/tablet capaz: estrelas suaves e dessincronizadas, cometa mais lento e fade gradual.
-- Mobile/dispositivo limitado: fundo simplificado, sem cometa e sem novas animações pesadas.
+- Nível completo para desktops capazes.
+- Nível equilibrado para tablets, telas intermediárias e hardware mediano.
+- Nível estático para celular, movimento reduzido, economia de dados ou hardware limitado.
+- Estrelas com tempos longos, variados e dessincronizados.
+- Cometa mais lento, raro e com fade gradual.
+- Pausa das animações quando a aba fica oculta.
+- Fundo mobile reduzido, sem cometa, máscaras, pseudocamadas ou blur decorativo.
+- Testes automatizados para a seleção dos níveis e orçamentos visuais.
 
 ## Progresso
 
-- Etapas concluídas: 1, 2, 3 e 4.
-- Etapa atual: 5.
-- Etapas restantes depois do merge desta branch: apenas a Etapa 6.
+- Etapas concluídas: 1, 2, 3, 4 e 5.
+- Etapa atual: 6.
+- Etapas restantes depois do merge desta branch: nenhuma.
