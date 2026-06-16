@@ -7,9 +7,14 @@
 - Public flag support in classroom create and update flows.
 - Teacher controls for visibility and share-link copying.
 - Public read-only classroom screens.
+- Access-aware classroom gate in `src/pages/TurmaDetail.tsx`.
 - Persisted landing-page selector between the default and Galaxy themes.
 - Public-shell Galaxy rendering gate.
 
-## Integration note
+## Before merge
 
-The application route must use the access-aware classroom component before merge. This repository connector refused the source-file replacement, so that final route switch remains explicitly documented rather than silently claimed as complete.
+- Run the production build and type checking.
+- Apply and validate the Supabase migration.
+- Test professor, enrolled student, authenticated non-member, and anonymous visitor flows.
+- Confirm public visitors remain read-only.
+- Review Galaxy performance on mobile devices.
