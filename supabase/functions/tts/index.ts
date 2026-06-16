@@ -37,6 +37,15 @@ serve(async (req) => {
     const text = url.searchParams.get("text");
     const voice = url.searchParams.get("voice") || "en-US-JennyNeural";
 
+    // Validate voice against strict allowlist to prevent SSML/XML injection
+    const VOICE_PATTERN = /^[a-z]{2,3}-[A-Z]{2}-[A-Za-z]+Neural$/;
+    if (!VOICE_PATTERN.test(voice)) {
+      return new Response(JSON.stringify({ error: "Invalid voice parameter" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Input validation
     if (!text) {
       return new Response(JSON.stringify({ error: "Text parameter required" }), {
