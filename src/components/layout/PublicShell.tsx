@@ -1,16 +1,16 @@
 /**
  * PublicShell — minimal chrome for public/anonymous routes.
  *
- * Phase 5 (Clara Master): landing, /auth, /auth/callback, SEO pages and
- * /portal/* render through this shell. It deliberately omits Economy,
- * Institution, heartbeat, notifications, GoogleConnectPrompt and
- * BrowserCheck so unauthenticated visitors never pay the cost of
- * private providers (and so those providers never trigger redundant
- * Supabase calls outside the app surface).
+ * Landing, auth, SEO pages, public classrooms and /portal/* render through
+ * this shell. Private providers remain unmounted, while the optional galaxy
+ * layer is loaded only when the visitor selects it.
  */
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { PublicGalaxyGate } from "@/components/layout/PublicGalaxyGate";
 import { formatVersionLabel } from "@/lib/versionManager";
+import "@/styles/space-ui-v1.css";
+import "@/styles/space-layouts.css";
 
 interface PublicShellProps {
   children: ReactNode;
@@ -18,13 +18,16 @@ interface PublicShellProps {
 
 export function PublicShell({ children }: PublicShellProps) {
   return (
-    <>
-      {children}
+    <div className="space-ui space-ui-shell min-h-screen">
+      <PublicGalaxyGate />
+      <div className="space-ui-main min-h-screen">
+        {children}
+      </div>
       <div className="fixed bottom-3 right-3 z-50 pointer-events-none">
         <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
           {formatVersionLabel()}
         </Badge>
       </div>
-    </>
+    </div>
   );
 }
