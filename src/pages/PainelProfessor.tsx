@@ -1,11 +1,14 @@
+import { useNavigate } from "react-router-dom";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { MeusAlunosCard } from "@/features/classroom/components/MeusAlunosCard";
 import { MinhasTurmasCard } from "@/components/MinhasTurmasCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Globe2 } from "lucide-react";
 
 const PainelProfessor = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <ApeAppBar title="Painel do Professor" showBack />
@@ -25,6 +28,26 @@ const PainelProfessor = () => {
 
         <div className="space-y-4">
           <ApeSectionTitle>Recursos</ApeSectionTitle>
+
+          <Card
+            className="hover:shadow-lg transition-all duration-200 cursor-pointer border-border"
+            onClick={() => navigate('/settings/public-profile')}
+          >
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Globe2 className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base truncate">Perfil público</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure sua bio, especialidades e materiais publicados
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer border-border">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
