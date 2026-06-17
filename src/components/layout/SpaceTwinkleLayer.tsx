@@ -5,12 +5,14 @@ import { usePerformance } from "@/contexts/PerformanceContext";
 import {
   detectGalaxyMotionTier,
   getGalaxyCometPlan,
+  getGalaxyScenePlan,
   getGalaxyStarLimit,
   type GalaxyMotionTier,
 } from "@/lib/galaxyPerformance";
 import "@/styles/space-layouts.css";
 import "@/styles/space-galaxy-mobile-guard.css";
 import "@/styles/space-galaxy-motion.css";
+import "@/styles/space-galaxy-scene.css";
 
 const DRAWER_LAYOUT_CSS = `
 [role="dialog"][class~="left-0"][class~="inset-y-0"]{width:min(88vw,360px)!important;max-width:360px!important;height:100dvh!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:hsl(var(--background))!important}
@@ -58,16 +60,31 @@ function motionClass(tier: GalaxyMotionTier) {
   return `space-galaxy-effects--${tier}`;
 }
 
+function GalaxyAsset({ className, src }: { className: string; src: string }) {
+  return (
+    <img
+      className={`space-galaxy-object ${className}`}
+      src={src}
+      alt=""
+      decoding="async"
+      draggable={false}
+    />
+  );
+}
+
 export function SpaceTwinkleLayer() {
   const { palette } = usePalette();
   const { settings } = usePerformance();
   const cometRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const [motionTier, setMotionTier] = useState<GalaxyMotionTier>(() => detectGalaxyMotionTier());
+  const [documentVisible, setDocumentVisible] = useState(() => typeof document === "undefined" || !document.hidden);
   const cometPlan = useMemo(() => getGalaxyCometPlan(motionTier), [motionTier]);
+  const scenePlan = useMemo(() => getGalaxyScenePlan(motionTier), [motionTier]);
   const isGalaxy = palette === "galaxy";
   const motionAllowed = settings.animations && !settings.reduceMotion && motionTier !== "static";
   const starMotionAllowed = motionAllowed && settings.decorativeEffects;
   const armMotionAllowed = starMotionAllowed && motionTier === "full";
+  const sceneMotionAllowed = starMotionAllowed && scenePlan.animated;
   const cometMotionAllowed = motionAllowed && settings.decorativeEffects && cometPlan.count > 0;
   const visibleStars = STARS.slice(0, getGalaxyStarLimit(motionTier));
 
@@ -111,6 +128,13 @@ export function SpaceTwinkleLayer() {
       if (root.dataset.galaxyMotion === motionTier) delete root.dataset.galaxyMotion;
     };
   }, [isGalaxy, motionTier]);
+
+  useEffect(() => {
+    const syncVisibility = () => setDocumentVisible(!document.hidden);
+    document.addEventListener("visibilitychange", syncVisibility);
+    syncVisibility();
+    return () => document.removeEventListener("visibilitychange", syncVisibility);
+  }, []);
 
   useEffect(() => {
     if (!isGalaxy || !cometMotionAllowed || cometPlan.count === 0) return;
@@ -229,6 +253,8 @@ export function SpaceTwinkleLayer() {
     motionClass(motionTier),
     starMotionAllowed ? "space-galaxy-effects--stars-motion" : "",
     armMotionAllowed ? "space-galaxy-effects--arm-motion" : "",
+    sceneMotionAllowed ? "space-galaxy-effects--scene-motion" : "",
+    documentVisible ? "" : "space-galaxy-effects--paused",
   ].filter(Boolean).join(" ");
 
   return (
@@ -238,6 +264,26 @@ export function SpaceTwinkleLayer() {
       {isGalaxy && (
         <div aria-hidden="true" className={effectClasses}>
           <span className="space-galaxy-arm" />
+          {scenePlan.spiralMain && (
+            <GalaxyAsset className="space-galaxy-spiral-main" src="/assets/galaxy/galaxy-spiral-main.svg" />
+          )}
+          {scenePlan.spiralDistant && (
+            <GalaxyAsset className="space-galaxy-spiral-distant" src="/assets/galaxy/galaxy-spiral-distant.svg" />
+          )}
+          {scenePlan.planet && (
+            <GalaxyAsset className="space-galaxy-planet-main" src="/assets/galaxy/galaxy-planet-main.svg" />
+          )}
+          {scenePlan.moon && (
+            <span className="space-galaxy-moon-orbit">
+              <GalaxyAsset className="space-galaxy-moon-small" src="/assets/galaxy/galaxy-moon-small.svg" />
+            </span>
+          )}
+          {scenePlan.dust && (
+            <GalaxyAsset className="space-galaxy-nebula-dust" src="/assets/galaxy/galaxy-nebula-dust.svg" />
+          )}
+          {scenePlan.nebula && (
+            <GalaxyAsset className="space-galaxy-nebula" src="/assets/galaxy/galaxy-nebula-arm.svg" />
+          )}
           {visibleStars.map((star) => (
             <span
               key={`${star.left}-${star.top}`}
