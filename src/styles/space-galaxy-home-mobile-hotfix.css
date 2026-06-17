@@ -90,35 +90,45 @@
   }
 }
 
-/* Auth install button: participate in a vertical mobile layout instead of
-   taking horizontal space beside the login cards. */
+/* Auth install button: the route is wrapped by transition and error-boundary
+   containers, so this must not depend on Auth being a direct child of
+   .space-ui-main. Keep the complete login in one vertical mobile column. */
 @media (max-width: 767px) {
-  .space-ui-main > main.min-h-screen.flex.items-center.justify-center {
+  .space-ui-main main.min-h-screen.flex.items-center.justify-center {
     flex-direction: column !important;
+    align-items: stretch !important;
     justify-content: flex-start !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    gap: 1rem !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     padding-top: max(1rem, env(safe-area-inset-top)) !important;
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
   }
 
-  .space-ui-main > main.min-h-screen.flex.items-center.justify-center > button.fixed.top-4.right-4 {
+  .space-ui-main main.min-h-screen.flex.items-center.justify-center > button.fixed.top-4.right-4 {
     position: static !important;
     inset: auto !important;
     order: 0;
     width: 100% !important;
     max-width: 28rem !important;
     min-height: 48px;
-    margin: 0 auto 1rem !important;
+    margin: 0 auto !important;
     flex: 0 0 auto;
   }
 
-  .space-ui-main > main.min-h-screen.flex.items-center.justify-center > div.w-full.max-w-md {
+  .space-ui-main main.min-h-screen.flex.items-center.justify-center > div.w-full.max-w-md {
     order: 1;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 28rem !important;
     margin-inline: auto !important;
     flex: 0 0 auto;
+  }
+
+  .space-ui-main main.min-h-screen.flex.items-center.justify-center > img.fixed.bottom-0 {
+    display: none !important;
   }
 }
