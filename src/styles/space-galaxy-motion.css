@@ -28,7 +28,7 @@
 }
 
 .space-galaxy-effects--stars-motion .space-twinkle-star {
-  animation: ape-star-twinkle-final var(--twinkle-duration,12000ms) ease-in-out var(--twinkle-delay,0ms) infinite !important;
+  animation: ape-star-twinkle-full var(--twinkle-duration,8000ms) ease-in-out var(--twinkle-delay,0ms) infinite !important;
   will-change: transform, opacity;
 }
 
@@ -44,23 +44,54 @@
 
 .space-galaxy-effects--balanced .space-shooting-star,
 .space-galaxy-effects--full .space-shooting-star {
-  width: 13rem;
-  height: 1.5px;
-  transform: rotate(-22deg);
+  position: absolute;
+  left: -15rem;
+  width: 14rem;
+  height: 2px;
+  opacity: 0;
+  transform: rotate(21deg);
+  transform-origin: 100% 50%;
+  border-radius: 999px;
+  pointer-events: none;
   background: linear-gradient(
     90deg,
-    transparent,
-    hsl(276 100% 88% / .12) 20%,
-    hsl(213 100% 92% / .62) 72%,
-    hsl(0 0% 100% / .94)
+    transparent 0%,
+    hsl(276 100% 88% / .08) 18%,
+    hsl(235 100% 90% / .32) 52%,
+    hsl(209 100% 94% / .76) 82%,
+    hsl(0 0% 100% / .98) 100%
   );
-  box-shadow: 0 0 10px hsl(268 100% 84% / .38);
-  will-change: transform, opacity;
+  box-shadow:
+    0 0 8px hsl(268 100% 84% / .28),
+    0 0 16px hsl(221 100% 82% / .14);
+  contain: layout paint style;
 }
 
 .space-galaxy-effects--balanced .space-shooting-star {
-  width: 10rem;
-  box-shadow: 0 0 8px hsl(268 100% 84% / .28);
+  width: 10.5rem;
+  height: 1.5px;
+  box-shadow: 0 0 7px hsl(268 100% 84% / .22);
+}
+
+.space-shooting-star::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: hsl(0 0% 100% / .98);
+  box-shadow:
+    0 0 7px 2px hsl(0 0% 100% / .52),
+    0 0 13px 4px hsl(221 100% 82% / .2);
+}
+
+.space-galaxy-effects--balanced .space-shooting-star::after {
+  width: 4px;
+  height: 4px;
+  box-shadow: 0 0 6px 2px hsl(0 0% 100% / .42);
 }
 
 @keyframes ape-galaxy-drift-final {
@@ -78,21 +109,21 @@
   }
 }
 
-@keyframes ape-star-twinkle-final {
+@keyframes ape-star-twinkle-full {
   0%, 100% {
-    opacity: .20;
-    transform: scale(.91);
+    opacity: var(--twinkle-low, .18);
+    transform: scale(.88);
   }
-  34% {
-    opacity: .48;
-    transform: scale(1.02);
+  31% {
+    opacity: var(--twinkle-mid, .56);
+    transform: scale(1.03);
   }
-  61% {
-    opacity: .76;
-    transform: scale(1.11);
+  58% {
+    opacity: var(--twinkle-peak, .92);
+    transform: scale(1.16);
   }
-  82% {
-    opacity: .38;
+  79% {
+    opacity: var(--twinkle-fall, .42);
     transform: scale(.98);
   }
 }
@@ -166,5 +197,14 @@ html[data-palette="galaxy"][data-galaxy-motion="static"] .space-ui [class*="back
   .space-galaxy-effects .space-shooting-star {
     animation: none !important;
     will-change: auto !important;
+  }
+
+  .space-galaxy-effects .space-shooting-star {
+    display: none !important;
+  }
+
+  .space-galaxy-effects .space-twinkle-star {
+    opacity: .54 !important;
+    transform: none !important;
   }
 }
