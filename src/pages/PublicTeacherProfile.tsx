@@ -18,6 +18,10 @@ import {
   PUBLIC_TEACHER_STATS_GRID_CLASS,
   type PublicTeacherTurmaRow,
 } from '@/features/publicTeacher/components/PublicTeacherTurmasSection';
+import {
+  isMissingDirectoryRpc,
+  shouldUsePreviewFallback,
+} from '@/features/publicTeacher/lib/publicTeacherProfile';
 
 interface PublicTeacherProfileRow {
   display_name: string;
@@ -50,18 +54,6 @@ const PREVIEW_PROFILE: PublicTeacherProfileRow = {
   card_count: 0,
 };
 
-export function isMissingDirectoryRpc(error: unknown) {
-  const value = error as { code?: string; message?: string; details?: string } | null;
-  const text = `${value?.message ?? ''} ${value?.details ?? ''}`.toLowerCase();
-  return value?.code === 'PGRST202' || value?.code === '42883' || text.includes('get_public_teacher_');
-}
-
-export function shouldUsePreviewFallback(error: unknown, slug: string, isDevelopment: boolean) {
-  return isDevelopment
-    && isMissingDirectoryRpc(error)
-    && slug.toLowerCase() === PREVIEW_PROFILE.public_slug;
-}
-
 function initials(name: string) {
   return name
     .split(/\s+/)
@@ -89,7 +81,12 @@ export default function PublicTeacherProfile() {
       });
 
       if (error) {
-        if (shouldUsePreviewFallback(error, slug, canUsePreviewFallback)) {
+        if (shouldUsePreviewFallback({
+          error,
+          slug,
+          previewSlug: PREVIEW_PROFILE.public_slug,
+          isDevelopment: canUsePreviewFallback,
+        })) {
           return { profile: PREVIEW_PROFILE, previewMode: true };
         }
         if (isMissingDirectoryRpc(error)) {
