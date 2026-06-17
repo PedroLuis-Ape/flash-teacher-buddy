@@ -64,7 +64,6 @@
   box-shadow:
     0 0 8px hsl(268 100% 84% / .28),
     0 0 16px hsl(221 100% 82% / .14);
-  contain: layout paint style;
 }
 
 .space-galaxy-effects--balanced .space-shooting-star {
