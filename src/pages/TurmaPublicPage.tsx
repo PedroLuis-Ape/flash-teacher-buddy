@@ -155,6 +155,14 @@ export default function TurmaPublicPage() {
   const { user } = useAuthUser();
   const guest = !user;
   const selectedAssignmentId = searchParams.get('atribuicao');
+  const publicPreview = searchParams.get('publicPreview') === 'true';
+
+  const updatePublicSearchParams = (assignmentId?: string) => {
+    const params = new URLSearchParams();
+    if (publicPreview) params.set('publicPreview', 'true');
+    if (assignmentId) params.set('atribuicao', assignmentId);
+    setSearchParams(params);
+  };
 
   const turmaQuery = useQuery({
     queryKey: ['public-turma', turmaId],
@@ -221,7 +229,7 @@ export default function TurmaPublicPage() {
                 Esta atividade pode ter sido removida ou a turma deixou de ser pública.
               </p>
             </div>
-            <Button onClick={() => setSearchParams({})}>Voltar à turma</Button>
+            <Button onClick={() => updatePublicSearchParams()}>Voltar à turma</Button>
           </Card>
         </div>
       </>
@@ -255,7 +263,7 @@ export default function TurmaPublicPage() {
             variant="ghost"
             size="icon"
             aria-label={selected ? 'Voltar à turma' : 'Voltar'}
-            onClick={() => selected ? setSearchParams({}) : navigate(guest ? '/' : '/turmas')}
+            onClick={() => selected ? updatePublicSearchParams() : navigate(guest ? '/' : '/turmas')}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -310,7 +318,7 @@ export default function TurmaPublicPage() {
                     </div>
                     <div className="mt-auto flex items-center justify-between gap-3">
                       <span className="text-sm text-muted-foreground">{atribuicao.card_count ?? 0} cards</span>
-                      <Button size="sm" onClick={() => setSearchParams({ atribuicao: atribuicao.id })}>
+                      <Button size="sm" onClick={() => updatePublicSearchParams(atribuicao.id)}>
                         Abrir conteúdo
                       </Button>
                     </div>

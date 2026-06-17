@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell, Target, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Users as UsersIcon, BookOpen, MessageSquare, Settings, Plus, Pencil, Trash2, FolderOpen, Megaphone, BarChart2, CheckCircle2, Bell, Target, ChevronUp, ChevronDown, Globe2, Lock, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MesaAvisos } from '@/components/MesaAvisos';
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useUpdateTurma, useDeleteTurma, useEnrollAluno, useRemoveTurmaMember } from '@/features/classroom/hooks/useTurmas';
 import { useCreateAnnouncement } from '@/hooks/useAnnouncements';
@@ -42,6 +43,7 @@ export default function TurmaDetail() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editNome, setEditNome] = useState('');
   const [editDescricao, setEditDescricao] = useState('');
+  const [editPublic, setEditPublic] = useState(false);
   
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [enrollApeId, setEnrollApeId] = useState('');
@@ -250,6 +252,7 @@ export default function TurmaDetail() {
   const handleOpenEdit = () => {
     setEditNome(turma?.nome || '');
     setEditDescricao(turma?.descricao || '');
+    setEditPublic(turma?.public === true);
     setEditDialogOpen(true);
   };
 
@@ -264,12 +267,39 @@ export default function TurmaDetail() {
         turma_id: turmaId,
         nome: editNome,
         descricao: editDescricao,
+        public: editPublic,
       });
-      toast.success('✅ Turma atualizada!');
+      toast.success(
+        editPublic
+          ? '✅ Turma atualizada e publicada com sucesso!'
+          : '✅ Turma atualizada e definida como privada!',
+      );
       setEditDialogOpen(false);
     } catch (error) {
       toast.error('❌ Erro ao atualizar turma');
     }
+  };
+
+  const handleCopyPublicLink = async () => {
+    if (!turmaId || !isOwner || !turma.public) return;
+
+    const url = `${window.location.origin}/turmas/${turmaId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link público copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o link.');
+    }
+  };
+
+  const handleOpenPublicPreview = () => {
+    if (!turmaId || !isOwner || !turma.public) return;
+
+    window.open(
+      `/turmas/${turmaId}?publicPreview=true`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   };
 
   const handleDeleteTurma = async () => {
@@ -414,18 +444,52 @@ export default function TurmaDetail() {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">{turma.nome}</h1>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold break-words">{turma.nome}</h1>
+                <Badge variant={turma.public ? 'default' : 'secondary'} className="shrink-0">
+                  {turma.public ? (
+                    <Globe2 className="mr-1 h-3 w-3" />
+                  ) : (
+                    <Lock className="mr-1 h-3 w-3" />
+                  )}
+                  {turma.public ? 'Pública' : 'Privada'}
+                </Badge>
+              </div>
               {turma.descricao && (
-                <p className="text-sm text-muted-foreground">{turma.descricao}</p>
+                <p className="text-sm text-muted-foreground break-words">{turma.descricao}</p>
               )}
             </div>
             {isOwner && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button variant="default" size="sm" onClick={() => setAnnouncementDialogOpen(true)}>
                   <Megaphone className="h-4 w-4 mr-2" />
                   Aviso
                 </Button>
+                {turma.public && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyPublicLink}
+                      aria-label="Copiar link público da turma"
+                      title="Copiar link público"
+                    >
+                      <Copy className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Copiar link</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenPublicPreview}
+                      aria-label="Ver turma como visitante"
+                      title="Ver como visitante"
+                    >
+                      <ExternalLink className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Ver como visitante</span>
+                    </Button>
+                  </>
+                )}
                 <Button variant="outline" size="sm" onClick={handleOpenEdit}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Editar
@@ -638,7 +702,7 @@ export default function TurmaDetail() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Turma</DialogTitle>
           </DialogHeader>
@@ -659,6 +723,33 @@ export default function TurmaDetail() {
                 value={editDescricao}
                 onChange={(e) => setEditDescricao(e.target.value)}
                 placeholder="Descrição da turma..."
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+              <div className="min-w-0 space-y-1">
+                <Label htmlFor="edit-turma-publica" className="flex items-center gap-2">
+                  {editPublic ? (
+                    <Globe2 className="h-4 w-4 text-primary" />
+                  ) : (
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  {editPublic ? 'Turma pública' : 'Turma privada'}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {editPublic
+                    ? 'Qualquer pessoa com o link poderá visualizar as atividades em modo somente leitura.'
+                    : 'Somente o professor e os alunos matriculados podem acessar.'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Visitantes não poderão editar conteúdo nem registrar progresso.
+                </p>
+              </div>
+              <Switch
+                id="edit-turma-publica"
+                checked={editPublic}
+                onCheckedChange={setEditPublic}
+                aria-label="Permitir acesso público à turma"
+                className="shrink-0"
               />
             </div>
           </div>
