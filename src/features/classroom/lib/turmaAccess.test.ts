@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveTurmaViewMode } from './turmaAccess';
+import { buildPublicTurmaSearchParams, resolveTurmaViewMode } from './turmaAccess';
 
 describe('resolveTurmaViewMode', () => {
   it('keeps owners and enrolled members in the complete classroom', () => {
@@ -32,5 +32,33 @@ describe('resolveTurmaViewMode', () => {
       authenticated: true,
       hasPrivateAccess: true,
     })).toBe('public');
+  });
+});
+
+describe('buildPublicTurmaSearchParams', () => {
+  it('preserves preview mode while opening an assignment', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: true,
+      assignmentId: 'assignment-123',
+    }).toString()).toBe('publicPreview=true&atribuicao=assignment-123');
+  });
+
+  it('keeps preview mode when returning to the classroom root', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: true,
+    }).toString()).toBe('publicPreview=true');
+  });
+
+  it('supports normal public navigation without preview mode', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: false,
+      assignmentId: 'assignment-123',
+    }).toString()).toBe('atribuicao=assignment-123');
+  });
+
+  it('returns empty parameters at the normal public classroom root', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: false,
+    }).toString()).toBe('');
   });
 });
