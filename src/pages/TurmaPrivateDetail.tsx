@@ -440,7 +440,7 @@ export default function TurmaDetail() {
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-10 bg-background border-b p-4">
         <div className="max-w-6xl mx-auto lg:px-4">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -461,7 +461,7 @@ export default function TurmaDetail() {
               )}
             </div>
             {isOwner && (
-              <div className="flex flex-wrap justify-end gap-2">
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                 <Button variant="default" size="sm" onClick={() => setAnnouncementDialogOpen(true)}>
                   <Megaphone className="h-4 w-4 mr-2" />
                   Aviso
@@ -702,7 +702,7 @@ export default function TurmaDetail() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Turma</DialogTitle>
           </DialogHeader>
@@ -725,7 +725,7 @@ export default function TurmaDetail() {
                 placeholder="Descrição da turma..."
               />
             </div>
-            <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+            <div className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 space-y-1">
                 <Label htmlFor="edit-turma-publica" className="flex items-center gap-2">
                   {editPublic ? (
@@ -749,7 +749,7 @@ export default function TurmaDetail() {
                 checked={editPublic}
                 onCheckedChange={setEditPublic}
                 aria-label="Permitir acesso público à turma"
-                className="shrink-0"
+                className="self-end shrink-0 sm:self-auto"
               />
             </div>
           </div>
