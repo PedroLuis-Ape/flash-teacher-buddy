@@ -32,6 +32,7 @@ export interface GalaxyScenePlan {
 
 const STATIC_MAX_WIDTH = 767;
 const BALANCED_MAX_WIDTH = 1199;
+const COMET_REPEAT_INTERVAL = 30_000;
 
 export function chooseGalaxyMotionTier(snapshot: GalaxyCapabilitySnapshot): GalaxyMotionTier {
   const lowMemory = snapshot.deviceMemory !== undefined && snapshot.deviceMemory <= 4;
@@ -121,10 +122,10 @@ export function getGalaxyCometPlan(tier: GalaxyMotionTier): GalaxyCometPlan {
   if (tier === 'balanced') {
     return {
       count: 1,
-      firstDelayMin: 30_000,
-      firstDelayVariation: 20_000,
-      repeatDelayMin: 90_000,
-      repeatDelayVariation: 50_000,
+      firstDelayMin: 8_000,
+      firstDelayVariation: 4_000,
+      repeatDelayMin: COMET_REPEAT_INTERVAL,
+      repeatDelayVariation: 0,
       duration: 6_000,
       staggerDelays: [0],
     };
@@ -134,8 +135,8 @@ export function getGalaxyCometPlan(tier: GalaxyMotionTier): GalaxyCometPlan {
     count: 4,
     firstDelayMin: 7_000,
     firstDelayVariation: 5_000,
-    repeatDelayMin: 28_000,
-    repeatDelayVariation: 7_000,
+    repeatDelayMin: COMET_REPEAT_INTERVAL,
+    repeatDelayVariation: 0,
     duration: 7_200,
     staggerDelays: [0, 1_250, 2_650, 4_200],
   };
