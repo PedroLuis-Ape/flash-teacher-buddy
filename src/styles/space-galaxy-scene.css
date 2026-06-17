@@ -1,0 +1,32 @@
+/* Layered Galaxy scene. Assets mount only while the Galaxy palette is active. */
+.space-galaxy-object,.space-galaxy-moon-orbit{position:absolute;display:block;pointer-events:none;user-select:none;max-width:none}
+.space-galaxy-object{height:auto;transform-origin:50% 50%}
+.space-galaxy-spiral-main{z-index:1;left:-4vw;top:2vh;width:clamp(240px,28vw,440px);opacity:.32;transform:rotate(-12deg) scaleY(.74)}
+.space-galaxy-spiral-distant{z-index:1;right:5vw;bottom:5vh;width:clamp(130px,14vw,230px);opacity:.16;transform:rotate(18deg) scaleY(.7)}
+.space-galaxy-planet-main{z-index:2;right:-9vw;top:-11vh;width:clamp(280px,32vw,560px);opacity:.43;transform:translate3d(0,0,0) rotate(-7deg)}
+.space-galaxy-moon-orbit{z-index:2;right:-1vw;top:-4vh;width:clamp(300px,38vw,650px);aspect-ratio:1;transform:rotate(-16deg);transform-origin:50% 50%}
+.space-galaxy-moon-small{left:46%;top:2%;width:11%;opacity:.56;transform:translate3d(-50%,0,0)}
+.space-galaxy-nebula-dust{z-index:3;left:-12vw;top:7vh;width:124vw;opacity:.34;transform:rotate(-3deg) scale(1.03)}
+.space-galaxy-nebula{z-index:4;left:-18vw;top:5vh;width:136vw;opacity:.52;transform:rotate(-4deg) scale(1.02)}
+.space-galaxy-effects--full .space-galaxy-arm{opacity:.07}
+.space-galaxy-effects--balanced .space-galaxy-arm{opacity:.11}
+.space-galaxy-effects--balanced .space-galaxy-spiral-main{left:-6vw;top:5vh;width:clamp(210px,31vw,340px);opacity:.22}
+.space-galaxy-effects--balanced .space-galaxy-planet-main{right:-12vw;top:-7vh;width:clamp(240px,34vw,410px);opacity:.3}
+.space-galaxy-effects--balanced .space-galaxy-nebula{left:-24vw;top:13vh;width:148vw;opacity:.36;transform:rotate(-4deg)}
+.space-galaxy-effects--scene-motion .space-galaxy-nebula{animation:ape-nebula-float 58s ease-in-out infinite alternate!important;will-change:transform,opacity}
+.space-galaxy-effects--scene-motion .space-galaxy-nebula-dust{animation:ape-dust-parallax 72s ease-in-out infinite alternate!important;will-change:transform,opacity}
+.space-galaxy-effects--scene-motion .space-galaxy-spiral-main{animation:ape-spiral-main-turn 260s linear infinite!important;will-change:transform,opacity}
+.space-galaxy-effects--scene-motion .space-galaxy-spiral-distant{animation:ape-spiral-distant-turn 330s linear infinite reverse!important;will-change:transform,opacity}
+.space-galaxy-effects--scene-motion .space-galaxy-planet-main{animation:ape-planet-drift 110s ease-in-out infinite alternate!important;will-change:transform,opacity}
+.space-galaxy-effects--scene-motion .space-galaxy-moon-orbit{animation:ape-moon-orbit 128s linear infinite!important;will-change:transform}
+.space-galaxy-effects--paused .space-galaxy-object,.space-galaxy-effects--paused .space-galaxy-moon-orbit,.space-galaxy-effects--paused .space-galaxy-arm,.space-galaxy-effects--paused .space-twinkle-star{animation-play-state:paused!important;will-change:auto!important}
+@keyframes ape-nebula-float{from{opacity:.48;transform:rotate(-4deg) translate3d(-5px,4px,0) scale(1.015)}to{opacity:.54;transform:rotate(-4deg) translate3d(7px,-6px,0) scale(1.025)}}
+@keyframes ape-dust-parallax{from{opacity:.28;transform:rotate(-3deg) translate3d(6px,-4px,0) scale(1.025)}to{opacity:.36;transform:rotate(-3deg) translate3d(-9px,8px,0) scale(1.04)}}
+@keyframes ape-spiral-main-turn{from{opacity:.28;transform:rotate(-12deg) scaleY(.74)}50%{opacity:.35}to{opacity:.28;transform:rotate(348deg) scaleY(.74)}}
+@keyframes ape-spiral-distant-turn{from{opacity:.12;transform:rotate(18deg) scaleY(.7)}50%{opacity:.19}to{opacity:.12;transform:rotate(378deg) scaleY(.7)}}
+@keyframes ape-planet-drift{from{opacity:.39;transform:translate3d(0,0,0) rotate(-7deg)}to{opacity:.46;transform:translate3d(-8px,7px,0) rotate(-5deg)}}
+@keyframes ape-moon-orbit{from{transform:rotate(-16deg)}to{transform:rotate(344deg)}}
+html[data-palette="galaxy"][data-galaxy-motion="static"] .space-galaxy-object,html[data-palette="galaxy"][data-galaxy-motion="static"] .space-galaxy-moon-orbit{display:none!important}
+@media(max-width:1199px){.space-galaxy-spiral-distant,.space-galaxy-nebula-dust,.space-galaxy-moon-orbit{display:none!important}}
+@media(max-width:767px),(update:slow){.space-galaxy-object,.space-galaxy-moon-orbit{display:none!important}}
+@media(prefers-reduced-motion:reduce){.space-galaxy-object,.space-galaxy-moon-orbit{display:none!important;animation:none!important;will-change:auto!important}}
