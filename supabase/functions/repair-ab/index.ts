@@ -1,94 +1,111 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  MAX_REPAIR_BODY_BYTES,
+  isRepairAction,
+  isSafeOptionalText,
+  isUuid,
+  normalizeCardIds,
+} from "./validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function relationOwnerId(value: unknown): string | null {
+  if (Array.isArray(value)) return (value[0] as { owner_id?: string } | undefined)?.owner_id ?? null;
+  return (value as { owner_id?: string } | null)?.owner_id ?? null;
+}
+
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return json({ error: "Content-Type must be application/json" }, 415);
   }
 
+  const declaredLength = Number(req.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_REPAIR_BODY_BYTES) {
+    return json({ error: "Request body too large" }, 413);
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error("Missing server configuration");
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Verify user
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
     const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (userError || !user) return json({ error: "Unauthorized" }, 401);
+
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return json({ error: "Invalid JSON body" }, 400);
     }
 
-    const body = await req.json();
-    const { action, list_id, card_ids } = body;
+    const { action } = body;
+    if (!isRepairAction(action)) return json({ error: "Invalid action" }, 400);
 
-    // Verify ownership
-    if (list_id) {
-      const { data: list } = await supabase
+    const listId = body.list_id;
+    if (listId !== undefined && !isUuid(listId)) return json({ error: "Invalid list_id" }, 400);
+
+    if (listId) {
+      const { data: list, error: listError } = await admin
         .from("lists")
         .select("owner_id")
-        .eq("id", list_id)
-        .single();
-
-      if (!list || list.owner_id !== user.id) {
-        return new Response(
-          JSON.stringify({ error: "Permission denied" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+        .eq("id", listId)
+        .maybeSingle();
+      if (listError) throw listError;
+      if (!list || list.owner_id !== user.id) return json({ error: "Permission denied" }, 403);
     }
 
-    let result: any = { success: false };
-
     switch (action) {
-      // ─── Swap specific cards' term ↔ translation ───────────────
       case "swap_cards": {
-        if (!card_ids || !Array.isArray(card_ids) || card_ids.length === 0) {
-          return new Response(
-            JSON.stringify({ error: "card_ids required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        const cardIds = normalizeCardIds(body.card_ids);
+        if (!cardIds) return json({ error: "card_ids must contain 1 to 500 unique UUIDs" }, 400);
 
-        // SECURITY: only operate on cards belonging to lists owned by the caller.
-        const { data: beforeCards } = await supabase
+        let query = admin
           .from("flashcards")
           .select("id, term, translation, list_id, lists!inner(owner_id)")
-          .in("id", card_ids);
+          .in("id", cardIds);
+        if (listId) query = query.eq("list_id", listId);
 
-        const ownedCards = (beforeCards || []).filter(
-          (c: any) => c.lists?.owner_id === user.id
+        const { data: cards, error: cardsError } = await query;
+        if (cardsError) throw cardsError;
+
+        const ownedCards = (cards ?? []).filter(
+          (card: Record<string, unknown>) => relationOwnerId(card.lists) === user.id,
         );
-
-        if (ownedCards.length !== card_ids.length) {
-          return new Response(
-            JSON.stringify({ error: "Permission denied: one or more cards do not belong to you" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+        if (ownedCards.length !== cardIds.length) {
+          return json({ error: "Permission denied for one or more cards" }, 403);
         }
 
-        // Swap term ↔ translation for specified cards
-        // We need to do this per-card since Supabase doesn't support swapping columns in bulk
         let swapped = 0;
         for (const card of ownedCards) {
-          const { error } = await supabase
+          const { error } = await admin
             .from("flashcards")
             .update({
               term: card.translation,
@@ -96,53 +113,29 @@ Deno.serve(async (req: Request) => {
               updated_at: new Date().toISOString(),
             })
             .eq("id", card.id);
-
-          if (!error) swapped++;
+          if (error) throw error;
+          swapped += 1;
         }
 
-        // Log the repair
-        await supabase.from("admin_logs").insert({
+        await admin.from("admin_logs").insert({
           actor_id: user.id,
           action: "repair_swap_cards",
-          target: list_id || "multiple",
-          details: {
-            card_ids,
-            cards_swapped: swapped,
-            before_samples: ownedCards.slice(0, 5).map((c: any) => ({
-              id: c.id,
-              term_was: c.term?.substring(0, 50),
-              translation_was: c.translation?.substring(0, 50),
-            })),
-          },
+          target: listId ?? "multiple",
+          details: { card_count: swapped, card_ids: cardIds },
         });
-
-        result = { success: true, cards_swapped: swapped };
-        break;
+        return json({ success: true, cards_swapped: swapped });
       }
 
-      // ─── Fix list metadata only (swap lang/labels) ─────────────
       case "fix_metadata": {
-        if (!list_id) {
-          return new Response(
-            JSON.stringify({ error: "list_id required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const { data: list } = await supabase
+        if (!listId) return json({ error: "list_id required" }, 400);
+        const { data: list, error: readError } = await admin
           .from("lists")
           .select("lang_a, lang_b, labels_a, labels_b")
-          .eq("id", list_id)
+          .eq("id", listId)
           .single();
+        if (readError) throw readError;
 
-        if (!list) {
-          return new Response(
-            JSON.stringify({ error: "List not found" }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const { error: updateError } = await supabase
+        const { error: updateError } = await admin
           .from("lists")
           .update({
             lang_a: list.lang_b,
@@ -151,138 +144,90 @@ Deno.serve(async (req: Request) => {
             labels_b: list.labels_a,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", list_id);
-
+          .eq("id", listId);
         if (updateError) throw updateError;
 
-        await supabase.from("admin_logs").insert({
+        await admin.from("admin_logs").insert({
           actor_id: user.id,
           action: "repair_fix_metadata",
-          target: list_id,
-          details: {
-            before: { lang_a: list.lang_a, lang_b: list.lang_b, labels_a: list.labels_a, labels_b: list.labels_b },
-            after: { lang_a: list.lang_b, lang_b: list.lang_a, labels_a: list.labels_b, labels_b: list.labels_a },
-          },
+          target: listId,
+          details: { fields_changed: ["lang_a", "lang_b", "labels_a", "labels_b"] },
         });
-
-        result = { success: true, action: "metadata_swapped" };
-        break;
+        return json({ success: true, action: "metadata_swapped" });
       }
 
-      // ─── Full structural repair: swap metadata + all cards ─────
       case "full_repair": {
-        if (!list_id) {
-          return new Response(
-            JSON.stringify({ error: "list_id required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Use the existing swap_list_sides RPC
-        const { data: rpcResult, error: rpcError } = await supabase.rpc(
-          "swap_list_sides",
-          { _list_id: list_id }
-        );
-
-        if (rpcError) throw rpcError;
-
-        await supabase.from("admin_logs").insert({
+        if (!listId) return json({ error: "list_id required" }, 400);
+        const { data, error } = await admin.rpc("swap_list_sides", { _list_id: listId });
+        if (error) throw error;
+        await admin.from("admin_logs").insert({
           actor_id: user.id,
           action: "repair_full_structural",
-          target: list_id,
-          details: rpcResult,
+          target: listId,
+          details: { completed: true },
         });
-
-        result = { success: true, ...rpcResult };
-        break;
+        return json({ success: true, ...(data ?? {}) });
       }
 
-      // ─── Mark as reviewed (no changes) ─────────────────────────
       case "mark_reviewed": {
-        if (!list_id) {
-          return new Response(
-            JSON.stringify({ error: "list_id required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        await supabase.from("admin_logs").insert({
+        if (!listId) return json({ error: "list_id required" }, 400);
+        await admin.from("admin_logs").insert({
           actor_id: user.id,
           action: "repair_mark_reviewed",
-          target: list_id,
+          target: listId,
           details: { status: "no_change_needed" },
         });
-
-        result = { success: true, action: "marked_reviewed" };
-        break;
+        return json({ success: true, action: "marked_reviewed" });
       }
 
-      // ─── Edit a single card manually ───────────────────────────
       case "edit_card": {
-        const { card_id, new_term, new_translation } = body;
-        if (!card_id) {
-          return new Response(
-            JSON.stringify({ error: "card_id required" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+        const cardId = body.card_id;
+        const newTerm = body.new_term;
+        const newTranslation = body.new_translation;
+        if (!isUuid(cardId)) return json({ error: "Invalid card_id" }, 400);
+        if (!isSafeOptionalText(newTerm) || !isSafeOptionalText(newTranslation)) {
+          return json({ error: "Card text exceeds the allowed size" }, 400);
+        }
+        if (newTerm === undefined && newTranslation === undefined) {
+          return json({ error: "No card fields supplied" }, 400);
         }
 
-        // SECURITY: verify card belongs to a list owned by the caller before editing.
-        const { data: before } = await supabase
+        const { data: card, error: cardError } = await admin
           .from("flashcards")
-          .select("term, translation, list_id, lists!inner(owner_id)")
-          .eq("id", card_id)
-          .single();
-
-        if (!before || (before as any).lists?.owner_id !== user.id) {
-          return new Response(
-            JSON.stringify({ error: "Permission denied" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          .select("id, list_id, lists!inner(owner_id)")
+          .eq("id", cardId)
+          .maybeSingle();
+        if (cardError) throw cardError;
+        if (!card || relationOwnerId(card.lists) !== user.id) {
+          return json({ error: "Permission denied" }, 403);
         }
 
-        const updateFields: any = { updated_at: new Date().toISOString() };
-        if (new_term !== undefined) updateFields.term = new_term;
-        if (new_translation !== undefined) updateFields.translation = new_translation;
+        const updateFields: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        if (newTerm !== undefined) updateFields.term = newTerm;
+        if (newTranslation !== undefined) updateFields.translation = newTranslation;
 
-        const { error: editError } = await supabase
+        const { error: editError } = await admin
           .from("flashcards")
           .update(updateFields)
-          .eq("id", card_id);
-
+          .eq("id", cardId);
         if (editError) throw editError;
 
-        await supabase.from("admin_logs").insert({
+        await admin.from("admin_logs").insert({
           actor_id: user.id,
           action: "repair_edit_card",
-          target: card_id,
+          target: cardId,
           details: {
-            before: { term: (before as any).term, translation: (before as any).translation },
-            after: { term: new_term, translation: new_translation },
+            fields_changed: [
+              ...(newTerm !== undefined ? ["term"] : []),
+              ...(newTranslation !== undefined ? ["translation"] : []),
+            ],
           },
         });
-
-        result = { success: true, action: "card_edited" };
-        break;
+        return json({ success: true, action: "card_edited" });
       }
-
-      default:
-        return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
     }
-
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err: any) {
-    return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+  } catch (error) {
+    console.error("repair-ab failed", error);
+    return json({ error: "Internal server error" }, 500);
   }
 });
