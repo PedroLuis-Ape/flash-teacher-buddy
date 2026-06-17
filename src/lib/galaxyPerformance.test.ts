@@ -51,7 +51,7 @@ describe('galaxy animation budgets', () => {
     expect(getGalaxyCometPlan('static').count).toBe(0);
   });
 
-  it('uses one occasional comet in balanced mode', () => {
+  it('uses one comet in balanced mode', () => {
     const balanced = getGalaxyCometPlan('balanced');
     expect(balanced.count).toBe(1);
     expect(balanced.staggerDelays).toEqual([0]);
@@ -72,9 +72,9 @@ describe('galaxy animation budgets', () => {
     expect(full.duration).toBeLessThanOrEqual(8_000);
   });
 
-  it('repeats the full group approximately every thirty seconds', () => {
-    const full = getGalaxyCometPlan('full');
-    expect(full.repeatDelayMin).toBeGreaterThanOrEqual(28_000);
-    expect(full.repeatDelayMin + full.repeatDelayVariation).toBeLessThanOrEqual(35_000);
+  it.each(['balanced', 'full'] as const)('repeats animated comet events every thirty seconds in %s mode', (tier) => {
+    const plan = getGalaxyCometPlan(tier);
+    expect(plan.repeatDelayMin).toBe(30_000);
+    expect(plan.repeatDelayVariation).toBe(0);
   });
 });
