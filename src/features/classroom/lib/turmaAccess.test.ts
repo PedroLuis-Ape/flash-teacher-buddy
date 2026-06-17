@@ -56,6 +56,13 @@ describe('buildPublicTurmaSearchParams', () => {
     }).toString()).toBe('atribuicao=assignment-123');
   });
 
+  it('ignores a null assignment when returning from unavailable content', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: true,
+      assignmentId: null,
+    }).toString()).toBe('publicPreview=true');
+  });
+
   it('returns empty parameters at the normal public classroom root', () => {
     expect(buildPublicTurmaSearchParams({
       publicPreview: false,
