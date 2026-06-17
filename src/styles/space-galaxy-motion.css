@@ -154,13 +154,30 @@
   }
 }
 
-/* Static tier: small screens, reduced motion, data saver or limited hardware. */
+/* Static tier: small screens, reduced motion, data saver or limited hardware.
+   The composition stays completely still, but must still read as a galaxy. */
 html[data-palette="galaxy"][data-galaxy-motion="static"] .space-ui {
   --ape-page:
-    radial-gradient(circle at 14% 22%, hsl(0 0% 100% / .62) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 76% 31%, hsl(282 90% 86% / .48) 0 1px, transparent 1.9px),
-    radial-gradient(ellipse 90% 48% at 50% -8%, hsl(273 88% 42% / .22), transparent 68%),
-    linear-gradient(180deg, hsl(248 54% 4%), hsl(251 54% 7%) 52%, hsl(247 54% 4%));
+    radial-gradient(circle at 8% 11%, hsl(0 0% 100% / .96) 0 1.4px, hsl(275 100% 90% / .38) 1.7px 3.4px, transparent 4.4px),
+    radial-gradient(circle at 84% 17%, hsl(213 100% 94% / .94) 0 1.3px, hsl(220 100% 80% / .30) 1.6px 3.2px, transparent 4.2px),
+    radial-gradient(circle at 65% 63%, hsl(0 0% 100% / .92) 0 1.5px, hsl(286 100% 88% / .34) 1.8px 3.6px, transparent 4.6px),
+    radial-gradient(circle at 18% 36%, hsl(0 0% 100% / .90) 0 1.2px, transparent 2.1px),
+    radial-gradient(circle at 37% 19%, hsl(228 100% 92% / .86) 0 1.1px, transparent 2px),
+    radial-gradient(circle at 55% 31%, hsl(291 100% 91% / .88) 0 1.25px, transparent 2.15px),
+    radial-gradient(circle at 74% 42%, hsl(0 0% 100% / .86) 0 1.1px, transparent 2px),
+    radial-gradient(circle at 91% 54%, hsl(221 100% 91% / .84) 0 1.25px, transparent 2.15px),
+    radial-gradient(circle at 12% 67%, hsl(286 100% 91% / .82) 0 1.15px, transparent 2.05px),
+    radial-gradient(circle at 31% 76%, hsl(0 0% 100% / .88) 0 1.3px, transparent 2.2px),
+    radial-gradient(circle at 49% 88%, hsl(217 100% 92% / .82) 0 1.1px, transparent 2px),
+    radial-gradient(circle at 79% 82%, hsl(292 100% 91% / .86) 0 1.2px, transparent 2.1px),
+    radial-gradient(circle at 95% 92%, hsl(0 0% 100% / .82) 0 1px, transparent 1.9px),
+    radial-gradient(circle at 23% 52%, hsl(0 0% 100% / .68) 0 .8px, transparent 1.6px),
+    radial-gradient(circle at 44% 58%, hsl(224 100% 90% / .70) 0 .85px, transparent 1.65px),
+    radial-gradient(circle at 69% 8%, hsl(283 100% 91% / .72) 0 .9px, transparent 1.7px),
+    linear-gradient(164deg, transparent 0 34%, hsl(280 88% 66% / .05) 38%, hsl(275 90% 62% / .16) 44%, hsl(220 92% 68% / .11) 51%, transparent 59%),
+    radial-gradient(ellipse 82% 42% at 18% 18%, hsl(281 90% 48% / .24), transparent 66%),
+    radial-gradient(ellipse 72% 40% at 92% 74%, hsl(222 88% 48% / .18), transparent 68%),
+    linear-gradient(180deg, hsl(248 58% 4%), hsl(251 55% 8%) 50%, hsl(248 58% 4%));
   --ape-shadow: 0 14px 36px -32px hsl(267 82% 48% / .42);
 }
 
