@@ -10,12 +10,14 @@ export interface GalaxyCapabilitySnapshot {
   hardwareConcurrency?: number;
 }
 
-export interface ShootingStarTiming {
+export interface GalaxyCometPlan {
+  count: 0 | 1 | 4;
   firstDelayMin: number;
   firstDelayVariation: number;
   repeatDelayMin: number;
   repeatDelayVariation: number;
   duration: number;
+  staggerDelays: readonly number[];
 }
 
 const STATIC_MAX_WIDTH = 767;
@@ -57,23 +59,39 @@ export function getGalaxyStarLimit(tier: GalaxyMotionTier): number {
   return 10;
 }
 
-export function getShootingStarTiming(tier: Exclude<GalaxyMotionTier, 'static'>): ShootingStarTiming {
+export function getGalaxyCometPlan(tier: GalaxyMotionTier): GalaxyCometPlan {
+  if (tier === 'static') {
+    return {
+      count: 0,
+      firstDelayMin: 0,
+      firstDelayVariation: 0,
+      repeatDelayMin: 0,
+      repeatDelayVariation: 0,
+      duration: 0,
+      staggerDelays: [],
+    };
+  }
+
   if (tier === 'balanced') {
     return {
-      firstDelayMin: 40_000,
-      firstDelayVariation: 30_000,
-      repeatDelayMin: 95_000,
-      repeatDelayVariation: 70_000,
-      duration: 3_800,
+      count: 1,
+      firstDelayMin: 30_000,
+      firstDelayVariation: 20_000,
+      repeatDelayMin: 90_000,
+      repeatDelayVariation: 50_000,
+      duration: 6_000,
+      staggerDelays: [0],
     };
   }
 
   return {
-    firstDelayMin: 25_000,
-    firstDelayVariation: 20_000,
-    repeatDelayMin: 65_000,
-    repeatDelayVariation: 55_000,
-    duration: 3_200,
+    count: 4,
+    firstDelayMin: 7_000,
+    firstDelayVariation: 5_000,
+    repeatDelayMin: 28_000,
+    repeatDelayVariation: 7_000,
+    duration: 7_200,
+    staggerDelays: [0, 1_250, 2_650, 4_200],
   };
 }
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   chooseGalaxyMotionTier,
+  getGalaxyCometPlan,
   getGalaxyStarLimit,
-  getShootingStarTiming,
   type GalaxyCapabilitySnapshot,
 } from './galaxyPerformance';
 
@@ -47,10 +47,34 @@ describe('galaxy animation budgets', () => {
     expect(getGalaxyStarLimit('full')).toBe(10);
   });
 
-  it('uses slower and less frequent shooting stars in balanced mode', () => {
-    const full = getShootingStarTiming('full');
-    const balanced = getShootingStarTiming('balanced');
-    expect(balanced.duration).toBeGreaterThan(full.duration);
-    expect(balanced.repeatDelayMin).toBeGreaterThan(full.repeatDelayMin);
+  it('disables comets in static mode', () => {
+    expect(getGalaxyCometPlan('static').count).toBe(0);
+  });
+
+  it('uses one occasional comet in balanced mode', () => {
+    const balanced = getGalaxyCometPlan('balanced');
+    expect(balanced.count).toBe(1);
+    expect(balanced.staggerDelays).toEqual([0]);
+  });
+
+  it('uses a four-comet staggered group in full mode', () => {
+    const full = getGalaxyCometPlan('full');
+    expect(full.count).toBe(4);
+    expect(full.staggerDelays).toHaveLength(4);
+    expect(full.staggerDelays[0]).toBe(0);
+    expect(full.staggerDelays[3]).toBeGreaterThanOrEqual(3_000);
+    expect(full.staggerDelays[3]).toBeLessThanOrEqual(4_500);
+  });
+
+  it('keeps full comet traversal slow and observable', () => {
+    const full = getGalaxyCometPlan('full');
+    expect(full.duration).toBeGreaterThanOrEqual(6_000);
+    expect(full.duration).toBeLessThanOrEqual(8_000);
+  });
+
+  it('repeats the full group approximately every thirty seconds', () => {
+    const full = getGalaxyCometPlan('full');
+    expect(full.repeatDelayMin).toBeGreaterThanOrEqual(28_000);
+    expect(full.repeatDelayMin + full.repeatDelayVariation).toBeLessThanOrEqual(35_000);
   });
 });
