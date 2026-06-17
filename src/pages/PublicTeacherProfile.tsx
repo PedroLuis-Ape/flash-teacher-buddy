@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, FolderOpen, GraduationCap, SearchX } from 'lucide-react';
+import { AlertTriangle, BookOpen, FolderOpen, GraduationCap, SearchX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ApeCardFolder } from '@/components/ape/ApeCardFolder';
 import { ApeGrid } from '@/components/ape/ApeGrid';
@@ -12,6 +12,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  buildPublicTurmaPath,
+  PublicTeacherTurmasSection,
+  PUBLIC_TEACHER_STATS_GRID_CLASS,
+  type PublicTeacherTurmaRow,
+} from '@/features/publicTeacher/components/PublicTeacherTurmasSection';
 
 interface PublicTeacherProfileRow {
   display_name: string;
@@ -44,10 +50,16 @@ const PREVIEW_PROFILE: PublicTeacherProfileRow = {
   card_count: 0,
 };
 
-function isMissingDirectoryRpc(error: unknown) {
+export function isMissingDirectoryRpc(error: unknown) {
   const value = error as { code?: string; message?: string; details?: string } | null;
   const text = `${value?.message ?? ''} ${value?.details ?? ''}`.toLowerCase();
   return value?.code === 'PGRST202' || value?.code === '42883' || text.includes('get_public_teacher_');
+}
+
+export function shouldUsePreviewFallback(error: unknown, slug: string, isDevelopment: boolean) {
+  return isDevelopment
+    && isMissingDirectoryRpc(error)
+    && slug.toLowerCase() === PREVIEW_PROFILE.public_slug;
 }
 
 function initials(name: string) {
@@ -67,6 +79,7 @@ function asNumber(value: number | string | null | undefined) {
 export default function PublicTeacherProfile() {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const canUsePreviewFallback = import.meta.env.DEV;
 
   const profileQuery = useQuery({
     queryKey: ['public-teacher-profile', slug],
@@ -76,8 +89,11 @@ export default function PublicTeacherProfile() {
       });
 
       if (error) {
-        if (isMissingDirectoryRpc(error) && slug.toLowerCase() === PREVIEW_PROFILE.public_slug) {
+        if (shouldUsePreviewFallback(error, slug, canUsePreviewFallback)) {
           return { profile: PREVIEW_PROFILE, previewMode: true };
+        }
+        if (isMissingDirectoryRpc(error)) {
+          console.error('[PublicTeacherProfile] Public profile RPC is not deployed.', error);
         }
         throw error;
       }
@@ -98,7 +114,12 @@ export default function PublicTeacherProfile() {
       });
 
       if (error) {
-        if (isMissingDirectoryRpc(error)) return [] as PublicTeacherFolderRow[];
+        if (profileQuery.data?.previewMode && canUsePreviewFallback && isMissingDirectoryRpc(error)) {
+          return [] as PublicTeacherFolderRow[];
+        }
+        if (isMissingDirectoryRpc(error)) {
+          console.error('[PublicTeacherProfile] Public folders RPC is not deployed.', error);
+        }
         throw error;
       }
 
@@ -109,10 +130,35 @@ export default function PublicTeacherProfile() {
     staleTime: 60_000,
   });
 
+  const turmasQuery = useQuery({
+    queryKey: ['public-teacher-turmas', slug],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_public_teacher_turmas', {
+        _slug: slug,
+      });
+
+      if (error) {
+        if (profileQuery.data?.previewMode && canUsePreviewFallback && isMissingDirectoryRpc(error)) {
+          return [] as PublicTeacherTurmaRow[];
+        }
+        if (isMissingDirectoryRpc(error)) {
+          console.error('[PublicTeacherProfile] Public classrooms RPC is not deployed.', error);
+        }
+        throw error;
+      }
+
+      return (data ?? []) as PublicTeacherTurmaRow[];
+    },
+    enabled: Boolean(slug && profileQuery.data?.profile),
+    retry: false,
+    staleTime: 60_000,
+  });
+
   const profile = profileQuery.data?.profile ?? null;
   const previewMode = profileQuery.data?.previewMode ?? false;
   const specialties = useMemo(() => profile?.public_specialties?.filter(Boolean) ?? [], [profile]);
   const folders = foldersQuery.data ?? [];
+  const turmas = turmasQuery.data ?? [];
 
   if (profileQuery.isLoading) {
     return (
@@ -121,6 +167,26 @@ export default function PublicTeacherProfile() {
         <div className="mx-auto flex min-h-[50vh] max-w-6xl items-center justify-center px-4 text-muted-foreground">
           Carregando perfil do professor...
         </div>
+      </div>
+    );
+  }
+
+  if (profileQuery.isError && isMissingDirectoryRpc(profileQuery.error) && !canUsePreviewFallback) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PublicPageHeader title="Perfil público" fallbackPath="/portal" />
+        <main className="mx-auto max-w-3xl px-4 py-16">
+          <Card className="p-8 text-center">
+            <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-destructive" />
+            <h1 className="text-xl font-bold">O perfil público ainda não foi completamente implantado</h1>
+            <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
+              A configuração do diretório público precisa ser atualizada. Nenhum dado demonstrativo foi exibido no lugar dos dados reais.
+            </p>
+            <Button className="mt-6" onClick={() => profileQuery.refetch()}>
+              Tentar novamente
+            </Button>
+          </Card>
+        </main>
       </div>
     );
   }
@@ -148,6 +214,7 @@ export default function PublicTeacherProfile() {
   const folderCount = asNumber(profile.folder_count);
   const listCount = asNumber(profile.list_count);
   const cardCount = asNumber(profile.card_count);
+  const turmaCount = turmasQuery.isLoading || turmasQuery.isError ? '—' : turmas.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -206,7 +273,11 @@ export default function PublicTeacherProfile() {
               </div>
             )}
 
-            <div className="mt-6 grid grid-cols-3 gap-3 sm:max-w-xl">
+            <div className={PUBLIC_TEACHER_STATS_GRID_CLASS}>
+              <div className="rounded-xl border border-border/70 bg-background/60 p-3 text-center">
+                <div className="text-xl font-bold">{turmaCount}</div>
+                <div className="text-xs text-muted-foreground">Turmas</div>
+              </div>
               <div className="rounded-xl border border-border/70 bg-background/60 p-3 text-center">
                 <div className="text-xl font-bold">{folderCount}</div>
                 <div className="text-xs text-muted-foreground">Pastas</div>
@@ -223,11 +294,20 @@ export default function PublicTeacherProfile() {
 
             {previewMode && (
               <p className="mt-5 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-                Este preview está usando dados demonstrativos. Os materiais reais aparecerão após a migration do diretório público ser aplicada.
+                Ambiente de desenvolvimento: este perfil usa dados demonstrativos porque as RPCs do diretório público não estão disponíveis localmente.
               </p>
             )}
           </div>
         </Card>
+
+        <PublicTeacherTurmasSection
+          profileName={profile.display_name}
+          turmas={turmas}
+          isLoading={turmasQuery.isLoading}
+          isError={turmasQuery.isError}
+          onRetry={() => turmasQuery.refetch()}
+          onOpenTurma={(turmaId) => navigate(buildPublicTurmaPath(turmaId))}
+        />
 
         <section aria-labelledby="teacher-materials-title" className="space-y-5">
           <div>
@@ -252,7 +332,9 @@ export default function PublicTeacherProfile() {
               <FolderOpen className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <h3 className="font-semibold">Nenhum material público disponível</h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                Este professor ainda não publicou pastas para visitantes ou os dados reais ainda não foram implantados no preview.
+                {previewMode
+                  ? 'O preview local não possui pastas demonstrativas.'
+                  : 'Este professor ainda não publicou pastas para visitantes.'}
               </p>
             </Card>
           ) : (
