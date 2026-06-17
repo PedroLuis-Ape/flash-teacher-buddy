@@ -1,11 +1,11 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { PitecoHeroAssetBridge } from "@/components/layout/PitecoHeroAssetBridge";
 import { usePalette } from "@/hooks/usePalette";
 import { usePerformance } from "@/contexts/PerformanceContext";
 import {
   detectGalaxyMotionTier,
+  getGalaxyCometPlan,
   getGalaxyStarLimit,
-  getShootingStarTiming,
   type GalaxyMotionTier,
 } from "@/lib/galaxyPerformance";
 import "@/styles/space-layouts.css";
@@ -29,20 +29,26 @@ type TwinkleStar = {
   duration: number;
   delay: number;
   glow: string;
+  peak: number;
 };
 
 const STARS: readonly TwinkleStar[] = [
-  { left: "7%", top: "14%", size: 3, duration: 11_400, delay: -1_350, glow: "rgba(255,255,255,.9)" },
-  { left: "38%", top: "81%", size: 2, duration: 8_900, delay: -5_200, glow: "rgba(224,196,255,.86)" },
-  { left: "75%", top: "27%", size: 2, duration: 13_200, delay: -2_700, glow: "rgba(255,255,255,.86)" },
-  { left: "18%", top: "66%", size: 2, duration: 10_300, delay: -7_100, glow: "rgba(255,255,255,.82)" },
-  { left: "57%", top: "53%", size: 3, duration: 14_600, delay: -8_900, glow: "rgba(195,225,255,.86)" },
-  { left: "90%", top: "58%", size: 2, duration: 9_700, delay: -3_850, glow: "rgba(235,202,255,.84)" },
-  { left: "28%", top: "34%", size: 2, duration: 12_100, delay: -10_200, glow: "rgba(205,228,255,.8)" },
-  { left: "82%", top: "86%", size: 2, duration: 15_400, delay: -6_450, glow: "rgba(255,255,255,.8)" },
-  { left: "48%", top: "18%", size: 2, duration: 10_900, delay: -9_300, glow: "rgba(230,214,255,.82)" },
-  { left: "66%", top: "72%", size: 3, duration: 13_800, delay: -4_600, glow: "rgba(205,228,255,.82)" },
+  { left: "7%", top: "14%", size: 3, duration: 7_200, delay: -1_350, glow: "rgba(255,255,255,.96)", peak: .96 },
+  { left: "38%", top: "81%", size: 2, duration: 8_900, delay: -5_200, glow: "rgba(224,196,255,.9)", peak: .86 },
+  { left: "75%", top: "27%", size: 2, duration: 6_600, delay: -2_700, glow: "rgba(255,255,255,.92)", peak: .91 },
+  { left: "18%", top: "66%", size: 2, duration: 9_700, delay: -7_100, glow: "rgba(255,255,255,.88)", peak: .82 },
+  { left: "57%", top: "53%", size: 3, duration: 8_100, delay: -8_900, glow: "rgba(195,225,255,.92)", peak: .9 },
+  { left: "90%", top: "58%", size: 2, duration: 6_200, delay: -3_850, glow: "rgba(235,202,255,.9)", peak: .84 },
+  { left: "28%", top: "34%", size: 2, duration: 9_300, delay: -6_800, glow: "rgba(205,228,255,.88)", peak: .8 },
+  { left: "82%", top: "86%", size: 2, duration: 7_700, delay: -6_450, glow: "rgba(255,255,255,.9)", peak: .87 },
+  { left: "48%", top: "18%", size: 2, duration: 8_500, delay: -4_300, glow: "rgba(230,214,255,.9)", peak: .85 },
+  { left: "66%", top: "72%", size: 3, duration: 9_900, delay: -4_600, glow: "rgba(205,228,255,.9)", peak: .92 },
 ];
+
+const FULL_COMET_TOPS = [2, 20, 39, 58] as const;
+const FULL_COMET_SCALES = [1, .95, .9, .86] as const;
+const FULL_COMET_PEAKS = [.98, .9, .82, .75] as const;
+const FULL_COMET_DURATION_OFFSETS = [0, 160, 320, 480] as const;
 
 interface NavigatorWithConnection extends Navigator {
   connection?: EventTarget;
@@ -55,13 +61,14 @@ function motionClass(tier: GalaxyMotionTier) {
 export function SpaceTwinkleLayer() {
   const { palette } = usePalette();
   const { settings } = usePerformance();
-  const shootingStarRef = useRef<HTMLSpanElement>(null);
+  const cometRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const [motionTier, setMotionTier] = useState<GalaxyMotionTier>(() => detectGalaxyMotionTier());
+  const cometPlan = useMemo(() => getGalaxyCometPlan(motionTier), [motionTier]);
   const isGalaxy = palette === "galaxy";
   const motionAllowed = settings.animations && !settings.reduceMotion && motionTier !== "static";
   const starMotionAllowed = motionAllowed && settings.decorativeEffects;
   const armMotionAllowed = starMotionAllowed && motionTier === "full";
-  const shootingStarAllowed = motionAllowed && settings.decorativeEffects;
+  const cometMotionAllowed = motionAllowed && settings.decorativeEffects && cometPlan.count > 0;
   const visibleStars = STARS.slice(0, getGalaxyStarLimit(motionTier));
 
   useEffect(() => {
@@ -106,59 +113,100 @@ export function SpaceTwinkleLayer() {
   }, [isGalaxy, motionTier]);
 
   useEffect(() => {
-    if (!isGalaxy || !shootingStarAllowed || motionTier === "static") return;
-    const star = shootingStarRef.current;
-    if (!star || typeof star.animate !== "function") return;
+    if (!isGalaxy || !cometMotionAllowed || cometPlan.count === 0) return;
 
-    const timing = getShootingStarTiming(motionTier);
-    let timer: number | undefined;
-    let activeAnimation: Animation | null = null;
+    let groupTimer: number | undefined;
+    const launchTimers = new Set<number>();
+    const activeAnimations = new Set<Animation>();
     let cancelled = false;
 
-    const clearTimer = () => {
-      if (timer) window.clearTimeout(timer);
-      timer = undefined;
+    const clearGroupTimer = () => {
+      if (groupTimer !== undefined) window.clearTimeout(groupTimer);
+      groupTimer = undefined;
+    };
+
+    const clearLaunchTimers = () => {
+      launchTimers.forEach((timer) => window.clearTimeout(timer));
+      launchTimers.clear();
+    };
+
+    const cancelAnimations = () => {
+      activeAnimations.forEach((animation) => animation.cancel());
+      activeAnimations.clear();
+      cometRefs.current.forEach((comet) => {
+        if (comet) comet.style.willChange = "auto";
+      });
+    };
+
+    const animateComet = (index: number, verticalJitter: number) => {
+      const comet = cometRefs.current[index];
+      if (!comet || typeof comet.animate !== "function" || cancelled || document.hidden) return;
+
+      const isFull = motionTier === "full";
+      const top = isFull
+        ? FULL_COMET_TOPS[index] + verticalJitter
+        : 10 + Math.random() * 34;
+      const scale = isFull ? FULL_COMET_SCALES[index] : .9;
+      const peak = isFull ? FULL_COMET_PEAKS[index] : .68;
+      const duration = cometPlan.duration + (isFull ? FULL_COMET_DURATION_OFFSETS[index] : 0);
+      const travelX = isFull ? 132 : 124;
+      const travelY = isFull ? 52 : 38;
+      const rotation = isFull ? 21 : 19;
+      const transformAt = (progress: number) => (
+        `translate3d(${travelX * progress}vw,${travelY * progress}vh,0) rotate(${rotation}deg) scale(${scale})`
+      );
+
+      comet.style.top = `${top}%`;
+      comet.style.left = "-15rem";
+      comet.style.willChange = "transform, opacity";
+
+      const animation = comet.animate(
+        [
+          { opacity: 0, transform: transformAt(0), offset: 0 },
+          { opacity: peak * .55, transform: transformAt(.12), offset: .12 },
+          { opacity: peak, transform: transformAt(.34), offset: .34 },
+          { opacity: peak * .78, transform: transformAt(.7), offset: .7 },
+          { opacity: 0, transform: transformAt(1), offset: 1 },
+        ],
+        { duration, easing: "cubic-bezier(.4,0,.2,1)" },
+      );
+
+      activeAnimations.add(animation);
+      animation.finished.catch(() => undefined).finally(() => {
+        activeAnimations.delete(animation);
+        comet.style.willChange = "auto";
+      });
     };
 
     const schedule = (first = false) => {
       if (cancelled || document.hidden) return;
-      clearTimer();
-      const min = first ? timing.firstDelayMin : timing.repeatDelayMin;
-      const variation = first ? timing.firstDelayVariation : timing.repeatDelayVariation;
-      timer = window.setTimeout(run, min + Math.random() * variation);
+      clearGroupTimer();
+      const min = first ? cometPlan.firstDelayMin : cometPlan.repeatDelayMin;
+      const variation = first ? cometPlan.firstDelayVariation : cometPlan.repeatDelayVariation;
+      groupTimer = window.setTimeout(runGroup, min + Math.random() * variation);
     };
 
-    const run = () => {
-      timer = undefined;
+    const runGroup = () => {
+      groupTimer = undefined;
       if (cancelled || document.hidden) return;
 
-      star.style.top = `${10 + Math.random() * 36}%`;
-      star.style.left = "-14rem";
-      const travelX = motionTier === "balanced" ? "122vw" : "130vw";
-      const travelY = motionTier === "balanced" ? "34vh" : "40vh";
-
-      activeAnimation = star.animate(
-        [
-          { opacity: 0, transform: "translate3d(0,0,0) rotate(-22deg)" },
-          { opacity: .48, offset: .16 },
-          { opacity: .88, offset: .42 },
-          { opacity: .58, offset: .72 },
-          { opacity: 0, transform: `translate3d(${travelX},${travelY},0) rotate(-22deg)` },
-        ],
-        { duration: timing.duration, easing: "cubic-bezier(.22,.58,.34,1)" },
-      );
-
-      activeAnimation.finished.catch(() => undefined).finally(() => {
-        activeAnimation = null;
-        schedule();
+      const verticalJitter = motionTier === "full" ? -2 + Math.random() * 4 : 0;
+      cometPlan.staggerDelays.forEach((delay, index) => {
+        const launchTimer = window.setTimeout(() => {
+          launchTimers.delete(launchTimer);
+          animateComet(index, verticalJitter);
+        }, delay);
+        launchTimers.add(launchTimer);
       });
+
+      schedule();
     };
 
     const handleVisibility = () => {
       if (document.hidden) {
-        clearTimer();
-        activeAnimation?.cancel();
-        activeAnimation = null;
+        clearGroupTimer();
+        clearLaunchTimers();
+        cancelAnimations();
         return;
       }
       schedule(true);
@@ -169,11 +217,12 @@ export function SpaceTwinkleLayer() {
 
     return () => {
       cancelled = true;
-      clearTimer();
-      activeAnimation?.cancel();
+      clearGroupTimer();
+      clearLaunchTimers();
+      cancelAnimations();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [isGalaxy, motionTier, shootingStarAllowed]);
+  }, [cometMotionAllowed, cometPlan, isGalaxy, motionTier]);
 
   const effectClasses = [
     "space-galaxy-effects",
@@ -199,13 +248,27 @@ export function SpaceTwinkleLayer() {
                 width: star.size,
                 height: star.size,
                 background: star.glow,
-                boxShadow: motionTier === "static" ? "none" : `0 0 ${star.size * 2.5}px ${star.size * .7}px ${star.glow}`,
+                boxShadow: motionTier === "static"
+                  ? "none"
+                  : `0 0 ${star.size * (motionTier === "full" ? 3.4 : 2.4)}px ${star.size * (motionTier === "full" ? .85 : .55)}px ${star.glow}`,
                 "--twinkle-duration": `${star.duration}ms`,
                 "--twinkle-delay": `${star.delay}ms`,
+                "--twinkle-low": Math.max(.16, star.peak - .7),
+                "--twinkle-mid": Math.max(.46, star.peak - .34),
+                "--twinkle-peak": star.peak,
+                "--twinkle-fall": Math.max(.34, star.peak - .48),
               } as React.CSSProperties}
             />
           ))}
-          {shootingStarAllowed && <span ref={shootingStarRef} className="space-shooting-star" />}
+          {cometMotionAllowed && Array.from({ length: cometPlan.count }, (_, index) => (
+            <span
+              key={index}
+              ref={(node) => {
+                cometRefs.current[index] = node;
+              }}
+              className={`space-shooting-star space-shooting-star--${index + 1}`}
+            />
+          ))}
         </div>
       )}
     </Fragment>
