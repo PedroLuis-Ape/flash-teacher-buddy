@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveTurmaViewMode } from '@/features/classroom/lib/turmaAccess';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import TurmaPrivateDetail from '@/pages/TurmaPrivateDetail';
 import TurmaPublicPage from '@/pages/TurmaPublicPage';
@@ -29,10 +30,6 @@ export default function TurmaDetail() {
     retry: false,
   });
 
-  if (publicPreview) {
-    return <TurmaPublicPage />;
-  }
-
   if (authLoading || (user && accessQuery.isLoading)) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
@@ -41,9 +38,11 @@ export default function TurmaDetail() {
     );
   }
 
-  if (user && accessQuery.data) {
-    return <TurmaPrivateDetail />;
-  }
+  const viewMode = resolveTurmaViewMode({
+    publicPreview,
+    authenticated: !!user,
+    hasPrivateAccess: !!accessQuery.data,
+  });
 
-  return <TurmaPublicPage />;
+  return viewMode === 'private' ? <TurmaPrivateDetail /> : <TurmaPublicPage />;
 }
