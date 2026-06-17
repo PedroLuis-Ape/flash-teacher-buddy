@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PublicNav } from '@/components/seo/PublicNav';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { buildPublicTurmaSearchParams } from '@/features/classroom/lib/turmaAccess';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -158,10 +159,7 @@ export default function TurmaPublicPage() {
   const publicPreview = searchParams.get('publicPreview') === 'true';
 
   const updatePublicSearchParams = (assignmentId?: string) => {
-    const params = new URLSearchParams();
-    if (publicPreview) params.set('publicPreview', 'true');
-    if (assignmentId) params.set('atribuicao', assignmentId);
-    setSearchParams(params);
+    setSearchParams(buildPublicTurmaSearchParams({ publicPreview, assignmentId }));
   };
 
   const turmaQuery = useQuery({

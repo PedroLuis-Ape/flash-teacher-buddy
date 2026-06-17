@@ -112,10 +112,12 @@ export function useUpdateTurma() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['turmas'] });
-      queryClient.invalidateQueries({ queryKey: ['turma'] });
-      queryClient.invalidateQueries({ queryKey: ['public-turma'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['turmas'] }),
+        queryClient.invalidateQueries({ queryKey: ['turma'] }),
+        queryClient.invalidateQueries({ queryKey: ['public-turma'] }),
+      ]);
     },
   });
 }
