@@ -1,0 +1,223 @@
+name: Finish public class controls
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: github.head_ref == 'feat/public-class-controls' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/public-class-controls
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply access hardening and tests
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              return text.replace(old, new, 1)
+
+          lib_dir = Path('src/features/classroom/lib')
+          lib_dir.mkdir(parents=True, exist_ok=True)
+
+          (lib_dir / 'turmaAccess.ts').write_text("""export type TurmaViewMode = 'private' | 'public';
+
+interface ResolveTurmaViewModeInput {
+  publicPreview: boolean;
+  authenticated: boolean;
+  hasPrivateAccess: boolean;
+}
+
+export function resolveTurmaViewMode({
+  publicPreview,
+  authenticated,
+  hasPrivateAccess,
+}: ResolveTurmaViewModeInput): TurmaViewMode {
+  if (publicPreview) return 'public';
+  if (authenticated && hasPrivateAccess) return 'private';
+  return 'public';
+}
+
+interface BuildPublicTurmaSearchParamsInput {
+  publicPreview: boolean;
+  assignmentId?: string | null;
+}
+
+export function buildPublicTurmaSearchParams({
+  publicPreview,
+  assignmentId,
+}: BuildPublicTurmaSearchParamsInput): URLSearchParams {
+  const params = new URLSearchParams();
+  if (publicPreview) params.set('publicPreview', 'true');
+  if (assignmentId) params.set('atribuicao', assignmentId);
+  return params;
+}
+""", encoding='utf-8')
+
+          (lib_dir / 'turmaAccess.test.ts').write_text("""import { describe, expect, it } from 'vitest';
+import { buildPublicTurmaSearchParams, resolveTurmaViewMode } from './turmaAccess';
+
+describe('resolveTurmaViewMode', () => {
+  it('keeps owners and enrolled members in the complete classroom', () => {
+    expect(resolveTurmaViewMode({
+      publicPreview: false,
+      authenticated: true,
+      hasPrivateAccess: true,
+    })).toBe('private');
+  });
+
+  it('sends authenticated non-members to the public read-only classroom', () => {
+    expect(resolveTurmaViewMode({
+      publicPreview: false,
+      authenticated: true,
+      hasPrivateAccess: false,
+    })).toBe('public');
+  });
+
+  it('sends anonymous visitors to the public read-only classroom', () => {
+    expect(resolveTurmaViewMode({
+      publicPreview: false,
+      authenticated: false,
+      hasPrivateAccess: false,
+    })).toBe('public');
+  });
+
+  it('forces public preview even when the authenticated user has private access', () => {
+    expect(resolveTurmaViewMode({
+      publicPreview: true,
+      authenticated: true,
+      hasPrivateAccess: true,
+    })).toBe('public');
+  });
+});
+
+describe('buildPublicTurmaSearchParams', () => {
+  it('preserves preview mode while opening an assignment', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: true,
+      assignmentId: 'assignment-123',
+    }).toString()).toBe('publicPreview=true&atribuicao=assignment-123');
+  });
+
+  it('keeps only preview mode when returning to the classroom', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: true,
+    }).toString()).toBe('publicPreview=true');
+  });
+
+  it('supports normal public navigation without preview mode', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: false,
+      assignmentId: 'assignment-123',
+    }).toString()).toBe('atribuicao=assignment-123');
+  });
+
+  it('returns empty parameters at the public classroom root', () => {
+    expect(buildPublicTurmaSearchParams({
+      publicPreview: false,
+    }).toString()).toBe('');
+  });
+});
+""", encoding='utf-8')
+
+          detail_path = Path('src/pages/TurmaDetail.tsx')
+          detail = detail_path.read_text(encoding='utf-8')
+          detail = replace_once(
+              detail,
+              "import { useAuthUser } from '@/hooks/useAuthUser';\n",
+              "import { useAuthUser } from '@/hooks/useAuthUser';\nimport { resolveTurmaViewMode } from '@/features/classroom/lib/turmaAccess';\n",
+              'detail helper import',
+          )
+          detail = replace_once(
+              detail,
+              "  if (publicPreview) {\n    return <TurmaPublicPage />;\n  }\n\n",
+              "",
+              'remove direct preview return',
+          )
+          detail = replace_once(
+              detail,
+              "  if (user && accessQuery.data) {\n    return <TurmaPrivateDetail />;\n  }\n\n  return <TurmaPublicPage />;",
+              "  const viewMode = resolveTurmaViewMode({\n    publicPreview,\n    authenticated: !!user,\n    hasPrivateAccess: !!accessQuery.data,\n  });\n\n  return viewMode === 'private' ? <TurmaPrivateDetail /> : <TurmaPublicPage />;",
+              'detail access resolution',
+          )
+          detail_path.write_text(detail, encoding='utf-8')
+
+          public_path = Path('src/pages/TurmaPublicPage.tsx')
+          public_page = public_path.read_text(encoding='utf-8')
+          public_page = replace_once(
+              public_page,
+              "import { useAuthUser } from '@/hooks/useAuthUser';\n",
+              "import { useAuthUser } from '@/hooks/useAuthUser';\nimport { buildPublicTurmaSearchParams } from '@/features/classroom/lib/turmaAccess';\n",
+              'public helper import',
+          )
+          public_page = replace_once(
+              public_page,
+              "  const updatePublicSearchParams = (assignmentId?: string) => {\n    const params = new URLSearchParams();\n    if (publicPreview) params.set('publicPreview', 'true');\n    if (assignmentId) params.set('atribuicao', assignmentId);\n    setSearchParams(params);\n  };",
+              "  const updatePublicSearchParams = (assignmentId?: string) => {\n    setSearchParams(buildPublicTurmaSearchParams({ publicPreview, assignmentId }));\n  };",
+              'public search params helper usage',
+          )
+          public_path.write_text(public_page, encoding='utf-8')
+
+          private_path = Path('src/pages/TurmaPrivateDetail.tsx')
+          private = private_path.read_text(encoding='utf-8')
+          private = replace_once(
+              private,
+              '<div className="flex items-center gap-4 mb-4">',
+              '<div className="flex flex-wrap items-center gap-3 mb-4">',
+              'mobile header wrapping',
+          )
+          private = replace_once(
+              private,
+              '<div className="flex flex-wrap justify-end gap-2">',
+              '<div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">',
+              'mobile actions row',
+          )
+          private = replace_once(
+              private,
+              '<div className="flex items-center justify-between gap-4 rounded-xl border p-4">',
+              '<div className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">',
+              'mobile visibility panel',
+          )
+          private = replace_once(
+              private,
+              'className="shrink-0"\n              />',
+              'className="self-end shrink-0 sm:self-auto"\n              />',
+              'mobile visibility switch',
+          )
+          private_path.write_text(private, encoding='utf-8')
+          PY
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run full validation
+        run: npm run check
+
+      - name: Commit hardening
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/classroom/lib/turmaAccess.ts src/features/classroom/lib/turmaAccess.test.ts src/pages/TurmaDetail.tsx src/pages/TurmaPublicPage.tsx src/pages/TurmaPrivateDetail.tsx
+          git commit -m "test: harden public classroom access flow"
+          git push origin HEAD:feat/public-class-controls
