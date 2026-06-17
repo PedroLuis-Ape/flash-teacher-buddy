@@ -40,16 +40,16 @@ type CometLane = {
 };
 
 const STARS: readonly TwinkleStar[] = [
-  { left: "7%", top: "14%", size: 3, duration: 11_400, delay: -1_350, glow: "rgba(255,255,255,.9)" },
-  { left: "38%", top: "81%", size: 2, duration: 8_900, delay: -5_200, glow: "rgba(224,196,255,.86)" },
-  { left: "75%", top: "27%", size: 2, duration: 13_200, delay: -2_700, glow: "rgba(255,255,255,.86)" },
-  { left: "18%", top: "66%", size: 2, duration: 10_300, delay: -7_100, glow: "rgba(255,255,255,.82)" },
-  { left: "57%", top: "53%", size: 3, duration: 14_600, delay: -8_900, glow: "rgba(195,225,255,.86)" },
-  { left: "90%", top: "58%", size: 2, duration: 9_700, delay: -3_850, glow: "rgba(235,202,255,.84)" },
-  { left: "28%", top: "34%", size: 2, duration: 12_100, delay: -10_200, glow: "rgba(205,228,255,.8)" },
-  { left: "82%", top: "86%", size: 2, duration: 15_400, delay: -6_450, glow: "rgba(255,255,255,.8)" },
-  { left: "48%", top: "18%", size: 2, duration: 10_900, delay: -9_300, glow: "rgba(230,214,255,.82)" },
-  { left: "66%", top: "72%", size: 3, duration: 13_800, delay: -4_600, glow: "rgba(205,228,255,.82)" },
+  { left: "7%", top: "14%", size: 3, duration: 7_400, delay: -1_350, glow: "rgba(255,255,255,.98)" },
+  { left: "38%", top: "81%", size: 2, duration: 8_600, delay: -5_200, glow: "rgba(232,208,255,.96)" },
+  { left: "75%", top: "27%", size: 2, duration: 6_900, delay: -2_700, glow: "rgba(255,255,255,.96)" },
+  { left: "18%", top: "66%", size: 2, duration: 9_300, delay: -7_100, glow: "rgba(255,255,255,.92)" },
+  { left: "57%", top: "53%", size: 3, duration: 7_900, delay: -8_900, glow: "rgba(205,232,255,.96)" },
+  { left: "90%", top: "58%", size: 2, duration: 8_200, delay: -3_850, glow: "rgba(242,214,255,.94)" },
+  { left: "28%", top: "34%", size: 2, duration: 9_800, delay: -10_200, glow: "rgba(214,236,255,.92)" },
+  { left: "82%", top: "86%", size: 2, duration: 7_100, delay: -6_450, glow: "rgba(255,255,255,.92)" },
+  { left: "48%", top: "18%", size: 2, duration: 8_900, delay: -9_300, glow: "rgba(238,220,255,.94)" },
+  { left: "66%", top: "72%", size: 3, duration: 6_800, delay: -4_600, glow: "rgba(216,238,255,.94)" },
 ];
 
 const FULL_COMET_LANES: readonly CometLane[] = [
@@ -241,7 +241,9 @@ export function SpaceTwinkleLayer() {
                 width: star.size,
                 height: star.size,
                 background: star.glow,
-                boxShadow: motionTier === "static" ? "none" : `0 0 ${star.size * 2.5}px ${star.size * .7}px ${star.glow}`,
+                boxShadow: motionTier === "static"
+                  ? "none"
+                  : `0 0 ${star.size * 3}px ${star.size}px ${star.glow}, 0 0 ${star.size * 7}px ${star.size * 1.4}px rgba(163,108,255,.24)`,
                 "--twinkle-duration": `${star.duration}ms`,
                 "--twinkle-delay": `${star.delay}ms`,
               } as React.CSSProperties}
