@@ -20,6 +20,16 @@ export interface GalaxyCometPlan {
   staggerDelays: readonly number[];
 }
 
+export interface GalaxyScenePlan {
+  nebula: boolean;
+  dust: boolean;
+  spiralMain: boolean;
+  spiralDistant: boolean;
+  planet: boolean;
+  moon: boolean;
+  animated: boolean;
+}
+
 const STATIC_MAX_WIDTH = 767;
 const BALANCED_MAX_WIDTH = 1199;
 
@@ -57,6 +67,42 @@ export function getGalaxyStarLimit(tier: GalaxyMotionTier): number {
   if (tier === 'static') return 4;
   if (tier === 'balanced') return 7;
   return 10;
+}
+
+export function getGalaxyScenePlan(tier: GalaxyMotionTier): GalaxyScenePlan {
+  if (tier === 'static') {
+    return {
+      nebula: false,
+      dust: false,
+      spiralMain: false,
+      spiralDistant: false,
+      planet: false,
+      moon: false,
+      animated: false,
+    };
+  }
+
+  if (tier === 'balanced') {
+    return {
+      nebula: true,
+      dust: false,
+      spiralMain: true,
+      spiralDistant: false,
+      planet: true,
+      moon: false,
+      animated: false,
+    };
+  }
+
+  return {
+    nebula: true,
+    dust: true,
+    spiralMain: true,
+    spiralDistant: true,
+    planet: true,
+    moon: true,
+    animated: true,
+  };
 }
 
 export function getGalaxyCometPlan(tier: GalaxyMotionTier): GalaxyCometPlan {
