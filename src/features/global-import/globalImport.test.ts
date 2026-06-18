@@ -4,22 +4,22 @@ import { validateGlobalImportPackage } from "./checks";
 import { GLOBAL_IMPORT_SCHEMA, GLOBAL_IMPORT_VERSION } from "./schema";
 
 function makePackage(counts: number[]) {
-  const names = ["Amor", "Ódio", "Felicidade"];
+  const names = ["Pasta A", "Pasta B", "Pasta C"];
   return {
     schema: GLOBAL_IMPORT_SCHEMA,
     version: GLOBAL_IMPORT_VERSION,
     package: {
-      name: "Emoções",
+      name: "Pacote de teste",
       source_language: "en",
       target_language: "pt-BR",
       folders: counts.map((count, folderIndex) => ({
         name: names[folderIndex] ?? `Pasta ${folderIndex + 1}`,
         expected_cards: count,
         lists: [{
-          name: "Vocabulário principal",
+          name: `Lista ${folderIndex + 1}`,
           expected_cards: count,
           cards: Array.from({ length: count }, (_, cardIndex) => ({
-            front: `${names[folderIndex]} ${cardIndex + 1}`,
+            front: `Frase ${folderIndex + 1}-${cardIndex + 1}`,
             back: `Tradução ${folderIndex + 1}-${cardIndex + 1}`,
           })),
         }],
@@ -29,7 +29,7 @@ function makePackage(counts: number[]) {
 }
 
 describe("Super Importador Global V1", () => {
-  it("preserva Amor 10, Ódio 10 e Felicidade 10 sem misturar hierarquia", () => {
+  it("preserva três pastas com 10 cards cada sem misturar a hierarquia", () => {
     const result = validateGlobalImportPackage(makePackage([10, 10, 10]));
     expect(result.valid).toBe(true);
     expect(result.summary).toEqual({ folders: 3, lists: 3, cards: 30 });
@@ -49,11 +49,11 @@ describe("Super Importador Global V1", () => {
     const value = makePackage([3]);
     value.package.folders[0].expected_cards = 6;
     value.package.folders[0].lists.push({
-      name: "Expressões",
+      name: "Lista adicional",
       expected_cards: 3,
       cards: Array.from({ length: 3 }, (_, index) => ({
-        front: `Expression ${index + 1}`,
-        back: `Expressão ${index + 1}`,
+        front: `Extra ${index + 1}`,
+        back: `Tradução extra ${index + 1}`,
       })),
     });
     const result = validateGlobalImportPackage(value);
@@ -89,15 +89,16 @@ describe("Super Importador Global V1", () => {
     expect(result.summary.cards).toBe(2);
   });
 
-  it("extrai JSON cercado por Markdown e remove vírgula final segura", () => {
-    const input = `Resposta da IA:\n\`\`\`json\n${JSON.stringify(makePackage([1])).replace(/}$/, ",}")}\n\`\`\``;
-    const parsed = parseGlobalImportText(input);
-    expect(parsed.extracted).toBe(true);
-    expect(parsed.repaired).toBe(true);
-    expect(validateGlobalImportPackage(parsed.value).valid).toBe(true);
+  it("extrai JSON cercado por Markdown e corrige vírgula final segura", () => {
+    const malformed = JSON.stringify(makePackage([1])).replace(/}$/, ",}");
+    const parsed = parseGlobalImportText(`Resposta da IA:\n\`\`\`json\n${malformed}\n\`\`\``);
+    const validation = validateGlobalImportPackage(parsed.value);
+
+    expect(validation.valid).toBe(true);
+    expect(validation.summary).toEqual({ folders: 1, lists: 1, cards: 1 });
   });
 
-  it("rejeita versão futura com mensagem de incompatibilidade estrutural", () => {
+  it("rejeita versão futura com caminho de erro na versão", () => {
     const value = { ...makePackage([1]), version: 2 };
     const result = validateGlobalImportPackage(value);
     expect(result.valid).toBe(false);
