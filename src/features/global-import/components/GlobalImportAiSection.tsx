@@ -1,7 +1,7 @@
 import type { GlobalImportDestinationMode } from "../destinationModes";
 import { buildUniversalGlobalImportPrompt } from "../universalPrompt";
+import { AdvancedPromptBuilder } from "./AdvancedPromptBuilder";
 import { PrimaryPromptCard } from "./PrimaryPromptCard";
-import { PromptBuilderCard } from "./PromptBuilderCard";
 
 interface Props {
   mode: GlobalImportDestinationMode;
@@ -18,7 +18,7 @@ export function GlobalImportAiSection({ mode, destinationFolderName }: Props) {
           <p className="mb-3 px-2 text-sm text-muted-foreground">
             Use o formulário manual somente quando quiser definir tecnicamente nomes, estrutura e quantidades.
           </p>
-          <PromptBuilderCard mode={mode} destinationFolderName={destinationFolderName} />
+          <AdvancedPromptBuilder mode={mode} destinationFolderName={destinationFolderName} />
         </div>
       </details>
     </div>
