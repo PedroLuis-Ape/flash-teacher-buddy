@@ -61,11 +61,14 @@ Não remover as tabelas de controle nem a RPC V1: elas pertencem ao importador g
 
 ## Verificação
 
-O workflow `.github/workflows/global-import-check.yml` executa:
+O workflow oficial `.github/workflows/ci.yml` executa:
 
 ```bash
-npm ci
-npm run check
+npm ci --legacy-peer-deps --no-audit --no-fund
+npm run typecheck
+npm run test
+npm run lint -- --format json --output-file lint-report.json
+npm run build
 ```
 
-O script `check` roda typecheck, testes, lint e build. A PR não deve sair de rascunho enquanto qualquer etapa estiver falhando.
+A PR não deve sair de rascunho enquanto qualquer etapa estiver falhando.
