@@ -189,6 +189,49 @@ function officialForEffectivePackage(
   });
 }
 
+function officialFromInternalPackage(packageValue: GlobalImportPackage): AppPitecoSuperImportPackage | null {
+  const folders: AppPitecoSuperImportPackage["package"]["folders"] = [];
+
+  for (const folder of packageValue.package.folders) {
+    const lists: AppPitecoSuperImportPackage["package"]["folders"][number]["lists"] = [];
+    for (const list of folder.lists) {
+      const metadata = list.cards[0]?.metadata;
+      if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+      const marker = metadata.app_piteco_contract;
+      const frontLanguage = metadata.front_language;
+      const backLanguage = metadata.back_language;
+      if (marker !== "1.0" || typeof frontLanguage !== "string" || typeof backLanguage !== "string") return null;
+
+      lists.push({
+        name: list.name,
+        front_language: frontLanguage,
+        back_language: backLanguage,
+        declared_card_count: list.cards.length,
+        cards: list.cards.map((card) => ({ front: card.front, back: card.back })),
+      });
+    }
+    folders.push({
+      name: folder.name,
+      declared_totals: {
+        lists: lists.length,
+        cards: lists.reduce((sum, list) => sum + list.cards.length, 0),
+      },
+      lists,
+    });
+  }
+
+  return appPitecoSuperImportSchema.parse({
+    schema: APP_PITECO_SUPER_IMPORT_SCHEMA,
+    version: APP_PITECO_SUPER_IMPORT_VERSION,
+    declared_totals: {
+      folders: folders.length,
+      lists: folders.reduce((sum, folder) => sum + folder.lists.length, 0),
+      cards: folders.reduce((sum, folder) => sum + folder.declared_totals.cards, 0),
+    },
+    package: { name: packageValue.package.name, folders },
+  });
+}
+
 function requestStorageKey(
   packageValue: GlobalImportPackage,
   options: ExecuteMappedImportOptions,
@@ -235,8 +278,9 @@ export async function executeMappedGlobalImport(
   options: ExecuteMappedImportOptions,
 ): Promise<GlobalImportExecutionReport> {
   const totalCards = countCards(packageValue);
-  const official = options.officialPackage
-    ? officialForEffectivePackage(options.officialPackage, packageValue)
+  const officialSource = options.officialPackage ?? officialFromInternalPackage(packageValue);
+  const official = officialSource
+    ? officialForEffectivePackage(officialSource, packageValue)
     : null;
   const canonical = !official && GLOBAL_IMPORT_V2_ENABLED && options.canonicalPackage
     ? canonicalForEffectivePackage(options.canonicalPackage, packageValue)
