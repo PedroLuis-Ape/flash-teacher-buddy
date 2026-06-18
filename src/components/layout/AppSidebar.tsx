@@ -341,7 +341,7 @@ export function AppSidebar() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>{t('sidebar.deleteHubTitle')}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              {t('sidebar.hubDeleteDescription')}
+                              {t('sidebar.deleteHubDescription')}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
