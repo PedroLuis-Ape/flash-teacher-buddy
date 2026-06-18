@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { GlobalImportPackage } from "./schema";
+import type { GlobalImportCard, GlobalImportPackage } from "./schema";
 import type {
   GlobalImportDestinationPlan,
   ImportDestinationCatalog,
@@ -10,12 +10,19 @@ import {
   type CanonicalGlobalImportPackage,
   type GlobalImportNormalCard,
 } from "./schema/globalImportSchema";
+import {
+  APP_PITECO_SUPER_IMPORT_SCHEMA,
+  APP_PITECO_SUPER_IMPORT_VERSION,
+  appPitecoSuperImportSchema,
+  type AppPitecoSuperImportPackage,
+} from "./schema/appPitecoSuperImportSchema";
 import { updateGlobalImportManifestStatus } from "./manifest";
 
 export type CardConflictPolicy = "skip" | "copy" | "error";
 
 export interface ExecuteMappedImportOptions {
   requestId?: string;
+  officialPackage?: AppPitecoSuperImportPackage | null;
   canonicalPackage?: CanonicalGlobalImportPackage | null;
   destinationPlan: GlobalImportDestinationPlan;
   catalog: ImportDestinationCatalog;
@@ -37,6 +44,8 @@ export interface GlobalImportExecutionReport {
   lists_skipped?: number;
   cards_created: number;
   cards_skipped: number;
+  schema?: "app-piteco-super-import";
+  version?: "1.0";
   format?: "ape-global-import";
   schema_version?: 1;
 }
@@ -55,6 +64,15 @@ function countCards(packageValue: GlobalImportPackage): number {
 
 function normalizedCardKey(term: string, translation: string): string {
   return `${term.trim().toLocaleLowerCase()}\u0000${translation.trim().toLocaleLowerCase()}`;
+}
+
+function directionFromCard(card?: GlobalImportCard): { front: string; back: string } | null {
+  const metadata = card?.metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  if (metadata.app_piteco_contract !== "1.0") return null;
+  const front = metadata.front_language;
+  const back = metadata.back_language;
+  return typeof front === "string" && typeof back === "string" ? { front, back } : null;
 }
 
 function canonicalForEffectivePackage(
@@ -120,6 +138,106 @@ function canonicalForEffectivePackage(
   });
 }
 
+function officialForEffectivePackage(
+  source: AppPitecoSuperImportPackage,
+  packageValue: GlobalImportPackage,
+): AppPitecoSuperImportPackage {
+  const directionByCard = new Map<string, Array<{ front: string; back: string }>>();
+  source.package.folders.forEach((folder) => {
+    folder.lists.forEach((list) => {
+      list.cards.forEach((card) => {
+        const key = normalizedCardKey(card.front, card.back);
+        const pool = directionByCard.get(key) ?? [];
+        pool.push({ front: list.front_language, back: list.back_language });
+        directionByCard.set(key, pool);
+      });
+    });
+  });
+  const fallback = {
+    front: source.package.folders[0]?.lists[0]?.front_language ?? "en",
+    back: source.package.folders[0]?.lists[0]?.back_language ?? "pt-BR",
+  };
+
+  const folders = packageValue.package.folders.map((folder) => {
+    const lists = folder.lists.map((list) => {
+      const firstCard = list.cards[0];
+      const fromMetadata = directionFromCard(firstCard);
+      const matched = firstCard
+        ? directionByCard.get(normalizedCardKey(firstCard.front, firstCard.back))?.shift()
+        : null;
+      const direction = fromMetadata ?? matched ?? fallback;
+      return {
+        name: list.name,
+        front_language: direction.front,
+        back_language: direction.back,
+        declared_card_count: list.cards.length,
+        cards: list.cards.map((card) => ({ front: card.front, back: card.back })),
+      };
+    });
+    return {
+      name: folder.name,
+      declared_totals: {
+        lists: lists.length,
+        cards: lists.reduce((sum, list) => sum + list.cards.length, 0),
+      },
+      lists,
+    };
+  });
+
+  return appPitecoSuperImportSchema.parse({
+    schema: APP_PITECO_SUPER_IMPORT_SCHEMA,
+    version: APP_PITECO_SUPER_IMPORT_VERSION,
+    declared_totals: {
+      folders: folders.length,
+      lists: folders.reduce((sum, folder) => sum + folder.lists.length, 0),
+      cards: folders.reduce((sum, folder) => sum + folder.declared_totals.cards, 0),
+    },
+    package: {
+      name: packageValue.package.name,
+      folders,
+    },
+  });
+}
+
+function officialFromInternalPackage(packageValue: GlobalImportPackage): AppPitecoSuperImportPackage | null {
+  const folders: AppPitecoSuperImportPackage["package"]["folders"] = [];
+
+  for (const folder of packageValue.package.folders) {
+    const lists: AppPitecoSuperImportPackage["package"]["folders"][number]["lists"] = [];
+    for (const list of folder.lists) {
+      const direction = directionFromCard(list.cards[0]);
+      if (!direction) return null;
+
+      lists.push({
+        name: list.name,
+        front_language: direction.front,
+        back_language: direction.back,
+        declared_card_count: list.cards.length,
+        cards: list.cards.map((card) => ({ front: card.front, back: card.back })),
+      });
+    }
+    folders.push({
+      name: folder.name,
+      declared_totals: {
+        lists: lists.length,
+        cards: lists.reduce((sum, list) => sum + list.cards.length, 0),
+      },
+      lists,
+    });
+  }
+
+  return appPitecoSuperImportSchema.parse({
+    schema: APP_PITECO_SUPER_IMPORT_SCHEMA,
+    version: APP_PITECO_SUPER_IMPORT_VERSION,
+    declared_totals: {
+      folders: folders.length,
+      lists: folders.reduce((sum, folder) => sum + folder.lists.length, 0),
+      cards: folders.reduce((sum, folder) => sum + folder.declared_totals.cards, 0),
+    },
+    package: { name: packageValue.package.name, folders },
+  });
+}
+
 function requestStorageKey(
   packageValue: GlobalImportPackage,
   options: ExecuteMappedImportOptions,
@@ -166,22 +284,31 @@ export async function executeMappedGlobalImport(
   options: ExecuteMappedImportOptions,
 ): Promise<GlobalImportExecutionReport> {
   const totalCards = countCards(packageValue);
-  const canonical = GLOBAL_IMPORT_V2_ENABLED && options.canonicalPackage
+  const officialSource = options.officialPackage ?? officialFromInternalPackage(packageValue);
+  const official = officialSource
+    ? officialForEffectivePackage(officialSource, packageValue)
+    : null;
+  const canonical = !official && GLOBAL_IMPORT_V2_ENABLED && options.canonicalPackage
     ? canonicalForEffectivePackage(options.canonicalPackage, packageValue)
     : null;
   if (canonical && options.requestId && options.requestId !== canonical.request_id) {
     throw new Error("O request_id informado não corresponde ao pacote canônico.");
   }
 
-  const legacyRequest = canonical
+  const request = canonical
     ? { requestId: canonical.request_id, storageKey: "" }
     : getOrCreateRequestId(packageValue, options);
   options.onProgress?.(0, totalCards, "Enviando pacote para uma transação segura");
 
-  const functionName = canonical ? "import_global_package_v2" : "import_global_package_v1";
+  const functionName = official
+    ? "import_app_piteco_super_package_v1"
+    : canonical
+      ? "import_global_package_v2"
+      : "import_global_package_v1";
+  const payload = official ?? canonical ?? packageValue;
   const { data, error } = await (supabase.rpc as any)(functionName, {
-    _request_id: legacyRequest.requestId,
-    _payload: canonical ?? packageValue,
+    _request_id: request.requestId,
+    _payload: payload,
     _destination_plan: options.destinationPlan,
     _card_conflict: options.cardConflict,
     _institution_id: options.institutionId ?? null,
@@ -193,7 +320,7 @@ export async function executeMappedGlobalImport(
   }
 
   if (canonical) updateGlobalImportManifestStatus(canonical.request_id, "imported");
-  else clearRequestId(legacyRequest.storageKey);
+  if (!canonical) clearRequestId(request.storageKey);
   options.onProgress?.(totalCards, totalCards, "Importação concluída");
   return data as GlobalImportExecutionReport;
 }

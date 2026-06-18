@@ -19,14 +19,14 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
     <Card className="space-y-4 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Label htmlFor="global-import-source">2. Importar conteúdo gerado</Label>
-          <p className="text-sm text-muted-foreground">Cole o CSV da IA ou selecione um arquivo CSV de até 5 MB.</p>
+          <Label htmlFor="global-import-source">2. Cole o JSON gerado</Label>
+          <p className="text-sm text-muted-foreground">Cole o JSON oficial da IA ou selecione um arquivo .json de até 10 MB.</p>
         </div>
         <div>
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,.json,.txt,text/csv,application/json,text/plain"
+            accept=".json,.txt,.csv,application/json,text/plain,text/csv"
             className="hidden"
             onChange={(event) => {
               onFile(event.target.files?.[0]);
@@ -34,7 +34,7 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
             }}
           />
           <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={busy}>
-            <Upload className="mr-2 h-4 w-4" />Selecionar arquivo CSV
+            <Upload className="mr-2 h-4 w-4" />Selecionar arquivo JSON
           </Button>
         </div>
       </div>
@@ -44,11 +44,11 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
         onChange={(event) => onChange(event.target.value)}
         className="min-h-64 font-mono text-xs"
         disabled={busy}
-        placeholder={'"folder_name","list_name","front","back"'}
+        placeholder={'{"schema":"app-piteco-super-import","version":"1.0",...}'}
       />
-      <p className="text-xs text-muted-foreground">Pacotes JSON antigos continuam aceitos por compatibilidade.</p>
+      <p className="text-xs text-muted-foreground">CSV e pacotes JSON antigos continuam aceitos apenas por compatibilidade.</p>
       <Button className="w-full" onClick={onAnalyze} disabled={!value.trim() || busy}>
-        Validar e visualizar
+        Analisar pacote
       </Button>
     </Card>
   );

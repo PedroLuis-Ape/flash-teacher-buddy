@@ -3,6 +3,10 @@ import {
   type CanonicalGlobalImportPackage,
 } from "../schema/globalImportSchema";
 import {
+  appPitecoSuperImportSchema,
+  type AppPitecoSuperImportPackage,
+} from "../schema/appPitecoSuperImportSchema";
+import {
   configurationFromCanonicalPackage,
   createGlobalImportManifest,
   type GlobalImportManifest,
@@ -70,6 +74,43 @@ export function makeCanonicalPackage(options: FixtureOptions = {}): CanonicalGlo
   });
 }
 
+export function makeOfficialPackage(options: Omit<FixtureOptions, "requestId"> = {}): AppPitecoSuperImportPackage {
+  const folderCount = options.folders ?? 2;
+  const listsPerFolder = options.listsPerFolder ?? 2;
+  const cardsPerList = options.cardsPerList ?? 3;
+  const folders = Array.from({ length: folderCount }, (_, folderIndex) => ({
+    name: `Pasta ${folderIndex + 1}`,
+    declared_totals: {
+      lists: listsPerFolder,
+      cards: listsPerFolder * cardsPerList,
+    },
+    lists: Array.from({ length: listsPerFolder }, (_, listIndex) => ({
+      name: `Lista ${folderIndex + 1}.${listIndex + 1}`,
+      front_language: listIndex % 2 === 0 ? "en" : "pt-BR",
+      back_language: listIndex % 2 === 0 ? "pt-BR" : "en",
+      declared_card_count: cardsPerList,
+      cards: Array.from({ length: cardsPerList }, (_, cardIndex) => ({
+        front: `Frente ${folderIndex + 1}.${listIndex + 1}.${cardIndex + 1}`,
+        back: `Verso ${folderIndex + 1}.${listIndex + 1}.${cardIndex + 1}`,
+      })),
+    })),
+  }));
+
+  return appPitecoSuperImportSchema.parse({
+    schema: "app-piteco-super-import",
+    version: "1.0",
+    declared_totals: {
+      folders: folderCount,
+      lists: folderCount * listsPerFolder,
+      cards: folderCount * listsPerFolder * cardsPerList,
+    },
+    package: {
+      name: "Pacote oficial de teste",
+      folders,
+    },
+  });
+}
+
 export function makeManifest(value: CanonicalGlobalImportPackage): GlobalImportManifest {
   return createGlobalImportManifest(
     value.request_id,
@@ -77,6 +118,6 @@ export function makeManifest(value: CanonicalGlobalImportPackage): GlobalImportM
   );
 }
 
-export function clonePackage(value: CanonicalGlobalImportPackage): any {
+export function clonePackage<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }

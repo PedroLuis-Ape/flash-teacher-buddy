@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { analyzeGlobalImportText } from "./analysisService";
 import { parseGlobalImportCsv } from "./csvPackage";
-import { GLOBAL_IMPORT_LIMITS } from "./schema/globalImportSchema";
+import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSchema";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
 
 function looksLikeCsv(value: string): boolean {
@@ -36,9 +36,9 @@ export function useGlobalImportSource() {
 
     const result = analyzeGlobalImportText(value);
     const nextNotes: string[] = [];
-    if (result.parsed.extracted) nextNotes.push("O JSON foi extraído do texto ao redor.");
-    if (result.parsed.repaired) nextNotes.push("Vírgulas finais inválidas foram removidas com segurança.");
-    if (result.validation.sourceFormat === "canonical") nextNotes.push("Protocolo canônico ape-global-import validado contra o manifesto local.");
+    if (result.parsed.extracted) nextNotes.push("Uma única cerca Markdown externa foi removida.");
+    if (result.validation.sourceFormat === "official") nextNotes.push("Contrato oficial app-piteco-super-import 1.0 validado.");
+    if (result.validation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
     if (result.validation.sourceFormat === "legacy") nextNotes.push("Formato legado aceito por compatibilidade.");
     setRaw(value);
     setValidation(result.validation);
@@ -48,7 +48,7 @@ export function useGlobalImportSource() {
 
   const readFile = async (file?: File) => {
     if (!file) return null;
-    if (file.size > GLOBAL_IMPORT_LIMITS.maxFileBytes) throw new Error("O arquivo excede 5 MB.");
+    if (file.size > APP_PITECO_SUPER_IMPORT_LIMITS.maxFileBytes) throw new Error("O arquivo excede 10 MB.");
     const text = await file.text();
     reset(text);
     return { text, validation: analyze(text) };
