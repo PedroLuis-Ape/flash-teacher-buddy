@@ -130,17 +130,18 @@ export default function PublicTeacherProfile() {
   const turmasQuery = useQuery({
     queryKey: ['public-teacher-turmas', slug],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_public_teacher_turmas', {
-        _slug: slug,
-      });
+      const normalizedSlug = slug.trim().toLowerCase();
+      const { data, error } = await (supabase as any)
+        .from('public_turmas')
+        .select('id, nome, descricao, created_at, assignment_count, card_count')
+        .eq('teacher_public_slug', normalizedSlug)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        if (profileQuery.data?.previewMode && canUsePreviewFallback && isMissingDirectoryRpc(error)) {
+        if (profileQuery.data?.previewMode && canUsePreviewFallback) {
           return [] as PublicTeacherTurmaRow[];
         }
-        if (isMissingDirectoryRpc(error)) {
-          console.error('[PublicTeacherProfile] Public classrooms RPC is not deployed.', error);
-        }
+        console.error('[PublicTeacherProfile] Reused public_turmas view is not ready.', error);
         throw error;
       }
 
