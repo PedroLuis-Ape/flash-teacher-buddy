@@ -31,8 +31,8 @@ function promptBundle() {
   });
 }
 
-describe("canonical prompt and manifest", () => {
-  it("generates the official protocol and exact counts", () => {
+describe("compatibility prompt and manifest", () => {
+  it("generates the previous canonical protocol and exact counts", () => {
     const bundle = promptBundle();
     const template = JSON.parse(bundle.template);
     expect(template.format).toBe("ape-global-import");
@@ -54,7 +54,7 @@ describe("canonical prompt and manifest", () => {
     );
   });
 
-  it("derives the displayed example from the canonical schema", () => {
+  it("derives the displayed compatibility example from its schema", () => {
     const example = createOfficialGlobalImportExample(TEST_REQUEST_ID);
     expect(globalImportSchema.safeParse(example).success).toBe(true);
     expect(example.package.folders[0].lists[0].cards[0].type).toBe("normal");
@@ -78,17 +78,22 @@ describe("canonical prompt and manifest", () => {
     expect(globalImportSchema.safeParse(parsed.value).success).toBe(true);
   });
 
-  it("extracts JSON accidentally wrapped in Markdown", () => {
+  it("accepts JSON wrapped by one outer Markdown fence", () => {
     const value = makeCanonicalPackage();
-    const parsed = parseGlobalImportText(`Texto antes\n\`\`\`json\n${JSON.stringify(value)}\n\`\`\`\nTexto depois`);
+    const fenced = "```json\n" + JSON.stringify(value) + "\n```";
+    const parsed = parseGlobalImportText(fenced);
     expect(parsed.extracted).toBe(true);
     expect(parsed.repaired).toBe(false);
   });
 
-  it("repairs only a trailing comma and reports the repair", () => {
-    const parsed = parseGlobalImportText('{"a":1,}');
-    expect(parsed.value).toEqual({ a: 1 });
-    expect(parsed.repaired).toBe(true);
+  it("rejects explanatory text around JSON", () => {
+    const value = makeCanonicalPackage();
+    expect(() => parseGlobalImportText("Texto antes\n" + JSON.stringify(value)))
+      .toThrow(/JSON válido/i);
+  });
+
+  it("rejects trailing commas", () => {
+    expect(() => parseGlobalImportText('{"a":1,}')).toThrow(/vírgula final/i);
   });
 
   it("detects names and order changed after prompt generation", () => {
