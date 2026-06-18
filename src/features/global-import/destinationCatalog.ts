@@ -1,0 +1,1 @@
+export const DESTINATION_CATALOG_VERSION = 1;
