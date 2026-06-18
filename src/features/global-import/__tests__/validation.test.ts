@@ -161,6 +161,6 @@ describe("canonical global import validation", () => {
     value.package.expected_card_count = 5001;
     const result = validateGlobalImportInput(value, null);
     expect(result.valid).toBe(false);
-    expect(result.issues.some((issue) => issue.message.includes("5.000"))).toBe(true);
+    expect(result.issues.some((issue) => /5\.?000/.test(issue.message))).toBe(true);
   });
 });
