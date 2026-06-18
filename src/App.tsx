@@ -21,8 +21,8 @@ import { RouteSuspense } from "@/components/RouteSuspense";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
-import LandingPage from "./pages/LandingPage"; // Public landing remains eager for SEO and visitor first paint
-import RootEntry from "./components/RootEntry"; // Smart "/" gate: guests → landing, logged-in → /dashboard
+import LandingPage from "./pages/LandingPage";
+import RootEntry from "./components/RootEntry";
 const InglesParaIniciantes = lazy(() => import("./pages/seo/InglesParaIniciantes"));
 const AtividadesDeIngles = lazy(() => import("./pages/seo/AtividadesDeIngles"));
 const FlashcardsDeIngles = lazy(() => import("./pages/seo/FlashcardsDeIngles"));
@@ -64,6 +64,7 @@ const GoalNew = lazy(() => import("./pages/GoalNew"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const GlobalImport = lazy(() => import("./pages/GlobalImport"));
+const SuperGlobalImport = lazy(() => import("./pages/SuperGlobalImport"));
 const Trash = lazy(() => import("./pages/Trash"));
 const PerformanceSettings = lazy(() => import("./pages/PerformanceSettings"));
 const AuditRepair = lazy(() => import("./pages/AuditRepair"));
@@ -160,6 +161,7 @@ const App = () => {
                   <Route path="/goals" element={<Goals />} />
                   <Route path="/goals/new" element={<GoalNew />} />
                   <Route path="/import" element={<GlobalImport />} />
+                  <Route path="/import/super" element={<SuperGlobalImport />} />
                   <Route path="/trash" element={<Trash />} />
                   <Route path="/settings/performance" element={<PerformanceSettings />} />
                   <Route path="/settings/shortcuts" element={<KeyboardShortcutsPage />} />
