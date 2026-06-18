@@ -4,9 +4,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
+import {
   Menu, Building2, Plus, Check, Trash2, StickyNote, Target, ChevronRight,
-  Home, Library, Store, User, GraduationCap, Search, Globe, Gem
+  Home, Library, Store, User, GraduationCap, Search, Globe, Gem, Sparkles
 } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -90,9 +90,8 @@ export function AppSidebar() {
           <SheetHeader>
             <SheetTitle>{t('sidebar.menu')}</SheetTitle>
           </SheetHeader>
-          
+
           <div className="mt-6 space-y-4 flex-1 overflow-y-auto">
-            {/* Main Navigation Section */}
             <div className="space-y-1">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
                 {t('sidebar.mainNav', 'Principal')}
@@ -106,31 +105,30 @@ export function AppSidebar() {
               ].map((item) => {
                 const isActive = location.pathname === item.path ||
                   (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
-                  return (
-                    <Button
-                      key={item.path}
-                      variant={isActive ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start gap-3 transition-all",
-                        isActive && "bg-primary/10 text-primary font-medium"
-                      )}
-                      onMouseEnter={() => prefetchRoute(item.path)}
-                      onTouchStart={() => prefetchRoute(item.path)}
-                      onClick={() => {
-                        setIsOpen(false);
-                        navigate(item.path);
-                      }}
-                    >
-                      <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
-                      <span>{item.label}</span>
-                    </Button>
-                  );
+                return (
+                  <Button
+                    key={item.path}
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 transition-all",
+                      isActive && "bg-primary/10 text-primary font-medium"
+                    )}
+                    onMouseEnter={() => prefetchRoute(item.path)}
+                    onTouchStart={() => prefetchRoute(item.path)}
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate(item.path);
+                    }}
+                  >
+                    <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
+                    <span>{item.label}</span>
+                  </Button>
+                );
               })}
             </div>
 
             <Separator />
 
-            {/* Tools Section */}
             <div className="space-y-1">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
                 {t('sidebar.tools', 'Ferramentas')}
@@ -178,6 +176,22 @@ export function AppSidebar() {
                 <span>Especiais</span>
               </Button>
               <Button
+                variant={location.pathname === '/import/super' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname === '/import/super' && "bg-primary/10 text-primary font-medium"
+                )}
+                onMouseEnter={() => prefetchRoute('/import/super')}
+                onTouchStart={() => prefetchRoute('/import/super')}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/import/super');
+                }}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Super Importador</span>
+              </Button>
+              <Button
                 variant={location.pathname.startsWith('/turmas') ? "secondary" : "ghost"}
                 className={cn(
                   "w-full justify-start gap-3",
@@ -223,7 +237,6 @@ export function AppSidebar() {
 
             <Separator />
 
-            {/* Institutions Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -286,7 +299,6 @@ export function AppSidebar() {
 
               <ScrollArea className="h-[200px]">
                 <div className="space-y-2">
-                  {/* Default (no filter) */}
                   <Button
                     variant={selectedInstitution === null ? "secondary" : "ghost"}
                     className="w-full justify-start"
@@ -329,7 +341,7 @@ export function AppSidebar() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>{t('sidebar.deleteHubTitle')}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              {t('sidebar.deleteHubDescription')}
+                              {t('sidebar.hubDeleteDescription')}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -356,7 +368,6 @@ export function AppSidebar() {
             </div>
           </div>
 
-          {/* Footer with Language Switcher */}
           <div className="mt-auto pt-4">
             <Separator className="mb-4" />
             <div className="space-y-2">
