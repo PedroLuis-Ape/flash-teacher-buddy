@@ -4,11 +4,19 @@ import type {
   GlobalImportDestinationPlan,
   ImportDestinationCatalog,
 } from "./destination";
+import { GLOBAL_IMPORT_V2_ENABLED } from "./featureFlag";
+import {
+  globalImportSchema,
+  type CanonicalGlobalImportPackage,
+  type GlobalImportNormalCard,
+} from "./schema/globalImportSchema";
+import { updateGlobalImportManifestStatus } from "./manifest";
 
 export type CardConflictPolicy = "skip" | "copy" | "error";
 
 export interface ExecuteMappedImportOptions {
   requestId?: string;
+  canonicalPackage?: CanonicalGlobalImportPackage | null;
   destinationPlan: GlobalImportDestinationPlan;
   catalog: ImportDestinationCatalog;
   cardConflict: CardConflictPolicy;
@@ -29,6 +37,8 @@ export interface GlobalImportExecutionReport {
   lists_skipped?: number;
   cards_created: number;
   cards_skipped: number;
+  format?: "ape-global-import";
+  schema_version?: 1;
 }
 
 const memoryRequestIds = new Map<string, string>();
@@ -41,6 +51,73 @@ function countCards(packageValue: GlobalImportPackage): number {
     ),
     0,
   );
+}
+
+function normalizedCardKey(term: string, translation: string): string {
+  return `${term.trim().toLocaleLowerCase()}\u0000${translation.trim().toLocaleLowerCase()}`;
+}
+
+function canonicalForEffectivePackage(
+  source: CanonicalGlobalImportPackage,
+  packageValue: GlobalImportPackage,
+): CanonicalGlobalImportPackage {
+  const cardPools = new Map<string, GlobalImportNormalCard[]>();
+  source.package.folders.forEach((folder) => {
+    folder.lists.forEach((list) => {
+      list.cards.forEach((card) => {
+        const key = normalizedCardKey(card.term, card.translation);
+        const pool = cardPools.get(key) ?? [];
+        pool.push(card);
+        cardPools.set(key, pool);
+      });
+    });
+  });
+
+  const folders = packageValue.package.folders.map((folder, folderIndex) => ({
+    title: folder.name,
+    description: folder.description ?? null,
+    order_index: folderIndex,
+    expected_list_count: folder.lists.length,
+    expected_card_count: folder.lists.reduce((sum, list) => sum + list.cards.length, 0),
+    lists: folder.lists.map((list, listIndex) => ({
+      title: list.name,
+      description: list.description ?? null,
+      order_index: listIndex,
+      expected_card_count: list.cards.length,
+      cards: list.cards.map((card) => {
+        const key = normalizedCardKey(card.front, card.back);
+        const original = cardPools.get(key)?.shift();
+        return {
+          type: "normal" as const,
+          term: card.front,
+          translation: card.back,
+          hint: original?.hint ?? card.hint ?? null,
+          example_text: original?.example_text ?? card.example ?? null,
+          example_translation: original?.example_translation ?? card.example_translation ?? null,
+          detailed_explanation: original?.detailed_explanation ?? null,
+          usage_notes: original?.usage_notes ?? null,
+          common_mistakes: original?.common_mistakes ?? null,
+        };
+      }),
+    })),
+  }));
+  const listCount = folders.reduce((sum, folder) => sum + folder.lists.length, 0);
+  const cardCount = folders.reduce((sum, folder) => sum + folder.expected_card_count, 0);
+
+  return globalImportSchema.parse({
+    format: source.format,
+    schema_version: source.schema_version,
+    request_id: source.request_id,
+    package: {
+      title: packageValue.package.name,
+      description: source.package.description ?? null,
+      study_settings: source.package.study_settings,
+      expected_folder_count: folders.length,
+      expected_list_count: listCount,
+      expected_card_count: cardCount,
+      folders,
+    },
+  });
 }
 
 function requestStorageKey(
@@ -89,12 +166,22 @@ export async function executeMappedGlobalImport(
   options: ExecuteMappedImportOptions,
 ): Promise<GlobalImportExecutionReport> {
   const totalCards = countCards(packageValue);
-  const { requestId, storageKey } = getOrCreateRequestId(packageValue, options);
+  const canonical = GLOBAL_IMPORT_V2_ENABLED && options.canonicalPackage
+    ? canonicalForEffectivePackage(options.canonicalPackage, packageValue)
+    : null;
+  if (canonical && options.requestId && options.requestId !== canonical.request_id) {
+    throw new Error("O request_id informado não corresponde ao pacote canônico.");
+  }
+
+  const legacyRequest = canonical
+    ? { requestId: canonical.request_id, storageKey: "" }
+    : getOrCreateRequestId(packageValue, options);
   options.onProgress?.(0, totalCards, "Enviando pacote para uma transação segura");
 
-  const { data, error } = await (supabase.rpc as any)("import_global_package_v1", {
-    _request_id: requestId,
-    _payload: packageValue,
+  const functionName = canonical ? "import_global_package_v2" : "import_global_package_v1";
+  const { data, error } = await (supabase.rpc as any)(functionName, {
+    _request_id: legacyRequest.requestId,
+    _payload: canonical ?? packageValue,
     _destination_plan: options.destinationPlan,
     _card_conflict: options.cardConflict,
     _institution_id: options.institutionId ?? null,
@@ -105,7 +192,8 @@ export async function executeMappedGlobalImport(
     throw new Error("O banco não devolveu o relatório da importação.");
   }
 
-  clearRequestId(storageKey);
+  if (canonical) updateGlobalImportManifestStatus(canonical.request_id, "imported");
+  else clearRequestId(legacyRequest.storageKey);
   options.onProgress?.(totalCards, totalCards, "Importação concluída");
   return data as GlobalImportExecutionReport;
 }
