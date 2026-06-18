@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { Sparkles } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useFreezeWatchdog } from "@/hooks/useFreezeWatchdog";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { PublicShell } from "@/components/layout/PublicShell";
@@ -36,6 +38,7 @@ function isPublicRoute(pathname: string, isGuest: boolean): boolean {
 
 export function GlobalLayout({ children }: GlobalLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuthUser();
   useFreezeWatchdog();
 
@@ -47,6 +50,18 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     <>
       <PortalHistorySyncAgent />
       {content}
+      {location.pathname === "/import" && user && (
+        <div className="fixed bottom-24 right-4 z-50 sm:bottom-8 sm:right-8">
+          <Button
+            size="lg"
+            className="rounded-full shadow-lg"
+            onClick={() => navigate("/import/super")}
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Super Importador Global
+          </Button>
+        </div>
+      )}
     </>
   );
 }
