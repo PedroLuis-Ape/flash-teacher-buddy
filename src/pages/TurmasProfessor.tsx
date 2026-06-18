@@ -75,14 +75,21 @@ export default function TurmasProfessor() {
   };
 
   const handleTogglePublic = async (turma: any) => {
+    const nextPublic = !turma.public;
+
     try {
-      await updateTurma.mutateAsync({
+      const result = await updateTurma.mutateAsync({
         turma_id: turma.id,
-        public: !turma.public,
+        public: nextPublic,
       });
-      toast.success(turma.public ? 'Turma agora é privada.' : 'Turma publicada com sucesso!');
-    } catch {
-      toast.error('Não foi possível alterar a visibilidade da turma.');
+
+      if (result?.turma?.public !== nextPublic) {
+        throw new Error('A visibilidade retornada pelo banco não corresponde à alteração solicitada.');
+      }
+
+      toast.success(nextPublic ? 'Turma publicada com sucesso!' : 'Turma agora é privada.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível alterar a visibilidade da turma.');
     }
   };
 
