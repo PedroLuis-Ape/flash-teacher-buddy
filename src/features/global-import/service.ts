@@ -1,12 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { GlobalImportPackage } from "./schema";
+import {
+  validateDestinationPlan,
+  type GlobalImportDestinationPlan,
+  type ImportDestinationCatalog,
+} from "./destination";
 
-export type ContainerConflictPolicy = "use_existing" | "numbered" | "error";
 export type CardConflictPolicy = "skip" | "copy" | "error";
 
 export interface ExecuteGlobalImportOptions {
-  folderConflict: ContainerConflictPolicy;
-  listConflict: ContainerConflictPolicy;
+  destinationPlan: GlobalImportDestinationPlan;
+  catalog: ImportDestinationCatalog;
   cardConflict: CardConflictPolicy;
   institutionId?: string | null;
   onProgress?: (completed: number, total: number, label: string) => void;
@@ -23,6 +27,15 @@ export interface GlobalImportExecutionReport {
   cards_skipped: number;
 }
 
+export interface GlobalImportHistoryRow {
+  id: string;
+  package_name: string;
+  status: "completed" | "undone";
+  summary: GlobalImportExecutionReport;
+  created_at: string;
+  undone_at: string | null;
+}
+
 interface ImportLogItem {
   entity_type: "folder" | "list" | "card";
   entity_id: string | null;
@@ -35,13 +48,6 @@ const db = supabase as any;
 
 function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function numberedName(baseName: string, occupied: Set<string>): string {
-  if (!occupied.has(normalize(baseName))) return baseName;
-  let suffix = 2;
-  while (occupied.has(normalize(`${baseName} (${suffix})`))) suffix += 1;
-  return `${baseName} (${suffix})`;
 }
 
 async function deleteInChunks(table: string, ids: string[]): Promise<void> {
@@ -105,7 +111,17 @@ export async function executeGlobalImport(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Você precisa estar logado.");
 
-  const created = { cards: [] as string[], lists: [] as string[], folders: [] as string[], batchId: undefined as string | undefined };
+  const planErrors = validateDestinationPlan(packageValue, options.catalog, options.destinationPlan);
+  if (planErrors.length) throw new Error(planErrors.join("\n"));
+
+  const folderById = new Map(options.catalog.folders.map((folder) => [folder.id, folder]));
+  const listById = new Map(options.catalog.lists.map((list) => [list.id, list]));
+  const created = {
+    cards: [] as string[],
+    lists: [] as string[],
+    folders: [] as string[],
+    batchId: undefined as string | undefined,
+  };
   const logs: ImportLogItem[] = [];
   const report: GlobalImportExecutionReport = {
     batch_id: "",
@@ -124,136 +140,109 @@ export async function executeGlobalImport(
   let completedCards = 0;
 
   try {
-    let foldersQuery = db
-      .from("folders")
-      .select("id, title")
-      .eq("owner_id", user.id)
-      .is("class_id", null)
-      .is("deleted_at", null);
-    foldersQuery = options.institutionId
-      ? foldersQuery.eq("institution_id", options.institutionId)
-      : foldersQuery.is("institution_id", null);
-    const { data: existingFolders, error: foldersError } = await foldersQuery;
-    if (foldersError) throw foldersError;
-
-    const folderByName = new Map<string, { id: string; title: string }>();
-    const occupiedFolderNames = new Set<string>();
-    for (const folder of existingFolders ?? []) {
-      folderByName.set(normalize(folder.title), folder);
-      occupiedFolderNames.add(normalize(folder.title));
-    }
-
     for (let folderIndex = 0; folderIndex < packageValue.package.folders.length; folderIndex += 1) {
-      const folder = packageValue.package.folders[folderIndex];
+      const incomingFolder = packageValue.package.folders[folderIndex];
       const folderPath = `package.folders[${folderIndex}]`;
-      let resolvedFolder = folderByName.get(normalize(folder.name));
+      const folderPlan = options.destinationPlan.folders[folderIndex];
+      let folderId: string;
+      let folderTitle: string;
 
-      if (resolvedFolder && options.folderConflict === "error") {
-        throw new Error(`${folderPath}: a pasta "${folder.name}" já existe.`);
-      }
-
-      if (!resolvedFolder || options.folderConflict === "numbered") {
-        const title = options.folderConflict === "numbered"
-          ? numberedName(folder.name, occupiedFolderNames)
-          : folder.name;
+      if (folderPlan.folder.mode === "existing") {
+        const existingFolder = folderById.get(folderPlan.folder.folderId);
+        if (!existingFolder) throw new Error(`${folderPath}: pasta existente inválida.`);
+        folderId = existingFolder.id;
+        folderTitle = existingFolder.title;
+        report.folders_reused += 1;
+        logs.push({ entity_type: "folder", entity_id: folderId, action: "reused", item_path: folderPath });
+      } else {
+        folderTitle = folderPlan.folder.name.trim();
         const { data, error } = await db.from("folders").insert({
           owner_id: user.id,
-          title,
-          description: folder.description || null,
+          title: folderTitle,
+          description: incomingFolder.description || null,
           visibility: "private",
           institution_id: options.institutionId || null,
           lang_a: packageValue.package.source_language || null,
           lang_b: packageValue.package.target_language || null,
-        }).select("id, title").single();
+        }).select("id").single();
         if (error) throw error;
-        resolvedFolder = data;
-        created.folders.push(data.id);
+        folderId = data.id;
+        created.folders.push(folderId);
         report.folders_created += 1;
-        logs.push({ entity_type: "folder", entity_id: data.id, action: "created", item_path: folderPath });
-        folderByName.set(normalize(data.title), data);
-        occupiedFolderNames.add(normalize(data.title));
-      } else {
-        report.folders_reused += 1;
-        logs.push({ entity_type: "folder", entity_id: resolvedFolder.id, action: "reused", item_path: folderPath });
+        logs.push({ entity_type: "folder", entity_id: folderId, action: "created", item_path: folderPath });
       }
 
-      const { data: existingLists, error: listsError } = await db
+      const { data: siblingLists, error: siblingError } = await db
         .from("lists")
-        .select("id, title, order_index")
-        .eq("owner_id", user.id)
-        .eq("folder_id", resolvedFolder.id)
+        .select("order_index")
+        .eq("folder_id", folderId)
         .is("deleted_at", null);
-      if (listsError) throw listsError;
+      if (siblingError) throw siblingError;
+      let nextOrder = Math.max(0, ...(siblingLists ?? []).map((list: any) => Number(list.order_index ?? -1) + 1));
 
-      const listByName = new Map<string, { id: string; title: string; order_index: number }>();
-      const occupiedListNames = new Set<string>();
-      let nextOrder = 0;
-      for (const list of existingLists ?? []) {
-        listByName.set(normalize(list.title), list);
-        occupiedListNames.add(normalize(list.title));
-        nextOrder = Math.max(nextOrder, Number(list.order_index ?? 0) + 1);
-      }
-
-      for (let listIndex = 0; listIndex < folder.lists.length; listIndex += 1) {
-        const list = folder.lists[listIndex];
+      for (let listIndex = 0; listIndex < incomingFolder.lists.length; listIndex += 1) {
+        const incomingList = incomingFolder.lists[listIndex];
         const listPath = `${folderPath}.lists[${listIndex}]`;
-        let resolvedList = listByName.get(normalize(list.name));
+        const listPlan = folderPlan.lists[listIndex];
+        let listId: string;
+        let listTitle: string;
 
-        if (resolvedList && options.listConflict === "error") {
-          throw new Error(`${listPath}: a lista "${list.name}" já existe.`);
-        }
-
-        if (!resolvedList || options.listConflict === "numbered") {
-          const title = options.listConflict === "numbered"
-            ? numberedName(list.name, occupiedListNames)
-            : list.name;
+        if (listPlan.mode === "existing") {
+          const existingList = listById.get(listPlan.listId);
+          if (!existingList || existingList.folder_id !== folderId) {
+            throw new Error(`${listPath}: a lista escolhida não pertence à pasta de destino.`);
+          }
+          listId = existingList.id;
+          listTitle = existingList.title;
+          report.lists_reused += 1;
+          logs.push({ entity_type: "list", entity_id: listId, action: "reused", item_path: listPath });
+        } else {
+          listTitle = listPlan.name.trim();
           const { data, error } = await db.from("lists").insert({
-            folder_id: resolvedFolder.id,
+            folder_id: folderId,
             owner_id: user.id,
-            title,
-            description: list.description || null,
+            title: listTitle,
+            description: incomingList.description || null,
             order_index: nextOrder,
             visibility: "private",
             institution_id: options.institutionId || null,
             lang_a: packageValue.package.source_language || null,
             lang_b: packageValue.package.target_language || null,
-          }).select("id, title, order_index").single();
+          }).select("id").single();
           if (error) throw error;
-          resolvedList = data;
+          listId = data.id;
           nextOrder += 1;
-          created.lists.push(data.id);
+          created.lists.push(listId);
           report.lists_created += 1;
-          logs.push({ entity_type: "list", entity_id: data.id, action: "created", item_path: listPath });
-          listByName.set(normalize(data.title), data);
-          occupiedListNames.add(normalize(data.title));
-        } else {
-          report.lists_reused += 1;
-          logs.push({ entity_type: "list", entity_id: resolvedList.id, action: "reused", item_path: listPath });
+          logs.push({ entity_type: "list", entity_id: listId, action: "created", item_path: listPath });
         }
 
-        const existingCards = await loadAllCards(resolvedList.id);
-        const existingKeys = new Set(existingCards.map((card) => `${normalize(card.term)}|${normalize(card.translation)}`));
+        const existingCards = await loadAllCards(listId);
+        const existingKeys = new Set(
+          existingCards.map((card) => `${normalize(card.term)}|${normalize(card.translation)}`),
+        );
         const cardsToInsert: Array<Record<string, unknown> & { item_path: string }> = [];
 
-        for (let cardIndex = 0; cardIndex < list.cards.length; cardIndex += 1) {
-          const card = list.cards[cardIndex];
+        for (let cardIndex = 0; cardIndex < incomingList.cards.length; cardIndex += 1) {
+          const card = incomingList.cards[cardIndex];
           const cardPath = `${listPath}.cards[${cardIndex}]`;
           const key = `${normalize(card.front)}|${normalize(card.back)}`;
           const duplicate = existingKeys.has(key);
+
           if (duplicate && options.cardConflict === "error") {
-            throw new Error(`${cardPath}: o card já existe na lista.`);
+            throw new Error(`${cardPath}: o card já existe na lista “${listTitle}”.`);
           }
           if (duplicate && options.cardConflict === "skip") {
             report.cards_skipped += 1;
             completedCards += 1;
             logs.push({ entity_type: "card", entity_id: null, action: "skipped", item_path: cardPath });
-            options.onProgress?.(completedCards, totalCards, `Ignorando duplicado em ${list.name}`);
+            options.onProgress?.(completedCards, totalCards, `Ignorando duplicado em ${folderTitle} / ${listTitle}`);
             continue;
           }
 
           cardsToInsert.push({
             item_path: cardPath,
-            list_id: resolvedList.id,
+            list_id: listId,
             user_id: user.id,
             term: card.front,
             translation: card.back,
@@ -276,7 +265,7 @@ export async function executeGlobalImport(
           });
           report.cards_created += data?.length ?? 0;
           completedCards += chunk.length;
-          options.onProgress?.(completedCards, totalCards, `Salvando ${list.name}`);
+          options.onProgress?.(completedCards, totalCards, `Salvando ${folderTitle} / ${listTitle}`);
         }
       }
     }
@@ -287,8 +276,7 @@ export async function executeGlobalImport(
       schema_version: packageValue.version,
       status: "completed",
       options: {
-        folder_conflict: options.folderConflict,
-        list_conflict: options.listConflict,
+        destination_plan: options.destinationPlan,
         card_conflict: options.cardConflict,
         institution_id: options.institutionId || null,
       },
@@ -298,12 +286,14 @@ export async function executeGlobalImport(
     created.batchId = batch.id;
     report.batch_id = batch.id;
 
-    if (logs.length) {
-      const historyRows = logs.map((item) => ({ ...item, batch_id: batch.id, user_id: user.id }));
-      for (let offset = 0; offset < historyRows.length; offset += CHUNK_SIZE) {
-        const { error } = await db.from("global_import_items").insert(historyRows.slice(offset, offset + CHUNK_SIZE));
-        if (error) throw error;
-      }
+    const historyRows = logs.map((item) => ({
+      ...item,
+      batch_id: batch.id,
+      user_id: user.id,
+    }));
+    for (let offset = 0; offset < historyRows.length; offset += CHUNK_SIZE) {
+      const { error } = await db.from("global_import_items").insert(historyRows.slice(offset, offset + CHUNK_SIZE));
+      if (error) throw error;
     }
 
     const { error: summaryError } = await db
@@ -321,4 +311,46 @@ export async function executeGlobalImport(
     }
     throw new Error(`${baseMessage} Nenhum item criado por esta tentativa foi mantido.`);
   }
+}
+
+export async function loadGlobalImportHistory(limit = 10): Promise<GlobalImportHistoryRow[]> {
+  const { data, error } = await db
+    .from("global_import_batches")
+    .select("id, package_name, status, summary, created_at, undone_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function undoGlobalImport(batchId: string): Promise<void> {
+  const { data: batch, error: batchError } = await db
+    .from("global_import_batches")
+    .select("id, status")
+    .eq("id", batchId)
+    .single();
+  if (batchError) throw batchError;
+  if (batch.status !== "completed") throw new Error("Esta importação já foi desfeita.");
+
+  const { data: items, error: itemsError } = await db
+    .from("global_import_items")
+    .select("entity_type, entity_id, action, id")
+    .eq("batch_id", batchId)
+    .eq("action", "created")
+    .order("id", { ascending: false });
+  if (itemsError) throw itemsError;
+
+  const cards = (items ?? []).filter((item: any) => item.entity_type === "card" && item.entity_id).map((item: any) => item.entity_id);
+  const lists = (items ?? []).filter((item: any) => item.entity_type === "list" && item.entity_id).map((item: any) => item.entity_id);
+  const folders = (items ?? []).filter((item: any) => item.entity_type === "folder" && item.entity_id).map((item: any) => item.entity_id);
+
+  await deleteInChunks("flashcards", cards);
+  await deleteInChunks("lists", lists);
+  await deleteInChunks("folders", folders);
+
+  const { error: updateError } = await db
+    .from("global_import_batches")
+    .update({ status: "undone", undone_at: new Date().toISOString() })
+    .eq("id", batchId);
+  if (updateError) throw updateError;
 }
