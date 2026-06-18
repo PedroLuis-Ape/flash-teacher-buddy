@@ -1,21 +1,15 @@
 import { parseGlobalImportText } from "./parser";
 import { validateGlobalImportPackage, type GlobalImportValidationResult } from "./checks";
+import type { GlobalImportDestinationPlan, ImportDestinationCatalog } from "./destination";
 import {
   executeGlobalImport,
   type CardConflictPolicy,
-  type ContainerConflictPolicy,
   type GlobalImportExecutionReport,
 } from "./service";
 
 export interface GlobalImportAnalysis {
   validation: GlobalImportValidationResult;
   notes: string[];
-}
-
-export interface GlobalImportPolicies {
-  folder: ContainerConflictPolicy;
-  list: ContainerConflictPolicy;
-  card: CardConflictPolicy;
 }
 
 export interface GlobalImportProgress {
@@ -37,7 +31,9 @@ export function analyzeGlobalImportText(text: string): GlobalImportAnalysis {
 
 export async function runGlobalImport(
   analysis: GlobalImportAnalysis,
-  policies: GlobalImportPolicies,
+  destinationPlan: GlobalImportDestinationPlan,
+  catalog: ImportDestinationCatalog,
+  cardConflict: CardConflictPolicy,
   onProgress?: (progress: GlobalImportProgress) => void,
 ): Promise<GlobalImportExecutionReport> {
   if (!analysis.validation.valid || !analysis.validation.package) {
@@ -45,9 +41,9 @@ export async function runGlobalImport(
   }
 
   return executeGlobalImport(analysis.validation.package, {
-    folderConflict: policies.folder,
-    listConflict: policies.list,
-    cardConflict: policies.card,
+    destinationPlan,
+    catalog,
+    cardConflict,
     institutionId: null,
     onProgress: (completed, total, label) => {
       onProgress?.({ completed, total, label });
