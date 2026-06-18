@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { GlobalImportPackage } from "./schema";
+import type { GlobalImportCard, GlobalImportPackage } from "./schema";
 import type {
   GlobalImportDestinationPlan,
   ImportDestinationCatalog,
@@ -64,6 +64,15 @@ function countCards(packageValue: GlobalImportPackage): number {
 
 function normalizedCardKey(term: string, translation: string): string {
   return `${term.trim().toLocaleLowerCase()}\u0000${translation.trim().toLocaleLowerCase()}`;
+}
+
+function directionFromCard(card?: GlobalImportCard): { front: string; back: string } | null {
+  const metadata = card?.metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  if (metadata.app_piteco_contract !== "1.0") return null;
+  const front = metadata.front_language;
+  const back = metadata.back_language;
+  return typeof front === "string" && typeof back === "string" ? { front, back } : null;
 }
 
 function canonicalForEffectivePackage(
@@ -152,10 +161,11 @@ function officialForEffectivePackage(
   const folders = packageValue.package.folders.map((folder) => {
     const lists = folder.lists.map((list) => {
       const firstCard = list.cards[0];
+      const fromMetadata = directionFromCard(firstCard);
       const matched = firstCard
-        ? directionByCard.get(normalizedCardKey(firstCard.front, firstCard.back))?.[0]
+        ? directionByCard.get(normalizedCardKey(firstCard.front, firstCard.back))?.shift()
         : null;
-      const direction = matched ?? fallback;
+      const direction = fromMetadata ?? matched ?? fallback;
       return {
         name: list.name,
         front_language: direction.front,
@@ -195,17 +205,13 @@ function officialFromInternalPackage(packageValue: GlobalImportPackage): AppPite
   for (const folder of packageValue.package.folders) {
     const lists: AppPitecoSuperImportPackage["package"]["folders"][number]["lists"] = [];
     for (const list of folder.lists) {
-      const metadata = list.cards[0]?.metadata;
-      if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
-      const marker = metadata.app_piteco_contract;
-      const frontLanguage = metadata.front_language;
-      const backLanguage = metadata.back_language;
-      if (marker !== "1.0" || typeof frontLanguage !== "string" || typeof backLanguage !== "string") return null;
+      const direction = directionFromCard(list.cards[0]);
+      if (!direction) return null;
 
       lists.push({
         name: list.name,
-        front_language: frontLanguage,
-        back_language: backLanguage,
+        front_language: direction.front,
+        back_language: direction.back,
         declared_card_count: list.cards.length,
         cards: list.cards.map((card) => ({ front: card.front, back: card.back })),
       });
