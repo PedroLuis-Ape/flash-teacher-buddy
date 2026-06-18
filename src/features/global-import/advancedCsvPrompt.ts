@@ -24,5 +24,5 @@ export function buildAdvancedCsvPrompt(options: AdvancedCsvPromptOptions): strin
     structure,
     options.extraInstructions?.trim() || "",
   ].filter(Boolean).join("\n");
-  return `${buildUniversalGlobalImportPrompt()}\n\nPEDIDO DO USUÁRIO\n${request}`;
+  return `${buildUniversalGlobalImportPrompt()}\n\nMODO AVANÇADO\nO pedido abaixo já foi fornecido. Gere o CSV agora, sem fazer a pergunta inicial.\n\nPEDIDO DO USUÁRIO\n${request}`;
 }
