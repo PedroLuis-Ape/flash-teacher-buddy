@@ -19,14 +19,14 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
     <Card className="space-y-4 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Label htmlFor="global-import-json">2. Pacote JSON</Label>
-          <p className="text-sm text-muted-foreground">Cole a resposta da IA ou carregue JSON/TXT de até 5 MB.</p>
+          <Label htmlFor="global-import-source">2. Importar conteúdo gerado</Label>
+          <p className="text-sm text-muted-foreground">Cole o CSV da IA ou selecione um arquivo CSV de até 5 MB.</p>
         </div>
         <div>
           <input
             ref={fileRef}
             type="file"
-            accept=".json,.txt,application/json,text/plain"
+            accept=".csv,.json,.txt,text/csv,application/json,text/plain"
             className="hidden"
             onChange={(event) => {
               onFile(event.target.files?.[0]);
@@ -34,20 +34,21 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
             }}
           />
           <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={busy}>
-            <Upload className="mr-2 h-4 w-4" />Arquivo
+            <Upload className="mr-2 h-4 w-4" />Selecionar arquivo CSV
           </Button>
         </div>
       </div>
       <Textarea
-        id="global-import-json"
+        id="global-import-source"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="min-h-64 font-mono text-xs"
         disabled={busy}
-        placeholder='{"format":"ape-global-import","schema_version":1,"request_id":"...","package":{...}}'
+        placeholder={'"folder_name","list_name","front","back"'}
       />
+      <p className="text-xs text-muted-foreground">Pacotes JSON antigos continuam aceitos por compatibilidade.</p>
       <Button className="w-full" onClick={onAnalyze} disabled={!value.trim() || busy}>
-        Validar e preparar destinos
+        Validar e visualizar
       </Button>
     </Card>
   );
