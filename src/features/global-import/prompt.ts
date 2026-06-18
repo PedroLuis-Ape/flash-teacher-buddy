@@ -1,7 +1,7 @@
-import { buildCanonicalGlobalImportPrompt } from "./canonicalPrompt";
-import { saveGlobalImportManifest } from "./manifest";
-import { createOfficialGlobalImportExample, type GlobalImportStudySettings } from "./schema/globalImportSchema";
+import { buildAdvancedCsvPrompt } from "./advancedCsvPrompt";
+import { GLOBAL_IMPORT_CSV_HEADER } from "./csvContract";
 import type { GlobalImportDestinationMode } from "./destinationModes";
+import type { GlobalImportStudySettings } from "./schema/globalImportSchema";
 
 export interface GlobalImportPromptFolderConfig {
   name: string;
@@ -30,29 +30,29 @@ export interface GlobalImportPromptOptions {
 }
 
 export function getOfficialGlobalImportExample(): string {
-  return JSON.stringify(createOfficialGlobalImportExample(), null, 2);
+  return [
+    GLOBAL_IMPORT_CSV_HEADER,
+    '"Viagens","Aeroporto","Where is the boarding gate?","Onde fica o portão de embarque?"',
+  ].join("\n");
 }
 
 export function buildGlobalImportPrompt(options: GlobalImportPromptOptions): string {
-  const bundle = buildCanonicalGlobalImportPrompt({
-    mode: options.mode,
-    destinationFolderName: options.destinationFolderName,
+  const folders = options.mode === "from-file" ? options.folders : [{
+    name: options.destinationFolderName?.trim() || "Destino escolhido no aplicativo",
+    lists: options.folders.flatMap((folder) => folder.lists),
+  }];
+  const preferences = [
+    options.includeExamples ? "Inclua exemplos quando forem úteis." : "",
+    options.includeExplanations ? "Inclua explicações curtas quando forem úteis." : "",
+    options.extraInstructions?.trim() || "",
+  ].filter(Boolean).join(" ");
+  return buildAdvancedCsvPrompt({
     packageName: options.packageName,
-    description: options.description,
-    studyType: options.studyType,
     sourceLanguage: options.sourceLanguage,
     targetLanguage: options.targetLanguage,
-    labelA: options.labelA,
-    labelB: options.labelB,
-    ttsEnabled: options.ttsEnabled,
     level: options.level,
     theme: options.theme,
-    folders: options.folders,
-    includeExamples: options.includeExamples,
-    includeExplanations: options.includeExplanations,
-    allowRepetitions: options.allowRepetitions,
-    extraInstructions: options.extraInstructions,
+    folders,
+    extraInstructions: preferences,
   });
-  saveGlobalImportManifest(bundle.manifest);
-  return bundle.prompt;
 }
