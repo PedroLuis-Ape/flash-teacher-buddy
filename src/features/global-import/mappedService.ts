@@ -25,6 +25,8 @@ export interface GlobalImportExecutionReport {
   folders_reused: number;
   lists_created: number;
   lists_reused: number;
+  lists_replaced?: number;
+  lists_skipped?: number;
   cards_created: number;
   cards_skipped: number;
 }
