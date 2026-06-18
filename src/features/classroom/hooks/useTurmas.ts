@@ -98,21 +98,64 @@ export function useUpdateTurma() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ turma_id, nome, descricao, public: isPublic }: { turma_id: string; nome?: string; descricao?: string; public?: boolean }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
+    mutationFn: async ({
+      turma_id,
+      nome,
+      descricao,
+      public: isPublic,
+    }: {
+      turma_id: string;
+      nome?: string;
+      descricao?: string;
+      public?: boolean;
+    }) => {
+      const updates: Record<string, string | boolean | null> = {};
 
-      const { data, error } = await supabase.functions.invoke('turmas-update', {
-        body: { turma_id, nome, descricao, public: isPublic },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      if (nome !== undefined) {
+        const normalizedName = nome.trim();
+        if (!normalizedName) throw new Error('Nome é obrigatório');
+        updates.nome = normalizedName;
+      }
+
+      if (descricao !== undefined) {
+        const normalizedDescription = descricao.trim();
+        updates.descricao = normalizedDescription || null;
+      }
+
+      if (isPublic !== undefined) {
+        updates.public = isPublic;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        throw new Error('Nenhuma alteração válida foi enviada');
+      }
+
+      const { data: updated, error } = await (supabase as any)
+        .from('turmas')
+        .update(updates)
+        .eq('id', turma_id)
+        .select('*')
+        .single();
 
       if (error) throw error;
-      return data;
+
+      if (isPublic !== undefined && updated?.public !== isPublic) {
+        throw new Error('A visibilidade da turma não foi salva. Tente novamente.');
+      }
+
+      return { turma: updated };
     },
-    onSuccess: async () => {
+    onSuccess: async ({ turma }) => {
+      queryClient.setQueryData(['turmas', 'mine'], (current: any) => {
+        if (!current?.turmas || !turma?.id) return current;
+        return {
+          ...current,
+          turmas: current.turmas.map((item: any) => (
+            item.id === turma.id ? { ...item, ...turma } : item
+          )),
+        };
+      });
+
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['turmas'] }),
         queryClient.invalidateQueries({ queryKey: ['turma'] }),
