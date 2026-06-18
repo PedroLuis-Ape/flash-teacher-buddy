@@ -72,7 +72,7 @@ export function buildDefaultDestinationPlan(
       const exactList = (listsByFolder.get(exactFolder.id) ?? [])
         .find((list) => normalize(list.title) === normalize(incomingList.name));
       lists[listIndex] = exactList
-        ? { mode: "existing", listId: exactList.id, strategy: "append" }
+        ? { mode: "existing", listId: exactList.id }
         : { mode: "create", name: incomingList.name };
     });
 
