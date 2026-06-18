@@ -2,7 +2,6 @@ import {
   findDangerousImportKey,
   globalImportSchema,
   type CanonicalGlobalImportPackage,
-  type GlobalImportStudySettings,
 } from "./schema/globalImportSchema";
 import {
   GLOBAL_IMPORT_SCHEMA,
@@ -13,20 +12,9 @@ import {
 
 export type GlobalImportSourceFormat = "canonical" | "legacy";
 
-export type NormalizedGlobalImportPackage = GlobalImportPackage & {
-  request_id?: string;
-  package: GlobalImportPackage["package"] & {
-    description?: string | null;
-    study_settings?: GlobalImportStudySettings;
-    expected_folders?: number;
-    expected_lists?: number;
-    expected_cards?: number;
-  };
-};
-
 export interface NormalizedGlobalImportResult {
   sourceFormat: GlobalImportSourceFormat;
-  packageValue: NormalizedGlobalImportPackage;
+  packageValue: GlobalImportPackage;
   canonicalPackage: CanonicalGlobalImportPackage | null;
   warnings: string[];
 }
@@ -38,20 +26,14 @@ export interface NormalizeGlobalImportFailure {
   dangerousPath: string | null;
 }
 
-function canonicalToInternal(value: CanonicalGlobalImportPackage): NormalizedGlobalImportPackage {
+function canonicalToInternal(value: CanonicalGlobalImportPackage): GlobalImportPackage {
   return {
     schema: GLOBAL_IMPORT_SCHEMA,
     version: GLOBAL_IMPORT_VERSION,
-    request_id: value.request_id,
     package: {
       name: value.package.title,
-      description: value.package.description ?? null,
       source_language: value.package.study_settings.lang_a,
       target_language: value.package.study_settings.lang_b,
-      study_settings: value.package.study_settings,
-      expected_folders: value.package.expected_folder_count,
-      expected_lists: value.package.expected_list_count,
-      expected_cards: value.package.expected_card_count,
       folders: value.package.folders.map((folder) => ({
         name: folder.title,
         description: folder.description ?? undefined,
