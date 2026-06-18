@@ -21,7 +21,7 @@ O schema canônico está em:
 
 `src/features/global-import/schema/globalImportSchema.ts`
 
-O exemplo oficial, os tipos, os limites, o parser canônico, o gerador de prompt e os testes dependem desse arquivo. O formato legado permanece apenas como camada de compatibilidade.
+O exemplo oficial, os tipos, os limites, o gerador de prompt e os testes dependem desse arquivo. O formato legado permanece apenas como camada de compatibilidade.
 
 ## Limites iniciais
 
@@ -33,28 +33,21 @@ O exemplo oficial, os tipos, os limites, o parser canônico, o gerador de prompt
 - termos e traduções: 8.000 caracteres;
 - explicações e campos longos: 16.000 caracteres.
 
-## Feature flag
-
-A RPC canônica possui um kill switch no cliente:
-
-```env
-VITE_GLOBAL_IMPORT_V2_ENABLED=false
-```
-
-Com o valor `false`, o Super Importador continua disponível, mas usa a RPC V1 com o pacote já normalizado. O padrão é habilitado para preservar o comportamento implementado nas PRs anteriores.
-
 ## Migrations
 
 - `20260618190000_import_global_package_v2.sql`: validação canônica, adaptação transacional, configurações de estudo e campos ricos;
-- `20260618190100_global_import_v2_permissions.sql`: permissão restrita necessária para o validador recursivo chamado pela RPC V2.
+- `20260618190100_global_import_validator_access.sql`: recria o validador recursivo puro com acesso de execução padrão, sem acesso a tabelas.
 
-## Rollback operacional
+A RPC V2 permanece `SECURITY INVOKER`. A RPC V1 continua sendo a responsável pelas verificações explícitas de `auth.uid()`, propriedade e persistência atômica.
 
-Rollback imediato sem remover banco:
+## Compatibilidade e rollback
 
-1. definir `VITE_GLOBAL_IMPORT_V2_ENABLED=false`;
-2. publicar novamente o frontend;
-3. a tela volta a chamar `import_global_package_v1`.
+O importador simples não foi alterado. O Super Importador aceita dois caminhos:
+
+- `ape-global-import` V1: validação por manifesto e RPC V2;
+- `appteco-global-import` V1: compatibilidade legada e RPC V1.
+
+Rollback de frontend: reverter a PR restaura a tela anterior, mantendo a RPC V1 e os dados existentes.
 
 Rollback de banco, somente após confirmar que nenhuma versão publicada chama a V2:
 
