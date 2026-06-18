@@ -75,24 +75,21 @@ export const GLOBAL_IMPORT_EXAMPLE: GlobalImportPackage = {
   schema: GLOBAL_IMPORT_SCHEMA,
   version: GLOBAL_IMPORT_VERSION,
   package: {
-    name: "Emoções Básicas",
-    source_language: "en",
-    target_language: "pt-BR",
-    level: "A2",
+    name: "Pacote de exemplo",
+    source_language: "idioma de origem",
+    target_language: "idioma de tradução",
     folders: [
       {
-        name: "Amor",
+        name: "Pasta definida pelo usuário",
         expected_cards: 1,
         lists: [
           {
-            name: "Vocabulário principal",
+            name: "Lista definida pelo usuário",
             expected_cards: 1,
             cards: [
               {
-                front: "Love",
-                back: "Amor",
-                example: "Love can change the way we see the world.",
-                example_translation: "O amor pode mudar a forma como vemos o mundo.",
+                front: "Conteúdo da frente",
+                back: "Conteúdo do verso",
               },
             ],
           },
