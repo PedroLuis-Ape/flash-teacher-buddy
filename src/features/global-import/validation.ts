@@ -21,6 +21,56 @@ function pathOf(parts: Array<string | number>): string {
   ), "") || "$";
 }
 
+function duplicateAndOptionalIssues(value: CanonicalGlobalImportPackage): GlobalImportIssue[] {
+  const issues: GlobalImportIssue[] = [];
+  const firstCardPath = new Map<string, string>();
+  let cardsWithoutExamples = 0;
+  let cardsWithoutExplanations = 0;
+
+  value.package.folders.forEach((folder, folderIndex) => {
+    folder.lists.forEach((list, listIndex) => {
+      list.cards.forEach((card, cardIndex) => {
+        const path = `package.folders[${folderIndex}].lists[${listIndex}].cards[${cardIndex}]`;
+        const key = `${card.term.trim().toLocaleLowerCase()}\u0000${card.translation.trim().toLocaleLowerCase()}`;
+        const firstPath = firstCardPath.get(key);
+        if (firstPath) {
+          issues.push({
+            severity: "error",
+            path,
+            message: `Card duplicado no pacote. A primeira ocorrência está em ${firstPath}.`,
+            code: "duplicate.card.package",
+          });
+        } else {
+          firstCardPath.set(key, path);
+        }
+
+        if (!card.example_text && !card.example_translation) cardsWithoutExamples += 1;
+        if (!card.detailed_explanation && !card.usage_notes && !card.common_mistakes) {
+          cardsWithoutExplanations += 1;
+        }
+      });
+    });
+  });
+
+  if (cardsWithoutExamples > 0) {
+    issues.push({
+      severity: "info",
+      path: "package.folders",
+      message: `${cardsWithoutExamples} card(s) não possuem exemplo. O campo é opcional.`,
+      code: "optional.examples_missing",
+    });
+  }
+  if (cardsWithoutExplanations > 0) {
+    issues.push({
+      severity: "info",
+      path: "package.folders",
+      message: `${cardsWithoutExplanations} card(s) não possuem explicações ou notas. Esses campos são opcionais.`,
+      code: "optional.explanations_missing",
+    });
+  }
+  return issues;
+}
+
 export function validateGlobalImportInput(
   value: unknown,
   manifest?: GlobalImportManifest | null,
@@ -71,6 +121,8 @@ export function validateGlobalImportInput(
       code: "limit.cards",
     });
   }
+
+  if (canonical) issues.push(...duplicateAndOptionalIssues(canonical));
 
   if (canonical && !manifest) {
     issues.push({
