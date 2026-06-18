@@ -59,6 +59,11 @@ function officialToInternal(value: AppPitecoSuperImportPackage): GlobalImportPac
           cards: list.cards.map((card) => ({
             front: card.front,
             back: card.back,
+            metadata: {
+              app_piteco_contract: "1.0",
+              front_language: list.front_language,
+              back_language: list.back_language,
+            },
           })),
         })),
       })),
