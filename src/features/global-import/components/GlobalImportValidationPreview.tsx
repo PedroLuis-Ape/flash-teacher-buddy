@@ -2,7 +2,7 @@ import { AlertTriangle, FolderTree } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { GlobalImportPackage } from "../schema";
+import type { GlobalImportList, GlobalImportPackage } from "../schema";
 import type { GlobalImportV2ValidationResult } from "../validation";
 
 interface Props {
@@ -12,6 +12,25 @@ interface Props {
   notes: string[];
   destinationErrors: string[];
   destinationWarnings: string[];
+}
+
+function sourceLabel(sourceFormat: GlobalImportV2ValidationResult["sourceFormat"]): string {
+  if (sourceFormat === "official") return "Contrato oficial 1.0";
+  if (sourceFormat === "canonical") return "Compatibilidade ape";
+  if (sourceFormat === "legacy") return "Legado";
+  return "Desconhecido";
+}
+
+function listDirection(list: GlobalImportList, packageValue: GlobalImportPackage): string | null {
+  const metadata = list.cards[0]?.metadata;
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const front = metadata.front_language;
+    const back = metadata.back_language;
+    if (typeof front === "string" && typeof back === "string") return `${front} → ${back}`;
+  }
+  const front = packageValue.package.source_language;
+  const back = packageValue.package.target_language;
+  return front && back ? `${front} → ${back}` : null;
 }
 
 export function GlobalImportValidationPreview(props: Props) {
@@ -24,7 +43,7 @@ export function GlobalImportValidationPreview(props: Props) {
           <Badge variant="outline">{props.counts.folders} pasta(s)</Badge>
           <Badge variant="outline">{props.counts.lists} lista(s)</Badge>
           <Badge variant="outline">{props.counts.cards} card(s)</Badge>
-          <Badge variant="outline">{props.validation.sourceFormat === "canonical" ? "Canônico" : "Legado"}</Badge>
+          <Badge variant="outline">{sourceLabel(props.validation.sourceFormat)}</Badge>
           {errors.length || props.destinationErrors.length
             ? <Badge variant="destructive">Revisão necessária</Badge>
             : <Badge>Estrutura válida</Badge>}
@@ -45,7 +64,7 @@ export function GlobalImportValidationPreview(props: Props) {
             <div className="space-y-2 pr-3">
               {props.validation.issues.map((issue, index) => (
                 <div key={`${issue.path}-${issue.code}-${index}`} className="rounded border p-3 text-sm">
-                  <div className="font-mono text-xs text-muted-foreground">{issue.path}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{issue.code} · {issue.path}</div>
                   <div>{issue.message}</div>
                 </div>
               ))}
@@ -66,17 +85,22 @@ export function GlobalImportValidationPreview(props: Props) {
                   {folder.name} — {folder.lists.reduce((sum, list) => sum + list.cards.length, 0)} cards
                 </summary>
                 <div className="mt-3 space-y-2 pl-3">
-                  {folder.lists.map((list, listIndex) => (
-                    <details key={`${list.name}-${listIndex}`} className="rounded-md bg-muted/40 p-3">
-                      <summary className="cursor-pointer">{list.name}: {list.cards.length} cards</summary>
-                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        {list.cards.slice(0, 10).map((card, cardIndex) => (
-                          <div key={`${card.front}-${cardIndex}`}>{cardIndex + 1}. {card.front} → {card.back}</div>
-                        ))}
-                        {list.cards.length > 10 && <div>… mais {list.cards.length - 10} card(s)</div>}
-                      </div>
-                    </details>
-                  ))}
+                  {folder.lists.map((list, listIndex) => {
+                    const direction = listDirection(list, props.packageValue!);
+                    return (
+                      <details key={`${list.name}-${listIndex}`} className="rounded-md bg-muted/40 p-3">
+                        <summary className="cursor-pointer">
+                          {list.name}: {list.cards.length} cards{direction ? ` · ${direction}` : ""}
+                        </summary>
+                        <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                          {list.cards.slice(0, 10).map((card, cardIndex) => (
+                            <div key={`${card.front}-${cardIndex}`}>{cardIndex + 1}. {card.front} → {card.back}</div>
+                          ))}
+                          {list.cards.length > 10 && <div>… mais {list.cards.length - 10} card(s)</div>}
+                        </div>
+                      </details>
+                    );
+                  })}
                 </div>
               </details>
             ))}
