@@ -5,7 +5,7 @@ import { GLOBAL_IMPORT_LIMITS } from "./schema/globalImportSchema";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
 
 function looksLikeCsv(value: string): boolean {
-  const normalized = value.trim().replace(/^```csv\s*/i, "");
+  const normalized = value.trim().replace(/^```(?:csv)?\s*/i, "");
   const firstLine = normalized.split(/\r?\n/, 1)[0] ?? "";
   return firstLine.includes("folder_name") && firstLine.includes("list_name");
 }
