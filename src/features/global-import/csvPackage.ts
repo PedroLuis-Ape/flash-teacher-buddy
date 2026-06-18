@@ -10,10 +10,17 @@ export interface CsvPackageResult {
   schema: typeof GLOBAL_IMPORT_CSV_SCHEMA;
 }
 
+const htmlPattern = /<\/?[a-z][^>]*>/i;
+
 function unwrapCsv(text: string) {
   const trimmed = text.trim();
   const fenced = trimmed.match(/^```(?:csv)?\s*([\s\S]*?)\s*```$/i);
   return { text: fenced ? fenced[1] : text, stripped: Boolean(fenced) };
+}
+
+function isHeader(values: string[]): boolean {
+  return values.length === GLOBAL_IMPORT_CSV_COLUMNS.length
+    && values.every((value, index) => value.trim() === GLOBAL_IMPORT_CSV_COLUMNS[index]);
 }
 
 export function parseGlobalImportCsv(raw: string): CsvPackageResult {
@@ -22,7 +29,7 @@ export function parseGlobalImportCsv(raw: string): CsvPackageResult {
   if (rows.length < 2) throw new CsvReadError("o CSV precisa de cabeçalho e pelo menos um flashcard.");
 
   const header = rows[0].values.map((value) => value.replace(/^\uFEFF/, "").trim());
-  if (header.length !== 4 || header.some((value, index) => value !== GLOBAL_IMPORT_CSV_COLUMNS[index])) {
+  if (!isHeader(header)) {
     throw new CsvReadError(`use exatamente o cabeçalho ${GLOBAL_IMPORT_CSV_COLUMNS.join(",")}.`, rows[0].line);
   }
 
@@ -33,9 +40,14 @@ export function parseGlobalImportCsv(raw: string): CsvPackageResult {
   const pairs = new Map<string, number>();
 
   for (const row of rows.slice(1)) {
+    if (isHeader(row.values)) throw new CsvReadError("cabeçalho repetido; remova os cabeçalhos das partes adicionais.", row.line);
     if (row.values.length !== 4) throw new CsvReadError(`esperadas 4 colunas; recebidas ${row.values.length}.`, row.line);
     const [folderName, listName, front, back] = row.values.map((value) => value.trim());
     if (!folderName || !listName || !front || !back) throw new CsvReadError("nenhum campo pode ficar vazio.", row.line);
+    if (folderName.length > 160 || listName.length > 160) throw new CsvReadError("nome de pasta ou lista acima de 160 caracteres.", row.line);
+    if (front.length > 8000 || back.length > 8000) throw new CsvReadError("frente ou verso acima de 8.000 caracteres.", row.line);
+    if ([folderName, listName, front, back].some((value) => htmlPattern.test(value))) throw new CsvReadError("HTML não é permitido.", row.line);
+
     const pair = `${front.toLocaleLowerCase()}\u0000${back.toLocaleLowerCase()}`;
     const firstLine = pairs.get(pair);
     if (firstLine) throw new CsvReadError(`flashcard repetido; primeira ocorrência na linha ${firstLine}.`, row.line);
@@ -61,17 +73,10 @@ export function parseGlobalImportCsv(raw: string): CsvPackageResult {
   if (cardCount > GLOBAL_IMPORT_LIMITS.maxCards) throw new CsvReadError(`limite de ${GLOBAL_IMPORT_LIMITS.maxCards} flashcards excedido.`);
 
   const normalizedFolders = [...folders.values()].map((folder) => {
-    const lists = [...folder.lists.values()].map((list) => ({
-      name: list.name,
-      expected_cards: list.cards.length,
-      cards: list.cards,
-    }));
-    return {
-      name: folder.name,
-      expected_cards: lists.reduce((total, list) => total + list.cards.length, 0),
-      lists,
-    };
+    const lists = [...folder.lists.values()].map((list) => ({ name: list.name, expected_cards: list.cards.length, cards: list.cards }));
+    return { name: folder.name, expected_cards: lists.reduce((total, list) => total + list.cards.length, 0), lists };
   });
+  const packageName = folders.size === 1 ? `Importação CSV — ${normalizedFolders[0].name}` : `Importação CSV — ${folders.size} pastas`;
 
   return {
     schema: GLOBAL_IMPORT_CSV_SCHEMA,
@@ -80,7 +85,7 @@ export function parseGlobalImportCsv(raw: string): CsvPackageResult {
     packageValue: {
       schema: GLOBAL_IMPORT_SCHEMA,
       version: GLOBAL_IMPORT_VERSION,
-      package: { name: "Pacote CSV", folders: normalizedFolders },
+      package: { name: packageName, folders: normalizedFolders },
     },
   };
 }
