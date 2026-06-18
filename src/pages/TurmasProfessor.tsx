@@ -75,7 +75,7 @@ export default function TurmasProfessor() {
   };
 
   const handleTogglePublic = async (turma: any) => {
-    const nextPublic = !Boolean(turma.public);
+    const nextPublic = !turma.public;
 
     try {
       const result = await updateTurma.mutateAsync({
