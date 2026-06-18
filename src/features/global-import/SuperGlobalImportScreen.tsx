@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileJson, FolderTree, Loader2, RotateCcw, Upload } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, FolderTree, Loader2, RotateCcw, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,14 @@ import {
   type GlobalImportDestinationPlan,
   type ImportDestinationCatalog,
 } from "./destination";
-import { executeMappedGlobalImport, undoGlobalImport, type CardConflictPolicy, type GlobalImportExecutionReport } from "./mappedService";
+import {
+  executeMappedGlobalImport,
+  undoGlobalImport,
+  type CardConflictPolicy,
+  type GlobalImportExecutionReport,
+} from "./mappedService";
 import { parseGlobalImportText } from "./parser";
-import { GLOBAL_IMPORT_EXAMPLE, GLOBAL_IMPORT_LIMITS } from "./schema";
+import { GLOBAL_IMPORT_LIMITS } from "./schema";
 import { validateGlobalImportPackage, type GlobalImportValidationResult } from "./checks";
 
 export default function SuperGlobalImportScreen() {
@@ -94,12 +99,6 @@ export default function SuperGlobalImportScreen() {
     } catch {
       toast.error("Não foi possível ler o arquivo.");
     }
-  };
-
-  const loadExample = async () => {
-    const text = JSON.stringify(GLOBAL_IMPORT_EXAMPLE, null, 2);
-    resetAnalysis(text);
-    await analyze(text);
   };
 
   const importPackage = async () => {
@@ -194,9 +193,6 @@ export default function SuperGlobalImportScreen() {
               />
               <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={busy}>
                 <Upload className="mr-2 h-4 w-4" />Arquivo
-              </Button>
-              <Button variant="outline" onClick={loadExample} disabled={busy}>
-                <FileJson className="mr-2 h-4 w-4" />Exemplo técnico
               </Button>
             </div>
           </div>
