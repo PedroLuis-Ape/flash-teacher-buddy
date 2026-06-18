@@ -4,6 +4,7 @@ import type {
   GlobalImportDestinationPlan,
   ImportDestinationCatalog,
 } from "./destination";
+import { GLOBAL_IMPORT_V2_ENABLED } from "./featureFlag";
 import {
   globalImportSchema,
   type CanonicalGlobalImportPackage,
@@ -165,7 +166,7 @@ export async function executeMappedGlobalImport(
   options: ExecuteMappedImportOptions,
 ): Promise<GlobalImportExecutionReport> {
   const totalCards = countCards(packageValue);
-  const canonical = options.canonicalPackage
+  const canonical = GLOBAL_IMPORT_V2_ENABLED && options.canonicalPackage
     ? canonicalForEffectivePackage(options.canonicalPackage, packageValue)
     : null;
   if (canonical && options.requestId && options.requestId !== canonical.request_id) {
