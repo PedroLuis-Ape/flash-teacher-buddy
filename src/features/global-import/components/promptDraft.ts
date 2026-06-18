@@ -34,3 +34,11 @@ export function promptDraftId(): string {
   draftSequence += 1;
   return `draft-${draftSequence}`;
 }
+
+export function newPromptList(title = "", cardCount = 10): PromptListDraft {
+  return { id: promptDraftId(), title, cardCount };
+}
+
+export function newPromptFolder(title = ""): PromptFolderDraft {
+  return { id: promptDraftId(), title, lists: [newPromptList()] };
+}
