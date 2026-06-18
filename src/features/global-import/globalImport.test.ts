@@ -89,13 +89,19 @@ describe("Super Importador Global V1", () => {
     expect(result.summary.cards).toBe(2);
   });
 
-  it("extrai JSON cercado por Markdown e corrige vírgula final segura", () => {
-    const malformed = JSON.stringify(makePackage([1])).replace(/}$/, ",}");
-    const parsed = parseGlobalImportText(`Resposta da IA:\n\`\`\`json\n${malformed}\n\`\`\``);
+  it("aceita uma única cerca Markdown envolvendo JSON válido", () => {
+    const valid = JSON.stringify(makePackage([1]));
+    const parsed = parseGlobalImportText("```json\n" + valid + "\n```");
     const validation = validateGlobalImportPackage(parsed.value);
 
     expect(validation.valid).toBe(true);
     expect(validation.summary).toEqual({ folders: 1, lists: 1, cards: 1 });
+  });
+
+  it("rejeita texto extra e vírgula final em vez de alterar o pacote", () => {
+    const malformed = JSON.stringify(makePackage([1])).replace(/}$/, ",}");
+    expect(() => parseGlobalImportText("Resposta da IA:\n" + malformed)).toThrow();
+    expect(() => parseGlobalImportText(malformed)).toThrow(/vírgula final/i);
   });
 
   it("rejeita versão futura com caminho de erro na versão", () => {
