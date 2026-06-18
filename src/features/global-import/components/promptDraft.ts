@@ -27,3 +27,10 @@ export interface PromptBuilderState {
   extraInstructions: string;
   folders: PromptFolderDraft[];
 }
+
+let draftSequence = 0;
+
+export function promptDraftId(): string {
+  draftSequence += 1;
+  return `draft-${draftSequence}`;
+}
