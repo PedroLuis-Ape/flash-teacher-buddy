@@ -15,3 +15,9 @@ it("reports the line of oversized names", () => {
   const name = "x".repeat(161);
   expect(() => parseGlobalImportCsv(`${header}\n"${name}","L","A","B"`)).toThrow(/Linha 2/i);
 });
+
+it("accepts a generic Markdown fence", () => {
+  const result = parseGlobalImportCsv(`\`\`\`\n${header}\n"P","L","A","B"\n\`\`\``);
+  expect(result.rows).toBe(1);
+  expect(result.notes).toHaveLength(1);
+});
