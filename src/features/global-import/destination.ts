@@ -17,7 +17,8 @@ export type FolderDestination =
 
 export type ListDestination =
   | { mode: "create"; name: string }
-  | { mode: "existing"; listId: string };
+  | { mode: "existing"; listId: string; strategy?: "append" | "replace" }
+  | { mode: "skip" };
 
 export interface FolderDestinationPlan {
   folder: FolderDestination;
@@ -89,6 +90,7 @@ export function validateDestinationPlan(
   const errors: string[] = [];
   const folderIds = new Set(catalog.folders.map((folder) => folder.id));
   const listById = new Map(catalog.lists.map((list) => [list.id, list]));
+  const targetedExistingLists = new Set<string>();
 
   packageValue.package.folders.forEach((folder, folderIndex) => {
     const folderPlan = plan.folders[folderIndex];
@@ -110,6 +112,7 @@ export function validateDestinationPlan(
         errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: destino da lista não definido.`);
         return;
       }
+      if (listPlan.mode === "skip") return;
       if (listPlan.mode === "create" && !listPlan.name.trim()) {
         errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: nome da nova lista vazio.`);
       }
@@ -122,6 +125,10 @@ export function validateDestinationPlan(
         } else if (list.folder_id !== folderPlan.folder.folderId) {
           errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a lista não pertence à pasta selecionada.`);
         }
+        if (targetedExistingLists.has(listPlan.listId)) {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a mesma lista existente não pode receber duas listas importadas na mesma operação.`);
+        }
+        targetedExistingLists.add(listPlan.listId);
       }
     });
   });
