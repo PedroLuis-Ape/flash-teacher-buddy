@@ -33,17 +33,7 @@ jobs:
         run: npm run typecheck
 
       - name: Tests
-        shell: bash
-        run: set -o pipefail; npm run test -- --reporter=verbose 2>&1 | tee test-report.txt
-
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-report
-          path: test-report.txt
-          if-no-files-found: warn
-          retention-days: 3
+        run: npm run test
 
       - name: Lint
         run: npm run lint -- --format json --output-file lint-report.json
