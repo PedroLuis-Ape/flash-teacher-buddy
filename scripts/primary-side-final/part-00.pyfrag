@@ -1,0 +1,84 @@
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).resolve().parents[1]
+
+def path(rel): return ROOT / rel
+
+def rep(rel, old, new, count=1):
+    p = path(rel); s = p.read_text()
+    n = s.count(old)
+    if n != count:
+        raise RuntimeError(f'{rel}: expected {count} matches, got {n}: {old[:100]!r}')
+    p.write_text(s.replace(old, new, count))
+
+def regex(rel, pattern, repl, count=1, flags=0):
+    p=path(rel); s=p.read_text()
+    ns,n=re.subn(pattern,repl,s,count=count,flags=flags)
+    if n != count:
+        raise RuntimeError(f'{rel}: regex expected {count}, got {n}: {pattern[:100]!r}')
+    p.write_text(ns)
+
+# 1) resolveStudySides: include primary side in effective settings.
+rel='src/features/study/lib/resolveStudySides.ts'
+rep(rel,
+'''import { toBCP47, getLangLabel } from "./languages";
+export { toBCP47, getLangLabel };
+''',
+'''import { toBCP47, getLangLabel } from "./languages";
+import { normalizePrimarySide, type PrimarySide } from "@/lib/primarySideDirection";
+export { toBCP47, getLangLabel };
+''')
+rep(rel,
+'''  ttsEnabled: boolean;
+  /** True when the list has its own explicit settings (not just defaults) */
+''',
+'''  ttsEnabled: boolean;
+  primarySide: PrimarySide;
+  /** True when the list has its own explicit settings (not just defaults) */
+''')
+rep(rel,
+'''  tts_enabled?: boolean | null;
+}
+
+interface FolderSettingsRow {
+''',
+'''  tts_enabled?: boolean | null;
+  primary_side?: string | null;
+}
+
+interface FolderSettingsRow {
+''')
+rep(rel,
+'''        tts_enabled: list?.tts_enabled ?? folder.tts_enabled,
+      }
+''',
+'''        tts_enabled: list?.tts_enabled ?? folder.tts_enabled,
+        primary_side: list?.primary_side,
+      }
+''')
+rep(rel,
+'''    ttsEnabled: src.tts_enabled ?? (studyType === "language"),
+    isListOverride: listHasExplicitOverride && !useFolderFallback,
+''',
+'''    ttsEnabled: src.tts_enabled ?? (studyType === "language"),
+    primarySide: normalizePrimarySide(list?.primary_side),
+    isListOverride: listHasExplicitOverride && !useFolderFallback,
+''')
+
+# 2) ListStudyTypeSelector: presentational only; ListDetail owns hydration.
+rel='src/features/study/components/ListStudyTypeSelector.tsx'
+rep(rel, 'import { useState, useEffect, useRef } from "react";\nimport { useParams } from "react-router-dom";\n', 'import { useState, useEffect } from "react";\n')
+rep(rel, 'import { useListPrimarySide } from "@/lib/useListPrimarySide";\n', '')
+rep(rel, '  primarySide?: "a" | "b";\n', '  primarySide: "a" | "b";\n')
+regex(rel,
+    r'''  const \{ id \} = useParams\(\);\n  const showPrimarySide = window\.location\.pathname\.startsWith\("/list/"\);\n  const \{ side: savedPrimarySide, loading: primarySideLoading \} = useListPrimarySide\(showPrimarySide \? id \|\| null : null\);\n  const primaryHydratedRef = useRef\(false\);\n''',
+    '')
+rep(rel,
+"""  useEffect(() => {
+    primaryHydratedRef.current = false;
+  }, [id]);
+
+  useEffect(() => {
+    if (!showPrimarySide || primarySideLoading || primaryHydratedRef.current) return;
+"""
