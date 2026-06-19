@@ -12,19 +12,38 @@ export function useListPrimarySide(listId: string | null, publicRoute = false) {
     }
 
     let active = true;
-    setState((current) => ({ ...current, loading: true }));
     const load = publicRoute ? loadPublicListPrimarySide : loadListPrimarySide;
 
-    load(listId)
-      .then((side) => {
-        if (active) setState({ side, loading: false });
-      })
-      .catch(() => {
-        if (active) setState({ side: "a", loading: false });
-      });
+    const refresh = () => {
+      setState((current) => ({ ...current, loading: true }));
+      load(listId)
+        .then((side) => {
+          if (active) setState({ side, loading: false });
+        })
+        .catch(() => {
+          if (active) setState({ side: "a", loading: false });
+        });
+    };
+
+    const handlePreferenceChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ listId?: string; side?: "a" | "b" }>).detail;
+      if (detail?.listId !== listId || !detail.side) return;
+      setState({ side: detail.side, loading: false });
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== `ape_list_primary_side:v1:${listId}`) return;
+      refresh();
+    };
+
+    refresh();
+    window.addEventListener("ape-list-primary-side-change", handlePreferenceChange);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
       active = false;
+      window.removeEventListener("ape-list-primary-side-change", handlePreferenceChange);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [listId, publicRoute]);
 
