@@ -1,0 +1,4 @@
+ALTER TABLE public.lists ADD COLUMN IF NOT EXISTS primary_side text NOT NULL DEFAULT 'a';
+ALTER TABLE public.lists DROP CONSTRAINT IF EXISTS lists_primary_side_check;
+ALTER TABLE public.lists ADD CONSTRAINT lists_primary_side_check CHECK (primary_side = ANY (ARRAY['a'::text, 'b'::text]));
+CREATE OR REPLACE FUNCTION public.get_portal_list_study_config(_list_id uuid) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$ SELECT jsonb_build_object('title', l.title, 'study_type', l.study_type, 'lang_a', l.lang_a, 'lang_b', l.lang_b, 'labels_a', l.labels_a, 'labels_b', l.labels_b, 'tts_enabled', l.tts_enabled, 'primary_side', l.primary_side) FROM public.lists l JOIN public.folders f ON f.id = l.folder_id JOIN public.profiles p ON p.id = f.owner_id WHERE l.id = _list_id AND l.deleted_at IS NULL AND f.deleted_at IS NULL AND l.visibility = 'class' AND f.visibility = 'class' AND COALESCE(p.public_access_enabled, false) = true LIMIT 1 $$;
