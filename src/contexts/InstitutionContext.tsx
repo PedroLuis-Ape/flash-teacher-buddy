@@ -49,38 +49,32 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
       .select("*")
       .eq("owner_id", ownerId)
       .order("created_at", { ascending: false });
-
     if (error) throw error;
     return Array.isArray(data) ? data : [];
   }, []);
 
   const restoreSavedSelection = useCallback((ownerId: string, available: Institution[]) => {
     const saved = migrateLegacyInstitution(ownerId) ?? readPersistedInstitution(ownerId);
-
     if (!saved) {
       writePersistedInstitution(ownerId, null);
       setSelectedInstitutionRaw(null);
       return;
     }
-
     if (saved.institutionId === null) {
       setSelectedInstitutionRaw(null);
       return;
     }
-
     const found = available.find((institution) => institution.id === saved.institutionId);
     if (found) {
       setSelectedInstitutionRaw(found);
       return;
     }
-
     writePersistedInstitution(ownerId, null);
     setSelectedInstitutionRaw(null);
   }, []);
 
   const refreshInstitutions = useCallback(async () => {
     if (!userId || status !== "authenticated") return;
-
     setLoading(true);
     try {
       const list = await fetchInstitutions(userId);
@@ -100,13 +94,11 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         .update({ institution_id: null })
         .eq("institution_id", id);
       if (updateError) throw updateError;
-
       const { error: deleteError } = await supabase
         .from("institutions")
         .delete()
         .eq("id", id);
       if (deleteError) throw deleteError;
-
       setInstitutions((previous) => previous.filter((institution) => institution.id !== id));
       if (selectedInstitution?.id === id) setSelectedInstitution(null);
     } catch (error) {
@@ -117,11 +109,9 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status === "initializing") return;
-
     if (status === "authenticated" && userId) {
       let cancelled = false;
       setLoading(true);
-
       fetchInstitutions(userId)
         .then((list) => {
           if (cancelled) return;
@@ -134,18 +124,70 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         .finally(() => {
           if (!cancelled) setLoading(false);
         });
-
-      return () => {
-        cancelled = true;
-      };
+      return () => { cancelled = true; };
     }
-
     if (status === "anonymous") {
       setInstitutions([]);
       setSelectedInstitutionRaw(null);
       setLoading(false);
     }
   }, [fetchInstitutions, restoreSavedSelection, status, userId]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !userId) return;
+    let cancelled = false;
+
+    const syncVisibleCounts = async () => {
+      const institutionId = selectedInstitution?.id ?? null;
+      let foldersQuery = supabase
+        .from("folders")
+        .select("title, lists(id, deleted_at)")
+        .eq("owner_id", userId)
+        .is("class_id", null)
+        .is("deleted_at", null);
+      foldersQuery = institutionId
+        ? foldersQuery.eq("institution_id", institutionId)
+        : foldersQuery.is("institution_id", null);
+
+      const [{ data: folders }, countsResult] = await Promise.all([
+        foldersQuery,
+        supabase.rpc("get_user_card_counts", {
+          _user_id: userId,
+          _institution_id: institutionId,
+        }),
+      ]);
+      if (cancelled) return;
+
+      const perList = new Map<string, number>();
+      for (const row of (Array.isArray(countsResult.data) ? countsResult.data : []) as any[]) {
+        const count = Number(row?.card_count);
+        if (typeof row?.list_id === "string") {
+          perList.set(row.list_id, Number.isFinite(count) ? count : 0);
+        }
+      }
+
+      const totals = new Map<string, { lists: number; cards: number }>();
+      for (const folder of (folders ?? []) as any[]) {
+        const lists = (folder.lists ?? []).filter((list: any) => list?.deleted_at == null);
+        totals.set(folder.title, {
+          lists: lists.length,
+          cards: lists.reduce((sum: number, list: any) => sum + (perList.get(list.id) ?? 0), 0),
+        });
+      }
+
+      document.querySelectorAll<HTMLElement>(".space-ui-folder-card").forEach((card) => {
+        const title = card.querySelector<HTMLElement>(".ape-card-title")?.textContent?.trim();
+        if (!title) return;
+        const total = totals.get(title);
+        const subtitle = card.querySelector<HTMLElement>("p.text-muted-foreground");
+        if (!total || !subtitle) return;
+        subtitle.textContent = `${total.lists} ${total.lists === 1 ? "lista" : "listas"} • ${total.cards} ${total.cards === 1 ? "card" : "cards"}`;
+      });
+    };
+
+    void syncVisibleCounts();
+    return () => { cancelled = true; };
+  }, [libraryRevision, selectedInstitution?.id, status, userId]);
 
   const contextValue = useMemo(() => ({
     selectedInstitution,
@@ -166,9 +208,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
 
 export function useInstitution() {
   const context = useContext(InstitutionContext);
-  if (context === undefined) {
-    throw new Error("useInstitution must be used within InstitutionProvider");
-  }
+  if (context === undefined) throw new Error("useInstitution must be used within InstitutionProvider");
   return context;
 }
 
