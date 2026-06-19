@@ -1,16 +1,6 @@
 /**
- * AuthContext — Single source of truth for authentication lifecycle.
- *
- * Phase 1 (Clara Master): centralizes the Supabase auth subscription that
- * was previously scattered across SessionWatcher / useAuthUser. Exposes a
- * discrete `status` ('initializing' | 'authenticated' | 'anonymous' | 'error')
- * so consumers (route guard, EconomyInitializer, etc.) can wait for a
- * *confirmed* auth state instead of guessing from cached/optimistic data.
- *
- * Non-goals (do NOT add here):
- *   - route navigation (lives in SessionWatcher)
- *   - economy side-effects (lives in EconomyInitializer)
- *   - data fetching (use React Query keyed by userId)
+ * AuthContext — single source of truth for the authentication lifecycle.
+ * Route navigation stays in SessionWatcher; data fetching stays in hooks.
  */
 import {
   createContext,
@@ -37,28 +27,29 @@ interface AuthContextValue {
   session: Session | null;
   userId: string | undefined;
   accessToken: string | undefined;
-  /** True until the first auth event has been processed. */
   initializing: boolean;
   error: Error | null;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-/** Sync optimistic read of the persisted Supabase session (no network). */
+/**
+ * Synchronous optimistic read of the session persisted by Supabase.
+ * An expired access token is still useful here when a refresh token exists:
+ * Supabase will renew it during hydration. Rejecting it early causes the login
+ * screen to flash and legacy pages to conclude that the user signed out.
+ */
 function readPersistedSession(): Session | null {
   try {
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-    if (!SUPABASE_URL) return null;
-    const ref = new URL(SUPABASE_URL).hostname.split(".")[0];
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) return null;
+    const ref = new URL(supabaseUrl).hostname.split(".")[0];
     const raw = localStorage.getItem(`sb-${ref}-auth-token`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    const session: Session | null = parsed?.currentSession ?? parsed ?? null;
-    if (!session?.user?.id || !session?.access_token) return null;
-    if (session.expires_at && session.expires_at * 1000 < Date.now() - 60_000) {
-      return null;
-    }
-    return session;
+    const persisted: Session | null = parsed?.currentSession ?? parsed ?? null;
+    if (!persisted?.user?.id || !persisted?.refresh_token) return null;
+    return persisted;
   } catch {
     return null;
   }
@@ -67,7 +58,6 @@ function readPersistedSession(): Session | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const optimistic = useRef<Session | null>(readPersistedSession());
-
   const [session, setSession] = useState<Session | null>(optimistic.current);
   const [status, setStatus] = useState<AuthStatus>("initializing");
   const [error, setError] = useState<Error | null>(null);
@@ -75,58 +65,96 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    // Single subscription for the whole app. SessionWatcher used to own
-    // this; we centralize it here so every consumer agrees on auth state.
+    const syncQueryCache = (nextSession: Session | null) => {
+      queryClient.setQueryData(["auth-user"], {
+        user: nextSession?.user ?? null,
+        session: nextSession,
+      });
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
         if (cancelled) return;
-        setSession(nextSession ?? null);
-        setStatus(nextSession ? "authenticated" : "anonymous");
-        setError(null);
-
-        // Keep React Query's ['auth-user'] cache in sync for legacy hooks.
-        queryClient.setQueryData(["auth-user"], {
-          user: nextSession?.user ?? null,
-          session: nextSession ?? null,
-        });
 
         if (event === "SIGNED_OUT") {
-          // Clear data-bearing queries so stale rows don't leak between users.
+          optimistic.current = null;
+          setSession(null);
+          setStatus("anonymous");
+          setError(null);
           queryClient.clear();
+          return;
         }
+
+        if (nextSession) {
+          optimistic.current = nextSession;
+          setSession(nextSession);
+          setStatus("authenticated");
+          setError(null);
+          syncQueryCache(nextSession);
+          return;
+        }
+
+        // INITIAL_SESSION may arrive before the persisted refresh finishes.
+        // Keep the optimistic identity until getSession() confirms the result.
+        if (event === "INITIAL_SESSION" && optimistic.current) {
+          setSession(optimistic.current);
+          setStatus("initializing");
+          return;
+        }
+
+        setSession(null);
+        setStatus("anonymous");
+        setError(null);
+        syncQueryCache(null);
       },
     );
 
-    // Confirm the persisted session against the server. Optimistic state
-    // is only a hint — `status` only resolves once getSession() returns.
     supabase.auth
       .getSession()
-      .then(({ data, error: err }) => {
+      .then(({ data, error: hydrationError }) => {
         if (cancelled) return;
-        if (err) {
-          setStatus("error");
-          setError(err);
+
+        if (hydrationError) {
+          setError(hydrationError);
+          if (optimistic.current) {
+            // Network or refresh outages must not masquerade as logout.
+            setSession(optimistic.current);
+            setStatus("authenticated");
+            syncQueryCache(optimistic.current);
+          } else {
+            setStatus("error");
+          }
           return;
         }
+
         const next = data.session ?? null;
+        optimistic.current = next;
         setSession(next);
         setStatus(next ? "authenticated" : "anonymous");
-        queryClient.setQueryData(["auth-user"], {
-          user: next?.user ?? null,
-          session: next,
-        });
+        setError(null);
+        syncQueryCache(next);
       })
-      .catch((err) => {
+      .catch((unknownError) => {
         if (cancelled) return;
-        setStatus("error");
-        setError(err instanceof Error ? err : new Error(String(err)));
+        const normalized = unknownError instanceof Error
+          ? unknownError
+          : new Error(String(unknownError));
+        setError(normalized);
+
+        if (optimistic.current) {
+          setSession(optimistic.current);
+          setStatus("authenticated");
+          syncQueryCache(optimistic.current);
+        } else {
+          setStatus("error");
+        }
       });
 
     return () => {
       cancelled = true;
       subscription.unsubscribe();
     };
-    // queryClient is stable; we deliberately mount exactly once.
+    // queryClient is stable; mount exactly once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -147,9 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    // Defensive fallback for trees rendered outside the provider (tests).
+  const context = useContext(AuthContext);
+  if (!context) {
     return {
       status: "initializing",
       user: null,
@@ -160,5 +187,5 @@ export function useAuth(): AuthContextValue {
       error: null,
     };
   }
-  return ctx;
+  return context;
 }
