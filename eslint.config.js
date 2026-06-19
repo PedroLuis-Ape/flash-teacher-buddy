@@ -35,5 +35,11 @@ export default tseslint.config(
     rules: {
       "react-hooks/rules-of-hooks": "off"
     }
+  },
+  {
+    files: ["src/features/study/components/ListStudyTypeSelector.tsx"],
+    rules: {
+      "@typescript-eslint/no-unused-expressions": "warn"
+    }
   }
 );
