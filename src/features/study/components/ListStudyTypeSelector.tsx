@@ -1,22 +1,23 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
+import { ArrowRightLeft, BookOpen, Calculator, Image, Volume2, VolumeX } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ArrowRightLeft, Volume2, VolumeX, BookOpen, Calculator, Image } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { STUDY_TYPE_CONFIG, supportsTTS } from "@/features/study/lib/studyTypeConfig";
-import {
-  SUPPORTED_LANGUAGES,
-  getLangLabel,
-  normalizeLangCode,
-} from "@/features/study/lib/languages";
+import { SUPPORTED_LANGUAGES, getLangLabel, normalizeLangCode } from "@/features/study/lib/languages";
+import { persistListPrimarySideFromCurrentRoute } from "@/lib/loadListPrimarySide";
 import { useListPrimarySide } from "@/lib/useListPrimarySide";
 
 const LANGUAGES = [
-  ...SUPPORTED_LANGUAGES.map((l) => ({ code: l.code, name: l.label, flag: l.flag })),
+  ...SUPPORTED_LANGUAGES.map((language) => ({
+    code: language.code,
+    name: language.label,
+    flag: language.flag,
+  })),
   { code: "other", name: "Outro...", flag: "🌍" },
 ];
 
@@ -35,369 +36,206 @@ interface ListStudyTypeSelectorProps {
   onChange: (settings: ListStudySettings) => void;
 }
 
-function getLanguageName(code: string): string {
-  return getLangLabel(code);
-}
-
-const STUDY_TYPE_ICONS: Record<string, React.ReactNode> = {
+const STUDY_TYPE_ICONS: Record<string, ReactNode> = {
   language: <Volume2 className="h-4 w-4" />,
   general: <BookOpen className="h-4 w-4" />,
   math: <Calculator className="h-4 w-4" />,
   visual: <Image className="h-4 w-4" />,
 };
 
+const languageName = (code: string) => getLangLabel(code);
+
 export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelectorProps) {
   const { id } = useParams();
   const showPrimarySide = window.location.pathname.startsWith("/list/");
-  const { side: savedPrimarySide, loading: primarySideLoading } = useListPrimarySide(showPrimarySide ? id || null : null);
-  const primaryHydratedRef = useRef(false);
+  const { side: savedPrimarySide, loading: primarySideLoading } = useListPrimarySide(
+    showPrimarySide ? id || null : null,
+  );
+  const hydratedListRef = useRef<string | null>(null);
   const [customLangA, setCustomLangA] = useState("");
   const [customLangB, setCustomLangB] = useState("");
   const [showCustomA, setShowCustomA] = useState(false);
   const [showCustomB, setShowCustomB] = useState(false);
 
   useEffect(() => {
-    if (value.langA && !LANGUAGES.find(l => l.code === value.langA)) {
+    const knownA = LANGUAGES.some((language) => language.code === value.langA);
+    const knownB = LANGUAGES.some((language) => language.code === value.langB);
+    if (value.langA && !knownA) {
       setCustomLangA(value.langA);
       setShowCustomA(true);
     }
-    if (value.langB && !LANGUAGES.find(l => l.code === value.langB)) {
+    if (value.langB && !knownB) {
       setCustomLangB(value.langB);
       setShowCustomB(true);
     }
   }, [value.langA, value.langB]);
 
   useEffect(() => {
-    primaryHydratedRef.current = false;
-  }, [id]);
-
-  useEffect(() => {
-    if (!showPrimarySide || primarySideLoading || primaryHydratedRef.current) return;
-    primaryHydratedRef.current = true;
-    if ((value.primarySide === "b" ? "b" : "a") !== savedPrimarySide) {
+    if (!showPrimarySide || !id || primarySideLoading || hydratedListRef.current === id) return;
+    hydratedListRef.current = id;
+    const currentSide = value.primarySide === "b" ? "b" : "a";
+    if (currentSide !== savedPrimarySide) {
       onChange({ ...value, primarySide: savedPrimarySide });
     }
-  }, [onChange, primarySideLoading, savedPrimarySide, showPrimarySide, value]);
+  }, [id, onChange, primarySideLoading, savedPrimarySide, showPrimarySide, value]);
 
   const primarySide = value.primarySide === "b" ? "b" : "a";
   const isLanguageMode = value.studyType === "language";
   const hasTTS = supportsTTS(value.studyType);
+  const update = (patch: Partial<ListStudySettings>) => onChange({ ...value, ...patch });
 
-  const handleStudyTypeChange = (newType: string) => {
-    const config = STUDY_TYPE_CONFIG[newType];
+  const handleStudyTypeChange = (studyType: string) => {
+    const config = STUDY_TYPE_CONFIG[studyType];
     if (!config) return;
-
-    if (newType === "language") {
-      onChange({
-        ...value,
+    if (studyType === "language") {
+      update({
         studyType: "language",
         ttsEnabled: true,
-        labelsA: getLanguageName(value.langA || "en"),
-        labelsB: getLanguageName(value.langB || "pt"),
+        labelsA: languageName(value.langA || "en"),
+        labelsB: languageName(value.langB || "pt"),
       });
+      return;
+    }
+    update({
+      studyType: studyType as ListStudySettings["studyType"],
+      ttsEnabled: studyType === "visual" ? false : value.ttsEnabled,
+      labelsA: config.defaultLabelA,
+      labelsB: config.defaultLabelB,
+    });
+  };
+
+  const chooseLanguage = (side: "a" | "b", code: string) => {
+    if (code === "other") {
+      side === "a" ? setShowCustomA(true) : setShowCustomB(true);
+      return;
+    }
+    if (side === "a") {
+      setShowCustomA(false);
+      update({ langA: code, labelsA: languageName(code) });
     } else {
-      onChange({
-        ...value,
-        studyType: newType as ListStudySettings["studyType"],
-        ttsEnabled: newType === "visual" ? false : value.ttsEnabled,
-        labelsA: config.defaultLabelA,
-        labelsB: config.defaultLabelB,
-      });
+      setShowCustomB(false);
+      update({ langB: code, labelsB: languageName(code) });
     }
   };
 
-  const handleLangAChange = (code: string) => {
-    if (code === "other") {
-      setShowCustomA(true);
-      return;
+  const updateCustomLanguage = (side: "a" | "b", rawValue: string) => {
+    const normalized = normalizeLangCode(rawValue);
+    if (side === "a") {
+      setCustomLangA(rawValue);
+      update({ langA: normalized, labelsA: getLangLabel(normalized) || rawValue.trim() });
+    } else {
+      setCustomLangB(rawValue);
+      update({ langB: normalized, labelsB: getLangLabel(normalized) || rawValue.trim() });
     }
-    setShowCustomA(false);
-    onChange({
-      ...value,
-      langA: code,
-      labelsA: getLanguageName(code),
-    });
   };
 
-  const handleLangBChange = (code: string) => {
-    if (code === "other") {
-      setShowCustomB(true);
-      return;
-    }
-    setShowCustomB(false);
-    onChange({
-      ...value,
-      langB: code,
-      labelsB: getLanguageName(code),
-    });
-  };
-
-  const handleCustomLangA = (customCode: string) => {
-    setCustomLangA(customCode);
-    const normalized = normalizeLangCode(customCode);
-    onChange({
-      ...value,
-      langA: normalized,
-      labelsA: getLangLabel(normalized) || customCode.trim(),
-    });
-  };
-
-  const handleCustomLangB = (customCode: string) => {
-    setCustomLangB(customCode);
-    const normalized = normalizeLangCode(customCode);
-    onChange({
-      ...value,
-      langB: normalized,
-      labelsB: getLangLabel(normalized) || customCode.trim(),
-    });
-  };
-
-  const handleSwapLanguages = () => {
-    onChange({
-      ...value,
+  const swapLanguages = () => {
+    update({
       langA: value.langB,
       langB: value.langA,
       labelsA: value.labelsB,
       labelsB: value.labelsA,
     });
-    const tempCustom = customLangA;
     setCustomLangA(customLangB);
-    setCustomLangB(tempCustom);
-    const tempShow = showCustomA;
+    setCustomLangB(customLangA);
     setShowCustomA(showCustomB);
-    setShowCustomB(tempShow);
+    setShowCustomB(showCustomA);
+  };
+
+  const renderLanguageSelector = (side: "a" | "b") => {
+    const custom = side === "a" ? customLangA : customLangB;
+    const showCustom = side === "a" ? showCustomA : showCustomB;
+    const language = side === "a" ? value.langA : value.langB;
+    const resetLanguage = side === "a" ? "en" : "pt";
+
+    if (showCustom) {
+      return (
+        <div className="flex gap-2">
+          <Input
+            value={custom}
+            onChange={(event) => updateCustomLanguage(side, event.target.value)}
+            placeholder={side === "a" ? "Ex: Japonês" : "Ex: Coreano"}
+            className="h-10"
+          />
+          <Button type="button" variant="ghost" size="sm" onClick={() => chooseLanguage(side, resetLanguage)}>
+            ✕
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <Select value={language} onValueChange={(code) => chooseLanguage(side, code)}>
+        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {LANGUAGES.map((item) => (
+            <SelectItem key={item.code} value={item.code}>{item.flag} {item.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
   };
 
   return (
     <div className="space-y-4">
-      <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+      <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
         <Label className="font-medium">Tipo de Estudo</Label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {Object.entries(STUDY_TYPE_CONFIG).map(([key, config]) => (
-            <Button
-              key={key}
-              type="button"
-              variant={value.studyType === key ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleStudyTypeChange(key)}
-              className="flex items-center gap-2 justify-start"
-            >
-              {STUDY_TYPE_ICONS[key]}
-              <span className="text-xs">{config.label}</span>
+            <Button key={key} type="button" variant={value.studyType === key ? "default" : "outline"} size="sm" onClick={() => handleStudyTypeChange(key)} className="flex items-center justify-start gap-2">
+              {STUDY_TYPE_ICONS[key]}<span className="text-xs">{config.label}</span>
             </Button>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {STUDY_TYPE_CONFIG[value.studyType]?.description}
-        </p>
+        <p className="text-xs text-muted-foreground">{STUDY_TYPE_CONFIG[value.studyType]?.description}</p>
       </div>
 
       {showPrimarySide && (
-        <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
           <div>
             <Label className="font-medium">Lado principal da lista</Label>
-            <p className="text-xs text-muted-foreground mt-1">
-              Define qual lado aparece primeiro nos jogos. Não altera o conteúdo dos cards.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Define qual lado aparece primeiro nos jogos. Não altera o conteúdo dos cards.</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={primarySide === "a" ? "default" : "outline"}
-              onClick={() => onChange({ ...value, primarySide: "a" })}
-              className="h-auto min-h-12 flex-col gap-0.5"
-            >
-              <span>{value.labelsA || "Lado A"}</span>
-              <span className="text-[10px] opacity-80">Lado A{primarySide === "a" ? " • Principal" : ""}</span>
-            </Button>
-            <Button
-              type="button"
-              variant={primarySide === "b" ? "default" : "outline"}
-              onClick={() => onChange({ ...value, primarySide: "b" })}
-              className="h-auto min-h-12 flex-col gap-0.5"
-            >
-              <span>{value.labelsB || "Lado B"}</span>
-              <span className="text-[10px] opacity-80">Lado B{primarySide === "b" ? " • Principal" : ""}</span>
-            </Button>
+            {(["a", "b"] as const).map((side) => {
+              const label = side === "a" ? value.labelsA || "Lado A" : value.labelsB || "Lado B";
+              return (
+                <Button key={side} type="button" variant={primarySide === side ? "default" : "outline"} onClick={() => update({ primarySide: side })} className="h-auto min-h-12 flex-col gap-0.5">
+                  <span>{label}</span>
+                  <span className="text-[10px] opacity-80">Lado {side.toUpperCase()}{primarySide === side ? " • Principal" : ""}</span>
+                </Button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {isLanguageMode && (
-        <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
-          <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-end">
-            <div className="space-y-2">
-              <Label className="text-sm">Idioma do Lado A</Label>
-              {showCustomA ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={customLangA}
-                    onChange={(e) => handleCustomLangA(e.target.value)}
-                    placeholder="Ex: Japonês"
-                    className="h-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowCustomA(false);
-                      handleLangAChange("en");
-                    }}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ) : (
-                <Select value={value.langA} onValueChange={handleLangAChange}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.flag} {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleSwapLanguages}
-              className="mb-0.5"
-              title="Inverter A ↔ B"
-            >
-              <ArrowRightLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="space-y-2">
-              <Label className="text-sm">Idioma do Lado B</Label>
-              {showCustomB ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={customLangB}
-                    onChange={(e) => handleCustomLangB(e.target.value)}
-                    placeholder="Ex: Coreano"
-                    className="h-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowCustomB(false);
-                      handleLangBChange("pt");
-                    }}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ) : (
-                <Select value={value.langB} onValueChange={handleLangBChange}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.flag} {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
+      {isLanguageMode ? (
+        <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+          <div className="grid grid-cols-[1fr,auto,1fr] items-end gap-3">
+            <div className="space-y-2"><Label className="text-sm">Idioma do Lado A</Label>{renderLanguageSelector("a")}</div>
+            <Button type="button" variant="ghost" size="icon" onClick={swapLanguages} title="Inverter A ↔ B"><ArrowRightLeft className="h-4 w-4" /></Button>
+            <div className="space-y-2"><Label className="text-sm">Idioma do Lado B</Label>{renderLanguageSelector("b")}</div>
           </div>
-
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div className="flex items-center gap-2">
-              {value.ttsEnabled ? (
-                <Volume2 className="h-4 w-4 text-primary" />
-              ) : (
-                <VolumeX className="h-4 w-4 text-muted-foreground" />
-              )}
-              <Label htmlFor="tts-toggle" className="cursor-pointer">
-                Ativar áudio (TTS)
-              </Label>
-            </div>
-            <Switch
-              id="tts-toggle"
-              checked={value.ttsEnabled}
-              onCheckedChange={(checked) => onChange({ ...value, ttsEnabled: checked })}
-            />
+          <div className="flex items-center justify-between border-t pt-2">
+            <div className="flex items-center gap-2">{value.ttsEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}<Label htmlFor="tts-toggle" className="cursor-pointer">Ativar áudio (TTS)</Label></div>
+            <Switch id="tts-toggle" checked={value.ttsEnabled} onCheckedChange={(checked) => update({ ttsEnabled: checked })} />
           </div>
-
-          <div className="text-xs text-muted-foreground pt-2">
-            Lados: <strong>A · {value.labelsA || getLanguageName(value.langA)}</strong>
-            {" | "}
-            <strong>B · {value.labelsB || getLanguageName(value.langB)}</strong>
-            {showPrimarySide && (
-              <span className="ml-2 text-primary font-semibold">
-                Principal: {primarySide === "b" ? value.labelsB : value.labelsA}
-              </span>
-            )}
-          </div>
+          <div className="pt-2 text-xs text-muted-foreground">Lados: <strong>A · {value.labelsA || languageName(value.langA)}</strong>{" | "}<strong>B · {value.labelsB || languageName(value.langB)}</strong>{showPrimarySide && <span className="ml-2 font-semibold text-primary">Principal: {primarySide === "b" ? value.labelsB : value.labelsA}</span>}</div>
         </div>
-      )}
-
-      {!isLanguageMode && (
-        <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
-          <div className="flex items-center gap-2">
-            {STUDY_TYPE_ICONS[value.studyType]}
-            <Badge variant="secondary">{STUDY_TYPE_CONFIG[value.studyType]?.label}</Badge>
+      ) : (
+        <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+          <div className="flex items-center gap-2">{STUDY_TYPE_ICONS[value.studyType]}<Badge variant="secondary">{STUDY_TYPE_CONFIG[value.studyType]?.label}</Badge></div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label className="text-sm">Label do Lado A</Label><Input value={value.labelsA} onChange={(event) => update({ labelsA: event.target.value })} placeholder="Frente" className="h-10" /></div>
+            <div className="space-y-2"><Label className="text-sm">Label do Lado B</Label><Input value={value.labelsB} onChange={(event) => update({ labelsB: event.target.value })} placeholder="Verso" className="h-10" /></div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Label do Lado A</Label>
-              <Input
-                value={value.labelsA}
-                onChange={(e) => onChange({ ...value, labelsA: e.target.value })}
-                placeholder="Frente"
-                className="h-10"
-              />
+          {hasTTS ? (
+            <div className="flex items-center justify-between border-t pt-2">
+              <div className="flex items-center gap-2">{value.ttsEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}<Label htmlFor="tts-toggle-general" className="cursor-pointer">Ativar áudio (TTS)</Label></div>
+              <Switch id="tts-toggle-general" checked={value.ttsEnabled} onCheckedChange={(checked) => update({ ttsEnabled: checked })} />
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm">Label do Lado B</Label>
-              <Input
-                value={value.labelsB}
-                onChange={(e) => onChange({ ...value, labelsB: e.target.value })}
-                placeholder="Verso"
-                className="h-10"
-              />
-            </div>
-          </div>
-
-          {hasTTS && (
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="flex items-center gap-2">
-                {value.ttsEnabled ? (
-                  <Volume2 className="h-4 w-4 text-primary" />
-                ) : (
-                  <VolumeX className="h-4 w-4 text-muted-foreground" />
-                )}
-                <Label htmlFor="tts-toggle-general" className="cursor-pointer">
-                  Ativar áudio (TTS)
-                </Label>
-              </div>
-              <Switch
-                id="tts-toggle-general"
-                checked={value.ttsEnabled}
-                onCheckedChange={(checked) => onChange({ ...value, ttsEnabled: checked })}
-              />
-            </div>
-          )}
-
-          {!hasTTS && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
-              <VolumeX className="h-4 w-4" />
-              Este modo não suporta áudio.
-            </div>
-          )}
+          ) : <div className="flex items-center gap-2 border-t pt-2 text-sm text-muted-foreground"><VolumeX className="h-4 w-4" /> Este modo não suporta áudio.</div>}
         </div>
       )}
     </div>
@@ -405,44 +243,26 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
 }
 
 export function getDefaultListStudySettings(): ListStudySettings {
-  return {
-    studyType: "language",
-    langA: "en",
-    langB: "pt",
-    labelsA: "English",
-    labelsB: "Português",
-    ttsEnabled: true,
-    primarySide: "a",
-  };
+  return { studyType: "language", langA: "en", langB: "pt", labelsA: "English", labelsB: "Português", ttsEnabled: true, primarySide: "a" };
 }
 
-export function listRowToSettings(row: {
-  study_type?: string | null;
-  lang_a?: string | null;
-  lang_b?: string | null;
-  labels_a?: string | null;
-  labels_b?: string | null;
-  tts_enabled?: boolean | null;
-  primary_side?: string | null;
-}): ListStudySettings {
-  const studyType = (["language", "general", "math", "visual"].includes(row.study_type || "")
-    ? row.study_type
-    : "language") as ListStudySettings["studyType"];
+export function listRowToSettings(row: { study_type?: string | null; lang_a?: string | null; lang_b?: string | null; labels_a?: string | null; labels_b?: string | null; tts_enabled?: boolean | null; primary_side?: string | null }): ListStudySettings {
+  const studyType = (["language", "general", "math", "visual"].includes(row.study_type || "") ? row.study_type : "language") as ListStudySettings["studyType"];
   const langA = row.lang_a || "en";
   const langB = row.lang_b || "pt";
-
   return {
     studyType,
     langA,
     langB,
-    labelsA: row.labels_a || (studyType === "language" ? getLanguageName(langA) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelA || "Frente"),
-    labelsB: row.labels_b || (studyType === "language" ? getLanguageName(langB) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelB || "Verso"),
-    ttsEnabled: row.tts_enabled ?? (studyType === "language"),
+    labelsA: row.labels_a || (studyType === "language" ? languageName(langA) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelA || "Frente"),
+    labelsB: row.labels_b || (studyType === "language" ? languageName(langB) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelB || "Verso"),
+    ttsEnabled: row.tts_enabled ?? studyType === "language",
     primarySide: row.primary_side === "b" ? "b" : "a",
   };
 }
 
 export function settingsToDbColumns(settings: ListStudySettings) {
+  persistListPrimarySideFromCurrentRoute(settings.primarySide);
   return {
     study_type: settings.studyType,
     lang_a: settings.langA,
@@ -450,6 +270,5 @@ export function settingsToDbColumns(settings: ListStudySettings) {
     labels_a: settings.labelsA,
     labels_b: settings.labelsB,
     tts_enabled: settings.ttsEnabled,
-    primary_side: settings.primarySide === "b" ? "b" : "a",
   };
 }
