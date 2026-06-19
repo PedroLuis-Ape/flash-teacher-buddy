@@ -7,6 +7,13 @@ on:
       - fix-supabase-v2-alignment
     paths:
       - ".github/workflows/deploy-supabase-v2.yml"
+      - "supabase/migrations/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-supabase-v2.yml"
+      - "supabase/migrations/**"
 
 permissions:
   contents: read
