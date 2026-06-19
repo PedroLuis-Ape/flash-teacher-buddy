@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
+type ListWithPrimary = { primary_side?: string };
+
 export async function loadListPrimarySide(listId: string): Promise<"a" | "b"> {
-  const result = await supabase.from("lists").select("primary_side").eq("id", listId).maybeSingle();
-  return (result.data as { primary_side?: string } | null)?.primary_side === "b" ? "b" : "a";
+  const result = await supabase.from("lists").select("*").eq("id", listId).maybeSingle();
+  const row = result.data as ListWithPrimary | null;
+  return row?.primary_side === "b" ? "b" : "a";
 }
