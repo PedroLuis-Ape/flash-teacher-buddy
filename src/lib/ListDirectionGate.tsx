@@ -1,2 +1,9 @@
-import type { ReactNode } from "react";
-export const ListDirectionGate = ({ children }: { children: ReactNode }) => <>{children}</>;
+import { useEffect, useState, type ReactNode } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { loadListPrimarySide } from "./loadListPrimarySide";
+import { loadPublicSide } from "./loadPublicSide";
+import { primarySideToDirection } from "./primarySideDirection";
+
+export function ListDirectionGate({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}
