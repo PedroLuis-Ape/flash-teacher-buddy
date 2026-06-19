@@ -1,13 +1,10 @@
 /**
- * glossaryMerge — Merges global list glossary with per-card manual word hints.
- *
- * Rules:
- * 1. Global glossary entries and manual card hints are COMPLEMENTARY by default.
- * 2. If a manual hint has `suppressGlobal: true`, global hints for the same text are hidden.
- * 3. Duplicate identical translations are deduplicated.
+ * Merges global list glossary entries with per-card manual hints.
+ * Entries are additive: shorter words and longer expressions coexist.
  */
 
 import type { WordHint } from "./wordHints";
+import { findGlossaryOccurrences } from "./glossaryLayers";
 
 export interface GlossaryItem {
   original_text: string;
@@ -18,25 +15,18 @@ export interface GlossaryItem {
 }
 
 export interface MergedHint {
-  /** The matched text in the source */
   text: string;
-  /** All translations to display (deduplicated) */
   translations: { text: string; note?: string; source: "global" | "manual" }[];
-  /** For segmentation: startIndex/endIndex from the manual hint if available */
   startIndex?: number;
   endIndex?: number;
 }
 
-/**
- * Extended WordHint with optional suppress flag for the UI.
- */
 export interface ExtendedWordHint extends WordHint {
   suppressGlobal?: boolean;
 }
 
-/**
- * Parse extended word hints from raw DB JSON.
- */
+const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+
 export function parseExtendedWordHints(raw: unknown): ExtendedWordHint[] {
   if (!raw || !Array.isArray(raw)) return [];
   return raw.filter(
@@ -46,136 +36,123 @@ export function parseExtendedWordHints(raw: unknown): ExtendedWordHint[] {
       typeof item.text === "string" &&
       item.text.trim().length > 0 &&
       typeof item.translation === "string" &&
-      item.translation.trim().length > 0
+      item.translation.trim().length > 0,
   );
 }
 
-/**
- * Merge global glossary entries with per-card manual hints for a given text.
- *
- * @param text - The text being rendered (e.g., the term or translation)
- * @param side - Which side this text is ("A" or "B")
- * @param glossary - Active global glossary items for this list
- * @param manualHints - Per-card word hints
- * @returns Array of MergedHint for rendering
- */
+function manualHintBelongsToSide(hint: ExtendedWordHint, side: "A" | "B") {
+  const hintSide = hint.side ?? "A";
+  return hintSide === side;
+}
+
 export function mergeGlossaryAndManual(
   text: string,
   side: "A" | "B",
   glossary: GlossaryItem[],
   manualHints: ExtendedWordHint[],
-  /** Optional: list language context for bidirectional glossary matching */
-  langContext?: { langA?: string; langB?: string }
+  _langContext?: { langA?: string; langB?: string },
 ): MergedHint[] {
   if (!text) return [];
 
-  const textLower = text.toLowerCase();
-
-  // Build a map: normalized original_text -> MergedHint
+  const relevantManual = manualHints.filter((hint) => manualHintBelongsToSide(hint, side));
   const hintMap = new Map<string, MergedHint>();
+  const suppressedTexts = new Set(
+    relevantManual
+      .filter((hint) => hint.suppressGlobal)
+      .map((hint) => normalize(hint.text)),
+  );
 
-  // Collect manual hints that suppress global
-  const suppressedTexts = new Set<string>();
-  for (const mh of manualHints) {
-    if (mh.suppressGlobal) {
-      suppressedTexts.add(mh.text.toLowerCase());
-    }
-  }
-
-  // 1. Add global glossary entries — bidirectional matching
-  // When rendering side A text, match glossary entries where side="A" (original_text is in langA).
-  // When rendering side B text, match glossary entries where side="A" BUT use translated_text as the lookup
-  // and original_text as the hint. Also match side="B" entries normally.
-  for (const g of glossary) {
-    if (!g.is_active) continue;
+  for (const entry of glossary) {
+    if (!entry.is_active) continue;
 
     let matchText: string;
     let hintText: string;
     let displayText: string;
 
-    if (side === "A" && g.side === "A") {
-      // Rendering side A text, glossary side A: original_text matches term, show translated_text
-      matchText = g.original_text.toLowerCase();
-      hintText = g.translated_text.trim();
-      displayText = g.original_text;
-    } else if (side === "B" && g.side === "A") {
-      // Rendering side B text, glossary side A: translated_text matches translation, show original_text
-      matchText = g.translated_text.toLowerCase();
-      hintText = g.original_text.trim();
-      displayText = g.translated_text;
-    } else if (side === "B" && g.side === "B") {
-      // Rendering side B text, glossary side B: original_text matches, show translated_text
-      matchText = g.original_text.toLowerCase();
-      hintText = g.translated_text.trim();
-      displayText = g.original_text;
-    } else if (side === "A" && g.side === "B") {
-      // Rendering side A text, glossary side B: translated_text matches, show original_text
-      matchText = g.translated_text.toLowerCase();
-      hintText = g.original_text.trim();
-      displayText = g.translated_text;
+    if (side === "A" && entry.side === "A") {
+      matchText = entry.original_text;
+      hintText = entry.translated_text.trim();
+      displayText = entry.original_text;
+    } else if (side === "B" && entry.side === "A") {
+      matchText = entry.translated_text;
+      hintText = entry.original_text.trim();
+      displayText = entry.translated_text;
+    } else if (side === "B" && entry.side === "B") {
+      matchText = entry.original_text;
+      hintText = entry.translated_text.trim();
+      displayText = entry.original_text;
+    } else if (side === "A" && entry.side === "B") {
+      matchText = entry.translated_text;
+      hintText = entry.original_text.trim();
+      displayText = entry.translated_text;
     } else {
       continue;
     }
 
-    // Check if text contains the match text
-    if (!textLower.includes(matchText)) continue;
-    // Check if suppressed by a manual hint
-    if (suppressedTexts.has(matchText)) continue;
+    if (!matchText.trim() || !hintText) continue;
+    if (findGlossaryOccurrences(text, matchText).length === 0) continue;
 
-    if (!hintMap.has(matchText)) {
-      hintMap.set(matchText, {
-        text: displayText,
-        translations: [],
+    const key = normalize(matchText);
+    if (suppressedTexts.has(key)) continue;
+
+    const merged = hintMap.get(key) ?? {
+      text: displayText,
+      translations: [],
+    };
+    if (!merged.translations.some((translation) => translation.text === hintText && translation.source === "global")) {
+      merged.translations.push({
+        text: hintText,
+        note: entry.note || undefined,
+        source: "global",
       });
     }
-    const merged = hintMap.get(matchText)!;
-    if (!merged.translations.some((t) => t.text === hintText && t.source === "global")) {
-      merged.translations.push({ text: hintText, note: g.note || undefined, source: "global" });
-    }
+    hintMap.set(key, merged);
   }
 
-  // 2. Add manual hints
-  for (const mh of manualHints) {
-    const key = mh.text.toLowerCase();
-    // Manual hints are always added (they are context-specific)
-    if (!hintMap.has(key)) {
-      hintMap.set(key, {
-        text: mh.text,
-        translations: [],
-        startIndex: mh.startIndex,
-        endIndex: mh.endIndex,
+  for (const hint of relevantManual) {
+    if (findGlossaryOccurrences(text, hint.text).length === 0 && hint.startIndex === undefined) continue;
+    const key = normalize(hint.text);
+    const merged = hintMap.get(key) ?? {
+      text: hint.text,
+      translations: [],
+      startIndex: hint.startIndex,
+      endIndex: hint.endIndex,
+    };
+
+    if (hint.startIndex !== undefined) {
+      merged.startIndex = hint.startIndex;
+      merged.endIndex = hint.endIndex;
+    }
+
+    const translation = hint.translation.trim();
+    if (!merged.translations.some((item) => item.text === translation && item.source === "manual")) {
+      merged.translations.push({
+        text: translation,
+        note: hint.note || undefined,
+        source: "manual",
       });
     }
-    const merged = hintMap.get(key)!;
-    // Prefer manual indices
-    if (mh.startIndex !== undefined) {
-      merged.startIndex = mh.startIndex;
-      merged.endIndex = mh.endIndex;
-    }
-    const translation = mh.translation.trim();
-    if (!merged.translations.some((t) => t.text === translation)) {
-      merged.translations.push({ text: translation, note: mh.note || undefined, source: "manual" });
-    }
+    hintMap.set(key, merged);
   }
 
-  return Array.from(hintMap.values());
+  return Array.from(hintMap.values()).sort((a, b) => b.text.length - a.text.length || a.text.localeCompare(b.text));
 }
 
 /**
- * Convert MergedHint[] back to WordHint[] for use with segmentText().
- * Each MergedHint produces one WordHint with combined translation text.
+ * Compatibility adapter for callers that still expect WordHint objects.
  */
-export function mergedHintsToWordHints(merged: MergedHint[]): (WordHint & { _mergedTranslations?: MergedHint["translations"] })[] {
-  return merged.map((m) => ({
-    text: m.text,
-    // Primary translation for backwards compat
-    translation: m.translations.map((t) => t.text).join(" · "),
-    note: m.translations
-      .filter((t) => t.note)
-      .map((t) => t.note)
+export function mergedHintsToWordHints(
+  merged: MergedHint[],
+): (WordHint & { _mergedTranslations?: MergedHint["translations"] })[] {
+  return merged.map((hint) => ({
+    text: hint.text,
+    translation: hint.translations.map((translation) => translation.text).join(" · "),
+    note: hint.translations
+      .filter((translation) => translation.note)
+      .map((translation) => translation.note)
       .join("; ") || undefined,
-    startIndex: m.startIndex,
-    endIndex: m.endIndex,
-    _mergedTranslations: m.translations,
+    startIndex: hint.startIndex,
+    endIndex: hint.endIndex,
+    _mergedTranslations: hint.translations,
   }));
 }
