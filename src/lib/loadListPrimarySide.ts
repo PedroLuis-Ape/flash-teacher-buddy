@@ -26,8 +26,9 @@ function writeLocalListPrimarySide(listId: string, side: StoredPrimarySide) {
 
 export async function loadListPrimarySide(listId: string): Promise<StoredPrimarySide> {
   const localSide = readLocalListPrimarySide(listId);
-  const result = await supabase.from("lists").select("*").eq("id", listId).maybeSingle();
+  if (localSide) return localSide;
 
+  const result = await supabase.from("lists").select("*").eq("id", listId).maybeSingle();
   if (!result.error) {
     const remoteValue = (result.data as ListWithPrimarySide | null)?.primary_side;
     if (remoteValue === "a" || remoteValue === "b") {
@@ -36,7 +37,7 @@ export async function loadListPrimarySide(listId: string): Promise<StoredPrimary
     }
   }
 
-  return localSide ?? "a";
+  return "a";
 }
 
 export async function saveListPrimarySide(listId: string, side: StoredPrimarySide): Promise<void> {
