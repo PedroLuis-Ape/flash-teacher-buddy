@@ -1,0 +1,33 @@
+CREATE OR REPLACE FUNCTION public.get_portal_list_study_config(_list_id uuid)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'id', l.id,
+    'title', l.title,
+    'folder_id', l.folder_id,
+    'study_type', l.study_type,
+    'lang_a', l.lang_a,
+    'lang_b', l.lang_b,
+    'labels_a', l.labels_a,
+    'labels_b', l.labels_b,
+    'tts_enabled', l.tts_enabled,
+    'primary_side', CASE WHEN l.primary_side = 'b' THEN 'b' ELSE 'a' END
+  )
+  FROM public.lists l
+  JOIN public.folders f ON f.id = l.folder_id
+  JOIN public.profiles p ON p.id = f.owner_id
+  WHERE l.id = _list_id
+    AND l.deleted_at IS NULL
+    AND f.deleted_at IS NULL
+    AND l.visibility = 'class'
+    AND f.visibility = 'class'
+    AND COALESCE(p.public_access_enabled, false) = true
+  LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_portal_list_study_config(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_portal_list_study_config(uuid) TO anon, authenticated;
