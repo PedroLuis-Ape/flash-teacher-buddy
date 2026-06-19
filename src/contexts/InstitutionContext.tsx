@@ -1,8 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-
-const STORAGE_KEY = "selectedInstitutionId";
+import {
+  migrateLegacyInstitution,
+  readPersistedInstitution,
+  writePersistedInstitution,
+} from "@/lib/persistentStorage";
 
 interface Institution {
   id: string;
@@ -32,67 +35,65 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { userId, status } = useAuth();
 
-  // Single setter that always persists to localStorage
   const setSelectedInstitution = useCallback((institution: Institution | null) => {
     setSelectedInstitutionRaw(institution);
-    if (institution) {
-      localStorage.setItem(STORAGE_KEY, institution.id);
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
+    if (userId) writePersistedInstitution(userId, institution?.id ?? null);
+  }, [userId]);
 
-  const fetchInstitutions = useCallback(async (userId: string): Promise<Institution[]> => {
+  const fetchInstitutions = useCallback(async (ownerId: string): Promise<Institution[]> => {
     const { data, error } = await supabase
       .from("institutions")
       .select("*")
-      .eq("owner_id", userId)
+      .eq("owner_id", ownerId)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error loading institutions:", error);
-      return [];
-    }
+    if (error) throw error;
     return Array.isArray(data) ? data : [];
   }, []);
 
-  // Restore saved selection once institutions are available
-  const restoreSavedSelection = useCallback((available: Institution[]) => {
-    const savedId = localStorage.getItem(STORAGE_KEY);
-    if (savedId) {
-      const found = available.find((i) => i?.id === savedId);
-      if (found) {
-        setSelectedInstitutionRaw(found);
-      } else {
-        // Saved hub no longer exists — fall back to "all"
-        localStorage.removeItem(STORAGE_KEY);
-        setSelectedInstitutionRaw(null);
-      }
-    } else {
-      // "Todos (sem filtro)" was explicitly chosen or first load
+  const restoreSavedSelection = useCallback((ownerId: string, available: Institution[]) => {
+    const saved = migrateLegacyInstitution(ownerId) ?? readPersistedInstitution(ownerId);
+
+    if (!saved) {
+      // Persist the default explicitly. Missing storage and an intentional
+      // “Todos” selection must not remain indistinguishable forever.
+      writePersistedInstitution(ownerId, null);
       setSelectedInstitutionRaw(null);
+      return;
     }
+
+    if (saved.institutionId === null) {
+      setSelectedInstitutionRaw(null);
+      return;
+    }
+
+    const found = available.find((institution) => institution.id === saved.institutionId);
+    if (found) {
+      setSelectedInstitutionRaw(found);
+      return;
+    }
+
+    // The selected institution was removed or no longer belongs to this user.
+    writePersistedInstitution(ownerId, null);
+    setSelectedInstitutionRaw(null);
   }, []);
 
   const refreshInstitutions = useCallback(async () => {
-    // Consumes the canonical auth state — no extra getSession() call.
-    if (!userId) {
-      setInstitutions([]);
-      setLoading(false);
-      return;
-    }
+    if (!userId || status !== "authenticated") return;
+
+    setLoading(true);
     try {
-      setLoading(true);
       const list = await fetchInstitutions(userId);
       setInstitutions(list);
-      restoreSavedSelection(list);
+      restoreSavedSelection(userId, list);
     } catch (error) {
+      // Keep both the current selection and persisted preference on temporary
+      // network errors. Emptying them here used to look like lost persistence.
       console.error("Error loading institutions:", error);
-      setInstitutions([]);
     } finally {
       setLoading(false);
     }
-  }, [userId, fetchInstitutions, restoreSavedSelection]);
+  }, [fetchInstitutions, restoreSavedSelection, status, userId]);
 
   const deleteInstitution = useCallback(async (id: string) => {
     try {
@@ -108,38 +109,47 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
         .eq("id", id);
       if (deleteError) throw deleteError;
 
-      setInstitutions((prev) => prev.filter((i) => i.id !== id));
-      // If deleted hub was selected, fall back to "all"
-      const savedId = localStorage.getItem(STORAGE_KEY);
-      if (savedId === id) {
-        setSelectedInstitution(null);
-      }
+      setInstitutions((previous) => previous.filter((institution) => institution.id !== id));
+      if (selectedInstitution?.id === id) setSelectedInstitution(null);
     } catch (error) {
       console.error("Error deleting institution:", error);
       throw error;
     }
-  }, [setSelectedInstitution]);
+  }, [selectedInstitution?.id, setSelectedInstitution]);
 
-  // React to canonical auth state instead of owning a parallel subscription.
   useEffect(() => {
     if (status === "initializing") return;
+
     if (status === "authenticated" && userId) {
       let cancelled = false;
       setLoading(true);
+
       fetchInstitutions(userId)
         .then((list) => {
           if (cancelled) return;
           setInstitutions(list);
-          restoreSavedSelection(list);
+          restoreSavedSelection(userId, list);
         })
-        .finally(() => { if (!cancelled) setLoading(false); });
-      return () => { cancelled = true; };
+        .catch((error) => {
+          if (!cancelled) console.error("Error loading institutions:", error);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
     }
-    // anonymous or error — reset
-    setInstitutions([]);
-    setSelectedInstitutionRaw(null);
-    setLoading(false);
-  }, [status, userId, fetchInstitutions, restoreSavedSelection]);
+
+    // Remove private data from memory between accounts, but preserve each
+    // account's namespaced preference for its next login.
+    if (status === "anonymous") {
+      setInstitutions([]);
+      setSelectedInstitutionRaw(null);
+      setLoading(false);
+    }
+  }, [fetchInstitutions, restoreSavedSelection, status, userId]);
 
   const contextValue = useMemo(() => ({
     selectedInstitution,
