@@ -8,7 +8,6 @@ import {
   saveOfflineList,
   getOfflineList,
   removeOfflineList,
-  isListAvailableOffline,
   type OfflineListData,
 } from "@/lib/offlineStore";
 import { toast } from "sonner";
@@ -52,16 +51,14 @@ export function useOfflineStatus(listId: string | undefined) {
     if (!listId) return;
     setIsDownloading(true);
     try {
-      // Fetch list metadata
       const { data: listData, error: listErr } = await supabase
         .from("lists")
-        .select("title, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled, folder_id")
+        .select("*")
         .eq("id", listId)
         .maybeSingle();
 
       if (listErr || !listData) throw new Error("Falha ao buscar dados da lista");
 
-      // Fetch all flashcards
       const { data: cards, error: cardsErr } = await supabase
         .from("flashcards")
         .select("id, term, translation, hint, accepted_answers_en, accepted_answers_pt, image_url_a, image_url_b, word_hints")
@@ -70,7 +67,6 @@ export function useOfflineStatus(listId: string | undefined) {
 
       if (cardsErr) throw new Error("Falha ao buscar flashcards");
 
-      // Fetch favorites for this list
       const { data: { user } } = await supabase.auth.getUser();
       let favIds: string[] = [];
       if (user) {
@@ -86,17 +82,18 @@ export function useOfflineStatus(listId: string | undefined) {
         }
       }
 
+      const listRow = listData as typeof listData & { primary_side?: string };
       const offlineData: OfflineListData = {
         listId,
         listMeta: {
-          title: listData.title,
-          lang_a: listData.lang_a || "en",
-          lang_b: listData.lang_b || "pt",
-          labels_a: listData.labels_a || "Termo",
-          labels_b: listData.labels_b || "Definição",
-          study_type: listData.study_type || "language",
-          tts_enabled: listData.tts_enabled ?? true,
-          folder_id: listData.folder_id || undefined,
+          title: listRow.title,
+          lang_a: listRow.lang_a || "en",
+          lang_b: listRow.lang_b || "pt",
+          labels_a: listRow.labels_a || "Termo",
+          labels_b: listRow.labels_b || "Definição",
+          study_type: listRow.study_type || "language",
+          tts_enabled: listRow.tts_enabled ?? true,
+          folder_id: listRow.folder_id || undefined,
         },
         flashcards: cards || [],
         favorites: favIds,
@@ -104,8 +101,11 @@ export function useOfflineStatus(listId: string | undefined) {
         version: 1,
       };
 
+      (offlineData.listMeta as typeof offlineData.listMeta & { primary_side?: "a" | "b" }).primary_side =
+        listRow.primary_side === "b" ? "b" : "a";
+
       await saveOfflineList(offlineData);
-      toast.success(`"${listData.title}" disponível offline (${(cards || []).length} cards)`);
+      toast.success(`"${listRow.title}" disponível offline (${(cards || []).length} cards)`);
       await refresh();
     } catch (err: any) {
       console.error("Offline download error:", err);
