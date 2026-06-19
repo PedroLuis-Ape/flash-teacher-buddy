@@ -1,3 +1,4 @@
+// Final publication validation marker.
 export type PrimarySide = "a" | "b";
 export type PrimaryDirection = "a-b" | "b-a";
 
