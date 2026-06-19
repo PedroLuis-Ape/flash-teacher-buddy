@@ -1,6 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  glossaryEntryIdentity,
+  type GlossaryTransferEntry,
+} from "@/features/study/lib/glossaryTransfer";
 
 export interface GlossaryEntry {
   id: string;
@@ -19,131 +23,205 @@ export type GlossaryInsert = Pick<GlossaryEntry, "list_id" | "original_text" | "
   is_active?: boolean;
 };
 
+export interface GlossaryImportResult {
+  inserted: number;
+  updated: number;
+  skipped: number;
+}
+
 export function useListGlossary(listId: string | undefined) {
   const queryClient = useQueryClient();
   const queryKey = ["list-glossary", listId];
 
-  const { data: glossary = [], isLoading } = useQuery({
+  const { data: glossary = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!listId) return [];
-      const { data, error } = await supabase
+      const { data, error: queryError } = await supabase
         .from("list_glossary")
         .select("*")
         .eq("list_id", listId)
         .order("created_at", { ascending: true })
-        .limit(500);
-      if (error) throw error;
+        .limit(1000);
+      if (queryError) throw queryError;
       return (data || []) as GlossaryEntry[];
     },
     enabled: !!listId,
     staleTime: 60_000,
   });
 
-  const activeGlossary = glossary.filter((g) => g.is_active);
+  const activeGlossary = glossary.filter((entry) => entry.is_active);
 
   const addEntry = useMutation({
     mutationFn: async (entry: GlossaryInsert) => {
-      const { error } = await supabase.from("list_glossary").insert(entry as any);
-      if (error) throw error;
+      const identity = glossaryEntryIdentity({
+        side: entry.side,
+        original_text: entry.original_text,
+        translated_text: entry.translated_text,
+      });
+      if (glossary.some((existing) => glossaryEntryIdentity(existing) === identity)) {
+        throw new Error("Essa tradução já existe no glossário.");
+      }
+      const { error: insertError } = await supabase.from("list_glossary").insert(entry as any);
+      if (insertError) throw insertError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      toast.success("Tradução global adicionada!");
+      toast.success("Tradução adicionada como uma nova camada.");
     },
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onError: (mutationError: any) => toast.error("Erro: " + mutationError.message),
   });
 
   const updateEntry = useMutation({
     mutationFn: async ({ id, ...fields }: Partial<GlossaryEntry> & { id: string }) => {
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from("list_glossary")
         .update({ ...fields, updated_at: new Date().toISOString() } as any)
         .eq("id", id);
-      if (error) throw error;
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      toast.success("Tradução global atualizada!");
+      toast.success("Tradução atualizada.");
     },
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onError: (mutationError: any) => toast.error("Erro: " + mutationError.message),
   });
 
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("list_glossary").delete().eq("id", id);
-      if (error) throw error;
+      const { error: deleteError } = await supabase.from("list_glossary").delete().eq("id", id);
+      if (deleteError) throw deleteError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      toast.success("Tradução global removida!");
+      toast.success("Camada removida do glossário.");
     },
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onError: (mutationError: any) => toast.error("Erro: " + mutationError.message),
   });
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
+      const { error: toggleError } = await supabase
         .from("list_glossary")
         .update({ is_active, updated_at: new Date().toISOString() } as any)
         .eq("id", id);
-      if (error) throw error;
+      if (toggleError) throw toggleError;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onError: (mutationError: any) => toast.error("Erro: " + mutationError.message),
   });
 
   const bulkDelete = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from("list_glossary")
-        .delete()
-        .in("id", ids);
-      if (error) throw error;
+      const { error: deleteError } = await supabase.from("list_glossary").delete().in("id", ids);
+      if (deleteError) throw deleteError;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey });
-      toast.success(`${variables.length} tradução(ões) removida(s)!`);
+      toast.success(`${variables.length} camada(s) removida(s).`);
     },
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onError: (mutationError: any) => toast.error("Erro: " + mutationError.message),
   });
 
   const bulkSwapTerms = useMutation({
     mutationFn: async (ids: string[]) => {
-      // Fetch current entries to swap their fields
-      const entries = glossary.filter((g) => ids.includes(g.id));
+      const entries = glossary.filter((entry) => ids.includes(entry.id));
       if (entries.length === 0) return;
-      // Update each entry swapping original_text ↔ translated_text
-      const updates = entries.map((e) =>
+      const results = await Promise.all(entries.map((entry) =>
         supabase
           .from("list_glossary")
           .update({
-            original_text: e.translated_text,
-            translated_text: e.original_text,
+            original_text: entry.translated_text,
+            translated_text: entry.original_text,
+            side: entry.side === "A" ? "B" : "A",
             updated_at: new Date().toISOString(),
           } as any)
-          .eq("id", e.id)
-      );
-      const results = await Promise.all(updates);
-      const failed = results.find((r) => r.error);
+          .eq("id", entry.id),
+      ));
+      const failed = results.find((result) => result.error);
       if (failed?.error) throw failed.error;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey });
-      toast.success(`${variables.length} termo(s) invertido(s)!`);
+      toast.success(`${variables.length} termo(s) invertido(s), incluindo o lado de origem.`);
     },
-    onError: (e: any) => toast.error("Erro: " + e.message),
+    onError: (mutationError: any) => toast.error("Erro: " + mutationError.message),
+  });
+
+  const importEntries = useMutation({
+    mutationFn: async (entries: GlossaryTransferEntry[]): Promise<GlossaryImportResult> => {
+      if (!listId) throw new Error("Lista não identificada.");
+
+      const existingByIdentity = new Map(glossary.map((entry) => [glossaryEntryIdentity(entry), entry]));
+      const inserts: Array<GlossaryTransferEntry & { list_id: string }> = [];
+      const updates: Array<{ id: string; entry: GlossaryTransferEntry }> = [];
+      let skipped = 0;
+
+      for (const entry of entries) {
+        const identity = glossaryEntryIdentity(entry);
+        const existing = existingByIdentity.get(identity);
+        if (!existing) {
+          inserts.push({ ...entry, list_id: listId });
+          existingByIdentity.set(identity, { ...entry, list_id: listId } as GlossaryEntry);
+          continue;
+        }
+
+        const normalizedNote = entry.note?.trim() || null;
+        if (existing.note !== normalizedNote || existing.is_active !== entry.is_active) {
+          updates.push({ id: existing.id, entry: { ...entry, note: normalizedNote } });
+        } else {
+          skipped += 1;
+        }
+      }
+
+      const chunkSize = 100;
+      for (let index = 0; index < inserts.length; index += chunkSize) {
+        const chunk = inserts.slice(index, index + chunkSize);
+        const { error: insertError } = await supabase.from("list_glossary").insert(chunk as any);
+        if (insertError) throw insertError;
+      }
+
+      for (let index = 0; index < updates.length; index += chunkSize) {
+        const chunk = updates.slice(index, index + chunkSize);
+        const results = await Promise.all(chunk.map(({ id, entry }) =>
+          supabase
+            .from("list_glossary")
+            .update({
+              note: entry.note ?? null,
+              is_active: entry.is_active,
+              updated_at: new Date().toISOString(),
+            } as any)
+            .eq("id", id),
+        ));
+        const failed = results.find((result) => result.error);
+        if (failed?.error) throw failed.error;
+      }
+
+      return { inserted: inserts.length, updated: updates.length, skipped };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey });
+      const parts = [
+        result.inserted > 0 ? `${result.inserted} nova(s)` : "",
+        result.updated > 0 ? `${result.updated} atualizada(s)` : "",
+        result.skipped > 0 ? `${result.skipped} já existente(s)` : "",
+      ].filter(Boolean);
+      toast.success(`Glossário importado: ${parts.join(", ") || "sem alterações"}.`);
+    },
+    onError: (mutationError: any) => toast.error("Erro ao importar glossário: " + mutationError.message),
   });
 
   return {
     glossary,
     activeGlossary,
     isLoading,
+    error,
     addEntry,
     updateEntry,
     deleteEntry,
     toggleActive,
     bulkDelete,
     bulkSwapTerms,
+    importEntries,
   };
 }
