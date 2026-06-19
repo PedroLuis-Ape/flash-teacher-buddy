@@ -27,17 +27,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      DIRECT_DB_URL: ${{ secrets.SUPABASE_DB_URL || secrets.DATABASE_URL || secrets.POSTGRES_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD || secrets.POSTGRES_PASSWORD }}
+      PROJECT_REF: xrnfhhoxmmstagmelvyi
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate deployment secret
+      - name: Detect available free deployment credentials
+        id: credentials
         shell: bash
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "SUPABASE_DB_URL secret is not configured in this repository."
+          if [ -n "$DIRECT_DB_URL" ]; then
+            echo "mode=direct" >> "$GITHUB_OUTPUT"
+          elif [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_DB_PASSWORD" ]; then
+            echo "mode=cli" >> "$GITHUB_OUTPUT"
+          else
+            echo "No supported Supabase deployment credentials are configured."
+            echo "Expected SUPABASE_DB_URL/DATABASE_URL, or SUPABASE_ACCESS_TOKEN plus SUPABASE_DB_PASSWORD."
             exit 1
           fi
 
@@ -54,8 +63,22 @@ jobs:
           mkdir -p deploy-artifacts
           supabase db dump --local --schema public --file deploy-artifacts/public-schema.sql
 
+      - name: Resolve database connection
+        id: connection
+        shell: bash
+        run: |
+          if [ "${{ steps.credentials.outputs.mode }}" = "direct" ]; then
+            echo "url=$DIRECT_DB_URL" >> "$GITHUB_OUTPUT"
+          else
+            supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+            DB_URL="postgresql://postgres.${PROJECT_REF}:${SUPABASE_DB_PASSWORD}@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
+            echo "url=$DB_URL" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Apply validated schema to Supabase V2
         shell: bash
+        env:
+          TARGET_DB_URL: ${{ steps.connection.outputs.url }}
         run: |
           {
             echo 'BEGIN;'
@@ -66,12 +89,14 @@ jobs:
             cat deploy-artifacts/public-schema.sql
             echo 'COMMIT;'
           } > deploy-artifacts/remote-schema.sql
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f deploy-artifacts/remote-schema.sql
+          psql "$TARGET_DB_URL" -v ON_ERROR_STOP=1 -f deploy-artifacts/remote-schema.sql
 
       - name: Verify critical application objects
         shell: bash
+        env:
+          TARGET_DB_URL: ${{ steps.connection.outputs.url }}
         run: |
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          psql "$TARGET_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
           DO $$
           DECLARE
             missing text[] := ARRAY[]::text[];
