@@ -26,8 +26,10 @@ because of / por causa de
     expect(parsed.entries.map((entry) => entry.original_text)).toEqual(["because", "of", "because of"]);
   });
 
-  it("parses side, active state and note metadata", () => {
-    const parsed = parseGlossaryTransfer("[B][OFF] por causa de / because of || expressão causal");
+  it("parses side, active state and note metadata inside the glossary section", () => {
+    const parsed = parseGlossaryTransfer(`=== GLOSSÁRIO GLOBAL ===
+[B][OFF] por causa de / because of || expressão causal
+=== CARDS ===`);
     expect(parsed.entries[0]).toEqual({
       original_text: "por causa de",
       translated_text: "because of",
