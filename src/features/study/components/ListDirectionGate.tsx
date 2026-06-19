@@ -3,10 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { loadListPrimarySide } from "@/lib/loadListPrimarySide";
 import { loadPublicListPrimarySide } from "@/lib/loadPublicListPrimarySide";
+import { getOfflineList } from "@/lib/offlineStore";
 import { primarySideToDirection } from "@/lib/primarySideDirection";
 
 function validDirection(value: string | null): boolean {
   return value === "a-b" || value === "b-a" || value === "any";
+}
+
+async function resolvePrimarySide(listId: string, publicRoute: boolean): Promise<"a" | "b"> {
+  try {
+    return publicRoute
+      ? await loadPublicListPrimarySide(listId)
+      : await loadListPrimarySide(listId);
+  } catch {
+    const offline = await getOfflineList(listId).catch(() => null);
+    const primarySide = (offline?.listMeta as { primary_side?: string } | undefined)?.primary_side;
+    return primarySide === "b" ? "b" : "a";
+  }
 }
 
 export function ListDirectionGate({ children }: { children: ReactNode }) {
@@ -18,7 +31,7 @@ export function ListDirectionGate({ children }: { children: ReactNode }) {
 
   const query = useQuery({
     queryKey: ["list-primary-side", id, publicRoute],
-    queryFn: () => publicRoute ? loadPublicListPrimarySide(id!) : loadListPrimarySide(id!),
+    queryFn: () => resolvePrimarySide(id!, publicRoute),
     enabled: !!id && !validDirection(explicit),
     staleTime: 0,
     refetchOnMount: "always",
