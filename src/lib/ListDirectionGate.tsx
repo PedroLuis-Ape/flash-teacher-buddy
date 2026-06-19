@@ -8,6 +8,8 @@ import { listIdFromPath } from "./listRoute";
 export function ListDirectionGate({ children }: { children: ReactNode }) {
   const location = useLocation();
   const listId = listIdFromPath(location.pathname);
+  const isPublic = location.pathname.startsWith("/portal/list/");
   void listId;
+  void isPublic;
   return <>{children}</>;
 }
