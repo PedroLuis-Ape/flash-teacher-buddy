@@ -2,6 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+
+    <!-- Canonicalize the apex domain before storage, authentication, or app boot. -->
+    <script>
+      if (window.location.hostname === "apeeducation.org") {
+        window.location.replace(
+          "https://www.apeeducation.org" +
+            window.location.pathname +
+            window.location.search +
+            window.location.hash
+        );
+      }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="T9Dd5l69FY7EQm4UW_CVwj3yun3THCvOQr6jSsGifw0" />
     <title>APE — Flashcards e Estudo Ativo para Aprender Mais Rápido</title>
