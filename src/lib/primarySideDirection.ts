@@ -1,3 +1,4 @@
+// Migration-safe final validation.
 export type PrimarySide = "a" | "b";
 export type PrimaryDirection = "a-b" | "b-a";
 
