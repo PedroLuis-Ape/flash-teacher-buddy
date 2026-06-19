@@ -1,3 +1,4 @@
+// Maps the persistent list preference to the canonical study direction.
 export type PrimarySide = "a" | "b";
 export type PrimaryDirection = "a-b" | "b-a";
 
