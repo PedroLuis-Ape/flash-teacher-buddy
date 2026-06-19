@@ -1,182 +1,173 @@
-/**
- * InteractiveText — renders text with hoverable/tappable word hints.
- *
- * Desktop: mouseenter shows tooltip, mouseleave hides it.
- * Mobile: tap shows tooltip, auto-closes after 3s or on outside tap.
- *
- * Supports multi-translation display (global + manual merged hints).
- * If no hints are provided, renders plain text — 100% backward compatible.
- *
- * HOOK SAFETY: All hooks are called unconditionally before any branching.
- */
-
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { Layers3 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { segmentText, parseWordHints, type WordHint } from "@/features/study/lib/wordHints";
-import type { MergedHint } from "@/features/study/lib/glossaryMerge";
-import { mergedHintsToWordHints } from "@/features/study/lib/glossaryMerge";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { getPerfSettings } from "@/lib/performanceSettings";
 import { useTTS } from "@/features/study/hooks/useTTS";
+import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import {
+  buildLayeredTextSegments,
+  definitionsFromMergedHints,
+  definitionsFromWordHints,
+  type LayeredHintMatch,
+} from "@/features/study/lib/glossaryLayers";
 
 interface InteractiveTextProps {
   text: string;
   wordHints?: unknown;
-  /** Pre-merged hints (global + manual). Takes priority over wordHints if provided. */
+  /** Pre-merged global glossary + per-card hints. */
   mergedHints?: MergedHint[];
   className?: string;
-  /** When true, clicking a highlighted glossary word also speaks that specific word/expression. */
+  /** When true, clicking a highlighted word also speaks that token. */
   speakOnHintClick?: boolean;
-  /** Optional BCP-47 language code used for click-to-speak (e.g. fr-FR, en-US). */
+  /** Optional BCP-47 language code used for click-to-speak. */
   speakLang?: string;
 }
 
-export const InteractiveText = ({ text = "", wordHints, mergedHints, className, speakOnHintClick = false, speakLang }: InteractiveTextProps) => {
-  // ── ALL HOOKS FIRST — unconditionally, every render ──
+export const InteractiveText = ({
+  text = "",
+  wordHints,
+  mergedHints,
+  className,
+  speakOnHintClick = false,
+  speakLang,
+}: InteractiveTextProps) => {
   const { speak } = useTTS();
+  const safeText = typeof text === "string" ? text : String(text ?? "");
+  const perf = getPerfSettings();
+  const hintsDisabled = !FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips;
+
+  const definitions = useMemo(() => {
+    if (hintsDisabled) return [];
+    return mergedHints
+      ? definitionsFromMergedHints(mergedHints)
+      : definitionsFromWordHints(wordHints);
+  }, [hintsDisabled, mergedHints, wordHints]);
+
+  const segments = useMemo(
+    () => buildLayeredTextSegments(safeText, definitions),
+    [safeText, definitions],
+  );
 
   const handleHintActivate = useCallback((clickedValue: string) => {
     if (!speakOnHintClick) return;
     speak(clickedValue, { langOverride: speakLang });
   }, [speakOnHintClick, speakLang, speak]);
 
-  // ── Derive data (no hooks below this line) ──
-  const safeText = typeof text === "string" ? text : String(text ?? "");
-
-  const perf = getPerfSettings();
-  const hintsDisabled = !FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips;
-
-  const resolvedHints = mergedHints
-    ? mergedHintsToWordHints(mergedHints)
-    : parseWordHints(wordHints);
-
-  const hasHints = !hintsDisabled && resolvedHints.length > 0;
-
-  // ── Unified render: always use segments array ──
-  const segments = hasHints
-    ? segmentText(safeText, resolvedHints)
-    : [{ value: safeText, hint: null as WordHint | null }];
-
   return (
     <span className={className}>
-      {segments.map((seg, i) =>
-        seg.hint ? (
-          <HintWord
-            key={`hint-${i}-${seg.value}`}
-            value={seg.value}
-            hint={seg.hint}
-            mergedTranslations={(seg.hint as any)._mergedTranslations}
+      {segments.map((segment, index) => (
+        segment.matches.length > 0 ? (
+          <LayeredHintToken
+            key={`hint-${segment.startIndex}-${segment.endIndex}-${index}`}
+            value={segment.value}
+            matches={segment.matches}
             onActivate={handleHintActivate}
           />
         ) : (
-          <span key={`plain-${i}-${seg.value}`}>{seg.value}</span>
+          <span key={`plain-${segment.startIndex}-${segment.endIndex}-${index}`}>{segment.value}</span>
         )
-      )}
+      ))}
     </span>
   );
 };
 
-const MOBILE_AUTO_CLOSE_MS = 3000;
+function uniqueTranslations(match: LayeredHintMatch) {
+  const seen = new Set<string>();
+  return match.translations.filter((translation) => {
+    const key = `${translation.text.trim().toLocaleLowerCase()}|${translation.note ?? ""}|${translation.source}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
-/** A single highlighted word/expression with a lightweight tooltip */
-function HintWord({
+function LayeredHintToken({
   value,
-  hint,
-  mergedTranslations,
+  matches,
   onActivate,
 }: {
   value: string;
-  hint: WordHint;
-  mergedTranslations?: { text: string; note?: string; source: "global" | "manual" }[];
+  matches: LayeredHintMatch[];
   onActivate?: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLSpanElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-
-  // Auto-close on mobile after timeout
-  useEffect(() => {
-    if (!open) return;
-    timerRef.current = setTimeout(() => setOpen(false), MOBILE_AUTO_CLOSE_MS);
-    return () => clearTimeout(timerRef.current);
-  }, [open]);
-
-  // Close on outside tap (mobile)
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: PointerEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("pointerdown", handler, true);
-    return () => document.removeEventListener("pointerdown", handler, true);
-  }, [open]);
-
-  const handleMouseEnter = useCallback(() => setOpen(true), []);
-  const handleMouseLeave = useCallback(() => setOpen(false), []);
-
-  const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    onActivate?.(value);
-    setOpen((prev) => !prev);
-  }, [onActivate, value]);
+  const layerCount = matches.length;
 
   return (
-    <span ref={wrapperRef} className="relative inline">
-      <span
-        role="button"
-        tabIndex={0}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleTap}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-            onActivate?.(value);
-            setOpen((prev) => !prev);
-          }
-        }}
-        className={cn(
-          "cursor-pointer border-b-2 border-dashed border-primary/50",
-          "md:hover:border-primary md:hover:text-primary transition-colors",
-          "rounded-sm px-0.5 -mx-0.5",
-          open && "bg-primary/10 text-primary border-primary"
-        )}
-      >
-        {value}
-      </span>
-      {open && (
-        <span
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none
-                     w-max max-w-[260px] rounded-md border bg-popover px-3 py-2 text-popover-foreground shadow-md
-                     animate-in fade-in-0 zoom-in-95"
-          role="tooltip"
-        >
-          {mergedTranslations && mergedTranslations.length > 0 ? (
-            <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              {mergedTranslations.map((t, i) => (
-                <span key={i} className="inline-flex items-baseline gap-1 whitespace-nowrap">
-                  {i > 0 && <span className="text-muted-foreground text-xs">·</span>}
-                  <span className="font-semibold text-sm leading-tight">{t.text}</span>
-                  {t.note && (
-                    <span className="text-xs text-muted-foreground italic">({t.note})</span>
-                  )}
-                </span>
-              ))}
-            </span>
-          ) : (
-            <>
-              <span className="block font-semibold text-sm">{hint.translation}</span>
-              {hint.note && (
-                <span className="block text-xs text-muted-foreground italic mt-0.5">{hint.note}</span>
-              )}
-            </>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline cursor-pointer rounded-sm border-0 border-b-2 border-dashed border-primary/55 bg-transparent px-0.5 py-0 font-inherit text-inherit -mx-0.5",
+            "transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+            open && "border-primary bg-primary/10 text-primary",
+            layerCount > 1 && "border-b-[3px] border-double",
           )}
-        </span>
-      )}
-    </span>
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onActivate?.(value);
+          }}
+          aria-label={`${value}: abrir ${layerCount} entrada${layerCount === 1 ? "" : "s"} do glossário`}
+        >
+          {value}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="center"
+        sideOffset={8}
+        collisionPadding={12}
+        className="w-[min(22rem,calc(100vw-1.5rem))] max-h-[min(26rem,72vh)] overflow-y-auto p-0"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-popover px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">Glossário contextual</p>
+            <p className="truncate text-sm font-semibold">{value}</p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
+            <Layers3 className="h-3.5 w-3.5" />
+            {layerCount} {layerCount === 1 ? "camada" : "camadas"}
+          </span>
+        </div>
+
+        <div className="divide-y">
+          {matches.map((match) => {
+            const translations = uniqueTranslations(match);
+            const isExpression = /\s/u.test(match.text.trim());
+            return (
+              <div key={`${match.key}-${match.startIndex}-${match.endIndex}`} className="space-y-2 px-3 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold leading-tight">{match.text}</span>
+                  <span className="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {isExpression ? "expressão" : "palavra"}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {translations.map((translation, index) => (
+                    <div key={`${translation.text}-${translation.source}-${index}`} className="rounded-md bg-muted/55 px-2.5 py-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-sm font-medium leading-snug">{translation.text}</span>
+                        <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {translation.source === "manual" ? "card" : "lista"}
+                        </span>
+                      </div>
+                      {translation.note && (
+                        <p className="mt-1 text-xs italic leading-relaxed text-muted-foreground">{translation.note}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
