@@ -5,5 +5,7 @@ import { loadPublicSide } from "./loadPublicSide";
 import { primarySideToDirection } from "./primarySideDirection";
 
 export function ListDirectionGate({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  void location;
   return <>{children}</>;
 }
