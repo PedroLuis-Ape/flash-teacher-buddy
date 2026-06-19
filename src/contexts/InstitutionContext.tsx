@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLibraryChangeRevision } from "@/hooks/useLibraryChangeRevision";
 import {
   migrateLegacyInstitution,
   readPersistedInstitution,
@@ -25,6 +26,7 @@ interface InstitutionContextType {
   refreshInstitutions: () => Promise<void>;
   deleteInstitution: (id: string) => Promise<void>;
   loading: boolean;
+  libraryRevision: number;
 }
 
 const InstitutionContext = createContext<InstitutionContextType | undefined>(undefined);
@@ -34,6 +36,7 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const { userId, status } = useAuth();
+  const libraryRevision = useLibraryChangeRevision();
 
   const setSelectedInstitution = useCallback((institution: Institution | null) => {
     setSelectedInstitutionRaw(institution);
@@ -55,8 +58,6 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     const saved = migrateLegacyInstitution(ownerId) ?? readPersistedInstitution(ownerId);
 
     if (!saved) {
-      // Persist the default explicitly. Missing storage and an intentional
-      // “Todos” selection must not remain indistinguishable forever.
       writePersistedInstitution(ownerId, null);
       setSelectedInstitutionRaw(null);
       return;
@@ -73,7 +74,6 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // The selected institution was removed or no longer belongs to this user.
     writePersistedInstitution(ownerId, null);
     setSelectedInstitutionRaw(null);
   }, []);
@@ -87,8 +87,6 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
       setInstitutions(list);
       restoreSavedSelection(userId, list);
     } catch (error) {
-      // Keep both the current selection and persisted preference on temporary
-      // network errors. Emptying them here used to look like lost persistence.
       console.error("Error loading institutions:", error);
     } finally {
       setLoading(false);
@@ -142,8 +140,6 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    // Remove private data from memory between accounts, but preserve each
-    // account's namespaced preference for its next login.
     if (status === "anonymous") {
       setInstitutions([]);
       setSelectedInstitutionRaw(null);
@@ -158,7 +154,8 @@ export function InstitutionProvider({ children }: { children: ReactNode }) {
     refreshInstitutions,
     deleteInstitution,
     loading,
-  }), [selectedInstitution, institutions, setSelectedInstitution, refreshInstitutions, deleteInstitution, loading]);
+    libraryRevision,
+  }), [selectedInstitution, institutions, setSelectedInstitution, refreshInstitutions, deleteInstitution, loading, libraryRevision]);
 
   return (
     <InstitutionContext.Provider value={contextValue}>
@@ -173,4 +170,8 @@ export function useInstitution() {
     throw new Error("useInstitution must be used within InstitutionProvider");
   }
   return context;
+}
+
+export function useOptionalInstitution() {
+  return useContext(InstitutionContext);
 }
