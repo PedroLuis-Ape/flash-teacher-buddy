@@ -1,0 +1,92 @@
+name: Deploy Supabase V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix-supabase-v2-alignment
+    paths:
+      - ".github/workflows/deploy-supabase-v2.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-supabase-v2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secret
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "SUPABASE_DB_URL secret is not configured in this repository."
+            exit 1
+          fi
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Build validated schema locally
+        run: |
+          supabase start
+          supabase db reset --local --no-seed
+          supabase db lint --local --level warning
+          mkdir -p deploy-artifacts
+          supabase db dump --local --schema public --file deploy-artifacts/public-schema.sql
+
+      - name: Apply validated schema to Supabase V2
+        shell: bash
+        run: |
+          {
+            echo 'BEGIN;'
+            echo 'DROP SCHEMA IF EXISTS public CASCADE;'
+            echo 'CREATE SCHEMA public;'
+            echo 'GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;'
+            echo 'GRANT ALL ON SCHEMA public TO postgres, service_role;'
+            cat deploy-artifacts/public-schema.sql
+            echo 'COMMIT;'
+          } > deploy-artifacts/remote-schema.sql
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f deploy-artifacts/remote-schema.sql
+
+      - name: Verify critical application objects
+        shell: bash
+        run: |
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            missing text[] := ARRAY[]::text[];
+          BEGIN
+            IF to_regclass('public.profiles') IS NULL THEN missing := array_append(missing, 'profiles'); END IF;
+            IF to_regclass('public.institutions') IS NULL THEN missing := array_append(missing, 'institutions'); END IF;
+            IF to_regclass('public.folders') IS NULL THEN missing := array_append(missing, 'folders'); END IF;
+            IF to_regclass('public.lists') IS NULL THEN missing := array_append(missing, 'lists'); END IF;
+            IF to_regclass('public.flashcards') IS NULL THEN missing := array_append(missing, 'flashcards'); END IF;
+            IF to_regprocedure('public.import_global_package_v1(uuid,jsonb,jsonb,text,uuid)') IS NULL THEN missing := array_append(missing, 'import_global_package_v1'); END IF;
+            IF to_regprocedure('public.import_global_package_v2(uuid,jsonb,jsonb,text,uuid)') IS NULL THEN missing := array_append(missing, 'import_global_package_v2'); END IF;
+            IF to_regprocedure('public.import_app_piteco_super_package_v1(uuid,jsonb,jsonb,text,uuid)') IS NULL THEN missing := array_append(missing, 'import_app_piteco_super_package_v1'); END IF;
+            IF cardinality(missing) > 0 THEN
+              RAISE EXCEPTION 'Missing critical objects: %', array_to_string(missing, ', ');
+            END IF;
+          END $$;
+
+          SELECT count(*) AS public_table_count
+          FROM pg_tables
+          WHERE schemaname = 'public';
+          SQL
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
