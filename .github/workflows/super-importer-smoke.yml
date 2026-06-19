@@ -35,7 +35,7 @@ jobs:
           supabase start
           supabase db reset --local --no-seed
 
-      - name: Execute official importer transaction
+      - name: Execute official and CSV importer transactions
         shell: bash
         run: |
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 <<'SQL'
@@ -101,21 +101,57 @@ jobs:
             IF COALESCE((report->>'folders_created')::integer, 0) <> 1
                OR COALESCE((report->>'lists_created')::integer, 0) <> 1
                OR COALESCE((report->>'cards_created')::integer, 0) <> 1 THEN
-              RAISE EXCEPTION 'Unexpected importer report: %', report;
+              RAISE EXCEPTION 'Unexpected official importer report: %', report;
+            END IF;
+
+            SELECT public.import_global_package_v1(
+              '33333333-3333-4333-8333-333333333333',
+              '{
+                "schema":"appteco-global-import",
+                "version":1,
+                "package":{
+                  "name":"CSV Smoke Package",
+                  "folders":[{
+                    "name":"CSV Smoke Folder",
+                    "expected_cards":1,
+                    "lists":[{
+                      "name":"CSV Smoke List",
+                      "expected_cards":1,
+                      "cards":[{"front":"Good morning","back":"Bom dia"}]
+                    }]
+                  }]
+                }
+              }'::jsonb,
+              '{
+                "folders":{
+                  "0":{
+                    "folder":{"mode":"create","name":"CSV Smoke Folder"},
+                    "lists":{"0":{"mode":"create","name":"CSV Smoke List"}}
+                  }
+                }
+              }'::jsonb,
+              'skip',
+              NULL
+            ) INTO report;
+
+            IF COALESCE((report->>'folders_created')::integer, 0) <> 1
+               OR COALESCE((report->>'lists_created')::integer, 0) <> 1
+               OR COALESCE((report->>'cards_created')::integer, 0) <> 1 THEN
+              RAISE EXCEPTION 'Unexpected CSV importer report: %', report;
             END IF;
 
             IF NOT EXISTS (
               SELECT 1
               FROM public.flashcards AS card
-              JOIN public.lists AS list ON list.id = card.list_id
-              JOIN public.folders AS folder ON folder.id = list.folder_id
+              JOIN public.lists AS list_row ON list_row.id = card.list_id
+              JOIN public.folders AS folder ON folder.id = list_row.folder_id
               WHERE card.user_id = smoke_user
-                AND card.term = 'Hello'
-                AND card.translation = 'Olá'
-                AND list.title = 'Smoke List'
-                AND folder.title = 'Smoke Folder'
+                AND card.term = 'Good morning'
+                AND card.translation = 'Bom dia'
+                AND list_row.title = 'CSV Smoke List'
+                AND folder.title = 'CSV Smoke Folder'
             ) THEN
-              RAISE EXCEPTION 'The importer did not persist the expected hierarchy.';
+              RAISE EXCEPTION 'The CSV importer did not persist the expected hierarchy.';
             END IF;
           END;
           $$;
