@@ -1,3 +1,3 @@
 # Lado principal da lista
 
-Validação automatizada da implementação integrada no `main`.
+Código integrado ao main. Este commit existe apenas para acionar a validação automática.
