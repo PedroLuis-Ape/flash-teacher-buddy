@@ -3,15 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export interface GameSettings {
   mode: 'sequential' | 'random';
   subset: 'all' | 'favorites';
   fastMode?: boolean;
-  /** When true (only meaningful when subset === 'favorites'), restrict the
-   *  session to cards that are BOTH favorited AND in the red list. */
   redFocus?: boolean;
 }
 
@@ -21,18 +19,15 @@ interface GameSettingsModalProps {
   onRestart: () => void;
   disabled?: boolean;
   showFastMode?: boolean;
-  /** Optional: when provided, renders an "Edit current card" action that opens
-   *  the parent's EditFlashcardDialog. Receives no args; parent owns the card. */
   onEditCurrentCard?: () => void;
-  /** Disable the edit button if there's no current card. */
   canEditCurrentCard?: boolean;
 }
 
 const FAST_MODE_STORAGE_KEY = 'piteco_flip_fast_mode';
 
-export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({ 
-  settings, 
-  onSettingsChange, 
+export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
+  settings,
+  onSettingsChange,
   onRestart,
   disabled = false,
   showFastMode = false,
@@ -40,8 +35,10 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   canEditCurrentCard = true,
 }) => {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const listSession = location.pathname.includes('/list/') && location.pathname.endsWith('/study');
 
-  // Load fast mode preference from localStorage on mount
   useEffect(() => {
     if (showFastMode) {
       const stored = localStorage.getItem(FAST_MODE_STORAGE_KEY);
@@ -64,8 +61,6 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const handleSubsetChange = (checked: boolean) => {
-    // Turning off favorites must also turn off redFocus (rule: redFocus
-    // requires favorites). Keeps state coherent without surprising the user.
     onSettingsChange({
       ...settings,
       subset: checked ? 'favorites' : 'all',
@@ -88,14 +83,23 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     });
   };
 
+  const handleInvertDirection = () => {
+    const params = new URLSearchParams(location.search);
+    const current = params.get('dir') || params.get('direction');
+    params.delete('direction');
+    params.set('dir', current === 'a-b' ? 'b-a' : 'a-b');
+    navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    setOpen(false);
+  };
+
   const favoritesActive = settings.subset === 'favorites';
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="bg-background/50 backdrop-blur-sm hover:bg-background/80"
           disabled={disabled}
         >
@@ -112,7 +116,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               <Label htmlFor="random-mode" className="font-medium">Ordem Aleatória</Label>
               <p className="text-sm text-muted-foreground">Embaralha os cards a cada reinício</p>
             </div>
-            <Switch 
+            <Switch
               id="random-mode"
               checked={settings.mode === 'random'}
               onCheckedChange={handleModeChange}
@@ -123,14 +127,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               <Label htmlFor="favorites-only" className="font-medium">Apenas Favoritos</Label>
               <p className="text-sm text-muted-foreground">Estude apenas os cards marcados com estrela</p>
             </div>
-            <Switch 
+            <Switch
               id="favorites-only"
               checked={favoritesActive}
               onCheckedChange={handleSubsetChange}
             />
           </div>
 
-          {/* Red Focus — only available when "Apenas Favoritos" is on */}
           <div className={`flex items-center justify-between transition-opacity ${favoritesActive ? '' : 'opacity-50'}`}>
             <div>
               <div className="flex items-center gap-2">
@@ -160,12 +163,19 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 </div>
                 <p className="text-sm text-muted-foreground">Mostra os dois lados ao mesmo tempo</p>
               </div>
-              <Switch 
+              <Switch
                 id="fast-mode"
                 checked={settings.fastMode ?? false}
                 onCheckedChange={handleFastModeChange}
               />
             </div>
+          )}
+
+          {listSession && (
+            <Button onClick={handleInvertDirection} className="w-full" variant="outline">
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              Inverter lado nesta sessão
+            </Button>
           )}
 
           {onEditCurrentCard && (
