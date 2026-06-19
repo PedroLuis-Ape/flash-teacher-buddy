@@ -1,0 +1,78 @@
+name: Supabase V2 Audit
+
+on:
+  push:
+    branches:
+      - fix-supabase-v2-alignment
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "src/integrations/supabase/types.ts"
+      - ".github/workflows/supabase-v2-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Supabase inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit-bundle
+
+          find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
+            | LC_ALL=C sort > audit-bundle/migrations.txt
+
+          if [ -d supabase/functions ]; then
+            find supabase/functions -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+              | LC_ALL=C sort > audit-bundle/edge-functions.txt
+          else
+            : > audit-bundle/edge-functions.txt
+          fi
+
+          cp supabase/config.toml audit-bundle/config.toml
+          cp src/integrations/supabase/types.ts audit-bundle/types.ts
+          cp -R supabase/migrations audit-bundle/migrations
+          if [ -d supabase/functions ]; then
+            cp -R supabase/functions audit-bundle/functions
+          fi
+
+          migration_count=$(wc -l < audit-bundle/migrations.txt | tr -d ' ')
+          function_count=$(wc -l < audit-bundle/edge-functions.txt | tr -d ' ')
+
+          {
+            echo "# Supabase repository inventory"
+            echo
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Migration files: $migration_count"
+            echo "- Edge Function directories: $function_count"
+          } > audit-bundle/summary.md
+
+          duplicate_versions=$(cut -d_ -f1 audit-bundle/migrations.txt | sort | uniq -d)
+          if [ -n "$duplicate_versions" ]; then
+            echo "Duplicate migration versions detected:" >&2
+            echo "$duplicate_versions" >&2
+            exit 1
+          fi
+
+          if ! grep -q 'project_id = "xrnfhhoxmmstagmelvyi"' supabase/config.toml; then
+            echo "supabase/config.toml is not aligned with xrnfhhoxmmstagmelvyi" >&2
+            exit 1
+          fi
+
+          cat audit-bundle/summary.md
+
+      - name: Upload audit bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-v2-audit-bundle
+          path: audit-bundle
+          if-no-files-found: error
+          retention-days: 7
