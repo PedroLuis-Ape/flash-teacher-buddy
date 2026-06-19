@@ -20,7 +20,8 @@ export function ListDirectionGate({ children }: { children: ReactNode }) {
     queryKey: ["list-primary-side", id, publicRoute],
     queryFn: () => publicRoute ? loadPublicListPrimarySide(id!) : loadListPrimarySide(id!),
     enabled: !!id && !validDirection(explicit),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
     retry: 1,
   });
 
@@ -37,10 +38,5 @@ export function ListDirectionGate({ children }: { children: ReactNode }) {
   params.delete("direction");
   params.set("dir", primarySideToDirection(query.data));
 
-  return (
-    <Navigate
-      replace
-      to={{ pathname: location.pathname, search: params.toString() }}
-    />
-  );
+  return <Navigate replace to={{ pathname: location.pathname, search: params.toString() }} />;
 }
