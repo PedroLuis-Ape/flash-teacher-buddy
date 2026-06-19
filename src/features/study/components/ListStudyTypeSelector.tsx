@@ -65,7 +65,7 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
       setCustomLangB(value.langB);
       setShowCustomB(true);
     }
-  }, []);
+  }, [value.langA, value.langB]);
 
   useEffect(() => {
     primaryHydratedRef.current = false;
@@ -77,7 +77,7 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
     if ((value.primarySide === "b" ? "b" : "a") !== savedPrimarySide) {
       onChange({ ...value, primarySide: savedPrimarySide });
     }
-  }, [showPrimarySide, primarySideLoading, savedPrimarySide]);
+  }, [onChange, primarySideLoading, savedPrimarySide, showPrimarySide, value]);
 
   const primarySide = value.primarySide === "b" ? "b" : "a";
   const isLanguageMode = value.studyType === "language";
