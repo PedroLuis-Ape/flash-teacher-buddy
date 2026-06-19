@@ -7,6 +7,7 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
+import { ListDirectionGate } from "@/lib/ListDirectionGate";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -41,6 +42,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuthUser();
   useFreezeWatchdog();
+  void ListDirectionGate;
 
   const content = isPublicRoute(location.pathname, !user)
     ? <PublicShell>{children}</PublicShell>
