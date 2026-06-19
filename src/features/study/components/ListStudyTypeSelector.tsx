@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -12,8 +13,8 @@ import {
   getLangLabel,
   normalizeLangCode,
 } from "@/features/study/lib/languages";
+import { useListPrimarySide } from "@/lib/useListPrimarySide";
 
-// Common language options come from the single source of truth.
 const LANGUAGES = [
   ...SUPPORTED_LANGUAGES.map((l) => ({ code: l.code, name: l.label, flag: l.flag })),
   { code: "other", name: "Outro...", flag: "🌍" },
@@ -26,6 +27,7 @@ export interface ListStudySettings {
   labelsA: string;
   labelsB: string;
   ttsEnabled: boolean;
+  primarySide?: "a" | "b";
 }
 
 interface ListStudyTypeSelectorProps {
@@ -45,12 +47,15 @@ const STUDY_TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelectorProps) {
+  const { id } = useParams();
+  const showPrimarySide = window.location.pathname.startsWith("/list/");
+  const { side: savedPrimarySide, loading: primarySideLoading } = useListPrimarySide(showPrimarySide ? id || null : null);
+  const primaryHydratedRef = useRef(false);
   const [customLangA, setCustomLangA] = useState("");
   const [customLangB, setCustomLangB] = useState("");
   const [showCustomA, setShowCustomA] = useState(false);
   const [showCustomB, setShowCustomB] = useState(false);
 
-  // Check if current langs are custom (not in predefined list)
   useEffect(() => {
     if (value.langA && !LANGUAGES.find(l => l.code === value.langA)) {
       setCustomLangA(value.langA);
@@ -62,6 +67,19 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
     }
   }, []);
 
+  useEffect(() => {
+    primaryHydratedRef.current = false;
+  }, [id]);
+
+  useEffect(() => {
+    if (!showPrimarySide || primarySideLoading || primaryHydratedRef.current) return;
+    primaryHydratedRef.current = true;
+    if ((value.primarySide === "b" ? "b" : "a") !== savedPrimarySide) {
+      onChange({ ...value, primarySide: savedPrimarySide });
+    }
+  }, [showPrimarySide, primarySideLoading, savedPrimarySide]);
+
+  const primarySide = value.primarySide === "b" ? "b" : "a";
   const isLanguageMode = value.studyType === "language";
   const hasTTS = supportsTTS(value.studyType);
 
@@ -152,7 +170,6 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
 
   return (
     <div className="space-y-4">
-      {/* Study Type Selector */}
       <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
         <Label className="font-medium">Tipo de Estudo</Label>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -175,11 +192,40 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
         </p>
       </div>
 
-      {/* Language Mode Options */}
+      {showPrimarySide && (
+        <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+          <div>
+            <Label className="font-medium">Lado principal da lista</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Define qual lado aparece primeiro nos jogos. Não altera o conteúdo dos cards.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={primarySide === "a" ? "default" : "outline"}
+              onClick={() => onChange({ ...value, primarySide: "a" })}
+              className="h-auto min-h-12 flex-col gap-0.5"
+            >
+              <span>{value.labelsA || "Lado A"}</span>
+              <span className="text-[10px] opacity-80">Lado A{primarySide === "a" ? " • Principal" : ""}</span>
+            </Button>
+            <Button
+              type="button"
+              variant={primarySide === "b" ? "default" : "outline"}
+              onClick={() => onChange({ ...value, primarySide: "b" })}
+              className="h-auto min-h-12 flex-col gap-0.5"
+            >
+              <span>{value.labelsB || "Lado B"}</span>
+              <span className="text-[10px] opacity-80">Lado B{primarySide === "b" ? " • Principal" : ""}</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
       {isLanguageMode && (
         <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
           <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-end">
-            {/* Language A */}
             <div className="space-y-2">
               <Label className="text-sm">Idioma do Lado A</Label>
               {showCustomA ? (
@@ -218,7 +264,6 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
               )}
             </div>
 
-            {/* Swap Button */}
             <Button
               type="button"
               variant="ghost"
@@ -230,7 +275,6 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
               <ArrowRightLeft className="h-4 w-4" />
             </Button>
 
-            {/* Language B */}
             <div className="space-y-2">
               <Label className="text-sm">Idioma do Lado B</Label>
               {showCustomB ? (
@@ -270,7 +314,6 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
             </div>
           </div>
 
-          {/* TTS Toggle */}
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="flex items-center gap-2">
               {value.ttsEnabled ? (
@@ -289,21 +332,25 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
             />
           </div>
 
-          {/* Preview Labels */}
           <div className="text-xs text-muted-foreground pt-2">
-            Preview: <strong>{value.labelsA || getLanguageName(value.langA)}</strong> → <strong>{value.labelsB || getLanguageName(value.langB)}</strong>
+            Lados: <strong>A · {value.labelsA || getLanguageName(value.langA)}</strong>
+            {" | "}
+            <strong>B · {value.labelsB || getLanguageName(value.langB)}</strong>
+            {showPrimarySide && (
+              <span className="ml-2 text-primary font-semibold">
+                Principal: {primarySide === "b" ? value.labelsB : value.labelsA}
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      {/* Non-language modes */}
       {!isLanguageMode && (
         <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
           <div className="flex items-center gap-2">
             {STUDY_TYPE_ICONS[value.studyType]}
             <Badge variant="secondary">{STUDY_TYPE_CONFIG[value.studyType]?.label}</Badge>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm">Label do Lado A</Label>
@@ -325,7 +372,6 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
             </div>
           </div>
 
-          {/* TTS toggle for visual mode (optional) */}
           {hasTTS && (
             <div className="flex items-center justify-between pt-2 border-t">
               <div className="flex items-center gap-2">
@@ -345,7 +391,7 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
               />
             </div>
           )}
-          
+
           {!hasTTS && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
               <VolumeX className="h-4 w-4" />
@@ -358,7 +404,6 @@ export function ListStudyTypeSelector({ value, onChange }: ListStudyTypeSelector
   );
 }
 
-// Helper to get default settings
 export function getDefaultListStudySettings(): ListStudySettings {
   return {
     studyType: "language",
@@ -367,10 +412,10 @@ export function getDefaultListStudySettings(): ListStudySettings {
     labelsA: "English",
     labelsB: "Português",
     ttsEnabled: true,
+    primarySide: "a",
   };
 }
 
-// Helper to map from DB row to settings
 export function listRowToSettings(row: {
   study_type?: string | null;
   lang_a?: string | null;
@@ -378,13 +423,14 @@ export function listRowToSettings(row: {
   labels_a?: string | null;
   labels_b?: string | null;
   tts_enabled?: boolean | null;
+  primary_side?: string | null;
 }): ListStudySettings {
-  const studyType = (["language", "general", "math", "visual"].includes(row.study_type || "") 
-    ? row.study_type 
+  const studyType = (["language", "general", "math", "visual"].includes(row.study_type || "")
+    ? row.study_type
     : "language") as ListStudySettings["studyType"];
   const langA = row.lang_a || "en";
   const langB = row.lang_b || "pt";
-  
+
   return {
     studyType,
     langA,
@@ -392,10 +438,10 @@ export function listRowToSettings(row: {
     labelsA: row.labels_a || (studyType === "language" ? getLanguageName(langA) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelA || "Frente"),
     labelsB: row.labels_b || (studyType === "language" ? getLanguageName(langB) : STUDY_TYPE_CONFIG[studyType]?.defaultLabelB || "Verso"),
     ttsEnabled: row.tts_enabled ?? (studyType === "language"),
+    primarySide: row.primary_side === "b" ? "b" : "a",
   };
 }
 
-// Helper to map settings to DB columns
 export function settingsToDbColumns(settings: ListStudySettings) {
   return {
     study_type: settings.studyType,
@@ -404,5 +450,6 @@ export function settingsToDbColumns(settings: ListStudySettings) {
     labels_a: settings.labelsA,
     labels_b: settings.labelsB,
     tts_enabled: settings.ttsEnabled,
+    primary_side: settings.primarySide === "b" ? "b" : "a",
   };
 }
