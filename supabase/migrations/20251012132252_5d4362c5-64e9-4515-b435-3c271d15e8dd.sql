@@ -1,6 +1,6 @@
 -- Add role column to user_roles table
-ALTER TABLE public.user_roles 
-ADD COLUMN role public.app_role NOT NULL DEFAULT 'student';
+ALTER TABLE public.user_roles
+ADD COLUMN IF NOT EXISTS role public.app_role NOT NULL DEFAULT 'student';
 
 -- Update the assign_default_role trigger function to include the role
 CREATE OR REPLACE FUNCTION public.assign_default_role()
