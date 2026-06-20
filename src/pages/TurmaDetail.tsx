@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { resolveTurmaViewMode } from '@/features/classroom/lib/turmaAccess';
+import { AssignmentOrderManager } from '@/features/classroom/components/AssignmentOrderManager';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import TurmaPrivateDetail from '@/pages/TurmaPrivateDetail';
 import TurmaPublicPage from '@/pages/TurmaPublicPage';
@@ -19,7 +20,7 @@ export default function TurmaDetail() {
 
       const { data, error } = await supabase
         .from('turmas')
-        .select('id')
+        .select('id, owner_teacher_id')
         .eq('id', turmaId)
         .maybeSingle();
 
@@ -44,5 +45,15 @@ export default function TurmaDetail() {
     hasPrivateAccess: !!accessQuery.data,
   });
 
-  return viewMode === 'private' ? <TurmaPrivateDetail /> : <TurmaPublicPage />;
+  if (viewMode === 'private') {
+    const isOwner = Boolean(user && accessQuery.data?.owner_teacher_id === user.id);
+    return (
+      <>
+        <TurmaPrivateDetail />
+        {isOwner && turmaId && <AssignmentOrderManager turmaId={turmaId} />}
+      </>
+    );
+  }
+
+  return <TurmaPublicPage />;
 }
