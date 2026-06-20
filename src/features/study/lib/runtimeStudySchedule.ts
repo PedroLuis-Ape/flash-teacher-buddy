@@ -93,8 +93,18 @@ function getSlot<T>(
   return value;
 }
 
+function speechRecognitionSupported(): boolean {
+  return typeof window !== "undefined" &&
+    ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+}
+
 export function getMixedFlipSlotMode(cardKey: string): FlipSlotMode {
-  return getSlot(flipStates, cardKey, ["pronunciation", "write", "pronunciation", "write", "pronunciation"]);
+  const selected = getSlot(
+    flipStates,
+    cardKey,
+    ["pronunciation", "write", "pronunciation", "write", "pronunciation"],
+  );
+  return selected === "pronunciation" && !speechRecognitionSupported() ? "write" : selected;
 }
 
 export function getMixedMultipleSlotMode(cardKey: string): MultipleSlotMode {
