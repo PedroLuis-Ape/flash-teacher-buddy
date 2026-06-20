@@ -16,10 +16,12 @@ if (!existsSync(policyPath)) errors.push("Política de funções ausente.");
 const configSource = existsSync(configPath) ? readFileSync(configPath, "utf8") : "";
 const policy = existsSync(policyPath)
   ? JSON.parse(readFileSync(policyPath, "utf8"))
-  : { publicFunctions: {}, serviceRoleFunctions: [] };
+  : { publicFunctions: {}, elevatedFunctions: [] };
 
 const publicFunctions = new Set(Object.keys(policy.publicFunctions ?? {}));
-const elevatedFunctions = new Set(policy.serviceRoleFunctions ?? []);
+const elevatedFunctions = new Set(
+  policy.elevatedFunctions ?? policy.serviceRoleFunctions ?? [],
+);
 const directories = existsSync(functionsRoot)
   ? readdirSync(functionsRoot).filter((name) => {
       if (name.startsWith("_")) return false;
