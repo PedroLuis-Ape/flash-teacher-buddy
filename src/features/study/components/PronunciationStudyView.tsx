@@ -7,26 +7,32 @@ const LazyPronunciationStudyView = lazy(() =>
 
 type PronunciationStudyViewProps = ComponentProps<typeof LazyPronunciationStudyView>;
 
+function languagePrefix(value?: string): string {
+  return (value || "").trim().toLowerCase().split("-")[0].split("_")[0];
+}
+
 export const PronunciationStudyView = (props: PronunciationStudyViewProps) => {
-  const params = new URLSearchParams(window.location.search);
-  const requested = params.get("dir") || params.get("direction") || "b-a";
-  const hash = `${props.front}:${props.back}`.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const direction = requested === "any" ? (hash % 2 === 0 ? "a-b" : "b-a") : requested;
-  const speakA = direction === "a-b";
+  const languageA = languagePrefix(props.langA);
+  const languageB = languagePrefix(props.langB);
+
+  // The implementation always treats side A as the visual hint and side B as
+  // the phrase the student must pronounce. Normalize the physical card sides
+  // from language metadata instead of relying on front/back or game direction.
+  const shouldSwap = languageA === "en" && languageB === "pt";
 
   return (
     <StudyCardDeck cardKey={`${props.front}:${props.back}`} density="compact">
       <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando pronúncia...</div>}>
         <LazyPronunciationStudyView
           {...props}
-          front={speakA ? props.back : props.front}
-          back={speakA ? props.front : props.back}
-          langA={speakA ? props.langB : props.langA}
-          langB={speakA ? props.langA : props.langB}
-          labelA={speakA ? props.labelB : props.labelA}
-          labelB={speakA ? props.labelA : props.labelB}
-          mergedHintsA={speakA ? props.mergedHintsB : props.mergedHintsA}
-          mergedHintsB={speakA ? props.mergedHintsA : props.mergedHintsB}
+          front={shouldSwap ? props.back : props.front}
+          back={shouldSwap ? props.front : props.back}
+          langA={shouldSwap ? props.langB : props.langA}
+          langB={shouldSwap ? props.langA : props.langB}
+          labelA={shouldSwap ? props.labelB : props.labelA}
+          labelB={shouldSwap ? props.labelA : props.labelB}
+          mergedHintsA={shouldSwap ? props.mergedHintsB : props.mergedHintsA}
+          mergedHintsB={shouldSwap ? props.mergedHintsA : props.mergedHintsB}
         />
       </Suspense>
     </StudyCardDeck>
