@@ -1,66 +1,85 @@
 .study-card-deck {
+  --deck-surface-top: 0px;
+  --deck-surface-left: 0px;
+  --deck-surface-width: 0px;
+  --deck-surface-height: 0px;
+  --deck-surface-radius: 0.75rem;
   position: relative;
   width: 100%;
   max-width: 42rem;
   margin-inline: auto;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.55rem;
   isolation: isolate;
   overflow: visible;
 }
 
-.study-card-deck::after {
-  content: "";
-  position: absolute;
-  z-index: 4;
-  inset: 0.15rem 0.3rem -0.25rem;
-  border-radius: calc(var(--radius) + 0.2rem);
-  border: 1px solid hsl(var(--primary) / 0.3);
-  background:
-    linear-gradient(145deg, hsl(var(--card) / 0.98), hsl(var(--primary) / 0.1));
-  box-shadow:
-    0 18px 36px -24px hsl(var(--primary) / 0.58),
-    inset 0 1px 0 hsl(var(--primary-glow) / 0.12);
-  pointer-events: none;
-  transform-origin: 50% 88%;
-  animation: study-deck-card-to-back 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
+.study-card-deck::after,
 .study-card-deck__layer {
   position: absolute;
-  top: 0.25rem;
-  right: 0.5rem;
-  bottom: -0.55rem;
-  left: 0.5rem;
-  border-radius: calc(var(--radius) + 0.2rem);
-  border: 1px solid hsl(var(--primary) / 0.22);
+  top: var(--deck-surface-top);
+  left: var(--deck-surface-left);
+  width: var(--deck-surface-width);
+  height: var(--deck-surface-height);
+  border-radius: var(--deck-surface-radius);
+  pointer-events: none;
+  transform-origin: 50% 86%;
+  opacity: 0;
+}
+
+.study-card-deck::after {
+  content: "";
+  z-index: 4;
+  border: 1px solid hsl(var(--primary) / 0.24);
   background:
     linear-gradient(145deg, hsl(var(--card) / 0.96), hsl(var(--primary) / 0.08));
   box-shadow:
-    0 12px 26px -22px hsl(var(--primary) / 0.42),
+    0 14px 30px -24px hsl(var(--primary) / 0.48),
     inset 0 1px 0 hsl(var(--primary-glow) / 0.08);
-  pointer-events: none;
-  transform-origin: 50% 12%;
+}
+
+.study-card-deck__layer {
+  border: 1px solid hsl(var(--primary) / 0.18);
+  background:
+    linear-gradient(145deg, hsl(var(--card) / 0.94), hsl(var(--primary) / 0.065));
+  box-shadow:
+    0 10px 24px -22px hsl(var(--primary) / 0.36),
+    inset 0 1px 0 hsl(var(--primary-glow) / 0.06);
 }
 
 .study-card-deck__layer--back {
   z-index: 0;
-  opacity: 0.2;
-  transform: translate3d(0, 8px, 0) rotate(-0.55deg) scale(0.986);
-  animation: study-deck-back-rise 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .study-card-deck__layer--middle {
   z-index: 1;
-  opacity: 0.32;
-  transform: translate3d(0, 4px, 0) rotate(0.28deg) scale(0.993);
-  animation: study-deck-middle-rise 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .study-card-deck__content {
   position: relative;
   z-index: 2;
   width: 100%;
-  animation: study-deck-card-rise 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.study-card-deck__surface {
+  position: relative;
+  z-index: 2;
+  transform-origin: 50% 86%;
+}
+
+.study-card-deck[data-deck-surface-ready="true"]::after {
+  animation: study-deck-card-to-back 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.study-card-deck[data-deck-surface-ready="true"] .study-card-deck__surface {
+  animation: study-deck-card-rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--middle {
+  animation: study-deck-middle-rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--back {
+  animation: study-deck-back-rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .study-card-deck--swipe {
@@ -73,19 +92,19 @@
 
 @keyframes study-deck-card-to-back {
   0% {
-    opacity: 0.72;
+    opacity: 0.56;
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate3d(16px, 42px, 0) rotate(1.8deg) scale(0.972);
+    transform: translate3d(10px, 26px, 0) rotate(1deg) scale(0.985);
   }
 }
 
 @keyframes study-deck-card-rise {
   0% {
-    opacity: 0.42;
-    transform: translate3d(0, 20px, 0) scale(0.972);
+    opacity: 0.64;
+    transform: translate3d(0, 10px, 0) scale(0.988);
   }
   100% {
     opacity: 1;
@@ -95,74 +114,63 @@
 
 @keyframes study-deck-middle-rise {
   0% {
-    opacity: 0.56;
-    transform: translate3d(0, 10px, 0) rotate(0.65deg) scale(0.982);
+    opacity: 0.34;
+    transform: translate3d(0, 8px, 0) rotate(0.4deg) scale(0.99);
   }
   100% {
-    opacity: 0.32;
-    transform: translate3d(0, 4px, 0) rotate(0.28deg) scale(0.993);
+    opacity: 0.24;
+    transform: translate3d(0, 4px, 0) rotate(0.22deg) scale(0.995);
   }
 }
 
 @keyframes study-deck-back-rise {
   0% {
-    opacity: 0.32;
-    transform: translate3d(0, 14px, 0) rotate(-0.9deg) scale(0.975);
+    opacity: 0.24;
+    transform: translate3d(0, 12px, 0) rotate(-0.55deg) scale(0.982);
   }
   100% {
-    opacity: 0.2;
-    transform: translate3d(0, 8px, 0) rotate(-0.55deg) scale(0.986);
+    opacity: 0.14;
+    transform: translate3d(0, 8px, 0) rotate(-0.35deg) scale(0.99);
   }
 }
 
 @media (max-width: 640px) {
   .study-card-deck {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.45rem;
   }
 
-  .study-card-deck::after {
-    inset: 0.1rem 0.24rem -0.2rem;
-    border-color: hsl(var(--primary) / 0.32);
+  .study-card-deck[data-deck-surface-ready="true"]::after {
     animation-name: study-deck-card-to-back-mobile;
   }
 
-  .study-card-deck__layer {
-    top: 0.15rem;
-    right: 0.3rem;
-    bottom: -0.62rem;
-    left: 0.3rem;
-  }
-
-  .study-card-deck__layer--back {
-    opacity: 0.22;
-    transform: translate3d(0, 9px, 0) rotate(-0.6deg) scale(0.984);
-  }
-
-  .study-card-deck__layer--middle {
-    opacity: 0.34;
-    transform: translate3d(0, 4px, 0) rotate(0.3deg) scale(0.992);
-  }
-
-  .study-card-deck__content {
+  .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__surface {
     animation-name: study-deck-card-rise-mobile;
+  }
+
+  .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--middle {
+    animation-name: study-deck-middle-rise-mobile;
+  }
+
+  .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--back {
+    animation-name: study-deck-back-rise-mobile;
   }
 }
 
 @keyframes study-deck-card-to-back-mobile {
   0% {
-    opacity: 0.66;
+    opacity: 0.5;
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate3d(9px, 30px, 0) rotate(1.15deg) scale(0.98);
+    transform: translate3d(6px, 18px, 0) rotate(0.65deg) scale(0.99);
   }
 }
 
 @keyframes study-deck-card-rise-mobile {
   0% {
-    opacity: 0.48;
-    transform: translate3d(0, 14px, 0) scale(0.98);
+    opacity: 0.7;
+    transform: translate3d(0, 7px, 0) scale(0.992);
   }
   100% {
     opacity: 1;
@@ -170,8 +178,30 @@
   }
 }
 
+@keyframes study-deck-middle-rise-mobile {
+  0% {
+    opacity: 0.3;
+    transform: translate3d(0, 6px, 0) rotate(0.28deg) scale(0.992);
+  }
+  100% {
+    opacity: 0.22;
+    transform: translate3d(0, 3px, 0) rotate(0.16deg) scale(0.996);
+  }
+}
+
+@keyframes study-deck-back-rise-mobile {
+  0% {
+    opacity: 0.2;
+    transform: translate3d(0, 9px, 0) rotate(-0.38deg) scale(0.986);
+  }
+  100% {
+    opacity: 0.12;
+    transform: translate3d(0, 6px, 0) rotate(-0.24deg) scale(0.992);
+  }
+}
+
 [data-perf-no-anim] .study-card-deck::after,
-[data-perf-no-anim] .study-card-deck__content,
+[data-perf-no-anim] .study-card-deck__surface,
 [data-perf-no-anim] .study-card-deck__layer {
   animation: none !important;
 }
@@ -185,7 +215,7 @@
     display: none;
   }
 
-  .study-card-deck__content,
+  .study-card-deck__surface,
   .study-card-deck__layer {
     animation: none !important;
   }
@@ -196,6 +226,7 @@
 }
 
 [data-perf-no-decor] .study-card-deck__layer {
-  opacity: 0.14;
+  animation: none !important;
+  opacity: 0.08 !important;
   box-shadow: none;
 }
