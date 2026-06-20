@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyRuntimeHost,
   createSystemHealthSnapshot,
-  getSupabaseProjectRef,
-  hasPersistedSupabaseSession,
+  isSupabasePublicUrlConfigured,
 } from "./systemHealth";
 
 describe("systemHealth", () => {
@@ -15,31 +14,20 @@ describe("systemHealth", () => {
     expect(classifyRuntimeHost("example.com")).toBe("other");
   });
 
-  it("extrai somente o project ref público da URL do Supabase", () => {
-    expect(getSupabaseProjectRef("https://abc123.supabase.co")).toBe("abc123");
-    expect(getSupabaseProjectRef("not-a-url")).toBeNull();
-    expect(getSupabaseProjectRef()).toBeNull();
+  it("valida somente uma URL pública compatível", () => {
+    expect(isSupabasePublicUrlConfigured("https://sample.supabase.co")).toBe(true);
+    expect(isSupabasePublicUrlConfigured("http://sample.supabase.co")).toBe(false);
+    expect(isSupabasePublicUrlConfigured("https://example.com")).toBe(false);
+    expect(isSupabasePublicUrlConfigured("invalid")).toBe(false);
+    expect(isSupabasePublicUrlConfigured()).toBe(false);
   });
 
-  it("detecta a presença do armazenamento oficial sem ler o conteúdo", () => {
-    const storage = {
-      getItem(key: string) {
-        return key === "sb-abc123-auth-token" ? "stored" : null;
-      },
-    };
-
-    expect(hasPersistedSupabaseSession(storage, "abc123")).toBe(true);
-    expect(hasPersistedSupabaseSession(storage, "other")).toBe(false);
-    expect(hasPersistedSupabaseSession(null, "abc123")).toBe(false);
-  });
-
-  it("gera snapshot sem expor chave, token ou conteúdo da sessão", () => {
+  it("gera snapshot sem incluir valores de configuração", () => {
     const snapshot = createSystemHealthSnapshot({
       hostname: "www.apeeducation.org",
       isOnline: true,
       mode: "production",
-      supabaseUrl: "https://abc123.supabase.co",
-      storage: { getItem: () => "secret-session-value" },
+      supabaseUrl: "https://sample.supabase.co",
     });
 
     expect(snapshot).toEqual({
@@ -49,9 +37,7 @@ describe("systemHealth", () => {
       isOnline: true,
       mode: "production",
       supabaseConfigured: true,
-      supabaseProjectRef: "abc123",
-      persistedSessionDetected: true,
     });
-    expect(JSON.stringify(snapshot)).not.toContain("secret-session-value");
+    expect(JSON.stringify(snapshot)).not.toContain("sample");
   });
 });
