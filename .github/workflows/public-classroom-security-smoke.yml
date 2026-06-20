@@ -123,25 +123,29 @@ jobs:
           INSERT INTO public.folders (id, owner_id, title, visibility, class_id)
           VALUES
             ('77777777-7777-4777-8777-777777777777', '44444444-4444-4444-8444-444444444444', 'Public folder', 'class', '55555555-5555-4555-8555-555555555555'),
-            ('88888888-8888-4888-8888-888888888888', '44444444-4444-4444-8444-444444444444', 'Private folder', 'class', '66666666-6666-4666-8666-666666666666')
+            ('88888888-8888-4888-8888-888888888888', '44444444-4444-4444-8444-444444444444', 'Private folder', 'class', '66666666-6666-4666-8666-666666666666'),
+            ('12121212-1212-4212-8212-121212121212', '44444444-4444-4444-8444-444444444444', 'Legacy assigned folder', 'private', NULL)
           ON CONFLICT (id) DO NOTHING;
 
           INSERT INTO public.lists (id, folder_id, owner_id, title, visibility, class_id)
           VALUES
             ('99999999-9999-4999-8999-999999999999', '77777777-7777-4777-8777-777777777777', '44444444-4444-4444-8444-444444444444', 'Public list', 'class', '55555555-5555-4555-8555-555555555555'),
-            ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '88888888-8888-4888-8888-888888888888', '44444444-4444-4444-8444-444444444444', 'Private list', 'class', '66666666-6666-4666-8666-666666666666')
+            ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '88888888-8888-4888-8888-888888888888', '44444444-4444-4444-8444-444444444444', 'Private list', 'class', '66666666-6666-4666-8666-666666666666'),
+            ('13131313-1313-4313-8313-131313131313', '12121212-1212-4212-8212-121212121212', '44444444-4444-4444-8444-444444444444', 'Legacy hidden list', 'private', NULL)
           ON CONFLICT (id) DO NOTHING;
 
           INSERT INTO public.flashcards (id, user_id, list_id, term, translation)
           VALUES
             ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '44444444-4444-4444-8444-444444444444', '99999999-9999-4999-8999-999999999999', 'Public card', 'Carta pública'),
-            ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '44444444-4444-4444-8444-444444444444', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Private card', 'Carta privada')
+            ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '44444444-4444-4444-8444-444444444444', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Private card', 'Carta privada'),
+            ('14141414-1414-4414-8414-141414141414', '44444444-4444-4444-8444-444444444444', '13131313-1313-4313-8313-131313131313', 'Legacy card', 'Carta reparada')
           ON CONFLICT (id) DO NOTHING;
 
           INSERT INTO public.atribuicoes (id, turma_id, titulo, fonte_tipo, fonte_id)
           VALUES
             ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '55555555-5555-4555-8555-555555555555', 'Public assignment', 'lista', '99999999-9999-4999-8999-999999999999'),
-            ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '66666666-6666-4666-8666-666666666666', 'Private assignment', 'lista', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+            ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '66666666-6666-4666-8666-666666666666', 'Private assignment', 'lista', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+            ('15151515-1515-4515-8515-151515151515', '55555555-5555-4555-8555-555555555555', 'Legacy folder assignment', 'pasta', '12121212-1212-4212-8212-121212121212')
           ON CONFLICT (id) DO NOTHING;
           SQL
 
@@ -149,6 +153,30 @@ jobs:
         shell: bash
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF (
+              SELECT COUNT(*)
+              FROM public.folders
+              WHERE id = '12121212-1212-4212-8212-121212121212'
+                AND class_id = '55555555-5555-4555-8555-555555555555'
+                AND visibility = 'class'
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Assigned legacy folder was not synchronized with the public classroom';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.lists
+              WHERE id = '13131313-1313-4313-8313-131313131313'
+                AND class_id = '55555555-5555-4555-8555-555555555555'
+                AND visibility = 'class'
+            ) <> 1 THEN
+              RAISE EXCEPTION 'List inside assigned folder did not inherit classroom context';
+            END IF;
+          END;
+          $$;
+
           SET ROLE anon;
           DO $$
           BEGIN
@@ -168,8 +196,21 @@ jobs:
               RAISE EXCEPTION 'Public assignment list is missing';
             END IF;
 
+            IF (
+              SELECT COUNT(*) FROM public.public_turma_lists
+              WHERE turma_id = '55555555-5555-4555-8555-555555555555'
+                AND atribuicao_id = '15151515-1515-4515-8515-151515151515'
+                AND list_id = '13131313-1313-4313-8313-131313131313'
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Repaired legacy list is missing from the public classroom';
+            END IF;
+
             IF (SELECT COUNT(*) FROM public.get_portal_flashcards('99999999-9999-4999-8999-999999999999')) <> 1 THEN
               RAISE EXCEPTION 'Public classroom list is not playable anonymously';
+            END IF;
+
+            IF (SELECT COUNT(*) FROM public.get_portal_flashcards('13131313-1313-4313-8313-131313131313')) <> 1 THEN
+              RAISE EXCEPTION 'Repaired legacy classroom list is not playable anonymously';
             END IF;
 
             IF (SELECT COUNT(*) FROM public.get_portal_flashcards('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')) <> 0 THEN
