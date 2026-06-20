@@ -2,6 +2,8 @@
   --deck-height: 14rem;
   position: relative;
   width: 100%;
+  max-width: 42rem;
+  margin-inline: auto;
   isolation: isolate;
 }
 
@@ -95,7 +97,10 @@
   }
 }
 
-[data-perf-no-anim] .study-card-deck__content,
+[data-perf-no-anim] .study-card-deck__content {
+  animation: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .study-card-deck__content {
     animation: none !important;
