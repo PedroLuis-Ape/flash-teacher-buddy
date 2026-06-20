@@ -13,8 +13,8 @@
   overflow: visible;
 }
 
-.study-card-deck::after,
-.study-card-deck__layer {
+.study-card-deck__layer,
+.study-card-deck__preloaded {
   position: absolute;
   top: var(--deck-surface-top);
   left: var(--deck-surface-left);
@@ -24,17 +24,6 @@
   pointer-events: none;
   transform-origin: 50% 86%;
   opacity: 0;
-}
-
-.study-card-deck::after {
-  content: "";
-  z-index: 4;
-  border: 1px solid hsl(var(--primary) / 0.24);
-  background:
-    linear-gradient(145deg, hsl(var(--card) / 0.96), hsl(var(--primary) / 0.08));
-  box-shadow:
-    0 14px 30px -24px hsl(var(--primary) / 0.48),
-    inset 0 1px 0 hsl(var(--primary-glow) / 0.08);
 }
 
 .study-card-deck__layer {
@@ -54,32 +43,106 @@
   z-index: 1;
 }
 
+.study-card-deck__preloaded {
+  z-index: 2;
+  overflow: hidden;
+  border: 1px solid hsl(var(--primary) / 0.22);
+  background: hsl(var(--card));
+  box-shadow: 0 14px 32px -24px hsl(var(--primary) / 0.48);
+}
+
 .study-card-deck__content {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   width: 100%;
 }
 
 .study-card-deck__surface {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   transform-origin: 50% 86%;
+  will-change: transform, opacity;
 }
 
-.study-card-deck[data-deck-surface-ready="true"]::after {
-  animation: study-deck-card-to-back 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.study-card-deck-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  color: hsl(var(--card-foreground));
+  background:
+    radial-gradient(circle at 50% 25%, hsl(var(--primary) / 0.09), transparent 45%),
+    linear-gradient(145deg, hsl(var(--card)), hsl(var(--muted) / 0.3));
+  text-align: center;
 }
 
-.study-card-deck[data-deck-surface-ready="true"] .study-card-deck__surface {
-  animation: study-deck-card-rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.study-card-deck-preview__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
 }
 
-.study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--middle {
-  animation: study-deck-middle-rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.study-card-deck-preview__text {
+  max-width: 90%;
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.study-card-deck-preview__image {
+  max-width: min(42%, 10rem);
+  max-height: 34%;
+  object-fit: contain;
+  border-radius: 0.7rem;
 }
 
 .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--back {
-  animation: study-deck-back-rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  opacity: 0.12;
+  transform: translate3d(0, 9px, 0) rotate(-0.32deg) scale(0.99);
+}
+
+.study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--middle {
+  opacity: 0.18;
+  transform: translate3d(0, 5px, 0) rotate(0.18deg) scale(0.995);
+}
+
+.study-card-deck[data-deck-surface-ready="true"] .study-card-deck__preloaded {
+  opacity: 0.26;
+  transform: translate3d(0, 6px, 0) scale(0.992);
+}
+
+.study-card-deck[data-deck-phase="exit-next"] .study-card-deck__surface {
+  animation: deck-current-out-next 230ms cubic-bezier(0.55, 0, 0.85, 0.35) both;
+}
+
+.study-card-deck[data-deck-phase="exit-next"] .study-card-deck__preloaded {
+  animation: deck-preloaded-up-next 230ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.study-card-deck[data-deck-phase="exit-previous"] .study-card-deck__surface {
+  animation: deck-current-to-back 230ms cubic-bezier(0.55, 0, 0.85, 0.35) both;
+}
+
+.study-card-deck[data-deck-phase="exit-previous"] .study-card-deck__preloaded {
+  animation: deck-preloaded-return 230ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.study-card-deck[data-deck-phase="enter-next"] .study-card-deck__surface {
+  animation: deck-current-enter-next 280ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
+}
+
+.study-card-deck[data-deck-phase="enter-previous"] .study-card-deck__surface {
+  animation: deck-current-enter-previous 280ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
+}
+
+.study-card-deck[data-deck-phase^="enter-"] .study-card-deck__preloaded {
+  opacity: 0;
 }
 
 .study-card-deck--swipe {
@@ -90,47 +153,69 @@
   cursor: grabbing;
 }
 
-@keyframes study-deck-card-to-back {
-  0% {
-    opacity: 0.56;
+@keyframes deck-current-out-next {
+  from {
+    opacity: 1;
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-  100% {
+  to {
     opacity: 0;
-    transform: translate3d(10px, 26px, 0) rotate(1deg) scale(0.985);
+    transform: translate3d(-92px, -14px, 0) rotate(-4deg) scale(0.975);
   }
 }
 
-@keyframes study-deck-card-rise {
-  0% {
-    opacity: 0.64;
-    transform: translate3d(0, 10px, 0) scale(0.988);
+@keyframes deck-preloaded-up-next {
+  from {
+    opacity: 0.34;
+    transform: translate3d(0, 12px, 0) scale(0.978);
   }
-  100% {
+  to {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
-@keyframes study-deck-middle-rise {
-  0% {
-    opacity: 0.34;
-    transform: translate3d(0, 8px, 0) rotate(0.4deg) scale(0.99);
+@keyframes deck-current-to-back {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-  100% {
-    opacity: 0.24;
-    transform: translate3d(0, 4px, 0) rotate(0.22deg) scale(0.995);
+  to {
+    opacity: 0.18;
+    transform: translate3d(34px, 26px, 0) rotate(2.4deg) scale(0.965);
   }
 }
 
-@keyframes study-deck-back-rise {
-  0% {
-    opacity: 0.24;
-    transform: translate3d(0, 12px, 0) rotate(-0.55deg) scale(0.982);
+@keyframes deck-preloaded-return {
+  from {
+    opacity: 0;
+    transform: translate3d(-76px, -18px, 0) rotate(-3deg) scale(0.975);
   }
-  100% {
-    opacity: 0.14;
-    transform: translate3d(0, 8px, 0) rotate(-0.35deg) scale(0.99);
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes deck-current-enter-next {
+  from {
+    opacity: 0.72;
+    transform: translate3d(0, 10px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes deck-current-enter-previous {
+  from {
+    opacity: 0.68;
+    transform: translate3d(-54px, -12px, 0) rotate(-2deg) scale(0.982);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
 }
 
@@ -139,94 +224,111 @@
     margin-bottom: 0.45rem;
   }
 
-  .study-card-deck[data-deck-surface-ready="true"]::after {
-    animation-name: study-deck-card-to-back-mobile;
+  .study-card-deck-preview {
+    gap: 0.6rem;
+    padding: 0.9rem;
   }
 
-  .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__surface {
-    animation-name: study-deck-card-rise-mobile;
-  }
-
-  .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--middle {
-    animation-name: study-deck-middle-rise-mobile;
+  .study-card-deck-preview__text {
+    font-size: clamp(1.05rem, 6vw, 1.55rem);
   }
 
   .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--back {
-    animation-name: study-deck-back-rise-mobile;
+    opacity: 0.1;
+    transform: translate3d(0, 6px, 0) rotate(-0.2deg) scale(0.993);
+  }
+
+  .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--middle {
+    opacity: 0.15;
+    transform: translate3d(0, 3px, 0) rotate(0.1deg) scale(0.997);
+  }
+
+  .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__preloaded {
+    opacity: 0.2;
+    transform: translate3d(0, 4px, 0) scale(0.995);
+  }
+
+  .study-card-deck[data-deck-phase="exit-next"] .study-card-deck__surface {
+    animation-name: deck-current-out-next-mobile;
+  }
+
+  .study-card-deck[data-deck-phase="exit-previous"] .study-card-deck__surface {
+    animation-name: deck-current-to-back-mobile;
+  }
+
+  .study-card-deck[data-deck-phase="exit-previous"] .study-card-deck__preloaded {
+    animation-name: deck-preloaded-return-mobile;
+  }
+
+  .study-card-deck[data-deck-phase="enter-previous"] .study-card-deck__surface {
+    animation-name: deck-current-enter-previous-mobile;
   }
 }
 
-@keyframes study-deck-card-to-back-mobile {
-  0% {
-    opacity: 0.5;
+@keyframes deck-current-out-next-mobile {
+  from {
+    opacity: 1;
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-  100% {
+  to {
     opacity: 0;
-    transform: translate3d(6px, 18px, 0) rotate(0.65deg) scale(0.99);
+    transform: translate3d(-44px, -7px, 0) rotate(-2deg) scale(0.985);
   }
 }
 
-@keyframes study-deck-card-rise-mobile {
-  0% {
-    opacity: 0.7;
-    transform: translate3d(0, 7px, 0) scale(0.992);
-  }
-  100% {
+@keyframes deck-current-to-back-mobile {
+  from {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-}
-
-@keyframes study-deck-middle-rise-mobile {
-  0% {
-    opacity: 0.3;
-    transform: translate3d(0, 6px, 0) rotate(0.28deg) scale(0.992);
-  }
-  100% {
+  to {
     opacity: 0.22;
-    transform: translate3d(0, 3px, 0) rotate(0.16deg) scale(0.996);
+    transform: translate3d(18px, 15px, 0) rotate(1.2deg) scale(0.98);
   }
 }
 
-@keyframes study-deck-back-rise-mobile {
-  0% {
-    opacity: 0.2;
-    transform: translate3d(0, 9px, 0) rotate(-0.38deg) scale(0.986);
+@keyframes deck-preloaded-return-mobile {
+  from {
+    opacity: 0;
+    transform: translate3d(-34px, -8px, 0) rotate(-1.4deg) scale(0.985);
   }
-  100% {
-    opacity: 0.12;
-    transform: translate3d(0, 6px, 0) rotate(-0.24deg) scale(0.992);
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
 }
 
-[data-perf-no-anim] .study-card-deck::after,
+@keyframes deck-current-enter-previous-mobile {
+  from {
+    opacity: 0.72;
+    transform: translate3d(-26px, -6px, 0) rotate(-0.9deg) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
 [data-perf-no-anim] .study-card-deck__surface,
+[data-perf-no-anim] .study-card-deck__preloaded,
 [data-perf-no-anim] .study-card-deck__layer {
   animation: none !important;
 }
 
-[data-perf-no-anim] .study-card-deck::after {
-  display: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .study-card-deck::after {
-    display: none;
-  }
-
   .study-card-deck__surface,
+  .study-card-deck__preloaded,
   .study-card-deck__layer {
     animation: none !important;
   }
 }
 
-[data-perf-no-decor] .study-card-deck::after {
-  display: none;
+[data-perf-no-decor] .study-card-deck__preloaded {
+  opacity: 0.08 !important;
+  box-shadow: none;
 }
 
 [data-perf-no-decor] .study-card-deck__layer {
-  animation: none !important;
-  opacity: 0.08 !important;
+  opacity: 0.05 !important;
   box-shadow: none;
 }
