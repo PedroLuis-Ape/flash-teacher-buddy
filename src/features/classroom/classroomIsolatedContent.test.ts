@@ -25,12 +25,15 @@ describe('isolated classroom content', () => {
   });
 
   it('uses the assignment as the public visibility source of truth', () => {
-    const publicListsFunction = migration.split('CREATE OR REPLACE FUNCTION public.public_turma_lists_rows()')[1];
+    const publicListsFunction = migration
+      .split('CREATE OR REPLACE FUNCTION public.public_turma_lists_rows()')[1]
+      .split('CREATE OR REPLACE FUNCTION public.get_portal_flashcards')[0];
+
     expect(publicListsFunction).toBeTruthy();
     expect(publicListsFunction).not.toContain('l.class_id = t.id');
     expect(publicListsFunction).not.toContain("l.visibility = 'class'");
-    expect(migration).toContain("a.fonte_tipo::text = 'pasta'");
-    expect(migration).toContain('a.fonte_id = f.id');
+    expect(publicListsFunction).toContain("a.fonte_tipo::text = 'pasta'");
+    expect(publicListsFunction).toContain('a.fonte_id = f.id');
   });
 
   it('offers direct class creation and isolated personal-library import', () => {
