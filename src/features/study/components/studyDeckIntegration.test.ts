@@ -27,9 +27,13 @@ describe("study deck integration", () => {
     }
   });
 
-  it("keeps the stack restrained and motion accessible", () => {
-    expect(css).toContain("rotate(-0.7deg)");
-    expect(css).toContain("rotate(0.35deg)");
+  it("keeps the stack proportional, full-height and motion accessible", () => {
+    expect(css).toContain("bottom: -0.8rem");
+    expect(css).not.toContain("height: var(--deck-height)");
+    expect(css).toContain("rotate(-0.9deg)");
+    expect(css).toContain("rotate(0.5deg)");
+    expect(css).toContain("translate3d(0, 12px, 0)");
+    expect(css).toContain("translate3d(0, 6px, 0)");
     expect(css).toContain("prefers-reduced-motion");
     expect(css).toContain("max-width: 42rem");
   });
