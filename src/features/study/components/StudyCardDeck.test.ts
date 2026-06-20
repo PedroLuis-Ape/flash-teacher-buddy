@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveDeckSwipe } from "./StudyCardDeck";
+import { resolveDeckSwipe, resolveFlightRenderMode } from "./StudyCardDeck";
 
 describe("resolveDeckSwipe", () => {
   it("moves left to the next card when allowed", () => {
@@ -58,5 +58,58 @@ describe("resolveDeckSwipe", () => {
         canGoPrevious: true,
       }),
     ).toBeNull();
+  });
+});
+
+describe("resolveFlightRenderMode", () => {
+  it("uses a lightweight outgoing card on mobile and coarse pointers", () => {
+    expect(
+      resolveFlightRenderMode({
+        viewportWidth: 390,
+        coarsePointer: false,
+        reducedMotion: false,
+        animationsDisabled: false,
+      }),
+    ).toBe("lightweight");
+
+    expect(
+      resolveFlightRenderMode({
+        viewportWidth: 1200,
+        coarsePointer: true,
+        reducedMotion: false,
+        animationsDisabled: false,
+      }),
+    ).toBe("lightweight");
+  });
+
+  it("keeps the full visual clone only on larger fine-pointer screens", () => {
+    expect(
+      resolveFlightRenderMode({
+        viewportWidth: 1280,
+        coarsePointer: false,
+        reducedMotion: false,
+        animationsDisabled: false,
+      }),
+    ).toBe("full");
+  });
+
+  it("disables flight animation for reduced motion and performance mode", () => {
+    expect(
+      resolveFlightRenderMode({
+        viewportWidth: 390,
+        coarsePointer: true,
+        reducedMotion: true,
+        animationsDisabled: false,
+      }),
+    ).toBe("disabled");
+
+    expect(
+      resolveFlightRenderMode({
+        viewportWidth: 1280,
+        coarsePointer: false,
+        reducedMotion: false,
+        animationsDisabled: true,
+      }),
+    ).toBe("disabled");
   });
 });
