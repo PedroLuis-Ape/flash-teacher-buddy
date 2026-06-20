@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,10 +37,10 @@ jobs:
           supabase start
           supabase db reset --local --no-seed
 
-      - name: Verify public views and anonymous play
+      - name: Verify security-invoker view options
         shell: bash
         run: |
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 <<'SQL'
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           DO $$
           DECLARE
             view_name text;
@@ -68,7 +71,12 @@ jobs:
             END LOOP;
           END;
           $$;
+          SQL
 
+      - name: Seed public and private classroom fixtures
+        shell: bash
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           INSERT INTO auth.users (
             instance_id, id, aud, role, email, encrypted_password,
             email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
@@ -197,9 +205,13 @@ jobs:
               'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
             )
           ON CONFLICT (id) DO NOTHING;
+          SQL
 
+      - name: Verify anonymous raw-table isolation
+        shell: bash
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           SET ROLE anon;
-
           DO $$
           BEGIN
             IF (
@@ -212,7 +224,18 @@ jobs:
             ) <> 0 THEN
               RAISE EXCEPTION 'Anonymous role can read raw classroom rows';
             END IF;
+          END;
+          $$;
+          RESET ROLE;
+          SQL
 
+      - name: Verify public and private classroom views
+        shell: bash
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          SET ROLE anon;
+          DO $$
+          BEGIN
             IF (
               SELECT COUNT(*)
               FROM public.public_turmas
@@ -231,6 +254,26 @@ jobs:
 
             IF (
               SELECT COUNT(*)
+              FROM public.public_turma_lists
+              WHERE turma_id = '55555555-5555-4555-8555-555555555555'
+                AND atribuicao_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Public assignment list is missing from the launcher source';
+            END IF;
+          END;
+          $$;
+          RESET ROLE;
+          SQL
+
+      - name: Verify anonymous guest play
+        shell: bash
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          SET ROLE anon;
+          DO $$
+          BEGIN
+            IF (
+              SELECT COUNT(*)
               FROM public.get_portal_flashcards('99999999-9999-4999-8999-999999999999')
             ) <> 1 THEN
               RAISE EXCEPTION 'Public classroom list is not playable anonymously';
@@ -242,18 +285,8 @@ jobs:
             ) <> 0 THEN
               RAISE EXCEPTION 'Private classroom list leaked into anonymous play';
             END IF;
-
-            IF (
-              SELECT COUNT(*)
-              FROM public.public_turma_lists
-              WHERE turma_id = '55555555-5555-4555-8555-555555555555'
-                AND atribuicao_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
-            ) <> 1 THEN
-              RAISE EXCEPTION 'Public assignment list is missing from the launcher source';
-            END IF;
           END;
           $$;
-
           RESET ROLE;
           SQL
 
