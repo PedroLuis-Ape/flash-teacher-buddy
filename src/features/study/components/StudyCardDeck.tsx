@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import "./studyCardDeck.css";
 
 type SwipeAction = "next" | "previous" | null;
+type DeckDirection = "next" | "previous";
 
 interface SwipeNavigation {
   onNext?: () => void;
@@ -39,6 +40,27 @@ const SURFACE_SELECTOR = [
   ".flip-card",
   ".rounded-lg.border.bg-card",
 ].join(", ");
+
+let pendingEnterDirection: DeckDirection | null = null;
+let pendingEnterExpiresAt = 0;
+
+function markPendingEnter(direction: DeckDirection) {
+  pendingEnterDirection = direction;
+  pendingEnterExpiresAt = Date.now() + 650;
+}
+
+function consumePendingEnter(): DeckDirection | null {
+  if (!pendingEnterDirection || Date.now() > pendingEnterExpiresAt) {
+    pendingEnterDirection = null;
+    pendingEnterExpiresAt = 0;
+    return null;
+  }
+
+  const direction = pendingEnterDirection;
+  pendingEnterDirection = null;
+  pendingEnterExpiresAt = 0;
+  return direction;
+}
 
 export function resolveDeckSwipe({
   dx,
@@ -72,6 +94,65 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   );
 }
 
+function inferButtonDirection(target: EventTarget | null): DeckDirection | null {
+  if (!(target instanceof Element)) return null;
+  const button = target.closest("button, [role='button']");
+  if (!button || button.hasAttribute("disabled")) return null;
+
+  const description = [
+    button.getAttribute("title"),
+    button.getAttribute("aria-label"),
+    button.textContent,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase();
+
+  if (/card anterior|previous card|voltar card/.test(description)) return "previous";
+  if (/próximo card|proximo card|next card/.test(description)) return "next";
+  return null;
+}
+
+function removeDuplicateIds(root: HTMLElement) {
+  root.removeAttribute("id");
+  root.querySelectorAll<HTMLElement>("[id]").forEach((node) => node.removeAttribute("id"));
+  root.querySelectorAll<HTMLElement>("button, a, input, textarea, select, [tabindex]").forEach((node) => {
+    node.setAttribute("tabindex", "-1");
+    node.setAttribute("aria-hidden", "true");
+  });
+}
+
+function launchFlyingCard(surface: HTMLElement, direction: DeckDirection) {
+  const rect = surface.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+
+  const flight = document.createElement("div");
+  flight.className = `study-card-flight study-card-flight--${direction}`;
+  flight.style.top = `${rect.top}px`;
+  flight.style.left = `${rect.left}px`;
+  flight.style.width = `${rect.width}px`;
+  flight.style.height = `${rect.height}px`;
+  flight.style.borderRadius = window.getComputedStyle(surface).borderRadius || "0.75rem";
+
+  const clone = surface.cloneNode(true) as HTMLElement;
+  clone.classList.remove("study-card-deck__surface");
+  clone.style.width = "100%";
+  clone.style.height = "100%";
+  clone.style.margin = "0";
+  clone.style.pointerEvents = "none";
+  removeDuplicateIds(clone);
+
+  flight.appendChild(clone);
+  document.body.appendChild(flight);
+  markPendingEnter(direction);
+
+  window.requestAnimationFrame(() => {
+    flight.classList.add("study-card-flight--active");
+  });
+
+  window.setTimeout(() => flight.remove(), 420);
+}
+
 export function StudyCardDeck({
   children,
   cardKey,
@@ -81,9 +162,17 @@ export function StudyCardDeck({
 }: StudyCardDeckProps) {
   const deckRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const surfaceRef = useRef<HTMLElement | null>(null);
   const startRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const consumedRef = useRef(false);
   const timerRef = useRef<number | null>(null);
+  const enterTimerRef = useRef<number | null>(null);
+
+  const prepareTransition = (direction: DeckDirection) => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    launchFlyingCard(surface, direction);
+  };
 
   useLayoutEffect(() => {
     const deck = deckRef.current;
@@ -93,12 +182,14 @@ export function StudyCardDeck({
     let surface: HTMLElement | null = null;
     let surfaceObserver: ResizeObserver | null = null;
     let frame = 0;
+    let enterApplied = false;
 
     const clearSurface = () => {
       surface?.classList.remove("study-card-deck__surface");
       surfaceObserver?.disconnect();
       surfaceObserver = null;
       surface = null;
+      surfaceRef.current = null;
       delete deck.dataset.deckSurfaceReady;
     };
 
@@ -122,6 +213,17 @@ export function StudyCardDeck({
       deck.style.setProperty("--deck-surface-height", `${surfaceRect.height}px`);
       deck.style.setProperty("--deck-surface-radius", computed.borderRadius || "0.75rem");
       deck.dataset.deckSurfaceReady = "true";
+
+      if (!enterApplied) {
+        enterApplied = true;
+        const direction = consumePendingEnter();
+        if (direction) {
+          deck.dataset.deckEnter = direction;
+          enterTimerRef.current = window.setTimeout(() => {
+            delete deck.dataset.deckEnter;
+          }, 340);
+        }
+      }
     };
 
     const scheduleMeasure = () => {
@@ -140,6 +242,7 @@ export function StudyCardDeck({
       if (!nextSurface) return;
 
       surface = nextSurface;
+      surfaceRef.current = nextSurface;
       surface.classList.add("study-card-deck__surface");
       surfaceObserver = new ResizeObserver(scheduleMeasure);
       surfaceObserver.observe(surface);
@@ -166,13 +269,25 @@ export function StudyCardDeck({
   }, [cardKey]);
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isInteractiveTarget(event.target)) return;
+      if (event.key === "ArrowLeft") prepareTransition("previous");
+      if (event.key === "ArrowRight") prepareTransition("next");
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  });
+
+  useEffect(() => {
     return () => {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      if (enterTimerRef.current !== null) window.clearTimeout(enterTimerRef.current);
     };
   }, []);
 
-  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    if (!swipeNavigation || event.touches.length !== 1 || isInteractiveTarget(event.target)) {
+  const handleTouchStartCapture = (event: TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1 || isInteractiveTarget(event.target)) {
       startRef.current = null;
       return;
     }
@@ -186,30 +301,36 @@ export function StudyCardDeck({
     consumedRef.current = false;
   };
 
-  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+  const handleTouchEndCapture = (event: TouchEvent<HTMLDivElement>) => {
     const start = startRef.current;
     startRef.current = null;
-    if (!start || !swipeNavigation) return;
+    if (!start) return;
 
     const touch = event.changedTouches[0];
     const action = resolveDeckSwipe({
       dx: touch.clientX - start.x,
       dy: touch.clientY - start.y,
       elapsedMs: Date.now() - start.time,
-      canGoNext: swipeNavigation.canGoNext !== false,
-      canGoPrevious: swipeNavigation.canGoPrevious !== false,
+      canGoNext: swipeNavigation?.canGoNext !== false,
+      canGoPrevious: swipeNavigation?.canGoPrevious !== false,
     });
 
     if (!action) return;
+    prepareTransition(action);
+
+    if (!swipeNavigation) return;
 
     consumedRef.current = true;
     timerRef.current = window.setTimeout(() => {
       if (action === "next") swipeNavigation.onNext?.();
       else swipeNavigation.onPrevious?.();
-    }, 90);
+    }, 32);
   };
 
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
+    const direction = inferButtonDirection(event.target);
+    if (direction) prepareTransition(direction);
+
     if (!consumedRef.current) return;
     consumedRef.current = false;
     event.preventDefault();
@@ -226,8 +347,8 @@ export function StudyCardDeck({
         swipeNavigation && "study-card-deck--swipe",
         className,
       )}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      onTouchStartCapture={handleTouchStartCapture}
+      onTouchEndCapture={handleTouchEndCapture}
       onClickCapture={handleClickCapture}
       style={{ touchAction: swipeNavigation ? "pan-y" : undefined }}
     >
