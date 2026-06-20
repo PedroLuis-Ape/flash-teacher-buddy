@@ -3,45 +3,64 @@
   width: 100%;
   max-width: 42rem;
   margin-inline: auto;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.65rem;
   isolation: isolate;
   overflow: visible;
 }
 
+.study-card-deck::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  inset: 0.15rem 0.3rem -0.25rem;
+  border-radius: calc(var(--radius) + 0.2rem);
+  border: 1px solid hsl(var(--primary) / 0.3);
+  background:
+    linear-gradient(145deg, hsl(var(--card) / 0.98), hsl(var(--primary) / 0.1));
+  box-shadow:
+    0 18px 36px -24px hsl(var(--primary) / 0.58),
+    inset 0 1px 0 hsl(var(--primary-glow) / 0.12);
+  pointer-events: none;
+  transform-origin: 50% 88%;
+  animation: study-deck-card-to-back 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .study-card-deck__layer {
   position: absolute;
-  top: 0.3rem;
-  right: 0.55rem;
-  bottom: -0.65rem;
-  left: 0.55rem;
+  top: 0.25rem;
+  right: 0.5rem;
+  bottom: -0.55rem;
+  left: 0.5rem;
   border-radius: calc(var(--radius) + 0.2rem);
-  border: 1px solid hsl(var(--primary) / 0.26);
+  border: 1px solid hsl(var(--primary) / 0.22);
   background:
-    linear-gradient(145deg, hsl(var(--card) / 0.96), hsl(var(--primary) / 0.11));
+    linear-gradient(145deg, hsl(var(--card) / 0.96), hsl(var(--primary) / 0.08));
   box-shadow:
-    0 14px 30px -23px hsl(var(--primary) / 0.5),
-    inset 0 1px 0 hsl(var(--primary-glow) / 0.1);
+    0 12px 26px -22px hsl(var(--primary) / 0.42),
+    inset 0 1px 0 hsl(var(--primary-glow) / 0.08);
   pointer-events: none;
   transform-origin: 50% 12%;
 }
 
 .study-card-deck__layer--back {
   z-index: 0;
-  opacity: 0.46;
-  transform: translate3d(0, 10px, 0) rotate(-0.75deg) scale(0.984);
+  opacity: 0.2;
+  transform: translate3d(0, 8px, 0) rotate(-0.55deg) scale(0.986);
+  animation: study-deck-back-rise 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .study-card-deck__layer--middle {
   z-index: 1;
-  opacity: 0.64;
-  transform: translate3d(0, 5px, 0) rotate(0.4deg) scale(0.992);
+  opacity: 0.32;
+  transform: translate3d(0, 4px, 0) rotate(0.28deg) scale(0.993);
+  animation: study-deck-middle-rise 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .study-card-deck__content {
   position: relative;
   z-index: 2;
   width: 100%;
-  animation: study-card-deck-arrive 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: study-deck-card-rise 310ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .study-card-deck--swipe {
@@ -52,57 +71,131 @@
   cursor: grabbing;
 }
 
-@keyframes study-card-deck-arrive {
-  from {
-    opacity: 0.84;
-    transform: translate3d(0, 6px, 0) scale(0.995);
+@keyframes study-deck-card-to-back {
+  0% {
+    opacity: 0.72;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-  to {
+  100% {
+    opacity: 0;
+    transform: translate3d(16px, 42px, 0) rotate(1.8deg) scale(0.972);
+  }
+}
+
+@keyframes study-deck-card-rise {
+  0% {
+    opacity: 0.42;
+    transform: translate3d(0, 20px, 0) scale(0.972);
+  }
+  100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
+@keyframes study-deck-middle-rise {
+  0% {
+    opacity: 0.56;
+    transform: translate3d(0, 10px, 0) rotate(0.65deg) scale(0.982);
+  }
+  100% {
+    opacity: 0.32;
+    transform: translate3d(0, 4px, 0) rotate(0.28deg) scale(0.993);
+  }
+}
+
+@keyframes study-deck-back-rise {
+  0% {
+    opacity: 0.32;
+    transform: translate3d(0, 14px, 0) rotate(-0.9deg) scale(0.975);
+  }
+  100% {
+    opacity: 0.2;
+    transform: translate3d(0, 8px, 0) rotate(-0.55deg) scale(0.986);
+  }
+}
+
 @media (max-width: 640px) {
   .study-card-deck {
-    margin-bottom: 0.95rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .study-card-deck::after {
+    inset: 0.1rem 0.24rem -0.2rem;
+    border-color: hsl(var(--primary) / 0.32);
+    animation-name: study-deck-card-to-back-mobile;
   }
 
   .study-card-deck__layer {
-    top: 0.2rem;
-    right: 0.35rem;
-    bottom: -0.8rem;
-    left: 0.35rem;
-    border-color: hsl(var(--primary) / 0.34);
-    background:
-      linear-gradient(145deg, hsl(var(--card) / 0.98), hsl(var(--primary) / 0.14));
-    box-shadow:
-      0 16px 34px -22px hsl(var(--primary) / 0.56),
-      inset 0 1px 0 hsl(var(--primary-glow) / 0.14);
+    top: 0.15rem;
+    right: 0.3rem;
+    bottom: -0.62rem;
+    left: 0.3rem;
   }
 
   .study-card-deck__layer--back {
-    opacity: 0.56;
-    transform: translate3d(0, 12px, 0) rotate(-0.9deg) scale(0.98);
+    opacity: 0.22;
+    transform: translate3d(0, 9px, 0) rotate(-0.6deg) scale(0.984);
   }
 
   .study-card-deck__layer--middle {
-    opacity: 0.74;
-    transform: translate3d(0, 6px, 0) rotate(0.5deg) scale(0.99);
+    opacity: 0.34;
+    transform: translate3d(0, 4px, 0) rotate(0.3deg) scale(0.992);
+  }
+
+  .study-card-deck__content {
+    animation-name: study-deck-card-rise-mobile;
   }
 }
 
-[data-perf-no-anim] .study-card-deck__content {
+@keyframes study-deck-card-to-back-mobile {
+  0% {
+    opacity: 0.66;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(9px, 30px, 0) rotate(1.15deg) scale(0.98);
+  }
+}
+
+@keyframes study-deck-card-rise-mobile {
+  0% {
+    opacity: 0.48;
+    transform: translate3d(0, 14px, 0) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+[data-perf-no-anim] .study-card-deck::after,
+[data-perf-no-anim] .study-card-deck__content,
+[data-perf-no-anim] .study-card-deck__layer {
   animation: none !important;
 }
 
+[data-perf-no-anim] .study-card-deck::after {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .study-card-deck__content {
+  .study-card-deck::after {
+    display: none;
+  }
+
+  .study-card-deck__content,
+  .study-card-deck__layer {
     animation: none !important;
   }
 }
 
+[data-perf-no-decor] .study-card-deck::after {
+  display: none;
+}
+
 [data-perf-no-decor] .study-card-deck__layer {
-  opacity: 0.22;
+  opacity: 0.14;
   box-shadow: none;
 }
