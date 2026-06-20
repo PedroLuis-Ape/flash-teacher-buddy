@@ -29,7 +29,7 @@ const hostCopy: Record<RuntimeHostKind, { label: string; detail: string; ok: boo
 const backendCopy: Record<BackendContractStatus, { label: string; detail: string; ok: boolean }> = {
   valid: {
     label: "Consistente",
-    detail: "A URL compilada corresponde ao projeto configurado para o frontend.",
+    detail: "URL, projeto e chave publicável do frontend formam um contrato coerente.",
     ok: true,
   },
   missing: {
@@ -39,12 +39,17 @@ const backendCopy: Record<BackendContractStatus, { label: string; detail: string
   },
   mismatch: {
     label: "Configuração divergente",
-    detail: "A URL compilada e o identificador do projeto não correspondem.",
+    detail: "Os componentes públicos do backend não pertencem ao mesmo projeto.",
     ok: false,
   },
   "invalid-url": {
     label: "URL inválida",
     detail: "O endereço compilado do backend não possui um formato válido.",
+    ok: false,
+  },
+  "invalid-key": {
+    label: "Chave inválida",
+    detail: "A chave compilada não possui formato publicável ou role anônima.",
     ok: false,
   },
 };
@@ -82,6 +87,7 @@ export default function SystemStatusPage() {
     mode: import.meta.env.MODE,
     backendProjectId: import.meta.env.VITE_SUPABASE_PROJECT_ID,
     backendUrl: import.meta.env.VITE_SUPABASE_URL,
+    backendPublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   }), [revision]);
 
   const host = hostCopy[snapshot.hostKind];
