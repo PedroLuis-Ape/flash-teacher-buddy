@@ -49,11 +49,11 @@ Funções com cliente administrativo são detectadas automaticamente como elevad
 - `turmas-as-aluno`: privada, JWT obrigatório e executada sob RLS;
 - `turmas-update`: privada, JWT obrigatório e com filtros repetidos na escrita;
 - `turmas-delete`: privada, JWT obrigatório e com soft delete filtrado;
-- `turmas-remove-member`: privada, JWT obrigatório e com desativação lógica da matrícula.
+- `turmas-remove-member`: privada, JWT obrigatório e com remoção filtrada da matrícula ativa.
 
 A revisão detalhada dessa família está em `docs/reviews/turmas-review.md`.
 
-Nenhuma dessas alterações publica funções ou modifica o banco. Elas tornam o contrato de segurança verific&aacute;vel no repositório e no CI.
+Nenhuma dessas alterações publica funções ou modifica o banco. Elas tornam o contrato de segurança verificável no repositório e no CI.
 
 ## Relatório
 
@@ -67,7 +67,7 @@ O relatório é publicado como artefato temporário do workflow. Ele contém som
 
 ## Próxima migração segura
 
-As funções legadas devem ser adicionadas gradualmente a `supabase/config.toml` depois de revisão individual. O CI passa a trat&aacute;-las como gerenciadas assim que a configuração explícita é incluída. Nenhuma função é publicada ou alterada automaticamente por este processo.
+As funções legadas devem ser adicionadas gradualmente a `supabase/config.toml` depois de revisão individual. O CI passa a tratá-las como gerenciadas assim que a configuração explícita é incluída. Nenhuma função é publicada ou alterada automaticamente por este processo.
 
 ## Limitação conhecida
 
