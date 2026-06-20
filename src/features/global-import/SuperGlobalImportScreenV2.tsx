@@ -175,7 +175,7 @@ export default function SuperGlobalImportScreenV2() {
         destinationPlan: effectivePlan,
         catalog,
         cardConflict,
-        institutionId: classroomMode ? null : null,
+        institutionId: null,
         turmaId: turmaId ?? null,
         onProgress: (completed, total, label) => {
           setProgress(total > 0 ? (completed / total) * 100 : 0);
@@ -304,6 +304,7 @@ export default function SuperGlobalImportScreenV2() {
           report={report}
           undoing={undoing}
           onUndo={handleUndo}
+          openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}
           onOpenFolders={() => {
             if (classroomMode && turmaId) navigate(`/turmas/${turmaId}`);
             else navigate("/folders");
