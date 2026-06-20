@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,16 @@ import {
   type RuntimeHostKind,
 } from "@/lib/systemHealth";
 import {
+  describeBundleReport,
+  parseBundleReport,
+  type BundleReport,
+} from "@/lib/bundleHealth";
+import {
   Activity,
   AlertTriangle,
   CheckCircle2,
   Database,
+  Gauge,
   Globe2,
   RefreshCw,
   Wifi,
@@ -54,6 +60,11 @@ const backendCopy: Record<BackendContractStatus, { label: string; detail: string
   },
 };
 
+type BundleState =
+  | { status: "loading" }
+  | { status: "ready"; report: BundleReport }
+  | { status: "unavailable" };
+
 function StatusLine({ icon: Icon, title, value, detail, ok }: {
   icon: typeof Activity;
   title: string;
@@ -80,6 +91,7 @@ function StatusLine({ icon: Icon, title, value, detail, ok }: {
 export default function SystemStatusPage() {
   const [revision, setRevision] = useState(0);
   const [checkedAt, setCheckedAt] = useState(() => new Date());
+  const [bundleState, setBundleState] = useState<BundleState>({ status: "loading" });
 
   const snapshot = useMemo(() => createSystemHealthSnapshot({
     hostname: window.location.hostname,
@@ -90,9 +102,42 @@ export default function SystemStatusPage() {
     backendPublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   }), [revision]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setBundleState({ status: "loading" });
+
+    void fetch(`/bundle-report.json?revision=${revision}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return parseBundleReport(await response.json());
+      })
+      .then((report) => {
+        if (cancelled) return;
+        setBundleState(report ? { status: "ready", report } : { status: "unavailable" });
+      })
+      .catch(() => {
+        if (!cancelled) setBundleState({ status: "unavailable" });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [revision]);
+
   const host = hostCopy[snapshot.hostKind];
   const backend = backendCopy[snapshot.backendContract];
-  const overallHealthy = host.ok && snapshot.isOnline && backend.ok;
+  const bundleOk = bundleState.status === "ready" && bundleState.report.status === "within-budget";
+  const overallHealthy = host.ok && snapshot.isOnline && backend.ok && bundleOk;
+
+  const bundleCopy = bundleState.status === "loading"
+    ? { label: "Verificando", detail: "Carregando o relatório gerado pelo build.", ok: false }
+    : bundleState.status === "unavailable"
+      ? { label: "Indisponível", detail: "O relatório do bundle não foi encontrado neste ambiente.", ok: false }
+      : {
+          label: bundleState.report.status === "within-budget" ? "Dentro do orçamento" : "Acima do orçamento",
+          detail: describeBundleReport(bundleState.report),
+          ok: bundleState.report.status === "within-budget",
+        };
 
   const refresh = () => {
     setCheckedAt(new Date());
@@ -111,7 +156,7 @@ export default function SystemStatusPage() {
                   {overallHealthy ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <AlertTriangle className="h-5 w-5 text-destructive" />}
                   Estado do ambiente
                 </CardTitle>
-                <CardDescription className="mt-1">Verificação segura do frontend, domínio e contrato do backend.</CardDescription>
+                <CardDescription className="mt-1">Verificação segura do frontend, domínio, backend e tamanho do build.</CardDescription>
               </div>
               <Badge variant={overallHealthy ? "default" : "destructive"}>{overallHealthy ? "Operacional" : "Atenção"}</Badge>
             </div>
@@ -127,14 +172,15 @@ export default function SystemStatusPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Ambiente e domínio</CardTitle>
-            <CardDescription>Confirma onde a interface está rodando e se o backend compilado é coerente.</CardDescription>
+            <CardTitle className="text-base">Ambiente e publicação</CardTitle>
+            <CardDescription>Confirma a origem do frontend e os contratos essenciais do build publicado.</CardDescription>
           </CardHeader>
           <CardContent className="divide-y">
             <StatusLine icon={Globe2} title="Host atual" value={host.label} detail={`${snapshot.hostname} — ${host.detail}`} ok={host.ok} />
             <StatusLine icon={snapshot.isOnline ? Wifi : WifiOff} title="Conectividade" value={snapshot.isOnline ? "Online" : "Offline"} detail="Sinal informado pelo navegador." ok={snapshot.isOnline} />
             <StatusLine icon={Activity} title="Modo do build" value={snapshot.mode} detail="Identifica como o bundle atual foi gerado." ok={snapshot.mode === "production"} />
             <StatusLine icon={Database} title="Contrato do backend" value={backend.label} detail={backend.detail} ok={backend.ok} />
+            <StatusLine icon={Gauge} title="Orçamento do bundle" value={bundleCopy.label} detail={bundleCopy.detail} ok={bundleCopy.ok} />
           </CardContent>
         </Card>
       </main>
