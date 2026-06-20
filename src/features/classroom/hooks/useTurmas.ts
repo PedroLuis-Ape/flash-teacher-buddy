@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
+import { readTurmaUpdateFunctionError } from '@/features/classroom/lib/turmaUpdateErrors';
 
 export function useTurmasMine() {
   return useQuery({
@@ -109,37 +110,43 @@ export function useUpdateTurma() {
       descricao?: string;
       public?: boolean;
     }) => {
-      const updates: Record<string, string | boolean | null> = {};
+      const body: Record<string, string | boolean | null> = { turma_id };
 
       if (nome !== undefined) {
         const normalizedName = nome.trim();
         if (!normalizedName) throw new Error('Nome é obrigatório');
-        updates.nome = normalizedName;
+        body.nome = normalizedName;
       }
 
       if (descricao !== undefined) {
         const normalizedDescription = descricao.trim();
-        updates.descricao = normalizedDescription || null;
+        body.descricao = normalizedDescription || null;
       }
 
       if (isPublic !== undefined) {
-        updates.public = isPublic;
+        body.public = isPublic;
       }
 
-      if (Object.keys(updates).length === 0) {
+      if (Object.keys(body).length === 1) {
         throw new Error('Nenhuma alteração válida foi enviada');
       }
 
-      const { data: updated, error } = await (supabase as any)
-        .from('turmas')
-        .update(updates)
-        .eq('id', turma_id)
-        .select('*')
-        .single();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sua sessão expirou. Entre novamente para atualizar a turma.');
 
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('turmas-update', {
+        body,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (isPublic !== undefined && updated?.public !== isPublic) {
+      if (error) throw await readTurmaUpdateFunctionError(error);
+
+      const updated = data?.turma;
+      if (!updated?.id) throw new Error('O servidor não confirmou a atualização da turma.');
+
+      if (isPublic !== undefined && updated.public !== isPublic) {
         throw new Error('A visibilidade da turma não foi salva. Tente novamente.');
       }
 
@@ -160,6 +167,7 @@ export function useUpdateTurma() {
         queryClient.invalidateQueries({ queryKey: ['turmas'] }),
         queryClient.invalidateQueries({ queryKey: ['turma'] }),
         queryClient.invalidateQueries({ queryKey: ['public-turma'] }),
+        queryClient.invalidateQueries({ queryKey: ['public-teacher-turmas'] }),
       ]);
     },
   });
