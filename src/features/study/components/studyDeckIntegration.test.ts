@@ -9,6 +9,7 @@ const write = read("WriteStudyView.tsx");
 const multiple = read("MultipleChoiceStudyView.tsx");
 const unscramble = read("UnscrambleStudyView.tsx");
 const pronunciation = read("PronunciationStudyView.tsx");
+const deck = read("StudyCardDeck.tsx");
 const css = read("studyCardDeck.css");
 
 describe("study deck integration", () => {
@@ -27,23 +28,32 @@ describe("study deck integration", () => {
     }
   });
 
-  it("animates a card sinking while the next card rises", () => {
-    expect(css).toContain("study-deck-card-to-back");
-    expect(css).toContain("study-deck-card-rise");
-    expect(css).toContain("translate3d(16px, 42px, 0)");
-    expect(css).toContain("translate3d(0, 20px, 0)");
+  it("measures the real flashcard instead of the full mode wrapper", () => {
+    expect(deck).toContain("SURFACE_SELECTOR");
+    expect(deck).toContain(".flip-card");
+    expect(deck).toContain(".rounded-lg.border.bg-card");
+    expect(deck).toContain("ResizeObserver");
+    expect(deck).toContain("--deck-surface-height");
+    expect(deck).toContain("deckSurfaceReady");
   });
 
-  it("uses a smaller proportional transition on mobile", () => {
+  it("positions every deck layer from measured surface variables", () => {
+    expect(css).toContain("top: var(--deck-surface-top)");
+    expect(css).toContain("left: var(--deck-surface-left)");
+    expect(css).toContain("width: var(--deck-surface-width)");
+    expect(css).toContain("height: var(--deck-surface-height)");
+    expect(css).toContain("border-radius: var(--deck-surface-radius)");
+  });
+
+  it("keeps the mobile motion restrained", () => {
     expect(css).toContain("study-deck-card-to-back-mobile");
     expect(css).toContain("study-deck-card-rise-mobile");
-    expect(css).toContain("translate3d(9px, 30px, 0)");
-    expect(css).toContain("translate3d(0, 14px, 0)");
-    expect(css).toContain("rotate(1.15deg)");
+    expect(css).toContain("translate3d(6px, 18px, 0)");
+    expect(css).toContain("translate3d(0, 7px, 0)");
+    expect(css).toContain("rotate(0.65deg)");
   });
 
   it("keeps layout dimensions stable and supports reduced motion", () => {
-    expect(css).not.toContain("height: var(--deck-height)");
     expect(css).toContain("pointer-events: none");
     expect(css).toContain("prefers-reduced-motion");
     expect(css).toContain("max-width: 42rem");
