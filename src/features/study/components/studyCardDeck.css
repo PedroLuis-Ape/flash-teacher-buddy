@@ -96,6 +96,40 @@
   pointer-events: none !important;
 }
 
+.study-card-flight--lightweight {
+  overflow: hidden;
+  border: 1px solid hsl(var(--primary) / 0.18);
+  background:
+    radial-gradient(circle at 84% 12%, hsl(var(--primary) / 0.13), transparent 34%),
+    linear-gradient(145deg, hsl(var(--card)), hsl(var(--card) / 0.96));
+  box-shadow:
+    0 14px 28px -22px hsl(var(--foreground) / 0.22),
+    inset 0 1px 0 hsl(var(--primary-glow) / 0.08);
+}
+
+.study-card-flight--lightweight::before,
+.study-card-flight--lightweight::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  border-radius: 999px;
+  background: hsl(var(--foreground) / 0.1);
+}
+
+.study-card-flight--lightweight::before {
+  top: 22%;
+  width: 58%;
+  height: 0.7rem;
+  box-shadow: 0 1.55rem 0 hsl(var(--foreground) / 0.065);
+}
+
+.study-card-flight--lightweight::after {
+  bottom: 16%;
+  width: 80%;
+  height: 0.42rem;
+  background: hsl(var(--primary) / 0.13);
+}
+
 .study-card-flight--next.study-card-flight--active {
   animation: deck-card-flight-next 360ms cubic-bezier(0.42, 0, 0.75, 0.42) both;
 }
@@ -168,6 +202,12 @@
   .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--middle {
     opacity: 0.13;
     transform: translate3d(0, 3px, 0) rotate(0.08deg) scale(0.997);
+  }
+
+  .study-card-flight--lightweight {
+    box-shadow:
+      0 10px 20px -18px hsl(var(--foreground) / 0.16),
+      inset 0 1px 0 hsl(var(--primary-glow) / 0.06);
   }
 
   .study-card-flight--next.study-card-flight--active {
