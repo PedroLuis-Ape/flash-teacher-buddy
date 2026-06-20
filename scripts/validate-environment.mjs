@@ -66,11 +66,13 @@ for (const key of requiredKeys) {
 const forbiddenKeyPatterns = [
   /SERVICE_ROLE/i,
   /DATABASE_URL/i,
-  /POSTGRES.*PASSWORD/i,
+  /PASSWORD/i,
   /SUPABASE_ACCESS_TOKEN/i,
   /JWT_SECRET/i,
   /PRIVATE_KEY/i,
-  /SECRET_KEY/i,
+  /(?:^|_)SECRET(?:_|$)/i,
+  /(?:^|_)TOKEN(?:_|$)/i,
+  /CREDENTIAL/i,
 ];
 
 for (const key of Object.keys(envFile)) {
