@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -38,6 +38,7 @@ const PublicPortal = lazy(() => import("./pages/PublicPortal"));
 const PublicTeacherProfile = lazy(() => import("./pages/PublicTeacherProfile"));
 const PublicProfileSettings = lazy(() => import("./pages/PublicProfileSettings"));
 const GamesHub = lazy(() => import("./pages/GamesHub"));
+const PublicClassGamesHub = lazy(() => import("./pages/PublicClassGamesHub"));
 const Study = lazy(() => import("./pages/Study"));
 const Search = lazy(() => import("./pages/Search"));
 const Store = lazy(() => import("./pages/Store"));
@@ -71,6 +72,24 @@ const PerformanceSettings = lazy(() => import("./pages/PerformanceSettings"));
 const AuditRepair = lazy(() => import("./pages/AuditRepair"));
 const KeyboardShortcutsPage = lazy(() => import("./pages/KeyboardShortcuts"));
 const SpecialCards = lazy(() => import("./pages/SpecialCards"));
+
+function PublicListGamesRoute() {
+  const [searchParams] = useSearchParams();
+  const classroomMode =
+    searchParams.get("guest") === "true" &&
+    Boolean(searchParams.get("turma")) &&
+    Boolean(searchParams.get("atribuicao"));
+
+  if (classroomMode) {
+    return <PublicClassGamesHub />;
+  }
+
+  return (
+    <ListDirectionGate>
+      <GamesHub />
+    </ListDirectionGate>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -131,7 +150,7 @@ const App = () => {
                   <Route path="/portal" element={<PublicPortal />} />
                   <Route path="/portal/professor/:slug" element={<PublicTeacherProfile />} />
                   <Route path="/portal/folder/:id" element={<Folder />} />
-                  <Route path="/portal/list/:id/games" element={<ListDirectionGate><GamesHub /></ListDirectionGate>} />
+                  <Route path="/portal/list/:id/games" element={<PublicListGamesRoute />} />
                   <Route path="/portal/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
                   <Route path="/portal/collection/:id" element={<PublicCollection />} />
                   <Route path="/portal/collection/:id/study" element={<Study />} />
