@@ -2,7 +2,10 @@ import { lazy, Suspense, useMemo, type ComponentProps } from "react";
 import { listIdFromPath, isPublicListPath } from "@/lib/listRoute";
 import { useListPrimarySide } from "@/lib/useListPrimarySide";
 import { primarySideToDirection } from "@/lib/primarySideDirection";
+import { getMixedFlipSlotMode, isMixedStudySession } from "@/features/study/lib/runtimeStudySchedule";
 import { StudyCardDeck } from "./StudyCardDeck";
+import { WriteStudyView } from "./WriteStudyView";
+import { PronunciationStudyView } from "./PronunciationStudyView";
 
 const LazyFlipStudyView = lazy(() =>
   import("./FlipStudyView.impl").then((module) => ({ default: module.FlipStudyView }))
@@ -23,6 +26,10 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
   const publicRoute = useMemo(() => isPublicListPath(window.location.pathname), []);
   const { side } = useListPrimarySide(listId, publicRoute);
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
+  const mixedSlotMode = isMixedStudySession() ? getMixedFlipSlotMode(cardKey) : null;
+  void WriteStudyView;
+  void PronunciationStudyView;
+  void mixedSlotMode;
 
   const deck = (
     <StudyCardDeck
