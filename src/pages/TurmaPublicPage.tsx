@@ -106,10 +106,10 @@ function PublicCta({ guest }: { guest: boolean }) {
   if (!guest) return null;
 
   return (
-    <Card className="border-primary/20 bg-primary/5 p-4">
+    <Card className="border-primary/20 bg-primary/5 p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          Você pode jogar sem conta. Entre apenas para sincronizar progresso, favoritos e histórico.
+          Jogue sem conta. Entre apenas para sincronizar progresso, favoritos e histórico.
         </p>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => navigate('/auth')}>
@@ -219,7 +219,7 @@ export default function TurmaPublicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-14">
       <SEOHead
         title={selected
           ? `${selected.assignment.titulo} - ${turma.nome} | APE`
@@ -240,7 +240,7 @@ export default function TurmaPublicPage() {
       {guest && <PublicNav />}
 
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-        <div className="mx-auto flex max-w-6xl items-start gap-3 px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-start gap-3 px-4 py-3">
           <Button
             variant="ghost"
             size="icon"
@@ -251,32 +251,27 @@ export default function TurmaPublicPage() {
           </Button>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="break-words text-2xl font-bold">
+              <h1 className="break-words text-xl font-bold sm:text-2xl">
                 {selected ? selected.assignment.titulo : turma.nome}
               </h1>
               <Badge variant="secondary" className="gap-1">
-                <Globe2 className="h-3 w-3" /> Acesso público
+                <Globe2 className="h-3 w-3" /> Público
               </Badge>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {turma.nome} · Professor: {turma.teacher_name}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Professor: {turma.teacher_name}
             </p>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        <PublicCta guest={guest} />
-
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-4">
         {!selected ? (
-          <section aria-labelledby="public-assignments-title" className="space-y-5">
+          <section aria-labelledby="public-assignments-title" className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-primary">Espaço do aluno</p>
+              <p className="text-sm font-medium text-primary">Escolha e comece</p>
               <h2 id="public-assignments-title" className="text-2xl font-bold">Atividades da turma</h2>
-              {turma.descricao && <p className="mt-1 text-sm text-muted-foreground">{turma.descricao}</p>}
-              <p className="mt-1 text-sm text-muted-foreground">
-                Escolha uma pasta ou atividade para ver as listas disponíveis.
-              </p>
+              {turma.descricao && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{turma.descricao}</p>}
             </div>
 
             {atribuicoes.length === 0 ? (
@@ -285,7 +280,7 @@ export default function TurmaPublicPage() {
                 <p className="text-muted-foreground">Nenhuma atividade foi publicada nesta turma ainda.</p>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {atribuicoes.map((atribuicao) => {
                   const isFolder = atribuicao.fonte_tipo === 'pasta';
                   const Icon = isFolder ? FolderOpen : ListChecks;
@@ -296,20 +291,20 @@ export default function TurmaPublicPage() {
                       className="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                       onClick={() => updatePublicSearchParams(atribuicao.id)}
                     >
-                      <Card className="group flex h-full flex-col gap-5 p-5 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:shadow-lg">
+                      <Card className="group flex h-full flex-col gap-4 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:shadow-lg">
                         <div className="flex items-start justify-between gap-3">
-                          <div className="rounded-xl border border-primary/20 bg-primary/10 p-3 text-primary">
-                            <Icon className="h-6 w-6" />
+                          <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary">
+                            <Icon className="h-5 w-5" />
                           </div>
                           <Badge variant="outline">{isFolder ? 'Pasta' : 'Atividade'}</Badge>
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="break-words text-lg font-semibold">{atribuicao.titulo}</h3>
                           {atribuicao.descricao && (
-                            <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{atribuicao.descricao}</p>
+                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{atribuicao.descricao}</p>
                           )}
                         </div>
-                        <div className="flex items-center justify-between gap-3 border-t pt-4">
+                        <div className="flex items-center justify-between gap-3 border-t pt-3">
                           <span className="text-sm text-muted-foreground">{atribuicao.card_count ?? 0} cards</span>
                           <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
                             Abrir <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -323,16 +318,13 @@ export default function TurmaPublicPage() {
             )}
           </section>
         ) : (
-          <section aria-labelledby="public-lists-title" className="space-y-5">
+          <section aria-labelledby="public-lists-title" className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-primary">Escolha o conteúdo</p>
+              <p className="text-sm font-medium text-primary">Escolha e jogue</p>
               <h2 id="public-lists-title" className="text-2xl font-bold">Listas disponíveis</h2>
               {selected.assignment.descricao && (
-                <p className="mt-1 text-sm text-muted-foreground">{selected.assignment.descricao}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{selected.assignment.descricao}</p>
               )}
-              <p className="mt-1 text-sm text-muted-foreground">
-                Clique em uma lista para abrir o Hub de jogos completo.
-              </p>
             </div>
 
             {selected.lists.length === 0 ? (
@@ -340,23 +332,23 @@ export default function TurmaPublicPage() {
                 Esta atividade ainda não possui listas públicas disponíveis.
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {selected.lists.map((list) => (
-                  <Card key={list.list_id} className="flex h-full flex-col gap-5 p-5 transition-all hover:border-primary/50 hover:shadow-lg">
+                  <Card key={list.list_id} className="flex h-full flex-col gap-4 p-4 transition-all hover:border-primary/50 hover:shadow-lg">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="rounded-xl border border-primary/20 bg-primary/10 p-3 text-primary">
-                        <Gamepad2 className="h-6 w-6" />
+                      <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary">
+                        <Gamepad2 className="h-5 w-5" />
                       </div>
                       <Badge variant="secondary">Lista</Badge>
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="break-words text-lg font-semibold">{list.title}</h3>
                       {list.description && (
-                        <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{list.description}</p>
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{list.description}</p>
                       )}
                     </div>
-                    <Button size="lg" className="w-full" onClick={() => openGameHub(list.list_id)}>
-                      <Gamepad2 className="mr-2 h-5 w-5" />
+                    <Button className="w-full" onClick={() => openGameHub(list.list_id)}>
+                      <Gamepad2 className="mr-2 h-4 w-4" />
                       Escolher jogo
                     </Button>
                   </Card>
@@ -365,6 +357,8 @@ export default function TurmaPublicPage() {
             )}
           </section>
         )}
+
+        <PublicCta guest={guest} />
       </main>
     </div>
   );
