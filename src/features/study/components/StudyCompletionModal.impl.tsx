@@ -7,6 +7,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { clearStudyResume } from "@/features/study/lib/studyResume";
 
 interface StudyCompletionModalProps {
   open: boolean;
@@ -37,7 +39,13 @@ export const StudyCompletionModal = ({
   fromGoalId,
   onGoToGoals,
 }: StudyCompletionModalProps) => {
+  const { user } = useAuthUser();
   const accuracy = totalCards > 0 ? Math.round((correctCount / totalCards) * 100) : 0;
+
+  const handleComplete = () => {
+    if (user?.id) clearStudyResume(user.id);
+    onComplete();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,7 +83,7 @@ export const StudyCompletionModal = ({
 
         <div className="flex flex-col gap-2 pt-2">
           <Button
-            onClick={onComplete}
+            onClick={handleComplete}
             className="w-full bg-green-600 hover:bg-green-700 text-lg font-bold min-h-[48px]"
           >
             <CheckCircle className="mr-2 h-5 w-5" />
