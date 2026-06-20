@@ -14,6 +14,7 @@ import type { AppPitecoSuperImportPackage } from "./schema/appPitecoSuperImportS
 import { updateGlobalImportManifestStatus } from "./manifest";
 
 export type CardConflictPolicy = "skip" | "copy" | "error";
+export type ImportTargetScope = "personal" | "classroom";
 
 export interface ExecuteMappedImportOptions {
   requestId?: string;
@@ -24,6 +25,7 @@ export interface ExecuteMappedImportOptions {
   catalog: ImportDestinationCatalog;
   cardConflict: CardConflictPolicy;
   institutionId?: string | null;
+  turmaId?: string | null;
   onProgress?: (completed: number, total: number, label: string) => void;
 }
 
@@ -43,6 +45,9 @@ export interface GlobalImportExecutionReport {
   layered_groups_created?: number;
   glossary_created?: number;
   glossary_updated?: number;
+  assignments_created?: number;
+  target_scope?: ImportTargetScope;
+  turma_id?: string;
   schema?: "app-piteco-super-import";
   version?: "1.0" | "2.0";
   format?: "ape-global-import";
@@ -72,6 +77,7 @@ function requestStorageKey(
     destinationPlan: options.destinationPlan,
     cardConflict: options.cardConflict,
     institutionId: options.institutionId ?? null,
+    turmaId: options.turmaId ?? null,
   });
   let hash = 2166136261;
   for (let index = 0; index < text.length; index += 1) {
@@ -87,7 +93,8 @@ function getOrCreateRequestId(
   options: ExecuteMappedImportOptions,
 ): { requestId: string; storageKey: string } {
   const storageKey = requestStorageKey(packageValue, smartPackage, options);
-  const provided = options.requestId ?? options.canonicalPackage?.request_id;
+  const provided = options.requestId
+    ?? (options.turmaId ? undefined : options.canonicalPackage?.request_id);
   if (provided) return { requestId: provided, storageKey };
 
   const stored = typeof window !== "undefined"
@@ -116,22 +123,42 @@ export async function executeMappedGlobalImport(
   const request = getOrCreateRequestId(packageValue, smartPackage, options);
 
   if (
-    options.canonicalPackage
+    !options.turmaId
+    && options.canonicalPackage
     && options.requestId
     && options.requestId !== options.canonicalPackage.request_id
   ) {
     throw new Error("O request_id informado não corresponde ao pacote canônico.");
   }
 
-  options.onProgress?.(0, totalCards, "Enviando pacote enriquecido para uma transação segura");
+  options.onProgress?.(
+    0,
+    totalCards,
+    options.turmaId
+      ? "Enviando o pacote para uma transação segura dentro da turma"
+      : "Enviando pacote enriquecido para uma transação segura",
+  );
 
-  const { data, error } = await (supabase.rpc as any)("import_app_piteco_super_package_v2", {
-    _request_id: request.requestId,
-    _payload: smartPackage,
-    _destination_plan: options.destinationPlan,
-    _card_conflict: options.cardConflict,
-    _institution_id: options.institutionId ?? null,
-  });
+  const rpcName = options.turmaId
+    ? "import_app_piteco_super_package_to_class_v1"
+    : "import_app_piteco_super_package_v2";
+  const rpcPayload = options.turmaId
+    ? {
+        _request_id: request.requestId,
+        _payload: smartPackage,
+        _destination_plan: options.destinationPlan,
+        _turma_id: options.turmaId,
+        _card_conflict: options.cardConflict,
+      }
+    : {
+        _request_id: request.requestId,
+        _payload: smartPackage,
+        _destination_plan: options.destinationPlan,
+        _card_conflict: options.cardConflict,
+        _institution_id: options.institutionId ?? null,
+      };
+
+  const { data, error } = await (supabase.rpc as any)(rpcName, rpcPayload);
 
   if (error) throw error;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -146,8 +173,14 @@ export async function executeMappedGlobalImport(
   return data as GlobalImportExecutionReport;
 }
 
-export async function undoGlobalImport(batchId: string): Promise<void> {
-  const { error } = await (supabase.rpc as any)("undo_global_import_v1", {
+export async function undoGlobalImport(
+  batchId: string,
+  targetScope: ImportTargetScope = "personal",
+): Promise<void> {
+  const rpcName = targetScope === "classroom"
+    ? "undo_classroom_global_import_v1"
+    : "undo_global_import_v1";
+  const { error } = await (supabase.rpc as any)(rpcName, {
     _batch_id: batchId,
   });
   if (error) throw error;
