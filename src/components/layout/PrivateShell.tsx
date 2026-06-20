@@ -32,6 +32,8 @@ import { InstitutionBar } from "@/components/layout/InstitutionBar";
 import { isSafeModeEnabled } from "@/lib/safeMode";
 import { AppRecoveryBanner } from "@/components/AppRecoveryBanner";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
+import { StudyResumeAgent } from "@/features/study/components/StudyResumeAgent";
+import { StudyResumeBanner } from "@/features/study/components/StudyResumeBanner";
 import "@/styles/space-ui-v1.css";
 import "@/styles/space-ui-components.css";
 import "@/styles/space-ui-widgets.css";
@@ -103,6 +105,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
       <SpaceTwinkleLayer />
       <AppRecoveryBanner />
       <OfflineIndicator />
+      <StudyResumeAgent />
 
       {FEATURE_FLAGS.currency_header_enabled && user && (
         <header
@@ -144,6 +147,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
 
         <div className="space-ui-content flex min-h-0 min-w-0 flex-1 flex-col">
           <main className="space-ui-main min-w-0 flex-1">
+            {isHome && user && <StudyResumeBanner />}
             {children}
           </main>
 
