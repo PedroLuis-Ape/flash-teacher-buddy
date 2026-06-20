@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useInstitution } from "@/contexts/InstitutionContext";
+import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import {
   clearStudyResume,
   describeStudyResume,
@@ -12,11 +13,13 @@ import {
   studyResumeMatchesInstitution,
   type StudyResumeSnapshot,
 } from "@/features/study/lib/studyResume";
+import { isResumeSupersededByCompletion } from "@/features/study/lib/studyResumeCompletion";
 
 export function StudyResumeBanner() {
   const navigate = useNavigate();
   const { user } = useAuthUser();
   const { selectedInstitution } = useInstitution();
+  const { prefs } = useStudyPreferences(user?.id);
   const institutionId = selectedInstitution?.id ?? null;
   const [dismissed, setDismissed] = useState(false);
   const [snapshot, setSnapshot] = useState<StudyResumeSnapshot | null>(null);
@@ -26,9 +29,24 @@ export function StudyResumeBanner() {
       setSnapshot(null);
       return;
     }
+
     setDismissed(false);
-    setSnapshot(readStudyResume(user.id));
-  }, [institutionId, user?.id]);
+    const saved = readStudyResume(user.id);
+
+    if (saved && isResumeSupersededByCompletion(user.id, saved, prefs)) {
+      clearStudyResume(user.id);
+      setSnapshot(null);
+      return;
+    }
+
+    setSnapshot(saved);
+  }, [
+    institutionId,
+    prefs.direction,
+    prefs.favoritesOnly,
+    prefs.mode,
+    user?.id,
+  ]);
 
   const visibleSnapshot = useMemo(() => {
     if (dismissed || !snapshot) return null;
