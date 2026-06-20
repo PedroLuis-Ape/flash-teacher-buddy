@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, type ComponentProps } from "react";
 import { listIdFromPath, isPublicListPath } from "@/lib/listRoute";
 import { useListPrimarySide } from "@/lib/useListPrimarySide";
 import { primarySideToDirection } from "@/lib/primarySideDirection";
+import { StudyCardDeck } from "./StudyCardDeck";
 
 const LazyFlipStudyView = lazy(() =>
   import("./FlipStudyView.impl").then((module) => ({ default: module.FlipStudyView }))
@@ -21,14 +22,30 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
   const listId = useMemo(() => listIdFromPath(window.location.pathname), []);
   const publicRoute = useMemo(() => isPublicListPath(window.location.pathname), []);
   const { side } = useListPrimarySide(listId, publicRoute);
+  const cardKey = props.flashcardId || `${props.front}:${props.back}`;
 
-  if (!listId) {
-    return (
+  const deck = (
+    <StudyCardDeck
+      cardKey={cardKey}
+      density={props.fastMode ? "regular" : "tall"}
+      swipeNavigation={
+        props.fastMode
+          ? {
+              onNext: props.onNext,
+              onPrevious: props.onPrevious,
+              canGoNext: props.canGoNext,
+              canGoPrevious: props.canGoPrevious,
+            }
+          : undefined
+      }
+    >
       <Suspense fallback={<StudyModeFallback />}>
         <LazyFlipStudyView {...props} />
       </Suspense>
-    );
-  }
+    </StudyCardDeck>
+  );
+
+  if (!listId) return deck;
 
   const primaryLabel = side === "b" ? props.labelB : props.labelA;
   const sessionLabel = props.direction === "b-a" ? props.labelB : props.direction === "a-b" ? props.labelA : "Misto";
@@ -46,9 +63,7 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
           </span>
         )}
       </div>
-      <Suspense fallback={<StudyModeFallback />}>
-        <LazyFlipStudyView {...props} />
-      </Suspense>
+      {deck}
     </div>
   );
 };
