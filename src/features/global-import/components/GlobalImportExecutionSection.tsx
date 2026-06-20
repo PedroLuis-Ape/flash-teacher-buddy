@@ -77,6 +77,8 @@ export function GlobalImportExecutionSection(props: Props) {
             <Metric value={props.report.lists_skipped ?? 0} label="Listas ignoradas" />
             <Metric value={props.report.cards_created} label="Cards criados" />
             <Metric value={props.report.cards_skipped} label="Cards duplicados ignorados" />
+            <Metric value={props.report.glossary_created ?? 0} label="Glossário criado" />
+            <Metric value={props.report.layered_groups_created ?? 0} label="Grupos em camadas" />
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button onClick={props.onOpenFolders}>{props.openLabel ?? "Abrir minhas pastas"}</Button>
