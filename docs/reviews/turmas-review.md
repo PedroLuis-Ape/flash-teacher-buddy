@@ -28,7 +28,7 @@ Todas as sete funções são privadas e devem aceitar somente `POST` e `OPTIONS`
 | `turmas-as-aluno` | Removido o cliente administrativo; a leitura agora respeita as políticas RLS versionadas. |
 | `turmas-update` | Adicionada validação de UUID e repetição dos filtros de propriedade e turma ativa na escrita. |
 | `turmas-delete` | Preservado o soft delete com filtros repetidos na mutação. |
-| `turmas-remove-member` | Adicionadas validações de método, sessão e UUID; a remoção passou a desativar a matrícula. |
+| `turmas-remove-member` | Adicionadas validações de método, sessão e UUID; a exclusão é filtrada por turma, usuário e matrícula ativa. |
 
 ## Decisões
 
@@ -40,9 +40,9 @@ As políticas versionadas permitem ao aluno consultar sua própria matrícula e 
 
 `turmas-update`, `turmas-delete` e `turmas-remove-member` repetem os filtros relevantes na escrita, em vez de depender apenas da conferência anterior.
 
-### Remoção lógica de membro
+### Remoção de membro compatível com os leitores atuais
 
-`turmas-remove-member` define `ativo = false`. Isso preserva histórico e continua compatível com o `upsert` de `turmas-enroll`, que pode reativar a mesma matrícula.
+`turmas-remove-member` mantém a exclusão da linha de matrícula. Isso evita que leitores existentes, que consultam ou contam `turma_membros`, voltem a exibir uma matrícula removida como linha inativa.
 
 ## Validação automatizada
 
