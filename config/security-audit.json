@@ -2,9 +2,10 @@
   "publicFunctions": {
     "ping": "Health check público, somente leitura e sem acesso ao banco"
   },
-  "serviceRoleFunctions": [
+  "elevatedFunctions": [
     "kingdoms-import-csv",
     "audit-ab-consistency",
-    "repair-ab"
+    "repair-ab",
+    "announcements\u002dcreate"
   ]
 }
