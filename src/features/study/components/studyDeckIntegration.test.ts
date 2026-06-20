@@ -18,7 +18,7 @@ describe("study deck integration", () => {
     }
   });
 
-  it("enables the new shared swipe only for Flip Fast", () => {
+  it("enables swipe navigation only for Flip Fast", () => {
     expect(flip).toContain("props.fastMode");
     expect(flip).toContain("swipeNavigation");
 
@@ -27,13 +27,24 @@ describe("study deck integration", () => {
     }
   });
 
-  it("keeps the stack proportional, full-height and motion accessible", () => {
-    expect(css).toContain("bottom: -0.8rem");
+  it("animates a card sinking while the next card rises", () => {
+    expect(css).toContain("study-deck-card-to-back");
+    expect(css).toContain("study-deck-card-rise");
+    expect(css).toContain("translate3d(16px, 42px, 0)");
+    expect(css).toContain("translate3d(0, 20px, 0)");
+  });
+
+  it("uses a smaller proportional transition on mobile", () => {
+    expect(css).toContain("study-deck-card-to-back-mobile");
+    expect(css).toContain("study-deck-card-rise-mobile");
+    expect(css).toContain("translate3d(9px, 30px, 0)");
+    expect(css).toContain("translate3d(0, 14px, 0)");
+    expect(css).toContain("rotate(1.15deg)");
+  });
+
+  it("keeps layout dimensions stable and supports reduced motion", () => {
     expect(css).not.toContain("height: var(--deck-height)");
-    expect(css).toContain("rotate(-0.9deg)");
-    expect(css).toContain("rotate(0.5deg)");
-    expect(css).toContain("translate3d(0, 12px, 0)");
-    expect(css).toContain("translate3d(0, 6px, 0)");
+    expect(css).toContain("pointer-events: none");
     expect(css).toContain("prefers-reduced-motion");
     expect(css).toContain("max-width: 42rem");
   });
