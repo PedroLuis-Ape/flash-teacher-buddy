@@ -1,4 +1,10 @@
-import { useEffect, useRef, type ReactNode, type TouchEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  type MouseEvent,
+  type ReactNode,
+  type TouchEvent,
+} from "react";
 import { cn } from "@/lib/utils";
 import "./studyCardDeck.css";
 
@@ -114,7 +120,7 @@ export function StudyCardDeck({
     }, 90);
   };
 
-  const handleClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if (!consumedRef.current) return;
     consumedRef.current = false;
     event.preventDefault();
