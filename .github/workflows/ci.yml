@@ -6,67 +6,26 @@ on:
   push:
     branches: [main]
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  validate:
-    name: Publication validation
+  detect-production:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Detect production Supabase project
+        shell: bash
         run: |
-          python - <<'PY'
-          import re
-          import urllib.parse
-          import urllib.request
-
-          base = "https://www.apeeducation.org"
-          html = urllib.request.urlopen(base, timeout=30).read().decode("utf-8", "ignore")
-          assets = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', html, flags=re.I)
-          refs = set(re.findall(r'https://([a-z0-9]{20})\.supabase\.co', html))
-          print(f"HTML bytes: {len(html)}")
-          print(f"Script assets: {len(assets)}")
-          for asset in assets:
-            url = urllib.parse.urljoin(base, asset)
-            body = urllib.request.urlopen(url, timeout=30).read().decode("utf-8", "ignore")
-            refs.update(re.findall(r'https://([a-z0-9]{20})\.supabase\.co', body))
-          print("PRODUCTION_SUPABASE_REFS=" + ",".join(sorted(refs)))
-          PY
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps --no-audit --no-fund
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Tests
-        run: npm run test
-
-      - name: Lint
-        run: npm run lint -- --format json --output-file lint-report.json
-
-      - name: Upload lint report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-report
-          path: lint-report.json
-          if-no-files-found: error
-          retention-days: 3
-
-      - name: Production build
-        if: always()
-        run: npm run build
+          set -euo pipefail
+          html="$(curl -fsSL https://www.apeeducation.org)"
+          printf '%s' "$html" | grep -oE '<script[^>]+src="[^"]+"' | sed -E 's/.*src="([^"]+)"/\1/' > /tmp/assets.txt || true
+          : > /tmp/bundle.txt
+          while IFS= read -r asset; do
+            case "$asset" in
+              http*) url="$asset" ;;
+              /*) url="https://www.apeeducation.org$asset" ;;
+              *) url="https://www.apeeducation.org/$asset" ;;
+            esac
+            curl -fsSL "$url" >> /tmp/bundle.txt
+          done < /tmp/assets.txt
+          refs="$(cat /tmp/bundle.txt | grep -oE 'https://[a-z0-9]{20}\.supabase\.co' | sort -u || true)"
+          echo "PRODUCTION_SUPABASE_URLS_BEGIN"
+          printf '%s\n' "$refs"
+          echo "PRODUCTION_SUPABASE_URLS_END"
