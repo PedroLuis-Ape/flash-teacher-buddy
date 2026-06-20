@@ -6,6 +6,7 @@ const functionsRoot = resolve(root, "supabase/functions");
 const configPath = resolve(root, "supabase/config.toml");
 const policyPath = resolve(root, "config/security-audit.json");
 const reportPath = resolve(root, "security-audit-report.json");
+const administrativeKeyName = ["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_");
 const errors = [];
 const warnings = [];
 
@@ -19,7 +20,7 @@ const policy = existsSync(policyPath)
   : { publicFunctions: {}, elevatedFunctions: [] };
 
 const publicFunctions = new Set(Object.keys(policy.publicFunctions ?? {}));
-const elevatedFunctions = new Set(
+const manuallyElevatedFunctions = new Set(
   policy.elevatedFunctions ?? policy.serviceRoleFunctions ?? [],
 );
 const directories = existsSync(functionsRoot)
@@ -38,6 +39,31 @@ function readVerifySetting(name) {
   return section[1].match(/verify_jwt\s*=\s*(true|false)/)?.[1] ?? null;
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasExplicitAuthenticatedUserGuard(source) {
+  const code = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+
+  const resultPattern = /const\s*\{\s*data\s*:\s*\{\s*([A-Za-z_$][\w$]*)\s*\}\s*,\s*error(?:\s*:\s*([A-Za-z_$][\w$]*))?\s*\}\s*=\s*await[\s\S]{0,180}?\.auth\.getUser\s*\([^;]*\)\s*;/g;
+
+  for (const match of code.matchAll(resultPattern)) {
+    const userVariable = match[1];
+    const errorVariable = match[2] ?? "error";
+    const userCheck = new RegExp(`!\\s*${escapeRegExp(userVariable)}\\b`);
+    const errorCheck = new RegExp(`\\b${escapeRegExp(errorVariable)}\\b`);
+
+    for (const condition of code.matchAll(/if\s*\(([^)]*)\)/g)) {
+      if (userCheck.test(condition[1]) && errorCheck.test(condition[1])) return true;
+    }
+  }
+
+  return false;
+}
+
 const configuredNames = [...configSource.matchAll(/^\[functions\.([^\]]+)\]/gm)].map((match) => match[1]);
 
 const inventory = directories.map((name) => {
@@ -45,7 +71,10 @@ const inventory = directories.map((name) => {
   const managed = configuredNames.includes(name);
   const verifyJwt = managed ? readVerifySetting(name) : null;
   const isPublic = publicFunctions.has(name);
-  const isElevated = elevatedFunctions.has(name);
+  const source = existsSync(indexPath) ? readFileSync(indexPath, "utf8") : "";
+  const usesAdministrativeClient = source.includes(administrativeKeyName);
+  const isElevated = manuallyElevatedFunctions.has(name) || usesAdministrativeClient;
+  const validatesAuthenticatedUser = hasExplicitAuthenticatedUserGuard(source);
 
   if (!existsSync(indexPath)) errors.push(`${name}: index.ts ausente.`);
 
@@ -59,6 +88,9 @@ const inventory = directories.map((name) => {
     if (!isPublic && verifyJwt !== "true") {
       errors.push(`${name}: função gerenciada privada deve declarar verify_jwt = true.`);
     }
+    if (usesAdministrativeClient && !validatesAuthenticatedUser) {
+      errors.push(`${name}: acesso administrativo sem guarda explícita de erro e usuário autenticado.`);
+    }
   }
 
   if (isPublic && isElevated) {
@@ -71,6 +103,8 @@ const inventory = directories.map((name) => {
     verifyJwt,
     public: isPublic,
     elevated: isElevated,
+    elevatedReason: usesAdministrativeClient ? "administrative-client" : manuallyElevatedFunctions.has(name) ? "manual-policy" : null,
+    hasExplicitAuthenticatedUserGuard: validatesAuthenticatedUser,
     hasEntryPoint: existsSync(indexPath),
   };
 });
@@ -82,7 +116,7 @@ for (const name of publicFunctions) {
   if (!directories.includes(name)) errors.push(`${name}: função pública inexistente.`);
   if (!configuredNames.includes(name)) errors.push(`${name}: função pública sem configuração explícita.`);
 }
-for (const name of elevatedFunctions) {
+for (const name of manuallyElevatedFunctions) {
   if (!directories.includes(name)) errors.push(`${name}: função elevada inexistente.`);
   if (!configuredNames.includes(name)) errors.push(`${name}: função elevada sem configuração explícita.`);
 }

@@ -26,3 +26,21 @@ verify_jwt = true
 
 [functions.announcements-update]
 verify_jwt = true
+
+[functions.atribuicoes-create]
+verify_jwt = true
+
+[functions.atribuicoes-delete]
+verify_jwt = true
+
+[functions.atribuicoes-update-status]
+verify_jwt = true
+
+[functions.atribuicoes-minhas]
+verify_jwt = true
+
+[functions.atribuicoes-by-turma]
+verify_jwt = true
+
+[functions.atribuicoes-progresso-alunos]
+verify_jwt = true
