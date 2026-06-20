@@ -165,6 +165,7 @@ export default function SuperGlobalImportScreenV2() {
         requestId: validation.requestId ?? undefined,
         officialPackage: validation.officialPackage,
         canonicalPackage: validation.canonicalPackage,
+        smartPackage: validation.smartPackage,
         destinationPlan: effectivePlan,
         catalog,
         cardConflict,
@@ -209,9 +210,9 @@ export default function SuperGlobalImportScreenV2() {
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-3xl font-bold">Super Importador Global</h1>
-              <Badge variant="secondary">app-piteco-super-import 1.0</Badge>
+              <Badge variant="secondary">app-piteco-super-import 2.0</Badge>
             </div>
-            <p className="mt-1 text-muted-foreground">JSON oficial, prévia obrigatória e importação transacional.</p>
+            <p className="mt-1 text-muted-foreground">Texto, CSV e JSON usam o mesmo motor transacional enriquecido.</p>
           </div>
           <Button variant="outline" onClick={() => navigate("/import")}>Importador simples</Button>
         </header>
