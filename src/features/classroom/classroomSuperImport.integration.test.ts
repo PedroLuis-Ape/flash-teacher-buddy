@@ -31,6 +31,7 @@ describe('classroom super importer integration', () => {
     expect(service).toContain('turmaId: options.turmaId ?? null');
     expect(screen).toContain('turmaId: turmaId ?? null');
     expect(screen).toContain('Lote importado e atribuído à turma.');
+    expect(screen).toContain('openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}');
   });
 
   it('creates isolated class entities and tracks assignments for undo', () => {
