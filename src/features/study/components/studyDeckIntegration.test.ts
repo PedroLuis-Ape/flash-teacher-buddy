@@ -37,7 +37,16 @@ describe("study deck integration", () => {
     expect(deck).toContain("deckSurfaceReady");
   });
 
-  it("positions every deck layer from measured surface variables", () => {
+  it("creates an independent outgoing card before navigation", () => {
+    expect(deck).toContain("cloneNode(true)");
+    expect(deck).toContain("study-card-flight--${direction}");
+    expect(deck).toContain("document.body.appendChild(flight)");
+    expect(deck).toContain("markPendingEnter(direction)");
+    expect(deck).toContain("onTouchEndCapture");
+    expect(deck).toContain("inferButtonDirection");
+  });
+
+  it("positions layers from the measured flashcard surface", () => {
     expect(css).toContain("top: var(--deck-surface-top)");
     expect(css).toContain("left: var(--deck-surface-left)");
     expect(css).toContain("width: var(--deck-surface-width)");
@@ -45,12 +54,12 @@ describe("study deck integration", () => {
     expect(css).toContain("border-radius: var(--deck-surface-radius)");
   });
 
-  it("keeps the mobile motion restrained", () => {
-    expect(css).toContain("study-deck-card-to-back-mobile");
-    expect(css).toContain("study-deck-card-rise-mobile");
-    expect(css).toContain("translate3d(6px, 18px, 0)");
-    expect(css).toContain("translate3d(0, 7px, 0)");
-    expect(css).toContain("rotate(0.65deg)");
+  it("uses a stronger desktop flight and a lighter mobile flight", () => {
+    expect(css).toContain("deck-card-flight-next");
+    expect(css).toContain("translate3d(-118px, -22px, 0)");
+    expect(css).toContain("deck-card-flight-next-mobile");
+    expect(css).toContain("translate3d(-52px, -9px, 0)");
+    expect(css).toContain("deck-card-enter-previous-mobile");
   });
 
   it("keeps layout dimensions stable and supports reduced motion", () => {
