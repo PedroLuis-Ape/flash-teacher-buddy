@@ -1030,6 +1030,95 @@ export type Database = {
           },
         ]
       }
+      global_import_batches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          options: Json
+          package_name: string
+          payload_hash: string
+          request_id: string
+          schema_version: number
+          status: string
+          summary: Json
+          undone_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          options?: Json
+          package_name: string
+          payload_hash: string
+          request_id: string
+          schema_version: number
+          status?: string
+          summary?: Json
+          undone_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          options?: Json
+          package_name?: string
+          payload_hash?: string
+          request_id?: string
+          schema_version?: number
+          status?: string
+          summary?: Json
+          undone_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      global_import_items: {
+        Row: {
+          action: string
+          batch_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: number
+          item_path: string
+          metadata: Json
+          user_id: string
+        }
+        Insert: {
+          action: string
+          batch_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: number
+          item_path: string
+          metadata?: Json
+          user_id: string
+        }
+        Update: {
+          action?: string
+          batch_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: number
+          item_path?: string
+          metadata?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_import_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "global_import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingest_logs: {
         Row: {
           action: string
@@ -2928,12 +3017,46 @@ export type Database = {
           list_id: string
         }[]
       }
+      global_import_json_has_forbidden_key: {
+        Args: { _value: Json }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      import_app_piteco_super_package_v1: {
+        Args: {
+          _card_conflict?: string
+          _destination_plan: Json
+          _institution_id?: string
+          _payload: Json
+          _request_id: string
+        }
+        Returns: Json
+      }
+      import_global_package_v1: {
+        Args: {
+          _card_conflict?: string
+          _destination_plan: Json
+          _institution_id?: string
+          _payload: Json
+          _request_id: string
+        }
+        Returns: Json
+      }
+      import_global_package_v2: {
+        Args: {
+          _card_conflict?: string
+          _destination_plan: Json
+          _institution_id?: string
+          _payload: Json
+          _request_id: string
+        }
+        Returns: Json
       }
       init_public_id: { Args: { p_user_id: string }; Returns: Json }
       is_class_member: {
@@ -3061,6 +3184,7 @@ export type Database = {
       }
       swap_flashcards_sides: { Args: { _list_id: string }; Returns: Json }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
+      undo_global_import_v1: { Args: { _batch_id: string }; Returns: Json }
       unmerge_flashcard_from_group: {
         Args: { p_card_id: string }
         Returns: Json
