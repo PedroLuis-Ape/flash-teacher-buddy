@@ -8,3 +8,8 @@ export const MIXED_MODE_WEIGHTS: Readonly<Record<MixedPlayableMode, number>> = {
   "multiple-choice": 20,
   pronunciation: 15,
 };
+
+export function createMixedModeSchedule(questionCount: number): MixedPlayableMode[] {
+  if (questionCount <= 0) return [];
+  return ["write"];
+}
