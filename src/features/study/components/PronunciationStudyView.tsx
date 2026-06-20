@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ComponentProps } from "react";
+import { StudyCardDeck } from "./StudyCardDeck";
 
 const LazyPronunciationStudyView = lazy(() =>
   import("./PronunciationStudyView.impl").then((module) => ({ default: module.PronunciationStudyView }))
@@ -14,18 +15,20 @@ export const PronunciationStudyView = (props: PronunciationStudyViewProps) => {
   const speakA = direction === "a-b";
 
   return (
-    <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando pronúncia...</div>}>
-      <LazyPronunciationStudyView
-        {...props}
-        front={speakA ? props.back : props.front}
-        back={speakA ? props.front : props.back}
-        langA={speakA ? props.langB : props.langA}
-        langB={speakA ? props.langA : props.langB}
-        labelA={speakA ? props.labelB : props.labelA}
-        labelB={speakA ? props.labelA : props.labelB}
-        mergedHintsA={speakA ? props.mergedHintsB : props.mergedHintsA}
-        mergedHintsB={speakA ? props.mergedHintsA : props.mergedHintsB}
-      />
-    </Suspense>
+    <StudyCardDeck cardKey={`${props.front}:${props.back}`} density="compact">
+      <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando pronúncia...</div>}>
+        <LazyPronunciationStudyView
+          {...props}
+          front={speakA ? props.back : props.front}
+          back={speakA ? props.front : props.back}
+          langA={speakA ? props.langB : props.langA}
+          langB={speakA ? props.langA : props.langB}
+          labelA={speakA ? props.labelB : props.labelA}
+          labelB={speakA ? props.labelA : props.labelB}
+          mergedHintsA={speakA ? props.mergedHintsB : props.mergedHintsA}
+          mergedHintsB={speakA ? props.mergedHintsA : props.mergedHintsB}
+        />
+      </Suspense>
+    </StudyCardDeck>
   );
 };
