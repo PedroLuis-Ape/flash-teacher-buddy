@@ -1,0 +1,153 @@
+name: Public Classroom Security Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/public-classroom-security-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/public-classroom-security-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        run: |
+          supabase start
+          supabase db reset --local --no-seed
+
+      - name: Verify security-invoker public views
+        shell: bash
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            view_name text;
+            options text[];
+          BEGIN
+            FOREACH view_name IN ARRAY ARRAY[
+              'public_turmas',
+              'public_turma_atribuicoes',
+              'public_turma_lists',
+              'public_turma_flashcards'
+            ]
+            LOOP
+              SELECT c.reloptions
+                INTO options
+              FROM pg_class AS c
+              JOIN pg_namespace AS n ON n.oid = c.relnamespace
+              WHERE n.nspname = 'public'
+                AND c.relname = view_name
+                AND c.relkind = 'v';
+
+              IF options IS NULL OR NOT ('security_invoker=true' = ANY(options)) THEN
+                RAISE EXCEPTION 'View public.% is not security_invoker: %', view_name, options;
+              END IF;
+
+              IF NOT ('security_barrier=true' = ANY(options)) THEN
+                RAISE EXCEPTION 'View public.% lost security_barrier: %', view_name, options;
+              END IF;
+            END LOOP;
+          END;
+          $$;
+
+          INSERT INTO auth.users (
+            instance_id, id, aud, role, email, encrypted_password,
+            email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+            created_at, updated_at
+          ) VALUES (
+            '00000000-0000-0000-0000-000000000000',
+            '44444444-4444-4444-8444-444444444444',
+            'authenticated',
+            'authenticated',
+            'public-class-security@app-piteco.local',
+            crypt('smoke-password', gen_salt('bf')),
+            now(),
+            '{"provider":"email","providers":["email"]}'::jsonb,
+            '{}'::jsonb,
+            now(),
+            now()
+          ) ON CONFLICT (id) DO NOTHING;
+
+          INSERT INTO public.turmas (
+            id, owner_teacher_id, nome, descricao, ativo, public
+          ) VALUES
+            (
+              '55555555-5555-4555-8555-555555555555',
+              '44444444-4444-4444-8444-444444444444',
+              'Public security smoke',
+              'Must be visible only through the public view',
+              true,
+              true
+            ),
+            (
+              '66666666-6666-4666-8666-666666666666',
+              '44444444-4444-4444-8444-444444444444',
+              'Private security smoke',
+              'Must never be visible anonymously',
+              true,
+              false
+            )
+          ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
+
+          SET ROLE anon;
+
+          DO $$
+          BEGIN
+            IF (
+              SELECT COUNT(*)
+              FROM public.turmas
+              WHERE id IN (
+                '55555555-5555-4555-8555-555555555555',
+                '66666666-6666-4666-8666-666666666666'
+              )
+            ) <> 0 THEN
+              RAISE EXCEPTION 'Anonymous role can read raw classroom rows';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.public_turmas
+              WHERE id = '55555555-5555-4555-8555-555555555555'
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Public classroom is not visible through the hardened view';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.public_turmas
+              WHERE id = '66666666-6666-4666-8666-666666666666'
+            ) <> 0 THEN
+              RAISE EXCEPTION 'Private classroom leaked through the hardened view';
+            END IF;
+
+            PERFORM COUNT(*) FROM public.public_turma_atribuicoes;
+            PERFORM COUNT(*) FROM public.public_turma_lists;
+            PERFORM COUNT(*) FROM public.public_turma_flashcards;
+          END;
+          $$;
+
+          RESET ROLE;
+          SQL
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
