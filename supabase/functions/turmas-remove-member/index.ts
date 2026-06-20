@@ -59,7 +59,7 @@ serve(async (req) => {
 
     const { data: removed, error: removeError } = await client
       .from("turma_membros")
-      .update({ ativo: false })
+      .delete()
       .eq("turma_id", turmaId)
       .eq("user_id", targetUserId)
       .eq("ativo", true)
