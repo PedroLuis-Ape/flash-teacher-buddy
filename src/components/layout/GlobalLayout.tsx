@@ -7,6 +7,7 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
+import { ListSequenceDialog } from "@/components/ListSequenceDialog";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -29,6 +30,12 @@ function isClassSharePath(pathname: string): boolean {
   return parts[1] !== "professor" && parts[1] !== "aluno";
 }
 
+function getPrivateFolderId(pathname: string): string | null {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length !== 2 || parts[0] !== "folder") return null;
+  return parts[1] || null;
+}
+
 function isPublicRoute(pathname: string, isGuest: boolean): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
   if (pathname === "/portal" || pathname.startsWith("/portal/")) return true;
@@ -45,11 +52,13 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const content = isPublicRoute(location.pathname, !user)
     ? <PublicShell>{children}</PublicShell>
     : <PrivateShell>{children}</PrivateShell>;
+  const privateFolderId = user ? getPrivateFolderId(location.pathname) : null;
 
   return (
     <>
       <PortalHistorySyncAgent />
       {content}
+      {privateFolderId && <ListSequenceDialog folderId={privateFolderId} />}
       {location.pathname === "/import" && user && (
         <div className="fixed bottom-24 right-4 z-50 sm:bottom-8 sm:right-8">
           <Button
