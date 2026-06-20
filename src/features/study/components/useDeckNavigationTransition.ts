@@ -8,11 +8,12 @@ export type DeckTransitionPhase =
   | "enter-next"
   | "enter-previous";
 
-const EXIT_MS = 210;
+const EXIT_MS = 230;
 const ENTER_MS = 280;
 
 export function useDeckNavigationTransition(cardKey: string) {
   const [phase, setPhase] = useState<DeckTransitionPhase>("idle");
+  const [direction, setDirection] = useState<DeckTransitionDirection>("next");
   const previousCardKeyRef = useRef(cardKey);
   const directionRef = useRef<DeckTransitionDirection>("next");
   const lockedRef = useRef(false);
@@ -30,8 +31,9 @@ export function useDeckNavigationTransition(cardKey: string) {
     if (previousCardKeyRef.current === cardKey) return;
 
     previousCardKeyRef.current = cardKey;
-    const direction = directionRef.current;
-    setPhase(direction === "next" ? "enter-next" : "enter-previous");
+    const activeDirection = directionRef.current;
+    setDirection(activeDirection);
+    setPhase(activeDirection === "next" ? "enter-next" : "enter-previous");
 
     enterTimerRef.current = window.setTimeout(() => {
       setPhase("idle");
@@ -42,36 +44,42 @@ export function useDeckNavigationTransition(cardKey: string) {
   useEffect(() => clearTimers, [clearTimers]);
 
   const run = useCallback(
-    (direction: DeckTransitionDirection, action?: () => void) => {
+    (nextDirection: DeckTransitionDirection, action?: () => void) => {
       if (!action || lockedRef.current) return;
 
       clearTimers();
       lockedRef.current = true;
-      directionRef.current = direction;
-      setPhase(direction === "next" ? "exit-next" : "exit-previous");
+      directionRef.current = nextDirection;
+      setDirection(nextDirection);
+      setPhase(nextDirection === "next" ? "exit-next" : "exit-previous");
 
       exitTimerRef.current = window.setTimeout(() => {
         action();
 
-        // When an action is blocked at a boundary, return the same card to place.
+        // If the engine refuses navigation at a boundary, return the current
+        // card to the front instead of leaving the deck mid-transition.
         enterTimerRef.current = window.setTimeout(() => {
           if (previousCardKeyRef.current === cardKey) {
-            setPhase(direction === "next" ? "enter-previous" : "enter-next");
+            setPhase(nextDirection === "next" ? "enter-previous" : "enter-next");
             enterTimerRef.current = window.setTimeout(() => {
               setPhase("idle");
               lockedRef.current = false;
             }, ENTER_MS);
           }
-        }, 48);
+        }, 56);
       }, EXIT_MS);
     },
     [cardKey, clearTimers],
   );
 
+  const next = useCallback((action?: () => void) => run("next", action), [run]);
+  const previous = useCallback((action?: () => void) => run("previous", action), [run]);
+
   return {
     phase,
+    direction,
     isAnimating: phase !== "idle",
-    next: (action?: () => void) => run("next", action),
-    previous: (action?: () => void) => run("previous", action),
+    next,
+    previous,
   };
 }
