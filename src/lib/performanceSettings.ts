@@ -7,9 +7,11 @@
 const STORAGE_KEY = "ape-performance-settings";
 
 export type PerformancePreset = "high" | "balanced" | "light";
+export type GalaxyVisualQuality = "standard" | "high";
 
 export interface PerformanceSettings {
   preset: PerformancePreset;
+  galaxyQuality: GalaxyVisualQuality;
   soundEffects: boolean;
   animations: boolean;
   hoverEffects: boolean;
@@ -23,8 +25,13 @@ export interface PerformanceSettings {
   backdropBlur: boolean;
 }
 
+export type BooleanPerformanceSettingKey = {
+  [Key in keyof PerformanceSettings]: PerformanceSettings[Key] extends boolean ? Key : never;
+}[keyof PerformanceSettings];
+
 export const PRESET_HIGH: PerformanceSettings = {
   preset: "high",
+  galaxyQuality: "standard",
   soundEffects: true,
   animations: true,
   hoverEffects: true,
@@ -40,6 +47,7 @@ export const PRESET_HIGH: PerformanceSettings = {
 
 export const PRESET_BALANCED: PerformanceSettings = {
   preset: "balanced",
+  galaxyQuality: "standard",
   soundEffects: true,
   animations: true,
   hoverEffects: true,
@@ -55,6 +63,7 @@ export const PRESET_BALANCED: PerformanceSettings = {
 
 export const PRESET_LIGHT: PerformanceSettings = {
   preset: "light",
+  galaxyQuality: "standard",
   soundEffects: false,
   animations: false,
   hoverEffects: false,
@@ -107,7 +116,7 @@ export function writePerformanceSettings(settings: PerformanceSettings): void {
 export function detectPreset(settings: PerformanceSettings): PerformancePreset | "custom" {
   for (const [key, preset] of Object.entries(PRESETS) as [PerformancePreset, PerformanceSettings][]) {
     const match = (Object.keys(preset) as (keyof PerformanceSettings)[])
-      .filter((settingKey) => settingKey !== "preset")
+      .filter((settingKey) => settingKey !== "preset" && settingKey !== "galaxyQuality")
       .every((settingKey) => settings[settingKey] === preset[settingKey]);
     if (match) return key;
   }
