@@ -55,7 +55,11 @@ export function StudyResumeBanner() {
               {describeStudyResume(visibleSnapshot.path)}
             </p>
           </div>
-          <Button size="sm" onClick={() => navigate(visibleSnapshot.path)} className="shrink-0">
+          <Button
+            size="sm"
+            onClick={() => navigate(visibleSnapshot.path)}
+            className="w-auto shrink-0 px-3"
+          >
             Continuar
           </Button>
           <Button
