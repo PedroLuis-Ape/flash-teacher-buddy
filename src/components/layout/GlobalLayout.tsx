@@ -7,7 +7,6 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
-import { PublicClassPlayLauncher } from "@/features/classroom/components/PublicClassPlayLauncher";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -51,7 +50,6 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     <>
       <PortalHistorySyncAgent />
       {content}
-      <PublicClassPlayLauncher />
       {location.pathname === "/import" && user && (
         <div className="fixed bottom-24 right-4 z-50 sm:bottom-8 sm:right-8">
           <Button
