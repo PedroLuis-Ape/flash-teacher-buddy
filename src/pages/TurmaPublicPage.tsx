@@ -16,6 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PublicNav } from '@/components/seo/PublicNav';
 import { SEOHead } from '@/components/seo/SEOHead';
+import {
+  assignmentPositionLabel,
+  sortAssignmentsByOrder,
+} from '@/features/classroom/lib/assignmentOrder';
 import { buildPublicTurmaSearchParams } from '@/features/classroom/lib/turmaAccess';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,7 +74,9 @@ async function fetchPublicTurma(turmaId: string) {
 
   return {
     turma: turmaResult.data as PublicTurma,
-    atribuicoes: (assignmentsResult.data ?? []) as PublicAssignment[],
+    atribuicoes: sortAssignmentsByOrder(
+      (assignmentsResult.data ?? []) as PublicAssignment[],
+    ),
   };
 }
 
@@ -192,6 +198,9 @@ export default function TurmaPublicPage() {
 
   const { turma, atribuicoes } = turmaQuery.data;
   const selected = selectedAssignmentId ? assignmentQuery.data : null;
+  const selectedPosition = selectedAssignmentId
+    ? atribuicoes.findIndex((assignment) => assignment.id === selectedAssignmentId)
+    : -1;
   const description = (
     selected?.assignment.descricao ||
     turma.descricao ||
@@ -251,6 +260,9 @@ export default function TurmaPublicPage() {
           </Button>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
+              {selected && selectedPosition >= 0 && (
+                <Badge className="font-mono">{assignmentPositionLabel(selectedPosition)}</Badge>
+              )}
               <h1 className="break-words text-xl font-bold sm:text-2xl">
                 {selected ? selected.assignment.titulo : turma.nome}
               </h1>
@@ -281,7 +293,7 @@ export default function TurmaPublicPage() {
               </Card>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {atribuicoes.map((atribuicao) => {
+                {atribuicoes.map((atribuicao, index) => {
                   const isFolder = atribuicao.fonte_tipo === 'pasta';
                   const Icon = isFolder ? FolderOpen : ListChecks;
                   return (
@@ -296,7 +308,10 @@ export default function TurmaPublicPage() {
                           <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary">
                             <Icon className="h-5 w-5" />
                           </div>
-                          <Badge variant="outline">{isFolder ? 'Pasta' : 'Atividade'}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge className="font-mono">{assignmentPositionLabel(index)}</Badge>
+                            <Badge variant="outline">{isFolder ? 'Pasta' : 'Atividade'}</Badge>
+                          </div>
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="break-words text-lg font-semibold">{atribuicao.titulo}</h3>
