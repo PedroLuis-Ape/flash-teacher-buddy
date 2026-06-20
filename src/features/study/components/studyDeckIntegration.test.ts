@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const read = (name: string) =>
-  readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
+const read = (name: string) => readFileSync(new URL(`./${name}`, import.meta.url), "utf8");
 
 const flip = read("FlipStudyView.tsx");
 const write = read("WriteStudyView.tsx");
@@ -22,28 +21,31 @@ describe("study deck integration", () => {
   it("enables swipe navigation only for Flip Fast", () => {
     expect(flip).toContain("props.fastMode");
     expect(flip).toContain("swipeNavigation");
-
     for (const source of [write, multiple, unscramble, pronunciation]) {
       expect(source).not.toContain("swipeNavigation");
     }
   });
 
-  it("measures the real flashcard instead of the full mode wrapper", () => {
+  it("measures the real flashcard surface with one resize observer", () => {
     expect(deck).toContain("SURFACE_SELECTOR");
     expect(deck).toContain(".flip-card");
     expect(deck).toContain(".rounded-lg.border.bg-card");
     expect(deck).toContain("ResizeObserver");
-    expect(deck).toContain("--deck-surface-height");
-    expect(deck).toContain("deckSurfaceReady");
+    expect(deck.match(/new ResizeObserver/g)?.length).toBe(1);
+    expect(deck).not.toContain("MutationObserver");
   });
 
-  it("creates an independent outgoing card before navigation", () => {
+  it("uses the lightweight outgoing card path on mobile", () => {
+    expect(deck).toContain("resolveFlightRenderMode");
+    expect(deck).toContain("study-card-flight--${mode}");
+    expect(css).toContain(".study-card-flight--lightweight");
+    expect(deck).toContain("activeFlightRef.current?.remove()");
+  });
+
+  it("keeps the detailed clone restricted to full desktop rendering", () => {
+    expect(deck).toContain('mode === "full"');
     expect(deck).toContain("cloneNode(true)");
-    expect(deck).toContain("study-card-flight--${direction}");
-    expect(deck).toContain("document.body.appendChild(flight)");
-    expect(deck).toContain("markPendingEnter(direction)");
-    expect(deck).toContain("onTouchEndCapture");
-    expect(deck).toContain("inferButtonDirection");
+    expect(deck).toContain("removeDuplicateIds");
   });
 
   it("positions layers from the measured flashcard surface", () => {
