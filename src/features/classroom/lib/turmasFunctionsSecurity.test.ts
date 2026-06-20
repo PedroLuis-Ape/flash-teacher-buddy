@@ -92,11 +92,12 @@ describe("turma Edge Function security contracts", () => {
     expect(occurrences(source, /\.eq\(["']ativo["'],\s*true\)/g)).toBeGreaterThanOrEqual(2);
   });
 
-  it("deactivates only an active member from an active owned turma", () => {
+  it("deletes only an active member from an active owned turma", () => {
     const source = readFunction("turmas-remove-member");
     expect(source).toContain("uuidPattern");
     expect(source).toContain("targetUserId === turma.owner_teacher_id");
-    expect(source).toMatch(/\.update\(\{\s*ativo:\s*false\s*\}\)/);
+    expect(source).toContain(".delete()");
+    expect(source).not.toMatch(/\.update\(\{\s*ativo:\s*false\s*\}\)/);
     expect(source).toMatch(/\.eq\(["']user_id["'],\s*targetUserId\)/);
     expect(occurrences(source, /\.eq\(["']ativo["'],\s*true\)/g)).toBeGreaterThanOrEqual(2);
   });
