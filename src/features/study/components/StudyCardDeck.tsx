@@ -6,6 +6,7 @@ import {
   type TouchEvent,
 } from "react";
 import { cn } from "@/lib/utils";
+import type { DeckMotionPhase } from "./deckTransition";
 import "./studyCardDeck.css";
 
 type SwipeAction = "next" | "previous" | null;
@@ -23,6 +24,7 @@ interface StudyCardDeckProps {
   className?: string;
   density?: "compact" | "regular" | "tall";
   swipeNavigation?: SwipeNavigation;
+  motionPhase?: DeckMotionPhase;
 }
 
 interface SwipeMetrics {
@@ -71,6 +73,7 @@ export function StudyCardDeck({
   className,
   density = "regular",
   swipeNavigation,
+  motionPhase = "idle",
 }: StudyCardDeckProps) {
   const startRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const consumedRef = useRef(false);
@@ -117,7 +120,7 @@ export function StudyCardDeck({
     timerRef.current = window.setTimeout(() => {
       if (action === "next") swipeNavigation.onNext?.();
       else swipeNavigation.onPrevious?.();
-    }, 90);
+    }, 40);
   };
 
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -133,9 +136,11 @@ export function StudyCardDeck({
       className={cn(
         "study-card-deck",
         `study-card-deck--${density}`,
+        `study-card-deck--${motionPhase}`,
         swipeNavigation && "study-card-deck--swipe",
         className,
       )}
+      data-deck-phase={motionPhase}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onClickCapture={handleClickCapture}
