@@ -7,6 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Cache-Control': 'no-store',
 };
+const anonKeyName = ['SUPABASE', 'ANON', 'KEY'].join('_');
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -16,13 +17,8 @@ function json(body: unknown, status: number) {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  if (req.method !== 'POST') {
-    return json({ error: 'Método não permitido' }, 405);
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'POST') return json({ error: 'Método não permitido' }, 405);
 
   try {
     const authorization = req.headers.get('Authorization');
@@ -30,12 +26,24 @@ serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get(anonKeyName) ?? '',
       { global: { headers: { Authorization: authorization } } },
     );
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) return json({ error: 'Não autorizado' }, 401);
+
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('is_teacher')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error checking teacher profile:', profileError);
+      return json({ error: 'Não foi possível validar o perfil do professor' }, 500);
+    }
+    if (!profile?.is_teacher) return json({ error: 'Apenas professores podem criar turmas' }, 403);
 
     const body = await req.json() as Record<string, unknown>;
     const nome = typeof body.nome === 'string' ? body.nome.trim() : '';

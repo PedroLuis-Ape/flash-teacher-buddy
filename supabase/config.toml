@@ -44,3 +44,24 @@ verify_jwt = true
 
 [functions.atribuicoes-progresso-alunos]
 verify_jwt = true
+
+[functions.turmas-create]
+verify_jwt = true
+
+[functions.turmas-enroll]
+verify_jwt = true
+
+[functions.turmas-mine]
+verify_jwt = true
+
+[functions.turmas-as-aluno]
+verify_jwt = true
+
+[functions.turmas-update]
+verify_jwt = true
+
+[functions.turmas-delete]
+verify_jwt = true
+
+[functions.turmas-remove-member]
+verify_jwt = true

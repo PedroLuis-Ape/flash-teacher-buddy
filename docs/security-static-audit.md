@@ -16,7 +16,7 @@ Esta verificação é executada localmente e no GitHub Actions. Ela é somente l
 - as listas de política não podem apontar para funções inexistentes;
 - configurações sem diretório correspondente bloqueiam o CI.
 
-Diretórios legados ainda ausentes de `supabase/config.toml` aparecem como avisos no relatório, e não como aprovação implícita. Isso permite introduzir a auditoria sem alterar em massa funções que ainda não foram verificadas individualmente.
+Diretórios legados ainda ausentes de `supabase/config.toml` aparecem como avisos no relatório, e não como aprovação implícita.
 
 ## Política atual
 
@@ -41,6 +41,18 @@ Funções com cliente administrativo são detectadas automaticamente como elevad
 - `atribuicoes-by-turma`: privada, JWT obrigatório e elevada por usar cliente administrativo;
 - `atribuicoes-progresso-alunos`: privada e JWT obrigatório.
 
+### Turmas
+
+- `turmas-create`: privada, JWT obrigatório e restrita a perfil de professor;
+- `turmas-enroll`: privada, JWT obrigatório e restrita ao proprietário de turma ativa;
+- `turmas-mine`: privada, JWT obrigatório e limitada às turmas do professor autenticado;
+- `turmas-as-aluno`: privada, JWT obrigatório e executada sob RLS;
+- `turmas-update`: privada, JWT obrigatório e com filtros repetidos na escrita;
+- `turmas-delete`: privada, JWT obrigatório e com soft delete filtrado;
+- `turmas-remove-member`: privada, JWT obrigatório e com remoção filtrada da matrícula ativa.
+
+A revisão detalhada dessa família está em `docs/reviews/turmas-review.md`.
+
 Nenhuma dessas alterações publica funções ou modifica o banco. Elas tornam o contrato de segurança verificável no repositório e no CI.
 
 ## Relatório
@@ -59,4 +71,4 @@ As funções legadas devem ser adicionadas gradualmente a `supabase/config.toml`
 
 ## Limitação conhecida
 
-A auditoria estática confirma a coerência do repositório. Ela não substitui a auditoria de RLS, permissões, logs e configuração implantada no projeto Supabase de produção. Essa parte permanece bloqueada até existir acesso administrativo comprovado ao project ref usado pelo domínio publicado.
+A auditoria estática confirma a coerência do repositório. Ela não substitui a auditoria de RLS, permissões, logs e configuração implantada.
