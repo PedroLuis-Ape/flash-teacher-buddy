@@ -13,6 +13,46 @@
   overflow: visible;
 }
 
+/* Study actions must remain easy to click even when an old component still
+ * requests h-7/w-7 or h-8. Audio is a primary card action, so it follows the
+ * same comfortable hit-area language as the toolbar controls. */
+.study-card-deck button:has(.lucide-volume-2) {
+  width: 3rem !important;
+  min-width: 3rem !important;
+  height: 3rem !important;
+  min-height: 3rem !important;
+  padding: 0 !important;
+  border: 1px solid hsl(var(--primary) / 0.28);
+  border-radius: 0.9rem;
+  color: hsl(var(--foreground));
+  background: hsl(var(--card) / 0.88);
+  box-shadow:
+    0 5px 16px -10px hsl(var(--primary) / 0.5),
+    inset 0 1px 0 hsl(var(--primary-glow) / 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.study-card-deck button:has(.lucide-volume-2):hover {
+  border-color: hsl(var(--primary) / 0.5);
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+  box-shadow:
+    0 8px 22px -12px hsl(var(--primary) / 0.62),
+    inset 0 1px 0 hsl(var(--primary-glow) / 0.12);
+}
+
+.study-card-deck button:has(.lucide-volume-2):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+}
+
+.study-card-deck button:has(.lucide-volume-2) .lucide-volume-2 {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  stroke-width: 2.2;
+}
+
 .study-card-deck__layer {
   position: absolute;
   top: var(--deck-surface-top);
@@ -192,6 +232,14 @@
 @media (max-width: 640px) {
   .study-card-deck {
     margin-bottom: 0.45rem;
+  }
+
+  .study-card-deck button:has(.lucide-volume-2) {
+    width: 2.875rem !important;
+    min-width: 2.875rem !important;
+    height: 2.875rem !important;
+    min-height: 2.875rem !important;
+    border-radius: 0.85rem;
   }
 
   .study-card-deck[data-deck-surface-ready="true"] .study-card-deck__layer--back {
