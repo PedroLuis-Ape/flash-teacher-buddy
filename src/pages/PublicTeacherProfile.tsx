@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, FolderOpen, GraduationCap, SearchX } from 'lucide-react';
+import { BookOpen, FolderOpen, GraduationCap, Layers3, School, SearchX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ApeCardFolder } from '@/components/ape/ApeCardFolder';
 import { ApeGrid } from '@/components/ape/ApeGrid';
@@ -32,22 +32,13 @@ interface PublicTeacherFolderRow {
   card_count: number | string;
 }
 
-const PREVIEW_PROFILE: PublicTeacherProfileRow = {
-  display_name: 'Professor Pedro',
-  avatar_url: null,
-  public_slug: 'pedro',
-  public_bio:
-    'Materiais de inglês organizados para brasileiros, com foco em vocabulário, gramática, conversação e prática ativa.',
-  public_specialties: ['Inglês para iniciantes', 'Conversação', 'Gramática'],
-  folder_count: 0,
-  list_count: 0,
-  card_count: 0,
-};
-
-function isMissingDirectoryRpc(error: unknown) {
-  const value = error as { code?: string; message?: string; details?: string } | null;
-  const text = `${value?.message ?? ''} ${value?.details ?? ''}`.toLowerCase();
-  return value?.code === 'PGRST202' || value?.code === '42883' || text.includes('get_public_teacher_');
+interface PublicTeacherTurmaRow {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  assignment_count: number | string;
+  card_count: number | string;
+  created_at: string;
 }
 
 function initials(name: string) {
@@ -71,19 +62,10 @@ export default function PublicTeacherProfile() {
   const profileQuery = useQuery({
     queryKey: ['public-teacher-profile', slug],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_public_teacher_profile', {
-        _slug: slug,
-      });
-
-      if (error) {
-        if (isMissingDirectoryRpc(error) && slug.toLowerCase() === PREVIEW_PROFILE.public_slug) {
-          return { profile: PREVIEW_PROFILE, previewMode: true };
-        }
-        throw error;
-      }
-
+      const { data, error } = await (supabase.rpc as any)('get_public_teacher_profile', { _slug: slug });
+      if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      return { profile: (row ?? null) as PublicTeacherProfileRow | null, previewMode: false };
+      return (row ?? null) as PublicTeacherProfileRow | null;
     },
     enabled: Boolean(slug),
     retry: false,
@@ -93,26 +75,31 @@ export default function PublicTeacherProfile() {
   const foldersQuery = useQuery({
     queryKey: ['public-teacher-folders', slug],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)('get_public_teacher_folders', {
-        _slug: slug,
-      });
-
-      if (error) {
-        if (isMissingDirectoryRpc(error)) return [] as PublicTeacherFolderRow[];
-        throw error;
-      }
-
+      const { data, error } = await (supabase.rpc as any)('get_public_teacher_folders', { _slug: slug });
+      if (error) throw error;
       return (data ?? []) as PublicTeacherFolderRow[];
     },
-    enabled: Boolean(slug && profileQuery.data?.profile),
+    enabled: Boolean(slug && profileQuery.data),
     retry: false,
     staleTime: 60_000,
   });
 
-  const profile = profileQuery.data?.profile ?? null;
-  const previewMode = profileQuery.data?.previewMode ?? false;
+  const turmasQuery = useQuery({
+    queryKey: ['public-teacher-turmas', slug],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_public_teacher_turmas', { _slug: slug });
+      if (error) throw error;
+      return (data ?? []) as PublicTeacherTurmaRow[];
+    },
+    enabled: Boolean(slug && profileQuery.data),
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  const profile = profileQuery.data ?? null;
   const specialties = useMemo(() => profile?.public_specialties?.filter(Boolean) ?? [], [profile]);
   const folders = foldersQuery.data ?? [];
+  const turmas = turmasQuery.data ?? [];
 
   if (profileQuery.isLoading) {
     return (
@@ -125,7 +112,25 @@ export default function PublicTeacherProfile() {
     );
   }
 
-  if (profileQuery.isError || !profile) {
+  if (profileQuery.isError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PublicPageHeader title="Perfil público" fallbackPath="/portal" />
+        <main className="mx-auto max-w-3xl px-4 py-16">
+          <Card className="p-8 text-center">
+            <SearchX className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h1 className="text-xl font-bold">Perfil público indisponível</h1>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Não foi possível consultar o diretório público agora. Tente novamente.
+            </p>
+            <Button className="mt-6" onClick={() => profileQuery.refetch()}>Tentar novamente</Button>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (!profile) {
     return (
       <div className="min-h-screen bg-background">
         <PublicPageHeader title="Perfil público" fallbackPath="/portal" />
@@ -136,9 +141,7 @@ export default function PublicTeacherProfile() {
             <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
               Este perfil não existe, deixou de ser público ou ainda não foi publicado.
             </p>
-            <Button className="mt-6" onClick={() => navigate('/portal')}>
-              Voltar ao portal
-            </Button>
+            <Button className="mt-6" onClick={() => navigate('/portal')}>Voltar ao portal</Button>
           </Card>
         </main>
       </div>
@@ -153,10 +156,7 @@ export default function PublicTeacherProfile() {
     <div className="min-h-screen bg-background">
       <SEOHead
         title={`${profile.display_name} | Materiais públicos de inglês`}
-        description={
-          profile.public_bio ||
-          `Explore materiais públicos de inglês compartilhados por ${profile.display_name}.`
-        }
+        description={profile.public_bio || `Explore materiais públicos de inglês compartilhados por ${profile.display_name}.`}
         path={`/portal/professor/${profile.public_slug}`}
         jsonLd={{
           '@context': 'https://schema.org',
@@ -176,15 +176,11 @@ export default function PublicTeacherProfile() {
             <div className="-mt-10 flex flex-col gap-5 sm:flex-row sm:items-end">
               <Avatar className="h-20 w-20 border-4 border-background shadow-md sm:h-24 sm:w-24">
                 <AvatarImage src={profile.avatar_url ?? undefined} alt={profile.display_name} />
-                <AvatarFallback className="text-xl font-bold">
-                  {initials(profile.display_name)}
-                </AvatarFallback>
+                <AvatarFallback className="text-xl font-bold">{initials(profile.display_name)}</AvatarFallback>
               </Avatar>
-
               <div className="min-w-0 flex-1">
                 <Badge variant="secondary" className="mb-2 gap-1.5">
-                  <GraduationCap className="h-3.5 w-3.5" />
-                  Perfil público de professor
+                  <GraduationCap className="h-3.5 w-3.5" /> Perfil público de professor
                 </Badge>
                 <h1 className="text-2xl font-extrabold sm:text-3xl">{profile.display_name}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">@{profile.public_slug}</p>
@@ -192,16 +188,13 @@ export default function PublicTeacherProfile() {
             </div>
 
             <p className="mt-6 max-w-3xl leading-relaxed text-muted-foreground">
-              {profile.public_bio ||
-                'Este professor compartilha materiais públicos de inglês para estudo e prática.'}
+              {profile.public_bio || 'Este professor compartilha materiais públicos de inglês para estudo e prática.'}
             </p>
 
             {specialties.length > 0 && (
               <div className="mt-5 flex flex-wrap gap-2">
                 {specialties.map((specialty) => (
-                  <Badge key={specialty} variant="outline" className="font-normal">
-                    {specialty}
-                  </Badge>
+                  <Badge key={specialty} variant="outline" className="font-normal">{specialty}</Badge>
                 ))}
               </div>
             )}
@@ -220,21 +213,64 @@ export default function PublicTeacherProfile() {
                 <div className="text-xs text-muted-foreground">Cards</div>
               </div>
             </div>
-
-            {previewMode && (
-              <p className="mt-5 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-                Este preview está usando dados demonstrativos. Os materiais reais aparecerão após a migration do diretório público ser aplicada.
-              </p>
-            )}
           </div>
         </Card>
+
+        {(turmasQuery.isLoading || turmasQuery.isError || turmas.length > 0) && (
+          <section aria-labelledby="teacher-classes-title" className="space-y-5">
+            <div>
+              <p className="text-sm font-medium text-primary">Sala de aula aberta</p>
+              <h2 id="teacher-classes-title" className="text-2xl font-bold">Turmas públicas</h2>
+            </div>
+
+            {turmasQuery.isLoading ? (
+              <Card className="p-10 text-center text-muted-foreground">Carregando turmas...</Card>
+            ) : turmasQuery.isError ? (
+              <Card className="p-8 text-center">
+                <School className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                <h3 className="font-semibold">Não foi possível carregar as turmas públicas</h3>
+                <Button variant="outline" className="mt-5" onClick={() => turmasQuery.refetch()}>Tentar novamente</Button>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {turmas.map((turma) => (
+                  <button
+                    key={turma.id}
+                    type="button"
+                    className="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    onClick={() => navigate(`/turmas/${turma.id}`)}
+                    aria-label={`Abrir turma pública ${turma.nome}`}
+                  >
+                    <Card className="h-full p-5 transition-colors hover:border-primary/50 hover:bg-primary/5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold break-words">{turma.nome}</h3>
+                          {turma.descricao && <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{turma.descricao}</p>}
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 gap-1">
+                          <School className="h-3.5 w-3.5" /> Pública
+                        </Badge>
+                      </div>
+                      <div className="mt-5 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Layers3 className="h-4 w-4" /> {asNumber(turma.assignment_count)} atividades
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <BookOpen className="h-4 w-4" /> {asNumber(turma.card_count)} cards
+                        </span>
+                      </div>
+                    </Card>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <section aria-labelledby="teacher-materials-title" className="space-y-5">
           <div>
             <p className="text-sm font-medium text-primary">Biblioteca pública</p>
-            <h2 id="teacher-materials-title" className="text-2xl font-bold">
-              Materiais de {profile.display_name}
-            </h2>
+            <h2 id="teacher-materials-title" className="text-2xl font-bold">Materiais de {profile.display_name}</h2>
           </div>
 
           {foldersQuery.isLoading ? (
@@ -243,16 +279,14 @@ export default function PublicTeacherProfile() {
             <Card className="p-8 text-center">
               <BookOpen className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
               <h3 className="font-semibold">Não foi possível carregar os materiais</h3>
-              <Button variant="outline" className="mt-5" onClick={() => foldersQuery.refetch()}>
-                Tentar novamente
-              </Button>
+              <Button variant="outline" className="mt-5" onClick={() => foldersQuery.refetch()}>Tentar novamente</Button>
             </Card>
           ) : folders.length === 0 ? (
             <Card className="p-10 text-center">
               <FolderOpen className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <h3 className="font-semibold">Nenhum material público disponível</h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-                Este professor ainda não publicou pastas para visitantes ou os dados reais ainda não foram implantados no preview.
+                Este professor ainda não publicou pastas para visitantes.
               </p>
             </Card>
           ) : (
