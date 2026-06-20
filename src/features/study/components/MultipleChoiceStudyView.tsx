@@ -20,13 +20,24 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
   const cardKey = props.currentCard.id || `${props.currentCard.term}:${props.currentCard.translation}`;
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const renderWrite = isMixedStudySession() && getMixedMultipleSlotMode(cardKey) === "write";
-  void LazyWriteStudyView;
-  void renderWrite;
+
+  const activity = renderWrite ? (
+    <LazyWriteStudyView
+      front={props.currentCard.term}
+      back={props.currentCard.translation}
+      direction={direction}
+      onCorrect={props.onCorrect}
+      onIncorrect={props.onIncorrect}
+      onSkip={props.onIncorrect}
+    />
+  ) : (
+    <LazyMultipleChoiceStudyView {...props} direction={direction} />
+  );
 
   return (
     <StudyCardDeck cardKey={cardKey} density="compact">
-      <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando múltipla escolha...</div>}>
-        <LazyMultipleChoiceStudyView {...props} direction={direction} />
+      <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando atividade...</div>}>
+        {activity}
       </Suspense>
     </StudyCardDeck>
   );
