@@ -3,9 +3,8 @@ import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
 import { createSystemHealthSnapshot, type RuntimeHostKind } from "@/lib/systemHealth";
-import { Activity, AlertTriangle, CheckCircle2, Database, Globe2, RefreshCw, ShieldCheck, Wifi, WifiOff } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Globe2, RefreshCw, Wifi, WifiOff } from "lucide-react";
 
 const hostCopy: Record<RuntimeHostKind, { label: string; detail: string; ok: boolean }> = {
   canonical: { label: "Domínio canônico", detail: "A aplicação está em www.apeeducation.org.", ok: true },
@@ -14,13 +13,7 @@ const hostCopy: Record<RuntimeHostKind, { label: string; detail: string; ok: boo
   other: { label: "Host não reconhecido", detail: "Confirme se este endereço é autorizado.", ok: false },
 };
 
-function StatusLine({
-  icon: Icon,
-  title,
-  value,
-  detail,
-  ok,
-}: {
+function StatusLine({ icon: Icon, title, value, detail, ok }: {
   icon: typeof Activity;
   title: string;
   value: string;
@@ -44,24 +37,17 @@ function StatusLine({
 }
 
 export default function SystemStatusPage() {
-  const { status: authStatus, error: authError } = useAuth();
   const [revision, setRevision] = useState(0);
   const [checkedAt, setCheckedAt] = useState(() => new Date());
 
-  const snapshot = useMemo(
-    () => createSystemHealthSnapshot({
-      hostname: window.location.hostname,
-      isOnline: navigator.onLine,
-      mode: import.meta.env.MODE,
-      supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-      storage: window.localStorage,
-    }),
-    [revision],
-  );
+  const snapshot = useMemo(() => createSystemHealthSnapshot({
+    hostname: window.location.hostname,
+    isOnline: navigator.onLine,
+    mode: import.meta.env.MODE,
+  }), [revision]);
 
   const host = hostCopy[snapshot.hostKind];
-  const authHealthy = authStatus !== "error";
-  const overallHealthy = host.ok && snapshot.supabaseConfigured && snapshot.isOnline && authHealthy;
+  const overallHealthy = host.ok && snapshot.isOnline;
 
   const refresh = () => {
     setCheckedAt(new Date());
@@ -80,7 +66,7 @@ export default function SystemStatusPage() {
                   {overallHealthy ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <AlertTriangle className="h-5 w-5 text-destructive" />}
                   Estado do ambiente
                 </CardTitle>
-                <CardDescription className="mt-1">Verificação do frontend, domínio e persistência local.</CardDescription>
+                <CardDescription className="mt-1">Verificação do frontend e do domínio atual.</CardDescription>
               </div>
               <Badge variant={overallHealthy ? "default" : "destructive"}>{overallHealthy ? "Operacional" : "Atenção"}</Badge>
             </div>
@@ -103,39 +89,6 @@ export default function SystemStatusPage() {
             <StatusLine icon={Globe2} title="Host atual" value={host.label} detail={`${snapshot.hostname} — ${host.detail}`} ok={host.ok} />
             <StatusLine icon={snapshot.isOnline ? Wifi : WifiOff} title="Conectividade" value={snapshot.isOnline ? "Online" : "Offline"} detail="Sinal informado pelo navegador." ok={snapshot.isOnline} />
             <StatusLine icon={Activity} title="Modo do build" value={snapshot.mode} detail="Identifica como o bundle atual foi gerado." ok={snapshot.mode === "production"} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Supabase e autenticação</CardTitle>
-            <CardDescription>Exibe apenas estado e identificadores públicos.</CardDescription>
-          </CardHeader>
-          <CardContent className="divide-y">
-            <StatusLine
-              icon={Database}
-              title="Cliente Supabase"
-              value={snapshot.supabaseConfigured ? "Configurado" : "Ausente"}
-              detail={snapshot.supabaseProjectRef ? `Project ref detectado: ${snapshot.supabaseProjectRef}` : "A URL pública não foi encontrada neste build."}
-              ok={snapshot.supabaseConfigured}
-            />
-            <StatusLine icon={ShieldCheck} title="Ciclo de autenticação" value={authStatus} detail={authError ? "O provedor de autenticação informou erro." : "Estado fornecido pelo AuthProvider central."} ok={authHealthy} />
-            <StatusLine
-              icon={ShieldCheck}
-              title="Persistência local"
-              value={snapshot.persistedSessionDetected ? "Detectada" : "Não detectada"}
-              detail="A tela verifica somente se o armazenamento oficial existe."
-              ok={authStatus === "anonymous" || snapshot.persistedSessionDetected}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Escopo</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Esta tela não substitui os testes de RLS, funções de servidor, banco e desempenho mobile previstos no plano mestre.
           </CardContent>
         </Card>
       </main>
