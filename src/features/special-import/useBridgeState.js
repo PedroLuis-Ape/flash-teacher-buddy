@@ -15,7 +15,6 @@ export function useBridgeState(userId) {
   const [missing, setMissing] = useState([]);
   const [warnings, setWarnings] = useState([]);
   const [exportId, setExportId] = useState();
-  const [mode, setMode] = useState("replace");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState("");
   const [progress, setProgress] = useState(null);
@@ -35,7 +34,6 @@ export function useBridgeState(userId) {
     setMissing([]);
     setWarnings([]);
     setExportId(undefined);
-    setMode("replace");
     setBusy(false);
     setPhase("");
     setProgress(null);
@@ -100,9 +98,21 @@ export function useBridgeState(userId) {
     if (!manifest) return;
     const retry = buildRetryExportPackage(manifest, missing);
     if (!retry) return;
-    saveSpecialExportManifest(retry);
+
     const copied = await copyText(buildSpecialPrompt(retry));
-    toast[copied ? "success" : "error"](copied ? "Prompt dos faltantes copiado." : "Falha ao copiar.");
+    if (!copied) {
+      toast.error("Falha ao copiar. A exportação atual foi preservada para nova tentativa.");
+      return;
+    }
+
+    const saved = saveSpecialExportManifest(retry);
+    if (!saved) {
+      toast.error("O prompt foi copiado, mas o novo lote não pôde ser registrado. Copie novamente antes de importar.");
+      return;
+    }
+
+    setExportId(retry.export_id);
+    toast.success("Prompt dos faltantes copiado.");
   };
 
   const refresh = async (ids) => {
@@ -149,20 +159,19 @@ export function useBridgeState(userId) {
   const apply = async () => {
     if (!rows) return;
     setBusy(true);
-    setPhase("Aplicando explicações");
+    setPhase("Substituindo explicações");
     setProgress(null);
     try {
       const accepted = rows
-        .filter((row) => row.item && row.id && (row.status === "found" || (row.status === "existing" && mode !== "skip")))
+        .filter((row) => row.item && row.id && (row.status === "found" || row.status === "existing"))
         .map((row) => ({ item: row.item, flashcardId: row.id }));
-      const result = await applyImportRows(accepted, mode, (value) => setProgress(value));
+      const result = await applyImportRows(accepted, (value) => setProgress(value));
       const count = (status) => result.filter((row) => row.status === status).length;
       const removedIds = result
         .filter((row) => row.status === "applied" && row.removed_from_specials === true)
         .map((row) => row.flashcard_id);
       const applied = count("applied");
       const removed = removedIds.length;
-      const skipped = count("skipped");
       const notFound = count("not_found");
       const denied = count("permission_denied");
       const errors = count("error") + denied;
@@ -175,10 +184,10 @@ export function useBridgeState(userId) {
         );
       }
       await refresh(removedIds);
-      setReport(`${applied} explicação(ões) aplicada(s) · ${removed} removido(s) dos Especiais · ${skipped} ignorado(s) · ${missing.length + notFound} faltante(s) · ${denied} sem permissão · ${count("error")} erro(s) · ${kept} mantido(s) na fila.`);
+      setReport(`${applied} explicação(ões) substituída(s) · ${removed} removido(s) dos Especiais · ${missing.length + notFound} faltante(s) · ${denied} sem permissão · ${count("error")} erro(s) · ${kept} mantido(s) na fila.`);
       toast[removed ? "success" : "message"](
         removed
-          ? `${removed} card(s) atualizado(s) e removido(s) dos Especiais.`
+          ? `${removed} card(s) substituído(s) e removido(s) dos Especiais.`
           : "Nenhum card foi removido dos Especiais.",
       );
     } catch (error) {
@@ -199,8 +208,6 @@ export function useBridgeState(userId) {
     missing,
     warnings,
     exportId,
-    mode,
-    setMode,
     busy,
     phase,
     progress,

@@ -1,0 +1,79 @@
+/* Responsive Galaxy composition and user-selected high-clarity mode. */
+.space-galaxy-effects--full .space-galaxy-arm {
+  left: -24%;
+  top: 18%;
+  width: 152%;
+  height: clamp(30rem, 46vw, 64rem);
+  opacity: .34;
+}
+
+.space-galaxy-effects--balanced .space-galaxy-arm {
+  left: -28%;
+  top: 24%;
+  width: 160%;
+  height: clamp(22rem, 52vw, 42rem);
+  opacity: .28;
+}
+
+.space-galaxy-effects--quality-high .space-galaxy-arm {
+  opacity: .52;
+  filter: saturate(1.22) brightness(1.16);
+}
+
+.space-galaxy-effects--quality-high .space-galaxy-nebula {
+  opacity: .7;
+  filter: saturate(1.18) brightness(1.12);
+}
+
+.space-galaxy-effects--quality-high .space-galaxy-nebula-dust {
+  opacity: .48;
+  filter: saturate(1.12) brightness(1.08);
+}
+
+.space-galaxy-effects--quality-high .space-twinkle-star {
+  filter: brightness(1.28);
+}
+
+.space-galaxy-effects--quality-high .space-shooting-star {
+  height: 2.5px;
+  filter: brightness(1.25);
+  box-shadow:
+    0 0 10px hsl(268 100% 88% / .44),
+    0 0 24px hsl(221 100% 84% / .24);
+}
+
+html[data-palette="galaxy"][data-galaxy-quality="high"] .space-ui-shell::before {
+  opacity: 1 !important;
+  filter: brightness(1.18) drop-shadow(0 0 4px hsl(280 100% 90% / .48));
+  animation-duration: 30s, 3.2s;
+}
+
+html[data-palette="galaxy"][data-galaxy-quality="high"] .space-ui-shell::after {
+  opacity: .68 !important;
+  filter: brightness(1.22);
+  animation-duration: 2.7s;
+}
+
+@media (min-aspect-ratio: 2/1) and (min-width: 1200px) {
+  .space-galaxy-effects--full .space-galaxy-arm {
+    left: -18%;
+    top: 8%;
+    width: 140%;
+    height: min(78vh, 66rem);
+  }
+
+  .space-galaxy-nebula,
+  .space-galaxy-nebula-dust {
+    left: -8vw;
+    width: 116vw;
+    transform: rotate(-4deg) scaleY(1.18);
+  }
+}
+
+@media (max-width: 767px), (prefers-reduced-motion: reduce) {
+  .space-galaxy-effects--quality-high .space-galaxy-arm,
+  .space-galaxy-effects--quality-high .space-twinkle-star,
+  .space-galaxy-effects--quality-high .space-shooting-star {
+    filter: none;
+  }
+}

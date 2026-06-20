@@ -1,12 +1,5 @@
-import { AlertTriangle, CheckCircle2, Copy, FileWarning, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, FileWarning, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-
-const MODES = [
-  { id: "replace", title: "Substituir", description: "Troca a explicação antiga pela nova." },
-  { id: "append", title: "Acrescentar", description: "Mantém a antiga e adiciona a nova abaixo." },
-  { id: "skip", title: "Ignorar existentes", description: "Aplica apenas nos cards ainda sem explicação." },
-];
 
 export default function BridgeStats({ state }) {
   return <div className="space-y-4">
@@ -39,21 +32,13 @@ export default function BridgeStats({ state }) {
       Copiar pedido somente dos faltantes
     </Button>}
 
-    {(state.stats?.existing ?? 0) > 0 && <div className="space-y-2">
-      <div className="text-sm font-medium">O que fazer com cards que já têm explicação?</div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        {MODES.map((option) => <button
-          type="button"
-          key={option.id}
-          onClick={() => state.setMode(option.id)}
-          className={`rounded-lg border p-3 text-left transition ${state.mode === option.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/50"}`}
-        >
-          <div className="flex items-center justify-between gap-2 font-medium">
-            {option.title}
-            {state.mode === option.id && <Badge>Selecionado</Badge>}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">{option.description}</div>
-        </button>)}
+    {(state.stats?.existing ?? 0) > 0 && <div className="rounded-lg border border-primary/25 bg-primary/5 p-3">
+      <div className="flex items-start gap-2">
+        <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <div>
+          <div className="text-sm font-medium">A nova importação substitui a anterior</div>
+          <p className="mt-1 text-xs text-muted-foreground">Para acrescentar conteúdo sem substituir, use a edição manual do card.</p>
+        </div>
       </div>
     </div>}
 

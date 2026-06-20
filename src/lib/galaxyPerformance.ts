@@ -1,3 +1,5 @@
+import type { GalaxyVisualQuality } from './performanceSettings';
+
 export type GalaxyMotionTier = 'full' | 'balanced' | 'static';
 
 export interface GalaxyCapabilitySnapshot {
@@ -64,10 +66,13 @@ export function chooseGalaxyMotionTier(snapshot: GalaxyCapabilitySnapshot): Gala
   return 'full';
 }
 
-export function getGalaxyStarLimit(tier: GalaxyMotionTier): number {
+export function getGalaxyStarLimit(
+  tier: GalaxyMotionTier,
+  quality: GalaxyVisualQuality = 'standard',
+): number {
   if (tier === 'static') return 4;
-  if (tier === 'balanced') return 7;
-  return 10;
+  if (tier === 'balanced') return quality === 'high' ? 10 : 7;
+  return quality === 'high' ? 16 : 10;
 }
 
 export function getGalaxyScenePlan(tier: GalaxyMotionTier): GalaxyScenePlan {
@@ -106,7 +111,10 @@ export function getGalaxyScenePlan(tier: GalaxyMotionTier): GalaxyScenePlan {
   };
 }
 
-export function getGalaxyCometPlan(tier: GalaxyMotionTier): GalaxyCometPlan {
+export function getGalaxyCometPlan(
+  tier: GalaxyMotionTier,
+  quality: GalaxyVisualQuality = 'standard',
+): GalaxyCometPlan {
   if (tier === 'static') {
     return {
       count: 0,
@@ -119,7 +127,7 @@ export function getGalaxyCometPlan(tier: GalaxyMotionTier): GalaxyCometPlan {
     };
   }
 
-  if (tier === 'balanced') {
+  if (tier === 'balanced' && quality === 'standard') {
     return {
       count: 1,
       firstDelayMin: 8_000,
@@ -131,14 +139,26 @@ export function getGalaxyCometPlan(tier: GalaxyMotionTier): GalaxyCometPlan {
     };
   }
 
+  if (tier === 'balanced') {
+    return {
+      count: 4,
+      firstDelayMin: 6_000,
+      firstDelayVariation: 3_000,
+      repeatDelayMin: 24_000,
+      repeatDelayVariation: 4_000,
+      duration: 6_400,
+      staggerDelays: [0, 900, 1_900, 3_000],
+    };
+  }
+
   return {
     count: 4,
-    firstDelayMin: 7_000,
-    firstDelayVariation: 5_000,
-    repeatDelayMin: COMET_REPEAT_INTERVAL,
-    repeatDelayVariation: 0,
-    duration: 7_200,
-    staggerDelays: [0, 1_250, 2_650, 4_200],
+    firstDelayMin: quality === 'high' ? 5_000 : 7_000,
+    firstDelayVariation: quality === 'high' ? 3_000 : 5_000,
+    repeatDelayMin: quality === 'high' ? 24_000 : COMET_REPEAT_INTERVAL,
+    repeatDelayVariation: quality === 'high' ? 4_000 : 0,
+    duration: quality === 'high' ? 6_800 : 7_200,
+    staggerDelays: quality === 'high' ? [0, 850, 1_850, 3_100] : [0, 1_250, 2_650, 4_200],
   };
 }
 

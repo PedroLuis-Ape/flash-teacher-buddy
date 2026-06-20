@@ -41,20 +41,33 @@ describe('chooseGalaxyMotionTier', () => {
 });
 
 describe('galaxy animation budgets', () => {
-  it('limits decorative stars by tier', () => {
+  it('limits decorative stars by tier in standard mode', () => {
     expect(getGalaxyStarLimit('static')).toBe(4);
     expect(getGalaxyStarLimit('balanced')).toBe(7);
     expect(getGalaxyStarLimit('full')).toBe(10);
   });
 
-  it('disables comets in static mode', () => {
-    expect(getGalaxyCometPlan('static').count).toBe(0);
+  it('adds visible stars in high mode without changing the static safety tier', () => {
+    expect(getGalaxyStarLimit('static', 'high')).toBe(4);
+    expect(getGalaxyStarLimit('balanced', 'high')).toBe(10);
+    expect(getGalaxyStarLimit('full', 'high')).toBe(16);
   });
 
-  it('uses one comet in balanced mode', () => {
+  it('disables comets in static mode even when high quality is selected', () => {
+    expect(getGalaxyCometPlan('static', 'high').count).toBe(0);
+  });
+
+  it('uses one comet in balanced standard mode', () => {
     const balanced = getGalaxyCometPlan('balanced');
     expect(balanced.count).toBe(1);
     expect(balanced.staggerDelays).toEqual([0]);
+  });
+
+  it('uses an adaptive four-comet shower on notebooks in high mode', () => {
+    const balancedHigh = getGalaxyCometPlan('balanced', 'high');
+    expect(balancedHigh.count).toBe(4);
+    expect(balancedHigh.staggerDelays).toHaveLength(4);
+    expect(balancedHigh.repeatDelayMin).toBeLessThan(30_000);
   });
 
   it('uses a four-comet staggered group in full mode', () => {
@@ -72,9 +85,8 @@ describe('galaxy animation budgets', () => {
     expect(full.duration).toBeLessThanOrEqual(8_000);
   });
 
-  it.each(['balanced', 'full'] as const)('repeats animated comet events every thirty seconds in %s mode', (tier) => {
-    const plan = getGalaxyCometPlan(tier);
-    expect(plan.repeatDelayMin).toBe(30_000);
-    expect(plan.repeatDelayVariation).toBe(0);
+  it('keeps the standard animated tiers on a thirty-second repeat', () => {
+    expect(getGalaxyCometPlan('balanced').repeatDelayMin).toBe(30_000);
+    expect(getGalaxyCometPlan('full').repeatDelayMin).toBe(30_000);
   });
 });

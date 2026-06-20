@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import "@/styles/library-responsive.css";
 
 interface ApeTab {
   value: string;
@@ -18,26 +19,29 @@ interface ApeTabsProps {
   sticky?: boolean;
 }
 
-export function ApeTabs({ 
-  tabs, 
-  defaultValue, 
-  value, 
+export function ApeTabs({
+  tabs,
+  defaultValue,
+  value,
   onValueChange,
   className,
-  sticky = true
+  sticky = true,
 }: ApeTabsProps) {
   return (
-    <Tabs 
-      defaultValue={defaultValue || tabs[0]?.value} 
+    <Tabs
+      defaultValue={defaultValue || tabs[0]?.value}
       value={value}
       onValueChange={onValueChange}
-      className={cn("w-full", className)}
+      className={cn("ape-tabs-shell w-full", className)}
     >
       <div className={cn(
         "bg-background border-b border-border",
-        sticky && "sticky top-14 z-30"
+        sticky && "sticky top-14 z-30",
       )}>
-        <TabsList className="w-full h-10 sm:h-12 bg-transparent rounded-none border-0 p-0 grid" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+        <TabsList
+          className="w-full h-10 sm:h-12 bg-transparent rounded-none border-0 p-0 grid"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
+        >
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -56,8 +60,8 @@ export function ApeTabs({
       </div>
 
       {tabs.map((tab) => (
-        <TabsContent 
-          key={tab.value} 
+        <TabsContent
+          key={tab.value}
           value={tab.value}
           className="mt-0 max-w-6xl mx-auto"
         >
