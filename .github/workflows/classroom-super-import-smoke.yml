@@ -46,10 +46,10 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           DO $$
           DECLARE
-            teacher_id uuid := '11111111-1111-4111-8111-111111111111';
-            turma_id uuid := '44444444-4444-4444-8444-444444444444';
-            report jsonb;
-            batch_id uuid;
+            v_teacher_id uuid := '11111111-1111-4111-8111-111111111111';
+            v_turma_id uuid := '44444444-4444-4444-8444-444444444444';
+            v_report jsonb;
+            v_batch_id uuid;
           BEGIN
             INSERT INTO auth.users (
               instance_id, id, aud, role, email, encrypted_password,
@@ -57,7 +57,7 @@ jobs:
               created_at, updated_at
             ) VALUES (
               '00000000-0000-0000-0000-000000000000',
-              teacher_id,
+              v_teacher_id,
               'authenticated',
               'authenticated',
               'classroom-import@app-piteco.local',
@@ -69,15 +69,15 @@ jobs:
               now()
             ) ON CONFLICT (id) DO NOTHING;
 
-            PERFORM set_config('request.jwt.claim.sub', teacher_id::text, true);
+            PERFORM set_config('request.jwt.claim.sub', v_teacher_id::text, true);
             PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
             INSERT INTO public.profiles(id, first_name, is_teacher)
-            VALUES (teacher_id, 'Importer Smoke', true)
+            VALUES (v_teacher_id, 'Importer Smoke', true)
             ON CONFLICT (id) DO UPDATE SET is_teacher = true;
 
             INSERT INTO public.turmas(id, owner_teacher_id, nome, ativo, public)
-            VALUES (turma_id, teacher_id, 'Classroom importer smoke', true, true)
+            VALUES (v_turma_id, v_teacher_id, 'Classroom importer smoke', true, true)
             ON CONFLICT (id) DO NOTHING;
 
             SELECT public.import_app_piteco_super_package_to_class_v1(
@@ -119,18 +119,18 @@ jobs:
                   }
                 }
               }'::jsonb,
-              turma_id,
+              v_turma_id,
               'skip'
-            ) INTO report;
+            ) INTO v_report;
 
-            IF COALESCE((report->>'assignments_created')::integer, 0) <> 1
-               OR COALESCE((report->>'folders_created')::integer, 0) <> 1
-               OR COALESCE((report->>'lists_created')::integer, 0) <> 1
-               OR COALESCE((report->>'cards_created')::integer, 0) <> 1
-               OR COALESCE((report->>'glossary_created')::integer, 0) <> 1
-               OR report->>'target_scope' <> 'classroom'
-               OR (report->>'turma_id')::uuid <> turma_id THEN
-              RAISE EXCEPTION 'Unexpected classroom importer report: %', report;
+            IF COALESCE((v_report->>'assignments_created')::integer, 0) <> 1
+               OR COALESCE((v_report->>'folders_created')::integer, 0) <> 1
+               OR COALESCE((v_report->>'lists_created')::integer, 0) <> 1
+               OR COALESCE((v_report->>'cards_created')::integer, 0) <> 1
+               OR COALESCE((v_report->>'glossary_created')::integer, 0) <> 1
+               OR v_report->>'target_scope' <> 'classroom'
+               OR (v_report->>'turma_id')::uuid <> v_turma_id THEN
+              RAISE EXCEPTION 'Unexpected classroom importer report: %', v_report;
             END IF;
 
             IF NOT EXISTS (
@@ -140,13 +140,13 @@ jobs:
               JOIN public.lists l ON l.folder_id = f.id
               JOIN public.flashcards c ON c.list_id = l.id
               JOIN public.list_glossary g ON g.list_id = l.id
-              WHERE a.turma_id = turma_id
+              WHERE a.turma_id = v_turma_id
                 AND a.fonte_tipo::text = 'pasta'
-                AND f.owner_id = teacher_id
-                AND f.class_id = turma_id
+                AND f.owner_id = v_teacher_id
+                AND f.class_id = v_turma_id
                 AND f.visibility = 'class'
-                AND l.owner_id = teacher_id
-                AND l.class_id = turma_id
+                AND l.owner_id = v_teacher_id
+                AND l.class_id = v_turma_id
                 AND l.visibility = 'class'
                 AND c.term = 'Welcome to class'
                 AND c.translation = 'Bem-vindo à turma'
@@ -156,22 +156,22 @@ jobs:
               RAISE EXCEPTION 'Classroom importer did not persist the isolated hierarchy.';
             END IF;
 
-            batch_id := (report->>'batch_id')::uuid;
-            PERFORM public.undo_classroom_global_import_v1(batch_id);
+            v_batch_id := (v_report->>'batch_id')::uuid;
+            PERFORM public.undo_classroom_global_import_v1(v_batch_id);
 
             IF EXISTS (
-              SELECT 1 FROM public.folders
-              WHERE owner_id = teacher_id
-                AND class_id = turma_id
-                AND title = 'Classroom Smoke Folder'
+              SELECT 1 FROM public.folders f
+              WHERE f.owner_id = v_teacher_id
+                AND f.class_id = v_turma_id
+                AND f.title = 'Classroom Smoke Folder'
             ) OR EXISTS (
-              SELECT 1 FROM public.atribuicoes
-              WHERE turma_id = turma_id
-                AND titulo = 'Classroom Smoke Folder'
+              SELECT 1 FROM public.atribuicoes a
+              WHERE a.turma_id = v_turma_id
+                AND a.titulo = 'Classroom Smoke Folder'
             ) OR NOT EXISTS (
-              SELECT 1 FROM public.global_import_batches
-              WHERE id = batch_id
-                AND status = 'undone'
+              SELECT 1 FROM public.global_import_batches b
+              WHERE b.id = v_batch_id
+                AND b.status = 'undone'
             ) THEN
               RAISE EXCEPTION 'Classroom import undo left residual data.';
             END IF;
