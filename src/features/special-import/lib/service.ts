@@ -5,7 +5,13 @@ import type { NormalizedSpecialImportItem, ReconciledSpecialImportRow } from "./
 export type ConflictMode = "replace" | "append" | "skip";
 export interface ImportProgress { processed: number; total: number }
 export interface DatabaseCardState { detailed_explanation: string | null }
-export interface ApplyResult { flashcard_id: string; status: string; message?: string }
+export interface ApplyResult {
+  flashcard_id: string;
+  status: string;
+  message?: string;
+  explanation_updated?: boolean;
+  removed_from_specials?: boolean;
+}
 
 export async function lookupImportCards(
   rows: readonly ReconciledSpecialImportRow[],
@@ -42,6 +48,66 @@ function extraExamples(item: NormalizedSpecialImportItem): string {
   return `\n\nExemplos adicionais:\n${lines.join("\n")}`;
 }
 
+async function verifyAppliedItemsLeftTheQueue(results: ApplyResult[]): Promise<ApplyResult[]> {
+  const appliedIds = Array.from(new Set(
+    results.filter((result) => result.status === "applied").map((result) => result.flashcard_id),
+  ));
+  if (appliedIds.length === 0) return results;
+
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const user = authData.user;
+  if (authError || !user) {
+    return results.map((result) => result.status === "applied" ? {
+      ...result,
+      status: "error",
+      explanation_updated: true,
+      removed_from_specials: false,
+      message: "A explicação foi aplicada, mas não foi possível confirmar a remoção dos Especiais.",
+    } : result);
+  }
+
+  const { error: cleanupError } = await supabase
+    .from("user_special_flashcards" as any)
+    .delete()
+    .eq("user_id", user.id)
+    .in("flashcard_id", appliedIds);
+
+  const { data: remaining, error: verifyError } = await supabase
+    .from("user_special_flashcards" as any)
+    .select("flashcard_id")
+    .eq("user_id", user.id)
+    .in("flashcard_id", appliedIds);
+
+  if (cleanupError || verifyError) {
+    return results.map((result) => result.status === "applied" ? {
+      ...result,
+      status: "error",
+      explanation_updated: true,
+      removed_from_specials: false,
+      message: cleanupError?.message || verifyError?.message || "Falha ao confirmar a remoção dos Especiais.",
+    } : result);
+  }
+
+  const remainingIds = new Set(((remaining as Array<{ flashcard_id: string }>) ?? [])
+    .map((row) => row.flashcard_id));
+
+  return results.map((result) => {
+    if (result.status !== "applied") return result;
+    const removed = !remainingIds.has(result.flashcard_id);
+    return removed ? {
+      ...result,
+      explanation_updated: result.explanation_updated ?? true,
+      removed_from_specials: true,
+    } : {
+      ...result,
+      status: "error",
+      explanation_updated: true,
+      removed_from_specials: false,
+      message: "A explicação foi aplicada, mas o card continuou na fila de Especiais.",
+    };
+  });
+}
+
 export async function applyImportRows(
   rows: readonly { item: NormalizedSpecialImportItem; flashcardId: string }[],
   conflictMode: ConflictMode,
@@ -72,5 +138,5 @@ export async function applyImportRows(
     },
     { onProgress: (value) => onProgress?.({ processed: value.processed, total: value.total }) },
   );
-  return results;
+  return verifyAppliedItemsLeftTheQueue(results);
 }
