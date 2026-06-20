@@ -10,7 +10,9 @@ Esta verificação é executada localmente e no GitHub Actions. Ela é somente l
 - cada função explicitamente gerenciada em `supabase/config.toml` possui `verify_jwt` declarado;
 - apenas funções registradas como públicas podem usar `verify_jwt = false`;
 - funções gerenciadas privadas devem usar `verify_jwt = true`;
-- uma função não pode ser simultaneamente pública e classificada como elevada;
+- funções que usam cliente administrativo são classificadas automaticamente como elevadas;
+- funções gerenciadas com acesso administrativo precisam validar o usuário explicitamente;
+- uma função não pode ser simultaneamente pública e elevada;
 - as listas de política não podem apontar para funções inexistentes;
 - configurações sem diretório correspondente bloqueiam o CI.
 
@@ -20,24 +22,26 @@ Diretórios legados ainda ausentes de `supabase/config.toml` aparecem como aviso
 
 A função `ping` é o único endpoint público permitido. Ela funciona como health check sem leitura ou escrita no banco.
 
-As funções classificadas como elevadas são:
-
-- `kingdoms-import-csv`;
-- `audit-ab-consistency`;
-- `repair-ab`;
-- `announcements-create`.
-
-Essa classificação não concede permissão. Ela registra que essas funções exigem revisão especial, JWT obrigatório e controles explícitos de autenticação e escopo no código.
+Funções com cliente administrativo são detectadas automaticamente como elevadas. Funções também podem permanecer classificadas manualmente quando exigem revisão especial por impacto operacional.
 
 ## Famílias revisadas gradualmente
 
-A família de anúncios agora possui configuração explícita:
+### Anúncios
 
-- `announcements-create`: privada, JWT obrigatório e classificada como elevada por usar operações administrativas;
+- `announcements-create`: privada, JWT obrigatório e elevada;
 - `announcements-list`: privada e JWT obrigatório;
 - `announcements-update`: privada e JWT obrigatório.
 
-Nenhuma dessas alterações publica funções ou modifica o banco. Elas apenas tornam o contrato de segurança verificável no repositório e no CI.
+### Atribuições
+
+- `atribuicoes-create`: privada e JWT obrigatório;
+- `atribuicoes-delete`: privada e JWT obrigatório;
+- `atribuicoes-update-status`: privada, JWT obrigatório e elevada por usar cliente administrativo;
+- `atribuicoes-minhas`: privada e JWT obrigatório;
+- `atribuicoes-by-turma`: privada, JWT obrigatório e elevada por usar cliente administrativo;
+- `atribuicoes-progresso-alunos`: privada e JWT obrigatório.
+
+Nenhuma dessas alterações publica funções ou modifica o banco. Elas tornam o contrato de segurança verificável no repositório e no CI.
 
 ## Relatório
 
