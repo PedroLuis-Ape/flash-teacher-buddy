@@ -8,11 +8,30 @@ const corsHeaders = {
   'Cache-Control': 'no-store',
 };
 
+type ErrorCode =
+  | 'UNAUTHENTICATED'
+  | 'FORBIDDEN'
+  | 'INVALID_VISIBILITY'
+  | 'MISSING_SCHEMA'
+  | 'UPDATE_FAILED';
+
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+function failure(code: ErrorCode, error: string, status: number) {
+  return json({ code, error }, status);
+}
+
+function isMissingPublicColumn(error: { code?: string; message?: string; details?: string } | null) {
+  if (!error) return false;
+  const text = `${error.message ?? ''} ${error.details ?? ''}`.toLowerCase();
+  return error.code === '42703' || (
+    text.includes('public') && text.includes('turmas') && text.includes('column')
+  );
 }
 
 serve(async (req) => {
@@ -21,12 +40,14 @@ serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return json({ error: 'Método não permitido' }, 405);
+    return json({ code: 'UPDATE_FAILED', error: 'Método não permitido' }, 405);
   }
 
   try {
     const authorization = req.headers.get('Authorization');
-    if (!authorization) return json({ error: 'Não autorizado' }, 401);
+    if (!authorization) {
+      return failure('UNAUTHENTICATED', 'Sua sessão expirou. Entre novamente para atualizar a turma.', 401);
+    }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -35,50 +56,60 @@ serve(async (req) => {
     );
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) return json({ error: 'Não autorizado' }, 401);
+    if (authError || !user) {
+      console.error('turmas-update UNAUTHENTICATED', authError);
+      return failure('UNAUTHENTICATED', 'Sua sessão expirou. Entre novamente para atualizar a turma.', 401);
+    }
 
     const body = await req.json() as Record<string, unknown>;
     const turmaId = typeof body.turma_id === 'string' ? body.turma_id.trim() : '';
-    if (!turmaId) return json({ error: 'ID da turma é obrigatório' }, 400);
+    if (!turmaId) return json({ code: 'UPDATE_FAILED', error: 'ID da turma é obrigatório' }, 400);
 
     const updates: Record<string, unknown> = {};
 
     if (body.nome !== undefined) {
-      if (typeof body.nome !== 'string') return json({ error: 'Nome inválido' }, 400);
+      if (typeof body.nome !== 'string') return json({ code: 'UPDATE_FAILED', error: 'Nome inválido' }, 400);
       const nome = body.nome.trim();
-      if (!nome) return json({ error: 'Nome é obrigatório' }, 400);
-      if (nome.length > 120) return json({ error: 'O nome deve ter no máximo 120 caracteres' }, 400);
+      if (!nome) return json({ code: 'UPDATE_FAILED', error: 'Nome é obrigatório' }, 400);
+      if (nome.length > 120) return json({ code: 'UPDATE_FAILED', error: 'O nome deve ter no máximo 120 caracteres' }, 400);
       updates.nome = nome;
     }
 
     if (body.descricao !== undefined) {
       if (body.descricao !== null && typeof body.descricao !== 'string') {
-        return json({ error: 'Descrição inválida' }, 400);
+        return json({ code: 'UPDATE_FAILED', error: 'Descrição inválida' }, 400);
       }
       const descricao = typeof body.descricao === 'string' ? body.descricao.trim() : '';
       if (descricao.length > 1000) {
-        return json({ error: 'A descrição deve ter no máximo 1000 caracteres' }, 400);
+        return json({ code: 'UPDATE_FAILED', error: 'A descrição deve ter no máximo 1000 caracteres' }, 400);
       }
       updates.descricao = descricao || null;
     }
 
     if (body.public !== undefined) {
-      if (typeof body.public !== 'boolean') return json({ error: 'Visibilidade inválida' }, 400);
+      if (typeof body.public !== 'boolean') {
+        return failure('INVALID_VISIBILITY', 'A visibilidade enviada é inválida.', 400);
+      }
       updates.public = body.public;
     }
 
     if (Object.keys(updates).length === 0) {
-      return json({ error: 'Nenhuma alteração válida foi enviada' }, 400);
+      return json({ code: 'UPDATE_FAILED', error: 'Nenhuma alteração válida foi enviada' }, 400);
     }
 
     const { data: turma, error: verifyError } = await supabaseClient
       .from('turmas')
       .select('owner_teacher_id')
       .eq('id', turmaId)
-      .single();
+      .maybeSingle();
 
-    if (verifyError || !turma || turma.owner_teacher_id !== user.id) {
-      return json({ error: 'Você não tem permissão para editar esta turma' }, 403);
+    if (verifyError) {
+      console.error('turmas-update FORBIDDEN verify failure', verifyError);
+      return failure('FORBIDDEN', 'Você não tem permissão para editar esta turma.', 403);
+    }
+
+    if (!turma || turma.owner_teacher_id !== user.id) {
+      return failure('FORBIDDEN', 'Você não tem permissão para editar esta turma.', 403);
     }
 
     const { data: updated, error: updateError } = await supabaseClient
@@ -89,13 +120,31 @@ serve(async (req) => {
       .single();
 
     if (updateError) {
-      console.error('Error updating turma:', updateError);
-      return json({ error: 'Erro ao atualizar turma' }, 500);
+      if (isMissingPublicColumn(updateError)) {
+        console.error('turmas-update MISSING_SCHEMA', updateError);
+        return failure(
+          'MISSING_SCHEMA',
+          'A publicação de turmas ainda não foi instalada no servidor.',
+          503,
+        );
+      }
+
+      console.error('turmas-update UPDATE_FAILED', updateError);
+      return failure('UPDATE_FAILED', 'Não foi possível salvar as alterações da turma.', 500);
+    }
+
+    if (typeof body.public === 'boolean' && updated?.public !== body.public) {
+      console.error('turmas-update UPDATE_FAILED visibility mismatch', {
+        turmaId,
+        requested: body.public,
+        returned: updated?.public,
+      });
+      return failure('UPDATE_FAILED', 'A visibilidade da turma não foi confirmada pelo servidor.', 500);
     }
 
     return json({ turma: updated }, 200);
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return json({ error: 'Requisição inválida' }, 400);
+    console.error('turmas-update UPDATE_FAILED unexpected', error);
+    return failure('UPDATE_FAILED', 'Requisição inválida', 400);
   }
 });
