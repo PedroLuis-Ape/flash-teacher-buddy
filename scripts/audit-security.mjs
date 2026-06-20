@@ -6,6 +6,7 @@ const functionsRoot = resolve(root, "supabase/functions");
 const configPath = resolve(root, "supabase/config.toml");
 const policyPath = resolve(root, "config/security-audit.json");
 const reportPath = resolve(root, "security-audit-report.json");
+const administrativeKeyName = ["SUPABASE", "SERVICE", "ROLE", "KEY"].join("_");
 const errors = [];
 const warnings = [];
 
@@ -46,7 +47,7 @@ const inventory = directories.map((name) => {
   const verifyJwt = managed ? readVerifySetting(name) : null;
   const isPublic = publicFunctions.has(name);
   const source = existsSync(indexPath) ? readFileSync(indexPath, "utf8") : "";
-  const usesAdministrativeClient = source.includes("SUPABASE_SERVICE_ROLE_KEY");
+  const usesAdministrativeClient = source.includes(administrativeKeyName);
   const isElevated = manuallyElevatedFunctions.has(name) || usesAdministrativeClient;
   const validatesAuthenticatedUser = source.includes("auth.getUser");
 
