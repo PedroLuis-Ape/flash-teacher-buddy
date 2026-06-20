@@ -6,7 +6,7 @@ on:
       - "supabase/migrations/**"
       - ".github/workflows/public-classroom-security-smoke.yml"
   push:
-    branches: [main, security-replace-public-views-20260620]
+    branches: [main]
     paths:
       - "supabase/migrations/**"
       - ".github/workflows/public-classroom-security-smoke.yml"
