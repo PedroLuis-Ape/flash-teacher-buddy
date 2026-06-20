@@ -106,4 +106,12 @@ describe("turma Edge Function security contracts", () => {
     expect(review.trim()).not.toBe("review");
     for (const name of FUNCTION_NAMES) expect(review).toContain(`\`${name}\``);
   });
+
+  it("keeps the static audit document readable and linked to all turma functions", () => {
+    const audit = readFileSync(join(ROOT, "docs", "security-static-audit.md"), "utf8");
+    expect(audit).not.toContain("\uFFFD");
+    expect(audit).not.toContain("verificåvel");
+    expect(audit).not.toContain("traté-las");
+    for (const name of FUNCTION_NAMES) expect(audit).toContain(`\`${name}\``);
+  });
 });
