@@ -23,6 +23,7 @@ interface Props {
   undoing: boolean;
   onUndo: () => void;
   onOpenFolders: () => void;
+  openLabel?: string;
 }
 
 export function GlobalImportExecutionSection(props: Props) {
@@ -67,15 +68,20 @@ export function GlobalImportExecutionSection(props: Props) {
           </h2>
           <p className="mt-1 text-muted-foreground">Pacote: {props.report.package_name}</p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {props.report.assignments_created !== undefined && (
+              <Metric value={props.report.assignments_created} label="Atribuições criadas" />
+            )}
             <Metric value={props.report.folders_created} label="Pastas criadas" />
             <Metric value={props.report.lists_created} label="Listas criadas" />
             <Metric value={props.report.lists_replaced ?? 0} label="Listas substituídas" />
             <Metric value={props.report.lists_skipped ?? 0} label="Listas ignoradas" />
             <Metric value={props.report.cards_created} label="Cards criados" />
             <Metric value={props.report.cards_skipped} label="Cards duplicados ignorados" />
+            <Metric value={props.report.glossary_created ?? 0} label="Glossário criado" />
+            <Metric value={props.report.layered_groups_created ?? 0} label="Grupos em camadas" />
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Button onClick={props.onOpenFolders}>Abrir minhas pastas</Button>
+            <Button onClick={props.onOpenFolders}>{props.openLabel ?? "Abrir minhas pastas"}</Button>
             <Button variant="outline" onClick={props.onUndo} disabled={props.undoing}>
               {props.undoing
                 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />

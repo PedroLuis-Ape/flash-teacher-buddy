@@ -170,6 +170,7 @@ const App = () => {
                   <Route path="/turmas/professor" element={<TurmasProfessor />} />
                   <Route path="/turmas/aluno" element={<TurmasAluno />} />
                   <Route path="/turmas/:turmaId" element={<TurmaDetail />} />
+                  <Route path="/turmas/:turmaId/import/super" element={<SuperGlobalImport />} />
                   <Route path="/professor/alunos" element={<MeusAlunos />} />
                   <Route path="/professor/alunos/:alunoId" element={<AlunoProfile />} />
                   <Route path="/professores/:professorId" element={<ProfessorProfile />} />

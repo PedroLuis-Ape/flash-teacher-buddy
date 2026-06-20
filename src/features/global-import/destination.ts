@@ -38,9 +38,11 @@ function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export async function loadImportDestinationCatalog(): Promise<ImportDestinationCatalog> {
+export async function loadImportDestinationCatalog(
+  turmaId?: string | null,
+): Promise<ImportDestinationCatalog> {
   const module = await import("./destinationCatalog");
-  return module.loadImportDestinationCatalog();
+  return module.loadImportDestinationCatalog(turmaId);
 }
 
 export function buildDefaultDestinationPlan(

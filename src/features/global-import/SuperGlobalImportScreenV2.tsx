@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, GraduationCap } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,8 @@ function packageCounts(packageValue: GlobalImportPackage | null) {
 
 export default function SuperGlobalImportScreenV2() {
   const navigate = useNavigate();
+  const { turmaId } = useParams<{ turmaId?: string }>();
+  const classroomMode = Boolean(turmaId);
   const source = useGlobalImportSource();
   const [destinationMode, setDestinationMode] = useState<GlobalImportDestinationMode>("from-file");
   const [selectedFolderId, setSelectedFolderId] = useState("");
@@ -62,10 +64,12 @@ export default function SuperGlobalImportScreenV2() {
   const [undoing, setUndoing] = useState(false);
 
   useEffect(() => {
-    loadImportDestinationCatalog()
+    setCatalog(null);
+    setSelectedFolderId("");
+    loadImportDestinationCatalog(turmaId)
       .then(setCatalog)
-      .catch((error) => toast.error(error?.message || "Não foi possível carregar suas pastas."));
-  }, []);
+      .catch((error) => toast.error(error?.message || "Não foi possível carregar as pastas disponíveis."));
+  }, [turmaId]);
 
   useEffect(() => {
     if (destinationMode === "from-file" && source.validation?.valid && source.validation.package) {
@@ -105,7 +109,7 @@ export default function SuperGlobalImportScreenV2() {
       return;
     }
     if (validation.requestId) updateGlobalImportManifestStatus(validation.requestId, "validated");
-    const nextCatalog = catalog ?? await loadImportDestinationCatalog();
+    const nextCatalog = catalog ?? await loadImportDestinationCatalog(turmaId);
     setCatalog(nextCatalog);
     setDestinationPlan(buildCreateAllDestinationPlan(validation.package));
     toast.success("Pacote válido. Revise o destino e a prévia antes de importar.");
@@ -140,6 +144,8 @@ export default function SuperGlobalImportScreenV2() {
   const handleImport = async () => {
     const validation = source.validation;
     if (!validation?.valid || !validation.package || !catalog) return;
+    if (classroomMode && !turmaId) return;
+
     const effectivePackage = destinationMode === "from-file" ? validation.package : prepared?.packageValue;
     const effectivePlan = destinationMode === "from-file" ? destinationPlan : prepared?.plan;
 
@@ -162,7 +168,7 @@ export default function SuperGlobalImportScreenV2() {
     setProgressText("Preparando a importação...");
     try {
       const imported = await executeMappedGlobalImport(effectivePackage, {
-        requestId: validation.requestId ?? undefined,
+        requestId: classroomMode ? undefined : validation.requestId ?? undefined,
         officialPackage: validation.officialPackage,
         canonicalPackage: validation.canonicalPackage,
         smartPackage: validation.smartPackage,
@@ -170,6 +176,7 @@ export default function SuperGlobalImportScreenV2() {
         catalog,
         cardConflict,
         institutionId: null,
+        turmaId: turmaId ?? null,
         onProgress: (completed, total, label) => {
           setProgress(total > 0 ? (completed / total) * 100 : 0);
           setProgressText(`${label} — ${completed}/${total}`);
@@ -178,7 +185,9 @@ export default function SuperGlobalImportScreenV2() {
       setReport(imported);
       setProgress(100);
       setProgressText("Concluído");
-      toast.success("Importação global concluída.");
+      toast.success(classroomMode
+        ? "Lote importado e atribuído à turma."
+        : "Importação global concluída.");
     } catch (error: any) {
       toast.error(error?.message || "A importação falhou e foi desfeita.");
     } finally {
@@ -190,11 +199,13 @@ export default function SuperGlobalImportScreenV2() {
     if (!report?.batch_id) return;
     setUndoing(true);
     try {
-      await undoGlobalImport(report.batch_id);
+      await undoGlobalImport(report.batch_id, classroomMode ? "classroom" : "personal");
       setReport(null);
       setProgress(0);
       setProgressText("");
-      toast.success("A importação foi desfeita.");
+      toast.success(classroomMode
+        ? "O lote e suas atribuições foram removidos da turma."
+        : "A importação foi desfeita.");
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível desfazer a importação.");
     } finally {
@@ -202,20 +213,51 @@ export default function SuperGlobalImportScreenV2() {
     }
   };
 
+  const handleBack = () => {
+    if (classroomMode && turmaId) navigate(`/turmas/${turmaId}`);
+    else navigate(-1);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-24">
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex flex-wrap items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Voltar">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold">Super Importador Global</h1>
+              <h1 className="text-3xl font-bold">
+                {classroomMode ? "Super Importador da Turma" : "Super Importador Global"}
+              </h1>
               <Badge variant="secondary">app-piteco-super-import 2.0</Badge>
+              {classroomMode && (
+                <Badge className="gap-1">
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  Destino isolado
+                </Badge>
+              )}
             </div>
-            <p className="mt-1 text-muted-foreground">Texto, CSV e JSON usam o mesmo motor transacional enriquecido.</p>
+            <p className="mt-1 text-muted-foreground">
+              {classroomMode
+                ? "Texto, CSV e JSON criam pastas, listas, glossários, camadas e cards diretamente nesta turma."
+                : "Texto, CSV e JSON usam o mesmo motor transacional enriquecido."}
+            </p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/import")}>Importador simples</Button>
+          {classroomMode && turmaId ? (
+            <Button variant="outline" onClick={() => navigate(`/turmas/${turmaId}`)}>
+              Voltar à turma
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={() => navigate("/import")}>Importador simples</Button>
+          )}
         </header>
+
+        {classroomMode && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+            Todo conteúdo criado aqui fica isolado na turma atual. Novas pastas são atribuídas automaticamente e obedecem à visibilidade da turma.
+          </div>
+        )}
 
         <GlobalImportDestinationSection
           mode={destinationMode}
@@ -262,7 +304,11 @@ export default function SuperGlobalImportScreenV2() {
           report={report}
           undoing={undoing}
           onUndo={handleUndo}
-          onOpenFolders={() => navigate("/folders")}
+          openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}
+          onOpenFolders={() => {
+            if (classroomMode && turmaId) navigate(`/turmas/${turmaId}`);
+            else navigate("/folders");
+          }}
         />
       </div>
     </div>
