@@ -1,26 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-
-// Rotas públicas que não exigem sessão.
-// Prefixos: qualquer rota que comece com um destes é pública.
-const PUBLIC_PREFIXES = [
-  "/auth",
-  "/portal",
-  "/about",
-  "/ingles-para-iniciantes",
-  "/atividades-de-ingles",
-  "/flashcards-de-ingles",
-  "/para-professores",
-] as const;
-
-// Caminhos exatos públicos (não usar startsWith pois "/" pegaria tudo).
-const PUBLIC_EXACT = new Set<string>(["/", "/landing"]);
-
-function isProtectedPath(pathname: string) {
-  if (PUBLIC_EXACT.has(pathname)) return false;
-  return !PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
-}
+import { isProtectedPath } from "@/lib/sessionRouteAccess";
 
 /**
  * SessionWatcher — Route guard only.
