@@ -7,6 +7,7 @@ import {
   type TouchEvent,
 } from "react";
 import { cn } from "@/lib/utils";
+import type { DeckTransitionPhase } from "./useDeckNavigationTransition";
 import "./studyCardDeck.css";
 
 type SwipeAction = "next" | "previous" | null;
@@ -24,6 +25,8 @@ interface StudyCardDeckProps {
   className?: string;
   density?: "compact" | "regular" | "tall";
   swipeNavigation?: SwipeNavigation;
+  transitionPhase?: DeckTransitionPhase;
+  preloadedCard?: ReactNode;
 }
 
 interface SwipeMetrics {
@@ -78,6 +81,8 @@ export function StudyCardDeck({
   className,
   density = "regular",
   swipeNavigation,
+  transitionPhase = "idle",
+  preloadedCard,
 }: StudyCardDeckProps) {
   const deckRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -206,7 +211,7 @@ export function StudyCardDeck({
     timerRef.current = window.setTimeout(() => {
       if (action === "next") swipeNavigation.onNext?.();
       else swipeNavigation.onPrevious?.();
-    }, 90);
+    }, 40);
   };
 
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -220,6 +225,7 @@ export function StudyCardDeck({
     <div
       ref={deckRef}
       key={cardKey}
+      data-deck-phase={transitionPhase}
       className={cn(
         "study-card-deck",
         `study-card-deck--${density}`,
@@ -233,6 +239,11 @@ export function StudyCardDeck({
     >
       <span aria-hidden="true" className="study-card-deck__layer study-card-deck__layer--back" />
       <span aria-hidden="true" className="study-card-deck__layer study-card-deck__layer--middle" />
+      {preloadedCard && (
+        <div aria-hidden="true" inert className="study-card-deck__preloaded">
+          {preloadedCard}
+        </div>
+      )}
       <div ref={contentRef} className="study-card-deck__content">{children}</div>
     </div>
   );
