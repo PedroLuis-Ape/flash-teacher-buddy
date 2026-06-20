@@ -6,14 +6,15 @@ Esta verificação é executada localmente e no GitHub Actions. Ela é somente l
 
 ## O que o CI valida
 
-- cada diretório em `supabase/functions` possui `index.ts`;
-- cada função está declarada em `supabase/config.toml`;
-- cada declaração possui `verify_jwt` explícito;
-- apenas funções registradas em `publicFunctions` podem usar `verify_jwt = false`;
-- funções privadas devem usar `verify_jwt = true`;
+- cada diretório de função possui `index.ts`;
+- cada função explicitamente gerenciada em `supabase/config.toml` possui `verify_jwt` declarado;
+- apenas funções registradas como públicas podem usar `verify_jwt = false`;
+- funções gerenciadas privadas devem usar `verify_jwt = true`;
 - uma função não pode ser simultaneamente pública e classificada como elevada;
 - as listas de política não podem apontar para funções inexistentes;
-- configurações sem diretório e diretórios sem configuração bloqueiam o CI.
+- configurações sem diretório correspondente bloqueiam o CI.
+
+Diretórios legados ainda ausentes de `supabase/config.toml` aparecem como avisos no relatório, e não como aprovação implícita. Isso permite introduzir a auditoria sem alterar em massa funções que ainda não foram verificadas individualmente.
 
 ## Política atual
 
@@ -35,7 +36,11 @@ O comando abaixo gera `security-audit-report.json`:
 npm run check:security
 ```
 
-O relatório é publicado como artefato temporário do workflow. Ele contém somente nomes de funções, configuração de JWT e classificação da política. Não contém chaves, tokens, senhas ou dados de usuários.
+O relatório é publicado como artefato temporário do workflow. Ele contém somente nomes de funções, estado de gerenciamento, configuração de JWT e classificação da política. Não contém chaves, tokens, senhas ou dados de usuários.
+
+## Próxima migração segura
+
+As funções legadas devem ser adicionadas gradualmente a `supabase/config.toml` depois de revisão individual. O CI passa a tratá-las como gerenciadas assim que a configuração explícita é incluída. Nenhuma função é publicada ou alterada automaticamente por este processo.
 
 ## Limitação conhecida
 
