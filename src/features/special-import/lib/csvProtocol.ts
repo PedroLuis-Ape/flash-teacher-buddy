@@ -32,8 +32,11 @@ export function buildSpecialCsvPrompt(batch: SpecialExportPackage): string {
   const rules = [
     "Preserve exatamente o cabeçalho, a ordem das colunas e a ordem das linhas.",
     "Preserve sem nenhuma alteração format, schema_version, export_id, card_ref, flashcard_id, term e translation.",
-    "Preencha detailed_explanation em todas as linhas; explique significado, contexto de uso, diferenças de termos parecidos e a construção gramatical relevante.",
-    "Quando o card for um phrasal verb, explique a lógica da construção; quando representar uma camada ou sentido específico, explique somente esse sentido.",
+    "Quando term for uma frase completa, identifique dentro dela a palavra, collocation, phrasal verb ou expressão mais específica e pedagogicamente útil; não explique a frase inteira palavra por palavra quando existir uma peça-chave mais relevante.",
+    "Comece detailed_explanation exatamente com 'Expressão-chave: <trecho exato do card>' e concentre a explicação nessa peça-chave. Exemplo: em 'The city announces sweeping new curbs', um foco provável é 'sweeping new curbs'.",
+    "Quando o card já for uma palavra ou expressão curta, use o próprio term como expressão-chave. Quando representar uma camada ou sentido específico, explique somente esse sentido.",
+    "Preencha detailed_explanation em todas as linhas; explique significado, contexto de uso, nuance, diferenças de termos parecidos e a construção gramatical relevante.",
+    "Quando o card for um phrasal verb, explique a lógica da construção.",
     "Preencha usage_notes com observações práticas de uso e common_mistakes com erros frequentes de brasileiros quando forem relevantes.",
     "Preencha exatamente dois exemplos naturais em inglês e suas traduções nos quatro campos example_1_en, example_1_pt, example_2_en e example_2_pt.",
     "Use português simples, didático e direto nas explicações.",
@@ -45,7 +48,7 @@ export function buildSpecialCsvPrompt(batch: SpecialExportPackage): string {
   ];
   return [
     "Você recebeu um arquivo CSV de Cards Especiais exportado pelo App Piteco.",
-    "Sua tarefa é preencher explicações didáticas para todos os cards e devolver o mesmo CSV preenchido.",
+    "Sua tarefa é identificar a peça-chave de cada card, preencher a explicação didática e devolver o mesmo CSV preenchido.",
     "",
     `Lote esperado: ${batch.export_id}`,
     `Linhas de dados esperadas: ${batch.card_count}`,
