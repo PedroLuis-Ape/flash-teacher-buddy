@@ -3,14 +3,50 @@ import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createSystemHealthSnapshot, type RuntimeHostKind } from "@/lib/systemHealth";
-import { Activity, AlertTriangle, CheckCircle2, Globe2, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import {
+  createSystemHealthSnapshot,
+  type BackendContractStatus,
+  type RuntimeHostKind,
+} from "@/lib/systemHealth";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Database,
+  Globe2,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 
 const hostCopy: Record<RuntimeHostKind, { label: string; detail: string; ok: boolean }> = {
   canonical: { label: "Domínio canônico", detail: "A aplicação está em www.apeeducation.org.", ok: true },
   apex: { label: "Domínio raiz", detail: "Este acesso deveria redirecionar para www.", ok: false },
   preview: { label: "Ambiente de preview", detail: "Prévia isolada para validação.", ok: true },
   other: { label: "Host não reconhecido", detail: "Confirme se este endereço é autorizado.", ok: false },
+};
+
+const backendCopy: Record<BackendContractStatus, { label: string; detail: string; ok: boolean }> = {
+  valid: {
+    label: "Consistente",
+    detail: "A URL compilada corresponde ao projeto configurado para o frontend.",
+    ok: true,
+  },
+  missing: {
+    label: "Configuração ausente",
+    detail: "O build não recebeu todas as variáveis públicas obrigatórias do backend.",
+    ok: false,
+  },
+  mismatch: {
+    label: "Configuração divergente",
+    detail: "A URL compilada e o identificador do projeto não correspondem.",
+    ok: false,
+  },
+  "invalid-url": {
+    label: "URL inválida",
+    detail: "O endereço compilado do backend não possui um formato válido.",
+    ok: false,
+  },
 };
 
 function StatusLine({ icon: Icon, title, value, detail, ok }: {
@@ -44,10 +80,13 @@ export default function SystemStatusPage() {
     hostname: window.location.hostname,
     isOnline: navigator.onLine,
     mode: import.meta.env.MODE,
+    backendProjectId: import.meta.env.VITE_SUPABASE_PROJECT_ID,
+    backendUrl: import.meta.env.VITE_SUPABASE_URL,
   }), [revision]);
 
   const host = hostCopy[snapshot.hostKind];
-  const overallHealthy = host.ok && snapshot.isOnline;
+  const backend = backendCopy[snapshot.backendContract];
+  const overallHealthy = host.ok && snapshot.isOnline && backend.ok;
 
   const refresh = () => {
     setCheckedAt(new Date());
@@ -66,7 +105,7 @@ export default function SystemStatusPage() {
                   {overallHealthy ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <AlertTriangle className="h-5 w-5 text-destructive" />}
                   Estado do ambiente
                 </CardTitle>
-                <CardDescription className="mt-1">Verificação do frontend e do domínio atual.</CardDescription>
+                <CardDescription className="mt-1">Verificação segura do frontend, domínio e contrato do backend.</CardDescription>
               </div>
               <Badge variant={overallHealthy ? "default" : "destructive"}>{overallHealthy ? "Operacional" : "Atenção"}</Badge>
             </div>
@@ -83,12 +122,13 @@ export default function SystemStatusPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Ambiente e domínio</CardTitle>
-            <CardDescription>Confirma onde a interface está rodando.</CardDescription>
+            <CardDescription>Confirma onde a interface está rodando e se o backend compilado é coerente.</CardDescription>
           </CardHeader>
           <CardContent className="divide-y">
             <StatusLine icon={Globe2} title="Host atual" value={host.label} detail={`${snapshot.hostname} — ${host.detail}`} ok={host.ok} />
             <StatusLine icon={snapshot.isOnline ? Wifi : WifiOff} title="Conectividade" value={snapshot.isOnline ? "Online" : "Offline"} detail="Sinal informado pelo navegador." ok={snapshot.isOnline} />
             <StatusLine icon={Activity} title="Modo do build" value={snapshot.mode} detail="Identifica como o bundle atual foi gerado." ok={snapshot.mode === "production"} />
+            <StatusLine icon={Database} title="Contrato do backend" value={backend.label} detail={backend.detail} ok={backend.ok} />
           </CardContent>
         </Card>
       </main>
