@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, security-replace-public-views-20260620]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
