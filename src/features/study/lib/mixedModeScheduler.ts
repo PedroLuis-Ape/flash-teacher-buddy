@@ -9,6 +9,13 @@ export const MIXED_MODE_WEIGHTS: Readonly<Record<MixedPlayableMode, number>> = {
   pronunciation: 15,
 };
 
+const FULL_PATTERN: readonly MixedPlayableMode[] = [
+  "write", "unscramble", "write", "multiple-choice", "write",
+  "pronunciation", "unscramble", "write", "multiple-choice", "write",
+  "unscramble", "pronunciation", "write", "multiple-choice", "unscramble",
+  "write", "pronunciation", "multiple-choice", "write", "unscramble",
+];
+
 export function createMixedModeSchedule(
   questionCount: number,
   pronunciationSupported = true,
@@ -16,19 +23,9 @@ export function createMixedModeSchedule(
 ): MixedPlayableMode[] {
   const total = Math.max(0, Math.floor(questionCount));
   if (total === 0) return [];
-
-  const modes: MixedPlayableMode[] = pronunciationSupported
-    ? ["write", "unscramble", "multiple-choice", "pronunciation"]
-    : ["write", "unscramble", "multiple-choice"];
-  const totalWeight = modes.reduce((sum, mode) => sum + MIXED_MODE_WEIGHTS[mode], 0);
-  const output: MixedPlayableMode[] = [];
-
-  for (const mode of modes) {
-    const amount = Math.floor(total * MIXED_MODE_WEIGHTS[mode] / totalWeight);
-    for (let index = 0; index < amount; index += 1) output.push(mode);
-  }
-
-  while (output.length < total) output.push(modes[output.length % modes.length]);
+  void pronunciationSupported;
   void random;
-  return output;
+  const output: MixedPlayableMode[] = [];
+  while (output.length < total) output.push(...FULL_PATTERN);
+  return output.slice(0, total);
 }
