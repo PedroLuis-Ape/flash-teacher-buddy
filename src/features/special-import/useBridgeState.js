@@ -98,9 +98,21 @@ export function useBridgeState(userId) {
     if (!manifest) return;
     const retry = buildRetryExportPackage(manifest, missing);
     if (!retry) return;
-    saveSpecialExportManifest(retry);
+
     const copied = await copyText(buildSpecialPrompt(retry));
-    toast[copied ? "success" : "error"](copied ? "Prompt dos faltantes copiado." : "Falha ao copiar.");
+    if (!copied) {
+      toast.error("Falha ao copiar. A exportação atual foi preservada para nova tentativa.");
+      return;
+    }
+
+    const saved = saveSpecialExportManifest(retry);
+    if (!saved) {
+      toast.error("O prompt foi copiado, mas o novo lote não pôde ser registrado. Copie novamente antes de importar.");
+      return;
+    }
+
+    setExportId(retry.export_id);
+    toast.success("Prompt dos faltantes copiado.");
   };
 
   const refresh = async (ids) => {
