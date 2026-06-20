@@ -1,0 +1,245 @@
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Gamepad2,
+  Layers3,
+  ListOrdered,
+  Mic,
+  Pencil,
+  RotateCcw,
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { normalizeDirection, type Direction } from '@/features/study/lib/gameCore';
+import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from '@/features/study/lib/studyMode';
+
+interface PublicClassListMeta {
+  list_id: string;
+  title: string;
+  description: string | null;
+}
+
+type StudyOrder = 'random' | 'sequential';
+
+const gameOptions: Array<{
+  mode: StudyMode | 'multiple';
+  title: string;
+  description: string;
+  icon: typeof RotateCcw;
+  accent?: string;
+}> = [
+  {
+    mode: 'flip',
+    title: 'Virar Cartas',
+    description: 'Revise os dois lados dos flashcards.',
+    icon: RotateCcw,
+  },
+  {
+    mode: 'write',
+    title: 'Escrever',
+    description: 'Digite a resposta e confira na hora.',
+    icon: Pencil,
+  },
+  {
+    mode: 'multiple',
+    title: 'Múltipla Escolha',
+    description: 'Escolha a alternativa correta.',
+    icon: ListOrdered,
+  },
+  {
+    mode: 'unscramble',
+    title: 'Organizar Frase',
+    description: 'Coloque as palavras na ordem correta.',
+    icon: Layers3,
+  },
+  {
+    mode: 'mixed',
+    title: 'Estudo Misto',
+    description: 'Alterne entre diferentes desafios.',
+    icon: Gamepad2,
+  },
+  {
+    mode: 'pronunciation',
+    title: 'Pronúncia',
+    description: 'Pratique falando em voz alta.',
+    icon: Mic,
+    accent: 'orange',
+  },
+];
+
+export default function PublicClassGamesHub() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const turmaId = searchParams.get('turma');
+  const assignmentId = searchParams.get('atribuicao');
+  const [direction, setDirection] = useState<Direction>('a-b');
+  const [order, setOrder] = useState<StudyOrder>('random');
+
+  const validContext = Boolean(id && turmaId && assignmentId);
+
+  const listQuery = useQuery({
+    queryKey: ['public-class-game-hub', turmaId, assignmentId, id],
+    queryFn: async () => {
+      const client = supabase as any;
+      const { data, error } = await client
+        .from('public_turma_lists')
+        .select('list_id, title, description')
+        .eq('turma_id', turmaId!)
+        .eq('atribuicao_id', assignmentId!)
+        .eq('list_id', id!)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data ?? null) as PublicClassListMeta | null;
+    },
+    enabled: validContext,
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  const backPath = useMemo(() => {
+    if (!turmaId) return '/portal';
+    return assignmentId
+      ? `/turmas/${turmaId}?atribuicao=${assignmentId}`
+      : `/turmas/${turmaId}`;
+  }, [turmaId, assignmentId]);
+
+  const startGame = (rawMode: StudyMode | 'multiple') => {
+    if (!id || !turmaId || !assignmentId) return;
+    const mode = normalizeStudyMode(rawMode);
+    const params = new URLSearchParams({
+      mode: studyModeToUrlParam(mode),
+      dir: direction,
+      order,
+      guest: 'true',
+      turma: turmaId,
+      atribuicao: assignmentId,
+    });
+
+    navigate(`/portal/list/${id}/study?${params.toString()}`);
+  };
+
+  if (!validContext) {
+    return (
+      <div className="grid min-h-[70vh] place-items-center px-4">
+        <Card className="max-w-lg space-y-4 p-8 text-center">
+          <Gamepad2 className="mx-auto h-10 w-10 text-muted-foreground" />
+          <h1 className="text-xl font-bold">Hub público indisponível</h1>
+          <p className="text-sm text-muted-foreground">
+            Volte à turma pública e escolha uma lista novamente.
+          </p>
+          <Button onClick={() => navigate('/portal')}>Voltar ao portal</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <main className="container mx-auto max-w-6xl px-4 py-8">
+        <Button variant="ghost" onClick={() => navigate(backPath)} className="mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar às listas
+        </Button>
+
+        <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
+          <p className="text-sm font-medium text-primary">Área pública do aluno</p>
+          <h1 className="mt-1 text-3xl font-extrabold">Hub de jogos</h1>
+          {listQuery.isLoading ? (
+            <Skeleton className="mt-3 h-5 w-64" />
+          ) : listQuery.data ? (
+            <div className="mt-3 max-w-3xl">
+              <h2 className="text-xl font-semibold">{listQuery.data.title}</h2>
+              {listQuery.data.description && (
+                <p className="mt-1 text-muted-foreground">{listQuery.data.description}</p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-3 text-muted-foreground">Esta lista não está mais disponível publicamente.</p>
+          )}
+        </section>
+
+        <section className="space-y-6">
+          <div className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium">Direção</label>
+              <Select value={direction} onValueChange={(value) => setDirection(normalizeDirection(value))}>
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="a-b">Lado A → Lado B</SelectItem>
+                  <SelectItem value="b-a">Lado B → Lado A</SelectItem>
+                  <SelectItem value="any">Misto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">Ordem</label>
+              <Select value={order} onValueChange={(value) => setOrder(value as StudyOrder)}>
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="random">Aleatória</SelectItem>
+                  <SelectItem value="sequential">Sequencial</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-4">
+              <p className="text-sm font-medium text-primary">Escolha como jogar</p>
+              <h2 className="text-2xl font-bold">Modos disponíveis</h2>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {gameOptions.map(({ mode, title, description, icon: Icon, accent }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  disabled={!listQuery.data}
+                  onClick={() => startGame(mode)}
+                  className={[
+                    'group flex min-h-44 flex-col items-start justify-between rounded-2xl border bg-card p-5 text-left transition-all',
+                    'hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50',
+                    accent === 'orange' ? 'border-orange-500/30 bg-orange-500/5' : '',
+                  ].join(' ')}
+                >
+                  <div className={[
+                    'rounded-2xl p-3',
+                    accent === 'orange' ? 'bg-orange-500/10 text-orange-500' : 'bg-primary/10 text-primary',
+                  ].join(' ')}>
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <div className="mt-5">
+                    <h3 className="text-lg font-bold">{title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Card className="p-4 text-sm text-muted-foreground">
+            Você pode jogar sem conta. Uma conta é necessária apenas para sincronizar progresso, favoritos e histórico.
+          </Card>
+        </section>
+      </main>
+    </div>
+  );
+}
