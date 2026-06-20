@@ -17,3 +17,12 @@ verify_jwt = true
 
 [functions.repair-ab]
 verify_jwt = true
+
+[functions.announcements-create]
+verify_jwt = true
+
+[functions.announcements-list]
+verify_jwt = true
+
+[functions.announcements-update]
+verify_jwt = true
