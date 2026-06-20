@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Copy, Download, FileJson } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Download, FileJson, FileSpreadsheet, Sparkles, Upload } from "lucide-react";
 import type { SpecialFlashcardDetail } from "@/hooks/useSpecialFlashcards";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,12 @@ import {
   saveSpecialExportManifest,
   type SpecialExportPackage,
 } from "../lib/protocol";
+import {
+  buildSpecialCsvExport,
+  buildSpecialCsvPrompt,
+  specialCsvFilename,
+  specialCsvPromptFilename,
+} from "../lib/csvProtocol";
 
 interface Props {
   open: boolean;
@@ -61,14 +67,23 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
 
   useEffect(() => setActiveIndex(0), [batchSize, cards]);
 
-  const handleCopy = async () => {
+  const handleDownloadCsv = () => {
     if (!current) return;
     persist(current);
-    const copied = await copyText(buildSpecialPrompt(current));
+    downloadText(
+      specialCsvFilename(current),
+      `\uFEFF${buildSpecialCsvExport(current)}`,
+      "text/csv;charset=utf-8",
+    );
+    toast.success(`CSV do lote ${current.batch_index} baixado.`);
+  };
+
+  const handleCopyPrompt = async () => {
+    if (!current) return;
+    persist(current);
+    const copied = await copyText(buildSpecialCsvPrompt(current));
     toast[copied ? "success" : "error"](
-      copied
-        ? `Prompt do lote ${current.batch_index} copiado. O manifesto foi salvo para conferir a importação.`
-        : "Não foi possível copiar o prompt.",
+      copied ? "Prompt para a IA copiado." : "Não foi possível copiar o prompt.",
     );
   };
 
@@ -76,121 +91,116 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
     if (!current) return;
     persist(current);
     downloadText(
-      `ape-especiais-${current.export_id}.txt`,
-      buildSpecialPrompt(current),
+      specialCsvPromptFilename(current),
+      buildSpecialCsvPrompt(current),
       "text/plain;charset=utf-8",
     );
-    toast.success(`Prompt do lote ${current.batch_index} baixado.`);
+    toast.success("Prompt baixado.");
   };
 
-  const handleDownloadJson = () => {
+  const handleLegacyJson = () => {
     if (!current) return;
     persist(current);
     downloadText(
-      `ape-especiais-${current.export_id}.json`,
+      `ape-especiais-legado-${current.export_id}.json`,
       JSON.stringify(current, null, 2),
       "application/json;charset=utf-8",
     );
-    toast.success(`Dados do lote ${current.batch_index} baixados.`);
+    toast.success("JSON legado baixado.");
   };
 
-  const handleDownloadAll = () => {
-    if (batches.length === 0) return;
-    batches.forEach(persist);
-    const content = batches.map((batch) => (
-      `===== LOTE ${batch.batch_index} DE ${batch.batch_count} | ${batch.export_id} =====\n\n${buildSpecialPrompt(batch)}`
-    )).join("\n\n\n");
-    downloadText(
-      `ape-especiais-${batches.length}-lotes.txt`,
-      content,
-      "text/plain;charset=utf-8",
+  const handleLegacyPrompt = async () => {
+    if (!current) return;
+    persist(current);
+    const copied = await copyText(buildSpecialPrompt(current));
+    toast[copied ? "success" : "error"](
+      copied ? "Prompt legado copiado." : "Não foi possível copiar.",
     );
-    toast.success(`${batches.length} lote(s) baixados e registrados.`);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="flex max-h-[92vh] max-w-4xl flex-col">
         <DialogHeader>
-          <DialogTitle>Exportar cards especiais para IA</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Sparkles className="h-5 w-5 text-sky-500" />
+            Preparar Cards Especiais para a IA
+          </DialogTitle>
           <DialogDescription>
-            Use um lote por conversa com a IA. O app registra cada lote para detectar cards ausentes, duplicados e IDs alterados na volta.
+            Baixe o CSV, envie junto com o prompt e depois importe o arquivo preenchido.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-xl border bg-sky-50/70 p-3 dark:bg-sky-950/20">
+            <div className="flex items-center gap-2 font-medium"><FileSpreadsheet className="h-4 w-4 text-sky-600" />1. Baixe o CSV</div>
+            <p className="mt-1 text-xs text-muted-foreground">Ele contém os cards e os identificadores protegidos.</p>
+          </div>
+          <div className="rounded-xl border bg-violet-50/70 p-3 dark:bg-violet-950/20">
+            <div className="flex items-center gap-2 font-medium"><Copy className="h-4 w-4 text-violet-600" />2. Copie o prompt</div>
+            <p className="mt-1 text-xs text-muted-foreground">Envie o prompt e o CSV na mesma conversa com a IA.</p>
+          </div>
+          <div className="rounded-xl border bg-emerald-50/70 p-3 dark:bg-emerald-950/20">
+            <div className="flex items-center gap-2 font-medium"><Upload className="h-4 w-4 text-emerald-600" />3. Importe a resposta</div>
+            <p className="mt-1 text-xs text-muted-foreground">O app confere tudo antes de aplicar.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-muted/30 p-3">
           <div className="text-sm font-medium">Cards por lote</div>
           <Select value={String(batchSize)} onValueChange={(value) => setBatchSize(Number(value))}>
-            <SelectTrigger className="w-28">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[10, 20, 30, 50].map((size) => (
-                <SelectItem key={size} value={String(size)}>{size}</SelectItem>
-              ))}
+              {[10, 20, 30, 50].map((size) => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}
             </SelectContent>
           </Select>
           <Badge variant="secondary">{cards.length} card(s)</Badge>
           <Badge variant="outline">{batches.length} lote(s)</Badge>
         </div>
 
-        {current && (
-          <div className="flex-1 min-h-0 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveIndex((index) => Math.max(0, index - 1))}
-                disabled={activeIndex === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Anterior
-              </Button>
-              <div className="text-center">
-                <div className="font-medium">Lote {current.batch_index} de {current.batch_count}</div>
-                <div className="text-xs text-muted-foreground">{current.card_count} card(s) · {current.export_id}</div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveIndex((index) => Math.min(batches.length - 1, index + 1))}
-                disabled={activeIndex >= batches.length - 1}
-              >
-                Próximo
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Textarea
-              readOnly
-              value={buildSpecialPrompt(current)}
-              className="min-h-[300px] max-h-[45vh] font-mono text-[11px]"
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <Button onClick={handleCopy}>
-                <Copy className="h-4 w-4 mr-1.5" />
-                Copiar este lote
-              </Button>
-              <Button variant="outline" onClick={handleDownloadPrompt}>
-                <Download className="h-4 w-4 mr-1.5" />
-                Baixar prompt
-              </Button>
-              <Button variant="outline" onClick={handleDownloadJson}>
-                <FileJson className="h-4 w-4 mr-1.5" />
-                Baixar dados JSON
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2 sm:gap-2">
-          {batches.length > 1 && (
-            <Button variant="outline" onClick={handleDownloadAll}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Baixar todos os lotes
+        {current && <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+          <div className="flex items-center justify-between gap-2">
+            <Button variant="outline" size="sm" onClick={() => setActiveIndex((index) => Math.max(0, index - 1))} disabled={activeIndex === 0}>
+              <ChevronLeft className="h-4 w-4" />Anterior
             </Button>
-          )}
+            <div className="text-center">
+              <div className="font-medium">Lote {current.batch_index} de {current.batch_count}</div>
+              <div className="text-xs text-muted-foreground">{current.card_count} card(s) · {current.export_id}</div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setActiveIndex((index) => Math.min(batches.length - 1, index + 1))} disabled={activeIndex >= batches.length - 1}>
+              Próximo<ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button size="lg" onClick={handleDownloadCsv} className="h-auto min-h-16 justify-start px-4 py-3 text-left">
+              <FileSpreadsheet className="mr-3 h-6 w-6" />
+              <span><span className="block font-semibold">Baixar CSV para a IA</span><span className="block text-xs font-normal opacity-80">Arquivo principal deste lote</span></span>
+            </Button>
+            <Button size="lg" variant="secondary" onClick={handleCopyPrompt} className="h-auto min-h-16 justify-start px-4 py-3 text-left">
+              <Copy className="mr-3 h-6 w-6" />
+              <span><span className="block font-semibold">Copiar prompt para a IA</span><span className="block text-xs font-normal opacity-80">Cole junto com o CSV</span></span>
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-medium">Prompt deste lote</div>
+              <Button variant="outline" size="sm" onClick={handleDownloadPrompt}><Download className="mr-1 h-4 w-4" />Baixar prompt</Button>
+            </div>
+            <Textarea readOnly value={buildSpecialCsvPrompt(current)} className="min-h-[180px] font-mono text-[11px]" />
+          </div>
+
+          <details className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <summary className="cursor-pointer font-medium text-muted-foreground">Compatibilidade com o formato antigo</summary>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={handleLegacyJson}><FileJson className="mr-1 h-4 w-4" />Baixar JSON legado</Button>
+              <Button variant="outline" size="sm" onClick={handleLegacyPrompt}><Copy className="mr-1 h-4 w-4" />Copiar prompt legado</Button>
+            </div>
+          </details>
+        </div>}
+
+        <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
