@@ -2,7 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { APPLY_BATCH, VALIDATE_LOOKUP_BATCH, runInBatches } from "./chunking";
 import type { NormalizedSpecialImportItem, ReconciledSpecialImportRow } from "./parser";
 
-export type ConflictMode = "replace" | "append" | "skip";
 export interface ImportProgress { processed: number; total: number }
 export interface DatabaseCardState { detailed_explanation: string | null }
 export interface ApplyResult {
@@ -110,7 +109,6 @@ async function verifyAppliedItemsLeftTheQueue(results: ApplyResult[]): Promise<A
 
 export async function applyImportRows(
   rows: readonly { item: NormalizedSpecialImportItem; flashcardId: string }[],
-  conflictMode: ConflictMode,
   onProgress?: (progress: ImportProgress) => void,
 ): Promise<ApplyResult[]> {
   const payload = rows.map(({ item, flashcardId }) => {
@@ -131,7 +129,7 @@ export async function applyImportRows(
     async (batch) => {
       const { data, error } = await (supabase as any).rpc(
         "apply_special_flashcard_explanations",
-        { p_items: batch, p_conflict_mode: conflictMode },
+        { p_items: batch, p_conflict_mode: "replace" },
       );
       if (error) throw error;
       results.push(...((data?.results ?? []) as ApplyResult[]));
