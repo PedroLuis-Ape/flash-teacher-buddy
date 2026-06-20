@@ -39,6 +39,31 @@ function readVerifySetting(name) {
   return section[1].match(/verify_jwt\s*=\s*(true|false)/)?.[1] ?? null;
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasExplicitAuthenticatedUserGuard(source) {
+  const code = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+
+  const resultPattern = /const\s*\{\s*data\s*:\s*\{\s*([A-Za-z_$][\w$]*)\s*\}\s*,\s*error(?:\s*:\s*([A-Za-z_$][\w$]*))?\s*\}\s*=\s*await[\s\S]{0,180}?\.auth\.getUser\s*\([^;]*\)\s*;/g;
+
+  for (const match of code.matchAll(resultPattern)) {
+    const userVariable = match[1];
+    const errorVariable = match[2] ?? "error";
+    const userCheck = new RegExp(`!\\s*${escapeRegExp(userVariable)}\\b`);
+    const errorCheck = new RegExp(`\\b${escapeRegExp(errorVariable)}\\b`);
+
+    for (const condition of code.matchAll(/if\s*\(([^)]*)\)/g)) {
+      if (userCheck.test(condition[1]) && errorCheck.test(condition[1])) return true;
+    }
+  }
+
+  return false;
+}
+
 const configuredNames = [...configSource.matchAll(/^\[functions\.([^\]]+)\]/gm)].map((match) => match[1]);
 
 const inventory = directories.map((name) => {
@@ -49,7 +74,7 @@ const inventory = directories.map((name) => {
   const source = existsSync(indexPath) ? readFileSync(indexPath, "utf8") : "";
   const usesAdministrativeClient = source.includes(administrativeKeyName);
   const isElevated = manuallyElevatedFunctions.has(name) || usesAdministrativeClient;
-  const validatesAuthenticatedUser = source.includes("auth.getUser");
+  const validatesAuthenticatedUser = hasExplicitAuthenticatedUserGuard(source);
 
   if (!existsSync(indexPath)) errors.push(`${name}: index.ts ausente.`);
 
@@ -64,7 +89,7 @@ const inventory = directories.map((name) => {
       errors.push(`${name}: função gerenciada privada deve declarar verify_jwt = true.`);
     }
     if (usesAdministrativeClient && !validatesAuthenticatedUser) {
-      errors.push(`${name}: acesso administrativo sem validação explícita do usuário.`);
+      errors.push(`${name}: acesso administrativo sem guarda explícita de erro e usuário autenticado.`);
     }
   }
 
@@ -79,6 +104,7 @@ const inventory = directories.map((name) => {
     public: isPublic,
     elevated: isElevated,
     elevatedReason: usesAdministrativeClient ? "administrative-client" : manuallyElevatedFunctions.has(name) ? "manual-policy" : null,
+    hasExplicitAuthenticatedUserGuard: validatesAuthenticatedUser,
     hasEntryPoint: existsSync(indexPath),
   };
 });
