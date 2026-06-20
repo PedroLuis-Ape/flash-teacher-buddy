@@ -24,9 +24,20 @@ As funções classificadas como elevadas são:
 
 - `kingdoms-import-csv`;
 - `audit-ab-consistency`;
-- `repair-ab`.
+- `repair-ab`;
+- `announcements-create`.
 
 Essa classificação não concede permissão. Ela registra que essas funções exigem revisão especial, JWT obrigatório e controles explícitos de autenticação e escopo no código.
+
+## Famílias revisadas gradualmente
+
+A família de anúncios agora possui configuração explícita:
+
+- `announcements-create`: privada, JWT obrigatório e classificada como elevada por usar operações administrativas;
+- `announcements-list`: privada e JWT obrigatório;
+- `announcements-update`: privada e JWT obrigatório.
+
+Nenhuma dessas alterações publica funções ou modifica o banco. Elas apenas tornam o contrato de segurança verificável no repositório e no CI.
 
 ## Relatório
 
