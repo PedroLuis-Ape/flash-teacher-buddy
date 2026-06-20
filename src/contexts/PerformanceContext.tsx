@@ -2,9 +2,10 @@
  * PerformanceContext — provides performance settings to the entire app.
  * Reads from localStorage synchronously on init (no flash of wrong state).
  */
-
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import {
+  type BooleanPerformanceSettingKey,
+  type GalaxyVisualQuality,
   type PerformanceSettings,
   type PerformancePreset,
   PRESETS,
@@ -17,15 +18,11 @@ import {
 
 interface PerformanceContextValue {
   settings: PerformanceSettings;
-  /** Apply a full preset */
   applyPreset: (preset: PerformancePreset) => void;
-  /** Toggle a single setting */
-  toggleSetting: (key: keyof Omit<PerformanceSettings, 'preset'>, value: boolean) => void;
-  /** Apply a full settings object */
+  toggleSetting: (key: BooleanPerformanceSettingKey, value: boolean) => void;
+  setGalaxyQuality: (quality: GalaxyVisualQuality) => void;
   applySettings: (s: PerformanceSettings) => void;
-  /** Reset to the recommended default for this device */
   resetToDefault: () => void;
-  /** Detected preset name or 'custom' */
   currentPreset: PerformancePreset | 'custom';
 }
 
@@ -41,13 +38,27 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const applyPreset = useCallback((preset: PerformancePreset) => {
-    persist({ ...PRESETS[preset] });
-  }, [persist]);
+    setSettings((current) => {
+      const next = { ...PRESETS[preset], galaxyQuality: current.galaxyQuality };
+      writePerformanceSettings(next);
+      updatePerfSettingsCache(next);
+      return next;
+    });
+  }, []);
 
-  const toggleSetting = useCallback((key: keyof Omit<PerformanceSettings, 'preset'>, value: boolean) => {
+  const toggleSetting = useCallback((key: BooleanPerformanceSettingKey, value: boolean) => {
     setSettings(prev => {
       const next = { ...prev, [key]: value };
       next.preset = detectPreset(next) as PerformancePreset;
+      writePerformanceSettings(next);
+      updatePerfSettingsCache(next);
+      return next;
+    });
+  }, []);
+
+  const setGalaxyQuality = useCallback((quality: GalaxyVisualQuality) => {
+    setSettings((current) => {
+      const next = { ...current, galaxyQuality: quality };
       writePerformanceSettings(next);
       updatePerfSettingsCache(next);
       return next;
@@ -64,36 +75,28 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
 
   const currentPreset = detectPreset(settings);
 
-  // Keep CSS performance switches deterministic and in sync with both the
-  // selected preset and the operating-system reduced-motion preference.
   useEffect(() => {
     const el = document.documentElement;
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const syncFlags = () => {
       const motionAllowed = settings.animations && !settings.reduceMotion && !media.matches;
-
       el.toggleAttribute('data-perf-no-anim', !motionAllowed);
       el.toggleAttribute('data-perf-no-hover', !settings.hoverEffects);
       el.toggleAttribute('data-perf-no-decor', !settings.decorativeEffects);
       el.toggleAttribute('data-perf-space-stars', motionAllowed && settings.decorativeEffects);
       el.toggleAttribute('data-perf-backdrop', settings.backdropBlur);
+      el.setAttribute('data-galaxy-quality', settings.galaxyQuality);
     };
 
     syncFlags();
     media.addEventListener?.('change', syncFlags);
     return () => media.removeEventListener?.('change', syncFlags);
-  }, [
-    settings.animations,
-    settings.reduceMotion,
-    settings.hoverEffects,
-    settings.decorativeEffects,
-    settings.backdropBlur,
-  ]);
+  }, [settings.animations, settings.reduceMotion, settings.hoverEffects, settings.decorativeEffects, settings.backdropBlur, settings.galaxyQuality]);
 
   const contextValue = useMemo(() => ({
-    settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset,
-  }), [settings, applyPreset, toggleSetting, applySettings, resetToDefault, currentPreset]);
+    settings, applyPreset, toggleSetting, setGalaxyQuality, applySettings, resetToDefault, currentPreset,
+  }), [settings, applyPreset, toggleSetting, setGalaxyQuality, applySettings, resetToDefault, currentPreset]);
 
   return (
     <PerformanceContext.Provider value={contextValue}>
