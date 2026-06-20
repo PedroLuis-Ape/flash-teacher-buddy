@@ -4,7 +4,6 @@
  */
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import {
-  type BooleanPerformanceSettingKey,
   type GalaxyVisualQuality,
   type PerformanceSettings,
   type PerformancePreset,
@@ -16,10 +15,12 @@ import {
   getRecommendedPerformanceSettings,
 } from '@/lib/performanceSettings';
 
+type ToggleKey = keyof Omit<PerformanceSettings, 'preset'>;
+
 interface PerformanceContextValue {
   settings: PerformanceSettings;
   applyPreset: (preset: PerformancePreset) => void;
-  toggleSetting: (key: BooleanPerformanceSettingKey, value: boolean) => void;
+  toggleSetting: (key: ToggleKey, value: boolean) => void;
   setGalaxyQuality: (quality: GalaxyVisualQuality) => void;
   applySettings: (s: PerformanceSettings) => void;
   resetToDefault: () => void;
@@ -46,7 +47,8 @@ export function PerformanceProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const toggleSetting = useCallback((key: BooleanPerformanceSettingKey, value: boolean) => {
+  const toggleSetting = useCallback((key: ToggleKey, value: boolean) => {
+    if (key === 'galaxyQuality') return;
     setSettings(prev => {
       const next = { ...prev, [key]: value };
       next.preset = detectPreset(next) as PerformancePreset;
