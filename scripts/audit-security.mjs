@@ -19,7 +19,7 @@ const policy = existsSync(policyPath)
   : { publicFunctions: {}, elevatedFunctions: [] };
 
 const publicFunctions = new Set(Object.keys(policy.publicFunctions ?? {}));
-const elevatedFunctions = new Set(
+const manuallyElevatedFunctions = new Set(
   policy.elevatedFunctions ?? policy.serviceRoleFunctions ?? [],
 );
 const directories = existsSync(functionsRoot)
@@ -45,7 +45,10 @@ const inventory = directories.map((name) => {
   const managed = configuredNames.includes(name);
   const verifyJwt = managed ? readVerifySetting(name) : null;
   const isPublic = publicFunctions.has(name);
-  const isElevated = elevatedFunctions.has(name);
+  const source = existsSync(indexPath) ? readFileSync(indexPath, "utf8") : "";
+  const usesAdministrativeClient = source.includes("SUPABASE_SERVICE_ROLE_KEY");
+  const isElevated = manuallyElevatedFunctions.has(name) || usesAdministrativeClient;
+  const validatesAuthenticatedUser = source.includes("auth.getUser");
 
   if (!existsSync(indexPath)) errors.push(`${name}: index.ts ausente.`);
 
@@ -59,6 +62,9 @@ const inventory = directories.map((name) => {
     if (!isPublic && verifyJwt !== "true") {
       errors.push(`${name}: função gerenciada privada deve declarar verify_jwt = true.`);
     }
+    if (usesAdministrativeClient && !validatesAuthenticatedUser) {
+      errors.push(`${name}: acesso administrativo sem validação explícita do usuário.`);
+    }
   }
 
   if (isPublic && isElevated) {
@@ -71,6 +77,7 @@ const inventory = directories.map((name) => {
     verifyJwt,
     public: isPublic,
     elevated: isElevated,
+    elevatedReason: usesAdministrativeClient ? "administrative-client" : manuallyElevatedFunctions.has(name) ? "manual-policy" : null,
     hasEntryPoint: existsSync(indexPath),
   };
 });
@@ -82,7 +89,7 @@ for (const name of publicFunctions) {
   if (!directories.includes(name)) errors.push(`${name}: função pública inexistente.`);
   if (!configuredNames.includes(name)) errors.push(`${name}: função pública sem configuração explícita.`);
 }
-for (const name of elevatedFunctions) {
+for (const name of manuallyElevatedFunctions) {
   if (!directories.includes(name)) errors.push(`${name}: função elevada inexistente.`);
   if (!configuredNames.includes(name)) errors.push(`${name}: função elevada sem configuração explícita.`);
 }
