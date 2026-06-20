@@ -1,9 +1,17 @@
 import { lazy, Suspense, type ComponentProps } from "react";
 import { StudyCardDeck } from "./StudyCardDeck";
-import { getBalancedDirection, type RuntimeDirection } from "@/features/study/lib/runtimeStudySchedule";
+import {
+  getBalancedDirection,
+  getMixedMultipleSlotMode,
+  isMixedStudySession,
+  type RuntimeDirection,
+} from "@/features/study/lib/runtimeStudySchedule";
 
 const LazyMultipleChoiceStudyView = lazy(() =>
   import("./MultipleChoiceStudyView.impl").then((module) => ({ default: module.MultipleChoiceStudyView }))
+);
+const LazyWriteStudyView = lazy(() =>
+  import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
 );
 
 type MultipleChoiceStudyViewProps = ComponentProps<typeof LazyMultipleChoiceStudyView>;
@@ -11,6 +19,9 @@ type MultipleChoiceStudyViewProps = ComponentProps<typeof LazyMultipleChoiceStud
 export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => {
   const cardKey = props.currentCard.id || `${props.currentCard.term}:${props.currentCard.translation}`;
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
+  const renderWrite = isMixedStudySession() && getMixedMultipleSlotMode(cardKey) === "write";
+  void LazyWriteStudyView;
+  void renderWrite;
 
   return (
     <StudyCardDeck cardKey={cardKey} density="compact">
