@@ -7,6 +7,7 @@ const app = read('../../App.tsx');
 const detail = read('../../pages/TurmaDetailWithContent.tsx');
 const launchCard = read('./components/ClassroomSuperImportLaunchCard.tsx');
 const screen = read('../global-import/SuperGlobalImportScreenV2.tsx');
+const execution = read('../global-import/components/GlobalImportExecutionSection.tsx');
 const service = read('../global-import/mappedService.ts');
 const catalog = read('../global-import/destinationCatalog.ts');
 const migration = read('../../../supabase/migrations/20260620233000_classroom_super_import_v1.sql');
@@ -32,6 +33,12 @@ describe('classroom super importer integration', () => {
     expect(screen).toContain('turmaId: turmaId ?? null');
     expect(screen).toContain('Lote importado e atribuído à turma.');
     expect(screen).toContain('openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}');
+  });
+
+  it('reports the enriched classroom content created by the batch', () => {
+    expect(execution).toContain('Atribuições criadas');
+    expect(execution).toContain('Glossário criado');
+    expect(execution).toContain('Grupos em camadas');
   });
 
   it('creates isolated class entities and tracks assignments for undo', () => {
