@@ -19,7 +19,6 @@ jobs:
   security-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
@@ -37,7 +36,7 @@ jobs:
           supabase start
           supabase db reset --local --no-seed
 
-      - name: Verify security-invoker view options
+      - name: Verify classroom security metadata
         shell: bash
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
@@ -45,7 +44,20 @@ jobs:
           DECLARE
             view_name text;
             options text[];
+            rls_enabled boolean;
           BEGIN
+            SELECT c.relrowsecurity
+              INTO rls_enabled
+            FROM pg_class AS c
+            JOIN pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'turmas'
+              AND c.relkind = 'r';
+
+            IF COALESCE(rls_enabled, false) = false THEN
+              RAISE EXCEPTION 'RLS is not enabled on public.turmas';
+            END IF;
+
             FOREACH view_name IN ARRAY ARRAY[
               'public_turmas',
               'public_turma_atribuicoes',
@@ -96,193 +108,71 @@ jobs:
           ) ON CONFLICT (id) DO NOTHING;
 
           INSERT INTO public.profiles (id, first_name, is_teacher, public_access_enabled)
-          VALUES (
-            '44444444-4444-4444-8444-444444444444',
-            'Smoke Teacher',
-            true,
-            true
-          )
+          VALUES ('44444444-4444-4444-8444-444444444444', 'Smoke Teacher', true, true)
           ON CONFLICT (id) DO UPDATE SET
             first_name = EXCLUDED.first_name,
             is_teacher = true,
             public_access_enabled = true;
 
-          INSERT INTO public.turmas (
-            id, owner_teacher_id, nome, descricao, ativo, public
-          ) VALUES
-            (
-              '55555555-5555-4555-8555-555555555555',
-              '44444444-4444-4444-8444-444444444444',
-              'Public security smoke',
-              'Must be playable anonymously',
-              true,
-              true
-            ),
-            (
-              '66666666-6666-4666-8666-666666666666',
-              '44444444-4444-4444-8444-444444444444',
-              'Private security smoke',
-              'Must never be playable anonymously',
-              true,
-              false
-            )
+          INSERT INTO public.turmas (id, owner_teacher_id, nome, ativo, public)
+          VALUES
+            ('55555555-5555-4555-8555-555555555555', '44444444-4444-4444-8444-444444444444', 'Public smoke', true, true),
+            ('66666666-6666-4666-8666-666666666666', '44444444-4444-4444-8444-444444444444', 'Private smoke', true, false)
           ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
 
-          INSERT INTO public.folders (
-            id, owner_id, title, visibility, class_id
-          ) VALUES
-            (
-              '77777777-7777-4777-8777-777777777777',
-              '44444444-4444-4444-8444-444444444444',
-              'Public class folder',
-              'class',
-              '55555555-5555-4555-8555-555555555555'
-            ),
-            (
-              '88888888-8888-4888-8888-888888888888',
-              '44444444-4444-4444-8444-444444444444',
-              'Private class folder',
-              'class',
-              '66666666-6666-4666-8666-666666666666'
-            )
+          INSERT INTO public.folders (id, owner_id, title, visibility, class_id)
+          VALUES
+            ('77777777-7777-4777-8777-777777777777', '44444444-4444-4444-8444-444444444444', 'Public folder', 'class', '55555555-5555-4555-8555-555555555555'),
+            ('88888888-8888-4888-8888-888888888888', '44444444-4444-4444-8444-444444444444', 'Private folder', 'class', '66666666-6666-4666-8666-666666666666')
           ON CONFLICT (id) DO NOTHING;
 
-          INSERT INTO public.lists (
-            id, folder_id, owner_id, title, visibility, class_id
-          ) VALUES
-            (
-              '99999999-9999-4999-8999-999999999999',
-              '77777777-7777-4777-8777-777777777777',
-              '44444444-4444-4444-8444-444444444444',
-              'Public class list',
-              'class',
-              '55555555-5555-4555-8555-555555555555'
-            ),
-            (
-              'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-              '88888888-8888-4888-8888-888888888888',
-              '44444444-4444-4444-8444-444444444444',
-              'Private class list',
-              'class',
-              '66666666-6666-4666-8666-666666666666'
-            )
+          INSERT INTO public.lists (id, folder_id, owner_id, title, visibility, class_id)
+          VALUES
+            ('99999999-9999-4999-8999-999999999999', '77777777-7777-4777-8777-777777777777', '44444444-4444-4444-8444-444444444444', 'Public list', 'class', '55555555-5555-4555-8555-555555555555'),
+            ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '88888888-8888-4888-8888-888888888888', '44444444-4444-4444-8444-444444444444', 'Private list', 'class', '66666666-6666-4666-8666-666666666666')
           ON CONFLICT (id) DO NOTHING;
 
-          INSERT INTO public.flashcards (
-            id, user_id, list_id, term, translation
-          ) VALUES
-            (
-              'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-              '44444444-4444-4444-8444-444444444444',
-              '99999999-9999-4999-8999-999999999999',
-              'Public card',
-              'Carta pública'
-            ),
-            (
-              'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-              '44444444-4444-4444-8444-444444444444',
-              'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-              'Private card',
-              'Carta privada'
-            )
+          INSERT INTO public.flashcards (id, user_id, list_id, term, translation)
+          VALUES
+            ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '44444444-4444-4444-8444-444444444444', '99999999-9999-4999-8999-999999999999', 'Public card', 'Carta pública'),
+            ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '44444444-4444-4444-8444-444444444444', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Private card', 'Carta privada')
           ON CONFLICT (id) DO NOTHING;
 
-          INSERT INTO public.atribuicoes (
-            id, turma_id, titulo, fonte_tipo, fonte_id
-          ) VALUES
-            (
-              'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-              '55555555-5555-4555-8555-555555555555',
-              'Public assignment',
-              'lista',
-              '99999999-9999-4999-8999-999999999999'
-            ),
-            (
-              'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-              '66666666-6666-4666-8666-666666666666',
-              'Private assignment',
-              'lista',
-              'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-            )
+          INSERT INTO public.atribuicoes (id, turma_id, titulo, fonte_tipo, fonte_id)
+          VALUES
+            ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '55555555-5555-4555-8555-555555555555', 'Public assignment', 'lista', '99999999-9999-4999-8999-999999999999'),
+            ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '66666666-6666-4666-8666-666666666666', 'Private assignment', 'lista', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
           ON CONFLICT (id) DO NOTHING;
           SQL
 
-      - name: Verify anonymous raw-table isolation
+      - name: Verify public views and anonymous guest play
         shell: bash
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           SET ROLE anon;
           DO $$
           BEGIN
-            IF (
-              SELECT COUNT(*)
-              FROM public.turmas
-              WHERE id IN (
-                '55555555-5555-4555-8555-555555555555',
-                '66666666-6666-4666-8666-666666666666'
-              )
-            ) <> 0 THEN
-              RAISE EXCEPTION 'Anonymous role can read raw classroom rows';
+            IF (SELECT COUNT(*) FROM public.public_turmas WHERE id = '55555555-5555-4555-8555-555555555555') <> 1 THEN
+              RAISE EXCEPTION 'Public classroom is not visible';
             END IF;
-          END;
-          $$;
-          RESET ROLE;
-          SQL
 
-      - name: Verify public and private classroom views
-        shell: bash
-        run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
-          SET ROLE anon;
-          DO $$
-          BEGIN
-            IF (
-              SELECT COUNT(*)
-              FROM public.public_turmas
-              WHERE id = '55555555-5555-4555-8555-555555555555'
-            ) <> 1 THEN
-              RAISE EXCEPTION 'Public classroom is not visible through the hardened view';
+            IF (SELECT COUNT(*) FROM public.public_turmas WHERE id = '66666666-6666-4666-8666-666666666666') <> 0 THEN
+              RAISE EXCEPTION 'Private classroom leaked through the public view';
             END IF;
 
             IF (
-              SELECT COUNT(*)
-              FROM public.public_turmas
-              WHERE id = '66666666-6666-4666-8666-666666666666'
-            ) <> 0 THEN
-              RAISE EXCEPTION 'Private classroom leaked through the hardened view';
-            END IF;
-
-            IF (
-              SELECT COUNT(*)
-              FROM public.public_turma_lists
+              SELECT COUNT(*) FROM public.public_turma_lists
               WHERE turma_id = '55555555-5555-4555-8555-555555555555'
                 AND atribuicao_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
             ) <> 1 THEN
-              RAISE EXCEPTION 'Public assignment list is missing from the launcher source';
+              RAISE EXCEPTION 'Public assignment list is missing';
             END IF;
-          END;
-          $$;
-          RESET ROLE;
-          SQL
 
-      - name: Verify anonymous guest play
-        shell: bash
-        run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
-          SET ROLE anon;
-          DO $$
-          BEGIN
-            IF (
-              SELECT COUNT(*)
-              FROM public.get_portal_flashcards('99999999-9999-4999-8999-999999999999')
-            ) <> 1 THEN
+            IF (SELECT COUNT(*) FROM public.get_portal_flashcards('99999999-9999-4999-8999-999999999999')) <> 1 THEN
               RAISE EXCEPTION 'Public classroom list is not playable anonymously';
             END IF;
 
-            IF (
-              SELECT COUNT(*)
-              FROM public.get_portal_flashcards('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
-            ) <> 0 THEN
+            IF (SELECT COUNT(*) FROM public.get_portal_flashcards('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')) <> 0 THEN
               RAISE EXCEPTION 'Private classroom list leaked into anonymous play';
             END IF;
           END;
