@@ -1,6 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
+import { sortAssignmentsByOrder } from '@/features/classroom/lib/assignmentOrder';
+
+async function persistAssignmentSequence(turmaId: string, orderedIds: string[]) {
+  const updates = await Promise.all(
+    orderedIds.map(async (atribuicaoId, index) => {
+      const { data, error } = await supabase
+        .from('atribuicoes')
+        .update({ order_index: index + 1 } as any)
+        .eq('id', atribuicaoId)
+        .eq('turma_id', turmaId)
+        .select('id, order_index')
+        .single();
+
+      if (error) throw error;
+      return data;
+    }),
+  );
+
+  return updates;
+}
 
 export function useAtribuicoesByTurma(turmaId: string | null) {
   return useQuery({
@@ -71,10 +91,29 @@ export function useCreateAtribuicao() {
       });
 
       if (error) throw error;
+
+      try {
+        const { data: assignments, error: assignmentsError } = await supabase
+          .from('atribuicoes')
+          .select('id, order_index, created_at')
+          .eq('turma_id', payload.turma_id);
+
+        if (assignmentsError) throw assignmentsError;
+
+        const orderedIds = sortAssignmentsByOrder(assignments ?? []).map((item) => item.id);
+        if (orderedIds.length > 0) {
+          await persistAssignmentSequence(payload.turma_id, orderedIds);
+        }
+      } catch (orderError) {
+        console.warn('[useCreateAtribuicao] Assignment created, but sequence normalization failed:', orderError);
+      }
+
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, payload) => {
       queryClient.invalidateQueries({ queryKey: ['atribuicoes'] });
+      queryClient.invalidateQueries({ queryKey: ['public-turma', payload.turma_id] });
+      queryClient.invalidateQueries({ queryKey: ['public-teacher-turmas'] });
     },
   });
 }
@@ -174,21 +213,7 @@ export function useReorderAtribuicoes() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      const updates = await Promise.all(
-        payload.ordered_ids.map(async (atribuicaoId, index) => {
-          const { data, error } = await supabase
-            .from('atribuicoes')
-            .update({ order_index: index + 1 } as any)
-            .eq('id', atribuicaoId)
-            .eq('turma_id', payload.turma_id)
-            .select('id, order_index')
-            .single();
-
-          if (error) throw error;
-          return data;
-        }),
-      );
-
+      const updates = await persistAssignmentSequence(payload.turma_id, payload.ordered_ids);
       return { ordered_ids: payload.ordered_ids, updates };
     },
     onMutate: async (payload) => {
