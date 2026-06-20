@@ -29,6 +29,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps --no-audit --no-fund
 
+      - name: Static function policy audit
+        run: npm run check:security
+
+      - name: Upload security audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: security-audit-report.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Typecheck
         run: npm run typecheck
 
