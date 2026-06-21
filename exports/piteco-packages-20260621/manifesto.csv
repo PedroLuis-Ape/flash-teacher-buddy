@@ -1,0 +1,17 @@
+categoria,pacote,tipo,arquivo_exportado,caminho_original,blob_sha,formato_interno,observacao
+ativo,prime,avatar,01_pacotes_ativos/prime/avatar.png,public/assets/published/piteco_prime_avatar.png,d76d6dfe23070256407c0b79a7ceabe2f14c0bbd,PNG,
+ativo,prime,card,01_pacotes_ativos/prime/card.png,public/assets/published/piteco_prime_card.png,ded0a1c7f44d28c90922cd9c0eec189e62a7b6f7,PNG,
+ativo,vampiro,avatar,01_pacotes_ativos/vampiro/avatar.png,public/assets/published/piteco_vampiro_avatar.png,a91d5ce3b94a1648b527157159e8f77d516a98c8,PNG,
+ativo,vampiro,card,01_pacotes_ativos/vampiro/card.png,public/assets/published/piteco_vampiro_card.png,69e01a1dbebac38f02d9c236551334fa8553f668,PNG,
+ativo,zombie,avatar,01_pacotes_ativos/zombie/avatar.png,public/assets/published/piteco_zombie_avatar.png,24a8d542b7d950945205bd4433d2df42ab609c66,PNG,
+ativo,zombie,card,01_pacotes_ativos/zombie/card.png,public/assets/published/piteco_zombie_card.png,3a05bf9ef16d633385c9f5b83dd54f45255abf5b,PNG,
+extra,astronauta,avatar,02_pacotes_extras/astronauta/avatar.png,public/assets/published/piteco_astronaut_avatar_new.png,51ab398950b1058e2f425033cc3a3cf9102f25dd,PNG,versão final encontrada
+extra,astronauta,card,02_pacotes_extras/astronauta/card.png,public/assets/published/piteco_astronaut_card_new.png,1e7af798d12058c9a2702239e7ef70a2d30e2c4f,PNG,versão final encontrada
+extra,chad_gold,avatar,02_pacotes_extras/chad_gold/avatar.png,public/assets/published/piteco_chad_avatar.png,3910f68c998ab3a1f72340a9e81beeb21dde0e76,PNG,versão final encontrada
+extra,chad_gold,card,02_pacotes_extras/chad_gold/card.png,public/assets/published/piteco_chad_card.png,566f70d138e227712b37e0585c6f0beaa9b22cff,PNG,versão final encontrada
+antiga,astronauta,avatar,03_versoes_antigas/astronauta/avatar_original.jpg,public/assets/published/piteco_astronaut_avatar.png,6835195a01801bc6b693a187df1965f569ca5663,JPEG,arquivo original tinha extensão .png
+antiga,astronauta,card,03_versoes_antigas/astronauta/card_original.jpg,public/assets/published/piteco_astronaut_card.png,0817575ec20fc4c2309014e24d5d7d8d7e9b64d2,JPEG,arquivo original tinha extensão .png
+antiga,gold,avatar,03_versoes_antigas/gold/avatar_original.jpg,public/assets/published/piteco_gold_avatar.png,ec45aa2164c2f01dc3988693f56412008944b1c0,JPEG,arquivo original tinha extensão .png
+antiga,gold,card,03_versoes_antigas/gold/card_original.jpg,public/assets/published/piteco_gold_card.png,a8b3244967704ed552149cef72b7bb356c4c0b0c,JPEG,arquivo original tinha extensão .png
+antiga,scientist,avatar,03_versoes_antigas/scientist/avatar_original.jpg,public/assets/published/piteco_scientist_avatar.png,bfeffac92d1a481b3062fd5a092120fa860dab06,JPEG,arquivo original tinha extensão .png
+antiga,scientist,card,03_versoes_antigas/scientist/card_original.jpg,public/assets/published/piteco_scientist_card.png,bb301dbf64f920992b7baae24f2d9f73070a7245,JPEG,arquivo original tinha extensão .png
