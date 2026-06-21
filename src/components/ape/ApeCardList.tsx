@@ -1,4 +1,4 @@
-import { FileText, Play, Sparkles } from "lucide-react";
+import { Play } from "lucide-react";
 import { ScrollingTitle } from "@/components/ui/scrolling-title";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -55,9 +55,10 @@ export function ApeCardList({
         className
       )}
     >
-      <div className="space-ui-card-icon relative shrink-0 w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center transition-all duration-200 group-hover:bg-secondary/30 group-hover:scale-105">
-        <Sparkles className="absolute -right-1 -top-1 h-3 w-3 text-primary-glow opacity-0 transition-opacity group-hover:opacity-100" />
-        <FileText className="h-5 w-5 text-secondary-foreground transition-transform group-hover:scale-110" />
+      <div className="space-ui-card-icon relative shrink-0 w-12 h-12 rounded-xl border border-secondary/25 bg-secondary/20 flex items-center justify-center shadow-sm transition-all duration-200 group-hover:bg-secondary/30 group-hover:scale-105">
+        <span aria-hidden className="text-2xl leading-none transition-transform group-hover:scale-110">
+          {"\u{1F3AE}"}
+        </span>
       </div>
 
       <div className="flex-1 min-w-0">
