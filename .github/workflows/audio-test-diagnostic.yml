@@ -1,0 +1,21 @@
+name: Audio test diagnostic
+
+on:
+  push:
+    branches:
+      - feat/audio-reliability-foundation
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund --silent
+      - run: npm run test
