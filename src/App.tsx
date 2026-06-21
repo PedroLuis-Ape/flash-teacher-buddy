@@ -73,6 +73,7 @@ const AuditRepair = lazy(() => import("./pages/AuditRepair"));
 const KeyboardShortcutsPage = lazy(() => import("./pages/KeyboardShortcuts"));
 const SpecialCards = lazy(() => import("./pages/SpecialCards"));
 const SystemStatus = lazy(() => import("./pages/SystemStatus"));
+const Glossary = lazy(() => import("./pages/Glossary"));
 
 function PublicListGamesRoute() {
   const [searchParams] = useSearchParams();
@@ -81,9 +82,7 @@ function PublicListGamesRoute() {
     Boolean(searchParams.get("turma")) &&
     Boolean(searchParams.get("atribuicao"));
 
-  if (classroomMode) {
-    return <PublicClassGamesHub />;
-  }
+  if (classroomMode) return <PublicClassGamesHub />;
 
   return (
     <ListDirectionGate>
@@ -115,93 +114,94 @@ queryClient.getQueryCache().config.onError = (error, query) => {
 const App = () => {
   useEffect(() => { perfTelemetry.logBoot(); }, []);
   return (
-  <QueryClientProvider client={queryClient}>
-    <PerformanceProvider>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <LazyErrorBoundary>
-          <BrowserRouter>
-            <SessionWatcher />
-            <GlobalLayout>
-              <RouteErrorBoundary>
-                <RouteSuspense>
-                  <PageTransition>
-                    <Routes>
-                  <Route path="/" element={<RootEntry />} />
-                  <Route path="/landing" element={<LandingPage />} />
-                  <Route path="/dashboard" element={<Index />} />
-                  <Route path="/ingles-para-iniciantes" element={<InglesParaIniciantes />} />
-                  <Route path="/atividades-de-ingles" element={<AtividadesDeIngles />} />
-                  <Route path="/flashcards-de-ingles" element={<FlashcardsDeIngles />} />
-                  <Route path="/para-professores" element={<ParaProfessores />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/folders" element={<Folders />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/folder/:id" element={<Folder />} />
-                  <Route path="/list/:id" element={<ListDetail />} />
-                  <Route path="/list/:id/games" element={<ListDirectionGate><GamesHub /></ListDirectionGate>} />
-                  <Route path="/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
-                  <Route path="/collection/:id" element={<Collection />} />
-                  <Route path="/collection/:id/games" element={<GamesHub />} />
-                  <Route path="/collection/:id/study" element={<Study />} />
-                  <Route path="/portal" element={<PublicPortal />} />
-                  <Route path="/portal/professor/:slug" element={<PublicTeacherProfile />} />
-                  <Route path="/portal/folder/:id" element={<Folder />} />
-                  <Route path="/portal/list/:id/games" element={<PublicListGamesRoute />} />
-                  <Route path="/portal/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
-                  <Route path="/portal/collection/:id" element={<PublicCollection />} />
-                  <Route path="/portal/collection/:id/study" element={<Study />} />
-                  <Route path="/store" element={<Store />} />
-                  <Route path="/gifts" element={<PresentBox />} />
-                  <Route path="/reinos" element={<Reinos />} />
-                  <Route path="/reino" element={<Reinos />} />
-                  <Route path="/reino/:code" element={<KingdomDetail />} />
-                  <Route path="/store/inventory" element={<Store />} />
-                  <Route path="/store/exchange" element={<Store />} />
-                  <Route path="/reino/importar" element={<KingdomImport />} />
-                  <Route path="/admin/catalog" element={<AdminCatalog />} />
-                  <Route path="/admin/logs" element={<AdminLogs />} />
-                  <Route path="/admin/gifts" element={<AdminGifts />} />
-                  <Route path="/turmas" element={<Turmas />} />
-                  <Route path="/turmas/professor" element={<TurmasProfessor />} />
-                  <Route path="/turmas/aluno" element={<TurmasAluno />} />
-                  <Route path="/turmas/:turmaId" element={<TurmaDetail />} />
-                  <Route path="/turmas/:turmaId/import/super" element={<SuperGlobalImport />} />
-                  <Route path="/professor/alunos" element={<MeusAlunos />} />
-                  <Route path="/professor/alunos/:alunoId" element={<AlunoProfile />} />
-                  <Route path="/professores/:professorId" element={<ProfessorProfile />} />
-                  <Route path="/my-teachers" element={<MyTeachers />} />
-                  <Route path="/painel-professor" element={<PainelProfessor />} />
-                  <Route path="/settings/public-profile" element={<PublicProfileSettings />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/notes" element={<Notes />} />
-                  <Route path="/notes/:id" element={<NoteEditor />} />
-                  <Route path="/goals" element={<Goals />} />
-                  <Route path="/goals/new" element={<GoalNew />} />
-                  <Route path="/import" element={<GlobalImport />} />
-                  <Route path="/import/super" element={<SuperGlobalImport />} />
-                  <Route path="/trash" element={<Trash />} />
-                  <Route path="/settings/performance" element={<PerformanceSettings />} />
-                  <Route path="/settings/shortcuts" element={<KeyboardShortcutsPage />} />
-                  <Route path="/audit" element={<AuditRepair />} />
-                  <Route path="/special-cards" element={<SpecialCards />} />
-                  <Route path="/system-status" element={<SystemStatus />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </PageTransition>
-                </RouteSuspense>
-              </RouteErrorBoundary>
-            </GlobalLayout>
-          </BrowserRouter>
-        </LazyErrorBoundary>
-      </TooltipProvider>
-    </AuthProvider>
-    </PerformanceProvider>
-  </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <PerformanceProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <LazyErrorBoundary>
+              <BrowserRouter>
+                <SessionWatcher />
+                <GlobalLayout>
+                  <RouteErrorBoundary>
+                    <RouteSuspense>
+                      <PageTransition>
+                        <Routes>
+                          <Route path="/" element={<RootEntry />} />
+                          <Route path="/landing" element={<LandingPage />} />
+                          <Route path="/dashboard" element={<Index />} />
+                          <Route path="/ingles-para-iniciantes" element={<InglesParaIniciantes />} />
+                          <Route path="/atividades-de-ingles" element={<AtividadesDeIngles />} />
+                          <Route path="/flashcards-de-ingles" element={<FlashcardsDeIngles />} />
+                          <Route path="/para-professores" element={<ParaProfessores />} />
+                          <Route path="/auth" element={<Auth />} />
+                          <Route path="/auth/callback" element={<AuthCallback />} />
+                          <Route path="/profile" element={<Profile />} />
+                          <Route path="/folders" element={<Folders />} />
+                          <Route path="/glossary" element={<Glossary />} />
+                          <Route path="/search" element={<Search />} />
+                          <Route path="/folder/:id" element={<Folder />} />
+                          <Route path="/list/:id" element={<ListDetail />} />
+                          <Route path="/list/:id/games" element={<ListDirectionGate><GamesHub /></ListDirectionGate>} />
+                          <Route path="/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
+                          <Route path="/collection/:id" element={<Collection />} />
+                          <Route path="/collection/:id/games" element={<GamesHub />} />
+                          <Route path="/collection/:id/study" element={<Study />} />
+                          <Route path="/portal" element={<PublicPortal />} />
+                          <Route path="/portal/professor/:slug" element={<PublicTeacherProfile />} />
+                          <Route path="/portal/folder/:id" element={<Folder />} />
+                          <Route path="/portal/list/:id/games" element={<PublicListGamesRoute />} />
+                          <Route path="/portal/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
+                          <Route path="/portal/collection/:id" element={<PublicCollection />} />
+                          <Route path="/portal/collection/:id/study" element={<Study />} />
+                          <Route path="/store" element={<Store />} />
+                          <Route path="/gifts" element={<PresentBox />} />
+                          <Route path="/reinos" element={<Reinos />} />
+                          <Route path="/reino" element={<Reinos />} />
+                          <Route path="/reino/:code" element={<KingdomDetail />} />
+                          <Route path="/store/inventory" element={<Store />} />
+                          <Route path="/store/exchange" element={<Store />} />
+                          <Route path="/reino/importar" element={<KingdomImport />} />
+                          <Route path="/admin/catalog" element={<AdminCatalog />} />
+                          <Route path="/admin/logs" element={<AdminLogs />} />
+                          <Route path="/admin/gifts" element={<AdminGifts />} />
+                          <Route path="/turmas" element={<Turmas />} />
+                          <Route path="/turmas/professor" element={<TurmasProfessor />} />
+                          <Route path="/turmas/aluno" element={<TurmasAluno />} />
+                          <Route path="/turmas/:turmaId" element={<TurmaDetail />} />
+                          <Route path="/turmas/:turmaId/import/super" element={<SuperGlobalImport />} />
+                          <Route path="/professor/alunos" element={<MeusAlunos />} />
+                          <Route path="/professor/alunos/:alunoId" element={<AlunoProfile />} />
+                          <Route path="/professores/:professorId" element={<ProfessorProfile />} />
+                          <Route path="/my-teachers" element={<MyTeachers />} />
+                          <Route path="/painel-professor" element={<PainelProfessor />} />
+                          <Route path="/settings/public-profile" element={<PublicProfileSettings />} />
+                          <Route path="/about" element={<About />} />
+                          <Route path="/notes" element={<Notes />} />
+                          <Route path="/notes/:id" element={<NoteEditor />} />
+                          <Route path="/goals" element={<Goals />} />
+                          <Route path="/goals/new" element={<GoalNew />} />
+                          <Route path="/import" element={<GlobalImport />} />
+                          <Route path="/import/super" element={<SuperGlobalImport />} />
+                          <Route path="/trash" element={<Trash />} />
+                          <Route path="/settings/performance" element={<PerformanceSettings />} />
+                          <Route path="/settings/shortcuts" element={<KeyboardShortcutsPage />} />
+                          <Route path="/audit" element={<AuditRepair />} />
+                          <Route path="/special-cards" element={<SpecialCards />} />
+                          <Route path="/system-status" element={<SystemStatus />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </PageTransition>
+                    </RouteSuspense>
+                  </RouteErrorBoundary>
+                </GlobalLayout>
+              </BrowserRouter>
+            </LazyErrorBoundary>
+          </TooltipProvider>
+        </AuthProvider>
+      </PerformanceProvider>
+    </QueryClientProvider>
   );
 };
 
