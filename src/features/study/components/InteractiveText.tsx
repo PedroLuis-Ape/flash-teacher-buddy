@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layers3 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -16,12 +16,9 @@ import {
 interface InteractiveTextProps {
   text: string;
   wordHints?: unknown;
-  /** Pre-merged global glossary + per-card hints. */
   mergedHints?: MergedHint[];
   className?: string;
-  /** When true, clicking a highlighted word also speaks that token. */
   speakOnHintClick?: boolean;
-  /** Optional BCP-47 language code used for click-to-speak. */
   speakLang?: string;
 }
 
@@ -95,6 +92,12 @@ function LayeredHintToken({
   const [open, setOpen] = useState(false);
   const layerCount = matches.length;
 
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => setOpen(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -121,48 +124,43 @@ function LayeredHintToken({
         align="center"
         sideOffset={8}
         collisionPadding={12}
-        className="w-[min(22rem,calc(100vw-1.5rem))] max-h-[min(26rem,72vh)] overflow-y-auto p-0"
+        className="w-[min(18rem,calc(100vw-1.5rem))] max-h-[min(20rem,62vh)] overflow-y-auto p-0 shadow-lg"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-popover px-3 py-2.5">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-popover px-3 py-2">
           <div className="min-w-0">
-            <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">Glossário contextual</p>
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Tradução</p>
             <p className="truncate text-sm font-semibold">{value}</p>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">
-            <Layers3 className="h-3.5 w-3.5" />
-            {layerCount} {layerCount === 1 ? "camada" : "camadas"}
-          </span>
+          {layerCount > 1 && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+              <Layers3 className="h-3 w-3" />
+              {layerCount}
+            </span>
+          )}
         </div>
 
         <div className="divide-y">
           {matches.map((match) => {
             const translations = uniqueTranslations(match);
-            const isExpression = /\s/u.test(match.text.trim());
             return (
-              <div key={`${match.key}-${match.startIndex}-${match.endIndex}`} className="space-y-2 px-3 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold leading-tight">{match.text}</span>
-                  <span className="rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {isExpression ? "expressão" : "palavra"}
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {translations.map((translation, index) => (
-                    <div key={`${translation.text}-${translation.source}-${index}`} className="rounded-md bg-muted/55 px-2.5 py-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-medium leading-snug">{translation.text}</span>
-                        <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <div key={`${match.key}-${match.startIndex}-${match.endIndex}`} className="space-y-1.5 px-3 py-2.5">
+                {translations.map((translation, index) => (
+                  <div key={`${translation.text}-${translation.source}-${index}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-medium leading-snug">{translation.text}</span>
+                      {layerCount > 1 && (
+                        <span className="shrink-0 text-[9px] uppercase tracking-wide text-muted-foreground">
                           {translation.source === "manual" ? "card" : "lista"}
                         </span>
-                      </div>
-                      {translation.note && (
-                        <p className="mt-1 text-xs italic leading-relaxed text-muted-foreground">{translation.note}</p>
                       )}
                     </div>
-                  ))}
-                </div>
+                    {translation.note && (
+                      <p className="mt-1 text-xs italic leading-relaxed text-muted-foreground">{translation.note}</p>
+                    )}
+                  </div>
+                ))}
               </div>
             );
           })}
