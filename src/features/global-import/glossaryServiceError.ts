@@ -28,9 +28,15 @@ export function isMissingGlossaryRpcError(error: unknown) {
 export function isMissingGlossaryTableError(error: unknown) {
   const text = rawErrorText(error);
   const code = typeof error === "object" && error ? String((error as SupabaseLikeError).code ?? "") : "";
+  const explicitlyNamesMissingTable =
+    text.includes("could not find the table") && text.includes("account_glossary");
+  const explicitlyNamesMissingRelation =
+    text.includes("relation") && text.includes("account_glossary") && text.includes("does not exist");
+
   return code === "PGRST205"
     || code === "42P01"
-    || text.includes("account_glossary") && (text.includes("does not exist") || text.includes("schema cache"));
+    || explicitlyNamesMissingTable
+    || explicitlyNamesMissingRelation;
 }
 
 export function glossaryServiceMessage(error: unknown, action: GlossaryServiceAction) {
