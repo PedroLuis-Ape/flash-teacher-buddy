@@ -15,6 +15,32 @@ type Listener = (state: PWAInstallState) => void;
 const listeners = new Set<Listener>();
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
+function ensureInstallMetadata() {
+  if (typeof document === "undefined") return;
+
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const manifest = document.createElement("link");
+    manifest.rel = "manifest";
+    manifest.href = "/manifest.webmanifest?v=20260621-install1";
+    document.head.appendChild(manifest);
+  }
+
+  const metas: Array<[string, string]> = [
+    ["mobile-web-app-capable", "yes"],
+    ["apple-mobile-web-app-capable", "yes"],
+    ["apple-mobile-web-app-status-bar-style", "black-translucent"],
+    ["apple-mobile-web-app-title", "APE"],
+  ];
+
+  metas.forEach(([name, content]) => {
+    if (document.querySelector(`meta[name="${name}"]`)) return;
+    const meta = document.createElement("meta");
+    meta.name = name;
+    meta.content = content;
+    document.head.appendChild(meta);
+  });
+}
+
 function detectStandalone(): boolean {
   if (typeof window === "undefined") return false;
 
@@ -35,6 +61,8 @@ function emit(next: Partial<PWAInstallState>) {
 }
 
 if (typeof window !== "undefined") {
+  ensureInstallMetadata();
+
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredPrompt = event as BeforeInstallPromptEvent;
