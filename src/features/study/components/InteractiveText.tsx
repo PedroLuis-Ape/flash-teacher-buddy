@@ -6,6 +6,7 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { getPerfSettings } from "@/lib/performanceSettings";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { getSpeechRate } from "./SpeechRateControl";
 import {
   buildLayeredTextSegments,
   definitionsFromMergedHints,
@@ -49,7 +50,12 @@ export const InteractiveText = ({
 
   const handleHintActivate = useCallback((clickedValue: string) => {
     if (!speakOnHintClick) return;
-    speak(clickedValue, { langOverride: speakLang });
+    const rate = getSpeechRate();
+    speak(clickedValue, {
+      langOverride: speakLang,
+      rate,
+      mode: rate === 0.5 ? "word-by-word" : "natural",
+    });
   }, [speakOnHintClick, speakLang, speak]);
 
   return (
