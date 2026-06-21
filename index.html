@@ -22,11 +22,11 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/branding/icon.png" />
     <link rel="shortcut icon" href="/favicon.png" type="image/png" />
 
-    <!-- Versioned URLs force the CDN/browser to discard the earlier over-compressed splash cache. -->
-    <link rel="preload" as="image" type="image/webp" href="/branding/splash-mobile.webp?v=20260621-sharp2" media="(orientation: portrait) and (max-width: 767px)" />
-    <link rel="preload" as="image" type="image/webp" href="/branding/splash-tablet.webp?v=20260621-sharp2" media="(orientation: portrait) and (min-width: 768px)" />
-    <link rel="preload" as="image" type="image/webp" href="/branding/splash-ultrawide.webp?v=20260621-sharp2" media="(orientation: landscape) and (min-aspect-ratio: 2/1)" />
-    <link rel="preload" as="image" type="image/webp" href="/branding/splash-desktop.webp?v=20260621-sharp2" media="(orientation: landscape) and (max-aspect-ratio: 2/1)" />
+    <!-- Each viewport receives the artwork uploaded specifically for that format. -->
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-mobile.webp?v=20260621-artwork3" media="(orientation: portrait) and (max-width: 767px)" />
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-tablet.webp?v=20260621-artwork3" media="(orientation: portrait) and (min-width: 768px)" />
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-ultrawide.webp?v=20260621-artwork3" media="(orientation: landscape) and (min-aspect-ratio: 2/1)" />
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-desktop.webp?v=20260621-artwork3" media="(orientation: landscape) and (max-aspect-ratio: 2/1)" />
 
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
@@ -101,27 +101,11 @@
 
     <div id="boot-loader" aria-hidden="true">
       <picture id="boot-backdrop">
-        <source media="(orientation: landscape) and (min-aspect-ratio: 2/1)" srcset="/branding/splash-ultrawide.webp?v=20260621-sharp2" />
-        <source media="(orientation: portrait) and (min-width: 768px)" srcset="/branding/splash-tablet.webp?v=20260621-sharp2" />
-        <source media="(orientation: portrait) and (max-width: 767px)" srcset="/branding/splash-mobile.webp?v=20260621-sharp2" />
-        <img src="/branding/splash-desktop.webp?v=20260621-sharp2" alt="" id="boot-loader-img" fetchpriority="high" decoding="async" draggable="false" />
+        <source media="(orientation: landscape) and (min-aspect-ratio: 2/1)" srcset="/branding/splash-ultrawide.webp?v=20260621-artwork3" />
+        <source media="(orientation: portrait) and (min-width: 768px)" srcset="/branding/splash-tablet.webp?v=20260621-artwork3" />
+        <source media="(orientation: portrait) and (max-width: 767px)" srcset="/branding/splash-mobile.webp?v=20260621-artwork3" />
+        <img src="/branding/splash-desktop.webp?v=20260621-artwork3" alt="" id="boot-loader-img" fetchpriority="high" decoding="sync" draggable="false" />
       </picture>
-
-      <!-- The backdrop preserves each supplied composition. The focal mascot and logo are rendered as a separate sharp layer. -->
-      <div id="boot-focus">
-        <div id="boot-mascot-glow" aria-hidden="true"></div>
-        <img id="boot-mascot" alt="" draggable="false" />
-        <svg id="boot-ape-logo" viewBox="0 0 760 230" aria-hidden="true" focusable="false">
-          <defs>
-            <filter id="boot-logo-glow" x="-30%" y="-40%" width="160%" height="190%">
-              <feGaussianBlur stdDeviation="9" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-          <text x="380" y="174" text-anchor="middle" fill="#ffffff" filter="url(#boot-logo-glow)" font-family="Nunito, system-ui, sans-serif" font-size="192" font-weight="900" letter-spacing="22">APE</text>
-          <circle cx="194" cy="196" r="18" fill="#ffd21f" filter="url(#boot-logo-glow)" />
-        </svg>
-      </div>
 
       <div id="boot-status" role="status" aria-live="polite" aria-label="Carregando APE">
         <span id="boot-status-dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -143,7 +127,6 @@
         overflow: hidden;
         background: #09001f;
         opacity: 1;
-        isolation: isolate;
         transition: opacity 260ms ease-out;
       }
       @supports (height: 100dvh) {
@@ -152,10 +135,10 @@
       #boot-loader.boot-loader--hide { opacity: 0; pointer-events: none; }
       #boot-backdrop {
         position: absolute;
-        inset: -3px;
+        inset: 0;
         display: block;
-        width: calc(100% + 6px);
-        height: calc(100% + 6px);
+        width: 100%;
+        height: 100%;
         overflow: hidden;
       }
       #boot-loader-img {
@@ -167,85 +150,18 @@
         object-fit: cover;
         object-position: center center;
         image-rendering: auto;
-        -webkit-optimize-contrast: auto;
         user-select: none;
         -webkit-user-drag: none;
-        opacity: 0.78;
-        filter: saturate(1.08) contrast(1.08) brightness(0.72);
-        transform: translateZ(0) scale(1.006);
-        backface-visibility: hidden;
-        animation: boot-image-in 180ms ease-out both;
-      }
-      #boot-loader::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-        pointer-events: none;
-        background:
-          radial-gradient(circle at 50% 54%, rgba(152, 44, 255, 0.05) 0, rgba(25, 4, 63, 0.12) 38%, rgba(4, 0, 18, 0.32) 100%),
-          linear-gradient(to bottom, rgba(4, 0, 20, 0.06), rgba(4, 0, 20, 0.18));
-      }
-      #boot-focus {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        z-index: 2;
-        width: min(52vw, 620px);
-        height: min(82vh, 680px);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-end;
-        pointer-events: none;
-        transform: translate(-50%, -48%);
-      }
-      #boot-mascot-glow {
-        position: absolute;
-        left: 50%;
-        top: 40%;
-        width: min(44vw, 520px);
-        aspect-ratio: 1;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(218, 91, 255, 0.48) 0, rgba(129, 25, 255, 0.22) 42%, transparent 72%);
-        filter: blur(18px);
-        transform: translate(-50%, -50%);
-      }
-      #boot-mascot {
-        position: relative;
-        z-index: 1;
-        display: block;
-        width: auto;
-        height: min(56vh, 500px);
-        max-width: 100%;
-        object-fit: contain;
-        user-select: none;
-        -webkit-user-drag: none;
-        opacity: 0;
-        filter: drop-shadow(0 0 18px rgba(205, 82, 255, 0.72)) drop-shadow(0 16px 24px rgba(0, 0, 0, 0.34));
-        transform: translateY(8px) scale(0.985);
-        transition: opacity 160ms ease-out, transform 220ms ease-out;
-      }
-      #boot-mascot.boot-mascot--ready {
         opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-      #boot-ape-logo {
-        position: relative;
-        z-index: 2;
-        display: block;
-        width: min(38vw, 470px);
-        height: auto;
-        margin-top: -22px;
-        overflow: visible;
-        color: #fff;
-        filter: drop-shadow(0 0 14px rgba(186, 91, 255, 0.48));
+        filter: none;
+        transform: none;
+        animation: boot-image-in 140ms ease-out both;
       }
       #boot-status {
         position: absolute;
         top: calc(env(safe-area-inset-top, 0px) + 14px);
         left: 50%;
-        z-index: 4;
+        z-index: 2;
         display: inline-flex;
         max-width: calc(100vw - 28px);
         min-height: 40px;
@@ -283,40 +199,16 @@
       #boot-status-dots i:nth-child(2) { animation-delay: 140ms; }
       #boot-status-dots i:nth-child(3) { animation-delay: 280ms; }
 
-      @media (orientation: portrait) and (max-width: 767px) {
-        #boot-loader-img { opacity: 0.82; object-position: center center; }
-        #boot-focus {
-          top: 57%;
-          width: 82vw;
-          height: 66vh;
-          transform: translate(-50%, -50%);
-        }
-        #boot-mascot { height: min(42vh, 410px); }
-        #boot-mascot-glow { top: 41%; width: 82vw; }
-        #boot-ape-logo { width: min(72vw, 390px); margin-top: -14px; }
-      }
-      @media (orientation: portrait) and (min-width: 768px) {
-        #boot-focus { top: 55%; width: min(68vw, 620px); height: 72vh; }
-        #boot-mascot { height: min(48vh, 500px); }
-        #boot-mascot-glow { width: min(62vw, 560px); }
-        #boot-ape-logo { width: min(58vw, 480px); }
-      }
-      @media (orientation: landscape) and (min-aspect-ratio: 2/1) {
-        #boot-focus { top: 51%; height: 82vh; width: min(44vw, 600px); }
-        #boot-mascot { height: min(58vh, 430px); }
-        #boot-ape-logo { width: min(30vw, 430px); margin-top: -24px; }
-      }
-
       @keyframes boot-image-in {
-        from { opacity: 0.62; }
-        to { opacity: 0.78; }
+        from { opacity: 0.92; }
+        to { opacity: 1; }
       }
       @keyframes boot-dot-pulse {
         0%, 100% { opacity: 0.38; transform: translateY(0) scale(0.86); }
         50% { opacity: 1; transform: translateY(-2px) scale(1); }
       }
       @media (prefers-reduced-motion: reduce) {
-        #boot-loader, #boot-status, #boot-loader-img, #boot-mascot { transition: none; animation: none; }
+        #boot-loader, #boot-status, #boot-loader-img { transition: none; animation: none; }
         #boot-status-dots i { animation: none; opacity: 0.85; }
       }
     </style>
@@ -342,7 +234,6 @@
       })();
     </script>
 
-    <script type="module" async src="/src/bootSplashEnhancer.ts"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
