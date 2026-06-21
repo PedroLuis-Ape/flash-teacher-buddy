@@ -7,13 +7,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import type { ImportDestinationCatalog } from "../destination";
-import { buildGlossaryAiPrompt, filterGlossarySourceCards, type GlossarySourceCard, type GlossarySourceSide } from "../glossaryAiExport";
-import { loadGlossarySourceCards } from "../glossaryAiExportService";
+import {
+  buildGlossaryAiPrompt,
+  buildGlossaryAiPromptHeader,
+  buildGlossaryAiPromptParts,
+  buildGlossaryAiSourceChunk,
+  filterGlossarySourceCards,
+  GLOSSARY_AI_PROMPT_FOOTER,
+  type GlossarySourceCard,
+  type GlossarySourceSide,
+} from "../glossaryAiExport";
+import { loadGlossarySourceCards, streamGlossarySourceCards } from "../glossaryAiExportService";
 
 interface Props { catalog: ImportDestinationCatalog | null; folderIds: string[]; }
 const DISPLAY_LIMIT = 300;
+const CLIPBOARD_CARD_LIMIT = 5000;
 
 export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
   const [cards, setCards] = useState<GlossarySourceCard[]>([]);
@@ -23,6 +32,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
   const [loading, setLoading] = useState(false);
   const [exportingAll, setExportingAll] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
+  const [lastExportCount, setLastExportCount] = useState(0);
   const folderKey = useMemo(() => [...folderIds].sort().join("|"), [folderIds]);
   const folderSet = useMemo(() => new Set(folderIds), [folderIds]);
   const lists = useMemo(() => (catalog?.lists ?? []).filter((list) => folderSet.has(list.folder_id)), [catalog, folderSet]);
@@ -34,12 +44,14 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
     setSelected(new Set());
     setSearch("");
     setLoadedCount(0);
+    setLastExportCount(0);
   }, [folderKey]);
 
   const filtered = useMemo(() => filterGlossarySourceCards(cards, search), [cards, search]);
-  const chosen = useMemo(() => cards.filter((card) => selected.has(card.id)), [cards, selected]);
-  const prompt = useMemo(() => buildGlossaryAiPrompt(chosen, side), [chosen, side]);
-  const allFiltered = filtered.length > 0 && filtered.every((card) => selected.has(card.id));
+  const allFiltered = useMemo(
+    () => filtered.length > 0 && filtered.every((card) => selected.has(card.id)),
+    [filtered, selected],
+  );
 
   const enrich = (rows: GlossarySourceCard[]) => rows.map((card) => {
     const list = listMap.get(card.list_id);
@@ -59,32 +71,45 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
     return true;
   };
 
-  const downloadText = (content: string, filename: string) => {
-    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+  const downloadBlob = (parts: BlobPart[], filename: string) => {
+    const url = URL.createObjectURL(new Blob(parts, { type: "text/plain;charset=utf-8" }));
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = filename;
     anchor.click();
-    URL.revokeObjectURL(url);
+    globalThis.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const exportAll = async () => {
     if (!validateFolders()) return;
     setExportingAll(true);
     setLoadedCount(0);
+    setLastExportCount(0);
+
     try {
-      const rows = await loadGlossarySourceCards(lists.map((list) => list.id), setLoadedCount);
-      const allCards = enrich(rows);
-      if (allCards.length === 0) {
+      const parts: BlobPart[] = [buildGlossaryAiPromptHeader(side)];
+      let cardOffset = 0;
+
+      const total = await streamGlossarySourceCards(
+        lists.map((list) => list.id),
+        (batch, loadedCards) => {
+          const enrichedBatch = enrich(batch);
+          parts.push(buildGlossaryAiSourceChunk(enrichedBatch, side, cardOffset));
+          cardOffset += enrichedBatch.length;
+          setLoadedCount(loadedCards);
+        },
+      );
+
+      if (total === 0) {
         toast.error("Nenhum card foi encontrado nas pastas selecionadas.");
         return;
       }
-      const completePrompt = buildGlossaryAiPrompt(allCards, side);
+
+      parts.push(GLOSSARY_AI_PROMPT_FOOTER);
       const date = new Date().toISOString().slice(0, 10);
-      downloadText(completePrompt, `app-piteco-instrucoes-glossario-${date}.txt`);
-      setCards(allCards);
-      setSelected(new Set(allCards.map((card) => card.id)));
-      toast.success(`${allCards.length.toLocaleString("pt-BR")} card(s) exportado(s). A IA deve devolver app-piteco-glossario.json.`);
+      downloadBlob(parts, `app-piteco-instrucoes-glossario-${date}.txt`);
+      setLastExportCount(total);
+      toast.success(`${total.toLocaleString("pt-BR")} card(s) exportado(s) sem carregar tudo na tela.`);
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível exportar todos os termos.");
     } finally {
@@ -101,10 +126,12 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
       const enriched = enrich(rows);
       setCards(enriched);
       setSelected(new Set(enriched.map((card) => card.id)));
-      toast.success(`${enriched.length.toLocaleString("pt-BR")} card(s) carregado(s).`);
+      toast.success(`${enriched.length.toLocaleString("pt-BR")} card(s) carregado(s) para seleção manual.`);
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível carregar os termos.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggle = (id: string) => setSelected((current) => {
@@ -119,22 +146,33 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
     return next;
   });
 
+  const selectedCards = () => cards.filter((card) => selected.has(card.id));
+
   const copy = async () => {
-    if (chosen.length === 0) return toast.error("Selecione pelo menos um card.");
-    await navigator.clipboard.writeText(prompt);
+    if (selected.size === 0) return toast.error("Selecione pelo menos um card.");
+    if (selected.size > CLIPBOARD_CARD_LIMIT) {
+      toast.error(`Para mais de ${CLIPBOARD_CARD_LIMIT.toLocaleString("pt-BR")} cards, use “Baixar seleção” para evitar travar o navegador.`);
+      return;
+    }
+    await navigator.clipboard.writeText(buildGlossaryAiPrompt(selectedCards(), side));
     toast.success("Prompt copiado. A resposta obrigatória é um arquivo JSON.");
   };
 
   const download = () => {
-    if (chosen.length === 0) return toast.error("Selecione pelo menos um card.");
-    downloadText(prompt, `app-piteco-instrucoes-glossario-selecao-${new Date().toISOString().slice(0, 10)}.txt`);
+    if (selected.size === 0) return toast.error("Selecione pelo menos um card.");
+    const chosen = selectedCards();
+    downloadBlob(
+      buildGlossaryAiPromptParts(chosen, side),
+      `app-piteco-instrucoes-glossario-selecao-${new Date().toISOString().slice(0, 10)}.txt`,
+    );
+    toast.success(`${chosen.length.toLocaleString("pt-BR")} card(s) incluído(s) no arquivo da seleção.`);
   };
 
   return <div className="space-y-5">
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div className="flex gap-3"><Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div>
-        <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Gerar glossário com IA</span><Badge variant="secondary">retorno obrigatório: JSON</Badge></div>
-        <p className="mt-1 text-sm text-muted-foreground">O aplicativo exporta um TXT com as instruções e todos os cards. Você envia esse TXT à IA, e ela deve devolver somente o arquivo <strong>app-piteco-glossario.json</strong>.</p>
+        <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Gerar glossário com IA</span><Badge variant="secondary">retorno obrigatório: JSON</Badge><Badge variant="outline">alta capacidade</Badge></div>
+        <p className="mt-1 text-sm text-muted-foreground">A exportação completa é processada em lotes e grava o arquivo sem colocar 20, 30 ou 34 mil cards no estado visual da página.</p>
       </div></div>
     </div>
 
@@ -151,12 +189,13 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
           <Button onClick={() => void exportAll()} disabled={loading || exportingAll || folderIds.length === 0}>{exportingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}Exportar tudo para IA</Button>
         </div>
       </div>
-      {(loading || exportingAll) && <p className="text-sm text-muted-foreground">Lendo todos os cards, sem limite artificial: {loadedCount.toLocaleString("pt-BR")} carregado(s)...</p>}
-      <p className="text-xs leading-relaxed text-muted-foreground">“Exportar tudo para IA” reúne todos os cards das pastas marcadas. O TXT baixado é apenas a entrada para a IA; o resultado final deve ser JSON, não CSV nem TXT.</p>
+      {(loading || exportingAll) && <p className="text-sm text-muted-foreground">Processando por lotes: {loadedCount.toLocaleString("pt-BR")} card(s)... A tela permanece livre entre as páginas.</p>}
+      {lastExportCount > 0 && !exportingAll && <p className="text-sm font-medium text-emerald-600">Última exportação concluída: {lastExportCount.toLocaleString("pt-BR")} cards.</p>}
+      <p className="text-xs leading-relaxed text-muted-foreground">Para volumes muito grandes, use diretamente “Exportar tudo para IA”. “Carregar para escolher” existe para seleções manuais menores. O TXT baixado é a entrada; a IA deve devolver app-piteco-glossario.json.</p>
     </div>
 
     {cards.length > 0 && <>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Cards" value={cards.length} /><Metric label="Selecionados" value={chosen.length} /><Metric label="Pastas" value={folderIds.length} /><Metric label="Listas" value={lists.length} /></div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Cards carregados" value={cards.length} /><Metric label="Selecionados" value={selected.size} /><Metric label="Pastas" value={folderIds.length} /><Metric label="Listas" value={lists.length} /></div>
       <div className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
           <div className="relative flex-1 sm:max-w-md"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar termo, tradução, lista ou pasta..." className="pl-9" /></div>
@@ -169,10 +208,10 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
           </label>)}
           {filtered.length === 0 && <div className="p-5 text-center text-sm text-muted-foreground">Nenhum termo encontrado.</div>}
         </div>
-        {filtered.length > DISPLAY_LIMIT && <p className="text-xs text-muted-foreground">Mostrando {DISPLAY_LIMIT} de {filtered.length.toLocaleString("pt-BR")} resultados. Refine a busca para localizar termos específicos.</p>}
+        {filtered.length > DISPLAY_LIMIT && <p className="text-xs text-muted-foreground">Mostrando somente {DISPLAY_LIMIT} de {filtered.length.toLocaleString("pt-BR")} resultados na tela. A exportação continua incluindo todos os selecionados.</p>}
       </div>
-      <div className="space-y-2"><Label>Prompt da seleção atual — retorno em JSON</Label><Textarea value={prompt} readOnly className="min-h-[320px] font-mono text-xs sm:text-sm" /></div>
-      <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={chosen.length === 0}><Copy className="mr-2 h-4 w-4" />Copiar seleção</Button><Button onClick={download} disabled={chosen.length === 0}><Download className="mr-2 h-4 w-4" />Baixar instruções</Button></div>
+      <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">O prompt completo da seleção é montado somente ao copiar ou baixar. Isso evita reconstruir dezenas de milhares de linhas a cada clique na interface.</div>
+      <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={selected.size === 0}><Copy className="mr-2 h-4 w-4" />Copiar seleção</Button><Button onClick={download} disabled={selected.size === 0}><Download className="mr-2 h-4 w-4" />Baixar seleção</Button></div>
     </>}
   </div>;
 }
