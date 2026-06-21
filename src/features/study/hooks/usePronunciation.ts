@@ -1,220 +1,138 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useMemo, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { audioExtension } from "@/features/speech/audioMime";
+import { convertAudioToWav } from "@/features/speech/audio-to-wav";
+import { useAudioRecorder, type AudioRecording } from "@/features/speech/useAudioRecorder";
+import type { NormalizedPronunciationResult } from "@/features/speech/types";
 
-interface UsePronunciationProps {
-  lang?: string;
+export type PronunciationEngineState =
+  | "idle"
+  | "requesting-permission"
+  | "ready"
+  | "recording"
+  | "processing"
+  | "success"
+  | "permission-denied"
+  | "no-device"
+  | "device-busy"
+  | "unsupported"
+  | "network-error"
+  | "provider-error"
+  | "cancelled"
+  | "too-short";
+
+interface UsePronunciationEngineOptions {
+  expectedText: string;
+  language: string;
+  cardId?: string;
+  listId?: string;
 }
 
-// Type declarations for Web Speech API
-interface SpeechRecognitionAlternative {
-  transcript: string;
-  confidence: number;
-}
+export function usePronunciationEngine({ expectedText, language, cardId, listId }: UsePronunciationEngineOptions) {
+  const [engineState, setEngineState] = useState<PronunciationEngineState>("idle");
+  const [result, setResult] = useState<NormalizedPronunciationResult | null>(null);
+  const [engineError, setEngineError] = useState<string | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
-interface SpeechRecognitionResult {
-  readonly length: number;
-  readonly isFinal: boolean;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-}
-
-interface SpeechRecognitionResultList {
-  readonly length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionEventType {
-  readonly resultIndex: number;
-  readonly results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEventType {
-  readonly error: string;
-  readonly message: string;
-}
-
-interface SpeechRecognitionInstance {
-  continuous: boolean;
-  interimResults: boolean;
-  maxAlternatives: number;
-  lang: string;
-  onstart: (() => void) | null;
-  onend: (() => void) | null;
-  onresult: ((event: SpeechRecognitionEventType) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEventType) => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-}
-
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognitionInstance;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: SpeechRecognitionConstructor;
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-  }
-}
-
-export function usePronunciation({ lang = 'en-US' }: UsePronunciationProps = {}) {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [alternatives, setAlternatives] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isSupported, setIsSupported] = useState(true);
-
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasResultRef = useRef(false);
-
-  useEffect(() => {
-    // Safe fallback for SpeechRecognition API
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-    
-    if (!SpeechRecognitionAPI) {
-      console.warn('🚫 [Pronunciation] SpeechRecognition not supported in this browser');
-      setIsSupported(false);
-      return;
-    }
+  const assess = useCallback(async (recording: AudioRecording) => {
+    setEngineState("processing");
+    setEngineError(null);
+    const controller = new AbortController();
+    requestRef.current?.abort();
+    requestRef.current = controller;
 
     try {
-      const recognition = new SpeechRecognitionAPI();
-      
-      // STABLE SETTINGS - reverted to avoid bugs
-      recognition.continuous = false;
-      recognition.interimResults = false; // Disabled for stability
-      recognition.maxAlternatives = 1;    // Single result for reliability
-      recognition.lang = lang;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("AUTH_REQUIRED");
+      const converted = await convertAudioToWav(recording.blob);
+      const uploadMime = converted.type || recording.mimeType;
+      const form = new FormData();
+      form.append("audio", converted, `attempt.${audioExtension(uploadMime)}`);
+      form.append("mimeType", uploadMime);
+      form.append("expectedText", expectedText);
+      form.append("language", language);
+      form.append("mode", "auto");
+      form.append("durationMs", String(recording.durationMs));
+      if (cardId) form.append("cardId", cardId);
+      if (listId) form.append("listId", listId);
 
-      recognition.onstart = () => {
-        console.log('🎤 [Pronunciation] Started listening...');
-        setIsListening(true);
-        setError(null);
-        hasResultRef.current = false;
-
-        // Set timeout for no speech detection (3s - slightly longer for stability)
-        timeoutRef.current = setTimeout(() => {
-          if (!hasResultRef.current && recognitionRef.current) {
-            console.log('⏱️ [Pronunciation] Timeout - no speech detected');
-            try {
-              recognitionRef.current.stop();
-            } catch (e) {
-              console.warn('[Pronunciation] Stop error:', e);
-            }
-            setError('Nenhuma fala detectada. Tente novamente.');
-            setIsListening(false);
-          }
-        }, 3000);
-      };
-
-      recognition.onend = () => {
-        console.log('🛑 [Pronunciation] Stopped listening.');
-        setIsListening(false);
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-      };
-
-      recognition.onresult = (event: SpeechRecognitionEventType) => {
-        hasResultRef.current = true;
-        
-        // Clear timeout since we got a result
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-
-        // Get the final result
-        const result = event.results[0];
-        if (result) {
-          const bestTranscript = result[0]?.transcript || '';
-          console.log('📝 [Pronunciation] Result:', bestTranscript);
-          
-          setTranscript(bestTranscript);
-          // Put transcript as single alternative for evaluation
-          setAlternatives(bestTranscript ? [bestTranscript] : []);
-        }
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEventType) => {
-        console.error('⚠️ [Pronunciation] Error:', event.error);
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        
-        if (event.error === 'not-allowed') {
-          setError('Permissão de microfone negada. Clique no ícone 🔒 na barra de endereço.');
-        } else if (event.error === 'no-speech') {
-          setError('Nenhuma fala detectada. Tente novamente.');
-        } else if (event.error === 'network') {
-          setError('Erro de rede. Verifique sua conexão.');
-        } else if (event.error === 'aborted') {
-          // Ignore aborted errors (user stopped manually)
-        } else {
-          setError(`Erro de reconhecimento: ${event.error}`);
-        }
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    } catch (e) {
-      console.error('[Pronunciation] Failed to initialize:', e);
-      setIsSupported(false);
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {
-          // Ignore abort errors
-        }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assess-pronunciation`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: form,
+        signal: controller.signal,
+      });
+      const payload = await response.json().catch(() => null) as (NormalizedPronunciationResult & { error?: string; message?: string }) | null;
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || payload?.error || `HTTP_${response.status}`);
       }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      setResult(payload);
+      setEngineState("success");
+    } catch (caught) {
+      if (controller.signal.aborted) {
+        setEngineState("cancelled");
+        return;
       }
-    };
-  }, [lang]);
-
-  const startListening = useCallback(() => {
-    if (!recognitionRef.current || !isSupported) return;
-    setTranscript('');
-    setAlternatives([]);
-    setError(null);
-    hasResultRef.current = false;
-    try {
-      recognitionRef.current.lang = lang;
-      recognitionRef.current.start();
-    } catch (err) {
-      console.warn('[Pronunciation] Start called while active');
+      const message = caught instanceof Error ? caught.message : "ASSESSMENT_ERROR";
+      const isNetwork = caught instanceof TypeError || message.includes("Failed to fetch") || message.includes("Network");
+      setEngineState(isNetwork ? "network-error" : "provider-error");
+      setEngineError(isNetwork
+        ? "Sem conexão com o serviço de pronúncia. Verifique a internet e tente novamente."
+        : "O serviço de pronúncia está temporariamente indisponível. Tente novamente sem perder o card.");
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
     }
-  }, [lang, isSupported]);
+  }, [cardId, expectedText, language, listId]);
 
-  const stopListening = useCallback(() => {
-    if (!recognitionRef.current) return;
-    recognitionRef.current.stop();
-  }, []);
+  const recorder = useAudioRecorder({ onRecorded: assess });
+  const { start: startRecorder, stop, cancel: cancelRecorder, reset: resetRecorder } = recorder;
+  const state = useMemo<PronunciationEngineState>(() => {
+    if (["processing", "success", "network-error", "provider-error"].includes(engineState)) return engineState;
+    return recorder.state;
+  }, [engineState, recorder.state]);
 
-  const resetTranscript = useCallback(() => {
-    setTranscript('');
-    setAlternatives([]);
-    setError(null);
-    setIsListening(false);
-    hasResultRef.current = false;
-  }, []);
+  const start = useCallback(async () => {
+    requestRef.current?.abort();
+    setResult(null);
+    setEngineError(null);
+    setEngineState("idle");
+    await startRecorder();
+  }, [startRecorder]);
+
+  const cancel = useCallback(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    cancelRecorder();
+    setEngineState("cancelled");
+  }, [cancelRecorder]);
+
+  const reset = useCallback(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    resetRecorder();
+    setResult(null);
+    setEngineError(null);
+    setEngineState("idle");
+  }, [resetRecorder]);
 
   return {
-    isListening,
-    transcript,
-    alternatives,
-    error,
-    isSupported,
-    startListening,
-    stopListening,
-    resetTranscript
+    state,
+    result,
+    error: engineError || recorder.error,
+    isSupported: recorder.isSupported,
+    isRecording: recorder.isRecording,
+    isProcessing: state === "processing",
+    start,
+    stop,
+    cancel,
+    reset,
   };
+}
+
+/** Compatibility alias for older imports. */
+export function usePronunciation(options: UsePronunciationEngineOptions) {
+  return usePronunciationEngine(options);
 }
