@@ -36,6 +36,16 @@ USING (
     OR (
       deleted_at IS NULL
       AND visibility = 'class'
+      AND EXISTS (
+        SELECT 1
+        FROM public.profiles AS p
+        WHERE p.id = folders.owner_id
+          AND COALESCE(p.public_access_enabled, false) = true
+      )
+    )
+    OR (
+      deleted_at IS NULL
+      AND visibility = 'class'
       AND class_id IS NOT NULL
       AND (
         public.is_turma_owner(class_id, auth.uid())
@@ -71,6 +81,16 @@ USING (
     OR (
       deleted_at IS NULL
       AND visibility = 'class'
+      AND EXISTS (
+        SELECT 1
+        FROM public.profiles AS p
+        WHERE p.id = lists.owner_id
+          AND COALESCE(p.public_access_enabled, false) = true
+      )
+    )
+    OR (
+      deleted_at IS NULL
+      AND visibility = 'class'
       AND class_id IS NOT NULL
       AND (
         public.is_turma_owner(class_id, auth.uid())
@@ -86,6 +106,15 @@ USING (
           AND f.deleted_at IS NULL
           AND (
             f.visibility = 'public'
+            OR (
+              f.visibility = 'class'
+              AND EXISTS (
+                SELECT 1
+                FROM public.profiles AS p
+                WHERE p.id = f.owner_id
+                  AND COALESCE(p.public_access_enabled, false) = true
+              )
+            )
             OR (
               f.visibility = 'class'
               AND f.class_id IS NOT NULL
@@ -139,10 +168,6 @@ BEGIN
      OR NEW.thread_chave IS DISTINCT FROM OLD.thread_chave
      OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
     RAISE EXCEPTION 'Message identity and routing fields are immutable.' USING ERRCODE = '42501';
-  END IF;
-
-  IF NEW.deleted = false AND OLD.deleted = true THEN
-    RAISE EXCEPTION 'Deleted messages cannot be restored.' USING ERRCODE = '42501';
   END IF;
 
   RETURN NEW;
