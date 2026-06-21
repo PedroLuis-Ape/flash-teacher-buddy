@@ -1,6 +1,7 @@
 type SortableActivity = {
   last_activity?: string | null;
   order_index?: number | null;
+  class_id?: string | null;
 };
 
 function activityTimestamp(value: unknown): number | null {
@@ -10,16 +11,19 @@ function activityTimestamp(value: unknown): number | null {
 }
 
 /**
- * Natural sort utility for sorting strings with embedded numbers correctly.
- * E.g., "Passo 2" comes before "Passo 10" (not 1, 10, 2).
+ * Natural sorter used by folder/list screens.
  *
- * Priority:
- * 1. Most recently used items when `last_activity` is available.
- * 2. Explicit persisted `order_index` for items without recent activity.
- * 3. Natural title order as the stable fallback.
+ * Personal folders:
+ * 1. Most recently opened/studied lists.
+ * 2. Persisted order for untouched items.
+ * 3. Natural title order.
  *
- * This keeps normal/manual ordering intact for untouched lists, while a list
- * that the current user opens or studies automatically moves to the top.
+ * Classroom folders:
+ * 1. Manual persisted order only.
+ * 2. Natural title order as fallback.
+ *
+ * `class_id` is the boundary that prevents the responsive personal-library
+ * behavior from overriding the teacher's manual classroom organization.
  */
 export function naturalSort<T>(data: T[], keySelector: (item: T) => string): T[] {
   const collator = new Intl.Collator(undefined, {
@@ -31,13 +35,17 @@ export function naturalSort<T>(data: T[], keySelector: (item: T) => string): T[]
   return [...data].sort((a, b) => {
     const aSortable = a as SortableActivity;
     const bSortable = b as SortableActivity;
-    const aActivity = activityTimestamp(aSortable.last_activity);
-    const bActivity = activityTimestamp(bSortable.last_activity);
+    const isClassroomContext = Boolean(aSortable.class_id || bSortable.class_id);
 
-    if (aActivity !== null || bActivity !== null) {
-      if (aActivity === null) return 1;
-      if (bActivity === null) return -1;
-      if (aActivity !== bActivity) return bActivity - aActivity;
+    if (!isClassroomContext) {
+      const aActivity = activityTimestamp(aSortable.last_activity);
+      const bActivity = activityTimestamp(bSortable.last_activity);
+
+      if (aActivity !== null || bActivity !== null) {
+        if (aActivity === null) return 1;
+        if (bActivity === null) return -1;
+        if (aActivity !== bActivity) return bActivity - aActivity;
+      }
     }
 
     const aOrder = Number(aSortable.order_index ?? 0);
@@ -57,7 +65,7 @@ export function naturalSort<T>(data: T[], keySelector: (item: T) => string): T[]
 }
 
 /**
- * Natural sort for simple string arrays
+ * Natural sort for simple string arrays.
  */
 export function naturalSortStrings(data: string[]): string[] {
   const collator = new Intl.Collator(undefined, {
