@@ -16,7 +16,7 @@ export function PublicThemeToggle({ className }: PublicThemeToggleProps) {
         value={palette}
         onChange={(event) => setPalette(event.target.value as PaletteId)}
         aria-label="Alterar layout do aplicativo"
-        className="h-9 max-w-[92px] rounded-lg border border-border/70 bg-background px-2 text-xs font-medium text-foreground outline-none focus:ring-2 focus:ring-ring"
+        className="h-9 w-[76px] rounded-lg border border-border/70 bg-background px-1.5 text-[11px] font-medium text-foreground outline-none focus:ring-2 focus:ring-ring sm:w-[92px] sm:px-2 sm:text-xs"
       >
         {PALETTES.map((item) => (
           <option key={item.id} value={item.id}>{item.shortName}</option>
