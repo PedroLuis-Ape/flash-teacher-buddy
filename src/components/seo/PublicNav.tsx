@@ -42,10 +42,10 @@ export function PublicNav() {
         </nav>
         <div className="flex items-center gap-2 shrink-0">
           <PublicThemeToggle />
-          <AuthAwareCTA variant="ghost" size="sm" className="hidden lg:inline-flex">
+          <AuthAwareCTA guestMode="login" variant="ghost" size="sm" className="hidden lg:inline-flex">
             Entrar
           </AuthAwareCTA>
-          <AuthAwareCTA size="sm" className="hidden lg:inline-flex">
+          <AuthAwareCTA guestMode="signup" size="sm" className="hidden lg:inline-flex">
             Começar agora
           </AuthAwareCTA>
           <Sheet open={open} onOpenChange={setOpen}>
@@ -67,10 +67,10 @@ export function PublicNav() {
                   </Link>
                 ))}
                 <div className="h-px bg-border my-3" />
-                <AuthAwareCTA variant="outline" onClick={() => setOpen(false)}>
+                <AuthAwareCTA guestMode="login" variant="outline" onClick={() => setOpen(false)}>
                   Entrar
                 </AuthAwareCTA>
-                <AuthAwareCTA onClick={() => setOpen(false)}>
+                <AuthAwareCTA guestMode="signup" onClick={() => setOpen(false)}>
                   Começar agora
                 </AuthAwareCTA>
               </nav>
