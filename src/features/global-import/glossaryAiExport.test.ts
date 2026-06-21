@@ -57,14 +57,16 @@ describe("glossary AI export", () => {
     expect(second).toContain("[CARD 2");
   });
 
-  it("creates multiple blob parts instead of one giant string", () => {
-    const repeated = Array.from({ length: 2500 }, (_, index) => ({
+  it("segments a 34,000-card export instead of building one giant source string", () => {
+    const largeCatalog = Array.from({ length: 34_000 }, (_, index) => ({
       ...cards[index % cards.length],
       id: String(index),
     }));
-    const parts = buildGlossaryAiPromptParts(repeated, "both", 1000);
-    expect(parts).toHaveLength(5);
+    const parts = buildGlossaryAiPromptParts(largeCatalog, "both", 1000);
+    expect(parts).toHaveLength(36);
     expect(parts.at(-1)).toBe(GLOSSARY_AI_PROMPT_FOOTER);
+    expect(String(parts[1])).toContain("[CARD 1");
+    expect(String(parts[34])).toContain("[CARD 33001");
   });
 
   it("filters by term, translation, list or folder", () => {
