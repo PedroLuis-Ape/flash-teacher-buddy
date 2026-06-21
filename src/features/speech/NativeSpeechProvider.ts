@@ -1,5 +1,5 @@
 import { cleanTextForTTS } from "@/features/study/lib/speech";
-import { segmentTextForTTS } from "@/features/study/lib/speechSegmentation";
+import { buildDidacticSpeechPlan } from "@/features/study/lib/didacticPronunciation";
 import { toBCP47 } from "@/features/study/lib/languages";
 import type { SpeechOutputOptions, SpeechOutputProvider, SpeechPlaybackResult } from "./types";
 
@@ -9,6 +9,13 @@ const START_WATCHDOG_MS = 2200;
 const NATURAL_CHUNK_LIMIT = 220;
 
 type ProviderOptions = Required<Pick<SpeechOutputOptions, "lang" | "rate" | "pitch" | "mode">> & SpeechOutputOptions;
+
+type PlaybackStep = {
+  text: string;
+  rate: number;
+  pitch: number;
+  pauseAfterMs: number;
+};
 
 function pickVoice(lang: string, preference?: string): SpeechSynthesisVoice | null {
   if (typeof window === "undefined" || !window.speechSynthesis) return null;
@@ -52,6 +59,24 @@ function chunkNaturalText(text: string): string[] {
   return chunks;
 }
 
+function createPlaybackSteps(text: string, language: string, options: ProviderOptions): PlaybackStep[] {
+  if (options.mode === "word-by-word") {
+    return buildDidacticSpeechPlan(text, language).map((step) => ({
+      text: step.text,
+      rate: step.rate,
+      pitch: step.pitch,
+      pauseAfterMs: step.pauseAfterMs,
+    }));
+  }
+
+  return chunkNaturalText(text).map((part) => ({
+    text: part,
+    rate: options.rate,
+    pitch: options.pitch,
+    pauseAfterMs: 0,
+  }));
+}
+
 export class NativeSpeechProvider implements SpeechOutputProvider {
   readonly name = "native" as const;
   private session = 0;
@@ -80,23 +105,29 @@ export class NativeSpeechProvider implements SpeechOutputProvider {
     const session = this.session;
     const startedAtRef: { value: number | null } = { value: null };
     const voice = pickVoice(language, options.voicePreference);
-    const parts = options.mode === "word-by-word"
-      ? segmentTextForTTS(cleaned)
-      : chunkNaturalText(cleaned);
+    const steps = createPlaybackSteps(cleaned, language, options);
 
     try {
-      for (let index = 0; index < parts.length; index += 1) {
+      for (let index = 0; index < steps.length; index += 1) {
         if (session !== this.session || options.signal?.aborted) {
           return this.result(false, "cancelled", language, startedAtRef.value);
         }
 
-        const utteranceRate = options.mode === "word-by-word" ? WORD_BY_WORD_RATE : options.rate;
-        const outcome = await this.playPart(parts[index], language, voice, utteranceRate, options.pitch, session, options.signal);
+        const step = steps[index];
+        const outcome = await this.playPart(
+          step.text,
+          language,
+          voice,
+          step.rate,
+          step.pitch,
+          session,
+          options.signal,
+        );
         if (outcome.startedAt && startedAtRef.value === null) startedAtRef.value = outcome.startedAt;
         if (!outcome.success) return this.result(false, outcome.reason, language, startedAtRef.value, outcome.errorCode);
 
-        if (options.mode === "word-by-word" && index < parts.length - 1) {
-          await this.delay(WORD_PAUSE_MS, session, options.signal);
+        if (step.pauseAfterMs > 0 && index < steps.length - 1) {
+          await this.delay(step.pauseAfterMs, session, options.signal);
         }
       }
       return this.result(true, "completed", language, startedAtRef.value);
