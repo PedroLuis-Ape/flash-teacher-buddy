@@ -20,8 +20,8 @@ describe("bulk glossary selection", () => {
     expect(folderListCount(catalog, ["folder-c"])).toBe(0);
   });
 
-  it("calculates the total applications", () => {
-    expect(glossaryApplicationsCount(35, 14)).toBe(490);
+  it("stores each glossary entry once", () => {
+    expect(glossaryApplicationsCount(35, 14)).toBe(35);
     expect(glossaryApplicationsCount(-1, 14)).toBe(0);
   });
 });

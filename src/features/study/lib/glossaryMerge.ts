@@ -1,10 +1,11 @@
 /**
- * Merges global list glossary entries with per-card manual hints.
+ * Merges glossary entries with per-card manual hints.
  * Entries are additive: shorter words and longer expressions coexist.
  */
 
 import type { WordHint } from "./wordHints";
 import { findGlossaryOccurrences } from "./glossaryLayers";
+import { findRelevantGlossaryMatches } from "./glossaryIndex";
 
 export interface GlossaryItem {
   original_text: string;
@@ -72,7 +73,10 @@ function addGlobalTranslation(
   if (suppressedTexts.has(key)) return;
 
   const merged = hintMap.get(key) ?? { text: cleanMatch, translations: [] };
-  if (!merged.translations.some((translation) => normalize(translation.text) === normalize(cleanTranslation) && translation.source === "global")) {
+  if (!merged.translations.some((translation) =>
+    normalize(translation.text) === normalize(cleanTranslation)
+    && translation.source === "global"
+  )) {
     merged.translations.push({
       text: cleanTranslation,
       note: note || undefined,
@@ -99,25 +103,15 @@ export function mergeGlossaryAndManual(
       .map((hint) => normalize(hint.text)),
   );
 
-  for (const entry of glossary) {
-    if (!entry.is_active) continue;
-
-    const viewingSourceSide = side === entry.side;
-    const matchCandidates = viewingSourceSide
-      ? [entry.original_text]
-      : splitGlossaryAlternatives(entry.translated_text);
-    const translationText = viewingSourceSide ? entry.translated_text : entry.original_text;
-
-    matchCandidates.forEach((matchText) => {
-      addGlobalTranslation(
-        hintMap,
-        suppressedTexts,
-        text,
-        matchText,
-        translationText,
-        entry.note,
-      );
-    });
+  for (const candidate of findRelevantGlossaryMatches(text, side, glossary)) {
+    addGlobalTranslation(
+      hintMap,
+      suppressedTexts,
+      text,
+      candidate.matchText,
+      candidate.translationText,
+      candidate.note,
+    );
   }
 
   for (const hint of relevantManual) {
@@ -146,12 +140,11 @@ export function mergeGlossaryAndManual(
     hintMap.set(key, merged);
   }
 
-  return Array.from(hintMap.values()).sort((a, b) => b.text.length - a.text.length || a.text.localeCompare(b.text));
+  return Array.from(hintMap.values()).sort((a, b) =>
+    b.text.length - a.text.length || a.text.localeCompare(b.text)
+  );
 }
 
-/**
- * Compatibility adapter for callers that still expect WordHint objects.
- */
 export function mergedHintsToWordHints(
   merged: MergedHint[],
 ): (WordHint & { _mergedTranslations?: MergedHint["translations"] })[] {

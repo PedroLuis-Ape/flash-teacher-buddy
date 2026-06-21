@@ -30,5 +30,5 @@ export function folderListCount(catalog: ImportDestinationCatalog | null, folder
 }
 
 export function glossaryApplicationsCount(entryCount: number, listCount: number): number {
-  return Math.max(0, entryCount) * Math.max(0, listCount);
+  return Math.max(0, entryCount) * Math.min(1, Math.max(0, listCount));
 }
