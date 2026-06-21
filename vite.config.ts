@@ -37,9 +37,16 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     dedupe: ['react', 'react-dom'],
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      {
+        find: /^@\/features\/study\/hooks\/useStudyEngine$/,
+        replacement: path.resolve(__dirname, "./src/features/speech/useStudyEngineWithPronunciation.ts"),
+      },
+      {
+        find: "@",
+        replacement: path.resolve(__dirname, "./src"),
+      },
+    ],
   },
   plugins: [
     react(),
