@@ -51,9 +51,9 @@ BEGIN
   END IF;
 
   v_allowed :=
-    v_uid = v_owner_id
-    OR v_list_visibility = 'public'
-    OR v_folder_visibility = 'public';
+    COALESCE(v_uid = v_owner_id, false)
+    OR COALESCE(v_list_visibility = 'public', false)
+    OR COALESCE(v_folder_visibility = 'public', false);
 
   IF NOT v_allowed
      AND v_uid IS NOT NULL
@@ -78,7 +78,7 @@ BEGIN
     END IF;
   END IF;
 
-  IF NOT v_allowed THEN
+  IF NOT COALESCE(v_allowed, false) THEN
     RAISE EXCEPTION 'Lista invalida ou sem permissao.' USING ERRCODE = '42501';
   END IF;
 
@@ -95,6 +95,29 @@ BEGIN
     g.updated_at
   FROM public.account_glossary g
   WHERE g.owner_id = v_owner_id
+    AND g.is_active = true
+    AND EXISTS (
+      SELECT 1
+      FROM public.flashcards c
+      WHERE c.list_id = _list_id
+        AND c.deleted_at IS NULL
+        AND (
+          (
+            g.side = 'A'
+            AND strpos(
+              ' ' || regexp_replace(lower(c.term), '[^[:alnum:]_]+', ' ', 'g') || ' ',
+              ' ' || regexp_replace(lower(g.original_text), '[^[:alnum:]_]+', ' ', 'g') || ' '
+            ) > 0
+          )
+          OR (
+            g.side = 'B'
+            AND strpos(
+              ' ' || regexp_replace(lower(c.translation), '[^[:alnum:]_]+', ' ', 'g') || ' ',
+              ' ' || regexp_replace(lower(g.original_text), '[^[:alnum:]_]+', ' ', 'g') || ' '
+            ) > 0
+          )
+        )
+    )
   ORDER BY g.created_at ASC, g.id ASC;
 END;
 $$;
