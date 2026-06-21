@@ -9,14 +9,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ImportDestinationCatalog } from "../destination";
 import {
+  addGlossaryWordInventory,
   buildGlossaryAiPrompt,
   buildGlossaryAiPromptHeader,
   buildGlossaryAiPromptParts,
   buildGlossaryAiSourceChunk,
+  buildGlossaryWordInventorySection,
   filterGlossarySourceCards,
-  GLOSSARY_AI_PROMPT_FOOTER,
+  GLOSSARY_AI_SOURCE_FOOTER,
   type GlossarySourceCard,
   type GlossarySourceSide,
+  type GlossaryWordInventoryItem,
 } from "../glossaryAiExport";
 import { loadGlossarySourceCards, streamGlossarySourceCards } from "../glossaryAiExportService";
 
@@ -88,6 +91,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
 
     try {
       const parts: BlobPart[] = [buildGlossaryAiPromptHeader(side)];
+      const inventory = new Map<string, GlossaryWordInventoryItem>();
       let cardOffset = 0;
 
       const total = await streamGlossarySourceCards(
@@ -95,6 +99,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
         (batch, loadedCards) => {
           const enrichedBatch = enrich(batch);
           parts.push(buildGlossaryAiSourceChunk(enrichedBatch, side, cardOffset));
+          addGlossaryWordInventory(enrichedBatch, side, inventory);
           cardOffset += enrichedBatch.length;
           setLoadedCount(loadedCards);
         },
@@ -105,11 +110,12 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
         return;
       }
 
-      parts.push(GLOSSARY_AI_PROMPT_FOOTER);
+      parts.push(`${GLOSSARY_AI_SOURCE_FOOTER}\n`);
+      parts.push(buildGlossaryWordInventorySection(inventory.values()));
       const date = new Date().toISOString().slice(0, 10);
       downloadBlob(parts, `app-piteco-instrucoes-glossario-${date}.txt`);
       setLastExportCount(total);
-      toast.success(`${total.toLocaleString("pt-BR")} card(s) exportado(s) sem carregar tudo na tela.`);
+      toast.success(`${total.toLocaleString("pt-BR")} card(s) exportado(s), com ${inventory.size.toLocaleString("pt-BR")} palavra(s) única(s) obrigatórias.`);
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível exportar todos os termos.");
     } finally {
@@ -172,7 +178,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div className="flex gap-3"><Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div>
         <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Gerar glossário com IA</span><Badge variant="secondary">retorno obrigatório: JSON</Badge><Badge variant="outline">alta capacidade</Badge></div>
-        <p className="mt-1 text-sm text-muted-foreground">A exportação completa é processada em lotes e grava o arquivo sem colocar 20, 30 ou 34 mil cards no estado visual da página.</p>
+        <p className="mt-1 text-sm text-muted-foreground">A exportação inclui cada palavra única uma vez e pede chunks adicionais. Uma palavra repetida em muitos cards não é duplicada no glossário.</p>
       </div></div>
     </div>
 
@@ -189,9 +195,9 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
           <Button onClick={() => void exportAll()} disabled={loading || exportingAll || folderIds.length === 0}>{exportingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}Exportar tudo para IA</Button>
         </div>
       </div>
-      {(loading || exportingAll) && <p className="text-sm text-muted-foreground">Processando por lotes: {loadedCount.toLocaleString("pt-BR")} card(s)... A tela permanece livre entre as páginas.</p>}
+      {(loading || exportingAll) && <p className="text-sm text-muted-foreground">Processando por lotes: {loadedCount.toLocaleString("pt-BR")} card(s)...</p>}
       {lastExportCount > 0 && !exportingAll && <p className="text-sm font-medium text-emerald-600">Última exportação concluída: {lastExportCount.toLocaleString("pt-BR")} cards.</p>}
-      <p className="text-xs leading-relaxed text-muted-foreground">Para volumes muito grandes, use diretamente “Exportar tudo para IA”. “Carregar para escolher” existe para seleções manuais menores. O TXT baixado é a entrada; a IA deve devolver app-piteco-glossario.json.</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">Para volumes muito grandes, use “Exportar tudo para IA”. O arquivo inclui um inventário obrigatório para impedir que a IA omita palavras comuns como the, at, of ou is.</p>
     </div>
 
     {cards.length > 0 && <>
@@ -210,7 +216,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
         </div>
         {filtered.length > DISPLAY_LIMIT && <p className="text-xs text-muted-foreground">Mostrando somente {DISPLAY_LIMIT} de {filtered.length.toLocaleString("pt-BR")} resultados na tela. A exportação continua incluindo todos os selecionados.</p>}
       </div>
-      <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">O prompt completo da seleção é montado somente ao copiar ou baixar. Isso evita reconstruir dezenas de milhares de linhas a cada clique na interface.</div>
+      <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">Palavras individuais e chunks são camadas cumulativas. O prompt completo é montado somente ao copiar ou baixar.</div>
       <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={selected.size === 0}><Copy className="mr-2 h-4 w-4" />Copiar seleção</Button><Button onClick={download} disabled={selected.size === 0}><Download className="mr-2 h-4 w-4" />Baixar seleção</Button></div>
     </>}
   </div>;
