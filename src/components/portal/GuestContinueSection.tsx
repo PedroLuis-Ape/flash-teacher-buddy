@@ -47,58 +47,58 @@ export function GuestContinueSection() {
   return (
     <>
       {visibleItems.length > 0 && (
-        <section aria-labelledby="guest-continue-title" className="mb-12 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <section aria-labelledby="guest-continue-title" className="mb-7 space-y-3 sm:mb-12 sm:space-y-4">
+          <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-primary">
-                {user ? 'Histórico da sua conta' : 'Seu histórico neste navegador'}
+              <p className="text-xs font-medium text-primary sm:text-sm">
+                {user ? 'Histórico da sua conta' : 'Histórico deste navegador'}
               </p>
-              <h2 id="guest-continue-title" className="text-2xl font-bold">
+              <h2 id="guest-continue-title" className="text-xl font-bold sm:text-2xl">
                 Continue de onde parou
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 hidden text-sm text-muted-foreground sm:block">
                 {user
                   ? 'Seus acessos públicos recentes são sincronizados com sua conta.'
                   : 'O histórico local funciona sem conta. O backup no servidor é opcional e não usa IP.'}
               </p>
             </div>
-            <Button type="button" variant="ghost" size="sm" className="self-start gap-2 text-muted-foreground" onClick={clear}>
-              <Trash2 className="h-4 w-4" />
-              Limpar histórico
+            <Button type="button" variant="ghost" size="sm" className="h-8 shrink-0 gap-1.5 px-2 text-xs text-muted-foreground sm:h-9 sm:px-3" onClick={clear}>
+              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Limpar
             </Button>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0">
             {visibleItems.map((item, index) => {
               const Icon = itemIcon(item.type);
               return (
-                <Card key={item.id} className="group relative overflow-hidden border-border/70 bg-card/85 p-4 shadow-sm">
+                <Card key={item.id} className="group relative min-w-[78vw] snap-center overflow-hidden border-border/70 bg-card/85 p-3 shadow-sm md:min-w-0 md:p-4">
                   <button
                     type="button"
                     onClick={() => remove(item.id)}
-                    className="absolute right-2 top-2 rounded-full p-2 text-muted-foreground opacity-70 transition hover:bg-muted hover:opacity-100"
+                    className="absolute right-1.5 top-1.5 rounded-full p-1.5 text-muted-foreground opacity-70 transition hover:bg-muted hover:opacity-100 sm:right-2 sm:top-2 sm:p-2"
                     aria-label={`Remover ${item.title} do histórico`}
                     title="Remover do histórico"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
 
-                  <div className="flex gap-3 pr-8">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
+                  <div className="flex gap-2.5 pr-7 sm:gap-3 sm:pr-8">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-11 sm:w-11">
+                      <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="text-[11px]">
+                      <div className="mb-0.5 flex flex-wrap items-center gap-1.5 sm:mb-1 sm:gap-2">
+                        <Badge variant="secondary" className="px-1.5 py-0 text-[10px] sm:text-[11px]">
                           {itemLabel(item.type)}
                         </Badge>
-                        {index === 0 && <Badge variant="outline" className="text-[11px]">Último acesso</Badge>}
+                        {index === 0 && <Badge variant="outline" className="px-1.5 py-0 text-[10px] sm:text-[11px]">Último acesso</Badge>}
                       </div>
-                      <h3 className="truncate font-semibold">{item.title}</h3>
-                      {item.subtitle && <p className="mt-1 truncate text-sm text-muted-foreground">{item.subtitle}</p>}
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <h3 className="truncate text-sm font-semibold sm:text-base">{item.title}</h3>
+                      {item.subtitle && <p className="mt-0.5 truncate text-xs text-muted-foreground sm:mt-1 sm:text-sm">{item.subtitle}</p>}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted-foreground sm:mt-2 sm:gap-x-3 sm:text-xs">
                         <span className="inline-flex items-center gap-1">
-                          <Clock3 className="h-3.5 w-3.5" />
+                          <Clock3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                           {relativeTime(item.visitedAt)}
                         </span>
                         {item.progressLabel && <span>{item.progressLabel}</span>}
@@ -106,9 +106,9 @@ export function GuestContinueSection() {
                     </div>
                   </div>
 
-                  <Button asChild className="mt-4 w-full gap-2" variant={index === 0 ? 'default' : 'outline'}>
+                  <Button asChild className="mt-3 h-9 w-full gap-1.5 text-sm sm:mt-4 sm:h-10 sm:gap-2" variant={index === 0 ? 'default' : 'outline'}>
                     <Link to={item.path} onClick={() => requestGuestResume(item.path)}>
-                      <Play className="h-4 w-4" />
+                      <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       {index === 0 ? 'Continuar' : 'Abrir novamente'}
                     </Link>
                   </Button>
@@ -116,6 +116,7 @@ export function GuestContinueSection() {
               );
             })}
           </div>
+          <p className="text-center text-[10px] text-muted-foreground md:hidden">Deslize para ver o histórico recente →</p>
         </section>
       )}
 
