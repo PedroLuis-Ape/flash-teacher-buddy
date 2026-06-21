@@ -3,7 +3,6 @@ import type { GlossarySourceCard } from "./glossaryAiExport";
 
 const LIST_CHUNK_SIZE = 100;
 const PAGE_SIZE = 1000;
-export const MAX_GLOSSARY_SOURCE_CARDS = 10000;
 
 function chunks<T>(values: readonly T[], size: number): T[][] {
   const result: T[][] = [];
@@ -13,7 +12,10 @@ function chunks<T>(values: readonly T[], size: number): T[][] {
   return result;
 }
 
-export async function loadGlossarySourceCards(listIds: readonly string[]): Promise<GlossarySourceCard[]> {
+export async function loadGlossarySourceCards(
+  listIds: readonly string[],
+  onProgress?: (loadedCards: number) => void,
+): Promise<GlossarySourceCard[]> {
   const uniqueListIds = Array.from(new Set(listIds.filter(Boolean)));
   if (uniqueListIds.length === 0) return [];
 
@@ -38,11 +40,9 @@ export async function loadGlossarySourceCards(listIds: readonly string[]): Promi
         seenIds.add(row.id);
         if (!row.term?.trim() && !row.translation?.trim()) continue;
         rows.push(row);
-        if (rows.length > MAX_GLOSSARY_SOURCE_CARDS) {
-          throw new Error(`A seleção ultrapassa ${MAX_GLOSSARY_SOURCE_CARDS.toLocaleString("pt-BR")} cards. Divida a geração em mais de uma operação.`);
-        }
       }
 
+      onProgress?.(rows.length);
       if ((data?.length ?? 0) < PAGE_SIZE) break;
       from += PAGE_SIZE;
     }
