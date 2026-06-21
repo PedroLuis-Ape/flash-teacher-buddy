@@ -21,6 +21,26 @@
     <link rel="apple-touch-icon" href="/branding/icon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/branding/icon.png" />
     <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260621-install2" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="APE" />
+    <script>
+      (function() {
+        window.__apeInstallPrompt = window.__apeInstallPrompt || null;
+
+        window.addEventListener("beforeinstallprompt", function(event) {
+          event.preventDefault();
+          window.__apeInstallPrompt = event;
+          window.dispatchEvent(new Event("ape:pwa-install-ready"));
+        });
+
+        window.addEventListener("appinstalled", function() {
+          window.__apeInstallPrompt = null;
+        });
+      })();
+    </script>
 
     <!-- Each viewport receives the artwork uploaded specifically for that format. -->
     <link rel="preload" as="image" type="image/webp" href="/branding/splash-mobile.webp?v=20260621-hires1" media="(orientation: portrait) and (max-width: 767px)" />

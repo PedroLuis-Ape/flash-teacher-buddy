@@ -10,10 +10,28 @@ export interface PWAInstallState {
   installed: boolean;
 }
 
-type Listener = (state: PWAInstallState) => void;
+export interface RequestPWAInstallOptions {
+  /**
+   * Chromium may emit beforeinstallprompt shortly after React renders.
+   * Waiting briefly prevents an early click from falling back to instructions.
+   */
+  waitForPromptMs?: number;
+}
 
+type Listener = (state: PWAInstallState) => void;
+type PromptWaiter = (available: boolean) => void;
+
+declare global {
+  interface Window {
+    __apeInstallPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
+
+const INSTALL_READY_EVENT = "ape:pwa-install-ready";
 const listeners = new Set<Listener>();
-let deferredPrompt: BeforeInstallPromptEvent | null = null;
+const promptWaiters = new Set<PromptWaiter>();
+let deferredPrompt: BeforeInstallPromptEvent | null =
+  typeof window !== "undefined" ? window.__apeInstallPrompt ?? null : null;
 
 function ensureInstallMetadata() {
   if (typeof document === "undefined") return;
@@ -21,7 +39,7 @@ function ensureInstallMetadata() {
   if (!document.querySelector('link[rel="manifest"]')) {
     const manifest = document.createElement("link");
     manifest.rel = "manifest";
-    manifest.href = "/manifest.webmanifest?v=20260621-install1";
+    manifest.href = "/manifest.webmanifest?v=20260621-install2";
     document.head.appendChild(manifest);
   }
 
@@ -45,13 +63,13 @@ function detectStandalone(): boolean {
   if (typeof window === "undefined") return false;
 
   return (
-    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true
   );
 }
 
 let state: PWAInstallState = {
-  available: false,
+  available: Boolean(deferredPrompt),
   installed: detectStandalone(),
 };
 
@@ -60,22 +78,76 @@ function emit(next: Partial<PWAInstallState>) {
   listeners.forEach((listener) => listener(state));
 }
 
+function resolvePromptWaiters(available: boolean) {
+  promptWaiters.forEach((resolve) => resolve(available));
+  promptWaiters.clear();
+}
+
+function capturePrompt(prompt: BeforeInstallPromptEvent) {
+  prompt.preventDefault?.();
+  deferredPrompt = prompt;
+  if (typeof window !== "undefined") window.__apeInstallPrompt = prompt;
+  emit({ available: true, installed: false });
+  resolvePromptWaiters(true);
+}
+
+async function waitForInstallPrompt(timeoutMs: number): Promise<boolean> {
+  if (deferredPrompt || (typeof window !== "undefined" && window.__apeInstallPrompt)) {
+    deferredPrompt = deferredPrompt ?? window.__apeInstallPrompt ?? null;
+    return Boolean(deferredPrompt);
+  }
+
+  if (timeoutMs <= 0 || typeof window === "undefined") return false;
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+
+    const finish = (available: boolean) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      window.removeEventListener(INSTALL_READY_EVENT, handleReady);
+      promptWaiters.delete(finish);
+      resolve(available);
+    };
+
+    const handleReady = () => {
+      deferredPrompt = deferredPrompt ?? window.__apeInstallPrompt ?? null;
+      finish(Boolean(deferredPrompt));
+    };
+
+    const timer = window.setTimeout(() => finish(false), timeoutMs);
+    promptWaiters.add(finish);
+    window.addEventListener(INSTALL_READY_EVENT, handleReady, { once: true });
+  });
+}
+
 if (typeof window !== "undefined") {
   ensureInstallMetadata();
 
   window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredPrompt = event as BeforeInstallPromptEvent;
-    emit({ available: true, installed: false });
+    capturePrompt(event as BeforeInstallPromptEvent);
+  });
+
+  window.addEventListener(INSTALL_READY_EVENT, () => {
+    const prompt = window.__apeInstallPrompt;
+    if (prompt) capturePrompt(prompt);
   });
 
   window.addEventListener("appinstalled", () => {
     deferredPrompt = null;
+    window.__apeInstallPrompt = null;
     emit({ available: false, installed: true });
+    resolvePromptWaiters(false);
   });
 
-  window.matchMedia("(display-mode: standalone)").addEventListener?.("change", () => {
-    if (detectStandalone()) emit({ available: false, installed: true });
+  window.matchMedia?.("(display-mode: standalone)").addEventListener?.("change", () => {
+    if (detectStandalone()) {
+      deferredPrompt = null;
+      window.__apeInstallPrompt = null;
+      emit({ available: false, installed: true });
+      resolvePromptWaiters(false);
+    }
   });
 }
 
@@ -85,27 +157,37 @@ export function getPWAInstallState(): PWAInstallState {
 
 export function subscribeToPWAInstall(listener: Listener): () => void {
   listeners.add(listener);
+  listener(state);
   return () => listeners.delete(listener);
 }
 
-export async function requestPWAInstall(): Promise<PWAInstallResult> {
+export async function requestPWAInstall(
+  options: RequestPWAInstallOptions = {},
+): Promise<PWAInstallResult> {
   if (state.installed || detectStandalone()) {
     emit({ available: false, installed: true });
     return "installed";
   }
 
-  if (!deferredPrompt) return "unavailable";
+  const hasPrompt = await waitForInstallPrompt(options.waitForPromptMs ?? 0);
+  if (!hasPrompt || !deferredPrompt) return "unavailable";
 
   const prompt = deferredPrompt;
   deferredPrompt = null;
+  if (typeof window !== "undefined") window.__apeInstallPrompt = null;
   emit({ available: false });
 
-  await prompt.prompt();
-  const choice = await prompt.userChoice;
+  try {
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
 
-  if (choice.outcome === "accepted") {
-    emit({ available: false, installed: true });
+    if (choice.outcome === "accepted") {
+      emit({ available: false, installed: true });
+    }
+
+    return choice.outcome;
+  } catch (error) {
+    console.warn("[PWA] Native install prompt could not be opened:", error);
+    return "unavailable";
   }
-
-  return choice.outcome;
 }
