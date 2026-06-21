@@ -1,17 +1,21 @@
 BEGIN;
 
--- Public portal access must go through the narrow RPCs/views, never through
--- direct anonymous SELECTs on the base content tables.
 ALTER TABLE public.folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mensagens ENABLE ROW LEVEL SECURITY;
 
-REVOKE SELECT ON public.folders FROM anon;
-REVOKE SELECT ON public.lists FROM anon;
-REVOKE UPDATE ON public.mensagens FROM anon;
+-- Least privilege: anonymous portal access uses narrow SECURITY DEFINER RPCs.
+-- RLS does not protect TRUNCATE or REFERENCES, so remove every direct base-table
+-- privilege and grant back only what the signed-in client actually needs.
+REVOKE ALL PRIVILEGES ON TABLE public.folders FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.lists FROM PUBLIC, anon, authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.mensagens FROM PUBLIC, anon, authenticated;
 
--- Remove legacy folder policies that either apply to PUBLIC or can expose
--- shared rows directly. Recreate one explicit authenticated-only policy.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.folders TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.lists TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.mensagens TO authenticated;
+
+-- FOLDERS: remove legacy PUBLIC-role and duplicate policies.
 DROP POLICY IF EXISTS "Anyone can view shared folders" ON public.folders;
 DROP POLICY IF EXISTS "Public can view shared folders" ON public.folders;
 DROP POLICY IF EXISTS "Authenticated users or public portal can view shared folders" ON public.folders;
@@ -20,6 +24,13 @@ DROP POLICY IF EXISTS "Students can view shared folders" ON public.folders;
 DROP POLICY IF EXISTS "Authenticated users can view class folders they belong to" ON public.folders;
 DROP POLICY IF EXISTS "Owner can view own folders" ON public.folders;
 DROP POLICY IF EXISTS "Authenticated users can view folders they have access to" ON public.folders;
+DROP POLICY IF EXISTS "Owners can delete their own folders" ON public.folders;
+DROP POLICY IF EXISTS "Owners can update their own folders" ON public.folders;
+DROP POLICY IF EXISTS "Users can create their own folders" ON public.folders;
+DROP POLICY IF EXISTS "Turma owners can view folders in their turmas" ON public.folders;
+DROP POLICY IF EXISTS "Turma owners can insert folders for their turmas" ON public.folders;
+DROP POLICY IF EXISTS "Turma owners can update folders in their turmas" ON public.folders;
+DROP POLICY IF EXISTS "Turma owners can delete folders in their turmas" ON public.folders;
 
 CREATE POLICY "Authenticated users can view folders they have access to"
 ON public.folders
@@ -55,9 +66,41 @@ USING (
   )
 );
 
--- Remove legacy list policies for the same reason and keep one explicit,
--- authenticated-only policy. Anonymous portal reads remain available through
--- get_portal_* and public_turma_* APIs.
+CREATE POLICY "Turma owners can insert folders for their turmas"
+ON public.folders
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND (
+    owner_id = auth.uid()
+    OR public.is_turma_owner(class_id, auth.uid())
+  )
+);
+
+CREATE POLICY "Turma owners can update folders in their turmas"
+ON public.folders
+FOR UPDATE
+TO authenticated
+USING (
+  auth.uid() IS NOT NULL
+  AND public.is_turma_owner(class_id, auth.uid())
+)
+WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND public.is_turma_owner(class_id, auth.uid())
+);
+
+CREATE POLICY "Turma owners can delete folders in their turmas"
+ON public.folders
+FOR DELETE
+TO authenticated
+USING (
+  auth.uid() IS NOT NULL
+  AND public.is_turma_owner(class_id, auth.uid())
+);
+
+-- LISTS: remove legacy PUBLIC-role and duplicate policies.
 DROP POLICY IF EXISTS "Anyone can view lists from shared folders" ON public.lists;
 DROP POLICY IF EXISTS "Public can view lists from shared folders" ON public.lists;
 DROP POLICY IF EXISTS "Authenticated users or public portal can view lists from shared" ON public.lists;
@@ -65,6 +108,10 @@ DROP POLICY IF EXISTS "Authenticated users can view lists from shared folders" O
 DROP POLICY IF EXISTS "Students can view shared lists" ON public.lists;
 DROP POLICY IF EXISTS "Authenticated users can view lists they have access to" ON public.lists;
 DROP POLICY IF EXISTS "Owner can view own lists" ON public.lists;
+DROP POLICY IF EXISTS "Turma owners can view lists in their turmas" ON public.lists;
+DROP POLICY IF EXISTS "Turma owners can insert lists for their turmas" ON public.lists;
+DROP POLICY IF EXISTS "Turma owners can update lists in their turmas" ON public.lists;
+DROP POLICY IF EXISTS "Turma owners can delete lists in their turmas" ON public.lists;
 
 CREATE POLICY "Authenticated users can view lists they have access to"
 ON public.lists
@@ -129,11 +176,77 @@ USING (
   )
 );
 
--- PostgreSQL combines permissive policies with OR. The old broad UPDATE policy
--- made the deleted=false condition in the soft-delete policy ineffective.
+CREATE POLICY "Turma owners can insert lists for their turmas"
+ON public.lists
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND (
+    owner_id = auth.uid()
+    OR public.is_turma_owner(class_id, auth.uid())
+  )
+);
+
+CREATE POLICY "Turma owners can update lists in their turmas"
+ON public.lists
+FOR UPDATE
+TO authenticated
+USING (
+  auth.uid() IS NOT NULL
+  AND public.is_turma_owner(class_id, auth.uid())
+)
+WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND public.is_turma_owner(class_id, auth.uid())
+);
+
+CREATE POLICY "Turma owners can delete lists in their turmas"
+ON public.lists
+FOR DELETE
+TO authenticated
+USING (
+  auth.uid() IS NOT NULL
+  AND public.is_turma_owner(class_id, auth.uid())
+);
+
+-- MESSAGES: replace every PUBLIC-role policy and the two overlapping UPDATE
+-- policies with three authenticated-only policies.
+DROP POLICY IF EXISTS "Members can view messages in their threads" ON public.mensagens;
+DROP POLICY IF EXISTS "Members can send messages in their threads" ON public.mensagens;
 DROP POLICY IF EXISTS "Senders can update their own messages" ON public.mensagens;
 DROP POLICY IF EXISTS "Senders can soft-delete their messages" ON public.mensagens;
 DROP POLICY IF EXISTS "Senders can edit or soft-delete active messages" ON public.mensagens;
+
+CREATE POLICY "Members can view messages in their threads"
+ON public.mensagens
+FOR SELECT
+TO authenticated
+USING (
+  auth.uid() IS NOT NULL
+  AND deleted = false
+  AND public.can_access_thread(
+    turma_id,
+    thread_tipo,
+    thread_chave,
+    auth.uid()
+  )
+);
+
+CREATE POLICY "Members can send messages in their threads"
+ON public.mensagens
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  auth.uid() IS NOT NULL
+  AND sender_id = auth.uid()
+  AND public.can_access_thread(
+    turma_id,
+    thread_tipo,
+    thread_chave,
+    auth.uid()
+  )
+);
 
 CREATE POLICY "Senders can edit or soft-delete active messages"
 ON public.mensagens
@@ -149,9 +262,8 @@ WITH CHECK (
   AND sender_id = auth.uid()
 );
 
--- Defense in depth: message routing and authorship are immutable, and a
--- soft-deleted message can never be edited or restored even if a future policy
--- is accidentally broadened.
+-- Defense in depth: after soft deletion, no later update is possible. Authorship,
+-- routing and creation timestamp are immutable even during a legitimate edit.
 CREATE OR REPLACE FUNCTION public.guard_mensagens_update_v1()
 RETURNS trigger
 LANGUAGE plpgsql
