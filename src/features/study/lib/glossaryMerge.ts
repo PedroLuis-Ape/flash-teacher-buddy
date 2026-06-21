@@ -27,6 +27,16 @@ export interface ExtendedWordHint extends WordHint {
 
 const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 
+export function splitGlossaryAlternatives(value: string): string[] {
+  const unique = new Map<string, string>();
+  value.split(/\s*[,;]\s*/u).forEach((part) => {
+    const clean = part.trim();
+    const key = normalize(clean);
+    if (clean && !unique.has(key)) unique.set(key, clean);
+  });
+  return Array.from(unique.values());
+}
+
 export function parseExtendedWordHints(raw: unknown): ExtendedWordHint[] {
   if (!raw || !Array.isArray(raw)) return [];
   return raw.filter(
@@ -43,6 +53,33 @@ export function parseExtendedWordHints(raw: unknown): ExtendedWordHint[] {
 function manualHintBelongsToSide(hint: ExtendedWordHint, side: "A" | "B") {
   const hintSide = hint.side ?? "A";
   return hintSide === side;
+}
+
+function addGlobalTranslation(
+  hintMap: Map<string, MergedHint>,
+  suppressedTexts: Set<string>,
+  text: string,
+  matchText: string,
+  translationText: string,
+  note?: string | null,
+) {
+  const cleanMatch = matchText.trim();
+  const cleanTranslation = translationText.trim();
+  if (!cleanMatch || !cleanTranslation) return;
+  if (findGlossaryOccurrences(text, cleanMatch).length === 0) return;
+
+  const key = normalize(cleanMatch);
+  if (suppressedTexts.has(key)) return;
+
+  const merged = hintMap.get(key) ?? { text: cleanMatch, translations: [] };
+  if (!merged.translations.some((translation) => normalize(translation.text) === normalize(cleanTranslation) && translation.source === "global")) {
+    merged.translations.push({
+      text: cleanTranslation,
+      note: note || undefined,
+      source: "global",
+    });
+  }
+  hintMap.set(key, merged);
 }
 
 export function mergeGlossaryAndManual(
@@ -65,48 +102,22 @@ export function mergeGlossaryAndManual(
   for (const entry of glossary) {
     if (!entry.is_active) continue;
 
-    let matchText: string;
-    let hintText: string;
-    let displayText: string;
+    const viewingSourceSide = side === entry.side;
+    const matchCandidates = viewingSourceSide
+      ? [entry.original_text]
+      : splitGlossaryAlternatives(entry.translated_text);
+    const translationText = viewingSourceSide ? entry.translated_text : entry.original_text;
 
-    if (side === "A" && entry.side === "A") {
-      matchText = entry.original_text;
-      hintText = entry.translated_text.trim();
-      displayText = entry.original_text;
-    } else if (side === "B" && entry.side === "A") {
-      matchText = entry.translated_text;
-      hintText = entry.original_text.trim();
-      displayText = entry.translated_text;
-    } else if (side === "B" && entry.side === "B") {
-      matchText = entry.original_text;
-      hintText = entry.translated_text.trim();
-      displayText = entry.original_text;
-    } else if (side === "A" && entry.side === "B") {
-      matchText = entry.translated_text;
-      hintText = entry.original_text.trim();
-      displayText = entry.translated_text;
-    } else {
-      continue;
-    }
-
-    if (!matchText.trim() || !hintText) continue;
-    if (findGlossaryOccurrences(text, matchText).length === 0) continue;
-
-    const key = normalize(matchText);
-    if (suppressedTexts.has(key)) continue;
-
-    const merged = hintMap.get(key) ?? {
-      text: displayText,
-      translations: [],
-    };
-    if (!merged.translations.some((translation) => translation.text === hintText && translation.source === "global")) {
-      merged.translations.push({
-        text: hintText,
-        note: entry.note || undefined,
-        source: "global",
-      });
-    }
-    hintMap.set(key, merged);
+    matchCandidates.forEach((matchText) => {
+      addGlobalTranslation(
+        hintMap,
+        suppressedTexts,
+        text,
+        matchText,
+        translationText,
+        entry.note,
+      );
+    });
   }
 
   for (const hint of relevantManual) {
