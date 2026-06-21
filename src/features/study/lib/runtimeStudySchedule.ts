@@ -102,11 +102,11 @@ export function getMixedFlipSlotMode(cardKey: string): FlipSlotMode {
   const selected = getSlot(
     flipStates,
     cardKey,
-    ["pronunciation", "write", "pronunciation", "write", "pronunciation"],
+    ["pronunciation", "write", "pronunciation", "write", "pronunciation"] as FlipSlotMode[],
   );
   return selected === "pronunciation" && !speechRecognitionSupported() ? "write" : selected;
 }
 
 export function getMixedMultipleSlotMode(cardKey: string): MultipleSlotMode {
-  return getSlot(multipleStates, cardKey, ["multiple-choice", "multiple-choice", "multiple-choice", "multiple-choice", "write"]);
+  return getSlot(multipleStates, cardKey, ["multiple-choice", "multiple-choice", "multiple-choice", "multiple-choice", "write"] as MultipleSlotMode[]);
 }

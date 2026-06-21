@@ -87,7 +87,7 @@ async function verifyAppliedItemsLeftTheQueue(results: ApplyResult[]): Promise<A
     } : result);
   }
 
-  const remainingIds = new Set(((remaining as Array<{ flashcard_id: string }>) ?? [])
+  const remainingIds = new Set(((remaining as unknown as Array<{ flashcard_id: string }>) ?? [])
     .map((row) => row.flashcard_id));
 
   return results.map((result) => {

@@ -15,12 +15,12 @@ export const SMART_IMPORT_LIMITS = {
   maxLayersPerGroup: 500,
 } as const;
 
-const trimmed = (label: string, max = SMART_IMPORT_LIMITS.maxTextLength) =>
+const trimmed = (label: string, max: number = SMART_IMPORT_LIMITS.maxTextLength) =>
   z.string()
     .transform((value) => value.trim())
     .pipe(z.string().min(1, `${label} não pode ficar vazio.`).max(max, `${label} excede ${max} caracteres.`));
 
-const optionalTrimmed = (max = SMART_IMPORT_LIMITS.maxTextLength) =>
+const optionalTrimmed = (max: number = SMART_IMPORT_LIMITS.maxTextLength) =>
   z.string()
     .transform((value) => value.trim())
     .pipe(z.string().max(max))

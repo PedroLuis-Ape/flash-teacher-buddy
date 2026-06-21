@@ -16,7 +16,7 @@ const manifest = {
     { card_ref: "CARD_001", flashcard_id: A, term: "take", translation: "pegar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null },
     { card_ref: "CARD_002", flashcard_id: B, term: "leave", translation: "deixar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null },
   ],
-} as const;
+};
 
 describe("manifest reconciliation", () => {
   it("detects a duplicate and a missing card", () => {
