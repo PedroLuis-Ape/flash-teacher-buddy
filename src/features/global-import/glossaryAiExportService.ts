@@ -12,15 +12,19 @@ function chunks<T>(values: readonly T[], size: number): T[][] {
   return result;
 }
 
-export async function loadGlossarySourceCards(
-  listIds: readonly string[],
-  onProgress?: (loadedCards: number) => void,
-): Promise<GlossarySourceCard[]> {
-  const uniqueListIds = Array.from(new Set(listIds.filter(Boolean)));
-  if (uniqueListIds.length === 0) return [];
+function yieldToBrowser() {
+  return new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+}
 
-  const rows: GlossarySourceCard[] = [];
+export async function streamGlossarySourceCards(
+  listIds: readonly string[],
+  onBatch: (cards: GlossarySourceCard[], loadedCards: number) => void | Promise<void>,
+): Promise<number> {
+  const uniqueListIds = Array.from(new Set(listIds.filter(Boolean)));
+  if (uniqueListIds.length === 0) return 0;
+
   const seenIds = new Set<string>();
+  let loadedCards = 0;
 
   for (const listChunk of chunks(uniqueListIds, LIST_CHUNK_SIZE)) {
     let from = 0;
@@ -35,18 +39,36 @@ export async function loadGlossarySourceCards(
 
       if (error) throw error;
 
+      const batch: GlossarySourceCard[] = [];
       for (const row of (data ?? []) as GlossarySourceCard[]) {
         if (seenIds.has(row.id)) continue;
         seenIds.add(row.id);
         if (!row.term?.trim() && !row.translation?.trim()) continue;
-        rows.push(row);
+        batch.push(row);
       }
 
-      onProgress?.(rows.length);
+      if (batch.length > 0) {
+        loadedCards += batch.length;
+        await onBatch(batch, loadedCards);
+      }
+
+      await yieldToBrowser();
       if ((data?.length ?? 0) < PAGE_SIZE) break;
       from += PAGE_SIZE;
     }
   }
 
+  return loadedCards;
+}
+
+export async function loadGlossarySourceCards(
+  listIds: readonly string[],
+  onProgress?: (loadedCards: number) => void,
+): Promise<GlossarySourceCard[]> {
+  const rows: GlossarySourceCard[] = [];
+  await streamGlossarySourceCards(listIds, (batch, loadedCards) => {
+    rows.push(...batch);
+    onProgress?.(loadedCards);
+  });
   return rows;
 }
