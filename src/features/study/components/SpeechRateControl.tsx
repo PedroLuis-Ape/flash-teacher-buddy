@@ -30,7 +30,7 @@ export function SpeechRateControl() {
       className="gap-2"
       title={rate === 1
         ? "Velocidade da fala: natural"
-        : "Velocidade da fala: palavra por palavra"}
+        : "Fala didática: palavras separadas e termos difíceis articulados em partes"}
     >
       <Gauge className="h-4 w-4" />
       <span className="text-xs font-medium">{rate === 1 ? "1x" : "0.5x"}</span>
