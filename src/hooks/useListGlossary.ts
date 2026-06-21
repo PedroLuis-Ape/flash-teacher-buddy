@@ -29,6 +29,8 @@ export interface GlossaryImportResult {
   skipped: number;
 }
 
+const GLOSSARY_PAGE_SIZE = 1000;
+
 export function useListGlossary(listId: string | undefined) {
   const queryClient = useQueryClient();
   const queryKey = ["list-glossary", listId];
@@ -37,14 +39,24 @@ export function useListGlossary(listId: string | undefined) {
     queryKey,
     queryFn: async () => {
       if (!listId) return [];
-      const { data, error: queryError } = await supabase
-        .from("list_glossary")
-        .select("*")
-        .eq("list_id", listId)
-        .order("created_at", { ascending: true })
-        .limit(1000);
-      if (queryError) throw queryError;
-      return (data || []) as GlossaryEntry[];
+      const rows: GlossaryEntry[] = [];
+      let from = 0;
+
+      while (true) {
+        const { data, error: queryError } = await supabase
+          .from("list_glossary")
+          .select("*")
+          .eq("list_id", listId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, from + GLOSSARY_PAGE_SIZE - 1);
+        if (queryError) throw queryError;
+        rows.push(...((data || []) as GlossaryEntry[]));
+        if ((data?.length ?? 0) < GLOSSARY_PAGE_SIZE) break;
+        from += GLOSSARY_PAGE_SIZE;
+      }
+
+      return rows;
     },
     enabled: !!listId,
     staleTime: 60_000,
