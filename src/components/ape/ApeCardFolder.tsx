@@ -1,4 +1,4 @@
-import { Folder, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { ScrollingTitle } from "@/components/ui/scrolling-title";
 import { cn } from "@/lib/utils";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -41,12 +41,14 @@ export function ApeCardFolder({
         className
       )}
     >
-      <div className="space-ui-card-icon relative shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center transition-all duration-200 group-hover:bg-primary/20 group-hover:scale-105">
+      <div className="space-ui-card-icon relative shrink-0 w-12 h-12 rounded-xl border border-primary/20 bg-primary/15 flex items-center justify-center shadow-sm transition-all duration-200 group-hover:bg-primary/25 group-hover:scale-105">
         <span aria-hidden className="absolute inset-1 rounded-full border border-primary/15" />
         {isLocked ? (
           <Lock className="relative h-5 w-5 text-primary transition-transform group-hover:scale-110" />
         ) : (
-          <Folder className="relative h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+          <span aria-hidden className="relative text-2xl leading-none transition-transform group-hover:scale-110">
+            {"\u{1F4C1}"}
+          </span>
         )}
       </div>
 
