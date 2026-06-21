@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, MonitorDown, MoreVertical, Share2, Smartphone } from "lucide-react";
+import { CheckCircle2, Download, Loader2, MonitorDown, MoreVertical, Share2, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,11 +45,23 @@ export function InstallAppButton({ className, compact = false }: InstallAppButto
   useEffect(() => subscribeToPWAInstall(setInstallState), []);
 
   const handleInstall = async () => {
-    if (installState.installed) return;
+    if (installState.installed || installing) return;
+
+    // Apple Safari and Firefox do not expose beforeinstallprompt. Their only
+    // reliable flow is the browser-specific installation instruction.
+    if (platform === "ios" || platform === "mac-safari" || platform === "firefox") {
+      setGuideOpen(true);
+      return;
+    }
 
     setInstalling(true);
     try {
-      const result = await requestPWAInstall();
+      const result = await requestPWAInstall({
+        waitForPromptMs: installState.available ? 0 : 4_500,
+      });
+
+      // Chromium normally opens its native confirmation dialog from the same
+      // click. Instructions are shown only when the browser never offers it.
       if (result === "unavailable") setGuideOpen(true);
     } finally {
       setInstalling(false);
@@ -60,13 +72,13 @@ export function InstallAppButton({ className, compact = false }: InstallAppButto
     ios: {
       icon: Share2,
       title: "Instalar no iPhone ou iPad",
-      text: "Abra esta página no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.",
+      text: "A Apple não permite que sites confirmem a instalação automaticamente. No Safari, use Compartilhar e escolha “Adicionar à Tela de Início”.",
       steps: ["Toque no botão Compartilhar", "Escolha “Adicionar à Tela de Início”", "Confirme em “Adicionar”"],
     },
     android: {
       icon: Smartphone,
       title: "Instalar no Android",
-      text: "No Chrome, abra o menu do navegador e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.",
+      text: "O navegador não liberou a janela automática desta vez. No Chrome, use o menu e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.",
       steps: ["Abra o menu ⋮ do Chrome", "Toque em “Instalar aplicativo”", "Confirme a instalação"],
     },
     "mac-safari": {
@@ -78,19 +90,31 @@ export function InstallAppButton({ className, compact = false }: InstallAppButto
     firefox: {
       icon: MonitorDown,
       title: "Instalar no computador",
-      text: "O Firefox pode não oferecer a instalação automática. Abra o APE no Chrome ou Edge e use a opção “Instalar aplicativo”.",
-      steps: ["Abra esta página no Chrome ou Edge", "Use o ícone de instalação na barra de endereço", "Confirme a instalação"],
+      text: "O Firefox não oferece a instalação direta deste PWA. Abra o APE no Chrome ou Edge e clique novamente em “Instalar APE”.",
+      steps: ["Abra esta página no Chrome ou Edge", "Clique em “Instalar APE”", "Confirme na janela do navegador"],
     },
     desktop: {
       icon: MonitorDown,
       title: "Instalar no computador",
-      text: "No Chrome ou Edge, use o ícone de instalação na barra de endereço ou a opção “Instalar aplicativo” no menu.",
-      steps: ["Procure o ícone de instalação na barra de endereço", "Ou abra o menu do navegador", "Escolha “Instalar APE”"],
+      text: "O navegador não liberou a janela automática. No Chrome ou Edge, use o ícone de instalação na barra ou a opção “Instalar aplicativo” no menu.",
+      steps: ["Procure o ícone de instalação na barra", "Ou abra o menu do navegador", "Escolha “Instalar APE”"],
     },
   }[platform];
 
   const GuideIcon = guide.icon;
-  const buttonText = installState.installed ? "Instalado" : installing ? "Abrindo…" : "Instalar app";
+  const buttonText = installState.installed
+    ? "Instalado"
+    : installing
+      ? installState.available
+        ? "Abrindo instalação…"
+        : "Preparando instalação…"
+      : "Instalar APE";
+
+  const compactButtonText = installState.installed
+    ? "Pronto"
+    : installing
+      ? "Preparando…"
+      : "Instalar";
 
   return (
     <>
@@ -105,15 +129,18 @@ export function InstallAppButton({ className, compact = false }: InstallAppButto
           className,
         )}
         aria-label={installState.installed ? "Aplicativo já instalado" : "Instalar aplicativo APE"}
+        aria-live="polite"
       >
         {installState.installed ? (
           <CheckCircle2 className="h-4 w-4" />
+        ) : installing ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <Download className="h-4 w-4" />
         )}
         {compact ? (
           <>
-            <span className="sm:hidden">{installState.installed ? "Pronto" : installing ? "Abrindo…" : "Instalar"}</span>
+            <span className="sm:hidden">{compactButtonText}</span>
             <span className="hidden sm:inline">{buttonText}</span>
           </>
         ) : (
