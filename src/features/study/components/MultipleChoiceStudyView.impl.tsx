@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Volume2 } from "lucide-react";
+import { ArrowRight, Volume2 } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
@@ -18,6 +18,8 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { pickSmartDistractors } from "@/features/study/lib/smartDistractors";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
+
+const AUTO_ADVANCE_DELAY_MS = 3500;
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
@@ -67,6 +69,12 @@ export const MultipleChoiceStudyView = ({
   const [showFeedback, setShowFeedback] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
+  const [secondsRemaining, setSecondsRemaining] = useState(
+    Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000),
+  );
+  const autoAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingAdvanceRef = useRef<(() => void) | null>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
   
@@ -86,6 +94,43 @@ export const MultipleChoiceStudyView = ({
   const answerLabel = answerSide.label;
 
   const promptLang = toBCP47(promptSide.lang);
+
+  const clearAutoAdvance = useCallback(() => {
+    if (autoAdvanceTimeoutRef.current) {
+      clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    pendingAdvanceRef.current = null;
+  }, []);
+
+  const runPendingAdvance = useCallback(() => {
+    const pendingAdvance = pendingAdvanceRef.current;
+    clearAutoAdvance();
+    pendingAdvance?.();
+  }, [clearAutoAdvance]);
+
+  const scheduleAutoAdvance = useCallback((advance: () => void) => {
+    clearAutoAdvance();
+    pendingAdvanceRef.current = advance;
+
+    const startedAt = Date.now();
+    setSecondsRemaining(Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000));
+
+    countdownIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, AUTO_ADVANCE_DELAY_MS - elapsed);
+      setSecondsRemaining(Math.ceil(remaining / 1000));
+    }, 250);
+
+    autoAdvanceTimeoutRef.current = setTimeout(
+      runPendingAdvance,
+      AUTO_ADVANCE_DELAY_MS,
+    );
+  }, [clearAutoAdvance, runPendingAdvance]);
 
   useEffect(() => {
     // Gerar 3 alternativas incorretas
@@ -118,18 +163,49 @@ export const MultipleChoiceStudyView = ({
     // Embaralhar todas as opções
     const shuffled = allOptions.sort(() => Math.random() - 0.5);
     
+    clearAutoAdvance();
     setOptions(shuffled);
     setCorrectIndex(shuffled.indexOf(correctAnswer));
     setSelectedOption(null);
     setShowFeedback(false);
-  }, [currentCard, allCards, isAFirst, correctAnswer]);
+    setSecondsRemaining(Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000));
+  }, [currentCard, allCards, isAFirst, correctAnswer, clearAutoAdvance]);
+
+  useEffect(() => {
+    return () => clearAutoAdvance();
+  }, [clearAutoAdvance]);
+
+  const handleOptionClick = useCallback((index: number) => {
+    if (showFeedback) return;
+
+    setSelectedOption(index);
+    setShowFeedback(true);
+
+    if (index === correctIndex) {
+      playCorrect();
+      scheduleAutoAdvance(onCorrect);
+    } else {
+      playWrong();
+      scheduleAutoAdvance(onIncorrect);
+    }
+  }, [showFeedback, correctIndex, scheduleAutoAdvance, onCorrect, onIncorrect]);
 
   // Keyboard shortcuts for multiple choice: 1-4 or A-D selects the option.
+  // While feedback is visible, the configured next-card key skips the wait.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showFeedback) return;
       if (isTypingTarget(e.target)) return;
       const k = normalizeKey(e.key);
+
+      if (showFeedback) {
+        const nextKey = normalizeKey(shortcuts.nextCard);
+        if (k === nextKey) {
+          e.preventDefault();
+          runPendingAdvance();
+        }
+        return;
+      }
+
       let index: number | null = null;
       if (k === "1" || k === "A") index = 0;
       else if (k === "2" || k === "B") index = 1;
@@ -142,28 +218,7 @@ export const MultipleChoiceStudyView = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showFeedback, options.length, correctIndex]);
-
-  const handleOptionClick = (index: number) => {
-    if (showFeedback) return;
-
-    setSelectedOption(index);
-    setShowFeedback(true);
-
-    if (index === correctIndex) {
-      playCorrect();
-    } else {
-      playWrong();
-    }
-
-    setTimeout(() => {
-      if (index === correctIndex) {
-        onCorrect();
-      } else {
-        onIncorrect();
-      }
-    }, 600);
-  };
+  }, [showFeedback, options.length, shortcuts, handleOptionClick, runPendingAdvance]);
 
   const getOptionClassName = (index: number) => {
     if (!showFeedback) {
@@ -276,6 +331,18 @@ export const MultipleChoiceStudyView = ({
             </div>
           </AlertDescription>
         </Alert>
+      )}
+
+      {showFeedback && (
+        <div className="flex flex-col items-center gap-2 animate-fade-in">
+          <Button onClick={runPendingAdvance} size="lg" className="min-w-[190px]">
+            Próximo agora
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            Próximo card automaticamente em {secondsRemaining}s
+          </p>
+        </div>
       )}
     </div>
   );
