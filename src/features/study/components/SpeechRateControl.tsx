@@ -18,6 +18,7 @@ export function SpeechRateControl() {
   }, [rate]);
 
   const toggleRate = () => {
+    window.speechSynthesis?.cancel();
     setRate((current) => current === 1 ? 0.5 : 1);
   };
 
