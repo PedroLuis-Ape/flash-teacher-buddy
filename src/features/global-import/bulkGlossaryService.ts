@@ -22,4 +22,13 @@ export interface BulkGlossaryImportOptions {
   confirmExisting?: boolean;
 }
 
-void supabase;
+export async function importGlossaryToFolders(options: BulkGlossaryImportOptions) {
+  const { data, error } = await (supabase.rpc as any)("bulk_import_glossary_to_folders_v1", {
+    _folder_ids: options.folderIds,
+    _entries: options.entries,
+    _confirm_existing: options.confirmExisting ?? false,
+    _turma_id: options.turmaId ?? null,
+  });
+  if (error) throw error;
+  return data as BulkGlossaryImportReport;
+}
