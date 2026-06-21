@@ -12,6 +12,7 @@ import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
 import { StudyToolsMenu } from "./StudyToolsMenu";
+import { getSpeechRate } from "./SpeechRateControl";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 
@@ -88,7 +89,12 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
 
   const handlePlayPronunciation = () => {
     stopTTS();
-    speak(speakSide.text, { langOverride: speakLang, rate: 0.5 });
+    const rate = getSpeechRate();
+    speak(speakSide.text, {
+      langOverride: speakLang,
+      rate,
+      mode: rate === 0.5 ? "word-by-word" : "natural",
+    });
   };
 
   const handleMicToggle = () => {
