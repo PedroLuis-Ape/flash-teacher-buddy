@@ -135,13 +135,13 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
 
   if (!isSupported) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
-        <h3 className="text-xl font-bold">Navegador não suportado</h3>
-        <p className="text-muted-foreground mt-2">
+      <div className="flex flex-col items-center justify-center p-6 sm:p-8 text-center">
+        <AlertTriangle className="w-10 h-10 sm:w-12 sm:h-12 text-amber-500 mb-3 sm:mb-4" />
+        <h3 className="text-lg sm:text-xl font-bold">Navegador não suportado</h3>
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
           O reconhecimento de voz requer Google Chrome ou Edge.
         </p>
-        <Button onClick={onNext} className="mt-6">
+        <Button onClick={onNext} className="mt-4 sm:mt-6">
           Pular Exercício
         </Button>
       </div>
@@ -203,9 +203,9 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
-      <Card className={cn("w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden", getRedListCardClass(isRedListed))}>
-        <div className="absolute top-3 right-3">
+    <div className="flex flex-col items-center gap-3 sm:gap-6 w-full max-w-2xl mx-auto animate-fade-in">
+      <Card className={cn("w-full p-4 sm:p-8 flex flex-col items-center min-h-[160px] sm:min-h-[200px] justify-center border-2 text-center relative overflow-hidden", getRedListCardClass(isRedListed))}>
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
           <StudyToolsMenu
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
@@ -215,17 +215,17 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
             onToggleSpecial={onToggleSpecial}
           />
         </div>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
+        <p className="text-[11px] sm:text-xs uppercase tracking-widest text-muted-foreground mb-2 sm:mb-4 font-semibold">
           Fale em {speakSide.label}
         </p>
 
         {/* Phrase to speak - BIG */}
-        <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
+        <h2 className="text-[clamp(1.75rem,8.5vw,2.5rem)] sm:text-4xl md:text-5xl leading-tight font-bold text-primary mb-1 sm:mb-2 tracking-tight">
           <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick speakLang={speakLang} />
         </h2>
 
         {/* Hint translation - small */}
-        <p className="text-sm text-muted-foreground/60 mb-8 italic">
+        <p className="text-xs sm:text-sm text-muted-foreground/60 mb-4 sm:mb-8 italic">
           "<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} speakOnHintClick speakLang={hintLang} />"
         </p>
 
@@ -233,19 +233,19 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
           variant="secondary"
           size="sm"
           onClick={handlePlayPronunciation}
-          className="gap-2 rounded-full px-6"
+          className="h-10 gap-2 rounded-full px-5 sm:px-6"
         >
           <Volume2 className="w-4 h-4" />
           Ouvir Original
         </Button>
       </Card>
 
-      <div className="flex flex-col items-center gap-4 py-2">
+      <div className="flex flex-col items-center gap-2 sm:gap-4 py-0 sm:py-2">
         <Button
           size="lg"
           variant={isListening ? "destructive" : "default"}
           className={cn(
-            "rounded-full w-20 h-20 shadow-2xl border-4 transition-all duration-300 flex items-center justify-center",
+            "rounded-full w-16 h-16 sm:w-20 sm:h-20 shadow-2xl border-[3px] sm:border-4 transition-all duration-300 flex items-center justify-center",
             isListening
               ? "scale-110 border-red-200 ring-4 ring-red-100 animate-pulse"
               : "border-primary/20 hover:scale-105"
@@ -253,15 +253,15 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
           onClick={handleMicToggle}
         >
           {isListening ? (
-            <Square className="w-8 h-8 fill-current" />
+            <Square className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
           ) : (
-            <Mic className="w-8 h-8" />
+            <Mic className="w-6 h-6 sm:w-8 sm:h-8" />
           )}
         </Button>
 
         <span
           className={cn(
-            "text-sm font-medium transition-all duration-300 h-6",
+            "text-xs sm:text-sm font-medium transition-all duration-300 h-5 sm:h-6",
             isListening ? "text-red-500 animate-pulse" : "text-muted-foreground"
           )}
         >
@@ -271,52 +271,52 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
 
       <div
         className={cn(
-          "w-full p-6 rounded-xl border-2 text-center transition-all duration-500 min-h-[120px] flex flex-col justify-center items-center",
+          "w-full p-4 sm:p-6 rounded-xl border-2 text-center transition-all duration-500 min-h-[88px] sm:min-h-[120px] flex flex-col justify-center items-center",
           getResultStyles()
         )}
       >
         {error ? (
-          <div className="flex items-center gap-2 text-destructive animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center gap-2 text-sm sm:text-base text-destructive animate-in fade-in slide-in-from-bottom-2">
             <AlertTriangle className="w-4 h-4" />
             <p>{error}</p>
           </div>
         ) : transcript ? (
           <div className="animate-in zoom-in-95 duration-300">
-            <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wider">
               Reconhecido
             </p>
             <p className={cn(
-              "text-2xl font-medium italic",
+              "text-xl sm:text-2xl font-medium italic",
               getResultColor() || "text-foreground"
             )}>
               "{transcript}"
             </p>
             {evaluation && (
-              <div className={cn("flex items-center justify-center gap-2 mt-2", getResultColor())}>
+              <div className={cn("flex items-center justify-center gap-2 mt-1.5 sm:mt-2 text-sm sm:text-base", getResultColor())}>
                 {getResultIcon()}
                 <span className="font-semibold">{getResultText()}</span>
               </div>
             )}
           </div>
         ) : (
-          <p className="text-muted-foreground/40 italic">
+          <p className="text-sm sm:text-base text-muted-foreground/40 italic">
             O texto falado aparecerá aqui...
           </p>
         )}
       </div>
 
-      <div className="w-full flex justify-between pt-2">
+      <div className="w-full flex justify-between items-center pt-0 sm:pt-2">
         <Button
           variant="ghost"
           onClick={resetTranscript}
           disabled={!transcript && !error}
-          className="text-muted-foreground hover:text-foreground"
+          className="h-10 px-2 sm:px-4 text-sm text-muted-foreground hover:text-foreground"
         >
           <RotateCcw className="h-4 w-4 mr-2" />
           Limpar
         </Button>
 
-        <Button onClick={handleNext} className="px-8" size="lg">
+        <Button onClick={handleNext} className="h-11 sm:h-12 px-6 sm:px-8" size="lg">
           Próximo
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
