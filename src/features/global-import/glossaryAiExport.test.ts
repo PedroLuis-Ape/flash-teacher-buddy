@@ -21,20 +21,23 @@ const cards: GlossarySourceCard[] = [
 ];
 
 describe("glossary AI export", () => {
-  it("builds a strict prompt with bidirectional and multiple-translation rules", () => {
+  it("builds a strict JSON prompt with bidirectional and multiple-translation rules", () => {
     const prompt = buildGlossaryAiPrompt(cards, "both");
-    expect(prompt).toContain("=== GLOSSÁRIO GLOBAL ===");
-    expect(prompt).toContain("=== CARDS ===");
-    expect(prompt).toContain("am / sou, estou");
-    expect(prompt).toContain("what / o que, qual");
-    expect(prompt).toContain("não crie duas linhas espelhadas");
-    expect(prompt).toContain("arquivo de texto UTF-8 chamado app-piteco-glossario.txt");
+    expect(prompt).toContain("app-piteco-glossario.json");
+    expect(prompt).toContain("JSON puro e válido");
+    expect(prompt).toContain('"schema": "app-piteco-glossary"');
+    expect(prompt).toContain('"version": 2');
+    expect(prompt).toContain('"translated_text": "sou, estou"');
+    expect(prompt).toContain('"translated_text": "o que, qual"');
+    expect(prompt).toContain("não crie pares espelhados duplicados");
+    expect(prompt).toContain("Não use CSV, TXT, JSONL ou outro formato");
     expect(prompt).toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][A] I am at home.");
     expect(prompt).toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][B] Eu estou em casa.");
   });
 
   it("exports only the requested side", () => {
     const prompt = buildGlossaryAiPrompt(cards.slice(0, 1), "A");
+    expect(prompt).toContain('Use side = "A" em todas as entradas.');
     expect(prompt).toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][A] I am at home.");
     expect(prompt).not.toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][B]");
   });
