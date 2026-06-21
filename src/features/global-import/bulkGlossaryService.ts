@@ -18,6 +18,7 @@ interface ExistingGlossaryRow {
 
 const QUERY_CHUNK = 100;
 const INSERT_CHUNK = 250;
+const PAGE_SIZE = 1000;
 
 function chunks<T>(values: readonly T[], size: number): T[][] {
   const result: T[][] = [];
@@ -32,26 +33,40 @@ function uniqueEntries(entries: readonly GlossaryTransferEntry[]): GlossaryTrans
 }
 
 async function loadTargetListIds(request: BulkGlossaryRequest): Promise<string[]> {
-  let query = supabase
-    .from("lists")
-    .select("id")
-    .in("folder_id", request.folderIds)
-    .is("deleted_at", null);
-  if (request.turmaId) query = query.eq("class_id", request.turmaId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return Array.from(new Set((data ?? []).map((row) => row.id)));
+  const rows: Array<{ id: string }> = [];
+  let from = 0;
+  while (true) {
+    let query = supabase
+      .from("lists")
+      .select("id")
+      .in("folder_id", request.folderIds)
+      .is("deleted_at", null)
+      .range(from, from + PAGE_SIZE - 1);
+    if (request.turmaId) query = query.eq("class_id", request.turmaId);
+    const { data, error } = await query;
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if ((data?.length ?? 0) < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return Array.from(new Set(rows.map((row) => row.id)));
 }
 
 async function loadExisting(listIds: readonly string[]): Promise<ExistingGlossaryRow[]> {
   const rows: ExistingGlossaryRow[] = [];
   for (const listChunk of chunks(listIds, QUERY_CHUNK)) {
-    const { data, error } = await supabase
-      .from("list_glossary")
-      .select("id, list_id, original_text, translated_text, note, side, is_active")
-      .in("list_id", listChunk);
-    if (error) throw error;
-    rows.push(...((data ?? []) as ExistingGlossaryRow[]));
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from("list_glossary")
+        .select("id, list_id, original_text, translated_text, note, side, is_active")
+        .in("list_id", listChunk)
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      rows.push(...((data ?? []) as ExistingGlossaryRow[]));
+      if ((data?.length ?? 0) < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
   }
   return rows;
 }
@@ -77,9 +92,7 @@ async function buildPlan(request: BulkGlossaryRequest) {
         exactExisting += 1;
         continue;
       }
-      if (termLayers.has(`${listId}|${entry.side}|${normalizeGlossaryValue(entry.original_text)}`)) {
-        alternativeLayers += 1;
-      }
+      if (termLayers.has(`${listId}|${entry.side}|${normalizeGlossaryValue(entry.original_text)}`)) alternativeLayers += 1;
       inserts.push({ ...entry, list_id: listId });
     }
   }
