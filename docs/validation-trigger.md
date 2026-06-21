@@ -1,1 +1,0 @@
-clean theme validation

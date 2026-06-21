@@ -1,1 +1,0 @@
-Clean theme PR candidate.

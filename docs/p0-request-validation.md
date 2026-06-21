@@ -1,1 +1,0 @@
-The repair endpoint now validates method, JSON type, request size, action, identifiers, batch size and editable text length. Administrative logs no longer store flashcard text.

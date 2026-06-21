@@ -1,1 +1,0 @@
-Review clean theme system.
