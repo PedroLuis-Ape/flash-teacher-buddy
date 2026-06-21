@@ -33,9 +33,25 @@ export function getDidacticPronunciation(
   return ENGLISH_DIDACTIC_PRONUNCIATION[normalizeLookupWord(word)] ?? null;
 }
 
-function regularWordStep(word: string): DidacticSpeechStep {
+/**
+ * Some native voices announce isolated uppercase tokens as character names
+ * (for example, "capital I") instead of reading them as words. The didactic
+ * mode sends every token separately, so lexical one-letter words need an
+ * unambiguous spoken surrogate.
+ */
+function getSpokenWord(word: string, lang: string): string {
+  if (!lang.toLocaleLowerCase().startsWith("en")) return word;
+
+  const normalized = word.replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, "");
+  if (normalized === "I") return "eye";
+  if (normalized.toLocaleLowerCase("en-US") === "a") return "uh";
+
+  return word;
+}
+
+function regularWordStep(word: string, lang: string): DidacticSpeechStep {
   return {
-    text: word,
+    text: getSpokenWord(word, lang),
     rate: 0.72,
     pitch: 1,
     pauseAfterMs: 350,
@@ -51,9 +67,8 @@ export function buildDidacticSpeechPlan(
   text: string,
   lang: string,
 ): DidacticSpeechStep[] {
-  void lang;
   const words = segmentTextForTTS(text);
-  const plan = words.map(regularWordStep);
+  const plan = words.map((word) => regularWordStep(word, lang));
 
   if (plan.length > 0) {
     plan[plan.length - 1] = {

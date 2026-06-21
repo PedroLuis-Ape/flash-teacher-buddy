@@ -29,6 +29,24 @@ describe("didactic pronunciation", () => {
     expect(plan.some((step) => ["im", "port", "ent"].includes(step.text))).toBe(false);
   });
 
+  it("pronounces the English pronoun I as a word instead of a capital letter", () => {
+    const plan = buildDidacticSpeechPlan("I am at home", "en-US");
+
+    expect(plan.map((step) => step.text)).toEqual(["eye", "am", "at", "home"]);
+  });
+
+  it("pronounces the English article a as a word instead of a letter name", () => {
+    const plan = buildDidacticSpeechPlan("A good lesson", "en-US");
+
+    expect(plan.map((step) => step.text)).toEqual(["uh", "good", "lesson"]);
+  });
+
+  it("does not rewrite one-letter tokens in other languages", () => {
+    const plan = buildDidacticSpeechPlan("A casa", "pt-BR");
+
+    expect(plan.map((step) => step.text)).toEqual(["A", "casa"]);
+  });
+
   it("preserves word-by-word playback for ordinary words", () => {
     const plan = buildDidacticSpeechPlan("hello world", "en-US");
 
