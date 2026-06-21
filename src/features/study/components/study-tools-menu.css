@@ -35,8 +35,26 @@
 
 @media (max-width: 767px) {
   .study-tools-portal-slot {
-    min-height: 2.25rem;
-    margin-bottom: 0.375rem;
+    min-height: 2rem;
+    margin-bottom: 0.125rem;
+  }
+
+  /* Every game mode mounts its shared tools slot directly inside the mode root.
+     Compact only the vertical rhythm on mobile; card contents keep their own
+     responsive sizing and remain free to scroll when the content is genuinely long. */
+  .max-w-2xl:has(> .study-tools-portal-slot) {
+    gap: 0.75rem !important;
+  }
+}
+
+@media (max-width: 767px) and (max-height: 760px) {
+  .study-tools-portal-slot {
+    min-height: 1.75rem;
+    margin-bottom: 0;
+  }
+
+  .max-w-2xl:has(> .study-tools-portal-slot) {
+    gap: 0.5rem !important;
   }
 }
 
