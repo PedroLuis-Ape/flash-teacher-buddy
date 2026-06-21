@@ -1,15 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Gamepad2,
-  Layers3,
-  ListOrdered,
-  Mic,
-  Pencil,
-  RotateCcw,
-} from 'lucide-react';
+import { ArrowLeft, Gamepad2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,6 +15,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { normalizeDirection, type Direction } from '@/features/study/lib/gameCore';
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from '@/features/study/lib/studyMode';
+import {
+  GAME_MODE_VISUALS,
+  type GameModeVisualKey,
+} from '@/features/study/lib/gameModeVisuals';
+import { cn } from '@/lib/utils';
 
 interface PublicClassListMeta {
   list_id: string;
@@ -34,47 +31,45 @@ type StudyOrder = 'random' | 'sequential';
 
 const gameOptions: Array<{
   mode: StudyMode | 'multiple';
+  visualKey: GameModeVisualKey;
   title: string;
   description: string;
-  icon: typeof RotateCcw;
-  accent?: string;
 }> = [
   {
     mode: 'flip',
+    visualKey: 'flip',
     title: 'Virar Cartas',
     description: 'Revise os dois lados dos flashcards.',
-    icon: RotateCcw,
   },
   {
     mode: 'write',
+    visualKey: 'write',
     title: 'Escrever',
     description: 'Digite a resposta e confira na hora.',
-    icon: Pencil,
   },
   {
     mode: 'multiple',
+    visualKey: 'multiple',
     title: 'Múltipla Escolha',
     description: 'Escolha a alternativa correta.',
-    icon: ListOrdered,
   },
   {
     mode: 'unscramble',
+    visualKey: 'unscramble',
     title: 'Organizar Frase',
     description: 'Coloque as palavras na ordem correta.',
-    icon: Layers3,
   },
   {
     mode: 'mixed',
+    visualKey: 'mixed',
     title: 'Estudo Misto',
     description: 'Alterne entre diferentes desafios.',
-    icon: Gamepad2,
   },
   {
     mode: 'pronunciation',
+    visualKey: 'pronunciation',
     title: 'Pronúncia',
     description: 'Pratique falando em voz alta.',
-    icon: Mic,
-    accent: 'orange',
   },
 ];
 
@@ -148,22 +143,24 @@ export default function PublicClassGamesHub() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto max-w-6xl px-4 py-8">
-        <Button variant="ghost" onClick={() => navigate(backPath)} className="mb-6">
+      <main className="container mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-8">
+        <Button variant="ghost" size="sm" onClick={() => navigate(backPath)} className="mb-3 sm:mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar às listas
         </Button>
 
-        <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
-          <p className="text-sm font-medium text-primary">Área pública do aluno</p>
-          <h1 className="mt-1 text-3xl font-extrabold">Hub de jogos</h1>
+        <section className="mb-4 rounded-2xl border border-primary/25 bg-card/95 p-4 shadow-sm sm:mb-8 sm:p-8">
+          <p className="text-xs font-medium uppercase tracking-wide text-primary sm:text-sm sm:normal-case sm:tracking-normal">
+            Área pública do aluno
+          </p>
+          <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">Hub de jogos</h1>
           {listQuery.isLoading ? (
-            <Skeleton className="mt-3 h-5 w-64" />
+            <Skeleton className="mt-2 h-5 w-64" />
           ) : listQuery.data ? (
-            <div className="mt-3 max-w-3xl">
-              <h2 className="text-xl font-semibold">{listQuery.data.title}</h2>
+            <div className="mt-2 max-w-3xl sm:mt-3">
+              <h2 className="line-clamp-2 text-base font-semibold sm:text-xl">{listQuery.data.title}</h2>
               {listQuery.data.description && (
-                <p className="mt-1 text-muted-foreground">{listQuery.data.description}</p>
+                <p className="mt-1 hidden text-muted-foreground sm:block">{listQuery.data.description}</p>
               )}
             </div>
           ) : (
@@ -171,12 +168,12 @@ export default function PublicClassGamesHub() {
           )}
         </section>
 
-        <section className="space-y-6">
-          <div className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-2">
+        <section className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-2 gap-3 rounded-2xl border bg-card/95 p-3 shadow-sm sm:p-5">
             <div>
-              <label className="mb-2 block text-sm font-medium">Direção</label>
+              <label className="mb-1.5 block text-xs font-medium sm:mb-2 sm:text-sm">Direção</label>
               <Select value={direction} onValueChange={(value) => setDirection(normalizeDirection(value))}>
-                <SelectTrigger className="h-11">
+                <SelectTrigger className="h-10 sm:h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -188,9 +185,9 @@ export default function PublicClassGamesHub() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">Ordem</label>
+              <label className="mb-1.5 block text-xs font-medium sm:mb-2 sm:text-sm">Ordem</label>
               <Select value={order} onValueChange={(value) => setOrder(value as StudyOrder)}>
-                <SelectTrigger className="h-11">
+                <SelectTrigger className="h-10 sm:h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -202,40 +199,50 @@ export default function PublicClassGamesHub() {
           </div>
 
           <div>
-            <div className="mb-4">
-              <p className="text-sm font-medium text-primary">Escolha como jogar</p>
-              <h2 className="text-2xl font-bold">Modos disponíveis</h2>
+            <div className="mb-3 sm:mb-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-primary sm:text-sm sm:normal-case sm:tracking-normal">
+                Escolha como jogar
+              </p>
+              <h2 className="text-xl font-bold sm:text-2xl">Modos disponíveis</h2>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {gameOptions.map(({ mode, title, description, icon: Icon, accent }) => (
-                <button
-                  key={mode}
-                  type="button"
-                  disabled={!listQuery.data}
-                  onClick={() => startGame(mode)}
-                  className={[
-                    'group flex min-h-44 flex-col items-start justify-between rounded-2xl border bg-card p-5 text-left transition-all',
-                    'hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50',
-                    accent === 'orange' ? 'border-orange-500/30 bg-orange-500/5' : '',
-                  ].join(' ')}
-                >
-                  <div className={[
-                    'rounded-2xl p-3',
-                    accent === 'orange' ? 'bg-orange-500/10 text-orange-500' : 'bg-primary/10 text-primary',
-                  ].join(' ')}>
-                    <Icon className="h-7 w-7" />
-                  </div>
-                  <div className="mt-5">
-                    <h3 className="text-lg font-bold">{title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {gameOptions.map(({ mode, visualKey, title, description }) => {
+                const visual = GAME_MODE_VISUALS[visualKey];
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    disabled={!listQuery.data}
+                    onClick={() => startGame(mode)}
+                    className={cn(
+                      'group flex min-h-[116px] flex-col items-start justify-between rounded-2xl border p-3 text-left shadow-sm transition-all',
+                      'hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50',
+                      'sm:min-h-40 sm:p-5',
+                      visual.cardClass,
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'flex h-11 w-11 items-center justify-center rounded-2xl border text-2xl shadow-sm sm:h-13 sm:w-13 sm:text-3xl',
+                        visual.tileClass,
+                      )}
+                      aria-hidden="true"
+                      title={visual.emojiLabel}
+                    >
+                      {visual.emoji}
+                    </div>
+                    <div className="mt-3 min-w-0 sm:mt-5">
+                      <h3 className="text-sm font-bold leading-tight sm:text-lg">{title}</h3>
+                      <p className="mt-1 hidden text-sm text-muted-foreground sm:block">{description}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <Card className="p-4 text-sm text-muted-foreground">
+          <Card className="bg-card/95 p-4 text-sm text-muted-foreground shadow-sm">
             Você pode jogar sem conta. Uma conta é necessária apenas para sincronizar progresso, favoritos e histórico.
           </Card>
         </section>
