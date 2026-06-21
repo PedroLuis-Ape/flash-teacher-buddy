@@ -45,39 +45,66 @@ export function QuickLoginForm({ onSuccess, onCreateAccount }: QuickLoginFormPro
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full text-center">
       <div className="mb-5 text-center">
         <h2 className="text-2xl font-bold tracking-tight">Entrar na APE</h2>
         <p className="mt-2 text-sm text-muted-foreground">Acesse seus materiais e continue de onde parou.</p>
       </div>
 
-      <Button type="button" variant="outline" onClick={handleGoogle} disabled={loading} className="h-11 w-full gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleGoogle}
+        disabled={loading}
+        className="mx-auto h-11 min-w-[230px] justify-center gap-2"
+      >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />}
         Continuar com Google
       </Button>
 
-      <div className="my-4 flex items-center gap-3">
+      <div className="mx-auto my-4 flex max-w-sm items-center gap-3">
         <Separator className="flex-1" />
         <span className="text-xs text-muted-foreground">ou</span>
         <Separator className="flex-1" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="quick-login-email">E-mail</Label>
-          <Input id="quick-login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
+      <form onSubmit={handleSubmit} className="mx-auto max-w-sm space-y-4 text-center">
+        <div className="space-y-2 text-center">
+          <Label htmlFor="quick-login-email" className="block text-center">E-mail</Label>
+          <Input
+            id="quick-login-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            className="text-center"
+            required
+          />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="quick-login-password">Senha</Label>
-          <Input id="quick-login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
+        <div className="space-y-2 text-center">
+          <Label htmlFor="quick-login-password" className="block text-center">Senha</Label>
+          <Input
+            id="quick-login-password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            className="text-center"
+            required
+          />
         </div>
-        <Button type="submit" className="h-11 w-full" disabled={loading}>
+        <Button type="submit" className="mx-auto h-11 min-w-[150px] justify-center" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Entrar
         </Button>
       </form>
 
-      <Button type="button" variant="link" className="mt-2 h-auto w-full py-1 text-sm" onClick={onCreateAccount}>
+      <Button
+        type="button"
+        variant="link"
+        className="mx-auto mt-3 h-auto py-1 text-center text-sm"
+        onClick={onCreateAccount}
+      >
         Não tem conta? Criar uma
       </Button>
     </div>
