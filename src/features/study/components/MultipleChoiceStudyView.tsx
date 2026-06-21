@@ -25,7 +25,20 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
     <LazyWriteStudyView
       front={props.currentCard.term}
       back={props.currentCard.translation}
+      hint={props.currentCard.hint}
+      flashcardId={props.currentCard.id}
+      wordHintsA={props.currentCard.word_hints}
+      mergedHintsA={props.mergedHintsA}
+      mergedHintsB={props.mergedHintsB}
       direction={direction}
+      langA={props.langA}
+      langB={props.langB}
+      isFavorite={props.isFavorite}
+      isRedListed={props.isRedListed}
+      onToggleFavorite={props.onToggleFavorite}
+      onToggleRedList={props.onToggleRedList}
+      isSpecial={props.isSpecial}
+      onToggleSpecial={props.onToggleSpecial}
       onCorrect={props.onCorrect}
       onIncorrect={props.onIncorrect}
       onSkip={props.onIncorrect}
