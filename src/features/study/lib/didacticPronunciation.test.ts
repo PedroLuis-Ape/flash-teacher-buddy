@@ -31,7 +31,7 @@ describe("didactic pronunciation", () => {
       "chunk",
       "review",
     ]);
-    expect(plan.at(-1)?.pauseAfterMs).toBe(0);
+    expect(plan[plan.length - 1]?.pauseAfterMs).toBe(0);
   });
 
   it("keeps ordinary words separated while expanding difficult words in a phrase", () => {
