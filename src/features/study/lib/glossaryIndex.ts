@@ -1,4 +1,4 @@
-import { splitGlossaryAlternatives, type GlossaryItem } from "./glossaryMerge";
+import type { GlossaryItem } from "./glossaryMerge";
 
 export interface IndexedGlossaryMatch {
   matchText: string;
@@ -15,6 +15,16 @@ const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleL
 
 function firstToken(value: string) {
   return normalize(value).match(WORD_TOKEN_REGEX)?.[0] ?? normalize(value);
+}
+
+function splitAlternatives(value: string) {
+  const unique = new Map<string, string>();
+  value.split(/\s*[,;]\s*/u).forEach((part) => {
+    const clean = part.trim();
+    const key = normalize(clean);
+    if (clean && !unique.has(key)) unique.set(key, clean);
+  });
+  return Array.from(unique.values());
 }
 
 function addMatch(index: GlossaryIndex, side: "A" | "B", match: IndexedGlossaryMatch) {
@@ -41,7 +51,7 @@ export function buildGlossaryIndex(glossary: GlossaryItem[]): GlossaryIndex {
     });
 
     const reverseSide = entry.side === "A" ? "B" : "A";
-    for (const alternative of splitGlossaryAlternatives(entry.translated_text)) {
+    for (const alternative of splitAlternatives(entry.translated_text)) {
       addMatch(index, reverseSide, {
         matchText: alternative,
         translationText: entry.original_text,
