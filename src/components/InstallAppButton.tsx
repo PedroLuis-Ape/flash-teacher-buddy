@@ -90,6 +90,7 @@ export function InstallAppButton({ className, compact = false }: InstallAppButto
   }[platform];
 
   const GuideIcon = guide.icon;
+  const buttonText = installState.installed ? "Instalado" : installing ? "Abrindo…" : "Instalar app";
 
   return (
     <>
@@ -110,9 +111,14 @@ export function InstallAppButton({ className, compact = false }: InstallAppButto
         ) : (
           <Download className="h-4 w-4" />
         )}
-        <span className={compact ? "hidden sm:inline" : undefined}>
-          {installState.installed ? "Instalado" : installing ? "Abrindo…" : "Instalar app"}
-        </span>
+        {compact ? (
+          <>
+            <span className="sm:hidden">{installState.installed ? "Pronto" : installing ? "Abrindo…" : "Instalar"}</span>
+            <span className="hidden sm:inline">{buttonText}</span>
+          </>
+        ) : (
+          <span>{buttonText}</span>
+        )}
       </Button>
 
       <Dialog open={guideOpen} onOpenChange={setGuideOpen}>
