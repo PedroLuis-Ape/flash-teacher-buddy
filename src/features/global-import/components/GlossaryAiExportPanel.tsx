@@ -81,10 +81,10 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
       }
       const completePrompt = buildGlossaryAiPrompt(allCards, side);
       const date = new Date().toISOString().slice(0, 10);
-      downloadText(completePrompt, `app-piteco-todos-os-termos-${date}.txt`);
+      downloadText(completePrompt, `app-piteco-instrucoes-glossario-${date}.txt`);
       setCards(allCards);
       setSelected(new Set(allCards.map((card) => card.id)));
-      toast.success(`${allCards.length.toLocaleString("pt-BR")} card(s) exportado(s) em um único arquivo.`);
+      toast.success(`${allCards.length.toLocaleString("pt-BR")} card(s) exportado(s). A IA deve devolver app-piteco-glossario.json.`);
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível exportar todos os termos.");
     } finally {
@@ -122,19 +122,19 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
   const copy = async () => {
     if (chosen.length === 0) return toast.error("Selecione pelo menos um card.");
     await navigator.clipboard.writeText(prompt);
-    toast.success("Prompt completo copiado.");
+    toast.success("Prompt copiado. A resposta obrigatória é um arquivo JSON.");
   };
 
   const download = () => {
     if (chosen.length === 0) return toast.error("Selecione pelo menos um card.");
-    downloadText(prompt, `app-piteco-prompt-glossario-${new Date().toISOString().slice(0, 10)}.txt`);
+    downloadText(prompt, `app-piteco-instrucoes-glossario-selecao-${new Date().toISOString().slice(0, 10)}.txt`);
   };
 
   return <div className="space-y-5">
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div className="flex gap-3"><Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div>
-        <div className="font-medium">Gerar glossário com IA</div>
-        <p className="mt-1 text-sm text-muted-foreground">Depois de marcar as pastas, exporte todos os cards em um único arquivo para enviar ao ChatGPT. O arquivo já contém o prompt e o contrato de resposta do App Piteco.</p>
+        <div className="flex flex-wrap items-center gap-2"><span className="font-medium">Gerar glossário com IA</span><Badge variant="secondary">retorno obrigatório: JSON</Badge></div>
+        <p className="mt-1 text-sm text-muted-foreground">O aplicativo exporta um TXT com as instruções e todos os cards. Você envia esse TXT à IA, e ela deve devolver somente o arquivo <strong>app-piteco-glossario.json</strong>.</p>
       </div></div>
     </div>
 
@@ -152,7 +152,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
         </div>
       </div>
       {(loading || exportingAll) && <p className="text-sm text-muted-foreground">Lendo todos os cards, sem limite artificial: {loadedCount.toLocaleString("pt-BR")} carregado(s)...</p>}
-      <p className="text-xs leading-relaxed text-muted-foreground">“Exportar tudo para IA” não exige seleção manual: reúne todos os cards de todas as listas das pastas marcadas, mesmo que o arquivo fique muito longo.</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">“Exportar tudo para IA” reúne todos os cards das pastas marcadas. O TXT baixado é apenas a entrada para a IA; o resultado final deve ser JSON, não CSV nem TXT.</p>
     </div>
 
     {cards.length > 0 && <>
@@ -171,8 +171,8 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
         </div>
         {filtered.length > DISPLAY_LIMIT && <p className="text-xs text-muted-foreground">Mostrando {DISPLAY_LIMIT} de {filtered.length.toLocaleString("pt-BR")} resultados. Refine a busca para localizar termos específicos.</p>}
       </div>
-      <div className="space-y-2"><Label>Prompt da seleção atual</Label><Textarea value={prompt} readOnly className="min-h-[320px] font-mono text-xs sm:text-sm" /></div>
-      <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={chosen.length === 0}><Copy className="mr-2 h-4 w-4" />Copiar seleção</Button><Button onClick={download} disabled={chosen.length === 0}><Download className="mr-2 h-4 w-4" />Baixar seleção</Button></div>
+      <div className="space-y-2"><Label>Prompt da seleção atual — retorno em JSON</Label><Textarea value={prompt} readOnly className="min-h-[320px] font-mono text-xs sm:text-sm" /></div>
+      <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={chosen.length === 0}><Copy className="mr-2 h-4 w-4" />Copiar seleção</Button><Button onClick={download} disabled={chosen.length === 0}><Download className="mr-2 h-4 w-4" />Baixar instruções</Button></div>
     </>}
   </div>;
 }
