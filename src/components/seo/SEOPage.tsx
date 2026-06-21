@@ -37,7 +37,7 @@ export function SEOPage({
         </h1>
         <p className="mt-6 text-lg text-muted-foreground">{intro}</p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <AuthAwareCTA size="lg">Começar agora</AuthAwareCTA>
+          <AuthAwareCTA guestMode="signup" size="lg">Começar agora</AuthAwareCTA>
           <Button asChild size="lg" variant="outline">
             <Link to="/portal">Ver materiais públicos</Link>
           </Button>
@@ -61,7 +61,9 @@ export function SEOPage({
         <section className="max-w-3xl mx-auto px-4 md:px-6 py-16 text-center w-full">
           <h2 className="text-2xl md:text-3xl font-bold mb-3">{finalCta.title}</h2>
           <p className="text-muted-foreground mb-6">{finalCta.text}</p>
-          <AuthAwareCTA size="lg">{finalCta.buttonLabel ?? "Criar acesso"}</AuthAwareCTA>
+          <AuthAwareCTA guestMode="signup" size="lg">
+            {finalCta.buttonLabel ?? "Criar acesso"}
+          </AuthAwareCTA>
         </section>
       )}
 
