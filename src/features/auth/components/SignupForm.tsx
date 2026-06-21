@@ -1,0 +1,166 @@
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+interface SignupFormProps {
+  onSuccess?: () => void;
+  onLogin?: () => void;
+}
+
+export function SignupForm({ onSuccess, onLogin }: SignupFormProps) {
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [isProfessor, setIsProfessor] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isProfessor || username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setCheckingUsername(true);
+      const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, "");
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("public_slug")
+        .eq("public_slug", cleanUsername)
+        .maybeSingle();
+
+      setUsernameAvailable(!data && !error);
+      setCheckingUsername(false);
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [username, isProfessor]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isProfessor && username.length < 3) {
+      toast.error("O username deve ter pelo menos 3 caracteres.");
+      return;
+    }
+    if (isProfessor && usernameAvailable === false) {
+      toast.error("Este username já está em uso.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      if (error) throw error;
+
+      if (!data.user) throw new Error("Não foi possível criar a conta.");
+
+      const cleanUsername = isProfessor
+        ? username.toLowerCase().replace(/[^a-z0-9_]/g, "")
+        : null;
+
+      const { error: profileError } = await supabase.rpc("update_own_profile", {
+        p_user_id: data.user.id,
+        p_first_name: firstName,
+        p_public_slug: cleanUsername,
+        p_public_access_enabled: isProfessor,
+        p_is_teacher: isProfessor,
+        p_user_type: isProfessor ? "professor" : "aluno",
+      });
+      if (profileError) throw profileError;
+
+      const { error: roleError } = await supabase.from("user_roles").insert({
+        user_id: data.user.id,
+        role: "student",
+      });
+      if (roleError && roleError.code !== "23505" && !roleError.message?.includes("duplicate")) {
+        console.error("Erro ao criar role:", roleError);
+      }
+
+      if (data.session) {
+        toast.success("Conta criada com sucesso!");
+        onSuccess?.();
+      } else {
+        toast.success("Conta criada. Confira seu e-mail para confirmar o acesso.");
+        onLogin?.();
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Não foi possível criar a conta.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full">
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Criar sua conta</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Escolha seu perfil e comece a estudar ou ensinar.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="signup-name">Nome</Label>
+          <Input id="signup-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} autoComplete="name" required />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tipo de conta</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant={isProfessor ? "outline" : "default"} onClick={() => setIsProfessor(false)}>Aluno</Button>
+            <Button type="button" variant={isProfessor ? "default" : "outline"} onClick={() => setIsProfessor(true)}>Professor</Button>
+          </div>
+        </div>
+
+        {isProfessor && (
+          <div className="space-y-2">
+            <Label htmlFor="signup-username">Username público</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+              <Input id="signup-username" value={username} onChange={(event) => setUsername(event.target.value)} className="pl-8" minLength={3} autoComplete="username" required />
+            </div>
+            {username.length >= 3 && (
+              <p className={cn("text-xs", checkingUsername ? "text-muted-foreground" : usernameAvailable ? "text-emerald-600" : "text-destructive")}>
+                {checkingUsername ? "Verificando..." : usernameAvailable ? "Disponível" : "Já está em uso"}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="signup-email">E-mail</Label>
+          <Input id="signup-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="signup-password">Senha</Label>
+          <Input id="signup-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" minLength={6} required />
+          <p className="text-xs text-muted-foreground">Use pelo menos 6 caracteres.</p>
+        </div>
+
+        <Button type="submit" className="h-11 w-full" disabled={loading}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {loading ? "Criando conta..." : "Criar conta"}
+        </Button>
+
+        <Button type="button" variant="link" className="h-auto w-full py-1 text-sm" onClick={onLogin} disabled={loading}>
+          Já tem uma conta? Entrar
+        </Button>
+      </form>
+    </div>
+  );
+}
