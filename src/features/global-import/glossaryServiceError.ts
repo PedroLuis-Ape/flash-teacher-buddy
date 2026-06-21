@@ -21,7 +21,6 @@ export function isMissingGlossaryRpcError(error: unknown) {
   const text = rawErrorText(error);
   const code = typeof error === "object" && error ? String((error as SupabaseLikeError).code ?? "") : "";
   return code === "PGRST202"
-    || text.includes("schema cache")
     || text.includes("could not find the function")
     || text.includes("import_account_glossary_v1");
 }
@@ -29,23 +28,32 @@ export function isMissingGlossaryRpcError(error: unknown) {
 export function isMissingGlossaryTableError(error: unknown) {
   const text = rawErrorText(error);
   const code = typeof error === "object" && error ? String((error as SupabaseLikeError).code ?? "") : "";
+  const explicitlyNamesMissingTable =
+    text.includes("could not find the table") && text.includes("account_glossary");
+  const explicitlyNamesMissingRelation =
+    text.includes("relation") && text.includes("account_glossary") && text.includes("does not exist");
+
   return code === "PGRST205"
     || code === "42P01"
-    || text.includes("account_glossary") && (text.includes("does not exist") || text.includes("schema cache"));
+    || explicitlyNamesMissingTable
+    || explicitlyNamesMissingRelation;
 }
 
 export function glossaryServiceMessage(error: unknown, action: GlossaryServiceAction) {
   const value = (error ?? {}) as SupabaseLikeError;
   const text = rawErrorText(error);
 
+  // A missing table can also mention the generic PostgREST "schema cache".
+  // Check the more specific table condition first so it is not mislabeled as
+  // a missing RPC/function deployment.
+  if (isMissingGlossaryTableError(error)) {
+    return "A Caixa de Glossário não existe no Supabase conectado. O aplicativo e as migrations podem estar apontando para projetos diferentes.";
+  }
+
   if (isMissingGlossaryRpcError(error)) {
     return action === "analisar"
       ? "O arquivo foi validado, mas o serviço de análise ainda não foi reconhecido pelo Supabase. O App Piteco tentará a análise segura diretamente na Caixa de Glossário."
       : "O arquivo foi validado, mas a função de importação não está disponível no banco conectado. Verifique se as migrations da Caixa de Glossário foram publicadas neste mesmo ambiente.";
-  }
-
-  if (isMissingGlossaryTableError(error)) {
-    return "A Caixa de Glossário não existe no Supabase conectado. O aplicativo e as migrations podem estar apontando para projetos diferentes.";
   }
 
   if (value.status === 401 || value.status === 403 || value.code === "42501" || text.includes("jwt") || text.includes("permission")) {
