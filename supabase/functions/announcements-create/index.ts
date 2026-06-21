@@ -205,9 +205,40 @@ Deno.serve(async (req) => {
     let recipientIds: string[] = [];
 
     if (mode === 'direct_assignment') {
-      // Direct assignment mode: only selected students
-      recipientIds = target_student_ids;
-      console.log('[announcements-create] Direct assignment mode - recipients:', recipientIds.length);
+      // Direct assignment mode: only selected students, but validate membership
+      const { data: validMembros } = await supabaseAdmin
+        .from('turma_membros')
+        .select('user_id')
+        .eq('turma_id', class_id)
+        .eq('ativo', true)
+        .in('user_id', target_student_ids);
+
+      let validIds = (validMembros ?? []).map((m: { user_id: string }) => m.user_id);
+
+      // Fallback to legacy class_members
+      if (validIds.length === 0) {
+        const { data: validClassMembers } = await supabaseAdmin
+          .from('class_members')
+          .select('user_id')
+          .eq('class_id', class_id)
+          .eq('status', 'active')
+          .in('user_id', target_student_ids);
+        validIds = (validClassMembers ?? []).map((m: { user_id: string }) => m.user_id);
+      }
+
+      if (validIds.length !== target_student_ids.length) {
+        console.error('[announcements-create] Invalid recipients detected', {
+          requested: target_student_ids.length,
+          valid: validIds.length,
+        });
+        return new Response(
+          JSON.stringify({ error: 'Um ou mais alunos selecionados não pertencem a esta turma.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      recipientIds = validIds.filter((id) => id !== user.id);
+      console.log('[announcements-create] Direct assignment mode - validated recipients:', recipientIds.length);
     } else {
       // General mode: all students in the turma
       const { data: turmaMembros, error: membrosError } = await supabaseAdmin

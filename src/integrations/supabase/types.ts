@@ -192,13 +192,6 @@ export type Database = {
             foreignKeyName: "atribuicoes_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
-            referencedRelation: "public_turmas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "atribuicoes_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id"]
           },
@@ -235,13 +228,6 @@ export type Database = {
             columns: ["atribuicao_id"]
             isOneToOne: false
             referencedRelation: "atribuicoes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "atribuicoes_status_atribuicao_id_fkey"
-            columns: ["atribuicao_id"]
-            isOneToOne: false
-            referencedRelation: "public_turma_atribuicoes"
             referencedColumns: ["id"]
           },
         ]
@@ -411,13 +397,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "class_goals_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "public_turmas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "class_goals_turma_id_fkey"
             columns: ["turma_id"]
@@ -661,13 +640,6 @@ export type Database = {
             foreignKeyName: "dms_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
-            referencedRelation: "public_turmas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dms_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id"]
           },
@@ -776,13 +748,6 @@ export type Database = {
             columns: ["flashcard_id"]
             isOneToOne: false
             referencedRelation: "flashcards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "flashcard_progress_flashcard_id_fkey"
-            columns: ["flashcard_id"]
-            isOneToOne: false
-            referencedRelation: "public_turma_flashcards"
             referencedColumns: ["id"]
           },
           {
@@ -911,13 +876,6 @@ export type Database = {
             columns: ["parent_card_id"]
             isOneToOne: false
             referencedRelation: "flashcards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "flashcards_parent_card_id_fkey"
-            columns: ["parent_card_id"]
-            isOneToOne: false
-            referencedRelation: "public_turma_flashcards"
             referencedColumns: ["id"]
           },
         ]
@@ -1526,13 +1484,6 @@ export type Database = {
           turma_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "mensagens_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "public_turmas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "mensagens_turma_id_fkey"
             columns: ["turma_id"]
@@ -2281,13 +2232,6 @@ export type Database = {
             foreignKeyName: "turma_membros_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
-            referencedRelation: "public_turmas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "turma_membros_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
             referencedRelation: "turmas"
             referencedColumns: ["id"]
           },
@@ -2333,13 +2277,6 @@ export type Database = {
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "turma_student_activity_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "public_turmas"
             referencedColumns: ["id"]
           },
           {
@@ -2441,13 +2378,6 @@ export type Database = {
             columns: ["flashcard_id"]
             isOneToOne: false
             referencedRelation: "flashcards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_favorites_flashcard_id_fkey"
-            columns: ["flashcard_id"]
-            isOneToOne: false
-            referencedRelation: "public_turma_flashcards"
             referencedColumns: ["id"]
           },
         ]
@@ -2687,13 +2617,6 @@ export type Database = {
             referencedRelation: "flashcards"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "user_red_list_flashcard_id_fkey"
-            columns: ["flashcard_id"]
-            isOneToOne: false
-            referencedRelation: "public_turma_flashcards"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -2748,13 +2671,6 @@ export type Database = {
             columns: ["flashcard_id"]
             isOneToOne: false
             referencedRelation: "flashcards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_special_flashcards_flashcard_id_fkey"
-            columns: ["flashcard_id"]
-            isOneToOne: false
-            referencedRelation: "public_turma_flashcards"
             referencedColumns: ["id"]
           },
           {
@@ -2839,22 +2755,7 @@ export type Database = {
           titulo: string | null
           turma_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "atribuicoes_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "public_turmas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "atribuicoes_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       public_turma_flashcards: {
         Row: {
@@ -2927,6 +2828,13 @@ export type Database = {
       claim_gift_atomic: {
         Args: { p_gift_id: string; p_user_id: string }
         Returns: Json
+      }
+      create_class_folder_with_assignment: {
+        Args: { _description?: string; _title: string; _turma_id: string }
+        Returns: {
+          assignment_id: string
+          folder_id: string
+        }[]
       }
       create_notification: {
         Args: {
@@ -3238,6 +3146,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_app_piteco_super_package_to_class_v1: {
+        Args: {
+          _card_conflict?: string
+          _destination_plan: Json
+          _payload: Json
+          _request_id: string
+          _turma_id: string
+        }
+        Returns: Json
+      }
       import_app_piteco_super_package_v1: {
         Args: {
           _card_conflict?: string
@@ -3306,6 +3224,60 @@ export type Database = {
           p_skin_id: string
         }
         Returns: Json
+      }
+      public_turma_atribuicoes_rows: {
+        Args: never
+        Returns: {
+          card_count: number
+          created_at: string
+          descricao: string
+          fonte_tipo: string
+          id: string
+          order_index: number
+          titulo: string
+          turma_id: string
+        }[]
+      }
+      public_turma_flashcards_rows: {
+        Args: never
+        Returns: {
+          atribuicao_id: string
+          audio_url: string
+          created_at: string
+          detailed_explanation: string
+          example_text: string
+          example_translation: string
+          hint: string
+          id: string
+          image_url_a: string
+          image_url_b: string
+          list_id: string
+          short_explanation: string
+          term: string
+          translation: string
+          turma_id: string
+        }[]
+      }
+      public_turma_lists_rows: {
+        Args: never
+        Returns: {
+          atribuicao_id: string
+          description: string
+          list_id: string
+          order_index: number
+          title: string
+          turma_id: string
+        }[]
+      }
+      public_turmas_rows: {
+        Args: never
+        Returns: {
+          created_at: string
+          descricao: string
+          id: string
+          nome: string
+          teacher_name: string
+        }[]
       }
       publish_skin_to_store: { Args: { p_skin_id: string }; Returns: Json }
       purge_expired_trash: { Args: never; Returns: Json }
@@ -3411,6 +3383,10 @@ export type Database = {
       }
       swap_flashcards_sides: { Args: { _list_id: string }; Returns: Json }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
+      undo_classroom_global_import_v1: {
+        Args: { _batch_id: string }
+        Returns: undefined
+      }
       undo_global_import_v1: { Args: { _batch_id: string }; Returns: Json }
       unmerge_flashcard_from_group: {
         Args: { p_card_id: string }
