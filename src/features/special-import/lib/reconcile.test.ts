@@ -3,7 +3,7 @@ import { parseSpecialImportText, reconcileSpecialImport } from "./parser";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
-const manifest: import("./protocol").StoredSpecialExportManifest = {
+const manifest: import("./protocolPolicy").StoredSpecialExportManifest = {
   format: "ape-special-cards",
   schema_version: 2,
   export_id: "exp_test_b01",
