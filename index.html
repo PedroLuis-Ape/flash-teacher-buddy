@@ -2,8 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
-    <!-- Canonicalize the apex domain before storage, authentication, or app boot. -->
     <script>
       if (window.location.hostname === "apeeducation.org") {
         window.location.replace(
@@ -24,52 +22,37 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/branding/icon.png" />
     <link rel="shortcut icon" href="/favicon.png" type="image/png" />
 
-    <!-- PWA temporarily disabled to stabilize boot and flush stale caches.
-         Do NOT re-enable the manifest link or standalone meta tags until
-         the controlled PWA path is fully restored. -->
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-mobile.webp" media="(orientation: portrait) and (max-width: 767px)" />
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-tablet.webp" media="(orientation: portrait) and (min-width: 768px)" />
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-ultrawide.webp" media="(orientation: landscape) and (min-width: 1400px) and (min-aspect-ratio: 2/1)" />
+    <link rel="preload" as="image" type="image/webp" href="/branding/splash-desktop.webp" media="(orientation: landscape) and (max-aspect-ratio: 2/1)" />
 
-    <!-- Preload splash images so they appear instantly -->
-    <link rel="preload" as="image" href="/branding/splash-mobile.png" media="(max-width: 767px)" />
-    <link rel="preload" as="image" href="/branding/splash-desktop.png" media="(min-width: 768px)" />
-
-    <!-- Force the HTML shell to always be revalidated.
-         Hashed JS/CSS assets in /assets are immutable, but the shell must
-         never be served stale (especially for installed shortcuts on mobile). -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    
-    <!-- Aplicar tema antes do React renderizar -->
     <script>
       (function() {
         try {
-          // Aplicar tema salvo ou padrão
           var theme = localStorage.getItem('theme') || 'dark';
           document.documentElement.classList.add(theme);
-          
-          // Aplicar background sólido imediatamente
-          document.documentElement.style.backgroundColor = 
+          document.documentElement.style.backgroundColor =
             theme === 'dark' ? 'hsl(224 71% 4%)' : 'hsl(0 0% 100%)';
         } catch (e) {
-          // Fallback para tema escuro
           document.documentElement.classList.add('dark');
           document.documentElement.style.backgroundColor = 'hsl(224 71% 4%)';
         }
       })();
     </script>
-    <!-- Google Fonts: Nunito (preconnect + swap) -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    
+
     <meta name="description" content="APE: flashcards e estudo ativo para alunos e professores. Crie coleções, turmas e pratique com modos interativos." />
     <meta name="author" content="APE Education" />
     <link rel="canonical" href="https://www.apeeducation.org/" />
-
-    <!-- PWA temporarily disabled to flush stale caches -->
     <meta name="theme-color" content="#3a0d6b" />
-
     <meta property="og:title" content="APE — Flashcards e Estudo Ativo" />
     <meta property="og:description" content="Crie coleções de flashcards, monte turmas e estude com modos interativos. Para alunos e professores." />
     <meta property="og:locale" content="pt_BR" />
@@ -77,7 +60,6 @@
     <meta property="og:url" content="https://www.apeeducation.org/" />
     <meta property="og:site_name" content="APE" />
     <meta property="og:image" content="https://www.apeeducation.org/branding/icon.png" />
-
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="APE — Flashcards e Estudo Ativo" />
     <meta name="twitter:description" content="Crie coleções de flashcards, monte turmas e estude com modos interativos. Para alunos e professores." />
@@ -110,174 +92,143 @@
         }
       }
     </script>
-    
-    <!-- Puter.js for better TTS (async to never block boot) -->
     <script src="https://js.puter.com/v2/" async></script>
   </head>
 
   <body>
     <div id="root"></div>
 
-    <!-- Boot loader — sits OUTSIDE #root so React's mount does not wipe it.
-         It is dismissed explicitly by src/main.tsx after the minimum
-         splash duration AND after React commits its first paint. -->
     <div id="boot-loader" aria-hidden="true">
       <picture>
-        <source media="(min-width: 768px)" srcset="/branding/splash-desktop.png" />
-        <img src="/branding/splash-mobile.png" alt="APE" id="boot-loader-img" />
+        <source media="(orientation: landscape) and (min-width: 1400px) and (min-aspect-ratio: 2/1)" srcset="/branding/splash-ultrawide.webp" />
+        <source media="(orientation: portrait) and (min-width: 768px)" srcset="/branding/splash-tablet.webp" />
+        <source media="(orientation: portrait) and (max-width: 767px)" srcset="/branding/splash-mobile.webp" />
+        <img src="/branding/splash-desktop.webp" alt="" id="boot-loader-img" fetchpriority="high" decoding="async" draggable="false" />
       </picture>
-      <!-- Progress UI overlay (always visible, sits above artwork) -->
-      <div id="boot-progress" role="progressbar" aria-label="Carregando APE" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <div id="boot-progress-track">
-          <div id="boot-progress-bar"></div>
-        </div>
-        <p id="boot-progress-label">Inicializando APE…</p>
+
+      <div id="boot-status" role="status" aria-live="polite" aria-label="Carregando APE">
+        <span id="boot-status-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span id="boot-progress-label">Preparando seu estudo…</span>
       </div>
     </div>
+
     <style>
-        #boot-loader{
-          position:fixed;inset:0;z-index:99999;
-          background:#3a0d6b;
-          opacity:1;transition:opacity .5s ease-out;
-          overflow:hidden;
-          width:100vw;height:100vh;min-width:100vw;min-height:100vh;
-          margin:0;padding:0;
-        }
-        @supports (height: 100dvh){
-          #boot-loader{height:100dvh;min-height:100dvh;}
-        }
-        #boot-loader.boot-loader--hide{opacity:0;pointer-events:none;}
-        #boot-loader picture{
-          position:absolute;inset:0;display:block;
-          width:100%;height:100%;
-        }
-        #boot-loader-img{
-          position:absolute;inset:0;
-          width:100vw;height:100vh;
-          min-width:100vw;min-height:100vh;
-          object-fit:cover;object-position:center center;
-          display:block;user-select:none;-webkit-user-drag:none;
-        }
-        @supports (height: 100dvh){
-          #boot-loader-img{height:100dvh;min-height:100dvh;}
-        }
-        /* Cover on every viewport — slight crop is acceptable, banding is not. */
-        /* Progress bar — premium dark, sits at the bottom over the artwork */
-        #boot-progress{
-          position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
-          width:min(360px,72vw);
-          display:flex;flex-direction:column;align-items:center;gap:10px;
-          font-family:Nunito,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-          pointer-events:none;
-        }
-        @media (min-width: 768px){
-          #boot-progress{bottom:10%;width:min(420px,40vw);}
-        }
-        #boot-progress-track{
-          width:100%;height:6px;border-radius:999px;
-          background:rgba(255,255,255,0.14);
-          box-shadow:inset 0 1px 2px rgba(0,0,0,0.25);
-          overflow:hidden;
-        }
-        #boot-progress-bar{
-          width:0%;height:100%;border-radius:999px;
-          background:linear-gradient(90deg,#FFD700 0%,#ffb347 50%,#ff7ad9 100%);
-          box-shadow:0 0 12px rgba(255,215,0,0.45);
-          transition:width .35s ease-out;
-        }
-        #boot-progress-label{
-          margin:0;font-size:12px;letter-spacing:0.04em;
-          color:rgba(255,255,255,0.78);text-shadow:0 1px 2px rgba(0,0,0,0.4);
-        }
-        @media (prefers-reduced-motion: reduce){
-          #boot-progress-bar{transition:none;}
-          #boot-loader{transition:none;}
-        }
+      #boot-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        width: 100vw;
+        height: 100vh;
+        min-width: 100vw;
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #12002f;
+        opacity: 1;
+        transition: opacity 260ms ease-out;
+      }
+      @supports (height: 100dvh) {
+        #boot-loader { height: 100dvh; min-height: 100dvh; }
+      }
+      #boot-loader.boot-loader--hide { opacity: 0; pointer-events: none; }
+      #boot-loader picture {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      #boot-loader-img {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        min-width: 100vw;
+        min-height: 100vh;
+        object-fit: cover;
+        object-position: center center;
+        user-select: none;
+        -webkit-user-drag: none;
+        animation: boot-image-in 180ms ease-out both;
+      }
+      @supports (height: 100dvh) {
+        #boot-loader-img { height: 100dvh; min-height: 100dvh; }
+      }
+      #boot-status {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0px) + 14px);
+        left: 50%;
+        z-index: 2;
+        display: inline-flex;
+        max-width: calc(100vw - 28px);
+        min-height: 40px;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border: 1px solid rgba(190, 112, 255, 0.42);
+        border-radius: 999px;
+        background: rgba(15, 5, 42, 0.82);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), 0 0 22px rgba(164, 73, 255, 0.16);
+        color: rgba(255, 255, 255, 0.94);
+        font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(-50%, -8px);
+        transition: opacity 180ms ease-out, transform 180ms ease-out;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      #boot-status.boot-status--visible { opacity: 1; transform: translate(-50%, 0); }
+      #boot-status-dots { display: inline-flex; align-items: center; gap: 3px; }
+      #boot-status-dots i {
+        display: block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #f2c94c;
+        box-shadow: 0 0 8px rgba(242, 201, 76, 0.7);
+        animation: boot-dot-pulse 900ms ease-in-out infinite;
+      }
+      #boot-status-dots i:nth-child(2) { animation-delay: 140ms; }
+      #boot-status-dots i:nth-child(3) { animation-delay: 280ms; }
+      @keyframes boot-image-in {
+        from { opacity: 0.88; }
+        to { opacity: 1; }
+      }
+      @keyframes boot-dot-pulse {
+        0%, 100% { opacity: 0.38; transform: translateY(0) scale(0.86); }
+        50% { opacity: 1; transform: translateY(-2px) scale(1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-loader, #boot-status, #boot-loader-img { transition: none; animation: none; }
+        #boot-status-dots i { animation: none; opacity: 0.85; }
+      }
     </style>
+
     <noscript><p style="text-align:center;padding:40px;color:#ccc;font-family:sans-serif;">JavaScript é necessário para usar o APE.</p></noscript>
 
-    <!-- Mark splash start time so React can enforce a minimum display window -->
     <script>
       window.__apeSplashStart = Date.now();
-      window.__APE_SPLASH_MIN_MS = 3000; // minimum visible duration
-      window.__APE_SPLASH_MAX_MS = 5000; // soft target ceiling
-      // ── Hybrid progress bar controller ───────────────────────────────
-      // Progress is driven by REAL milestones emitted by the app
-      // (window.__apeBootProgress(value, label?)). To avoid the bar
-      // sitting at 0% if the bundle is slow, a soft auto-creep pushes
-      // it gently toward 85%. The final 100% is ALWAYS triggered by
-      // the app, never by the timer — preventing a fake "ready" state.
-      (function(){
-        var bar = null, label = null, root = null;
-        var current = 0;          // 0..100
-        var target  = 8;          // start with a tiny visible nudge
-        var softCap = 85;         // creep ceiling until app confirms ready
-        var lastPaint = 0;
-        function el(){
-          if (!bar)   bar   = document.getElementById('boot-progress-bar');
-          if (!label) label = document.getElementById('boot-progress-label');
-          if (!root)  root  = document.getElementById('boot-progress');
-        }
-        function paint(){
-          el(); if (!bar || !root) return;
-          if (Math.abs(current - lastPaint) < 0.5 && current !== 100) return;
-          bar.style.width = current.toFixed(1) + '%';
-          root.setAttribute('aria-valuenow', String(Math.round(current)));
-          lastPaint = current;
-        }
-        // Soft creep — only moves forward, never past softCap unless
-        // the app explicitly raises the target.
-        var creep = setInterval(function(){
-          var ceiling = Math.min(target, softCap);
-          if (current < ceiling){
-            // Ease-out: bigger steps when far from the ceiling.
-            var step = Math.max(0.4, (ceiling - current) * 0.06);
-            current = Math.min(ceiling, current + step);
-            paint();
-          }
-        }, 90);
-        // Public API used by src/main.tsx to report real milestones.
-        window.__apeBootProgress = function(value, msg){
-          if (typeof value === 'number'){
-            target = Math.max(target, Math.min(100, value));
-            // When app says 100, jump bar straight to 100 and stop creep.
-            if (value >= 100){
-              current = 100; paint();
-              clearInterval(creep);
-            }
-          }
-          if (msg && label){ el(); label && (label.textContent = msg); }
+      window.__APE_SPLASH_MIN_MS = 350;
+      window.__APE_SPLASH_MAX_MS = 5000;
+
+      (function() {
+        var statusTimer = window.setTimeout(function() {
+          var status = document.getElementById('boot-status');
+          if (status) status.classList.add('boot-status--visible');
+        }, 420);
+        window.__apeBootStatusTimer = statusTimer;
+        window.__apeBootProgress = function(_value, message) {
+          if (!message) return;
+          var label = document.getElementById('boot-progress-label');
+          if (label) label.textContent = message;
         };
-        // Stop creeping if the loader is already gone (defensive).
-        var watchdog = setInterval(function(){
-          if (!document.getElementById('boot-loader')) {
-            clearInterval(creep); clearInterval(watchdog);
-          }
-        }, 500);
-      })();
-      (function(){
-        var t = setTimeout(function(){
-          var bl = document.getElementById('boot-loader');
-          if (!bl) return; // App mounted fine and removed the splash
-          // App still hasn't mounted after 10s — show recovery UI on top of splash
-          var rec = document.createElement('div');
-          rec.style.cssText = 'position:absolute;left:50%;bottom:8%;transform:translateX(-50%);text-align:center;font-family:system-ui,-apple-system,sans-serif;';
-          rec.innerHTML = '<p style="color:#fff;font-size:14px;margin:0 0 12px;">Falha ao iniciar o app.</p><button id="boot-recover" style="padding:10px 20px;border:none;border-radius:8px;background:#FFD700;color:#1a1a2e;font-weight:600;font-size:14px;cursor:pointer;">Limpar cache e recarregar</button>';
-          bl.appendChild(rec);
-          var btn = document.getElementById('boot-recover');
-          if (btn) btn.onclick = async function(){
-              try {
-                var authKeys=[];
-                for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith('sb-'))authKeys.push([k,localStorage.getItem(k)])}
-                if('serviceWorker' in navigator){var regs=await navigator.serviceWorker.getRegistrations();await Promise.allSettled(regs.map(function(sw){return sw.unregister()}))}
-                if('caches' in window){var names=await caches.keys();await Promise.allSettled(names.map(function(k){return caches.delete(k)}))}
-                localStorage.clear(); sessionStorage.clear();
-                authKeys.forEach(function(p){localStorage.setItem(p[0],p[1])});
-              } catch(e){}
-              window.location.href=window.location.origin+'/?t='+Date.now();
-            };
-        }, 10000);
-        window.__apeBootTimer = t;
       })();
     </script>
 
