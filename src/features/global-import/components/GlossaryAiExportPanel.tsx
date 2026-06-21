@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Download, Loader2, Search, Sparkles } from "lucide-react";
+import { Copy, Download, FileDown, Loader2, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,30 +21,84 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
   const [side, setSide] = useState<GlossarySourceSide>("both");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
+  const [loadedCount, setLoadedCount] = useState(0);
   const folderKey = useMemo(() => [...folderIds].sort().join("|"), [folderIds]);
   const folderSet = useMemo(() => new Set(folderIds), [folderIds]);
   const lists = useMemo(() => (catalog?.lists ?? []).filter((list) => folderSet.has(list.folder_id)), [catalog, folderSet]);
   const listMap = useMemo(() => new Map((catalog?.lists ?? []).map((list) => [list.id, list])), [catalog]);
   const folderMap = useMemo(() => new Map((catalog?.folders ?? []).map((folder) => [folder.id, folder])), [catalog]);
 
-  useEffect(() => { setCards([]); setSelected(new Set()); setSearch(""); }, [folderKey]);
+  useEffect(() => {
+    setCards([]);
+    setSelected(new Set());
+    setSearch("");
+    setLoadedCount(0);
+  }, [folderKey]);
 
   const filtered = useMemo(() => filterGlossarySourceCards(cards, search), [cards, search]);
   const chosen = useMemo(() => cards.filter((card) => selected.has(card.id)), [cards, selected]);
   const prompt = useMemo(() => buildGlossaryAiPrompt(chosen, side), [chosen, side]);
   const allFiltered = filtered.length > 0 && filtered.every((card) => selected.has(card.id));
 
-  const load = async () => {
-    if (folderIds.length === 0) return toast.error("Selecione pelo menos uma pasta.");
-    if (lists.length === 0) return toast.error("As pastas selecionadas não possuem listas.");
-    setLoading(true);
+  const enrich = (rows: GlossarySourceCard[]) => rows.map((card) => {
+    const list = listMap.get(card.list_id);
+    const folder = list ? folderMap.get(list.folder_id) : undefined;
+    return { ...card, list_title: list?.title, folder_title: folder?.title };
+  });
+
+  const validateFolders = () => {
+    if (folderIds.length === 0) {
+      toast.error("Selecione pelo menos uma pasta.");
+      return false;
+    }
+    if (lists.length === 0) {
+      toast.error("As pastas selecionadas não possuem listas.");
+      return false;
+    }
+    return true;
+  };
+
+  const downloadText = (content: string, filename: string) => {
+    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAll = async () => {
+    if (!validateFolders()) return;
+    setExportingAll(true);
+    setLoadedCount(0);
     try {
-      const rows = await loadGlossarySourceCards(lists.map((list) => list.id));
-      const enriched = rows.map((card) => {
-        const list = listMap.get(card.list_id);
-        const folder = list ? folderMap.get(list.folder_id) : undefined;
-        return { ...card, list_title: list?.title, folder_title: folder?.title };
-      });
+      const rows = await loadGlossarySourceCards(lists.map((list) => list.id), setLoadedCount);
+      const allCards = enrich(rows);
+      if (allCards.length === 0) {
+        toast.error("Nenhum card foi encontrado nas pastas selecionadas.");
+        return;
+      }
+      const completePrompt = buildGlossaryAiPrompt(allCards, side);
+      const date = new Date().toISOString().slice(0, 10);
+      downloadText(completePrompt, `app-piteco-todos-os-termos-${date}.txt`);
+      setCards(allCards);
+      setSelected(new Set(allCards.map((card) => card.id)));
+      toast.success(`${allCards.length.toLocaleString("pt-BR")} card(s) exportado(s) em um único arquivo.`);
+    } catch (error: any) {
+      toast.error(error?.message || "Não foi possível exportar todos os termos.");
+    } finally {
+      setExportingAll(false);
+    }
+  };
+
+  const load = async () => {
+    if (!validateFolders()) return;
+    setLoading(true);
+    setLoadedCount(0);
+    try {
+      const rows = await loadGlossarySourceCards(lists.map((list) => list.id), setLoadedCount);
+      const enriched = enrich(rows);
       setCards(enriched);
       setSelected(new Set(enriched.map((card) => card.id)));
       toast.success(`${enriched.length.toLocaleString("pt-BR")} card(s) carregado(s).`);
@@ -73,30 +127,32 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
 
   const download = () => {
     if (chosen.length === 0) return toast.error("Selecione pelo menos um card.");
-    const url = URL.createObjectURL(new Blob([prompt], { type: "text/plain;charset=utf-8" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `app-piteco-prompt-glossario-${new Date().toISOString().slice(0, 10)}.txt`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadText(prompt, `app-piteco-prompt-glossario-${new Date().toISOString().slice(0, 10)}.txt`);
   };
 
   return <div className="space-y-5">
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
       <div className="flex gap-3"><Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div>
         <div className="font-medium">Gerar glossário com IA</div>
-        <p className="mt-1 text-sm text-muted-foreground">Carregue os cards, escolha todos ou apenas os desejados e copie o prompt padronizado.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Depois de marcar as pastas, exporte todos os cards em um único arquivo para enviar ao ChatGPT. O arquivo já contém o prompt e o contrato de resposta do App Piteco.</p>
       </div></div>
     </div>
 
-    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-      <div className="space-y-1.5"><Label>Conteúdo usado pela IA</Label>
-        <Select value={side} onValueChange={(value) => setSide(value as GlossarySourceSide)}>
-          <SelectTrigger className="w-full md:w-64"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="both">Lados A e B</SelectItem><SelectItem value="A">Somente lado A</SelectItem><SelectItem value="B">Somente lado B</SelectItem></SelectContent>
-        </Select>
+    <div className="space-y-3 rounded-xl border p-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-1.5"><Label>Conteúdo usado pela IA</Label>
+          <Select value={side} onValueChange={(value) => setSide(value as GlossarySourceSide)}>
+            <SelectTrigger className="w-full md:w-64"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="both">Lados A e B</SelectItem><SelectItem value="A">Somente lado A</SelectItem><SelectItem value="B">Somente lado B</SelectItem></SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => void load()} disabled={loading || exportingAll || folderIds.length === 0}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}Carregar para escolher</Button>
+          <Button onClick={() => void exportAll()} disabled={loading || exportingAll || folderIds.length === 0}>{exportingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}Exportar tudo para IA</Button>
+        </div>
       </div>
-      <Button onClick={() => void load()} disabled={loading || folderIds.length === 0}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}Carregar termos</Button>
+      {(loading || exportingAll) && <p className="text-sm text-muted-foreground">Lendo todos os cards, sem limite artificial: {loadedCount.toLocaleString("pt-BR")} carregado(s)...</p>}
+      <p className="text-xs leading-relaxed text-muted-foreground">“Exportar tudo para IA” não exige seleção manual: reúne todos os cards de todas as listas das pastas marcadas, mesmo que o arquivo fique muito longo.</p>
     </div>
 
     {cards.length > 0 && <>
@@ -115,8 +171,8 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
         </div>
         {filtered.length > DISPLAY_LIMIT && <p className="text-xs text-muted-foreground">Mostrando {DISPLAY_LIMIT} de {filtered.length.toLocaleString("pt-BR")} resultados. Refine a busca para localizar termos específicos.</p>}
       </div>
-      <div className="space-y-2"><Label>Prompt pronto para copiar</Label><Textarea value={prompt} readOnly className="min-h-[320px] font-mono text-xs sm:text-sm" /></div>
-      <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={chosen.length === 0}><Copy className="mr-2 h-4 w-4" />Copiar prompt</Button><Button onClick={download} disabled={chosen.length === 0}><Download className="mr-2 h-4 w-4" />Baixar prompt</Button></div>
+      <div className="space-y-2"><Label>Prompt da seleção atual</Label><Textarea value={prompt} readOnly className="min-h-[320px] font-mono text-xs sm:text-sm" /></div>
+      <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={chosen.length === 0}><Copy className="mr-2 h-4 w-4" />Copiar seleção</Button><Button onClick={download} disabled={chosen.length === 0}><Download className="mr-2 h-4 w-4" />Baixar seleção</Button></div>
     </>}
   </div>;
 }
