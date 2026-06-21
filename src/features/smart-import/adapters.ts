@@ -84,7 +84,7 @@ function legacyWordHints(value: unknown): SmartWordHint[] | undefined {
     const translation = optionalString(hint?.translation);
     if (!text || !translation) return [];
     const rawOccurrence = hint?.occurrence;
-    const occurrence = rawOccurrence === "all" || typeof rawOccurrence === "number"
+    const occurrence: number | "all" = typeof rawOccurrence === "number"
       ? rawOccurrence
       : "all";
     const start = hint?.start_index ?? hint?.startIndex;

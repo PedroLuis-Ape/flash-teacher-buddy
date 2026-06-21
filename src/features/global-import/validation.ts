@@ -162,16 +162,17 @@ export function validateGlobalImportInput(value: unknown, manifest?: GlobalImpor
   }
 
   const normalized = normalizeGlobalImportValue(value);
-  if (!normalized.success) {
+  if (normalized.success === false) {
+    const failure = normalized.error;
     return {
       valid: false,
       package: null,
       officialPackage: null,
       canonicalPackage: null,
       smartPackage: null,
-      sourceFormat: normalized.error.sourceFormat,
+      sourceFormat: failure.sourceFormat,
       requestId: null,
-      issues: schemaIssues(normalized.error),
+      issues: schemaIssues(failure),
       summary: { folders: 0, lists: 0, cards: 0 },
     };
   }

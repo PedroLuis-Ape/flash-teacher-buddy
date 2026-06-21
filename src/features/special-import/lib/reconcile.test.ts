@@ -3,7 +3,7 @@ import { parseSpecialImportText, reconcileSpecialImport } from "./parser";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
-const manifest = {
+const manifest: import("./protocolPolicy").StoredSpecialExportManifest = {
   format: "ape-special-cards",
   schema_version: 2,
   export_id: "exp_test_b01",
@@ -16,7 +16,7 @@ const manifest = {
     { card_ref: "CARD_001", flashcard_id: A, term: "take", translation: "pegar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null },
     { card_ref: "CARD_002", flashcard_id: B, term: "leave", translation: "deixar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null },
   ],
-} as const;
+};
 
 describe("manifest reconciliation", () => {
   it("detects a duplicate and a missing card", () => {

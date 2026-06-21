@@ -91,7 +91,7 @@ function normalizeExamples(value: unknown): SpecialImportExample[] | undefined {
     const pt = toText(firstDefined(raw, ["pt", "portuguese", "translation", "traducao", "tradução"]));
     if (!en && !pt) return null;
     return { en, pt };
-  }).filter((entry): entry is SpecialImportExample => entry !== null);
+  }).filter((entry) => entry !== null) as SpecialImportExample[];
   return examples.length > 0 ? examples : undefined;
 }
 

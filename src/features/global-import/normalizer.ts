@@ -100,9 +100,13 @@ function canonicalToInternal(value: CanonicalGlobalImportPackage): GlobalImportP
   };
 }
 
+export type NormalizeGlobalImportResult =
+  | { success: true; data: NormalizedGlobalImportResult }
+  | { success: false; error: NormalizeGlobalImportFailure };
+
 export function normalizeGlobalImportValue(
   value: unknown,
-): { success: true; data: NormalizedGlobalImportResult } | { success: false; error: NormalizeGlobalImportFailure } {
+): NormalizeGlobalImportResult {
   const dangerousPath = findDangerousImportKey(value);
   const officialResult = appPitecoSuperImportSchema.safeParse(value);
   const canonicalResult = globalImportSchema.safeParse(value);

@@ -89,11 +89,12 @@ export function DestinationMappingCard({ packageValue, catalog, plan, onChange }
       <div className="space-y-4">
         {packageValue.package.folders.map((folder, folderIndex) => {
           const folderPlan = plan.folders[folderIndex];
-          const selectedFolderId = folderPlan.folder.mode === "existing"
-            ? folderPlan.folder.folderId
+          const folderTarget = folderPlan.folder;
+          const selectedFolderId = folderTarget.mode === "existing"
+            ? folderTarget.folderId
             : CREATE_FOLDER;
-          const availableLists = folderPlan.folder.mode === "existing"
-            ? catalog.lists.filter((list) => list.folder_id === folderPlan.folder.folderId)
+          const availableLists = folderTarget.mode === "existing"
+            ? catalog.lists.filter((list) => list.folder_id === folderTarget.folderId)
             : [];
 
           return (
