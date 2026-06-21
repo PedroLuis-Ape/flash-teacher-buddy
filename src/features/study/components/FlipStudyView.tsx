@@ -2,7 +2,9 @@ import { lazy, Suspense, useMemo, type ComponentProps } from "react";
 import { listIdFromPath, isPublicListPath } from "@/lib/listRoute";
 import { useListPrimarySide } from "@/lib/useListPrimarySide";
 import { primarySideToDirection } from "@/lib/primarySideDirection";
+import { getMixedFlipSlotMode, isMixedStudySession } from "@/features/study/lib/runtimeStudySchedule";
 import { StudyCardDeck } from "./StudyCardDeck";
+import { MixedSlotActivity } from "./MixedSlotActivity";
 
 const LazyFlipStudyView = lazy(() =>
   import("./FlipStudyView.impl").then((module) => ({ default: module.FlipStudyView }))
@@ -23,6 +25,25 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
   const publicRoute = useMemo(() => isPublicListPath(window.location.pathname), []);
   const { side } = useListPrimarySide(listId, publicRoute);
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
+  const mixedSlotMode = isMixedStudySession() ? getMixedFlipSlotMode(cardKey) : null;
+
+  if (mixedSlotMode) {
+    return (
+      <MixedSlotActivity
+        mode={mixedSlotMode}
+        front={props.front}
+        back={props.back}
+        direction={props.direction}
+        flashcardId={props.flashcardId}
+        langA={props.langA}
+        langB={props.langB}
+        labelA={props.labelA}
+        labelB={props.labelB}
+        onCorrect={props.onKnew}
+        onIncorrect={props.onDidntKnow}
+      />
+    );
+  }
 
   const deck = (
     <StudyCardDeck

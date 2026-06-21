@@ -1,196 +1,126 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cleanTextForTTS } from "@/features/study/lib/speech";
-import { toBCP47, normalizeLangCode } from "@/features/study/lib/languages";
+import { segmentTextForTTS } from "@/features/study/lib/speechSegmentation";
+import { normalizeLangCode, toBCP47 } from "@/features/study/lib/languages";
+
+export type SpeechMode = "natural" | "word-by-word";
 
 export interface PlayOptions {
-  langOverride?: string; // ISO code like "en-US", "pt-BR", "es", "fr", etc.
-  rate?: number;   // 0.5 = slow, 1.0 = normal
-  pitch?: number;  // default 1
+  langOverride?: string;
+  rate?: number;
+  pitch?: number;
+  mode?: SpeechMode;
 }
 
-/**
- * Smart Voice Selection Algorithm
- * Order, for ANY language:
- *   1. Exact BCP-47 locale match (e.g. en-GB, pt-PT, es-MX).
- *   2. Canonical default for the short prefix (e.g. en→en-US, pt→pt-BR).
- *   3. Any voice sharing the prefix (en-*, pt-*, ...).
- * Inside each pool, prefer Google → Microsoft/Natural/Neural →
- * Apple → first available.
- */
-function pickVoice(langCode: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-  if (!voices || voices.length === 0) return null;
+export const WORD_BY_WORD_RATE = 0.72;
+export const WORD_PAUSE_MS = 350;
 
-  // Normalize to BCP-47 via the single source of truth
-  const requested = toBCP47(langCode);
-  const lowerReq = requested.toLowerCase();
-  const prefix = lowerReq.split("-")[0];
-  const canonical = toBCP47(prefix).toLowerCase();
+function pickVoice(lang: string, voices: SpeechSynthesisVoice[]) {
+  const requested = toBCP47(lang).toLowerCase();
+  const prefix = requested.split("-")[0];
+  const rank = (pool: SpeechSynthesisVoice[]) =>
+    pool.find((v) => v.name.toLowerCase().includes("google")) ||
+    pool.find((v) => /microsoft|natural|neural|enhanced/i.test(v.name)) ||
+    pool[0] || null;
 
-  const voiceName = (v: SpeechSynthesisVoice) => v.name.toLowerCase();
-
-  // Helper: rank voices by manufacturer/quality preference
-  const pickByQuality = (pool: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
-    if (pool.length === 0) return null;
-    const google = pool.find(v => voiceName(v).includes("google"));
-    if (google) return google;
-    const premium = pool.find(v =>
-      voiceName(v).includes("microsoft") ||
-      voiceName(v).includes("natural") ||
-      voiceName(v).includes("neural") ||
-      voiceName(v).includes("enhanced")
-    );
-    if (premium) return premium;
-    const apple = pool.find(v =>
-      voiceName(v).includes("samantha") ||
-      voiceName(v).includes("alex") ||
-      voiceName(v).includes("victoria")
-    );
-    if (apple) return apple;
-    return pool[0];
-  };
-
-  // Pool 1: exact locale (preserves en-GB, pt-PT, es-MX, ...)
-  const exact = voices.filter(v => v.lang.toLowerCase() === lowerReq);
-  const exactPick = pickByQuality(exact);
-  if (exactPick) return exactPick;
-
-  // Pool 2: canonical default for the short prefix (en→en-US, pt→pt-BR)
-  if (canonical !== lowerReq) {
-    const canon = voices.filter(v => v.lang.toLowerCase() === canonical);
-    const canonPick = pickByQuality(canon);
-    if (canonPick) return canonPick;
-  }
-
-  // Pool 3: any voice sharing the prefix
-  const prefixed = voices.filter(v => {
-    const vl = v.lang.toLowerCase();
-    return vl === prefix || vl.startsWith(prefix + "-");
-  });
-  const prefixPick = pickByQuality(prefixed);
-  if (prefixPick) return prefixPick;
-
-  console.warn(`[TTS] No voice found for language: ${langCode}`);
-  return null;
+  return rank(voices.filter((v) => v.lang.toLowerCase() === requested)) ||
+    rank(voices.filter((v) => v.lang.toLowerCase().startsWith(`${prefix}-`)));
 }
 
-/**
- * High-quality Browser TTS Hook
- * Smart voice selection with Google/Microsoft/Apple priority
- */
 export function useTTS() {
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      console.warn('[TTS] Web Speech API not supported');
-      return;
-    }
-
-    const loadVoices = () => {
-      const loadedVoices = window.speechSynthesis.getVoices();
-      if (loadedVoices.length > 0) {
-        setVoices(loadedVoices);
-        setVoicesLoaded(true);
-        console.log('[TTS] Voices loaded:', loadedVoices.length, 'voices available');
-        
-        // Log available premium voices for debugging
-        const premiumVoices = loadedVoices.filter(v => 
-          v.name.toLowerCase().includes('google') ||
-          v.name.toLowerCase().includes('microsoft') ||
-          v.name.toLowerCase().includes('natural')
-        );
-        if (premiumVoices.length > 0) {
-          console.log('[TTS] Premium voices found:', premiumVoices.map(v => v.name).join(', '));
-        }
-      }
-    };
-
-    // Try immediately (some browsers have voices ready)
-    loadVoices();
-
-    // CRITICAL for mobile: Listen for async voice loading
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-
-    // Cleanup
-    return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    };
-  }, []);
-
-  /**
-   * Main speak function with smart voice selection
-   */
-  const speak = useCallback((text: string, options?: PlayOptions) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      console.warn('[TTS] Web Speech API not supported');
-      return;
-    }
-
-    try {
-      // Cancel any ongoing speech first
-      window.speechSynthesis.cancel();
-
-      // Clean text for better TTS
-      const cleanedText = cleanTextForTTS(text);
-      if (!cleanedText) {
-        console.warn('[TTS] No text to speak after cleaning');
-        return;
-      }
-
-      // Get voices - use cached or fetch fresh
-      const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
-
-      // Determine language via single source of truth.
-      // Short codes ("en", "pt") map to canonical BCP-47 ("en-US", "pt-BR").
-      // Regional tags ("en-GB", "pt-PT", "es-MX") are preserved.
-      const requested = normalizeLangCode(options?.langOverride ?? "en");
-      const lang = toBCP47(requested);
-
-      // Find the best voice using smart algorithm
-      const voice = pickVoice(lang, currentVoices);
-
-      // Create utterance
-      const utterance = new SpeechSynthesisUtterance(cleanedText);
-
-      // Apply voice if found
-      if (voice) {
-        utterance.voice = voice;
-        // Honour the requested locale tag so engines speaking via
-        // utterance.lang respect regional variants (en-GB, pt-PT, ...).
-        utterance.lang = voice.lang || lang;
-      } else {
-        utterance.lang = lang;
-        console.warn('[TTS] No voice found for', lang, '- using browser default');
-      }
-
-      // Apply rate and pitch - DEFAULT 1.0 (normal speed)
-      utterance.rate = options?.rate ?? 1.0;
-      utterance.pitch = options?.pitch ?? 1.0;
-      utterance.volume = 1;
-
-      // Error handling
-      utterance.onerror = (event) => {
-        console.error('[TTS] Speech error:', event.error);
-      };
-
-      console.log('[TTS] Speaking:', cleanedText.substring(0, 40) + (cleanedText.length > 40 ? '...' : ''));
-
-      // Speak!
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      console.error('[TTS] Error:', error);
-    }
-  }, [voices]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [activeMode, setActiveMode] = useState<SpeechMode | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const sessionRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stop = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
+    sessionRef.current += 1;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    setIsSpeaking(false);
+    setActiveMode(null);
   }, []);
 
-  return { speak, stop, voicesLoaded };
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const load = () => {
+      voicesRef.current = window.speechSynthesis.getVoices();
+      setVoicesLoaded(voicesRef.current.length > 0);
+    };
+    load();
+    window.speechSynthesis.addEventListener?.("voiceschanged", load);
+    return () => {
+      window.speechSynthesis.removeEventListener?.("voiceschanged", load);
+      stop();
+    };
+  }, [stop]);
+
+  const speak = useCallback((text: string, options?: PlayOptions) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const cleaned = cleanTextForTTS(text);
+    if (!cleaned) return;
+
+    stop();
+    const session = sessionRef.current;
+    const synth = window.speechSynthesis;
+    const lang = toBCP47(normalizeLangCode(options?.langOverride ?? "en"));
+    const voice = pickVoice(lang, voicesRef.current.length ? voicesRef.current : synth.getVoices());
+    const mode = options?.mode ?? ((options?.rate ?? 1) <= 0.5 ? "word-by-word" : "natural");
+
+    const done = () => {
+      if (sessionRef.current !== session) return;
+      setIsSpeaking(false);
+      setActiveMode(null);
+    };
+    const make = (value: string, rate: number) => {
+      const utterance = new SpeechSynthesisUtterance(value);
+      utterance.lang = voice?.lang || lang;
+      if (voice) utterance.voice = voice;
+      utterance.rate = rate;
+      utterance.pitch = options?.pitch ?? 1;
+      utterance.volume = 1;
+      return utterance;
+    };
+
+    setIsSpeaking(true);
+    setActiveMode(mode);
+
+    if (mode === "natural") {
+      const utterance = make(cleaned, options?.rate ?? 1);
+      utterance.onend = done;
+      utterance.onerror = done;
+      synth.speak(utterance);
+      return;
+    }
+
+    const words = segmentTextForTTS(cleaned);
+    const play = (index: number) => {
+      if (sessionRef.current !== session) return;
+      if (index >= words.length) return done();
+      const utterance = make(words[index], WORD_BY_WORD_RATE);
+      const next = () => {
+        if (sessionRef.current !== session) return;
+        if (index === words.length - 1) return done();
+        timerRef.current = setTimeout(() => play(index + 1), WORD_PAUSE_MS);
+      };
+      utterance.onend = next;
+      utterance.onerror = next;
+      synth.speak(utterance);
+    };
+    play(0);
+  }, [stop]);
+
+  return {
+    speak,
+    stop,
+    voicesLoaded,
+    isSpeaking,
+    activeMode,
+    isSupported: typeof window !== "undefined" && "speechSynthesis" in window,
+  };
 }
