@@ -22,41 +22,45 @@ export function PublicNav() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-1.5 px-3 sm:gap-2 sm:px-4 md:px-6">
-        <Link to="/" className="flex shrink-0 items-center gap-1.5 text-base font-bold sm:gap-2 sm:text-lg">
-          <PitecoLogo className="h-8 w-8" />
-          <span>APE</span>
+      <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-3 sm:px-4 lg:px-6">
+        <Link to="/" className="flex min-w-0 shrink-0 items-center gap-1.5 text-base font-bold sm:gap-2 sm:text-lg">
+          <PitecoLogo className="h-8 w-8 shrink-0" />
+          <span className="truncate">APE</span>
         </Link>
 
-        <nav className="hidden min-w-0 items-center gap-1 text-sm md:flex">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 text-sm xl:flex 2xl:gap-1">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className="nav-link-animated rounded-md px-2 py-2 text-muted-foreground hover:text-foreground lg:px-3"
+              className="nav-link-animated whitespace-nowrap rounded-md px-2 py-2 text-muted-foreground hover:text-foreground 2xl:px-3"
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <InstallAppButton compact className="hidden shrink-0 min-[390px]:inline-flex" />
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+          <InstallAppButton
+            compact
+            className="shrink-0 max-[480px]:h-9 max-[480px]:w-9 max-[480px]:gap-0 max-[480px]:px-0 max-[480px]:[&>span]:hidden"
+          />
           <PublicThemeToggle />
-          <AuthAwareCTA guestMode="login" variant="ghost" size="sm" className="hidden xl:inline-flex">
+
+          <AuthAwareCTA guestMode="login" variant="ghost" size="sm" className="hidden 2xl:inline-flex">
             Entrar
           </AuthAwareCTA>
-          <AuthAwareCTA guestMode="signup" size="sm" className="hidden xl:inline-flex">
+          <AuthAwareCTA guestMode="signup" size="sm" className="hidden 2xl:inline-flex">
             Começar agora
           </AuthAwareCTA>
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden" aria-label="Abrir menu">
+              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 xl:hidden" aria-label="Abrir menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-72">
+            <SheetContent side="right" className="w-[min(20rem,88vw)]">
               <nav className="mt-8 flex flex-col gap-1">
                 {NAV_LINKS.map((link) => (
                   <Link
