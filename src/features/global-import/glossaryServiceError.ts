@@ -40,7 +40,7 @@ export function glossaryServiceMessage(error: unknown, action: GlossaryServiceAc
 
   if (isMissingGlossaryRpcError(error)) {
     return action === "analisar"
-      ? "O arquivo foi validado, mas o serviço de análise ainda não foi reconhecido pelo Supabase. Aguarde alguns segundos e tente novamente."
+      ? "O arquivo foi validado, mas o serviço de análise ainda não foi reconhecido pelo Supabase. O App Piteco tentará a análise segura diretamente na Caixa de Glossário."
       : "O arquivo foi validado, mas a função de importação não está disponível no banco conectado. Verifique se as migrations da Caixa de Glossário foram publicadas neste mesmo ambiente.";
   }
 
