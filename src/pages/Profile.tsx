@@ -307,8 +307,8 @@ const Profile = () => {
         </Button>
 
         <Button
-          variant="outline"
-          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 min-h-[44px]"
+          variant="destructive"
+          className="w-full justify-start min-h-[44px] font-semibold"
           onClick={handleLogout}
           disabled={isLoggingOut}
         >
