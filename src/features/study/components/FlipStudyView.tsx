@@ -33,12 +33,22 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
         mode={mixedSlotMode}
         front={props.front}
         back={props.back}
+        hint={props.hint}
         direction={props.direction}
         flashcardId={props.flashcardId}
+        wordHintsA={props.wordHintsA}
+        mergedHintsA={props.mergedHintsA}
+        mergedHintsB={props.mergedHintsB}
         langA={props.langA}
         langB={props.langB}
         labelA={props.labelA}
         labelB={props.labelB}
+        isFavorite={props.isFavorite}
+        isRedListed={props.isRedListed}
+        onToggleFavorite={props.onToggleFavorite}
+        onToggleRedList={props.onToggleRedList}
+        isSpecial={props.isSpecial}
+        onToggleSpecial={props.onToggleSpecial}
         onCorrect={props.onKnew}
         onIncorrect={props.onDidntKnow}
       />
