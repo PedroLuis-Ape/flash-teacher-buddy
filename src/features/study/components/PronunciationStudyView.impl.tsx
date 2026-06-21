@@ -1,24 +1,28 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
-import { usePronunciation } from "@/features/study/hooks/usePronunciation";
+import { Mic, Volume2, Gauge, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
+import { usePronunciationEngine } from "@/features/speech/usePronunciationEngine";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
-import { toBCP47 } from "@/features/study/lib/resolveStudySides";
+import { resolveStudySides, toBCP47, type Direction } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import { playCorrect, playWrong } from "@/lib/sfx";
-import { evaluatePronunciation } from "@/lib/levenshtein";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
+import type { PronunciationResultKind } from "@/features/speech/types";
 
 interface PronunciationStudyViewProps {
   front: string;
   back: string;
+  flashcardId?: string;
+  listId?: string;
+  direction: Direction | string;
   wordHintsA?: unknown;
+  wordHintsB?: unknown;
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   langA?: string;
@@ -31,175 +35,140 @@ interface PronunciationStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
-  onNext: () => void;
+  onResult: (result: { result: PronunciationResultKind; score: number | null }) => void;
 }
 
-export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, isRedListed = false, onToggleFavorite, onToggleRedList, isSpecial = false, onToggleSpecial, onNext }: PronunciationStudyViewProps) {
-  // --- Side A/B State Consolidation ---
-  // In pronunciation mode, user practices speaking sideB (the answer/translation side)
-  const sideA = { text: front, lang: langA, label: labelA || "Termo" };
-  const sideB = { text: back, lang: langB, label: labelB || "Definição" };
-
-  // Pronunciation always practices speaking sideB
-  const speakSide = sideB;   // The phrase user must speak
-  const hintSide = sideA;    // Just a visual hint
-
-  // Map short codes to BCP-47 using shared utility
+export function PronunciationStudyView({
+  front,
+  back,
+  flashcardId,
+  listId,
+  direction,
+  wordHintsA,
+  wordHintsB,
+  mergedHintsA,
+  mergedHintsB,
+  langA = "en",
+  langB = "pt",
+  labelA,
+  labelB,
+  isFavorite = false,
+  isRedListed = false,
+  onToggleFavorite,
+  onToggleRedList,
+  isSpecial = false,
+  onToggleSpecial,
+  onResult,
+}: PronunciationStudyViewProps) {
+  const sideA = useMemo(() => ({ text: front, lang: langA, label: labelA || "Lado A" }), [front, langA, labelA]);
+  const sideB = useMemo(() => ({ text: back, lang: langB, label: labelB || "Lado B" }), [back, langB, labelB]);
+  const resolved = useMemo(
+    () => resolveStudySides(sideA, sideB, direction, flashcardId || `${front}:${back}`),
+    [back, direction, flashcardId, front, sideA, sideB],
+  );
+  const hintSide = resolved.promptSide;
+  const speakSide = resolved.answerSide;
   const speakLang = toBCP47(speakSide.lang);
   const hintLang = toBCP47(hintSide.lang);
+  const speakHints = resolved.isAFirst ? mergedHintsB : mergedHintsA;
+  const hintHints = resolved.isAFirst ? mergedHintsA : mergedHintsB;
+  const speakWordHints = resolved.isAFirst ? wordHintsB : wordHintsA;
+  const hintWordHints = resolved.isAFirst ? wordHintsA : wordHintsB;
 
-  const {
-    isListening,
-    transcript,
-    alternatives,
-    error,
-    isSupported,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = usePronunciation({ lang: speakLang });
-
-  const { speak, stop: stopTTS } = useTTS();
+  const pronunciation = usePronunciationEngine({
+    expectedText: speakSide.text,
+    language: speakLang,
+    cardId: flashcardId,
+    listId,
+  });
+  const { speak, stop: stopTTS, isSpeaking, lastResult: lastPlayback } = useTTS();
   const shortcuts = useShortcutMap();
-  
-  // Track if we've already played sound for this transcript
-  const lastSoundPlayedForRef = useRef<string>('');
+  const lastSoundPlayedForRef = useRef<string>("");
 
   useEffect(() => {
-    resetTranscript();
+    pronunciation.reset();
     stopTTS();
-    lastSoundPlayedForRef.current = '';
-  }, [speakSide.text, resetTranscript, stopTTS]);
+    lastSoundPlayedForRef.current = "";
+  }, [speakSide.text]); // reset only when the practiced phrase changes
 
-  // Keyboard shortcuts for pronunciation: nextCard advances to the next card.
+  const advance = () => {
+    pronunciation.cancel();
+    stopTTS();
+    if (pronunciation.result) {
+      onResult({ result: pronunciation.result.result, score: pronunciation.result.score });
+    } else {
+      onResult({ result: "skipped", score: null });
+    }
+  };
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isTypingTarget(e.target)) return;
-      const k = normalizeKey(e.key);
-      const nextKey = normalizeKey(shortcuts.nextCard);
-      if (k === nextKey) {
-        e.preventDefault();
-        handleNext();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return;
+      if (normalizeKey(event.key) === normalizeKey(shortcuts.nextCard)) {
+        event.preventDefault();
+        advance();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [shortcuts, onNext]);
+  }, [shortcuts.nextCard, pronunciation.result, onResult]);
 
-  const handlePlayPronunciation = () => {
-    stopTTS();
-    speak(speakSide.text, { langOverride: speakLang, rate: 0.5 });
-  };
-
-  const handleMicToggle = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
-
-  const handleNext = () => {
-    stopListening();
-    stopTTS();
-    onNext();
-  };
-
-  // Evaluate pronunciation using fuzzy matching
-  const evaluation = useMemo(() => {
-    if (!transcript || alternatives.length === 0) return null;
-    return evaluatePronunciation(alternatives, speakSide.text);
-  }, [speakSide.text, transcript, alternatives]);
-
-  // Play sound effect in useEffect (NOT in useMemo to avoid issues)
   useEffect(() => {
-    if (!evaluation || !transcript) return;
-    
-    // Only play sound once per unique transcript
-    if (lastSoundPlayedForRef.current === transcript) return;
-    lastSoundPlayedForRef.current = transcript;
-    
-    if (evaluation.result === 'correct') {
-      playCorrect();
-    } else if (evaluation.result === 'incorrect') {
-      playWrong();
-    }
-    // 'almost' doesn't play any sound - it's a neutral feedback
-  }, [evaluation, transcript]);
+    const result = pronunciation.result;
+    if (!result || lastSoundPlayedForRef.current === result.transcript) return;
+    lastSoundPlayedForRef.current = result.transcript;
+    if (result.result === "correct") playCorrect();
+    if (result.result === "incorrect") playWrong();
+  }, [pronunciation.result]);
 
-  if (!isSupported) {
+  const playOriginal = () => {
+    stopTTS();
+    void speak(speakSide.text, { langOverride: speakLang, rate: 1, mode: "natural" });
+  };
+  const playSlow = () => {
+    stopTTS();
+    void speak(speakSide.text, { langOverride: speakLang, rate: 0.5, mode: "word-by-word" });
+  };
+  const toggleRecording = () => {
+    if (pronunciation.isRecording) pronunciation.stop();
+    else void pronunciation.start();
+  };
+
+  const resultStyle = !pronunciation.result
+    ? "bg-muted/20 border-dashed border-muted"
+    : pronunciation.result.result === "correct"
+      ? "bg-green-50/50 border-green-400 dark:bg-green-900/20 dark:border-green-600"
+      : pronunciation.result.result === "almost"
+        ? "bg-amber-50/50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600"
+        : "bg-red-50/50 border-red-400 dark:bg-red-900/20 dark:border-red-600";
+  const resultColor = pronunciation.result?.result === "correct"
+    ? "text-green-600 dark:text-green-400"
+    : pronunciation.result?.result === "almost"
+      ? "text-amber-600 dark:text-amber-400"
+      : pronunciation.result?.result === "incorrect"
+        ? "text-red-600 dark:text-red-400"
+        : "";
+  const ResultIcon = pronunciation.result?.result === "correct"
+    ? CheckCircle2
+    : pronunciation.result?.result === "almost"
+      ? AlertCircle
+      : XCircle;
+
+  if (!pronunciation.isSupported) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
-        <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
-        <h3 className="text-xl font-bold">Navegador não suportado</h3>
-        <p className="text-muted-foreground mt-2">
-          O reconhecimento de voz requer Google Chrome ou Edge.
-        </p>
-        <Button onClick={onNext} className="mt-6">
-          Pular Exercício
-        </Button>
+        <AlertTriangle className="mb-4 h-12 w-12 text-amber-500" />
+        <h3 className="text-xl font-bold">Gravação indisponível</h3>
+        <p className="mt-2 text-muted-foreground">Este navegador não oferece MediaRecorder e acesso ao microfone neste contexto. A página precisa estar em HTTPS.</p>
+        <Button onClick={advance} className="mt-6">Pular exercício</Button>
       </div>
     );
   }
 
-  const getResultStyles = () => {
-    if (!evaluation) return "bg-muted/20 border-dashed border-muted";
-    
-    switch (evaluation.result) {
-      case 'correct':
-        return "bg-green-50/50 border-green-400 dark:bg-green-900/20 dark:border-green-600";
-      case 'almost':
-        return "bg-amber-50/50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600";
-      case 'incorrect':
-        return "bg-red-50/50 border-red-400 dark:bg-red-900/20 dark:border-red-600";
-    }
-  };
-
-  const getResultIcon = () => {
-    if (!evaluation) return null;
-    
-    switch (evaluation.result) {
-      case 'correct':
-        return <CheckCircle2 className="w-5 h-5" />;
-      case 'almost':
-        return <AlertCircle className="w-5 h-5" />;
-      case 'incorrect':
-        return <XCircle className="w-5 h-5" />;
-    }
-  };
-
-  const getResultText = () => {
-    if (!evaluation) return null;
-    
-    const percentage = Math.round(evaluation.bestScore * 100);
-    
-    switch (evaluation.result) {
-      case 'correct':
-        return `Correto! (${percentage}%)`;
-      case 'almost':
-        return `Quase lá! (${percentage}%)`;
-      case 'incorrect':
-        return `Incorreto (${percentage}%)`;
-    }
-  };
-
-  const getResultColor = () => {
-    if (!evaluation) return "";
-    
-    switch (evaluation.result) {
-      case 'correct':
-        return "text-green-600 dark:text-green-400";
-      case 'almost':
-        return "text-amber-600 dark:text-amber-400";
-      case 'incorrect':
-        return "text-red-600 dark:text-red-400";
-    }
-  };
-
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-2xl mx-auto animate-fade-in">
-      <Card className={cn("w-full p-8 flex flex-col items-center min-h-[200px] justify-center border-2 text-center relative overflow-hidden", getRedListCardClass(isRedListed))}>
-        <div className="absolute top-3 right-3">
+    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-6 animate-fade-in">
+      <Card className={cn("relative flex min-h-[200px] w-full flex-col items-center justify-center overflow-hidden border-2 p-8 text-center", getRedListCardClass(isRedListed))}>
+        <div className="absolute right-3 top-3">
           <StudyToolsMenu
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
@@ -209,110 +178,86 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
             onToggleSpecial={onToggleSpecial}
           />
         </div>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
-          Fale em {speakSide.label}
-        </p>
-
-        {/* Phrase to speak - BIG */}
-        <h2 className="text-4xl md:text-5xl font-bold text-primary mb-2 tracking-tight">
-          <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick speakLang={speakLang} />
+        <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Fale em {speakSide.label}</p>
+        <h2 className="mb-2 text-4xl font-bold tracking-tight text-primary md:text-5xl">
+          <InteractiveText text={speakSide.text} wordHints={speakWordHints} mergedHints={speakHints} speakOnHintClick speakLang={speakLang} />
         </h2>
-
-        {/* Hint translation - small */}
-        <p className="text-sm text-muted-foreground/60 mb-8 italic">
-          "<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} speakOnHintClick speakLang={hintLang} />"
+        <p className="mb-8 text-sm italic text-muted-foreground/60">
+          “<InteractiveText text={hintSide.text} wordHints={hintWordHints} mergedHints={hintHints} speakOnHintClick speakLang={hintLang} />”
         </p>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handlePlayPronunciation}
-          className="gap-2 rounded-full px-6"
-        >
-          <Volume2 className="w-4 h-4" />
-          Ouvir Original
-        </Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button variant="secondary" size="sm" onClick={playOriginal} disabled={isSpeaking} className="gap-2 rounded-full px-5">
+            {isSpeaking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+            Ouvir original
+          </Button>
+          <Button variant="outline" size="sm" onClick={playSlow} disabled={isSpeaking} className="gap-2 rounded-full px-5">
+            <Gauge className="h-4 w-4" /> Ouvir devagar
+          </Button>
+        </div>
+        {lastPlayback?.provider === "cloud" && (
+          <p className="mt-3 text-xs text-muted-foreground">Voz de fallback gerada por IA.</p>
+        )}
       </Card>
+
+      <div className="w-full rounded-lg border bg-muted/20 p-3 text-center text-xs text-muted-foreground">
+        O App Piteco usa o microfone para processar esta tentativa. O áudio não é salvo permanentemente.
+      </div>
 
       <div className="flex flex-col items-center gap-4 py-2">
         <Button
           size="lg"
-          variant={isListening ? "destructive" : "default"}
+          variant={pronunciation.isRecording ? "destructive" : "default"}
+          disabled={pronunciation.isProcessing || pronunciation.state === "requesting-permission"}
           className={cn(
-            "rounded-full w-20 h-20 shadow-2xl border-4 transition-all duration-300 flex items-center justify-center",
-            isListening
-              ? "scale-110 border-red-200 ring-4 ring-red-100 animate-pulse"
-              : "border-primary/20 hover:scale-105"
+            "flex h-20 w-20 items-center justify-center rounded-full border-4 shadow-2xl transition-all duration-300",
+            pronunciation.isRecording ? "scale-110 animate-pulse border-red-200 ring-4 ring-red-100" : "border-primary/20 hover:scale-105",
           )}
-          onClick={handleMicToggle}
+          onClick={toggleRecording}
         >
-          {isListening ? (
-            <Square className="w-8 h-8 fill-current" />
-          ) : (
-            <Mic className="w-8 h-8" />
-          )}
+          {pronunciation.isProcessing || pronunciation.state === "requesting-permission"
+            ? <Loader2 className="h-8 w-8 animate-spin" />
+            : pronunciation.isRecording
+              ? <Square className="h-8 w-8 fill-current" />
+              : <Mic className="h-8 w-8" />}
         </Button>
-
-        <span
-          className={cn(
-            "text-sm font-medium transition-all duration-300 h-6",
-            isListening ? "text-red-500 animate-pulse" : "text-muted-foreground"
-          )}
-        >
-          {isListening ? "Ouvindo... (Fale agora)" : "Toque para falar"}
+        <span className={cn("h-6 text-sm font-medium", pronunciation.isRecording ? "animate-pulse text-red-500" : "text-muted-foreground")}>
+          {pronunciation.isRecording
+            ? "Gravando... toque para concluir"
+            : pronunciation.isProcessing
+              ? "Processando a tentativa..."
+              : pronunciation.state === "requesting-permission"
+                ? "Aguardando permissão do microfone..."
+                : "Toque para falar"}
         </span>
       </div>
 
-      <div
-        className={cn(
-          "w-full p-6 rounded-xl border-2 text-center transition-all duration-500 min-h-[120px] flex flex-col justify-center items-center",
-          getResultStyles()
-        )}
-      >
-        {error ? (
-          <div className="flex items-center gap-2 text-destructive animate-in fade-in slide-in-from-bottom-2">
-            <AlertTriangle className="w-4 h-4" />
-            <p>{error}</p>
-          </div>
-        ) : transcript ? (
-          <div className="animate-in zoom-in-95 duration-300">
-            <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">
-              Reconhecido
+      <div className={cn("flex min-h-[130px] w-full flex-col items-center justify-center rounded-xl border-2 p-6 text-center transition-all", resultStyle)}>
+        {pronunciation.error ? (
+          <div className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-4 w-4" /><p>{pronunciation.error}</p></div>
+        ) : pronunciation.result ? (
+          <div className="animate-in zoom-in-95">
+            <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">Frase reconhecida</p>
+            <p className={cn("text-2xl font-medium italic", resultColor)}>“{pronunciation.result.transcript}”</p>
+            <div className={cn("mt-2 flex items-center justify-center gap-2 font-semibold", resultColor)}>
+              <ResultIcon className="h-5 w-5" />
+              <span>{pronunciation.result.result === "correct" ? "Correto" : pronunciation.result.result === "almost" ? "Quase lá" : "Tente novamente"} ({Math.round(pronunciation.result.score)}%)</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {pronunciation.result.assessmentType === "acoustic" ? "Avaliação acústica de pronúncia" : "Correspondência da frase reconhecida"}
             </p>
-            <p className={cn(
-              "text-2xl font-medium italic",
-              getResultColor() || "text-foreground"
-            )}>
-              "{transcript}"
-            </p>
-            {evaluation && (
-              <div className={cn("flex items-center justify-center gap-2 mt-2", getResultColor())}>
-                {getResultIcon()}
-                <span className="font-semibold">{getResultText()}</span>
-              </div>
-            )}
+            {pronunciation.result.warnings.map((warning) => <p key={warning} className="mt-1 text-xs text-amber-700 dark:text-amber-400">{warning}</p>)}
           </div>
         ) : (
-          <p className="text-muted-foreground/40 italic">
-            O texto falado aparecerá aqui...
-          </p>
+          <p className="italic text-muted-foreground/50">O resultado aparecerá aqui depois da gravação.</p>
         )}
       </div>
 
-      <div className="w-full flex justify-between pt-2">
-        <Button
-          variant="ghost"
-          onClick={resetTranscript}
-          disabled={!transcript && !error}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <RotateCcw className="h-4 w-4 mr-2" />
-          Limpar
+      <div className="flex w-full justify-between pt-2">
+        <Button variant="ghost" onClick={pronunciation.reset} disabled={pronunciation.isProcessing} className="text-muted-foreground hover:text-foreground">
+          <RotateCcw className="mr-2 h-4 w-4" /> Tentar novamente
         </Button>
-
-        <Button onClick={handleNext} className="px-8" size="lg">
-          Próximo
-          <ArrowRight className="ml-2 h-4 w-4" />
+        <Button onClick={advance} className="px-8" size="lg" disabled={pronunciation.isRecording || pronunciation.isProcessing}>
+          {pronunciation.result ? "Próximo" : "Pular"}<ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>
