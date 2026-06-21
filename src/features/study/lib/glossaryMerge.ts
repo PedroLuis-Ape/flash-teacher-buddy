@@ -31,7 +31,8 @@ export function splitGlossaryAlternatives(value: string): string[] {
   const unique = new Map<string, string>();
   value.split(/\s*[,;]\s*/u).forEach((part) => {
     const clean = part.trim();
-    if (clean) unique.set(normalize(clean), clean);
+    const key = normalize(clean);
+    if (clean && !unique.has(key)) unique.set(key, clean);
   });
   return Array.from(unique.values());
 }
