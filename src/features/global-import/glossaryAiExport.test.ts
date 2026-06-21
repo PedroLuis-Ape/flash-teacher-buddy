@@ -28,14 +28,15 @@ describe("glossary AI export", () => {
     expect(prompt).toContain("am / sou, estou");
     expect(prompt).toContain("what / o que, qual");
     expect(prompt).toContain("não crie duas linhas espelhadas");
-    expect(prompt).toContain("[CARD 1 | LISTA: Rotina][A] I am at home.");
-    expect(prompt).toContain("[CARD 1 | LISTA: Rotina][B] Eu estou em casa.");
+    expect(prompt).toContain("arquivo de texto UTF-8 chamado app-piteco-glossario.txt");
+    expect(prompt).toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][A] I am at home.");
+    expect(prompt).toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][B] Eu estou em casa.");
   });
 
   it("exports only the requested side", () => {
     const prompt = buildGlossaryAiPrompt(cards.slice(0, 1), "A");
-    expect(prompt).toContain("[CARD 1 | LISTA: Rotina][A] I am at home.");
-    expect(prompt).not.toContain("[CARD 1 | LISTA: Rotina][B]");
+    expect(prompt).toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][A] I am at home.");
+    expect(prompt).not.toContain("[CARD 1 | PASTA: Inglês básico | LISTA: Rotina][B]");
   });
 
   it("filters by term, translation, list or folder", () => {
