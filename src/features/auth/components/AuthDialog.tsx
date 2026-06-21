@@ -16,6 +16,9 @@ export function AuthDialog({ open, onOpenChange, children }: AuthDialogProps) {
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/45" />
         <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-2xl focus:outline-none">
           <DialogPrimitive.Title className="sr-only">Entrar na APE</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">
+            Entre com Google ou com seu e-mail e senha.
+          </DialogPrimitive.Description>
           <div className="mb-5 flex items-center justify-center">
             <PitecoLogo className="h-14 w-14" />
           </div>
