@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cleanTextForTTS } from "@/features/study/lib/speech";
-import { segmentTextForTTS } from "@/features/study/lib/speechSegmentation";
 import { normalizeLangCode, toBCP47 } from "@/features/study/lib/languages";
+import { buildDidacticSpeechPlan } from "@/features/study/lib/didacticPronunciation";
 
 export type SpeechMode = "natural" | "word-by-word";
 
@@ -11,9 +11,6 @@ export interface PlayOptions {
   pitch?: number;
   mode?: SpeechMode;
 }
-
-export const WORD_BY_WORD_RATE = 0.72;
-export const WORD_PAUSE_MS = 350;
 
 function pickVoice(lang: string, voices: SpeechSynthesisVoice[]) {
   const requested = toBCP47(lang).toLowerCase();
@@ -77,12 +74,17 @@ export function useTTS() {
       setIsSpeaking(false);
       setActiveMode(null);
     };
-    const make = (value: string, rate: number) => {
+
+    const make = (
+      value: string,
+      rate: number,
+      pitch = options?.pitch ?? 1,
+    ) => {
       const utterance = new SpeechSynthesisUtterance(value);
       utterance.lang = voice?.lang || lang;
       if (voice) utterance.voice = voice;
       utterance.rate = rate;
-      utterance.pitch = options?.pitch ?? 1;
+      utterance.pitch = pitch;
       utterance.volume = 1;
       return utterance;
     };
@@ -98,20 +100,29 @@ export function useTTS() {
       return;
     }
 
-    const words = segmentTextForTTS(cleaned);
+    const steps = buildDidacticSpeechPlan(cleaned, lang);
     const play = (index: number) => {
       if (sessionRef.current !== session) return;
-      if (index >= words.length) return done();
-      const utterance = make(words[index], WORD_BY_WORD_RATE);
+      if (index >= steps.length) return done();
+
+      const step = steps[index];
+      const utterance = make(step.text, step.rate, step.pitch);
       const next = () => {
         if (sessionRef.current !== session) return;
-        if (index === words.length - 1) return done();
-        timerRef.current = setTimeout(() => play(index + 1), WORD_PAUSE_MS);
+        if (index === steps.length - 1) return done();
+        timerRef.current = setTimeout(() => play(index + 1), step.pauseAfterMs);
       };
+
       utterance.onend = next;
       utterance.onerror = next;
       synth.speak(utterance);
     };
+
+    if (steps.length === 0) {
+      done();
+      return;
+    }
+
     play(0);
   }, [stop]);
 
