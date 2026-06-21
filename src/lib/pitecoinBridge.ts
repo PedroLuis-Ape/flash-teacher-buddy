@@ -1,0 +1,1 @@
+export const PITECOIN_BRIDGE_VERSION = 1;
