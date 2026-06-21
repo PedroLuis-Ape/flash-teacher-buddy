@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { audioExtension } from "./audioMime";
+import { convertAudioToWav } from "./audioToWav";
 import { useAudioRecorder, type AudioRecording } from "./useAudioRecorder";
 import type { NormalizedPronunciationResult } from "./types";
 
@@ -43,9 +44,11 @@ export function usePronunciationEngine({ expectedText, language, cardId, listId 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error("AUTH_REQUIRED");
+      const converted = await convertAudioToWav(recording.blob);
+      const uploadMime = converted.type || recording.mimeType;
       const form = new FormData();
-      form.append("audio", recording.blob, `attempt.${audioExtension(recording.mimeType)}`);
-      form.append("mimeType", recording.mimeType);
+      form.append("audio", converted, `attempt.${audioExtension(uploadMime)}`);
+      form.append("mimeType", uploadMime);
       form.append("expectedText", expectedText);
       form.append("language", language);
       form.append("mode", "auto");
@@ -96,14 +99,14 @@ export function usePronunciationEngine({ expectedText, language, cardId, listId 
     setEngineError(null);
     setEngineState("idle");
     await recorder.start();
-  }, [recorder]);
+  }, [recorder.start]);
 
   const cancel = useCallback(() => {
     requestRef.current?.abort();
     requestRef.current = null;
     recorder.cancel();
     setEngineState("cancelled");
-  }, [recorder]);
+  }, [recorder.cancel]);
 
   const reset = useCallback(() => {
     requestRef.current?.abort();
@@ -112,7 +115,7 @@ export function usePronunciationEngine({ expectedText, language, cardId, listId 
     setResult(null);
     setEngineError(null);
     setEngineState("idle");
-  }, [recorder]);
+  }, [recorder.reset]);
 
   return {
     state,
