@@ -132,6 +132,7 @@ export function StudyToolsMenu({
   }, []);
 
   const toggleRate = () => {
+    window.speechSynthesis?.cancel();
     const next = rate === 1 ? 0.5 : 1;
     setRate(next);
     localStorage.setItem(SPEECH_RATE_KEY, String(next));
@@ -140,9 +141,29 @@ export function StudyToolsMenu({
 
   const hasHint = !!hint && hint.trim().length > 0;
   const anyActive = !!isFavorite || !!isRedListed || !!isSpecial;
+  const rateLabel = rate === 1
+    ? "Velocidade da fala: normal (1x)"
+    : "Velocidade da fala: palavra por palavra (0.5x)";
 
   const mobileMenu = (
-    <div className="md:hidden">
+    <div className="flex items-center gap-2 md:hidden">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="study-tools-inline-button h-9 min-w-[4.25rem] gap-1.5 px-2.5"
+        title={rateLabel}
+        aria-label={`${rateLabel}. Toque para alternar.`}
+        onPointerDown={stopCardInteraction}
+        onClick={(event) => {
+          stopCardInteraction(event);
+          toggleRate();
+        }}
+      >
+        <Gauge className="h-4 w-4" />
+        <span className="text-xs font-semibold">{rate === 1 ? "1x" : "0.5x"}</span>
+      </Button>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -238,16 +259,6 @@ export function StudyToolsMenu({
           >
             <Lightbulb className={cn("mr-2 h-4 w-4", hasHint ? "text-warning" : "text-muted-foreground")} />
             {hasHint ? "Ver dica" : "Sem dica"}
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              toggleRate();
-            }}
-          >
-            <Gauge className="mr-2 h-4 w-4" />
-            Velocidade: {rate === 1 ? "Normal (1x)" : "Lenta (0.5x)"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
