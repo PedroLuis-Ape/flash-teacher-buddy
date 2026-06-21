@@ -3,6 +3,12 @@ project_id = "ymahldldyxvwjeruaxpr"
 [functions.tts]
 verify_jwt = true
 
+[functions.tts-synthesize]
+verify_jwt = true
+
+[functions.assess-pronunciation]
+verify_jwt = true
+
 [functions.ping]
 verify_jwt = false
 
