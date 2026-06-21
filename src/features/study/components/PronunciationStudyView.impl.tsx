@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Mic, Volume2, ArrowRight, RotateCcw, AlertTriangle, Square, CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
 import { usePronunciation } from "@/features/study/hooks/usePronunciation";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { cn } from "@/lib/utils";
@@ -36,43 +36,38 @@ interface PronunciationStudyViewProps {
 }
 
 export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, mergedHintsB, langA = "en", langB = "pt", labelA, labelB, isFavorite = false, isRedListed = false, onToggleFavorite, onToggleRedList, isSpecial = false, onToggleSpecial, onNext }: PronunciationStudyViewProps) {
-  // --- Side A/B State Consolidation ---
-  // In pronunciation mode, user practices speaking sideB (the answer/translation side)
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
 
-  // Pronunciation always practices speaking sideB
-  const speakSide = sideB;   // The phrase user must speak
-  const hintSide = sideA;    // Just a visual hint
+  const speakSide = sideB;
+  const hintSide = sideA;
 
-  // Map short codes to BCP-47 using shared utility
   const speakLang = toBCP47(speakSide.lang);
   const hintLang = toBCP47(hintSide.lang);
 
   const {
     isListening,
+    isProcessing,
     transcript,
     alternatives,
     error,
     isSupported,
+    provider,
     startListening,
     stopListening,
     resetTranscript,
-  } = usePronunciation({ lang: speakLang });
+  } = usePronunciation({ lang: speakLang, expectedText: speakSide.text });
 
   const { speak, stop: stopTTS } = useTTS();
   const shortcuts = useShortcutMap();
-  
-  // Track if we've already played sound for this transcript
-  const lastSoundPlayedForRef = useRef<string>('');
+  const lastSoundPlayedForRef = useRef<string>("");
 
   useEffect(() => {
     resetTranscript();
     stopTTS();
-    lastSoundPlayedForRef.current = '';
+    lastSoundPlayedForRef.current = "";
   }, [speakSide.text, resetTranscript, stopTTS]);
 
-  // Keyboard shortcuts for pronunciation: nextCard advances to the next card.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
@@ -98,10 +93,11 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
   };
 
   const handleMicToggle = () => {
+    if (isProcessing) return;
     if (isListening) {
       stopListening();
     } else {
-      startListening();
+      void startListening();
     }
   };
 
@@ -111,38 +107,33 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
     onNext();
   };
 
-  // Evaluate pronunciation using fuzzy matching
   const evaluation = useMemo(() => {
     if (!transcript || alternatives.length === 0) return null;
     return evaluatePronunciation(alternatives, speakSide.text);
   }, [speakSide.text, transcript, alternatives]);
 
-  // Play sound effect in useEffect (NOT in useMemo to avoid issues)
   useEffect(() => {
     if (!evaluation || !transcript) return;
-    
-    // Only play sound once per unique transcript
     if (lastSoundPlayedForRef.current === transcript) return;
     lastSoundPlayedForRef.current = transcript;
-    
-    if (evaluation.result === 'correct') {
+
+    if (evaluation.result === "correct") {
       playCorrect();
-    } else if (evaluation.result === 'incorrect') {
+    } else if (evaluation.result === "incorrect") {
       playWrong();
     }
-    // 'almost' doesn't play any sound - it's a neutral feedback
   }, [evaluation, transcript]);
 
   if (!isSupported) {
     return (
       <div className="flex flex-col items-center justify-center p-6 sm:p-8 text-center">
         <AlertTriangle className="w-10 h-10 sm:w-12 sm:h-12 text-amber-500 mb-3 sm:mb-4" />
-        <h3 className="text-lg sm:text-xl font-bold">Navegador não suportado</h3>
+        <h3 className="text-lg sm:text-xl font-bold">Gravação não suportada</h3>
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          O reconhecimento de voz requer Google Chrome ou Edge.
+          Este navegador não oferece acesso compatível ao microfone nem reconhecimento de voz.
         </p>
         <Button onClick={onNext} className="mt-4 sm:mt-6">
-          Pular Exercício
+          Pular exercício
         </Button>
       </div>
     );
@@ -150,57 +141,65 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
 
   const getResultStyles = () => {
     if (!evaluation) return "bg-muted/20 border-dashed border-muted";
-    
+
     switch (evaluation.result) {
-      case 'correct':
+      case "correct":
         return "bg-green-50/50 border-green-400 dark:bg-green-900/20 dark:border-green-600";
-      case 'almost':
+      case "almost":
         return "bg-amber-50/50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-600";
-      case 'incorrect':
+      case "incorrect":
         return "bg-red-50/50 border-red-400 dark:bg-red-900/20 dark:border-red-600";
     }
   };
 
   const getResultIcon = () => {
     if (!evaluation) return null;
-    
+
     switch (evaluation.result) {
-      case 'correct':
+      case "correct":
         return <CheckCircle2 className="w-5 h-5" />;
-      case 'almost':
+      case "almost":
         return <AlertCircle className="w-5 h-5" />;
-      case 'incorrect':
+      case "incorrect":
         return <XCircle className="w-5 h-5" />;
     }
   };
 
   const getResultText = () => {
     if (!evaluation) return null;
-    
+
     const percentage = Math.round(evaluation.bestScore * 100);
-    
+
     switch (evaluation.result) {
-      case 'correct':
+      case "correct":
         return `Correto! (${percentage}%)`;
-      case 'almost':
+      case "almost":
         return `Quase lá! (${percentage}%)`;
-      case 'incorrect':
+      case "incorrect":
         return `Incorreto (${percentage}%)`;
     }
   };
 
   const getResultColor = () => {
     if (!evaluation) return "";
-    
+
     switch (evaluation.result) {
-      case 'correct':
+      case "correct":
         return "text-green-600 dark:text-green-400";
-      case 'almost':
+      case "almost":
         return "text-amber-600 dark:text-amber-400";
-      case 'incorrect':
+      case "incorrect":
         return "text-red-600 dark:text-red-400";
     }
   };
+
+  const microphoneStatus = isProcessing
+    ? "Analisando sua fala..."
+    : isListening
+      ? provider === "cloud"
+        ? "Gravando... toque para concluir"
+        : "Ouvindo... fale agora"
+      : "Toque para falar";
 
   return (
     <div className="flex flex-col items-center gap-3 sm:gap-6 w-full max-w-2xl mx-auto animate-fade-in">
@@ -219,12 +218,10 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
           Fale em {speakSide.label}
         </p>
 
-        {/* Phrase to speak - BIG */}
         <h2 className="text-[clamp(1.75rem,8.5vw,2.5rem)] sm:text-4xl md:text-5xl leading-tight font-bold text-primary mb-1 sm:mb-2 tracking-tight">
           <InteractiveText text={speakSide.text} wordHints={wordHintsA} mergedHints={mergedHintsB} speakOnHintClick speakLang={speakLang} />
         </h2>
 
-        {/* Hint translation - small */}
         <p className="text-xs sm:text-sm text-muted-foreground/60 mb-4 sm:mb-8 italic">
           "<InteractiveText text={hintSide.text} wordHints={wordHintsA} mergedHints={mergedHintsA} speakOnHintClick speakLang={hintLang} />"
         </p>
@@ -244,15 +241,19 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
         <Button
           size="lg"
           variant={isListening ? "destructive" : "default"}
+          disabled={isProcessing}
           className={cn(
             "rounded-full w-16 h-16 sm:w-20 sm:h-20 shadow-2xl border-[3px] sm:border-4 transition-all duration-300 flex items-center justify-center",
             isListening
               ? "scale-110 border-red-200 ring-4 ring-red-100 animate-pulse"
-              : "border-primary/20 hover:scale-105"
+              : "border-primary/20 hover:scale-105",
+            isProcessing && "cursor-wait opacity-80",
           )}
           onClick={handleMicToggle}
         >
-          {isListening ? (
+          {isProcessing ? (
+            <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin" />
+          ) : isListening ? (
             <Square className="w-6 h-6 sm:w-8 sm:h-8 fill-current" />
           ) : (
             <Mic className="w-6 h-6 sm:w-8 sm:h-8" />
@@ -262,23 +263,30 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
         <span
           className={cn(
             "text-xs sm:text-sm font-medium transition-all duration-300 h-5 sm:h-6",
-            isListening ? "text-red-500 animate-pulse" : "text-muted-foreground"
+            isListening && "text-red-500 animate-pulse",
+            isProcessing && "text-primary",
+            !isListening && !isProcessing && "text-muted-foreground",
           )}
         >
-          {isListening ? "Ouvindo... (Fale agora)" : "Toque para falar"}
+          {microphoneStatus}
         </span>
       </div>
 
       <div
         className={cn(
           "w-full p-4 sm:p-6 rounded-xl border-2 text-center transition-all duration-500 min-h-[88px] sm:min-h-[120px] flex flex-col justify-center items-center",
-          getResultStyles()
+          getResultStyles(),
         )}
       >
         {error ? (
           <div className="flex items-center gap-2 text-sm sm:text-base text-destructive animate-in fade-in slide-in-from-bottom-2">
-            <AlertTriangle className="w-4 h-4" />
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <p>{error}</p>
+          </div>
+        ) : isProcessing ? (
+          <div className="flex items-center gap-2 text-sm sm:text-base text-primary">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <p>Transcrevendo o áudio...</p>
           </div>
         ) : transcript ? (
           <div className="animate-in zoom-in-95 duration-300">
@@ -287,7 +295,7 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
             </p>
             <p className={cn(
               "text-xl sm:text-2xl font-medium italic",
-              getResultColor() || "text-foreground"
+              getResultColor() || "text-foreground",
             )}>
               "{transcript}"
             </p>
@@ -309,14 +317,14 @@ export function PronunciationStudyView({ front, back, wordHintsA, mergedHintsA, 
         <Button
           variant="ghost"
           onClick={resetTranscript}
-          disabled={!transcript && !error}
+          disabled={isProcessing || (!transcript && !error)}
           className="h-10 px-2 sm:px-4 text-sm text-muted-foreground hover:text-foreground"
         >
           <RotateCcw className="h-4 w-4 mr-2" />
           Limpar
         </Button>
 
-        <Button onClick={handleNext} className="h-11 sm:h-12 px-6 sm:px-8" size="lg">
+        <Button onClick={handleNext} disabled={isProcessing} className="h-11 sm:h-12 px-6 sm:px-8" size="lg">
           Próximo
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
