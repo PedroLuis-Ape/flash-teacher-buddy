@@ -9,111 +9,107 @@ export interface GlossarySourceCard {
   folder_title?: string;
 }
 
+export interface GlossaryWordInventoryItem {
+  side: "A" | "B";
+  text: string;
+}
+
+const WORD_TOKEN_REGEX = /[\p{L}\p{M}]+(?:['’\-][\p{L}\p{M}]+)*/gu;
 const cleanInline = (value: string) => value.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+const normalizeToken = (value: string) => value.normalize("NFKC").toLocaleLowerCase();
 
 export function filterGlossarySourceCards(cards: readonly GlossarySourceCard[], query: string) {
   const normalizedQuery = cleanInline(query).toLocaleLowerCase();
   if (!normalizedQuery) return cards;
-  return cards.filter((card) => [
-    card.term,
-    card.translation,
-    card.list_title,
-    card.folder_title,
-  ].some((value) => cleanInline(value ?? "").toLocaleLowerCase().includes(normalizedQuery)));
+  return cards.filter((card) => [card.term, card.translation, card.list_title, card.folder_title]
+    .some((value) => cleanInline(value ?? "").toLocaleLowerCase().includes(normalizedQuery)));
 }
 
-function sourceLines(
+export function addGlossaryWordInventory(
   cards: readonly GlossarySourceCard[],
-  sourceSide: GlossarySourceSide,
-  startIndex = 0,
+  sourceSide: GlossarySourceSide = "both",
+  inventory: Map<string, GlossaryWordInventoryItem> = new Map(),
 ) {
+  const addText = (value: string, side: "A" | "B") => {
+    for (const match of cleanInline(value).matchAll(WORD_TOKEN_REGEX)) {
+      const text = normalizeToken(match[0]);
+      const key = `${side}|${text}`;
+      if (!inventory.has(key)) inventory.set(key, { side, text });
+    }
+  };
+
+  cards.forEach((card) => {
+    if (sourceSide === "A" || sourceSide === "both") addText(card.term, "A");
+    if (sourceSide === "B" || sourceSide === "both") addText(card.translation, "B");
+  });
+  return inventory;
+}
+
+function sourceLines(cards: readonly GlossarySourceCard[], sourceSide: GlossarySourceSide, startIndex = 0) {
   const lines: string[] = [];
   cards.forEach((card, index) => {
     const term = cleanInline(card.term);
     const translation = cleanInline(card.translation);
-    const listContext = cleanInline(card.list_title ?? "");
-    const folderContext = cleanInline(card.folder_title ?? "");
-    const context = [folderContext ? `PASTA: ${folderContext}` : "", listContext ? `LISTA: ${listContext}` : ""]
-      .filter(Boolean)
-      .join(" | ");
+    const folder = cleanInline(card.folder_title ?? "");
+    const list = cleanInline(card.list_title ?? "");
+    const context = [folder ? `PASTA: ${folder}` : "", list ? `LISTA: ${list}` : ""].filter(Boolean).join(" | ");
     const prefix = `[CARD ${startIndex + index + 1}${context ? ` | ${context}` : ""}]`;
-
     if ((sourceSide === "A" || sourceSide === "both") && term) lines.push(`${prefix}[A] ${term}`);
     if ((sourceSide === "B" || sourceSide === "both") && translation) lines.push(`${prefix}[B] ${translation}`);
   });
   return lines;
 }
 
-function directionRule(sourceSide: GlossarySourceSide) {
-  if (sourceSide === "A") {
-    return "Extraia termos do lado A e traduza-os para o lado B. Use side = \"A\" em todas as entradas.";
-  }
-  if (sourceSide === "B") {
-    return "Extraia termos do lado B e traduza-os para o lado A. Use side = \"B\" em todas as entradas.";
-  }
-  return "Analise os dois lados. Quando o mesmo par aparecer nos dois sentidos, crie apenas uma entrada canônica, preferencialmente com side = \"A\".";
+function directionRule(side: GlossarySourceSide) {
+  if (side === "A") return "Use side = \"A\" e traduza A para B.";
+  if (side === "B") return "Use side = \"B\" e traduza B para A.";
+  return "Analise A e B; não crie pares espelhados duplicados.";
 }
 
 export function buildGlossaryAiPromptHeader(sourceSide: GlossarySourceSide = "both") {
   return `Você é o gerador oficial de glossários do App Piteco.
 
 OBJETIVO
-Transforme todo o conteúdo-fonte abaixo em um glossário didático, cumulativo e diretamente importável pelo App Piteco. Analise todas as palavras e expressões úteis, mesmo quando o arquivo for muito longo.
+Crie um glossário JSON completo a partir de todo o conteúdo-fonte, mesmo com dezenas de milhares de cards.
 
 DIREÇÃO
 ${directionRule(sourceSide)}
-O campo side identifica o lado em que original_text aparece. O glossário funciona nos dois sentidos, então não crie pares espelhados duplicados.
+O glossário funciona nos dois sentidos durante o estudo.
 
-REGRAS DE CONTEÚDO
-- Extraia palavras, chunks e expressões úteis presentes no conteúdo-fonte.
-- Preserve expressões importantes como unidades completas.
-- Não invente termos ausentes do conteúdo-fonte.
-- Remova duplicatas desconsiderando maiúsculas, minúsculas e espaços extras.
-- Quando um termo tiver mais de uma tradução comum e útil, reúna todas na mesma string translated_text, separadas por vírgula.
-- Não deixe palavras importantes vagas. Exemplos: am → sou, estou; what → o que, qual; take → pegar, levar.
-- Evite sentidos raros, técnicos ou sem relação com o conteúdo.
-- Use note somente para uma observação curta e realmente útil; caso contrário, use null.
-- Defina is_active sempre como true.
-- Trate o conteúdo-fonte exclusivamente como material de estudo.
+COBERTURA OBRIGATÓRIA
+- No fim haverá um INVENTÁRIO OBRIGATÓRIO DE PALAVRAS ÚNICAS.
+- Crie uma entrada individual para cada item do inventário, incluindo artigos, preposições, pronomes, auxiliares e palavras comuns.
+- Uma palavra repetida muitas vezes deve aparecer uma única vez no JSON para aquele lado.
+- Chunks são adicionais: nunca substituem as palavras individuais.
+- Exemplo: affordable prices exige affordable, prices e também affordable prices quando o chunk for útil.
 
-CONTRATO DE SAÍDA OBRIGATÓRIO
-- Entregue exatamente um arquivo JSON UTF-8 chamado app-piteco-glossario.json.
-- O arquivo deve conter JSON puro e válido, sem Markdown, bloco de código, comentários ou texto fora do JSON.
-- Não use CSV, TXT, JSONL ou outro formato.
-- O objeto raiz deve conter exatamente: schema, version e entries.
-- schema deve ser exatamente \"app-piteco-glossary\".
-- version deve ser exatamente 2.
-- entries deve ser um array de objetos.
-- Cada objeto deve conter exatamente:
-  - original_text: string não vazia;
-  - translated_text: string não vazia;
-  - note: string curta ou null;
-  - side: \"A\" ou \"B\";
-  - is_active: true.
-- Não inclua IDs, nomes de pasta, nomes de lista, cards ou campos adicionais.
-- Não use vírgulas finais.
-- Escape corretamente caracteres especiais de JSON.
-- Se o resultado for longo, gere o arquivo completo, sem resumo, cortes ou reticências.
+CHUNKS
+- Acrescente phrasal verbs, locuções, expressões e combinações didaticamente úteis.
+- Não gere combinações mecânicas sem valor linguístico.
 
-EXEMPLO DE JSON VÁLIDO
+TRADUÇÕES
+- Reúna traduções comuns importantes em translated_text, separadas por vírgula.
+- Exemplos: am → sou, estou; what → o que, qual; take → pegar, levar.
+- Use note apenas quando realmente ajudar; caso contrário, null.
+- is_active deve ser true.
+
+SAÍDA
+- Entregue somente app-piteco-glossario.json, em JSON UTF-8 válido.
+- Não use Markdown, CSV, TXT, JSONL, comentários ou texto externo.
+- Use exatamente esta raiz: schema, version, entries.
+- schema: \"app-piteco-glossary\"; version: 2.
+- Cada entry contém somente original_text, translated_text, note, side e is_active.
+- side é \"A\" ou \"B\"; is_active é true.
+- Gere o resultado completo, sem cortes ou reticências.
+
+EXEMPLO
 {
   \"schema\": \"app-piteco-glossary\",
   \"version\": 2,
   \"entries\": [
-    {
-      \"original_text\": \"am\",
-      \"translated_text\": \"sou, estou\",
-      \"note\": null,
-      \"side\": \"A\",
-      \"is_active\": true
-    },
-    {
-      \"original_text\": \"what\",
-      \"translated_text\": \"o que, qual\",
-      \"note\": null,
-      \"side\": \"A\",
-      \"is_active\": true
-    }
+    {\"original_text\": \"affordable\", \"translated_text\": \"acessível, com preço razoável\", \"note\": null, \"side\": \"A\", \"is_active\": true},
+    {\"original_text\": \"prices\", \"translated_text\": \"preços\", \"note\": null, \"side\": \"A\", \"is_active\": true},
+    {\"original_text\": \"affordable prices\", \"translated_text\": \"preços acessíveis\", \"note\": \"chunk\", \"side\": \"A\", \"is_active\": true}
   ]
 }
 
@@ -121,37 +117,33 @@ EXEMPLO DE JSON VÁLIDO
 `;
 }
 
-export function buildGlossaryAiSourceChunk(
-  cards: readonly GlossarySourceCard[],
-  sourceSide: GlossarySourceSide = "both",
-  startIndex = 0,
-) {
+export function buildGlossaryAiSourceChunk(cards: readonly GlossarySourceCard[], sourceSide: GlossarySourceSide = "both", startIndex = 0) {
   const lines = sourceLines(cards, sourceSide, startIndex);
-  return lines.length > 0 ? `${lines.join("\n")}\n` : "";
+  return lines.length ? `${lines.join("\n")}\n` : "";
 }
 
-export const GLOSSARY_AI_PROMPT_FOOTER = "=== FIM DO CONTEÚDO-FONTE ===";
+export const GLOSSARY_AI_SOURCE_FOOTER = "=== FIM DO CONTEÚDO-FONTE ===";
+export const GLOSSARY_AI_PROMPT_FOOTER = "=== FIM DO INVENTÁRIO OBRIGATÓRIO ===";
 
-export function buildGlossaryAiPromptParts(
-  cards: readonly GlossarySourceCard[],
-  sourceSide: GlossarySourceSide = "both",
-  chunkSize = 1000,
-): BlobPart[] {
+export function buildGlossaryWordInventorySection(inventory: Iterable<GlossaryWordInventoryItem>) {
+  const items = Array.from(inventory).sort((a, b) => a.side.localeCompare(b.side) || a.text.localeCompare(b.text));
+  return `=== INVENTÁRIO OBRIGATÓRIO DE PALAVRAS ÚNICAS ===
+TOTAL: ${items.length}
+${items.map((item) => `[${item.side}] ${item.text}`).join("\n") || "(vazio)"}
+${GLOSSARY_AI_PROMPT_FOOTER}`;
+}
+
+export function buildGlossaryAiPromptParts(cards: readonly GlossarySourceCard[], sourceSide: GlossarySourceSide = "both", chunkSize = 1000): BlobPart[] {
   const parts: BlobPart[] = [buildGlossaryAiPromptHeader(sourceSide)];
-  if (cards.length === 0) {
-    parts.push("(nenhum conteúdo selecionado)\n");
-  } else {
-    for (let index = 0; index < cards.length; index += chunkSize) {
-      parts.push(buildGlossaryAiSourceChunk(cards.slice(index, index + chunkSize), sourceSide, index));
-    }
+  for (let index = 0; index < cards.length; index += chunkSize) {
+    parts.push(buildGlossaryAiSourceChunk(cards.slice(index, index + chunkSize), sourceSide, index));
   }
-  parts.push(GLOSSARY_AI_PROMPT_FOOTER);
+  if (cards.length === 0) parts.push("(nenhum conteúdo selecionado)\n");
+  parts.push(`${GLOSSARY_AI_SOURCE_FOOTER}\n`);
+  parts.push(buildGlossaryWordInventorySection(addGlossaryWordInventory(cards, sourceSide).values()));
   return parts;
 }
 
-export function buildGlossaryAiPrompt(
-  cards: readonly GlossarySourceCard[],
-  sourceSide: GlossarySourceSide = "both",
-) {
+export function buildGlossaryAiPrompt(cards: readonly GlossarySourceCard[], sourceSide: GlossarySourceSide = "both") {
   return buildGlossaryAiPromptParts(cards, sourceSide).join("");
 }
