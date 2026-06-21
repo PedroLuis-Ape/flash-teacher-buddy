@@ -5,49 +5,31 @@ import {
 } from "./didacticPronunciation";
 
 describe("didactic pronunciation", () => {
-  it("finds curated English words case-insensitively", () => {
-    expect(getDidacticPronunciation("Important!", "en-US")?.display).toBe("im-POR-tənt");
-    expect(getDidacticPronunciation("IMPORTANT", "en")?.stressIndex).toBe(1);
+  it("does not expose syllable decompositions", () => {
+    expect(getDidacticPronunciation("Important!", "en-US")).toBeNull();
+    expect(getDidacticPronunciation("comfortable", "en-US")).toBeNull();
   });
 
-  it("does not apply English decompositions to other languages", () => {
-    expect(getDidacticPronunciation("important", "pt-BR")).toBeNull();
-  });
-
-  it("plays an isolated difficult word as whole, chunks, then whole again", () => {
+  it("keeps an isolated difficult word intact", () => {
     const plan = buildDidacticSpeechPlan("important", "en-US");
 
-    expect(plan.map((step) => step.text)).toEqual([
-      "important",
-      "im",
-      "port",
-      "ent",
-      "important",
-    ]);
-    expect(plan.map((step) => step.kind)).toEqual([
-      "word",
-      "chunk",
-      "chunk",
-      "chunk",
-      "review",
-    ]);
-    expect(plan[plan.length - 1]?.pauseAfterMs).toBe(0);
+    expect(plan.map((step) => step.text)).toEqual(["important"]);
+    expect(plan.every((step) => step.kind === "word")).toBe(true);
+    expect(plan[0]?.pauseAfterMs).toBe(0);
   });
 
-  it("keeps ordinary words separated while expanding difficult words in a phrase", () => {
+  it("separates phrase words without splitting any word into syllables", () => {
     const plan = buildDidacticSpeechPlan("This is important", "en-US");
 
     expect(plan.map((step) => step.text)).toEqual([
       "This",
       "is",
-      "im",
-      "port",
-      "ent",
       "important",
     ]);
+    expect(plan.some((step) => ["im", "port", "ent"].includes(step.text))).toBe(false);
   });
 
-  it("preserves the original word-by-word behavior for unknown words", () => {
+  it("preserves word-by-word playback for ordinary words", () => {
     const plan = buildDidacticSpeechPlan("hello world", "en-US");
 
     expect(plan.map((step) => step.text)).toEqual(["hello", "world"]);
