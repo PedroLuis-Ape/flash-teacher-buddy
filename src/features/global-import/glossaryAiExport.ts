@@ -13,7 +13,7 @@ const cleanInline = (value: string) => value.replace(/[\r\n]+/g, " ").replace(/\
 
 export function filterGlossarySourceCards(cards: readonly GlossarySourceCard[], query: string) {
   const normalizedQuery = cleanInline(query).toLocaleLowerCase();
-  if (!normalizedQuery) return [...cards];
+  if (!normalizedQuery) return cards;
   return cards.filter((card) => [
     card.term,
     card.translation,
@@ -22,7 +22,11 @@ export function filterGlossarySourceCards(cards: readonly GlossarySourceCard[], 
   ].some((value) => cleanInline(value ?? "").toLocaleLowerCase().includes(normalizedQuery)));
 }
 
-function sourceLines(cards: readonly GlossarySourceCard[], sourceSide: GlossarySourceSide) {
+function sourceLines(
+  cards: readonly GlossarySourceCard[],
+  sourceSide: GlossarySourceSide,
+  startIndex = 0,
+) {
   const lines: string[] = [];
   cards.forEach((card, index) => {
     const term = cleanInline(card.term);
@@ -32,7 +36,7 @@ function sourceLines(cards: readonly GlossarySourceCard[], sourceSide: GlossaryS
     const context = [folderContext ? `PASTA: ${folderContext}` : "", listContext ? `LISTA: ${listContext}` : ""]
       .filter(Boolean)
       .join(" | ");
-    const prefix = `[CARD ${index + 1}${context ? ` | ${context}` : ""}]`;
+    const prefix = `[CARD ${startIndex + index + 1}${context ? ` | ${context}` : ""}]`;
 
     if ((sourceSide === "A" || sourceSide === "both") && term) lines.push(`${prefix}[A] ${term}`);
     if ((sourceSide === "B" || sourceSide === "both") && translation) lines.push(`${prefix}[B] ${translation}`);
@@ -40,24 +44,24 @@ function sourceLines(cards: readonly GlossarySourceCard[], sourceSide: GlossaryS
   return lines;
 }
 
-export function buildGlossaryAiPrompt(
-  cards: readonly GlossarySourceCard[],
-  sourceSide: GlossarySourceSide = "both",
-) {
-  const lines = sourceLines(cards, sourceSide);
-  const directionRule = sourceSide === "A"
-    ? "Extraia termos do lado A e traduza-os para o lado B. Use side = \"A\" em todas as entradas."
-    : sourceSide === "B"
-      ? "Extraia termos do lado B e traduza-os para o lado A. Use side = \"B\" em todas as entradas."
-      : "Analise os dois lados. Quando o mesmo par aparecer nos dois sentidos, crie apenas uma entrada canônica, preferencialmente com side = \"A\".";
+function directionRule(sourceSide: GlossarySourceSide) {
+  if (sourceSide === "A") {
+    return "Extraia termos do lado A e traduza-os para o lado B. Use side = \"A\" em todas as entradas.";
+  }
+  if (sourceSide === "B") {
+    return "Extraia termos do lado B e traduza-os para o lado A. Use side = \"B\" em todas as entradas.";
+  }
+  return "Analise os dois lados. Quando o mesmo par aparecer nos dois sentidos, crie apenas uma entrada canônica, preferencialmente com side = \"A\".";
+}
 
+export function buildGlossaryAiPromptHeader(sourceSide: GlossarySourceSide = "both") {
   return `Você é o gerador oficial de glossários do App Piteco.
 
 OBJETIVO
 Transforme todo o conteúdo-fonte abaixo em um glossário didático, cumulativo e diretamente importável pelo App Piteco. Analise todas as palavras e expressões úteis, mesmo quando o arquivo for muito longo.
 
 DIREÇÃO
-${directionRule}
+${directionRule(sourceSide)}
 O campo side identifica o lado em que original_text aparece. O glossário funciona nos dois sentidos, então não crie pares espelhados duplicados.
 
 REGRAS DE CONTEÚDO
@@ -114,6 +118,40 @@ EXEMPLO DE JSON VÁLIDO
 }
 
 === CONTEÚDO-FONTE ===
-${lines.length > 0 ? lines.join("\n") : "(nenhum conteúdo selecionado)"}
-=== FIM DO CONTEÚDO-FONTE ===`;
+`;
+}
+
+export function buildGlossaryAiSourceChunk(
+  cards: readonly GlossarySourceCard[],
+  sourceSide: GlossarySourceSide = "both",
+  startIndex = 0,
+) {
+  const lines = sourceLines(cards, sourceSide, startIndex);
+  return lines.length > 0 ? `${lines.join("\n")}\n` : "";
+}
+
+export const GLOSSARY_AI_PROMPT_FOOTER = "=== FIM DO CONTEÚDO-FONTE ===";
+
+export function buildGlossaryAiPromptParts(
+  cards: readonly GlossarySourceCard[],
+  sourceSide: GlossarySourceSide = "both",
+  chunkSize = 1000,
+): BlobPart[] {
+  const parts: BlobPart[] = [buildGlossaryAiPromptHeader(sourceSide)];
+  if (cards.length === 0) {
+    parts.push("(nenhum conteúdo selecionado)\n");
+  } else {
+    for (let index = 0; index < cards.length; index += chunkSize) {
+      parts.push(buildGlossaryAiSourceChunk(cards.slice(index, index + chunkSize), sourceSide, index));
+    }
+  }
+  parts.push(GLOSSARY_AI_PROMPT_FOOTER);
+  return parts;
+}
+
+export function buildGlossaryAiPrompt(
+  cards: readonly GlossarySourceCard[],
+  sourceSide: GlossarySourceSide = "both",
+) {
+  return buildGlossaryAiPromptParts(cards, sourceSide).join("");
 }
