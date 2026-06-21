@@ -51,13 +51,14 @@ const gameOptions: Array<{
   mode: StudyMode | "multiple";
   visualKey: GameModeVisualKey;
   title: string;
+  beta?: boolean;
 }> = [
   { mode: "flip", visualKey: "flip", title: "Virar Cartas" },
   { mode: "write", visualKey: "write", title: "Escrever" },
   { mode: "multiple", visualKey: "multiple", title: "Múltipla Escolha" },
   { mode: "unscramble", visualKey: "unscramble", title: "Desembaralhar" },
   { mode: "mixed", visualKey: "mixed", title: "Estudo Misto" },
-  { mode: "pronunciation", visualKey: "pronunciation", title: "Prática de Pronúncia" },
+  { mode: "pronunciation", visualKey: "pronunciation", title: "Prática de Pronúncia", beta: true },
 ];
 
 const GamesHub = () => {
@@ -66,25 +67,16 @@ const GamesHub = () => {
   const location = useLocation();
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
 
-  // Use declarative route matching (covers /list/:id/games and /portal/list/:id/games)
-  // instead of pathname.includes() — robust against future route additions.
   const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
 
-  // PERF: centralized auth (no redundant getUser() / getSession() calls)
   const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
-  // Clara Master P0 — authStatus is the ONLY gate for "we know who the
-  // user is". `userId` alone may be undefined during the auth race window.
   const { status: authStatus } = useAuth();
 
-  // ── Persistent study preferences (single source of truth) ──
   const { prefs, updatePrefs } = useStudyPreferences(userId);
-  // Keep a ref mirror of prefs so startGame() always reads the latest value
-  // even if invoked synchronously after an updatePrefs() in the same tick.
   const prefsRef = useRef(prefs);
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
-  // ── Local immediate selection state ──
   const [selectedDirection, setSelectedDirection] = useState<Direction>(prefs.direction);
   const [selectedOrder, setSelectedOrder] = useState<typeof prefs.order>(prefs.order);
   useEffect(() => { setSelectedDirection(prefs.direction); }, [prefs.direction]);
@@ -158,7 +150,7 @@ const GamesHub = () => {
     return isListRoute ? { listId: id } : { collectionId: id };
   }, [id, isListRoute]);
 
-  const favoritesQuery = useFavorites(userId, 'flashcard', favoritesScope);
+  const favoritesQuery = useFavorites(userId, "flashcard", favoritesScope);
   const favorites = favoritesQuery.data ?? [];
   const favoritesCount = favorites.length;
   const favoritesSyncing =
@@ -166,10 +158,10 @@ const GamesHub = () => {
     favoritesQuery.isFetching ||
     favoritesQuery.isPlaceholderData;
   const favoritesMutating = useIsMutating({
-    predicate: (m) => {
-      const k = m.options.mutationKey as unknown[] | undefined;
-      const key = Array.isArray(k) ? String(k[0] ?? '') : '';
-      return key.startsWith('favorite') || key.startsWith('red');
+    predicate: (mutation) => {
+      const keyParts = mutation.options.mutationKey as unknown[] | undefined;
+      const key = Array.isArray(keyParts) ? String(keyParts[0] ?? "") : "";
+      return key.startsWith("favorite") || key.startsWith("red");
     },
   }) > 0;
 
@@ -187,18 +179,24 @@ const GamesHub = () => {
 
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
-    const useFavorites = liveFavoritesOnly && favoritesCount > 0;
-    const favParam = useFavorites ? "&favorites=true" : "";
+    const useFavoritesOnly = liveFavoritesOnly && favoritesCount > 0;
+    const favoriteParam = useFavoritesOnly ? "&favorites=true" : "";
 
     if (import.meta.env.DEV) {
       console.debug("[GamesHub] startGame", {
-        rawMode, mode, kind, basePath,
-        direction: liveDirection, order: liveOrder,
-        favoritesOnly: liveFavoritesOnly, favoritesCount, useFavorites,
+        rawMode,
+        mode,
+        kind,
+        basePath,
+        direction: liveDirection,
+        order: liveOrder,
+        favoritesOnly: liveFavoritesOnly,
+        favoritesCount,
+        useFavorites: useFavoritesOnly,
       });
     }
 
-    navigate(`${basePath}/study?mode=${studyModeToUrlParam(mode)}&dir=${liveDirection}&order=${liveOrder}${favParam}`);
+    navigate(`${basePath}/study?mode=${studyModeToUrlParam(mode)}&dir=${liveDirection}&order=${liveOrder}${favoriteParam}`);
   };
 
   const handleBack = () => {
@@ -246,15 +244,13 @@ const GamesHub = () => {
               <label className="mb-1.5 block text-xs font-medium">Direção</label>
               <Select
                 value={selectedDirection}
-                onValueChange={(v) => {
-                  const dir = normalizeDirection(v);
-                  setSelectedDirection(dir);
-                  updatePrefs({ direction: dir });
+                onValueChange={(value) => {
+                  const direction = normalizeDirection(value);
+                  setSelectedDirection(direction);
+                  updatePrefs({ direction });
                 }}
               >
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="a-b">{listLabels.labelsA} → {listLabels.labelsB}</SelectItem>
                   <SelectItem value="b-a">{listLabels.labelsB} → {listLabels.labelsA}</SelectItem>
@@ -267,14 +263,12 @@ const GamesHub = () => {
               <label className="mb-1.5 block text-xs font-medium">Ordem</label>
               <Select
                 value={selectedOrder}
-                onValueChange={(v: any) => {
-                  setSelectedOrder(v);
-                  updatePrefs({ order: v });
+                onValueChange={(value: typeof prefs.order) => {
+                  setSelectedOrder(value);
+                  updatePrefs({ order: value });
                 }}
               >
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="random">Aleatória</SelectItem>
                   <SelectItem value="sequential">Sequencial</SelectItem>
@@ -293,8 +287,8 @@ const GamesHub = () => {
                     {favoritesSyncing
                       ? "Atualizando favoritos..."
                       : favoritesCount > 0
-                      ? `${favoritesCount} cards marcados como favorito`
-                      : "Nenhum favorito nesta lista"}
+                        ? `${favoritesCount} cards marcados como favorito`
+                        : "Nenhum favorito nesta lista"}
                   </p>
                 </Label>
               </div>
@@ -302,13 +296,13 @@ const GamesHub = () => {
                 id="favorites-only"
                 disabled={favoritesSyncing || favoritesCount === 0}
                 checked={prefs.favoritesOnly && favoritesCount > 0}
-                onCheckedChange={(v) => updatePrefs({ favoritesOnly: v })}
+                onCheckedChange={(value) => updatePrefs({ favoritesOnly: value })}
               />
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3 lg:grid-cols-6">
-            {gameOptions.map(({ mode, visualKey, title }) => {
+            {gameOptions.map(({ mode, visualKey, title, beta }) => {
               const visual = GAME_MODE_VISUALS[visualKey];
               return (
                 <button
@@ -316,11 +310,16 @@ const GamesHub = () => {
                   type="button"
                   onClick={() => startGame(mode)}
                   className={cn(
-                    "flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-xl border p-3 text-center shadow-sm transition-all",
+                    "relative flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-xl border p-3 text-center shadow-sm transition-all",
                     "hover:-translate-y-0.5 hover:shadow-md",
                     visual.cardClass,
                   )}
                 >
+                  {beta && (
+                    <span className="absolute right-2 top-2 rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow-sm">
+                      BETA
+                    </span>
+                  )}
                   <span
                     className={cn(
                       "flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl shadow-sm",
