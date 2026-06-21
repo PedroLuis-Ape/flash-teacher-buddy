@@ -25,6 +25,7 @@ DECLARE
   v_folder_visibility text;
   v_folder_class_id uuid;
   v_allowed boolean := false;
+  v_class_allowed boolean := false;
 BEGIN
   SELECT
     l.owner_id,
@@ -52,25 +53,30 @@ BEGIN
   v_allowed :=
     v_uid = v_owner_id
     OR v_list_visibility = 'public'
-    OR v_folder_visibility = 'public'
-    OR (
-      v_uid IS NOT NULL
-      AND v_list_visibility = 'class'
-      AND v_list_class_id IS NOT NULL
-      AND (
-        public.is_turma_owner(v_list_class_id, v_uid)
-        OR public.is_turma_member(v_list_class_id, v_uid)
-      )
-    )
-    OR (
-      v_uid IS NOT NULL
-      AND v_folder_visibility = 'class'
-      AND v_folder_class_id IS NOT NULL
-      AND (
-        public.is_turma_owner(v_folder_class_id, v_uid)
-        OR public.is_turma_member(v_folder_class_id, v_uid)
-      )
-    );
+    OR v_folder_visibility = 'public';
+
+  IF NOT v_allowed
+     AND v_uid IS NOT NULL
+     AND to_regprocedure('public.is_turma_owner(uuid,uuid)') IS NOT NULL
+     AND to_regprocedure('public.is_turma_member(uuid,uuid)') IS NOT NULL THEN
+    IF v_list_visibility = 'class' AND v_list_class_id IS NOT NULL THEN
+      EXECUTE
+        'SELECT public.is_turma_owner($1, $2) OR public.is_turma_member($1, $2)'
+      INTO v_class_allowed
+      USING v_list_class_id, v_uid;
+      v_allowed := COALESCE(v_class_allowed, false);
+    END IF;
+
+    IF NOT v_allowed
+       AND v_folder_visibility = 'class'
+       AND v_folder_class_id IS NOT NULL THEN
+      EXECUTE
+        'SELECT public.is_turma_owner($1, $2) OR public.is_turma_member($1, $2)'
+      INTO v_class_allowed
+      USING v_folder_class_id, v_uid;
+      v_allowed := COALESCE(v_class_allowed, false);
+    END IF;
+  END IF;
 
   IF NOT v_allowed THEN
     RAISE EXCEPTION 'Lista invalida ou sem permissao.' USING ERRCODE = '42501';
