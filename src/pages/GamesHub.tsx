@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useLocation, useMatch } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { resolveEffectiveListSettings, getLangLabel } from "@/features/study/lib/resolveStudySides";
+import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +15,19 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, RotateCcw, Pencil, Layers3, ListOrdered, Star, Mic } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 import { toast } from "sonner";
-import { isPortalPath, buildBasePath } from "@/lib/utils";
+import { isPortalPath, buildBasePath, cn } from "@/lib/utils";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useIsMutating } from "@tanstack/react-query";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useAuth } from "@/contexts/AuthContext";
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
+import {
+  GAME_MODE_VISUALS,
+  type GameModeVisualKey,
+} from "@/features/study/lib/gameModeVisuals";
 
 interface Collection {
   id: string;
@@ -42,6 +46,19 @@ interface ListSettings {
   labelsA: string;
   labelsB: string;
 }
+
+const gameOptions: Array<{
+  mode: StudyMode | "multiple";
+  visualKey: GameModeVisualKey;
+  title: string;
+}> = [
+  { mode: "flip", visualKey: "flip", title: "Virar Cartas" },
+  { mode: "write", visualKey: "write", title: "Escrever" },
+  { mode: "multiple", visualKey: "multiple", title: "Múltipla Escolha" },
+  { mode: "unscramble", visualKey: "unscramble", title: "Desembaralhar" },
+  { mode: "mixed", visualKey: "mixed", title: "Estudo Misto" },
+  { mode: "pronunciation", visualKey: "pronunciation", title: "Prática de Pronúncia" },
+];
 
 const GamesHub = () => {
   const { id } = useParams();
@@ -64,24 +81,15 @@ const GamesHub = () => {
   const { prefs, updatePrefs } = useStudyPreferences(userId);
   // Keep a ref mirror of prefs so startGame() always reads the latest value
   // even if invoked synchronously after an updatePrefs() in the same tick.
-  // This is a belt-and-suspenders guarantee against stale closures.
   const prefsRef = useRef(prefs);
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
   // ── Local immediate selection state ──
-  // The persistent prefs hook is async (writes through localStorage / queries),
-  // so a click on the Select followed immediately by clicking a game button
-  // could race the persisted value. We mirror the user's selection in local
-  // state and use it directly when starting the game — guarantees the URL
-  // reflects exactly what the user just picked.
   const [selectedDirection, setSelectedDirection] = useState<Direction>(prefs.direction);
   const [selectedOrder, setSelectedOrder] = useState<typeof prefs.order>(prefs.order);
-  // Sync local state when prefs load asynchronously (first render / userId change)
   useEffect(() => { setSelectedDirection(prefs.direction); }, [prefs.direction]);
   useEffect(() => { setSelectedOrder(prefs.order); }, [prefs.order]);
 
-  // PERF: cached metadata fetches with longer staleTime so back/forth navigation
-  // between list → hub → study → hub does not refetch unnecessarily.
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["gameshub-list", id],
     queryFn: async () => {
@@ -128,14 +136,12 @@ const GamesHub = () => {
     staleTime: 5 * 60_000,
   });
 
-  // Resolve labels once metadata is in
   useEffect(() => {
     if (!list) return;
     const resolved = resolveEffectiveListSettings(list, folderRow ?? null);
     setListLabels({ labelsA: resolved.labelsA, labelsB: resolved.labelsB });
   }, [list, folderRow]);
 
-  // Handle errors via effects (kept light to preserve original UX)
   useEffect(() => {
     if (isListRoute && !listLoading && !list && id) {
       toast.error("Lista não encontrada");
@@ -152,16 +158,13 @@ const GamesHub = () => {
     return isListRoute ? { listId: id } : { collectionId: id };
   }, [id, isListRoute]);
 
-  // Single source of truth: list of IDs + count come from the SAME query.
   const favoritesQuery = useFavorites(userId, 'flashcard', favoritesScope);
   const favorites = favoritesQuery.data ?? [];
   const favoritesCount = favorites.length;
-  const favoritesLoading = favoritesQuery.isLoading;
   const favoritesSyncing =
     favoritesQuery.isLoading ||
     favoritesQuery.isFetching ||
     favoritesQuery.isPlaceholderData;
-  // Any in-flight favorite-related mutation blocks the auto-reset too.
   const favoritesMutating = useIsMutating({
     predicate: (m) => {
       const k = m.options.mutationKey as unknown[] | undefined;
@@ -170,38 +173,20 @@ const GamesHub = () => {
     },
   }) > 0;
 
-  // Clara Master P0 — DO NOT auto-reset `favoritesOnly`. The previous logic
-  // silently rewrote the user's persistent preference whenever the query
-  // came back empty for any reason (auth race, fetching, placeholder,
-  // outbox pending). The user perceived this as "favorites lost on
-  // cold restart". The empty state is now shown in the UI and the user
-  // toggles the filter off explicitly when they want to study all cards.
-  //
-  // Keeping the previous variables (favoritesSyncing, favoritesMutating)
-  // referenced so future contributors can re-enable a guarded reset behind
-  // an explicit product decision — but they are intentionally unused now.
   void favoritesSyncing;
   void favoritesMutating;
   void authStatus;
 
   const startGame = (rawMode: StudyMode | "multiple") => {
-    // Normalize any alias (e.g. "multiple" → "multiple-choice") before persisting.
-    // This is the single entry point from the hub into the study session.
     const mode = normalizeStudyMode(rawMode);
     updatePrefs({ mode });
 
-    // SSOT for the URL = local selection state (what the user just picked in
-    // the Selects). This sidesteps any race with the async prefs writer.
-    // Favorites toggle is stable enough to read from the ref.
     const liveDirection = selectedDirection;
     const liveOrder = selectedOrder;
     const liveFavoritesOnly = prefsRef.current.favoritesOnly;
 
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
-    // Only forward favorites=true if the list actually has favorites — guards against
-    // a stale flag bleeding from a previous list (the auto-reset effect handles state,
-    // this guards the URL too).
     const useFavorites = liveFavoritesOnly && favoritesCount > 0;
     const favParam = useFavorites ? "&favorites=true" : "";
 
@@ -218,7 +203,7 @@ const GamesHub = () => {
 
   const handleBack = () => {
     const onPortal = isPortalPath(location.pathname);
-    
+
     if (window.history.state?.idx > 0) {
       navigate(-1);
     } else if (collection) {
@@ -236,40 +221,38 @@ const GamesHub = () => {
     }
   };
 
-  // PERF: render layout immediately with skeleton header instead of full-screen blocker.
-  // The controls below render with safe defaults; the title appears once metadata resolves.
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
-        <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4">
+      <div className="container mx-auto px-3 py-4 sm:px-4 sm:py-6">
+        <Button variant="ghost" size="sm" onClick={handleBack} className="mb-3 sm:mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
 
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <h1 className="text-2xl font-bold">Hub de jogos</h1>
           {loading ? (
-            <Skeleton className="h-4 w-48 mt-2" />
+            <Skeleton className="mt-2 h-4 w-48" />
           ) : (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
               {isListRoute ? list?.title : collection?.name}
             </p>
           )}
         </div>
 
-        <div className="max-w-6xl mx-auto space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <div className="grid grid-cols-2 gap-3 rounded-xl border bg-card/95 p-3 shadow-sm">
             <div>
-              <label className="text-xs font-medium mb-1.5 block">Direção</label>
+              <label className="mb-1.5 block text-xs font-medium">Direção</label>
               <Select
                 value={selectedDirection}
                 onValueChange={(v) => {
                   const dir = normalizeDirection(v);
-                  setSelectedDirection(dir);   // immediate, no race
-                  updatePrefs({ direction: dir }); // persist
+                  setSelectedDirection(dir);
+                  updatePrefs({ direction: dir });
                 }}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,7 +264,7 @@ const GamesHub = () => {
             </div>
 
             <div>
-              <label className="text-xs font-medium mb-1.5 block">Ordem</label>
+              <label className="mb-1.5 block text-xs font-medium">Ordem</label>
               <Select
                 value={selectedOrder}
                 onValueChange={(v: any) => {
@@ -289,7 +272,7 @@ const GamesHub = () => {
                   updatePrefs({ order: v });
                 }}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -300,10 +283,8 @@ const GamesHub = () => {
             </div>
           </div>
 
-          {/* Favorites filter — sempre visível para usuários logados, mesmo com 0 favoritos.
-              Garantia: o controle nunca fica oculto enquanto a preferência pode estar ativa por baixo. */}
           {userId && (
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
+            <div className="flex items-center justify-between rounded-lg border bg-card/95 p-3 shadow-sm">
               <div className="flex items-center gap-2">
                 <Star className="h-4 w-4 text-yellow-500" />
                 <Label htmlFor="favorites-only" className="cursor-pointer">
@@ -326,66 +307,34 @@ const GamesHub = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
-            <button
-              onClick={() => startGame("flip")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <RotateCcw className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-sm font-semibold">Virar Cartas</span>
-            </button>
-
-            <button
-              onClick={() => startGame("write")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Pencil className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-sm font-semibold">Escrever</span>
-            </button>
-
-            <button
-              onClick={() => startGame("multiple")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <ListOrdered className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-sm font-semibold">Múltipla Escolha</span>
-            </button>
-
-            <button
-              onClick={() => startGame("unscramble")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Layers3 className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-sm font-semibold">Desembaralhar</span>
-            </button>
-
-            <button
-              onClick={() => startGame("mixed")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:bg-accent hover:-translate-y-0.5 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <RotateCcw className="h-5 w-5 text-primary" />
-              </div>
-              <span className="text-sm font-semibold">Estudo Misto</span>
-            </button>
-
-            <button
-              onClick={() => startGame("pronunciation")}
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 hover:-translate-y-0.5 hover:shadow-md transition-all"
-            >
-              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <Mic className="h-5 w-5 text-orange-500" />
-              </div>
-              <span className="text-sm font-semibold">Prática de Pronúncia</span>
-            </button>
+          <div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3 lg:grid-cols-6">
+            {gameOptions.map(({ mode, visualKey, title }) => {
+              const visual = GAME_MODE_VISUALS[visualKey];
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => startGame(mode)}
+                  className={cn(
+                    "flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-xl border p-3 text-center shadow-sm transition-all",
+                    "hover:-translate-y-0.5 hover:shadow-md",
+                    visual.cardClass,
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl shadow-sm",
+                      visual.tileClass,
+                    )}
+                    aria-hidden="true"
+                    title={visual.emojiLabel}
+                  >
+                    {visual.emoji}
+                  </span>
+                  <span className="text-sm font-semibold leading-tight">{title}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
