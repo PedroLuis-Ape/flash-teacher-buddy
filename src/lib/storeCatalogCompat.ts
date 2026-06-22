@@ -1,12 +1,12 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { SkinItem } from './storeEngine';
 
-const LEGACY_PRODUCTION_SLUGS = [
+export const LEGACY_PRODUCTION_SLUGS = [
   'piteco_vampiro',
   'piteco_prime',
   'piteco-zombie',
   'piteco_zombie',
-];
+] as const;
 
 function hasCompleteAssets(item: any): item is SkinItem {
   return (
@@ -47,7 +47,10 @@ export async function getProductionStoreCatalog(): Promise<SkinItem[]> {
   }
 
   if (strictResult.error) {
-    console.warn('[StoreCatalog] Strict catalog unavailable; using legacy production compatibility.', strictResult.error);
+    console.warn(
+      '[StoreCatalog] Strict catalog unavailable; using legacy production compatibility.',
+      strictResult.error,
+    );
   } else {
     console.info('[StoreCatalog] Strict catalog is empty; using legacy production compatibility.');
   }
@@ -57,7 +60,7 @@ export async function getProductionStoreCatalog(): Promise<SkinItem[]> {
     .select('*')
     .eq('is_active', true)
     .eq('approved', true)
-    .in('slug', LEGACY_PRODUCTION_SLUGS)
+    .in('slug', [...LEGACY_PRODUCTION_SLUGS])
     .order('price_pitecoin', { ascending: true });
 
   if (legacyResult.error) {
