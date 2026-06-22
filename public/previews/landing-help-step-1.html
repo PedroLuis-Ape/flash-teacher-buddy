@@ -3,86 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>APE · Preview da ajuda inicial</title>
+  <title>APE · Preview refinado da ajuda inicial</title>
   <style>
     :root {
       color-scheme: light dark;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --background: #f7f8fb;
+      font-family: Nunito, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --background: #f5f6fb;
       --card: #ffffff;
-      --foreground: #172033;
-      --muted: #667085;
-      --border: #dce1ea;
-      --primary: #6f47d7;
-      --primary-soft: #f1edff;
-      --shadow: 0 24px 70px rgba(28, 24, 56, .22);
+      --foreground: #181629;
+      --muted: #6d6a7c;
+      --border: #dfdce9;
+      --primary: #7a45df;
+      --primary-2: #b64ae3;
+      --secondary: #3f98d8;
+      --accent: #d44fce;
+      --primary-soft: #f3edff;
+      --secondary-soft: #eaf6ff;
+      --accent-soft: #fff0fd;
+      --shadow: 0 28px 90px rgba(36, 22, 71, .28);
     }
+
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: var(--background); color: var(--foreground); }
-    button, a { font: inherit; }
+    button { font: inherit; }
+
     .landing {
       min-height: 100vh;
       background:
-        radial-gradient(circle at 10% 10%, rgba(111,71,215,.16), transparent 28rem),
-        radial-gradient(circle at 90% 70%, rgba(71,151,215,.12), transparent 28rem),
+        radial-gradient(circle at 8% 8%, rgba(122, 69, 223, .16), transparent 27rem),
+        radial-gradient(circle at 90% 74%, rgba(63, 152, 216, .13), transparent 30rem),
         var(--background);
     }
-    .nav { height: 58px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.78); backdrop-filter: blur(14px); }
-    .brand { font-size: 20px; font-weight: 800; }
+
+    .nav {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, .78);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 20px; font-weight: 900; }
+    .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 11px; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; }
     .hero { max-width: 1080px; margin: 0 auto; padding: 72px 24px; }
     .hero h1 { max-width: 700px; margin: 0; font-size: clamp(36px, 7vw, 66px); line-height: 1; color: var(--primary); }
     .hero p { max-width: 600px; color: var(--muted); font-size: 18px; line-height: 1.6; }
     .fake-actions { display: flex; gap: 10px; margin-top: 28px; }
-    .fake-action { height: 44px; border-radius: 12px; border: 1px solid var(--border); padding: 0 18px; background: var(--card); color: var(--foreground); font-weight: 700; }
-    .fake-action.primary { background: var(--primary); color: white; border-color: var(--primary); }
-    .overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(12,15,25,.68); z-index: 10; }
-    .dialog { width: min(100%, 520px); border: 1px solid var(--border); border-radius: 24px; background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
-    .dialog-inner { padding: 22px; }
-    .mascot-row { display: flex; align-items: center; gap: 14px; padding-right: 34px; }
-    .mascot { width: 62px; height: 62px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 22px; background: var(--primary-soft); font-size: 38px; }
-    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; background: #fff5d9; color: #8a5700; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-    .microcopy { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
-    .close { position: absolute; right: 20px; top: 18px; width: 34px; height: 34px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; }
-    .dialog-wrap { position: relative; }
-    h2 { margin: 22px 0 7px; font-size: 26px; line-height: 1.15; }
-    .subtitle { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
-    .choices { display: grid; gap: 10px; }
-    .choice { width: 100%; min-height: 74px; display: flex; align-items: center; gap: 13px; border: 1px solid var(--border); border-radius: 18px; padding: 12px; background: var(--card); color: var(--foreground); text-align: left; cursor: pointer; transition: .18s ease; }
-    .choice:hover, .choice:focus-visible { border-color: var(--primary); background: var(--primary-soft); outline: none; transform: translateY(-1px); }
-    .choice-icon { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 14px; background: var(--primary-soft); font-size: 22px; }
-    .choice-copy { min-width: 0; flex: 1; }
-    .choice-title { display: block; font-weight: 800; }
-    .choice-description { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
-    .arrow { color: var(--muted); font-size: 20px; }
+    .fake-action { height: 44px; border-radius: 12px; border: 1px solid var(--border); padding: 0 18px; background: var(--card); color: var(--foreground); font-weight: 800; }
+    .fake-action.primary { border-color: transparent; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; box-shadow: 0 10px 26px rgba(122, 69, 223, .26); }
+
+    .overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(12, 11, 24, .72); backdrop-filter: blur(4px); z-index: 10; }
+    .dialog { position: relative; width: min(100%, 570px); overflow: hidden; border: 1px solid rgba(255,255,255,.22); border-radius: 31px; background: var(--card); box-shadow: var(--shadow); }
+    .close { position: absolute; right: 17px; top: 16px; z-index: 5; width: 35px; height: 35px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; background: rgba(17,11,33,.16); color: white; cursor: pointer; backdrop-filter: blur(8px); }
+
+    .welcome {
+      position: relative;
+      overflow: hidden;
+      min-height: 132px;
+      padding: 22px 58px 23px 22px;
+      color: white;
+      background:
+        radial-gradient(circle at 88% 12%, rgba(255,255,255,.18) 0 66px, transparent 67px),
+        radial-gradient(circle at 2% 114%, rgba(216,151,255,.28), transparent 150px),
+        linear-gradient(135deg, var(--primary), var(--primary-2));
+    }
+
+    .welcome::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .22;
+      background-image: radial-gradient(circle, white 1px, transparent 1.2px);
+      background-size: 18px 18px;
+      mask-image: linear-gradient(90deg, transparent 25%, black 100%);
+    }
+
+    .welcome-row { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; }
+    .mascot-shell { position: relative; width: 76px; height: 76px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.28); border-radius: 23px; background: rgba(255,255,255,.15); box-shadow: 0 16px 38px rgba(36,17,65,.24); backdrop-filter: blur(10px); }
+    .mascot-face { width: 50px; height: 50px; position: relative; border: 3px solid white; border-radius: 50%; }
+    .mascot-face::before, .mascot-face::after { content: ""; position: absolute; top: 17px; width: 5px; height: 5px; border-radius: 50%; background: white; }
+    .mascot-face::before { left: 13px; }
+    .mascot-face::after { right: 13px; }
+    .mascot-smile { position: absolute; left: 50%; bottom: 11px; width: 18px; height: 9px; border-bottom: 3px solid white; border-radius: 0 0 18px 18px; transform: translateX(-50%); }
+    .preview-badge { display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 5px 9px; background: rgba(18,9,35,.14); font-size: 9px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+    .welcome-title { margin: 8px 0 0; font-size: 21px; font-weight: 900; line-height: 1.1; }
+    .welcome-copy { margin: 4px 0 0; color: rgba(255,255,255,.78); font-size: 13px; }
+
+    .content { padding: 22px; }
+    .step-line { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+    .step-number { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: var(--primary); color: white; font-size: 10px; }
+    .step-rule { height: 1px; flex: 1; background: linear-gradient(90deg, var(--border), transparent); }
+    h2 { margin: 0; font-size: 29px; line-height: 1.1; letter-spacing: -.02em; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .choices { display: grid; gap: 12px; margin-top: 19px; }
+
+    .choice {
+      position: relative;
+      width: 100%;
+      min-height: 86px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 13px 14px;
+      color: var(--foreground);
+      text-align: left;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+
+    .choice::after { content: ""; position: absolute; width: 92px; height: 92px; right: -31px; top: -39px; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: rgba(255,255,255,.24); }
+    .choice.student { border-color: rgba(122,69,223,.27); background: linear-gradient(135deg, var(--primary-soft), white 74%); }
+    .choice.teacher { border-color: rgba(63,152,216,.28); background: linear-gradient(135deg, var(--secondary-soft), white 74%); }
+    .choice.explore { border-color: rgba(212,79,206,.27); background: linear-gradient(135deg, var(--accent-soft), white 74%); }
+    .choice:hover, .choice:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(41,31,69,.13); outline: none; }
+    .choice.student:hover { border-color: var(--primary); }
+    .choice.teacher:hover { border-color: var(--secondary); }
+    .choice.explore:hover { border-color: var(--accent); }
+    .choice-icon { position: relative; z-index: 1; width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 17px; color: white; font-size: 21px; font-weight: 900; box-shadow: 0 13px 24px -14px rgba(40,20,80,.7); }
+    .student .choice-icon, .recommendation.student .choice-icon { background: linear-gradient(135deg, var(--primary), var(--primary-2)); }
+    .teacher .choice-icon, .recommendation.teacher .choice-icon { background: linear-gradient(135deg, var(--secondary), var(--primary)); }
+    .explore .choice-icon, .recommendation.explore .choice-icon { background: linear-gradient(135deg, var(--accent), var(--primary-2)); }
+    .choice-copy { position: relative; z-index: 1; min-width: 0; flex: 1; }
+    .choice-label { display: block; margin-bottom: 2px; font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+    .student .choice-label { color: var(--primary); }
+    .teacher .choice-label { color: var(--secondary); }
+    .explore .choice-label { color: var(--accent); }
+    .choice-title { display: block; font-size: 15px; font-weight: 900; }
+    .choice-description { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .arrow { position: relative; z-index: 1; width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--border); border-radius: 50%; background: rgba(255,255,255,.72); color: var(--muted); font-size: 18px; }
     .footnote { margin: 14px 0 0; color: var(--muted); text-align: center; font-size: 11px; }
-    .recommendation { display: flex; gap: 12px; margin: 18px 0; padding: 16px; border: 1px solid rgba(111,71,215,.35); border-radius: 18px; background: var(--primary-soft); }
-    .recommendation strong { display: block; }
-    .recommendation p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    .footnote strong { color: var(--primary); }
+
+    .recommendation { position: relative; display: flex; align-items: center; gap: 14px; overflow: hidden; margin: 19px 0 18px; padding: 18px; border: 1px solid var(--border); border-radius: 24px; }
+    .recommendation.student { border-color: rgba(122,69,223,.27); background: linear-gradient(135deg, var(--primary-soft), white 78%); }
+    .recommendation.teacher { border-color: rgba(63,152,216,.28); background: linear-gradient(135deg, var(--secondary-soft), white 78%); }
+    .recommendation.explore { border-color: rgba(212,79,206,.27); background: linear-gradient(135deg, var(--accent-soft), white 78%); }
+    .recommendation strong { display: block; font-size: 17px; }
+    .recommendation p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
     .actions { display: grid; grid-template-columns: auto 1fr; gap: 9px; }
-    .action { min-height: 43px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid var(--border); padding: 0 15px; background: var(--card); color: var(--foreground); font-weight: 800; text-decoration: none; cursor: pointer; }
-    .action.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
-    .reopen { position: fixed; right: 16px; top: 76px; display: none; border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; background: var(--card); color: var(--foreground); box-shadow: 0 8px 24px rgba(20,25,40,.15); cursor: pointer; font-weight: 800; }
+    .action { min-height: 45px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; border: 1px solid var(--border); padding: 0 16px; background: var(--card); color: var(--foreground); font-weight: 900; cursor: pointer; }
+    .action.primary { border-color: transparent; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; box-shadow: 0 11px 28px rgba(122,69,223,.25); }
+    .reopen { position: fixed; right: 16px; top: 76px; display: none; border: 0; border-radius: 999px; padding: 10px 14px; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; box-shadow: 0 10px 28px rgba(122,69,223,.28); cursor: pointer; font-weight: 900; }
+
     @media (max-width: 640px) {
       .hero { padding: 46px 18px; }
       .hero p { font-size: 15px; }
       .overlay { align-items: end; padding: 0; }
-      .dialog { width: 100%; border-radius: 26px 26px 0 0; border-bottom: 0; }
-      .dialog-inner { padding: 18px 16px 16px; }
-      .mascot { width: 56px; height: 56px; font-size: 34px; }
-      h2 { margin-top: 18px; font-size: 22px; }
+      .dialog { width: 100%; border-radius: 31px 31px 0 0; border-bottom: 0; }
+      .welcome { min-height: 124px; padding: 18px 52px 19px 17px; }
+      .mascot-shell { width: 68px; height: 68px; border-radius: 21px; }
+      .mascot-face { width: 45px; height: 45px; }
+      .welcome-title { font-size: 19px; }
+      .welcome-copy { font-size: 12px; }
+      .content { padding: 18px 16px 16px; }
+      h2 { font-size: 24px; }
+      .choice { min-height: 82px; border-radius: 20px; }
+      .choice-icon { width: 48px; height: 48px; }
       .actions { grid-template-columns: 1fr; }
       .fake-actions { display: grid; }
     }
+
     @media (prefers-color-scheme: dark) {
-      :root { --background: #10131c; --card: #181d29; --foreground: #f3f5f8; --muted: #aab2c2; --border: #303849; --primary: #a78bfa; --primary-soft: #28213f; --shadow: 0 24px 70px rgba(0,0,0,.5); }
-      .nav { background: rgba(16,19,28,.8); }
-      .badge { background: #392d11; color: #ffd979; }
+      :root {
+        --background: #11101a;
+        --card: #1d1928;
+        --foreground: #f4f0fb;
+        --muted: #bbb2c9;
+        --border: #3b3449;
+        --primary-soft: #2b2142;
+        --secondary-soft: #182d3d;
+        --accent-soft: #39203a;
+        --shadow: 0 28px 90px rgba(0,0,0,.52);
+      }
+      .nav { background: rgba(17,16,26,.8); }
+      .choice.student, .recommendation.student { background: linear-gradient(135deg, var(--primary-soft), var(--card) 76%); }
+      .choice.teacher, .recommendation.teacher { background: linear-gradient(135deg, var(--secondary-soft), var(--card) 76%); }
+      .choice.explore, .recommendation.explore { background: linear-gradient(135deg, var(--accent-soft), var(--card) 76%); }
+      .arrow { background: rgba(15,13,22,.44); }
     }
   </style>
 </head>
 <body>
   <div class="landing">
-    <div class="nav"><span class="brand">🐵 APE</span></div>
+    <div class="nav"><span class="brand"><span class="brand-mark">P</span>APE</span></div>
     <main class="hero">
       <h1>Inglês com flashcards, jogos e prática ativa</h1>
       <p>Prévia isolada da primeira etapa do sistema de ajuda. A landing real não foi alterada nesta demonstração.</p>
@@ -93,41 +201,62 @@
     </main>
   </div>
 
-  <button id="reopen" class="reopen">🧪 Abrir rascunho</button>
+  <button id="reopen" class="reopen">Abrir rascunho</button>
 
   <div id="overlay" class="overlay">
-    <section class="dialog dialog-wrap" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
       <button id="close" class="close" aria-label="Fechar">✕</button>
-      <div class="dialog-inner">
-        <div class="mascot-row">
-          <div class="mascot" aria-hidden="true">🐵</div>
+
+      <header class="welcome">
+        <div class="welcome-row">
+          <div class="mascot-shell" aria-hidden="true">
+            <div class="mascot-face"><span class="mascot-smile"></span></div>
+          </div>
           <div>
-            <span class="badge">🧪 Preview de rascunho</span>
-            <p class="microcopy">Primeiro pedaço · somente a escolha inicial</p>
+            <span class="preview-badge">Preview de rascunho</span>
+            <p class="welcome-title">Olá! Eu sou o Piteco.</p>
+            <p class="welcome-copy">Vou mostrar só o caminho essencial.</p>
           </div>
         </div>
+      </header>
+
+      <div class="content">
+        <div class="step-line"><span class="step-number">1</span>Escolha seu objetivo<span class="step-rule"></span></div>
 
         <div id="choice-screen">
           <h2 id="dialog-title">Como você quer usar o APE?</h2>
-          <p class="subtitle">Escolha uma opção e eu mostro apenas o próximo passo essencial.</p>
+          <p class="subtitle">Escolha uma opção. A ajuda mostra somente o próximo passo certo para você.</p>
+
           <div class="choices">
-            <button class="choice" data-kind="student" data-title="Quero estudar inglês" data-description="Abrir atividades e começar a praticar." data-action="Ver atividades">
-              <span class="choice-icon">🎓</span><span class="choice-copy"><span class="choice-title">Quero estudar inglês</span><span class="choice-description">Abrir atividades e começar a praticar.</span></span><span class="arrow">→</span>
+            <button class="choice student" data-kind="student" data-title="Quero estudar inglês" data-description="Abrir atividades e começar a praticar." data-action="Ver atividades">
+              <span class="choice-icon">A</span>
+              <span class="choice-copy"><span class="choice-label">Aprender</span><span class="choice-title">Quero estudar inglês</span><span class="choice-description">Abrir atividades e começar a praticar.</span></span>
+              <span class="arrow">→</span>
             </button>
-            <button class="choice" data-kind="teacher" data-title="Quero ensinar" data-description="Conhecer listas, materiais e turmas." data-action="Ver recursos para professores">
-              <span class="choice-icon">👨‍🏫</span><span class="choice-copy"><span class="choice-title">Quero ensinar</span><span class="choice-description">Conhecer listas, materiais e turmas.</span></span><span class="arrow">→</span>
+
+            <button class="choice teacher" data-kind="teacher" data-title="Quero ensinar" data-description="Conhecer listas, materiais e turmas." data-action="Ver recursos para professores">
+              <span class="choice-icon">P</span>
+              <span class="choice-copy"><span class="choice-label">Ensinar</span><span class="choice-title">Quero ensinar</span><span class="choice-description">Conhecer listas, materiais e turmas.</span></span>
+              <span class="arrow">→</span>
             </button>
-            <button class="choice" data-kind="explore" data-title="Quero apenas explorar" data-description="Testar materiais públicos sem compromisso." data-action="Abrir portal público">
-              <span class="choice-icon">🧭</span><span class="choice-copy"><span class="choice-title">Quero apenas explorar</span><span class="choice-description">Testar materiais públicos sem compromisso.</span></span><span class="arrow">→</span>
+
+            <button class="choice explore" data-kind="explore" data-title="Quero apenas explorar" data-description="Testar materiais públicos sem compromisso." data-action="Abrir portal público">
+              <span class="choice-icon">↗</span>
+              <span class="choice-copy"><span class="choice-label">Explorar</span><span class="choice-title">Quero apenas explorar</span><span class="choice-description">Testar materiais públicos sem compromisso.</span></span>
+              <span class="arrow">→</span>
             </button>
           </div>
-          <p class="footnote">Nada será salvo nesta versão de rascunho.</p>
+
+          <p class="footnote"><strong>✦</strong> Nada será salvo nesta versão de rascunho.</p>
         </div>
 
         <div id="result-screen" hidden>
           <h2>Comece por aqui</h2>
           <p class="subtitle">Sem passeio pela página inteira. Este é o caminho mais direto para o seu objetivo.</p>
-          <div class="recommendation"><div class="choice-icon" id="result-icon">🎓</div><div><strong id="result-title"></strong><p id="result-description"></p></div></div>
+          <div id="recommendation" class="recommendation student">
+            <div class="choice-icon" id="result-icon">A</div>
+            <div><span id="result-label" class="choice-label">Aprender</span><strong id="result-title"></strong><p id="result-description"></p></div>
+          </div>
           <div class="actions"><button id="back" class="action">← Voltar</button><button id="continue" class="action primary"></button></div>
         </div>
       </div>
@@ -139,7 +268,12 @@
     const reopen = document.querySelector('#reopen');
     const choiceScreen = document.querySelector('#choice-screen');
     const resultScreen = document.querySelector('#result-screen');
-    const icons = { student: '🎓', teacher: '👨‍🏫', explore: '🧭' };
+    const recommendation = document.querySelector('#recommendation');
+    const settings = {
+      student: { icon: 'A', label: 'Aprender' },
+      teacher: { icon: 'P', label: 'Ensinar' },
+      explore: { icon: '↗', label: 'Explorar' },
+    };
 
     function showChoices() {
       choiceScreen.hidden = false;
@@ -148,9 +282,12 @@
 
     document.querySelectorAll('.choice').forEach((button) => {
       button.addEventListener('click', () => {
+        const kind = button.dataset.kind;
         choiceScreen.hidden = true;
         resultScreen.hidden = false;
-        document.querySelector('#result-icon').textContent = icons[button.dataset.kind];
+        recommendation.className = `recommendation ${kind}`;
+        document.querySelector('#result-icon').textContent = settings[kind].icon;
+        document.querySelector('#result-label').textContent = settings[kind].label;
         document.querySelector('#result-title').textContent = button.dataset.title;
         document.querySelector('#result-description').textContent = button.dataset.description;
         document.querySelector('#continue').textContent = `${button.dataset.action} →`;
