@@ -1,2 +1,0 @@
-Study feedback redesign preview ready for Netlify review.
-Unique deploy trigger for PR #127.
