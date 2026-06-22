@@ -1,4 +1,4 @@
 interface Props { title: string; }
 export function Demo({ title }: Props) {
-  return <section>{title}</section>;
+  return <section className="p-4">{title}</section>;
 }
