@@ -73,8 +73,7 @@ async function uploadAsset(item, kind) {
   });
   if (error) throw error;
 
-  const publicUrl = admin.storage.from(catalog.bucket).getPublicUrl(objectPath).data.publicUrl;
-  return { publicUrl, hash };
+  return admin.storage.from(catalog.bucket).getPublicUrl(objectPath).data.publicUrl;
 }
 
 async function archivePackage(item) {
@@ -91,23 +90,13 @@ async function archivePackage(item) {
   ]);
   if (sourceError) throw sourceError;
   if (publicError) throw publicError;
-
-  const { error: logError } = await admin.from("store_package_sync_log").insert({
-    package_id: item.id,
-    action: "archive",
-    version: item.version,
-    asset_hashes: {},
-    source: "store-packages",
-  });
-  if (logError) throw logError;
 }
 
 async function publishPackage(item) {
-  const [avatar, card] = await Promise.all([
+  const [avatarUrl, cardUrl] = await Promise.all([
     uploadAsset(item, "avatar"),
     uploadAsset(item, "card"),
   ]);
-  const now = new Date().toISOString();
   const common = {
     id: item.id,
     sku: item.id.toUpperCase(),
@@ -117,23 +106,22 @@ async function publishPackage(item) {
     rarity: item.rarity,
     type: "bundle",
     price_pitecoin: item.price_pitecoin,
-    avatar_original: avatar.publicUrl,
-    card_original: card.publicUrl,
-    avatar_final: avatar.publicUrl,
-    card_final: card.publicUrl,
+    avatar_original: avatarUrl,
+    card_original: cardUrl,
+    avatar_final: avatarUrl,
+    card_final: cardUrl,
     is_active: true,
     approved: true,
     status: "published",
     version: item.version,
-    updated_at: now,
+    updated_at: new Date().toISOString(),
   };
-
   const sourceRow = {
     ...common,
-    avatar_src: avatar.publicUrl,
-    card_src: card.publicUrl,
-    avatar_img: avatar.publicUrl,
-    card_img: card.publicUrl,
+    avatar_src: avatarUrl,
+    card_src: cardUrl,
+    avatar_img: avatarUrl,
+    card_img: cardUrl,
   };
 
   const [{ error: sourceError }, { error: publicError }] = await Promise.all([
@@ -142,15 +130,6 @@ async function publishPackage(item) {
   ]);
   if (sourceError) throw sourceError;
   if (publicError) throw publicError;
-
-  const { error: logError } = await admin.from("store_package_sync_log").insert({
-    package_id: item.id,
-    action: "publish",
-    version: item.version,
-    asset_hashes: { avatar: avatar.hash, card: card.hash },
-    source: "store-packages",
-  });
-  if (logError) throw logError;
 }
 
 await ensureBucket();
