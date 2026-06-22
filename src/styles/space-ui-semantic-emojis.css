@@ -1,0 +1,42 @@
+/* Semantic emojis for content categories. Navigation controls stay as vector icons. */
+.space-ui-home-route .stat-tile .icon-tile > svg { display: none; }
+.space-ui-home-route .stat-tile .icon-tile::before { font-size: 1.2rem; line-height: 1; }
+.space-ui-home-route .stat-tile:nth-child(1) .icon-tile::before { content: "📈"; }
+.space-ui-home-route .stat-tile:nth-child(2) .icon-tile::before { content: "👑"; }
+.space-ui-home-route .stat-tile:nth-child(3) .icon-tile::before { content: "🔥"; }
+.space-ui-home-route .stat-tile:nth-child(4) .icon-tile::before { content: "📚"; }
+
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-users)::before { content: "👨‍🏫"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-graduation-cap)::before { content: "🧑‍🏫"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-play)::before { content: "▶️"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-library)::before { content: "📚"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-crown)::before { content: "👑"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-plus)::before { content: "➕"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-target)::before { content: "🎯"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-sticky-note)::before { content: "📝"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-store)::before { content: "🏪"; }
+.space-ui-home-route .w-12.h-12:has(> svg.lucide-search)::before { content: "🔎"; }
+.space-ui-home-route .w-12.h-12:has(> svg:is(.lucide-users,.lucide-graduation-cap,.lucide-play,.lucide-library,.lucide-crown,.lucide-plus,.lucide-target,.lucide-sticky-note,.lucide-store,.lucide-search))::before { font-size: 1.5rem; line-height: 1; }
+.space-ui-home-route .w-12.h-12 > svg:is(.lucide-users,.lucide-graduation-cap,.lucide-play,.lucide-library,.lucide-crown,.lucide-plus,.lucide-target,.lucide-sticky-note,.lucide-store,.lucide-search) { display: none; }
+
+.space-ui-home-route .home-turma-shortcut > div:first-child > div:first-child:has(> svg.lucide-sparkles)::before { content: "✨"; font-size: 1.25rem; line-height: 1; }
+.space-ui-home-route .home-turma-shortcut > div:first-child > div:first-child > svg.lucide-sparkles { display: none; }
+.space-ui-home-route .home-turma-shortcut :is(span,button):has(> svg.lucide-users)::before { content: "👥"; }
+.space-ui-home-route .home-turma-shortcut :is(span,button):has(> svg.lucide-book-open)::before { content: "🏫"; }
+.space-ui-home-route .home-turma-shortcut :is(span,button):has(> svg:is(.lucide-users,.lucide-book-open))::before { font-size: 1.25rem; line-height: 1; }
+.space-ui-home-route .home-turma-shortcut :is(span,button) > svg:is(.lucide-users,.lucide-book-open) { display: none; }
+
+.space-ui .space-ui-tabbar .space-ui-tab > div > svg { display: none; }
+.space-ui .space-ui-tabbar .space-ui-tab > div::before { font-size: 1.35rem; line-height: 1; }
+.space-ui .space-ui-tabbar button[aria-label="Início"] > div::before { content: "🏠"; }
+.space-ui .space-ui-tabbar button[aria-label="Biblioteca"] > div::before { content: "📚"; }
+.space-ui .space-ui-tabbar button[aria-label="Metas"] > div::before { content: "🎯"; }
+.space-ui .space-ui-tabbar button[aria-label="Loja"] > div::before { content: "🏪"; }
+.space-ui .space-ui-tabbar button[aria-label="Perfil"] > div::before { content: "👤"; }
+
+.space-ui .space-ui-main .w-8.h-8:has(> svg.lucide-file-text)::before { content: "📄"; font-size: 1.1rem; line-height: 1; }
+.space-ui .space-ui-main .w-8.h-8 > svg.lucide-file-text { display: none; }
+
+.space-ui .space-ui-main:has(svg.lucide-log-out) button:has(> svg.lucide-user)::before { content: "✏️"; font-size: 1.05rem; line-height: 1; }
+.space-ui .space-ui-main:has(svg.lucide-log-out) button:has(> svg.lucide-log-out)::before { content: "🚪"; font-size: 1.05rem; line-height: 1; }
+.space-ui .space-ui-main:has(svg.lucide-log-out) button > svg:is(.lucide-user,.lucide-log-out) { display: none; }
