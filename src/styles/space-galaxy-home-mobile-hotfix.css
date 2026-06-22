@@ -79,11 +79,12 @@
     mix-blend-mode: normal !important;
   }
 
-  html[data-palette="galaxy"] .space-ui main button::before,
-  html[data-palette="galaxy"] .space-ui main button::after {
-    content: none !important;
-    display: none !important;
-  }
+  /*
+   * Keep button pseudo-elements intact. They carry the emoji replacements used
+   * by important controls such as layout settings, favorites, red list and
+   * special cards. Removing them while the native SVG is hidden creates blank
+   * buttons and can trap the user inside the Galaxy layout.
+   */
 
   html[data-palette="galaxy"] .space-ui-version-badge {
     display: none !important;
