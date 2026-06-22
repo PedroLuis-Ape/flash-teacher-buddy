@@ -1,12 +1,13 @@
 import { Navigate } from "react-router-dom";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import LandingPage from "@/pages/LandingPage";
+import { LandingHelpOverlay } from "@/components/landing/LandingHelpPreview";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 /**
  * Smart "/" gate:
  *  - logged-in user  → redirect to /dashboard
- *  - logged-out user → render public LandingPage
+ *  - logged-out user → render public LandingPage with the first-visit help overlay
  *
  * Uses useAuthUser, which already provides optimistic session from
  * localStorage (Supabase-managed), so there is no extra flash when a
@@ -23,5 +24,10 @@ export default function RootEntry() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <LandingPage />;
+  return (
+    <>
+      <LandingPage />
+      <LandingHelpOverlay />
+    </>
+  );
 }
