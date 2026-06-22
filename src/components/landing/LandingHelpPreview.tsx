@@ -90,8 +90,8 @@ const HELP_PATHS = [
     eyebrow: "Aprender",
     title: "Quero estudar inglês",
     description: "Escolher entre conta gratuita ou acesso sem conta.",
-    cardClass: "border-primary/25 bg-gradient-to-br from-primary/15 via-primary/5 to-card hover:border-primary/55",
-    iconClass: "border-primary/25 bg-gradient-to-br from-primary to-primary-glow text-primary-foreground shadow-[0_10px_24px_-12px_hsl(var(--primary))]",
+    cardClass: "border-primary/45 bg-card hover:border-primary/75 hover:bg-primary/5",
+    iconClass: "border-primary/30 bg-primary text-primary-foreground shadow-sm",
     eyebrowClass: "text-primary",
   },
   {
@@ -100,8 +100,8 @@ const HELP_PATHS = [
     eyebrow: "Ensinar",
     title: "Quero ensinar",
     description: "Criar uma conta de professor para usar os recursos de ensino.",
-    cardClass: "border-secondary/25 bg-gradient-to-br from-secondary/15 via-secondary/5 to-card hover:border-secondary/55",
-    iconClass: "border-secondary/25 bg-gradient-to-br from-secondary to-primary text-secondary-foreground shadow-[0_10px_24px_-12px_hsl(var(--secondary))]",
+    cardClass: "border-secondary/45 bg-card hover:border-secondary/75 hover:bg-secondary/5",
+    iconClass: "border-secondary/30 bg-secondary text-secondary-foreground shadow-sm",
     eyebrowClass: "text-secondary",
   },
   {
@@ -110,8 +110,8 @@ const HELP_PATHS = [
     eyebrow: "Explorar",
     title: "Quero apenas explorar",
     description: "Conhecer professores e materiais públicos sem criar conta.",
-    cardClass: "border-accent/25 bg-gradient-to-br from-accent/15 via-accent/5 to-card hover:border-accent/55",
-    iconClass: "border-accent/25 bg-gradient-to-br from-accent to-primary-glow text-accent-foreground shadow-[0_10px_24px_-12px_hsl(var(--accent))]",
+    cardClass: "border-accent/45 bg-card hover:border-accent/75 hover:bg-accent/5",
+    iconClass: "border-accent/30 bg-accent text-accent-foreground shadow-sm",
     eyebrowClass: "text-accent",
   },
 ];
@@ -120,12 +120,12 @@ function BenefitsGrid({ items }: { items: BenefitItem[] }) {
   return (
     <div className="mt-4 grid gap-2 sm:grid-cols-2">
       {items.map(({ icon: Icon, title, description }) => (
-        <div key={title} className="flex gap-2.5 rounded-xl border border-border/70 bg-background/60 p-3">
+        <div key={title} className="flex gap-2.5 rounded-xl border border-border/70 bg-muted/30 p-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Icon className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-xs font-extrabold leading-tight sm:text-sm">{title}</p>
+            <p className="text-xs font-extrabold leading-tight text-foreground sm:text-sm">{title}</p>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">{description}</p>
           </div>
         </div>
@@ -200,7 +200,7 @@ export function LandingHelpPreview() {
                 {screen === "choose" ? "1" : "2"}
               </span>
               {screen === "choose" ? "Escolha seu objetivo" : "Escolha seu caminho"}
-              <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+              <span className="h-px flex-1 bg-border" />
             </div>
 
             {screen === "choose" && (
@@ -219,21 +219,20 @@ export function LandingHelpPreview() {
                       type="button"
                       onClick={() => setScreen(id)}
                       className={cn(
-                        "group relative flex min-h-[5.35rem] w-full items-center gap-3.5 overflow-hidden rounded-[1.35rem] border p-3.5 text-left shadow-sm transition-all duration-200",
-                        "hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        "group flex min-h-[5.35rem] w-full items-center gap-3.5 rounded-[1.35rem] border p-3.5 text-left text-foreground shadow-sm transition-all duration-200",
+                        "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         cardClass,
                       )}
                     >
-                      <span aria-hidden="true" className="absolute -right-7 -top-8 h-24 w-24 rounded-full border border-white/20 bg-white/10" />
-                      <span className={cn("relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border", iconClass)}>
+                      <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border", iconClass)}>
                         <Icon className="h-5 w-5" />
                       </span>
-                      <span className="relative min-w-0 flex-1">
+                      <span className="min-w-0 flex-1">
                         <span className={cn("block text-[10px] font-extrabold uppercase tracking-[0.14em]", eyebrowClass)}>{eyebrow}</span>
-                        <span className="mt-0.5 block text-[15px] font-extrabold leading-tight sm:text-base">{title}</span>
+                        <span className="mt-0.5 block text-[15px] font-extrabold leading-tight text-foreground sm:text-base">{title}</span>
                         <span className="mt-1 block text-xs leading-relaxed text-muted-foreground sm:text-[13px]">{description}</span>
                       </span>
-                      <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-background/70 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground">
                         <ArrowRight className="h-4 w-4" />
                       </span>
                     </button>
@@ -251,14 +250,14 @@ export function LandingHelpPreview() {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-5 rounded-[1.4rem] border border-primary/25 bg-gradient-to-br from-primary/15 via-primary/5 to-card p-4 shadow-sm">
+                <div className="mt-5 rounded-[1.4rem] border border-primary/35 bg-card p-4 shadow-sm">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-glow text-primary-foreground shadow-lg">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
                       <Sparkles className="h-5 w-5" />
                     </span>
                     <div>
                       <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-primary">Conta gratuita</p>
-                      <p className="mt-1 font-extrabold">Estude e desbloqueie todos os benefícios</p>
+                      <p className="mt-1 font-extrabold text-foreground">Estude e desbloqueie todos os benefícios</p>
                     </div>
                   </div>
                   <BenefitsGrid items={ACCOUNT_BENEFITS} />
@@ -270,7 +269,7 @@ export function LandingHelpPreview() {
                       <BookOpenCheck className="h-5 w-5" />
                     </span>
                     <div>
-                      <p className="font-extrabold">Estudar sem conta</p>
+                      <p className="font-extrabold text-foreground">Estudar sem conta</p>
                       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                         Você pode acessar professores, materiais e jogos públicos. Porém, não recebe Pontos ou PiteCOIN, não usa a loja nem os pacotes visuais de card e avatar, e o progresso não fica sincronizado em uma conta.
                       </p>
@@ -307,14 +306,14 @@ export function LandingHelpPreview() {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-5 rounded-[1.4rem] border border-secondary/25 bg-gradient-to-br from-secondary/15 via-secondary/5 to-card p-4 shadow-sm">
+                <div className="mt-5 rounded-[1.4rem] border border-secondary/35 bg-card p-4 shadow-sm">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-secondary to-primary text-secondary-foreground shadow-lg">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-sm">
                       <Presentation className="h-5 w-5" />
                     </span>
                     <div>
                       <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-secondary">Conta de professor</p>
-                      <p className="mt-1 font-extrabold">Organize, compartilhe e acompanhe</p>
+                      <p className="mt-1 font-extrabold text-foreground">Organize, compartilhe e acompanhe</p>
                     </div>
                   </div>
                   <BenefitsGrid items={TEACHER_BENEFITS} />
@@ -345,13 +344,13 @@ export function LandingHelpPreview() {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-5 rounded-[1.4rem] border border-accent/25 bg-gradient-to-br from-accent/15 via-accent/5 to-card p-4 shadow-sm">
+                <div className="mt-5 rounded-[1.4rem] border border-accent/35 bg-card p-4 shadow-sm">
                   <div className="flex gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary-glow text-accent-foreground shadow-lg">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-sm">
                       <Compass className="h-5 w-5" />
                     </span>
                     <div>
-                      <p className="font-extrabold">O que você encontra</p>
+                      <p className="font-extrabold text-foreground">O que você encontra</p>
                       <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
                         <p className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" /> Perfis de professores e seus materiais públicos.</p>
                         <p className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" /> Atividades, listas e jogos que podem ser abertos sem conta.</p>
