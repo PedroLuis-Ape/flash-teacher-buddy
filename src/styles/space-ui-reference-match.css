@@ -1,6 +1,7 @@
 @import "./space-ui-stars.css";
 @import "./space-ui-game.css";
 @import "./space-ui-semantic-emojis.css";
+@import "./space-ui-button-emojis.css";
 
 .space-ui .space-ui-header{min-height:4rem}
 .space-ui .space-ui-brand-title{font-size:1rem}
