@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Check, X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { StudyFeedbackPanel } from "@/features/study/components/StudyFeedbackPanel";
 
 interface Flashcard {
   id: string;
@@ -27,9 +28,21 @@ export const PracticeMode = ({ flashcards, mode, onExit }: PracticeModeProps) =>
 
   const currentCard = flashcards[currentIndex];
   const progress = ((currentIndex + 1) / flashcards.length) * 100;
-
   const question = mode === "write_pt_en" ? currentCard.term : currentCard.translation;
   const correctAnswer = mode === "write_pt_en" ? currentCard.translation : currentCard.term;
+
+  useEffect(() => {
+    if (!showResult) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      handleNext();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showResult, currentIndex, score]);
 
   const handleSubmit = () => {
     const userAnswer = answer.trim().toLowerCase();
@@ -39,28 +52,28 @@ export const PracticeMode = ({ flashcards, mode, onExit }: PracticeModeProps) =>
     setShowResult(true);
 
     if (correct) {
-      setScore(score + 1);
+      setScore((previous) => previous + 1);
       toast.success("Correto! 🎉");
-    } else {
-      toast.error(`Errado! A resposta era: ${correctAnswer}`);
     }
   };
 
   const handleNext = () => {
     if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex((previous) => previous + 1);
       setAnswer("");
       setShowResult(false);
-    } else {
-      const percentage = Math.round((score / flashcards.length) * 100);
-      toast.success(`Prática finalizada! Pontuação: ${score}/${flashcards.length} (${percentage}%)`);
-      onExit();
+      return;
     }
+
+    const finalScore = score + (isCorrect ? 0 : 0);
+    const percentage = Math.round((finalScore / flashcards.length) * 100);
+    toast.success(`Prática finalizada! Pontuação: ${finalScore}/${flashcards.length} (${percentage}%)`);
+    onExit();
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-6 flex items-center justify-between">
         <Button variant="ghost" onClick={onExit}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
@@ -74,73 +87,42 @@ export const PracticeMode = ({ flashcards, mode, onExit }: PracticeModeProps) =>
 
       <Progress value={progress} className="mb-6" />
 
-      <Card className="p-8 bg-gradient-to-br from-card to-muted/10 shadow-[var(--shadow-card)]">
-        <div className="text-center mb-6">
-          <p className="text-sm text-muted-foreground mb-2">
+      <Card className="bg-gradient-to-br from-card to-muted/10 p-5 shadow-[var(--shadow-card)] sm:p-8">
+        <div className="mb-6 text-center">
+          <p className="mb-2 text-sm text-muted-foreground">
             {mode === "write_pt_en" ? "Traduza para inglês" : "Traduza para português"}
           </p>
-          <h2 className="text-3xl font-bold">{question}</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">{question}</h2>
         </div>
 
         {!showResult ? (
           <div className="space-y-4">
             <Input
               value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
+              onChange={(event) => setAnswer(event.target.value)}
               placeholder="Digite a tradução..."
-              onKeyPress={(e) => e.key === "Enter" && answer && handleSubmit()}
+              onKeyDown={(event) => event.key === "Enter" && answer.trim() && handleSubmit()}
               autoFocus
-              className="text-lg text-center"
+              className="text-center text-lg"
             />
-            <Button
-              onClick={handleSubmit}
-              className="w-full"
-              size="lg"
-              disabled={!answer.trim()}
-            >
+            <Button onClick={handleSubmit} className="w-full" size="lg" disabled={!answer.trim()}>
               Verificar
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div
-              className={`p-4 rounded-lg ${
-                isCorrect ? "bg-green-100 dark:bg-green-900/20" : "bg-red-100 dark:bg-red-900/20"
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                {isCorrect ? (
-                  <>
-                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    <span className="font-semibold text-green-600 dark:text-green-400">
-                      Correto!
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <X className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    <span className="font-semibold text-red-600 dark:text-red-400">
-                      Incorreto
-                    </span>
-                  </>
-                )}
-              </div>
-              {!isCorrect && (
-                <p className="text-sm">
-                  Sua resposta: <span className="font-mono">{answer}</span>
-                  <br />
-                  Resposta correta: <span className="font-mono">{correctAnswer}</span>
-                </p>
-              )}
-            </div>
-            <Button onClick={handleNext} className="w-full" size="lg">
-              {currentIndex < flashcards.length - 1 ? "Próximo" : "Finalizar"}
-            </Button>
-          </div>
+          <StudyFeedbackPanel
+            status={isCorrect ? "correct" : "incorrect"}
+            title={isCorrect ? "Muito bem!" : undefined}
+            message={isCorrect ? "Sua tradução está correta." : "Compare sua resposta com a tradução esperada."}
+            userAnswer={isCorrect ? null : answer}
+            correctAnswer={correctAnswer}
+            actionLabel={currentIndex < flashcards.length - 1 ? "Próximo card" : "Finalizar"}
+            onAction={handleNext}
+          />
         )}
       </Card>
 
-      <p className="text-center text-muted-foreground mt-4">
+      <p className="mt-4 text-center text-muted-foreground">
         Pergunta {currentIndex + 1} de {flashcards.length}
       </p>
     </div>
