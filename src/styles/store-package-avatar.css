@@ -1,0 +1,21 @@
+/* Crop the baked checkerboard corners from official App Piteco avatars. */
+.piteco-store-avatar-frame {
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.piteco-store-avatar-frame > img,
+img.piteco-store-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.12);
+  transform-origin: center;
+}
+
+img[src*="/storage/v1/object/public/piteco-store/"][src*="/avatar.avif"],
+img[src*="/storage/v1/object/public/piteco-store/"][src*="/avatar.png"] {
+  object-fit: cover;
+  transform: scale(1.12);
+  transform-origin: center;
+}

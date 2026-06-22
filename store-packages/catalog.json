@@ -1,0 +1,60 @@
+{
+  "schema": "app-piteco-store-catalog",
+  "version": 1,
+  "packages": [
+    {
+      "id": "piteco_prime",
+      "name": "Piteco Prime",
+      "description": "O lendário líder da tribo.",
+      "rarity": "legendary",
+      "price_pitecoin": 750,
+      "active": true,
+      "version": 1
+    },
+    {
+      "id": "piteco_vampiro",
+      "name": "Piteco Vampiro",
+      "description": "Elegante nas noites mais sombrias.",
+      "rarity": "epic",
+      "price_pitecoin": 500,
+      "active": true,
+      "version": 1
+    },
+    {
+      "id": "piteco_zombie",
+      "name": "Piteco Zombie",
+      "description": "Direto das cavernas mais escuras.",
+      "rarity": "rare",
+      "price_pitecoin": 300,
+      "active": true,
+      "version": 1
+    },
+    {
+      "id": "piteco_ninja",
+      "name": "Piteco Ninja",
+      "description": "Rápido, focado e imparável.",
+      "rarity": "epic",
+      "price_pitecoin": 500,
+      "active": true,
+      "version": 1
+    },
+    {
+      "id": "piteco_astronauta",
+      "name": "Piteco Astronauta",
+      "description": "Explorando o universo do conhecimento.",
+      "rarity": "epic",
+      "price_pitecoin": 500,
+      "active": true,
+      "version": 1
+    },
+    {
+      "id": "piteco_explorador",
+      "name": "Piteco Explorador",
+      "description": "Sempre pronto para novas descobertas.",
+      "rarity": "rare",
+      "price_pitecoin": 300,
+      "active": true,
+      "version": 1
+    }
+  ]
+}
