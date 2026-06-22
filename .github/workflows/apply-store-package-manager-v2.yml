@@ -1,0 +1,31 @@
+name: Apply store package manager v2
+
+on:
+  push:
+    branches: [feat-piteco-package-manager-v2]
+    paths: [.github/store-package-manager-v2-ready]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat-piteco-package-manager-v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Apply deterministic integration
+        run: |
+          node scripts/store-packages/install-integration.mjs
+          node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p));j.dependencies['tailwind-merge']='^2.6.0';fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n')"
+      - name: Commit integration
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: feat(store): apply dynamic package integration
+          branch: feat-piteco-package-manager-v2
