@@ -126,27 +126,29 @@ const Store = () => {
           </div>
         </div>
 
+        <div className="container mx-auto px-4 pt-4">
+          <section className="flex items-center justify-between gap-3 rounded-2xl border bg-card p-3 shadow-sm">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Seu saldo</p>
+              <div className="flex items-center gap-1.5">
+                <img src={pitecoinIcon} alt="PITECOIN" className="h-5 w-5" />
+                <strong className="truncate text-lg tabular-nums">
+                  {balanceLoading ? "..." : new Intl.NumberFormat("pt-BR").format(balance_pitecoin)}
+                </strong>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="h-9 shrink-0 rounded-md border bg-background px-3 text-sm font-medium"
+              onClick={() => navigate("/store/exchange")}
+            >
+              Câmbio
+            </button>
+          </section>
+        </div>
+
         <TabsContent value="pacotes" className="mt-0">
           <div className="container mx-auto px-4 py-5 space-y-4">
-            <section className="flex items-center justify-between gap-3 rounded-2xl border bg-card p-3 shadow-sm">
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Seu saldo</p>
-                <div className="flex items-center gap-1.5">
-                  <img src={pitecoinIcon} alt="PITECOIN" className="h-5 w-5" />
-                  <strong className="truncate text-lg tabular-nums">
-                    {balanceLoading ? "..." : new Intl.NumberFormat("pt-BR").format(balance_pitecoin)}
-                  </strong>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="h-9 shrink-0 rounded-md border bg-background px-3 text-sm font-medium"
-                onClick={() => navigate("/store/exchange")}
-              >
-                Câmbio
-              </button>
-            </section>
-
             <div>
               <h2 className="text-lg font-bold">Pacotes disponíveis</h2>
               <p className="text-sm text-muted-foreground">
