@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "packages": [
+    {"id":"piteco_prime","name":"Piteco Prime","rarity":"legendary","price":750}
+  ]
+}
