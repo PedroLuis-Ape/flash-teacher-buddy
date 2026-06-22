@@ -11,10 +11,12 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "store:validate": "node scripts/store-packages/validate.mjs",
+    "store:sync": "npm run store:validate && node scripts/store-packages/sync.mjs",
     "check:environment": "node scripts/validate-environment.mjs",
     "check:security": "node scripts/audit-security.mjs",
     "check:bundle": "node scripts/report-bundle.mjs",
-    "check": "npm run check:environment && npm run check:security && npm run typecheck && npm run test && npm run lint && npm run build"
+    "check": "npm run check:environment && npm run check:security && npm run store:validate && npm run typecheck && npm run test && npm run lint && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -69,7 +71,7 @@
     "react-router-dom": "^6.30.1",
     "recharts": "^2.15.4",
     "sonner": "^1.7.4",
-    "tailwind-merge": "^2.6.0",
+    "tailwind-merge": "^3.3.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^13.0.0",
     "vaul": "^0.9.9",
