@@ -1,1 +1,0 @@
-The package cards use a 7:10 visual ratio. Each official purchase includes the collectible card and its matching profile photo.
