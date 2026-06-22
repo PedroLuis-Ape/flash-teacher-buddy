@@ -1,37 +1,53 @@
--- Canonical storage configuration for App Piteco visual bundles.
--- Catalog data is synchronized by `npm run store:sync`; records are archived,
--- never deleted, so purchases and inventories keep their stable package IDs.
+-- Optional database optimizations for the App Piteco package manager.
+--
+-- Bucket creation and MIME configuration are handled idempotently by
+-- `npm run store:sync`. Keeping Storage lifecycle out of SQL makes local
+-- `supabase db reset` independent from the bundled Storage schema version.
+-- Catalog rows are archived, never deleted, so purchases and inventories keep
+-- their stable package IDs.
 
-insert into storage.buckets (
-  id,
-  name,
-  public,
-  file_size_limit,
-  allowed_mime_types
-)
-values (
-  'piteco-store',
-  'piteco-store',
-  true,
-  8388608,
-  array['image/png', 'image/avif']::text[]
-)
-on conflict (id) do update
-set
-  name = excluded.name,
-  public = excluded.public,
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types,
-  updated_at = now();
+do $$
+begin
+  if to_regclass('public.skins_catalog') is not null
+     and exists (
+       select 1
+       from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'skins_catalog'
+         and column_name in ('is_active', 'approved', 'status', 'type')
+       group by table_schema, table_name
+       having count(*) = 4
+     ) then
+    create index if not exists skins_catalog_store_visibility_idx
+      on public.skins_catalog (is_active, approved, status, type);
+  end if;
 
-create index if not exists skins_catalog_store_visibility_idx
-  on public.skins_catalog (is_active, approved, status, type);
+  if to_regclass('public.public_catalog') is not null
+     and exists (
+       select 1
+       from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'public_catalog'
+         and column_name in ('is_active', 'approved', 'status', 'type')
+       group by table_schema, table_name
+       having count(*) = 4
+     ) then
+    create index if not exists public_catalog_store_visibility_idx
+      on public.public_catalog (is_active, approved, status, type);
+  end if;
+end
+$$;
 
-create index if not exists public_catalog_store_visibility_idx
-  on public.public_catalog (is_active, approved, status, type);
+do $$
+begin
+  if to_regclass('public.skins_catalog') is not null then
+    comment on table public.skins_catalog is
+      'Authoritative store catalog. Package IDs are stable and referenced by purchases and inventories.';
+  end if;
 
-comment on table public.skins_catalog is
-  'Authoritative store catalog. Package IDs are stable and referenced by purchases and inventories.';
-
-comment on table public.public_catalog is
-  'Public projection of published App Piteco visual bundles.';
+  if to_regclass('public.public_catalog') is not null then
+    comment on table public.public_catalog is
+      'Public projection of published App Piteco visual bundles.';
+  end if;
+end
+$$;
