@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Flame, Gauge, Gem, Lightbulb, Loader2, Settings2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { HintModal } from "./HintModal";
 import "./study-tools-menu.css";
 
@@ -118,6 +119,8 @@ export function StudyToolsMenu({
   onShowDetailedExplanation,
   className,
 }: StudyToolsMenuProps) {
+  const { user } = useAuthUser();
+  const hasAccount = Boolean(user?.id);
   const [showHint, setShowHint] = useState(false);
   const [rate, setRate] = useState<number>(() => readRate());
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -164,7 +167,7 @@ export function StudyToolsMenu({
   };
 
   const hasHint = !!hint && hint.trim().length > 0;
-  const anyActive = !!isFavorite || !!isRedListed || !!isSpecial;
+  const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial);
   const rateLabel = rate === 1
     ? "Velocidade da fala: natural (1x)"
     : "Fala didática: palavras separadas e termos difíceis articulados em partes (0.5x)";
@@ -233,7 +236,7 @@ export function StudyToolsMenu({
           <DropdownMenuLabel>Ferramentas</DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          {onToggleFavorite && (
+          {hasAccount && onToggleFavorite && (
             <DropdownMenuItem
               disabled={favoritePending}
               onSelect={(event) => {
@@ -246,7 +249,7 @@ export function StudyToolsMenu({
             </DropdownMenuItem>
           )}
 
-          {onToggleRedList && (
+          {hasAccount && onToggleRedList && (
             <DropdownMenuItem
               disabled={redListPending || !isFavorite}
               onSelect={(event) => {
@@ -263,7 +266,7 @@ export function StudyToolsMenu({
             </DropdownMenuItem>
           )}
 
-          {onToggleSpecial && (
+          {hasAccount && onToggleSpecial && (
             <DropdownMenuItem
               disabled={specialPending}
               onSelect={(event) => {
@@ -276,7 +279,7 @@ export function StudyToolsMenu({
             </DropdownMenuItem>
           )}
 
-          {(onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
+          {hasAccount && (onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
 
           {hasDetailedExplanation && onShowDetailedExplanation && (
             <DropdownMenuItem
@@ -307,7 +310,7 @@ export function StudyToolsMenu({
 
   const desktopTools = (
     <div className={cn("study-tools-desktop-actions hidden md:flex items-center justify-end gap-1.5", className)}>
-      {onToggleFavorite && (
+      {hasAccount && onToggleFavorite && (
         <InlineToolButton
           label={isFavorite ? "Remover favorito" : "Favoritar"}
           active={isFavorite}
@@ -316,7 +319,7 @@ export function StudyToolsMenu({
           icon={favoriteIcon}
         />
       )}
-      {onToggleRedList && (
+      {hasAccount && onToggleRedList && (
         <InlineToolButton
           label={!isFavorite ? "Favorite primeiro" : isRedListed ? "Sair da Lista Vermelha" : "Lista Vermelha"}
           active={isRedListed}
@@ -325,7 +328,7 @@ export function StudyToolsMenu({
           icon={redListIcon}
         />
       )}
-      {onToggleSpecial && (
+      {hasAccount && onToggleSpecial && (
         <InlineToolButton
           label={isSpecial ? "Remover especial" : "Salvar como especial"}
           active={isSpecial}
