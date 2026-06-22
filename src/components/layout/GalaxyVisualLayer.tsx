@@ -15,6 +15,11 @@ import "@/styles/space-galaxy-scene.css";
 import "@/styles/space-galaxy-motion.css";
 import "@/styles/space-galaxy-quality.css";
 import "@/styles/space-drawer-layout.css";
+import "@/styles/space-ui-stars.css";
+import "@/styles/space-ui-glitter.css";
+import "@/styles/space-ui-live-stars.css";
+import "@/styles/space-galaxy-home-mobile-hotfix.css";
+import "@/styles/space-galaxy-navigation-performance.css";
 
 type Star = {
   left: string;
@@ -56,6 +61,10 @@ interface NavigatorWithConnection extends Navigator {
 
 function GalaxyAsset({ className, src }: { className: string; src: string }) {
   return <img className={`space-galaxy-object ${className}`} src={src} alt="" decoding="async" draggable={false} />;
+}
+
+function isRouteTransitioning(): boolean {
+  return document.documentElement.hasAttribute("data-route-transitioning");
 }
 
 export function GalaxyVisualLayer() {
@@ -130,7 +139,7 @@ export function GalaxyVisualLayer() {
 
     const animate = (index: number, jitter: number) => {
       const comet = cometRefs.current[index];
-      if (!comet || cancelled || document.hidden || typeof comet.animate !== "function") return;
+      if (!comet || cancelled || document.hidden || isRouteTransitioning() || typeof comet.animate !== "function") return;
       const grouped = cometPlan.count === 4;
       const top = grouped ? COMET_TOPS[index] + jitter : 10 + Math.random() * 34;
       const scale = (grouped ? COMET_SCALES[index] : .9) + (high ? .08 : 0);
@@ -161,6 +170,10 @@ export function GalaxyVisualLayer() {
 
     const run = () => {
       if (cancelled || document.hidden) return;
+      if (isRouteTransitioning()) {
+        groupTimer = window.setTimeout(run, 180);
+        return;
+      }
       const jitter = cometPlan.count === 4 ? -2 + Math.random() * 4 : 0;
       cometPlan.staggerDelays.forEach((delay, index) => {
         const timer = window.setTimeout(() => {
