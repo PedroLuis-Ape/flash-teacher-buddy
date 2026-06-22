@@ -12,11 +12,12 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useEconomy } from "@/contexts/EconomyContext";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { Loader2, ShoppingBag, ArrowRightLeft, Package } from "lucide-react";
+import pitecoinIcon from "@/assets/pitecoin.png";
 
 const Store = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { refreshBalance } = useEconomy();
+  const { balance_pitecoin, refreshBalance, loading: balanceLoading } = useEconomy();
   const { userId, isLoading: authLoading } = useAuthUser();
   const [skins, setSkins] = useState<SkinItem[]>([]);
   const [ownedSkinIds, setOwnedSkinIds] = useState<Set<string>>(new Set());
@@ -34,7 +35,7 @@ const Store = () => {
       setSkins(catalogData);
       setOwnedSkinIds(new Set(inventoryData.map(item => item.skin_id)));
     } catch (error) {
-      console.error('Error loading store:', error);
+      console.error("Error loading store:", error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar a loja.",
@@ -48,7 +49,7 @@ const Store = () => {
   useEffect(() => {
     if (!FEATURE_FLAGS.store_visible || authLoading) return;
     if (!userId) {
-      navigate('/auth', { replace: true });
+      navigate("/auth", { replace: true });
       return;
     }
     void loadStoreData(userId);
@@ -78,7 +79,7 @@ const Store = () => {
         });
       }
     } catch (error) {
-      console.error('Purchase error:', error);
+      console.error("Purchase error:", error);
       toast({
         title: "Erro",
         description: "Não foi possível processar a compra.",
@@ -98,8 +99,8 @@ const Store = () => {
   }
 
   const location = window.location.pathname;
-  const initialTab = location.includes('/exchange') ? 'cambio' :
-                     location.includes('/inventory') ? 'inventario' : 'pacotes';
+  const initialTab = location.includes("/exchange") ? "cambio" :
+                     location.includes("/inventory") ? "inventario" : "pacotes";
 
   return (
     <div className="min-h-screen bg-background">
@@ -107,17 +108,17 @@ const Store = () => {
 
       <Tabs defaultValue={initialTab} className="w-full">
         <div className="border-b bg-background/95 backdrop-blur sticky top-16 z-30">
-          <div className="container mx-auto px-4">
+          <div className="container mx-auto px-3 sm:px-4">
             <TabsList className="w-full grid grid-cols-3 h-12">
-              <TabsTrigger value="pacotes" className="gap-2">
+              <TabsTrigger value="pacotes" className="gap-1.5 px-2 text-xs sm:gap-2 sm:text-sm">
                 <ShoppingBag className="h-4 w-4" />
                 Pacotes
               </TabsTrigger>
-              <TabsTrigger value="inventario" className="gap-2">
+              <TabsTrigger value="inventario" className="gap-1.5 px-2 text-xs sm:gap-2 sm:text-sm">
                 <Package className="h-4 w-4" />
                 Inventário
               </TabsTrigger>
-              <TabsTrigger value="cambio" className="gap-2">
+              <TabsTrigger value="cambio" className="gap-1.5 px-2 text-xs sm:gap-2 sm:text-sm">
                 <ArrowRightLeft className="h-4 w-4" />
                 Câmbio
               </TabsTrigger>
@@ -126,7 +127,33 @@ const Store = () => {
         </div>
 
         <TabsContent value="pacotes" className="mt-0">
-          <div className="container mx-auto px-4 py-6">
+          <div className="container mx-auto px-4 py-5 space-y-4">
+            <section className="flex items-center justify-between gap-3 rounded-2xl border bg-card p-3 shadow-sm">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Seu saldo</p>
+                <div className="flex items-center gap-1.5">
+                  <img src={pitecoinIcon} alt="PITECOIN" className="h-5 w-5" />
+                  <strong className="truncate text-lg tabular-nums">
+                    {balanceLoading ? "..." : new Intl.NumberFormat("pt-BR").format(balance_pitecoin)}
+                  </strong>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="h-9 shrink-0 rounded-md border bg-background px-3 text-sm font-medium"
+                onClick={() => navigate("/store/exchange")}
+              >
+                Câmbio
+              </button>
+            </section>
+
+            <div>
+              <h2 className="text-lg font-bold">Pacotes disponíveis</h2>
+              <p className="text-sm text-muted-foreground">
+                Toque em um card para abrir o pacote completo.
+              </p>
+            </div>
+
             {loading || authLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -143,6 +170,7 @@ const Store = () => {
                     skin={skin}
                     owned={ownedSkinIds.has(skin.id)}
                     onPurchase={handlePurchase}
+                    onOpenInventory={() => navigate("/store/inventory")}
                     loading={purchasingItems.has(skin.id)}
                   />
                 ))}
