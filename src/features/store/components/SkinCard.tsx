@@ -1,125 +1,136 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Check, Loader2, PackageOpen } from "lucide-react";
 import { getRarityColor, getRarityLabel, type SkinItem } from "@/lib/storeEngine";
 import pitecoinIcon from "@/assets/pitecoin.png";
-import { Loader2 } from "lucide-react";
+import { SkinPackageDialog } from "./SkinPackageDialog";
 
 interface SkinCardProps {
   skin: SkinItem;
   owned: boolean;
   onPurchase: (skinId: string, price: number) => Promise<void>;
+  onOpenInventory?: () => void;
   loading: boolean;
 }
 
-export function SkinCard({ skin, owned, onPurchase, loading }: SkinCardProps) {
+export function SkinCard({
+  skin,
+  owned,
+  onPurchase,
+  onOpenInventory,
+  loading,
+}: SkinCardProps) {
   const [showDetail, setShowDetail] = useState(false);
 
   const handlePurchase = async () => {
     await onPurchase(skin.id, skin.price_pitecoin);
+  };
+
+  const handleOpenInventory = () => {
     setShowDetail(false);
+    if (onOpenInventory) {
+      onOpenInventory();
+      return;
+    }
+    window.location.assign("/store/inventory");
   };
 
   return (
     <>
       <Card
-        className="overflow-hidden cursor-pointer border-2 transition-shadow duration-150 motion-safe:hover:shadow-xl md:motion-safe:hover:scale-[1.02]"
+        role="button"
+        tabIndex={0}
+        aria-label={`Abrir detalhes de ${skin.name}`}
+        className="group h-full cursor-pointer overflow-hidden border transition-[transform,box-shadow,border-color] duration-150 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hover:-translate-y-0.5"
         onClick={() => setShowDetail(true)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setShowDetail(true);
+          }
+        }}
       >
-        <CardHeader className="p-0">
-          <div className="aspect-[3/4] bg-gradient-to-br from-muted/50 to-muted relative overflow-hidden">
-            <img
-              src={skin.card_final}
-              alt={skin.name}
-              loading="lazy"
-              decoding="async"
-              fetchPriority="low"
-              className="w-full h-full object-contain p-2"
-            />
-            {owned && (
-              <div className="absolute top-3 right-3 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
-                ✓ Possui
-              </div>
-            )}
-            <Badge
-              variant="outline"
-              className={`absolute top-3 left-3 ${getRarityColor(skin.rarity)} font-bold shadow-md`}
+        <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-muted/30 to-muted">
+          <img
+            src={skin.card_final}
+            alt={skin.name}
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+            className="h-full w-full object-contain p-1.5 transition-transform duration-200 group-hover:scale-[1.02] sm:p-2"
+          />
+
+          <Badge
+            variant="outline"
+            className={`absolute bottom-2 left-2 max-w-[calc(100%-3rem)] truncate px-2 py-0.5 text-[10px] font-bold shadow-sm sm:text-xs ${getRarityColor(skin.rarity)}`}
+          >
+            {getRarityLabel(skin.rarity)}
+          </Badge>
+
+          {owned && (
+            <span
+              className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground shadow-md"
+              title="Pacote adquirido"
             >
-              {getRarityLabel(skin.rarity)}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 flex flex-col h-[120px]">
-          <CardTitle className="text-base line-clamp-2 text-center mb-auto">
+              <Check className="h-4 w-4" />
+              <span className="sr-only">Pacote adquirido</span>
+            </span>
+          )}
+        </div>
+
+        <CardContent className="p-2.5 sm:p-3">
+          <CardTitle className="line-clamp-2 min-h-9 text-sm leading-tight sm:text-base">
             {skin.name}
           </CardTitle>
-          <div className="flex items-center justify-center gap-2 pt-3 border-t mt-3">
-            <img src={pitecoinIcon} alt="PITECOIN" decoding="async" className="w-5 h-5 shrink-0" />
-            <span className="text-base font-bold">
-              {skin.price_pitecoin === 0 ? 'GRÁTIS' : `₱${skin.price_pitecoin}`}
-            </span>
+
+          <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <img src={pitecoinIcon} alt="PITECOIN" decoding="async" className="h-4 w-4 shrink-0" />
+              <span className="truncate text-sm font-bold">
+                {skin.price_pitecoin === 0 ? "GRÁTIS" : `₱${skin.price_pitecoin}`}
+              </span>
+            </div>
+            <span className="text-[11px] text-muted-foreground">Ver pacote</span>
           </div>
         </CardContent>
       </Card>
 
-      <Dialog open={showDetail} onOpenChange={setShowDetail}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {skin.name}
-              <Badge variant="outline" className={getRarityColor(skin.rarity)}>
-                {getRarityLabel(skin.rarity)}
-              </Badge>
-            </DialogTitle>
-            <DialogDescription>{skin.description}</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            <div className="aspect-[3/4] bg-gradient-to-br from-muted/30 to-muted rounded-xl overflow-hidden border-2">
-              <img
-                src={skin.card_final}
-                alt={skin.name}
-                decoding="async"
-                className="w-full h-full object-contain p-4"
-              />
-            </div>
-
-            <div className="flex items-center justify-center gap-3 text-2xl font-bold bg-muted/30 rounded-lg p-4">
-              <img src={pitecoinIcon} alt="PITECOIN" decoding="async" className="w-8 h-8" />
-              <span>{skin.price_pitecoin === 0 ? 'GRÁTIS' : `₱${skin.price_pitecoin}`}</span>
-            </div>
-
-            {owned ? (
-              <Button className="w-full py-6 text-lg" disabled>
-                ✓ Já possui este pacote
-              </Button>
-            ) : (
-              <Button
-                className="w-full py-6 text-lg font-bold"
-                onClick={handlePurchase}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  skin.price_pitecoin === 0 ? 'Obter Gratuitamente' : `Comprar por ₱${skin.price_pitecoin}`
-                )}
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SkinPackageDialog
+        skin={skin}
+        open={showDetail}
+        onOpenChange={setShowDetail}
+        owned={owned}
+        actions={
+          owned ? (
+            <Button className="h-12 w-full gap-2 sm:w-auto sm:min-w-56" onClick={handleOpenInventory}>
+              <PackageOpen className="h-4 w-4" />
+              Abrir no inventário
+            </Button>
+          ) : (
+            <Button
+              className="h-12 w-full font-bold sm:w-auto sm:min-w-64"
+              onClick={handlePurchase}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processando...
+                </>
+              ) : skin.price_pitecoin === 0 ? (
+                "Obter gratuitamente"
+              ) : (
+                <span className="flex items-center gap-2">
+                  <img src={pitecoinIcon} alt="" className="h-5 w-5" />
+                  Comprar por ₱{skin.price_pitecoin}
+                </span>
+              )}
+            </Button>
+          )
+        }
+      />
     </>
   );
 }
