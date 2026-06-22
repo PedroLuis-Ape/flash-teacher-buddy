@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APE · Ajuda inicial — rascunho interativo</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Nunito, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --background: #f5f6fb;
+      --card: #ffffff;
+      --foreground: #181629;
+      --muted: #6d6a7c;
+      --border: #dfdce9;
+      --primary: #7a45df;
+      --primary-2: #b64ae3;
+      --secondary: #3f98d8;
+      --accent: #d44fce;
+      --primary-soft: #f3edff;
+      --secondary-soft: #eaf6ff;
+      --accent-soft: #fff0fd;
+      --shadow: 0 28px 90px rgba(36, 22, 71, .28);
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--background); color: var(--foreground); }
+    button, a { font: inherit; }
+    .svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .icon-svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .landing {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(122, 69, 223, .16), transparent 27rem),
+        radial-gradient(circle at 90% 74%, rgba(63, 152, 216, .13), transparent 30rem),
+        var(--background);
+    }
+
+    .nav { height: 58px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.78); backdrop-filter: blur(14px); }
+    .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 20px; font-weight: 900; }
+    .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 11px; background: var(--primary); color: #fff; }
+    .hero { max-width: 1080px; margin: 0 auto; padding: 72px 24px; }
+    .hero h1 { max-width: 700px; margin: 0; font-size: clamp(36px, 7vw, 66px); line-height: 1; color: var(--primary); }
+    .hero p { max-width: 600px; color: var(--muted); font-size: 18px; line-height: 1.6; }
+    .fake-actions { display: flex; gap: 10px; margin-top: 28px; }
+    .fake-action { height: 44px; border-radius: 12px; border: 1px solid var(--border); padding: 0 18px; background: var(--card); color: var(--foreground); font-weight: 800; }
+    .fake-action.primary { border-color: transparent; background: var(--primary); color: white; box-shadow: 0 10px 26px rgba(122,69,223,.26); }
+
+    .overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(12,11,24,.72); backdrop-filter: blur(4px); z-index: 10; }
+    .dialog { position: relative; width: min(100%, 590px); max-height: min(94svh, 820px); overflow: hidden; border: 1px solid rgba(255,255,255,.22); border-radius: 31px; background: var(--card); box-shadow: var(--shadow); }
+    .close { position: absolute; right: 16px; top: 15px; z-index: 5; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.38); border-radius: 50%; background: rgba(30,14,58,.32); color: white; cursor: pointer; box-shadow: 0 7px 20px rgba(25,10,45,.22); backdrop-filter: blur(10px); transition: transform .16s ease, background .16s ease; }
+    .close:hover, .close:focus-visible { background: rgba(30,14,58,.55); transform: scale(1.05); outline: 2px solid rgba(255,255,255,.85); outline-offset: 2px; }
+    .close .icon-svg { width: 20px; height: 20px; }
+
+    .welcome {
+      position: relative;
+      overflow: hidden;
+      min-height: 132px;
+      padding: 22px 64px 23px 22px;
+      color: white;
+      background:
+        radial-gradient(circle at 88% 12%, rgba(255,255,255,.18) 0 66px, transparent 67px),
+        radial-gradient(circle at 2% 114%, rgba(216,151,255,.28), transparent 150px),
+        linear-gradient(135deg, var(--primary), var(--primary-2));
+    }
+    .welcome::after { content: ""; position: absolute; inset: 0; opacity: .22; background-image: radial-gradient(circle, white 1px, transparent 1.2px); background-size: 18px 18px; mask-image: linear-gradient(90deg, transparent 25%, black 100%); }
+    .welcome-row { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; }
+    .mascot-shell { position: relative; width: 76px; height: 76px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.28); border-radius: 23px; background: rgba(255,255,255,.15); box-shadow: 0 16px 38px rgba(36,17,65,.24); backdrop-filter: blur(10px); }
+    .mascot-face { width: 50px; height: 50px; position: relative; border: 3px solid white; border-radius: 50%; }
+    .mascot-face::before, .mascot-face::after { content: ""; position: absolute; top: 17px; width: 5px; height: 5px; border-radius: 50%; background: white; }
+    .mascot-face::before { left: 13px; }
+    .mascot-face::after { right: 13px; }
+    .mascot-smile { position: absolute; left: 50%; bottom: 11px; width: 18px; height: 9px; border-bottom: 3px solid white; border-radius: 0 0 18px 18px; transform: translateX(-50%); }
+    .preview-badge { display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 5px 9px; background: rgba(18,9,35,.14); font-size: 9px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+    .welcome-title { margin: 8px 0 0; font-size: 21px; font-weight: 900; line-height: 1.1; }
+    .welcome-copy { margin: 4px 0 0; color: rgba(255,255,255,.84); font-size: 13px; }
+
+    .content { max-height: calc(min(94svh, 820px) - 132px); overflow-y: auto; padding: 22px; }
+    .step-line { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+    .step-number { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: var(--primary); color: white; font-size: 10px; }
+    .step-rule { height: 1px; flex: 1; background: var(--border); }
+    h2 { margin: 0; color: var(--foreground); font-size: 29px; line-height: 1.1; letter-spacing: -.02em; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+    .choices { display: grid; gap: 12px; margin-top: 19px; }
+    .choice { position: relative; width: 100%; min-height: 86px; display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); border-left-width: 4px; border-radius: 22px; padding: 13px 14px 13px 12px; background: var(--card); color: var(--foreground); text-align: left; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
+    .student { border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); border-left-color: var(--primary); }
+    .teacher { border-color: color-mix(in srgb, var(--secondary) 50%, var(--border)); border-left-color: var(--secondary); }
+    .explore { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); border-left-color: var(--accent); }
+    .choice.student:hover { background: color-mix(in srgb, var(--primary) 7%, var(--card)); border-color: var(--primary); }
+    .choice.teacher:hover { background: color-mix(in srgb, var(--secondary) 7%, var(--card)); border-color: var(--secondary); }
+    .choice.explore:hover { background: color-mix(in srgb, var(--accent) 7%, var(--card)); border-color: var(--accent); }
+    .choice:hover, .choice:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(41,31,69,.13); outline: none; }
+    .choice-icon { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 17px; color: white; box-shadow: 0 8px 20px rgba(40,20,80,.18); }
+    .choice-icon .icon-svg { width: 24px; height: 24px; }
+    .student .choice-icon { background: var(--primary); }
+    .teacher .choice-icon { background: var(--secondary); }
+    .explore .choice-icon { background: var(--accent); }
+    .choice-copy { min-width: 0; flex: 1; }
+    .choice-label { display: block; margin-bottom: 2px; font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+    .student .choice-label { color: var(--primary); }
+    .teacher .choice-label { color: var(--secondary); }
+    .explore .choice-label { color: var(--accent); }
+    .choice-title { display: block; color: var(--foreground); font-size: 15px; font-weight: 900; }
+    .choice-description { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .arrow { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--border); border-radius: 50%; background: var(--background); color: var(--muted); }
+    .arrow .icon-svg { width: 17px; height: 17px; }
+
+    .feature-panel { margin-top: 19px; padding: 17px; border: 1px solid var(--border); border-left-width: 4px; border-radius: 24px; background: var(--card); }
+    .feature-panel.student { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); border-left-color: var(--primary); }
+    .feature-panel.teacher { border-color: color-mix(in srgb, var(--secondary) 45%, var(--border)); border-left-color: var(--secondary); }
+    .feature-panel.explore { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); border-left-color: var(--accent); }
+    .panel-heading { display: flex; align-items: center; gap: 12px; }
+    .panel-heading .choice-icon { width: 46px; height: 46px; border-radius: 16px; }
+    .eyebrow { font-size: 9px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    .student .eyebrow { color: var(--primary); }
+    .teacher .eyebrow { color: var(--secondary); }
+    .explore .eyebrow { color: var(--accent); }
+    .panel-title { margin-top: 3px; color: var(--foreground); font-size: 16px; font-weight: 900; }
+
+    .benefits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+    .benefit { display: flex; gap: 9px; border: 1px solid var(--border); border-radius: 14px; padding: 10px; background: var(--background); }
+    .benefit-icon { width: 30px; height: 30px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; background: var(--primary-soft); color: var(--primary); }
+    .benefit-icon .icon-svg { width: 16px; height: 16px; }
+    .benefit strong { display: block; color: var(--foreground); font-size: 11px; line-height: 1.2; }
+    .benefit span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+
+    .guest-box { display: flex; gap: 11px; margin-top: 11px; border: 1px solid var(--border); border-radius: 19px; padding: 14px; background: var(--background); }
+    .guest-icon { width: 40px; height: 40px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 13px; background: var(--card); color: var(--muted); box-shadow: 0 5px 16px rgba(30,24,50,.08); }
+    .guest-icon .icon-svg { width: 20px; height: 20px; }
+    .guest-box strong { color: var(--foreground); font-size: 13px; }
+    .guest-box p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+    .bullet-list { display: grid; gap: 8px; margin-top: 13px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .bullet { display: flex; gap: 8px; }
+    .bullet-mark { color: var(--accent); }
+    .bullet-mark .icon-svg { width: 15px; height: 15px; }
+
+    .actions { display: grid; gap: 9px; margin-top: 18px; }
+    .action { min-height: 45px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-radius: 13px; border: 1px solid var(--border); padding: 0 16px; background: var(--card); color: var(--foreground); font-weight: 900; text-decoration: none; cursor: pointer; }
+    .action.primary { border-color: transparent; background: var(--primary); color: #fff; box-shadow: 0 11px 28px rgba(122,69,223,.25); }
+    .action.back { min-height: 36px; border: 0; background: transparent; color: var(--muted); }
+    .action .icon-svg { width: 17px; height: 17px; }
+    .footnote { margin: 15px 0 0; color: var(--muted); text-align: center; font-size: 10px; }
+    .reopen { position: fixed; right: 16px; top: 76px; display: none; border: 0; border-radius: 999px; padding: 10px 14px; background: var(--primary); color: white; box-shadow: 0 10px 28px rgba(122,69,223,.28); cursor: pointer; font-weight: 900; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 46px 18px; }
+      .hero p { font-size: 15px; }
+      .overlay { align-items: end; padding: 0; }
+      .dialog { width: 100%; max-height: 96svh; border-radius: 31px 31px 0 0; border-bottom: 0; }
+      .welcome { min-height: 124px; padding: 18px 58px 19px 17px; }
+      .mascot-shell { width: 68px; height: 68px; border-radius: 21px; }
+      .mascot-face { width: 45px; height: 45px; }
+      .welcome-title { font-size: 18px; }
+      .welcome-copy { font-size: 11px; }
+      .content { max-height: calc(96svh - 124px); padding: 18px 16px 15px; }
+      h2 { font-size: 23px; }
+      .subtitle { font-size: 12px; }
+      .choice { min-height: 79px; border-radius: 19px; padding: 11px 12px 11px 10px; }
+      .choice-icon { width: 46px; height: 46px; border-radius: 15px; }
+      .benefits { grid-template-columns: 1fr; }
+      .fake-actions { display: grid; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root { --background: #10131c; --card: #181d29; --foreground: #f3f5f8; --muted: #aab2c2; --border: #303849; --primary: #a78bfa; --primary-2: #d18af2; --secondary: #70bdf0; --accent: #ef8ae8; --primary-soft: #28213f; --secondary-soft: #172c3d; --accent-soft: #382038; --shadow: 0 24px 70px rgba(0,0,0,.5); }
+      .nav { background: rgba(16,19,28,.8); }
+      .choice:hover, .choice:focus-visible { box-shadow: 0 14px 34px rgba(0,0,0,.28); }
+    }
+  </style>
+</head>
+<body>
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="icon-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5"/><path d="M18 12H6"/></symbol>
+    <symbol id="icon-graduation" viewBox="0 0 24 24"><path d="m22 10-10-5L2 10l10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></symbol>
+    <symbol id="icon-presentation" viewBox="0 0 24 24"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></symbol>
+    <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 8-2.3 5.7L8 16l2.3-5.7L16 8Z"/></symbol>
+    <symbol id="icon-sparkles" viewBox="0 0 24 24"><path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6L12 3Z"/><path d="m5 16-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8L5 16Z"/><path d="m19 13-.6 1.4L17 15l1.4.6L19 17l.6-1.4L21 15l-1.4-.6L19 13Z"/></symbol>
+    <symbol id="icon-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="5"/><path d="M8 3v10"/><path d="M5 6.5h4.5a1.5 1.5 0 0 1 0 3H6.5a1.5 1.5 0 0 0 0 3H11"/><path d="M16 8a5 5 0 1 1-4 8"/></symbol>
+    <symbol id="icon-package" viewBox="0 0 24 24"><path d="m12 3 8 4-8 4-8-4 8-4Z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></symbol>
+    <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></symbol>
+    <symbol id="icon-folders" viewBox="0 0 24 24"><path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 7V5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  </svg>
+
+  <div class="landing">
+    <div class="nav"><span class="brand"><span class="brand-mark">P</span> APE</span></div>
+    <main class="hero">
+      <h1>Inglês com flashcards, jogos e prática ativa</h1>
+      <p>Prévia isolada da ajuda inicial. A landing principal continua intacta e nada será mesclado sem aprovação.</p>
+      <div class="fake-actions"><button class="fake-action primary">Começar a estudar</button><button class="fake-action">Ver uma atividade</button></div>
+    </main>
+  </div>
+
+  <button id="reopen" class="reopen">Abrir rascunho</button>
+
+  <div id="overlay" class="overlay">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="screen-title">
+      <button id="close" class="close" aria-label="Fechar ajuda" title="Fechar ajuda">
+        <svg class="icon-svg" aria-hidden="true"><use href="#icon-x"></use></svg>
+      </button>
+      <header class="welcome">
+        <div class="welcome-row">
+          <div class="mascot-shell"><div class="mascot-face"><span class="mascot-smile"></span></div></div>
+          <div>
+            <span class="preview-badge">Rascunho navegável</span>
+            <p class="welcome-title">Olá! Eu sou o Piteco.</p>
+            <p class="welcome-copy">Vou mostrar só o caminho essencial.</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="step-line"><span id="step-number" class="step-number">1</span><span id="step-label">Escolha seu objetivo</span><span class="step-rule"></span></div>
+
+        <div id="screen-choose" class="screen">
+          <h2 id="screen-title">Como você quer usar o APE?</h2>
+          <p class="subtitle">Escolha uma opção. A ajuda mostra somente o próximo passo certo para você.</p>
+          <div class="choices">
+            <button class="choice student" data-screen="student">
+              <span class="choice-icon"><svg class="icon-svg" aria-hidden="true"><use href="#icon-graduation"></use></svg></span>
+              <span class="choice-copy"><span class="choice-label">Aprender</span><span class="choice-title">Quero estudar inglês</span><span class="choice-description">Escolher entre conta gratuita ou acesso sem conta.</span></span>
+              <span class="arrow"><svg class="icon-svg" aria-hidden="true"><use href="#icon-arrow-right"></use></svg></span>
+            </button>
+            <button class="choice teacher" data-screen="teacher">
+              <span class="choice-icon"><svg class="icon-svg" aria-hidden="true"><use href="#icon-presentation"></use></svg></span>
+              <span class="choice-copy"><span class="choice-label">Ensinar</span><span class="choice-title">Quero ensinar</span><span class="choice-description">Criar uma conta de professor para usar os recursos de ensino.</span></span>
+              <span class="arrow"><svg class="icon-svg" aria-hidden="true"><use href="#icon-arrow-right"></use></svg></span>
+            </button>
+            <button class="choice explore" data-screen="explore">
+              <span class="choice-icon"><svg class="icon-svg" aria-hidden="true"><use href="#icon-compass"></use></svg></span>
+              <span class="choice-copy"><span class="choice-label">Explorar</span><span class="choice-title">Quero apenas explorar</span><span class="choice-description">Conhecer professores e materiais públicos sem criar conta.</span></span>
+              <span class="arrow"><svg class="icon-svg" aria-hidden="true"><use href="#icon-arrow-right"></use></svg></span>
+            </button>
+          </div>
+        </div>
+
+        <div id="screen-student" class="screen" hidden>
+          <h2>Você pode estudar com ou sem conta</h2>
+          <p class="subtitle">O conteúdo público continua aberto. A conta gratuita libera o sistema completo de progresso e recompensas.</p>
+
+          <section class="feature-panel student">
+            <div class="panel-heading">
+              <span class="choice-icon"><svg class="icon-svg" aria-hidden="true"><use href="#icon-sparkles"></use></svg></span>
+              <div><div class="eyebrow">Conta gratuita</div><div class="panel-title">Estude e desbloqueie todos os benefícios</div></div>
+            </div>
+            <div class="benefits">
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-coins"></use></svg></span><div><strong>Pontos e PiteCOIN</strong><span>Ganhe recompensas ao concluir atividades.</span></div></div>
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-package"></use></svg></span><div><strong>Pacotes visuais</strong><span>Loja com pacote de card e avatar.</span></div></div>
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-target"></use></svg></span><div><strong>Progresso sincronizado</strong><span>Histórico, metas e evolução na conta.</span></div></div>
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-users"></use></svg></span><div><strong>Turmas e professores</strong><span>Entre em turmas e siga professores.</span></div></div>
+            </div>
+          </section>
+
+          <section class="guest-box">
+            <span class="guest-icon"><svg class="icon-svg"><use href="#icon-book"></use></svg></span>
+            <div><strong>Estudar sem conta</strong><p>Você pode acessar professores, materiais e jogos públicos. Porém, não recebe Pontos ou PiteCOIN, não usa a loja nem os pacotes visuais de card e avatar, e o progresso não fica sincronizado em uma conta.</p></div>
+          </section>
+
+          <div class="actions">
+            <a class="action primary" href="/auth?mode=signup&role=student">Criar conta gratuita <svg class="icon-svg"><use href="#icon-arrow-right"></use></svg></a>
+            <a class="action" href="/portal">Continuar sem conta</a>
+            <button class="action back" data-back><svg class="icon-svg"><use href="#icon-arrow-left"></use></svg> Voltar</button>
+          </div>
+        </div>
+
+        <div id="screen-teacher" class="screen" hidden>
+          <h2>Conta obrigatória para ensinar</h2>
+          <p class="subtitle">Os recursos de professor precisam de uma conta para proteger materiais, turmas e dados dos alunos.</p>
+
+          <section class="feature-panel teacher">
+            <div class="panel-heading">
+              <span class="choice-icon"><svg class="icon-svg"><use href="#icon-presentation"></use></svg></span>
+              <div><div class="eyebrow">Conta de professor</div><div class="panel-title">Organize, compartilhe e acompanhe</div></div>
+            </div>
+            <div class="benefits">
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-folders"></use></svg></span><div><strong>Listas e materiais</strong><span>Crie, organize e importe atividades.</span></div></div>
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-users"></use></svg></span><div><strong>Turmas e alunos</strong><span>Distribua atividades e acompanhe a turma.</span></div></div>
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-presentation"></use></svg></span><div><strong>Perfil público</strong><span>Compartilhe materiais por um perfil próprio.</span></div></div>
+              <div class="benefit"><span class="benefit-icon"><svg class="icon-svg"><use href="#icon-target"></use></svg></span><div><strong>Acompanhamento</strong><span>Visualize progresso e desempenho.</span></div></div>
+            </div>
+          </section>
+
+          <div class="actions">
+            <a class="action primary" href="/auth?mode=signup&role=teacher">Criar conta de professor <svg class="icon-svg"><use href="#icon-arrow-right"></use></svg></a>
+            <a class="action" href="/auth?role=teacher">Já tenho uma conta</a>
+            <button class="action back" data-back><svg class="icon-svg"><use href="#icon-arrow-left"></use></svg> Voltar</button>
+          </div>
+        </div>
+
+        <div id="screen-explore" class="screen" hidden>
+          <h2>Explore o portal público</h2>
+          <p class="subtitle">Você será levado à lista de professores públicos. Por enquanto, o Professor Pedro é o perfil principal disponível.</p>
+
+          <section class="feature-panel explore">
+            <div class="panel-heading">
+              <span class="choice-icon"><svg class="icon-svg"><use href="#icon-compass"></use></svg></span>
+              <div><div class="eyebrow">Acesso aberto</div><div class="panel-title">O que você encontra</div></div>
+            </div>
+            <div class="bullet-list">
+              <div class="bullet"><span class="bullet-mark"><svg class="icon-svg"><use href="#icon-check"></use></svg></span><span>Perfis de professores e seus materiais públicos.</span></div>
+              <div class="bullet"><span class="bullet-mark"><svg class="icon-svg"><use href="#icon-check"></use></svg></span><span>Atividades, listas e jogos que podem ser abertos sem conta.</span></div>
+              <div class="bullet"><span class="bullet-mark"><svg class="icon-svg"><use href="#icon-lock"></use></svg></span><span>Pontuação, PiteCOIN, loja e pacotes visuais exigem conta.</span></div>
+            </div>
+          </section>
+
+          <div class="actions">
+            <a class="action primary" href="/portal">Abrir portal público <svg class="icon-svg"><use href="#icon-arrow-right"></use></svg></a>
+            <a class="action" href="/auth?mode=signup&role=student">Criar conta gratuita</a>
+            <button class="action back" data-back><svg class="icon-svg"><use href="#icon-arrow-left"></use></svg> Voltar</button>
+          </div>
+        </div>
+
+        <p class="footnote">Fluxo modular de rascunho. Nenhuma escolha será salva.</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const overlay = document.querySelector('#overlay');
+    const reopen = document.querySelector('#reopen');
+    const screens = [...document.querySelectorAll('.screen')];
+    const stepNumber = document.querySelector('#step-number');
+    const stepLabel = document.querySelector('#step-label');
+
+    function showScreen(name) {
+      screens.forEach((screen) => { screen.hidden = screen.id !== `screen-${name}`; });
+      stepNumber.textContent = name === 'choose' ? '1' : '2';
+      stepLabel.textContent = name === 'choose' ? 'Escolha seu objetivo' : 'Escolha seu caminho';
+      document.querySelector('.content').scrollTop = 0;
+    }
+
+    function closeHelp() {
+      overlay.style.display = 'none';
+      reopen.style.display = 'block';
+      showScreen('choose');
+    }
+
+    document.querySelectorAll('[data-screen]').forEach((button) => button.addEventListener('click', () => showScreen(button.dataset.screen)));
+    document.querySelectorAll('[data-back]').forEach((button) => button.addEventListener('click', () => showScreen('choose')));
+    document.querySelector('#close').addEventListener('click', closeHelp);
+    reopen.addEventListener('click', () => { overlay.style.display = 'grid'; reopen.style.display = 'none'; });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeHelp(); });
+  </script>
+</body>
+</html>

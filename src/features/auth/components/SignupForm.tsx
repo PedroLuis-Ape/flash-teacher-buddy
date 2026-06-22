@@ -8,19 +8,24 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 interface SignupFormProps {
+  initialAccountType?: "student" | "teacher";
   onSuccess?: () => void;
   onLogin?: () => void;
 }
 
-export function SignupForm({ onSuccess, onLogin }: SignupFormProps) {
+export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFormProps) {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [isProfessor, setIsProfessor] = useState(false);
+  const [isProfessor, setIsProfessor] = useState(initialAccountType === "teacher");
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialAccountType) setIsProfessor(initialAccountType === "teacher");
+  }, [initialAccountType]);
 
   useEffect(() => {
     if (!isProfessor || username.length < 3) {
