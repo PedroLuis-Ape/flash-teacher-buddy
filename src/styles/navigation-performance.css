@@ -1,0 +1,26 @@
+/* The browser can promote the short transition on demand. Keeping will-change
+ * alive for the whole route wastes a compositor layer and GPU memory. */
+.page-transition {
+  will-change: auto !important;
+}
+
+/* Galaxy already contains multiple transformed layers. An opacity-only route
+ * entrance preserves polish without adding another moving full-page layer. */
+html[data-palette="galaxy"] .page-transition {
+  animation: galaxy-page-fade-in 140ms ease-out both;
+}
+
+@keyframes galaxy-page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+[data-perf-no-anim] .page-transition {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-palette="galaxy"] .page-transition {
+    animation: none !important;
+  }
+}
