@@ -51,6 +51,11 @@ html[data-palette="galaxy"] .space-ui .space-ui-class-row {
   -webkit-backdrop-filter:blur(12px) saturate(124%);
 }
 
+/*
+ * Buttons keep the glitter through their surface/background and never through
+ * ::before/::after. Those pseudo-elements are used by semantic UI elsewhere;
+ * taking them over can erase the layout gear and card-status identities.
+ */
 html[data-palette="galaxy"] .space-ui main button:not([role="switch"]),
 html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger {
   position:relative;
@@ -58,33 +63,39 @@ html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger {
   overflow:hidden;
 }
 
-html[data-palette="galaxy"] .space-ui main button:not([role="switch"])::before,
-html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger::before {
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  opacity:.18;
-  mix-blend-mode:screen;
-  background-image:
-    radial-gradient(circle at 18% 30%,hsl(0 0% 100%/.9) 0 .75px,transparent 1.6px),
-    radial-gradient(circle at 74% 24%,hsl(var(--primary-glow)/.82) 0 .8px,transparent 1.7px),
-    radial-gradient(circle at 58% 76%,hsl(0 0% 100%/.68) 0 .7px,transparent 1.5px);
-  background-size:112px 112px,168px 168px,204px 204px;
-}
-
-html[data-palette="galaxy"] .space-ui .space-y-3>.welcome-banner::before,
-html[data-palette="galaxy"] .space-ui .space-y-3>.welcome-banner::after {
+/* The dashboard must contain only the equipped profile avatar. */
+html[data-palette="galaxy"] .space-ui .welcome-banner::after,
+.space-ui-home-route .welcome-banner::after {
   content:none!important;
   display:none!important;
+  background:none!important;
+  background-image:none!important;
 }
 
-html[data-palette="galaxy"] .space-ui .space-y-3>.welcome-banner {
+html[data-palette="galaxy"] .space-ui .welcome-banner {
   min-height:auto!important;
   background:
     radial-gradient(circle at 14% 22%,hsl(0 0% 100%/.22) 0 .8px,transparent 1.8px),
     radial-gradient(circle at 78% 18%,hsl(var(--primary-glow)/.2) 0 .9px,transparent 2px),
     linear-gradient(145deg,hsl(251 46% 13%/.56),hsl(248 48% 8%/.64))!important;
+}
+
+/* Critical controls are real elements and must always sit above visual paint. */
+html[data-palette="galaxy"] .space-ui .welcome-banner button,
+html[data-palette="galaxy"] .space-ui .study-tools-inline-button,
+html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger {
+  position:relative;
+  z-index:2;
+}
+
+html[data-palette="galaxy"] .space-ui .welcome-banner button > svg,
+html[data-palette="galaxy"] .space-ui .study-tools-inline-button > svg,
+html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger > svg {
+  display:inline-flex!important;
+  opacity:1!important;
+  visibility:visible!important;
+  position:relative;
+  z-index:3;
 }
 
 @keyframes glitter-pulse { from{opacity:.08} to{opacity:.16} }
@@ -101,10 +112,6 @@ html[data-palette="galaxy"] .space-ui .space-y-3>.welcome-banner {
   html[data-palette="galaxy"] .space-ui main .rounded-2xl.border {
     backdrop-filter:none!important;
     -webkit-backdrop-filter:none!important;
-  }
-  html[data-palette="galaxy"] .space-ui main button:not([role="switch"])::before,
-  html[data-palette="galaxy"] .space-ui .study-tools-floating-trigger::before {
-    opacity:.1;
   }
 }
 
