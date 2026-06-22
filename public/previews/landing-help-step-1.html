@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>APE · Preview refinado da ajuda inicial</title>
+  <title>APE · Ajuda inicial — rascunho interativo</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -25,7 +25,7 @@
 
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: var(--background); color: var(--foreground); }
-    button { font: inherit; }
+    button, a { font: inherit; }
 
     .landing {
       min-height: 100vh;
@@ -35,16 +35,7 @@
         var(--background);
     }
 
-    .nav {
-      height: 58px;
-      display: flex;
-      align-items: center;
-      padding: 0 20px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, .78);
-      backdrop-filter: blur(14px);
-    }
-
+    .nav { height: 58px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.78); backdrop-filter: blur(14px); }
     .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 20px; font-weight: 900; }
     .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 11px; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; }
     .hero { max-width: 1080px; margin: 0 auto; padding: 72px 24px; }
@@ -52,10 +43,10 @@
     .hero p { max-width: 600px; color: var(--muted); font-size: 18px; line-height: 1.6; }
     .fake-actions { display: flex; gap: 10px; margin-top: 28px; }
     .fake-action { height: 44px; border-radius: 12px; border: 1px solid var(--border); padding: 0 18px; background: var(--card); color: var(--foreground); font-weight: 800; }
-    .fake-action.primary { border-color: transparent; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; box-shadow: 0 10px 26px rgba(122, 69, 223, .26); }
+    .fake-action.primary { border-color: transparent; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; box-shadow: 0 10px 26px rgba(122,69,223,.26); }
 
-    .overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(12, 11, 24, .72); backdrop-filter: blur(4px); z-index: 10; }
-    .dialog { position: relative; width: min(100%, 570px); overflow: hidden; border: 1px solid rgba(255,255,255,.22); border-radius: 31px; background: var(--card); box-shadow: var(--shadow); }
+    .overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(12,11,24,.72); backdrop-filter: blur(4px); z-index: 10; }
+    .dialog { position: relative; width: min(100%, 590px); max-height: min(94svh, 820px); overflow: hidden; border: 1px solid rgba(255,255,255,.22); border-radius: 31px; background: var(--card); box-shadow: var(--shadow); }
     .close { position: absolute; right: 17px; top: 16px; z-index: 5; width: 35px; height: 35px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; background: rgba(17,11,33,.16); color: white; cursor: pointer; backdrop-filter: blur(8px); }
 
     .welcome {
@@ -69,17 +60,7 @@
         radial-gradient(circle at 2% 114%, rgba(216,151,255,.28), transparent 150px),
         linear-gradient(135deg, var(--primary), var(--primary-2));
     }
-
-    .welcome::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      opacity: .22;
-      background-image: radial-gradient(circle, white 1px, transparent 1.2px);
-      background-size: 18px 18px;
-      mask-image: linear-gradient(90deg, transparent 25%, black 100%);
-    }
-
+    .welcome::after { content: ""; position: absolute; inset: 0; opacity: .22; background-image: radial-gradient(circle, white 1px, transparent 1.2px); background-size: 18px 18px; mask-image: linear-gradient(90deg, transparent 25%, black 100%); }
     .welcome-row { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; }
     .mascot-shell { position: relative; width: 76px; height: 76px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.28); border-radius: 23px; background: rgba(255,255,255,.15); box-shadow: 0 16px 38px rgba(36,17,65,.24); backdrop-filter: blur(10px); }
     .mascot-face { width: 50px; height: 50px; position: relative; border: 3px solid white; border-radius: 50%; }
@@ -91,43 +72,24 @@
     .welcome-title { margin: 8px 0 0; font-size: 21px; font-weight: 900; line-height: 1.1; }
     .welcome-copy { margin: 4px 0 0; color: rgba(255,255,255,.78); font-size: 13px; }
 
-    .content { padding: 22px; }
+    .content { max-height: calc(min(94svh, 820px) - 132px); overflow-y: auto; padding: 22px; }
     .step-line { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
     .step-number { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: var(--primary); color: white; font-size: 10px; }
     .step-rule { height: 1px; flex: 1; background: linear-gradient(90deg, var(--border), transparent); }
     h2 { margin: 0; font-size: 29px; line-height: 1.1; letter-spacing: -.02em; }
     .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+
     .choices { display: grid; gap: 12px; margin-top: 19px; }
-
-    .choice {
-      position: relative;
-      width: 100%;
-      min-height: 86px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 13px 14px;
-      color: var(--foreground);
-      text-align: left;
-      cursor: pointer;
-      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-    }
-
+    .choice { position: relative; width: 100%; min-height: 86px; display: flex; align-items: center; gap: 14px; overflow: hidden; border: 1px solid var(--border); border-radius: 22px; padding: 13px 14px; color: var(--foreground); text-align: left; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
     .choice::after { content: ""; position: absolute; width: 92px; height: 92px; right: -31px; top: -39px; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: rgba(255,255,255,.24); }
-    .choice.student { border-color: rgba(122,69,223,.27); background: linear-gradient(135deg, var(--primary-soft), white 74%); }
-    .choice.teacher { border-color: rgba(63,152,216,.28); background: linear-gradient(135deg, var(--secondary-soft), white 74%); }
-    .choice.explore { border-color: rgba(212,79,206,.27); background: linear-gradient(135deg, var(--accent-soft), white 74%); }
+    .student { border-color: rgba(122,69,223,.27); background: linear-gradient(135deg, var(--primary-soft), white 74%); }
+    .teacher { border-color: rgba(63,152,216,.28); background: linear-gradient(135deg, var(--secondary-soft), white 74%); }
+    .explore { border-color: rgba(212,79,206,.27); background: linear-gradient(135deg, var(--accent-soft), white 74%); }
     .choice:hover, .choice:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(41,31,69,.13); outline: none; }
-    .choice.student:hover { border-color: var(--primary); }
-    .choice.teacher:hover { border-color: var(--secondary); }
-    .choice.explore:hover { border-color: var(--accent); }
-    .choice-icon { position: relative; z-index: 1; width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 17px; color: white; font-size: 21px; font-weight: 900; box-shadow: 0 13px 24px -14px rgba(40,20,80,.7); }
-    .student .choice-icon, .recommendation.student .choice-icon { background: linear-gradient(135deg, var(--primary), var(--primary-2)); }
-    .teacher .choice-icon, .recommendation.teacher .choice-icon { background: linear-gradient(135deg, var(--secondary), var(--primary)); }
-    .explore .choice-icon, .recommendation.explore .choice-icon { background: linear-gradient(135deg, var(--accent), var(--primary-2)); }
+    .choice-icon { position: relative; z-index: 1; width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 17px; color: white; font-size: 19px; font-weight: 900; box-shadow: 0 13px 24px -14px rgba(40,20,80,.7); }
+    .student .choice-icon { background: linear-gradient(135deg, var(--primary), var(--primary-2)); }
+    .teacher .choice-icon { background: linear-gradient(135deg, var(--secondary), var(--primary)); }
+    .explore .choice-icon { background: linear-gradient(135deg, var(--accent), var(--primary-2)); }
     .choice-copy { position: relative; z-index: 1; min-width: 0; flex: 1; }
     .choice-label { display: block; margin-bottom: 2px; font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
     .student .choice-label { color: var(--primary); }
@@ -136,84 +98,90 @@
     .choice-title { display: block; font-size: 15px; font-weight: 900; }
     .choice-description { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
     .arrow { position: relative; z-index: 1; width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--border); border-radius: 50%; background: rgba(255,255,255,.72); color: var(--muted); font-size: 18px; }
-    .footnote { margin: 14px 0 0; color: var(--muted); text-align: center; font-size: 11px; }
-    .footnote strong { color: var(--primary); }
 
-    .recommendation { position: relative; display: flex; align-items: center; gap: 14px; overflow: hidden; margin: 19px 0 18px; padding: 18px; border: 1px solid var(--border); border-radius: 24px; }
-    .recommendation.student { border-color: rgba(122,69,223,.27); background: linear-gradient(135deg, var(--primary-soft), white 78%); }
-    .recommendation.teacher { border-color: rgba(63,152,216,.28); background: linear-gradient(135deg, var(--secondary-soft), white 78%); }
-    .recommendation.explore { border-color: rgba(212,79,206,.27); background: linear-gradient(135deg, var(--accent-soft), white 78%); }
-    .recommendation strong { display: block; font-size: 17px; }
-    .recommendation p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
-    .actions { display: grid; grid-template-columns: auto 1fr; gap: 9px; }
-    .action { min-height: 45px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; border: 1px solid var(--border); padding: 0 16px; background: var(--card); color: var(--foreground); font-weight: 900; cursor: pointer; }
+    .feature-panel { margin-top: 19px; padding: 17px; border: 1px solid var(--border); border-radius: 24px; }
+    .feature-panel.student { border-color: rgba(122,69,223,.27); background: linear-gradient(135deg, var(--primary-soft), white 78%); }
+    .feature-panel.teacher { border-color: rgba(63,152,216,.28); background: linear-gradient(135deg, var(--secondary-soft), white 78%); }
+    .feature-panel.explore { border-color: rgba(212,79,206,.27); background: linear-gradient(135deg, var(--accent-soft), white 78%); }
+    .panel-heading { display: flex; align-items: center; gap: 12px; }
+    .panel-heading .choice-icon { width: 46px; height: 46px; border-radius: 16px; }
+    .eyebrow { font-size: 9px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    .student .eyebrow { color: var(--primary); }
+    .teacher .eyebrow { color: var(--secondary); }
+    .explore .eyebrow { color: var(--accent); }
+    .panel-title { margin-top: 3px; font-size: 16px; font-weight: 900; }
+
+    .benefits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+    .benefit { display: flex; gap: 9px; border: 1px solid rgba(100,90,130,.16); border-radius: 14px; padding: 10px; background: rgba(255,255,255,.64); }
+    .benefit-icon { width: 30px; height: 30px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; background: var(--primary-soft); color: var(--primary); font-size: 14px; font-weight: 900; }
+    .benefit strong { display: block; font-size: 11px; line-height: 1.2; }
+    .benefit span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+
+    .guest-box { display: flex; gap: 11px; margin-top: 11px; border: 1px solid var(--border); border-radius: 19px; padding: 14px; background: rgba(110,105,125,.06); }
+    .guest-icon { width: 40px; height: 40px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 13px; background: var(--card); color: var(--muted); box-shadow: 0 5px 16px rgba(30,24,50,.08); }
+    .guest-box strong { font-size: 13px; }
+    .guest-box p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+    .bullet-list { display: grid; gap: 8px; margin-top: 13px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .bullet { display: flex; gap: 8px; }
+    .bullet-mark { color: var(--accent); font-weight: 900; }
+
+    .actions { display: grid; gap: 9px; margin-top: 18px; }
+    .action { min-height: 45px; display: inline-flex; align-items: center; justify-content: center; border-radius: 13px; border: 1px solid var(--border); padding: 0 16px; background: var(--card); color: var(--foreground); font-weight: 900; text-decoration: none; cursor: pointer; }
     .action.primary { border-color: transparent; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; box-shadow: 0 11px 28px rgba(122,69,223,.25); }
+    .action.back { min-height: 36px; border: 0; background: transparent; color: var(--muted); }
+    .footnote { margin: 15px 0 0; color: var(--muted); text-align: center; font-size: 10px; }
     .reopen { position: fixed; right: 16px; top: 76px; display: none; border: 0; border-radius: 999px; padding: 10px 14px; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; box-shadow: 0 10px 28px rgba(122,69,223,.28); cursor: pointer; font-weight: 900; }
+    [hidden] { display: none !important; }
 
     @media (max-width: 640px) {
       .hero { padding: 46px 18px; }
       .hero p { font-size: 15px; }
       .overlay { align-items: end; padding: 0; }
-      .dialog { width: 100%; border-radius: 31px 31px 0 0; border-bottom: 0; }
+      .dialog { width: 100%; max-height: 96svh; border-radius: 31px 31px 0 0; border-bottom: 0; }
       .welcome { min-height: 124px; padding: 18px 52px 19px 17px; }
       .mascot-shell { width: 68px; height: 68px; border-radius: 21px; }
       .mascot-face { width: 45px; height: 45px; }
-      .welcome-title { font-size: 19px; }
-      .welcome-copy { font-size: 12px; }
-      .content { padding: 18px 16px 16px; }
-      h2 { font-size: 24px; }
-      .choice { min-height: 82px; border-radius: 20px; }
-      .choice-icon { width: 48px; height: 48px; }
-      .actions { grid-template-columns: 1fr; }
+      .welcome-title { font-size: 18px; }
+      .welcome-copy { font-size: 11px; }
+      .content { max-height: calc(96svh - 124px); padding: 18px 16px 15px; }
+      h2 { font-size: 23px; }
+      .subtitle { font-size: 12px; }
+      .choice { min-height: 79px; border-radius: 19px; padding: 11px 12px; }
+      .choice-icon { width: 46px; height: 46px; border-radius: 15px; }
+      .benefits { grid-template-columns: 1fr; }
       .fake-actions { display: grid; }
     }
 
     @media (prefers-color-scheme: dark) {
-      :root {
-        --background: #11101a;
-        --card: #1d1928;
-        --foreground: #f4f0fb;
-        --muted: #bbb2c9;
-        --border: #3b3449;
-        --primary-soft: #2b2142;
-        --secondary-soft: #182d3d;
-        --accent-soft: #39203a;
-        --shadow: 0 28px 90px rgba(0,0,0,.52);
-      }
-      .nav { background: rgba(17,16,26,.8); }
-      .choice.student, .recommendation.student { background: linear-gradient(135deg, var(--primary-soft), var(--card) 76%); }
-      .choice.teacher, .recommendation.teacher { background: linear-gradient(135deg, var(--secondary-soft), var(--card) 76%); }
-      .choice.explore, .recommendation.explore { background: linear-gradient(135deg, var(--accent-soft), var(--card) 76%); }
-      .arrow { background: rgba(15,13,22,.44); }
+      :root { --background: #10131c; --card: #181d29; --foreground: #f3f5f8; --muted: #aab2c2; --border: #303849; --primary: #a78bfa; --primary-2: #d18af2; --secondary: #70bdf0; --accent: #ef8ae8; --primary-soft: #28213f; --secondary-soft: #172c3d; --accent-soft: #382038; --shadow: 0 24px 70px rgba(0,0,0,.5); }
+      .nav { background: rgba(16,19,28,.8); }
+      .student, .teacher, .explore, .feature-panel.student, .feature-panel.teacher, .feature-panel.explore { background-blend-mode: screen; }
+      .benefit { background: rgba(16,19,28,.52); }
+      .arrow { background: rgba(16,19,28,.62); }
     }
   </style>
 </head>
 <body>
   <div class="landing">
-    <div class="nav"><span class="brand"><span class="brand-mark">P</span>APE</span></div>
+    <div class="nav"><span class="brand"><span class="brand-mark">P</span> APE</span></div>
     <main class="hero">
       <h1>Inglês com flashcards, jogos e prática ativa</h1>
-      <p>Prévia isolada da primeira etapa do sistema de ajuda. A landing real não foi alterada nesta demonstração.</p>
-      <div class="fake-actions">
-        <button class="fake-action primary">Começar a estudar</button>
-        <button class="fake-action">Ver uma atividade</button>
-      </div>
+      <p>Prévia isolada da ajuda inicial. A landing principal continua intacta e nada será mesclado sem aprovação.</p>
+      <div class="fake-actions"><button class="fake-action primary">Começar a estudar</button><button class="fake-action">Ver uma atividade</button></div>
     </main>
   </div>
 
   <button id="reopen" class="reopen">Abrir rascunho</button>
 
   <div id="overlay" class="overlay">
-    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="screen-title">
       <button id="close" class="close" aria-label="Fechar">✕</button>
-
       <header class="welcome">
         <div class="welcome-row">
-          <div class="mascot-shell" aria-hidden="true">
-            <div class="mascot-face"><span class="mascot-smile"></span></div>
-          </div>
+          <div class="mascot-shell"><div class="mascot-face"><span class="mascot-smile"></span></div></div>
           <div>
-            <span class="preview-badge">Preview de rascunho</span>
+            <span class="preview-badge">Rascunho navegável</span>
             <p class="welcome-title">Olá! Eu sou o Piteco.</p>
             <p class="welcome-copy">Vou mostrar só o caminho essencial.</p>
           </div>
@@ -221,44 +189,83 @@
       </header>
 
       <div class="content">
-        <div class="step-line"><span class="step-number">1</span>Escolha seu objetivo<span class="step-rule"></span></div>
+        <div class="step-line"><span id="step-number" class="step-number">1</span><span id="step-label">Escolha seu objetivo</span><span class="step-rule"></span></div>
 
-        <div id="choice-screen">
-          <h2 id="dialog-title">Como você quer usar o APE?</h2>
+        <div id="screen-choose" class="screen">
+          <h2 id="screen-title">Como você quer usar o APE?</h2>
           <p class="subtitle">Escolha uma opção. A ajuda mostra somente o próximo passo certo para você.</p>
-
           <div class="choices">
-            <button class="choice student" data-kind="student" data-title="Quero estudar inglês" data-description="Abrir atividades e começar a praticar." data-action="Ver atividades">
-              <span class="choice-icon">A</span>
-              <span class="choice-copy"><span class="choice-label">Aprender</span><span class="choice-title">Quero estudar inglês</span><span class="choice-description">Abrir atividades e começar a praticar.</span></span>
-              <span class="arrow">→</span>
-            </button>
-
-            <button class="choice teacher" data-kind="teacher" data-title="Quero ensinar" data-description="Conhecer listas, materiais e turmas." data-action="Ver recursos para professores">
-              <span class="choice-icon">P</span>
-              <span class="choice-copy"><span class="choice-label">Ensinar</span><span class="choice-title">Quero ensinar</span><span class="choice-description">Conhecer listas, materiais e turmas.</span></span>
-              <span class="arrow">→</span>
-            </button>
-
-            <button class="choice explore" data-kind="explore" data-title="Quero apenas explorar" data-description="Testar materiais públicos sem compromisso." data-action="Abrir portal público">
-              <span class="choice-icon">↗</span>
-              <span class="choice-copy"><span class="choice-label">Explorar</span><span class="choice-title">Quero apenas explorar</span><span class="choice-description">Testar materiais públicos sem compromisso.</span></span>
-              <span class="arrow">→</span>
-            </button>
+            <button class="choice student" data-screen="student"><span class="choice-icon">A</span><span class="choice-copy"><span class="choice-label">Aprender</span><span class="choice-title">Quero estudar inglês</span><span class="choice-description">Escolher entre conta gratuita ou acesso sem conta.</span></span><span class="arrow">→</span></button>
+            <button class="choice teacher" data-screen="teacher"><span class="choice-icon">P</span><span class="choice-copy"><span class="choice-label">Ensinar</span><span class="choice-title">Quero ensinar</span><span class="choice-description">Criar uma conta de professor para usar os recursos de ensino.</span></span><span class="arrow">→</span></button>
+            <button class="choice explore" data-screen="explore"><span class="choice-icon">↗</span><span class="choice-copy"><span class="choice-label">Explorar</span><span class="choice-title">Quero apenas explorar</span><span class="choice-description">Conhecer professores e materiais públicos sem criar conta.</span></span><span class="arrow">→</span></button>
           </div>
-
-          <p class="footnote"><strong>✦</strong> Nada será salvo nesta versão de rascunho.</p>
         </div>
 
-        <div id="result-screen" hidden>
-          <h2>Comece por aqui</h2>
-          <p class="subtitle">Sem passeio pela página inteira. Este é o caminho mais direto para o seu objetivo.</p>
-          <div id="recommendation" class="recommendation student">
-            <div class="choice-icon" id="result-icon">A</div>
-            <div><span id="result-label" class="choice-label">Aprender</span><strong id="result-title"></strong><p id="result-description"></p></div>
+        <div id="screen-student" class="screen" hidden>
+          <h2>Você pode estudar com ou sem conta</h2>
+          <p class="subtitle">O conteúdo público continua aberto. A conta gratuita libera o sistema completo de progresso e recompensas.</p>
+
+          <section class="feature-panel student">
+            <div class="panel-heading"><span class="choice-icon">★</span><div><div class="eyebrow">Conta gratuita</div><div class="panel-title">Estude e desbloqueie todos os benefícios</div></div></div>
+            <div class="benefits">
+              <div class="benefit"><span class="benefit-icon">₱</span><div><strong>Pontos e PiteCOIN</strong><span>Ganhe recompensas ao concluir atividades.</span></div></div>
+              <div class="benefit"><span class="benefit-icon">▣</span><div><strong>Pacotes visuais</strong><span>Loja com pacote de card e avatar.</span></div></div>
+              <div class="benefit"><span class="benefit-icon">◎</span><div><strong>Progresso sincronizado</strong><span>Histórico, metas e evolução na conta.</span></div></div>
+              <div class="benefit"><span class="benefit-icon">♟</span><div><strong>Turmas e professores</strong><span>Entre em turmas e siga professores.</span></div></div>
+            </div>
+          </section>
+
+          <section class="guest-box"><span class="guest-icon">◇</span><div><strong>Estudar sem conta</strong><p>Você pode acessar professores, materiais e jogos públicos. Porém, não recebe Pontos ou PiteCOIN, não usa a loja nem os pacotes visuais de card e avatar, e o progresso não fica sincronizado em uma conta.</p></div></section>
+
+          <div class="actions">
+            <a class="action primary" href="/auth?mode=signup&role=student">Criar conta gratuita →</a>
+            <a class="action" href="/portal">Continuar sem conta</a>
+            <button class="action back" data-back>← Voltar</button>
           </div>
-          <div class="actions"><button id="back" class="action">← Voltar</button><button id="continue" class="action primary"></button></div>
         </div>
+
+        <div id="screen-teacher" class="screen" hidden>
+          <h2>Conta obrigatória para ensinar</h2>
+          <p class="subtitle">Os recursos de professor precisam de uma conta para proteger materiais, turmas e dados dos alunos.</p>
+
+          <section class="feature-panel teacher">
+            <div class="panel-heading"><span class="choice-icon">P</span><div><div class="eyebrow">Conta de professor</div><div class="panel-title">Organize, compartilhe e acompanhe</div></div></div>
+            <div class="benefits">
+              <div class="benefit"><span class="benefit-icon">▤</span><div><strong>Listas e materiais</strong><span>Crie, organize e importe atividades.</span></div></div>
+              <div class="benefit"><span class="benefit-icon">♟</span><div><strong>Turmas e alunos</strong><span>Distribua atividades e acompanhe a turma.</span></div></div>
+              <div class="benefit"><span class="benefit-icon">◎</span><div><strong>Perfil público</strong><span>Compartilhe materiais por um perfil próprio.</span></div></div>
+              <div class="benefit"><span class="benefit-icon">↗</span><div><strong>Acompanhamento</strong><span>Visualize progresso e desempenho.</span></div></div>
+            </div>
+          </section>
+
+          <div class="actions">
+            <a class="action primary" href="/auth?mode=signup&role=teacher">Criar conta de professor →</a>
+            <a class="action" href="/auth?role=teacher">Já tenho uma conta</a>
+            <button class="action back" data-back>← Voltar</button>
+          </div>
+        </div>
+
+        <div id="screen-explore" class="screen" hidden>
+          <h2>Explore o portal público</h2>
+          <p class="subtitle">Você será levado à lista de professores públicos. Por enquanto, o Professor Pedro é o perfil principal disponível.</p>
+
+          <section class="feature-panel explore">
+            <div class="panel-heading"><span class="choice-icon">↗</span><div><div class="eyebrow">Acesso aberto</div><div class="panel-title">O que você encontra</div></div></div>
+            <div class="bullet-list">
+              <div class="bullet"><span class="bullet-mark">✓</span><span>Perfis de professores e seus materiais públicos.</span></div>
+              <div class="bullet"><span class="bullet-mark">✓</span><span>Atividades, listas e jogos que podem ser abertos sem conta.</span></div>
+              <div class="bullet"><span class="bullet-mark">◈</span><span>Pontuação, PiteCOIN, loja e pacotes visuais exigem conta.</span></div>
+            </div>
+          </section>
+
+          <div class="actions">
+            <a class="action primary" href="/portal">Abrir portal público →</a>
+            <a class="action" href="/auth?mode=signup&role=student">Criar conta gratuita</a>
+            <button class="action back" data-back>← Voltar</button>
+          </div>
+        </div>
+
+        <p class="footnote">Fluxo modular de rascunho. Nenhuma escolha será salva.</p>
       </div>
     </section>
   </div>
@@ -266,37 +273,20 @@
   <script>
     const overlay = document.querySelector('#overlay');
     const reopen = document.querySelector('#reopen');
-    const choiceScreen = document.querySelector('#choice-screen');
-    const resultScreen = document.querySelector('#result-screen');
-    const recommendation = document.querySelector('#recommendation');
-    const settings = {
-      student: { icon: 'A', label: 'Aprender' },
-      teacher: { icon: 'P', label: 'Ensinar' },
-      explore: { icon: '↗', label: 'Explorar' },
-    };
+    const screens = [...document.querySelectorAll('.screen')];
+    const stepNumber = document.querySelector('#step-number');
+    const stepLabel = document.querySelector('#step-label');
 
-    function showChoices() {
-      choiceScreen.hidden = false;
-      resultScreen.hidden = true;
+    function showScreen(name) {
+      screens.forEach((screen) => { screen.hidden = screen.id !== `screen-${name}`; });
+      stepNumber.textContent = name === 'choose' ? '1' : '2';
+      stepLabel.textContent = name === 'choose' ? 'Escolha seu objetivo' : 'Escolha seu caminho';
+      document.querySelector('.content').scrollTop = 0;
     }
 
-    document.querySelectorAll('.choice').forEach((button) => {
-      button.addEventListener('click', () => {
-        const kind = button.dataset.kind;
-        choiceScreen.hidden = true;
-        resultScreen.hidden = false;
-        recommendation.className = `recommendation ${kind}`;
-        document.querySelector('#result-icon').textContent = settings[kind].icon;
-        document.querySelector('#result-label').textContent = settings[kind].label;
-        document.querySelector('#result-title').textContent = button.dataset.title;
-        document.querySelector('#result-description').textContent = button.dataset.description;
-        document.querySelector('#continue').textContent = `${button.dataset.action} →`;
-      });
-    });
-
-    document.querySelector('#back').addEventListener('click', showChoices);
-    document.querySelector('#continue').addEventListener('click', () => alert('Na implementação real, este botão abre o caminho escolhido.'));
-    document.querySelector('#close').addEventListener('click', () => { overlay.style.display = 'none'; reopen.style.display = 'block'; showChoices(); });
+    document.querySelectorAll('[data-screen]').forEach((button) => button.addEventListener('click', () => showScreen(button.dataset.screen)));
+    document.querySelectorAll('[data-back]').forEach((button) => button.addEventListener('click', () => showScreen('choose')));
+    document.querySelector('#close').addEventListener('click', () => { overlay.style.display = 'none'; reopen.style.display = 'block'; showScreen('choose'); });
     reopen.addEventListener('click', () => { overlay.style.display = 'grid'; reopen.style.display = 'none'; });
   </script>
 </body>
