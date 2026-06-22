@@ -6,7 +6,8 @@ import { SkinCard } from "@/features/store/components/SkinCard";
 import { ExchangeTab } from "@/components/ExchangeTab";
 import { InventoryTab } from "@/components/InventoryTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getSkinsCaltalog, getUserInventory, purchaseSkin, type SkinItem } from "@/lib/storeEngine";
+import { getUserInventory, purchaseSkin, type SkinItem } from "@/lib/storeEngine";
+import { getProductionStoreCatalog } from "@/lib/storeCatalogCompat";
 import { useToast } from "@/hooks/use-toast";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useEconomy } from "@/contexts/EconomyContext";
@@ -28,7 +29,7 @@ const Store = () => {
     setLoading(true);
     try {
       const [catalogData, inventoryData] = await Promise.all([
-        getSkinsCaltalog(),
+        getProductionStoreCatalog(),
         getUserInventory(activeUserId),
       ]);
 
