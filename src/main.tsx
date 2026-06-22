@@ -6,6 +6,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./styles/store-package-avatar.css";
 import "./lib/versionManager";
 import "./lib/errorCapture";
 import "./i18n/config";
