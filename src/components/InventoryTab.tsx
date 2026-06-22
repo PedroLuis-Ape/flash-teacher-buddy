@@ -1,0 +1,1 @@
+export { InventoryTab } from "./InventoryTabFixed";
