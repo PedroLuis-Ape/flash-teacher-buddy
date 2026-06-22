@@ -1,50 +1,63 @@
 /* Colorful emoji treatment for selected action buttons.
-   Text labels remain visible; only the thin vector icon is replaced. */
+   Native SVG icons stay as a guaranteed fallback. They are hidden only when
+   the browser confirms support for :has(), which is required by the emoji
+   replacement selectors below. */
 
-.space-ui :is(button,a):has(> svg:is(.lucide-list-plus,.lucide-share-2,.lucide-check-square,.lucide-square-check-big,.lucide-pencil,.lucide-trash-2,.lucide-play,.lucide-volume-2,.lucide-monitor-play,.lucide-gauge,.lucide-settings,.lucide-settings-2,.lucide-eye,.lucide-star,.lucide-flame,.lucide-gem,.lucide-lightbulb))::before {
+.space-ui :is(button,a) > svg:is(.lucide-list-plus,.lucide-share-2,.lucide-check-square,.lucide-square-check-big,.lucide-pencil,.lucide-trash-2,.lucide-play,.lucide-volume-2,.lucide-monitor-play,.lucide-gauge,.lucide-settings,.lucide-settings-2,.lucide-eye,.lucide-star,.lucide-flame,.lucide-gem,.lucide-lightbulb) {
   display:inline-flex;
-  min-width:1.15em;
-  align-items:center;
-  justify-content:center;
-  font-size:1.05rem;
-  line-height:1;
-  filter:saturate(1.08);
-  transform:translateY(-.02em);
+  flex:0 0 auto;
+  opacity:.78;
 }
 
-.space-ui :is(button,a):has(> svg:is(.lucide-list-plus,.lucide-share-2,.lucide-check-square,.lucide-square-check-big,.lucide-pencil,.lucide-trash-2,.lucide-play,.lucide-volume-2,.lucide-monitor-play,.lucide-gauge,.lucide-settings,.lucide-settings-2,.lucide-eye,.lucide-star,.lucide-flame,.lucide-gem,.lucide-lightbulb)){
-  font-weight:600;
-  letter-spacing:-.01em;
+@supports selector(:has(*)) {
+  .space-ui :is(button,a):has(> svg:is(.lucide-list-plus,.lucide-share-2,.lucide-check-square,.lucide-square-check-big,.lucide-pencil,.lucide-trash-2,.lucide-play,.lucide-volume-2,.lucide-monitor-play,.lucide-gauge,.lucide-settings,.lucide-settings-2,.lucide-eye,.lucide-star,.lucide-flame,.lucide-gem,.lucide-lightbulb))::before {
+    display:inline-flex;
+    min-width:1.15em;
+    align-items:center;
+    justify-content:center;
+    font-size:1.05rem;
+    line-height:1;
+    filter:saturate(1.08);
+    transform:translateY(-.02em);
+  }
+
+  .space-ui :is(button,a):has(> svg:is(.lucide-list-plus,.lucide-share-2,.lucide-check-square,.lucide-square-check-big,.lucide-pencil,.lucide-trash-2,.lucide-play,.lucide-volume-2,.lucide-monitor-play,.lucide-gauge,.lucide-settings,.lucide-settings-2,.lucide-eye,.lucide-star,.lucide-flame,.lucide-gem,.lucide-lightbulb)) {
+    font-weight:600;
+    letter-spacing:-.01em;
+  }
+
+  .space-ui :is(button,a) > svg:is(.lucide-list-plus,.lucide-share-2,.lucide-check-square,.lucide-square-check-big,.lucide-pencil,.lucide-trash-2,.lucide-play,.lucide-volume-2,.lucide-monitor-play,.lucide-gauge,.lucide-settings,.lucide-settings-2,.lucide-eye,.lucide-star,.lucide-flame,.lucide-gem,.lucide-lightbulb) {
+    display:none;
+  }
+
+  .space-ui :is(button,a):has(> svg.lucide-list-plus)::before{content:"📝"}
+  .space-ui :is(button,a):has(> svg.lucide-share-2)::before{content:"📤"}
+  .space-ui :is(button,a):has(> svg:is(.lucide-check-square,.lucide-square-check-big))::before{content:"☑️"}
+  .space-ui :is(button,a):has(> svg.lucide-pencil)::before{content:"✏️"}
+  .space-ui :is(button,a):has(> svg.lucide-trash-2)::before{content:"🗑️"}
+  .space-ui :is(button,a):has(> svg.lucide-play)::before{content:"▶️"}
+  .space-ui :is(button,a):has(> svg.lucide-volume-2)::before{content:"🔊"}
+  .space-ui :is(button,a):has(> svg.lucide-monitor-play)::before{content:"📺"}
+  .space-ui :is(button,a):has(> svg.lucide-gauge)::before{content:"🏎️"}
+  .space-ui :is(button,a):has(> svg:is(.lucide-settings,.lucide-settings-2))::before{content:"⚙️"}
+  .space-ui :is(button,a):has(> svg.lucide-eye)::before{content:"👀"}
+  .space-ui :is(button,a):has(> svg.lucide-star)::before{content:"⭐"}
+  .space-ui :is(button,a):has(> svg.lucide-flame)::before{content:"🔥"}
+  .space-ui :is(button,a):has(> svg.lucide-gem)::before{content:"💎"}
+  .space-ui :is(button,a):has(> svg.lucide-lightbulb)::before{content:"💡"}
+
+  /* Pasta: mantém Idiomas, Nova Lista, Compartilhar e Selecionar legíveis. */
+  .space-ui .mb-4.flex.flex-wrap.gap-2 > button:has(> svg.lucide-settings)::before{content:"🌐"}
+  .space-ui .mb-4.flex.flex-wrap.gap-2 > button:has(> svg.lucide-x)::before{content:"✖️";font-size:1.05rem;line-height:1}
+  .space-ui .mb-4.flex.flex-wrap.gap-2 > button:has(> svg.lucide-x) > svg{display:none}
+
+  /* Landing page: CTAs seguem a mesma linguagem caricata. */
+  .space-ui-main > .flex.min-h-screen.flex-col :is(button,a.inline-flex):has(> svg.lucide-arrow-right)::after{content:"🚀";display:inline-flex;font-size:1rem;line-height:1}
+  .space-ui-main > .flex.min-h-screen.flex-col :is(button,a.inline-flex) > svg.lucide-arrow-right{display:none}
+  .space-ui-main > .flex.min-h-screen.flex-col a.inline-flex[href="/atividades-de-ingles"]::before{content:"🎯";font-size:1rem}
+  .space-ui-main > .flex.min-h-screen.flex-col a.inline-flex[href="/para-professores"]::before{content:"🧑‍🏫";font-size:1rem}
+  .space-ui-main > .flex.min-h-screen.flex-col a.inline-flex[href="/portal"]::before{content:"🎮";font-size:1rem}
 }
 
-.space-ui :is(button,a) > svg:is(.lucide-list-plus,.lucide-share-2,.lucide-check-square,.lucide-square-check-big,.lucide-pencil,.lucide-trash-2,.lucide-play,.lucide-volume-2,.lucide-monitor-play,.lucide-gauge,.lucide-settings,.lucide-settings-2,.lucide-eye,.lucide-star,.lucide-flame,.lucide-gem,.lucide-lightbulb){display:none}
-
-.space-ui :is(button,a):has(> svg.lucide-list-plus)::before{content:"📝"}
-.space-ui :is(button,a):has(> svg.lucide-share-2)::before{content:"📤"}
-.space-ui :is(button,a):has(> svg:is(.lucide-check-square,.lucide-square-check-big))::before{content:"☑️"}
-.space-ui :is(button,a):has(> svg.lucide-pencil)::before{content:"✏️"}
-.space-ui :is(button,a):has(> svg.lucide-trash-2)::before{content:"🗑️"}
-.space-ui :is(button,a):has(> svg.lucide-play)::before{content:"▶️"}
-.space-ui :is(button,a):has(> svg.lucide-volume-2)::before{content:"🔊"}
-.space-ui :is(button,a):has(> svg.lucide-monitor-play)::before{content:"📺"}
-.space-ui :is(button,a):has(> svg.lucide-gauge)::before{content:"🏎️"}
-.space-ui :is(button,a):has(> svg:is(.lucide-settings,.lucide-settings-2))::before{content:"⚙️"}
-.space-ui :is(button,a):has(> svg.lucide-eye)::before{content:"👀"}
-.space-ui :is(button,a):has(> svg.lucide-star)::before{content:"⭐"}
-.space-ui :is(button,a):has(> svg.lucide-flame)::before{content:"🔥"}
-.space-ui :is(button,a):has(> svg.lucide-gem)::before{content:"💎"}
-.space-ui :is(button,a):has(> svg.lucide-lightbulb)::before{content:"💡"}
-
-/* Pasta: mantém Idiomas, Nova Lista, Compartilhar e Selecionar legíveis. */
-.space-ui .mb-4.flex.flex-wrap.gap-2 > button:has(> svg.lucide-settings)::before{content:"🌐"}
-.space-ui .mb-4.flex.flex-wrap.gap-2 > button:has(> svg.lucide-x)::before{content:"✖️";font-size:1.05rem;line-height:1}
-.space-ui .mb-4.flex.flex-wrap.gap-2 > button:has(> svg.lucide-x) > svg{display:none}
-
-/* Landing page: CTAs seguem a mesma linguagem caricata. */
-.space-ui-main > .flex.min-h-screen.flex-col :is(button,a.inline-flex):has(> svg.lucide-arrow-right)::after{content:"🚀";display:inline-flex;font-size:1rem;line-height:1}
-.space-ui-main > .flex.min-h-screen.flex-col :is(button,a.inline-flex) > svg.lucide-arrow-right{display:none}
-.space-ui-main > .flex.min-h-screen.flex-col a.inline-flex[href="/atividades-de-ingles"]::before{content:"🎯";font-size:1rem}
-.space-ui-main > .flex.min-h-screen.flex-col a.inline-flex[href="/para-professores"]::before{content:"🧑‍🏫";font-size:1rem}
-.space-ui-main > .flex.min-h-screen.flex-col a.inline-flex[href="/portal"]::before{content:"🎮";font-size:1rem}
 .space-ui-main > .flex.min-h-screen.flex-col > div.fixed.inset-x-0.bottom-0 button:last-child::before{content:"🎮";font-size:1rem;line-height:1}
 .space-ui-main > .flex.min-h-screen.flex-col section.hidden.sm\:block :is(button,a.inline-flex)::before{content:"🚀";font-size:1rem;line-height:1}
