@@ -6,10 +6,10 @@ Este diretório é a fonte canônica dos pacotes visuais publicados na loja.
 
 Cada pacote é um único produto inseparável, composto obrigatoriamente por:
 
-- `card.avif`: card colecionável vertical;
-- `avatar.avif`: foto de perfil correspondente.
+- `card.png` ou `card.avif`: card colecionável vertical;
+- `avatar.png` ou `avatar.avif`: foto de perfil correspondente.
 
-Card e avatar nunca devem ser cadastrados, vendidos ou arquivados como produtos separados.
+Card e avatar nunca devem ser cadastrados, vendidos ou arquivados como produtos separados. Cada pasta deve usar apenas um formato por imagem.
 
 ## Estrutura
 
@@ -18,12 +18,12 @@ store-packages/
 ├── README.md
 ├── catalog.json
 ├── piteco_prime/
-│   ├── card.avif
-│   └── avatar.avif
+│   ├── card.png
+│   └── avatar.png
 └── ...
 ```
 
-O `id` de cada item em `catalog.json` deve ser idêntico ao nome da pasta. Depois da primeira publicação, esse ID é permanente: substituir a arte não cria um novo produto e não rompe compras, inventários ou itens equipados.
+O `id` em `catalog.json` deve ser idêntico ao nome da pasta. Depois da primeira publicação, esse ID é permanente: substituir uma arte não cria outro produto e não rompe compras, inventários ou itens equipados.
 
 ## Comandos
 
@@ -40,24 +40,20 @@ SUPABASE_URL=https://xrnfhhoxmmstagmelvyi.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
-Por segurança, o sincronizador recusa outro projeto Supabase, salvo quando a opção explícita `--allow-non-production` for usada.
+Por segurança, o sincronizador recusa outro projeto Supabase, salvo quando `--allow-non-production` for usado explicitamente.
 
-## Adicionar um pacote
+## Adicionar ou atualizar um pacote
 
 1. Crie `store-packages/<id>/`.
-2. Adicione `card.avif` e `avatar.avif`.
-3. Registre o pacote em `catalog.json`.
+2. Adicione `card.png` e `avatar.png`, ou o par em AVIF.
+3. Registre ou atualize o pacote em `catalog.json`.
 4. Execute a validação e a sincronização.
 
-## Substituir uma arte
-
-Troque `card.avif`, `avatar.avif` ou ambos, mantendo o mesmo ID. A sincronização sobrescreve os objetos canônicos e acrescenta um hash à URL apenas para invalidar cache.
+Trocar uma ou ambas as imagens mantendo o mesmo ID preserva o produto. A sincronização sobrescreve os objetos canônicos, remove formatos antigos da pasta do Storage e acrescenta um hash à URL para invalidar cache.
 
 ## Arquivar
 
-Altere `active` para `false` e sincronize. O registro passa a `archived`, deixa de aparecer na loja e permanece disponível para inventários e compras históricas.
-
-Remover um item de `catalog.json` também o arquiva no banco. O fluxo normal nunca apaga registros referenciados.
+Altere `active` para `false` e sincronize. O registro passa a `archived`, deixa de aparecer na loja e permanece disponível para inventários e compras históricas. Remover um item de `catalog.json` também o arquiva no banco; o fluxo normal nunca apaga registros referenciados.
 
 ## Publicação dinâmica
 

@@ -13,7 +13,8 @@ img.piteco-store-avatar-image {
   transform-origin: center;
 }
 
-img[src*="/storage/v1/object/public/piteco-store/"][src*="/avatar.avif"] {
+img[src*="/storage/v1/object/public/piteco-store/"][src*="/avatar.avif"],
+img[src*="/storage/v1/object/public/piteco-store/"][src*="/avatar.png"] {
   object-fit: cover;
   transform: scale(1.12);
   transform-origin: center;

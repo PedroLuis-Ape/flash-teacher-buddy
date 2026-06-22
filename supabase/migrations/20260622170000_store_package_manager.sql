@@ -14,7 +14,7 @@ values (
   'piteco-store',
   true,
   8388608,
-  array['image/avif']::text[]
+  array['image/png', 'image/avif']::text[]
 )
 on conflict (id) do update
 set

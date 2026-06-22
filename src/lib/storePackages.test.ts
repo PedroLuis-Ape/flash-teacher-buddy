@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -17,10 +17,7 @@ interface Catalog {
 }
 
 const root = process.cwd();
-const catalog = JSON.parse(
-  readFileSync(path.join(root, "store-packages", "catalog.json"), "utf8"),
-) as Catalog;
-
+const catalog = JSON.parse(readFileSync(path.join(root, "store-packages", "catalog.json"), "utf8")) as Catalog;
 const official = [
   ["piteco_prime", "Piteco Prime", "legendary", 750],
   ["piteco_vampiro", "Piteco Vampiro", "epic", 500],
@@ -30,6 +27,11 @@ const official = [
   ["piteco_explorador", "Piteco Explorador", "rare", 300],
 ] as const;
 
+function isPng(filename: string): boolean {
+  const bytes = readFileSync(filename);
+  return bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+}
+
 function isAvif(filename: string): boolean {
   const bytes = readFileSync(filename);
   if (bytes.length < 12) return false;
@@ -37,31 +39,31 @@ function isAvif(filename: string): boolean {
   return box === "ftypavif" || box === "ftypavis";
 }
 
+function findAsset(id: string, basename: string): string {
+  for (const extension of ["avif", "png"]) {
+    const filename = path.join(root, "store-packages", id, `${basename}.${extension}`);
+    if (existsSync(filename)) return filename;
+  }
+  return "";
+}
+
 describe("canonical App Piteco store catalog", () => {
   it("contains only the six official active bundles", () => {
     expect(catalog.schema).toBe("app-piteco-store-catalog");
     expect(catalog.version).toBe(1);
     expect(catalog.packages).toHaveLength(official.length);
-
-    expect(
-      catalog.packages.map(({ id, name, rarity, price_pitecoin, active }) => [
-        id,
-        name,
-        rarity,
-        price_pitecoin,
-        active,
-      ]),
-    ).toEqual(official.map((item) => [...item, true]));
+    expect(catalog.packages.map(({ id, name, rarity, price_pitecoin, active }) => [id, name, rarity, price_pitecoin, active]))
+      .toEqual(official.map((item) => [...item, true]));
   });
 
-  it("keeps card and avatar together as real AVIF assets", () => {
+  it("keeps card and avatar together as valid image assets", () => {
     for (const [id] of official) {
-      const card = path.join(root, "store-packages", id, "card.avif");
-      const avatar = path.join(root, "store-packages", id, "avatar.avif");
-      expect(existsSync(card), `${id} card`).toBe(true);
-      expect(existsSync(avatar), `${id} avatar`).toBe(true);
-      expect(isAvif(card), `${id} card AVIF`).toBe(true);
-      expect(isAvif(avatar), `${id} avatar AVIF`).toBe(true);
+      const card = findAsset(id, "card");
+      const avatar = findAsset(id, "avatar");
+      expect(card, `${id} card`).not.toBe("");
+      expect(avatar, `${id} avatar`).not.toBe("");
+      expect(card.endsWith(".png") ? isPng(card) : isAvif(card), `${id} card válido`).toBe(true);
+      expect(avatar.endsWith(".png") ? isPng(avatar) : isAvif(avatar), `${id} avatar válido`).toBe(true);
     }
   });
 });
