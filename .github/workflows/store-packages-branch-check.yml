@@ -1,0 +1,20 @@
+name: Store package branch check
+
+on:
+  push:
+    branches: [feat-store-package-pipeline-final]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - run: node scripts/store-packages/validate.mjs
+      - run: node scripts/store-packages/sync.mjs --dry-run
+      - run: npm run typecheck
+      - run: npm run build
