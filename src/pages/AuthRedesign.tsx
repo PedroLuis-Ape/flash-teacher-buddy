@@ -12,6 +12,11 @@ export default function AuthRedesign() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = searchParams.get("mode") === "signup" ? "signup" : "login";
+  const requestedRole = searchParams.get("role") === "teacher"
+    ? "teacher"
+    : searchParams.get("role") === "student"
+      ? "student"
+      : undefined;
 
   useEffect(() => {
     const logoutFlag = Boolean(sessionStorage.getItem("logoutInProgress"));
@@ -29,7 +34,10 @@ export default function AuthRedesign() {
   }, [navigate]);
 
   const setMode = (nextMode: "login" | "signup") => {
-    setSearchParams(nextMode === "signup" ? { mode: "signup" } : {}, { replace: true });
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextMode === "signup") nextParams.set("mode", "signup");
+    else nextParams.delete("mode");
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handleSuccess = () => navigate("/dashboard", { replace: true });
@@ -53,7 +61,11 @@ export default function AuthRedesign() {
           </div>
 
           {mode === "signup" ? (
-            <SignupForm onSuccess={handleSuccess} onLogin={() => setMode("login")} />
+            <SignupForm
+              initialAccountType={requestedRole}
+              onSuccess={handleSuccess}
+              onLogin={() => setMode("login")}
+            />
           ) : (
             <QuickLoginForm onSuccess={handleSuccess} onCreateAccount={() => setMode("signup")} />
           )}
