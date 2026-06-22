@@ -32,10 +32,12 @@ O arquivo `catalog.json` é a fonte única de IDs, nomes, descrições, raridade
 1. Crie `store-packages/<id>/`.
 2. Coloque o card e o avatar na pasta.
 3. Registre o pacote em `catalog.json` com `active: false`.
-4. Execute `npm run store:validate:assets`.
+4. Execute `node scripts/store-packages/validate.mjs --require-assets`.
 5. Altere `active` para `true`.
-6. Execute `npm run store:plan` para revisar.
-7. Execute `npm run store:sync` para publicar.
+6. Execute `node scripts/store-packages/sync.mjs --dry-run` para revisar.
+7. Execute `node scripts/store-packages/sync.mjs` para publicar.
+
+Também é possível usar a ação manual **Store packages** no GitHub, depois que os segredos do Supabase estiverem configurados no repositório.
 
 ## Substituir o design
 
@@ -59,10 +61,11 @@ Tamanho máximo: 8 MB por imagem.
 ## Comandos
 
 ```bash
-npm run store:validate
-npm run store:validate:assets
-npm run store:plan
-npm run store:sync
+node scripts/store-packages/validate.mjs
+node scripts/store-packages/validate.mjs --require-assets
+node scripts/store-packages/sync.mjs --dry-run
+node scripts/store-packages/sync.mjs
+node scripts/store-packages/sync.mjs --only=piteco_prime
 ```
 
 A sincronização real exige as variáveis `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`. O modo de planejamento não altera o banco.
