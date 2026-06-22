@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { InstitutionProvider } from "@/contexts/InstitutionContext";
 import { GlobalFooter } from "@/components/layout/GlobalFooter";
-import { SpaceTwinkleLayer } from "@/components/layout/SpaceTwinkleLayer";
+import { PrivateGalaxyGate } from "@/components/layout/PrivateGalaxyGate";
 import { useActivityHeartbeat } from "@/hooks/useActivityHeartbeat";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -38,11 +38,8 @@ import "@/styles/space-ui-v1.css";
 import "@/styles/space-ui-components.css";
 import "@/styles/space-ui-widgets.css";
 import "@/styles/space-ui-reference-match.css";
-import "@/styles/space-ui-glitter.css";
 import "@/styles/space-ui-piteco-fullbody.css";
-import "@/styles/space-ui-live-stars.css";
 import "@/styles/space-ui-performance.css";
-import "@/styles/space-galaxy-home-mobile-hotfix.css";
 
 const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -102,7 +99,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
         isHome && "space-ui-home-route",
       )}
     >
-      <SpaceTwinkleLayer />
+      <PrivateGalaxyGate />
       <AppRecoveryBanner />
       <OfflineIndicator />
       <StudyResumeAgent />
