@@ -1,0 +1,3 @@
+.space-ui :is(button,a):has(svg.lucide-gauge)::before{content:"🏎️";display:inline-flex;min-width:1.15em;align-items:center;justify-content:center;font-size:1.05rem;line-height:1}
+.space-ui :is(button,a):has(svg.lucide-gauge){font-weight:600;letter-spacing:-.01em}
+.space-ui :is(button,a) svg.lucide-gauge{display:none}
