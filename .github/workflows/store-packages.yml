@@ -1,0 +1,62 @@
+name: Store packages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "store-packages/**"
+      - "scripts/store-packages/**"
+      - "src/lib/storeCatalog.ts"
+      - "src/pages/Store.tsx"
+      - "supabase/migrations/*store_package*"
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: "ID opcional para sincronizar somente um pacote"
+        required: false
+        type: string
+      confirmation:
+        description: "Digite PUBLICAR para confirmar a sincronização"
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate package catalog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - run: node scripts/store-packages/validate.mjs
+      - run: node scripts/store-packages/sync.mjs --dry-run
+
+  publish:
+    name: Publish package catalog
+    if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'PUBLICAR'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Validate active package assets
+        run: node scripts/store-packages/validate.mjs
+      - name: Synchronize catalog
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.package_id }}" ]; then
+            node scripts/store-packages/sync.mjs --only="${{ inputs.package_id }}"
+          else
+            node scripts/store-packages/sync.mjs
+          fi
