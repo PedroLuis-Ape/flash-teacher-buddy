@@ -52,7 +52,7 @@ export function SkinCard({
           }
         }}
       >
-        <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-muted/30 to-muted">
+        <div className="relative aspect-[7/10] overflow-hidden bg-gradient-to-br from-muted/30 to-muted">
           <img
             src={skin.card_final}
             alt={skin.name}
@@ -84,6 +84,7 @@ export function SkinCard({
           <CardTitle className="line-clamp-2 min-h-9 text-sm leading-tight sm:text-base">
             {skin.name}
           </CardTitle>
+          <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">Card + foto de perfil</p>
 
           <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
             <div className="flex min-w-0 items-center gap-1.5">
