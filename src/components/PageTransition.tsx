@@ -1,5 +1,6 @@
 import { ReactNode, useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
+import "@/styles/navigation-performance.css";
 
 interface PageTransitionProps {
   children: ReactNode;
