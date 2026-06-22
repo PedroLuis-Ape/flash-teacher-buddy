@@ -1,22 +1,44 @@
-import { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { ReactNode, useLayoutEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 interface PageTransitionProps {
   children: ReactNode;
 }
 
 /**
- * CSS-only page transition.
+ * Route-content transition.
  *
- * - Keyed by `location.pathname` so React fully unmounts the previous tree
- *   (no retention in state — avoids React #300 / hook-count mismatch).
- * - Pure CSS animation (no JS timer, no setState during transition).
- * - Disabled automatically by the global kill-switch `[data-perf-no-anim]`
- *   set by PerformanceContext, and by `prefers-reduced-motion`.
- * - Applied only to the route content; the GlobalLayout shell stays still.
+ * The shell remains mounted while the route tree changes. During the first
+ * paint frames we expose a short-lived document flag so expensive decorative
+ * backgrounds can pause composition without being removed or downgraded.
  */
 export function PageTransition({ children }: PageTransitionProps) {
   const location = useLocation();
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-route-transitioning", "true");
+
+    let firstFrame = 0;
+    let secondFrame = 0;
+    let releaseTimer = 0;
+
+    firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        releaseTimer = window.setTimeout(() => {
+          root.removeAttribute("data-route-transitioning");
+        }, 140);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+      window.clearTimeout(releaseTimer);
+      root.removeAttribute("data-route-transitioning");
+    };
+  }, [location.pathname]);
+
   return (
     <div key={location.pathname} className="page-transition">
       {children}
