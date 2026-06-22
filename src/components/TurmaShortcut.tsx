@@ -48,7 +48,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
         )}
       </div>
 
-      <Card className="welcome-banner w-full min-w-0 overflow-hidden border-0">
+      <Card className="card-premium w-full min-w-0 overflow-hidden">
         <CardContent className="w-full min-w-0 space-y-3 p-4">
           {visibleTurmas.map((turma: any) => (
             <button
