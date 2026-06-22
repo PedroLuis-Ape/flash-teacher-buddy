@@ -29,10 +29,10 @@ const STATUS_CONFIG = {
     icon: CheckCircle2,
     mascot: pitecoHappy,
     mascotAlt: "Piteco feliz",
-    panelClass: "border-emerald-500/45 border-l-4 border-l-emerald-500",
-    iconClass: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
+    panelClass: "border-emerald-500/40 border-l-4 border-l-emerald-500",
+    iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     titleClass: "text-emerald-700 dark:text-emerald-300",
-    answerClass: "border-emerald-500/25 bg-emerald-500/8",
+    answerClass: "border-emerald-500/25 bg-emerald-500/10",
     buttonClass: "bg-emerald-600 text-white hover:bg-emerald-700",
   },
   almost: {
@@ -40,10 +40,10 @@ const STATUS_CONFIG = {
     icon: AlertTriangle,
     mascot: pitecoHappy,
     mascotAlt: "Piteco feliz e encorajador",
-    panelClass: "border-amber-500/45 border-l-4 border-l-amber-500",
-    iconClass: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
+    panelClass: "border-amber-500/40 border-l-4 border-l-amber-500",
+    iconClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
     titleClass: "text-amber-700 dark:text-amber-300",
-    answerClass: "border-amber-500/25 bg-amber-500/8",
+    answerClass: "border-amber-500/25 bg-amber-500/10",
     buttonClass: "bg-amber-600 text-white hover:bg-amber-700",
   },
   incorrect: {
@@ -51,10 +51,10 @@ const STATUS_CONFIG = {
     icon: XCircle,
     mascot: pitecoSad,
     mascotAlt: "Piteco triste",
-    panelClass: "border-destructive/45 border-l-4 border-l-destructive",
+    panelClass: "border-destructive/40 border-l-4 border-l-destructive",
     iconClass: "bg-destructive/10 text-destructive",
     titleClass: "text-destructive",
-    answerClass: "border-destructive/20 bg-destructive/6",
+    answerClass: "border-destructive/20 bg-destructive/10",
     buttonClass: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
   },
 } as const;
@@ -91,7 +91,7 @@ export function StudyFeedbackPanel({
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-muted/35 p-1 shadow-sm sm:h-[4.5rem] sm:w-[4.5rem]">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-muted/30 p-1 shadow-sm sm:h-[4.5rem] sm:w-[4.5rem]">
             <img
               src={config.mascot}
               alt={config.mascotAlt}
@@ -129,7 +129,7 @@ export function StudyFeedbackPanel({
                 )}
 
                 {correctAnswer && (
-                  <div className="min-w-0 rounded-xl border border-emerald-500/25 bg-emerald-500/8 p-3">
+                  <div className="min-w-0 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3">
                     <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
                       {correctAnswerLabel}
                     </span>
