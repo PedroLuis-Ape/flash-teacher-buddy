@@ -1,17 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRight, Volume2 } from "lucide-react";
+import { Volume2 } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
-import pitecoSad from "@/assets/piteco-sad.png";
-import pitecoHappy from "@/assets/piteco-happy.png";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
+import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
@@ -69,30 +67,23 @@ export const MultipleChoiceStudyView = ({
   const [showFeedback, setShowFeedback] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
-  const [secondsRemaining, setSecondsRemaining] = useState(
-    Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000),
-  );
+  const [secondsRemaining, setSecondsRemaining] = useState(Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000));
   const autoAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pendingAdvanceRef = useRef<(() => void) | null>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
-  
-  // --- Centralized Side Resolution ---
+
   const sideA = { text: currentCard.term, lang: langA, label: getLangLabel(langA) };
   const sideB = { text: currentCard.translation, lang: langB, label: getLangLabel(langB) };
-
   const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, currentCard.id || currentCard.term);
 
-  // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = currentCard.word_hints;
   const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
-
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
   const promptLabel = promptSide.label;
   const answerLabel = answerSide.label;
-
   const promptLang = toBCP47(promptSide.lang);
 
   const clearAutoAdvance = useCallback(() => {
@@ -126,43 +117,28 @@ export const MultipleChoiceStudyView = ({
       setSecondsRemaining(Math.ceil(remaining / 1000));
     }, 250);
 
-    autoAdvanceTimeoutRef.current = setTimeout(
-      runPendingAdvance,
-      AUTO_ADVANCE_DELAY_MS,
-    );
+    autoAdvanceTimeoutRef.current = setTimeout(runPendingAdvance, AUTO_ADVANCE_DELAY_MS);
   }, [clearAutoAdvance, runPendingAdvance]);
 
   useEffect(() => {
-    // Gerar 3 alternativas incorretas
-    // isAFirst means sideA (term) is the prompt, so answer comes from sideB (translation)
     const wrongOptions = allCards
-      .filter(card =>
-        isAFirst
-          ? card.translation !== currentCard.translation
-          : card.term !== currentCard.term
-      )
-      .map(card => isAFirst ? card.translation : card.term);
+      .filter((card) => isAFirst ? card.translation !== currentCard.translation : card.term !== currentCard.term)
+      .map((card) => isAFirst ? card.translation : card.term);
 
-    // V2: similarity-based selection (Levenshtein) — fallback to random when off
     let shuffledWrong: string[];
     if (FEATURE_FLAGS.intelligent_study_engine) {
       shuffledWrong = pickSmartDistractors(correctAnswer, wrongOptions, 3);
-      // Top up with random picks if scoring returned fewer than 3
       if (shuffledWrong.length < 3) {
         const used = new Set(shuffledWrong);
-        const fillers = wrongOptions.filter(o => !used.has(o)).sort(() => Math.random() - 0.5);
+        const fillers = wrongOptions.filter((option) => !used.has(option)).sort(() => Math.random() - 0.5);
         shuffledWrong = [...shuffledWrong, ...fillers].slice(0, 3);
       }
     } else {
       shuffledWrong = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 3);
     }
 
-    // Adicionar a resposta correta
-    const allOptions = [...shuffledWrong, correctAnswer];
+    const shuffled = [...shuffledWrong, correctAnswer].sort(() => Math.random() - 0.5);
 
-    // Embaralhar todas as opções
-    const shuffled = allOptions.sort(() => Math.random() - 0.5);
-    
     clearAutoAdvance();
     setOptions(shuffled);
     setCorrectIndex(shuffled.indexOf(correctAnswer));
@@ -171,9 +147,7 @@ export const MultipleChoiceStudyView = ({
     setSecondsRemaining(Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000));
   }, [currentCard, allCards, isAFirst, correctAnswer, clearAutoAdvance]);
 
-  useEffect(() => {
-    return () => clearAutoAdvance();
-  }, [clearAutoAdvance]);
+  useEffect(() => () => clearAutoAdvance(), [clearAutoAdvance]);
 
   const handleOptionClick = useCallback((index: number) => {
     if (showFeedback) return;
@@ -190,56 +164,50 @@ export const MultipleChoiceStudyView = ({
     }
   }, [showFeedback, correctIndex, scheduleAutoAdvance, onCorrect, onIncorrect]);
 
-  // Keyboard shortcuts for multiple choice: 1-4 or A-D selects the option.
-  // While feedback is visible, the configured next-card key skips the wait.
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isTypingTarget(e.target)) return;
-      const k = normalizeKey(e.key);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return;
+      const key = normalizeKey(event.key);
 
       if (showFeedback) {
         const nextKey = normalizeKey(shortcuts.nextCard);
-        if (k === nextKey) {
-          e.preventDefault();
+        if (key === nextKey) {
+          event.preventDefault();
           runPendingAdvance();
         }
         return;
       }
 
       let index: number | null = null;
-      if (k === "1" || k === "A") index = 0;
-      else if (k === "2" || k === "B") index = 1;
-      else if (k === "3" || k === "C") index = 2;
-      else if (k === "4" || k === "D") index = 3;
+      if (key === "1" || key === "A") index = 0;
+      else if (key === "2" || key === "B") index = 1;
+      else if (key === "3" || key === "C") index = 2;
+      else if (key === "4" || key === "D") index = 3;
+
       if (index !== null && index < options.length) {
-        e.preventDefault();
+        event.preventDefault();
         handleOptionClick(index);
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showFeedback, options.length, shortcuts, handleOptionClick, runPendingAdvance]);
 
   const getOptionClassName = (index: number) => {
-    if (!showFeedback) {
-      return "hover:bg-accent/50 cursor-pointer transition-colors";
-    }
-
-    if (index === correctIndex) {
-      return "bg-green-100 dark:bg-green-950 border-green-500 border-2";
-    }
-
-    if (index === selectedOption && index !== correctIndex) {
-      return "bg-red-100 dark:bg-red-950 border-red-500 border-2";
-    }
-
+    if (!showFeedback) return "hover:bg-accent/50 cursor-pointer transition-colors";
+    if (index === correctIndex) return "bg-emerald-500/10 border-emerald-500 border-2";
+    if (index === selectedOption && index !== correctIndex) return "bg-destructive/10 border-destructive border-2";
     return "opacity-50";
   };
 
+  const selectedAnswer = selectedOption === null ? null : options[selectedOption];
+  const isCorrect = showFeedback && selectedOption === correctIndex;
+
   return (
-    <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-2xl mx-auto">
-      <Card className={cn("p-4 sm:p-8 bg-gradient-to-br from-card to-muted/20 relative", getRedListCardClass(isRedListed))}>
-        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1 sm:gap-2">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 sm:gap-6">
+      <Card className={cn("relative bg-gradient-to-br from-card to-muted/20 p-4 sm:p-8", getRedListCardClass(isRedListed))}>
+        <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-4 sm:top-4 sm:gap-2">
           <StudyToolsMenu
             hint={currentCard.hint}
             isFavorite={isFavorite}
@@ -250,99 +218,63 @@ export const MultipleChoiceStudyView = ({
             onToggleSpecial={onToggleSpecial}
           />
         </div>
+
         <div className="text-center">
-          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{promptLabel}</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-8">
-            <p className="text-xl sm:text-3xl font-semibold break-words max-w-full px-2">
-              <InteractiveText text={prompt} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={promptLang} />
+          <p className="mb-3 text-xs text-muted-foreground sm:mb-4 sm:text-sm">{promptLabel}</p>
+          <div className="mb-4 flex flex-col items-center justify-center gap-2 sm:mb-8 sm:flex-row sm:gap-3">
+            <p className="max-w-full break-words px-2 text-xl font-semibold sm:text-3xl">
+              <InteractiveText
+                text={prompt}
+                wordHints={promptWordHints}
+                mergedHints={promptMergedHints}
+                speakOnHintClick
+                speakLang={promptLang}
+              />
             </p>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-shrink-0 h-8 w-8 p-0"
-                onClick={() => {
-                  const rate = getSpeechRate();
-                  speak(prompt, { langOverride: promptLang, rate });
-                }}
-              >
-                <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 shrink-0 p-0"
+              onClick={() => {
+                const rate = getSpeechRate();
+                speak(prompt, { langOverride: promptLang, rate });
+              }}
+            >
+              <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground break-words px-2">Escolha a tradução em {answerLabel}:</p>
+          <p className="break-words px-2 text-xs text-muted-foreground sm:text-sm">Escolha a tradução em {answerLabel}:</p>
         </div>
       </Card>
 
       <div className="grid gap-2 sm:gap-3">
         {options.map((option, index) => (
           <Card
-            key={index}
-            className={`p-3 sm:p-6 cursor-pointer transition-all ${getOptionClassName(index)}`}
+            key={`${option}-${index}`}
+            className={`cursor-pointer p-3 transition-all sm:p-6 ${getOptionClassName(index)}`}
             onClick={() => handleOptionClick(index)}
           >
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-sm sm:text-base">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold sm:h-8 sm:w-8 sm:text-base">
                 {String.fromCharCode(65 + index)}
               </div>
-              <p className="text-base sm:text-lg font-medium">{option}</p>
+              <p className="text-base font-medium sm:text-lg">{option}</p>
             </div>
           </Card>
         ))}
       </div>
 
-      {showFeedback && selectedOption === correctIndex && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950 animate-fade-in">
-          <AlertDescription className="text-green-700 dark:text-green-300">
-            <div className="flex items-start gap-4">
-              <img 
-                src={pitecoHappy} 
-                alt="Piteco feliz" 
-                className="w-16 h-16 object-contain flex-shrink-0"
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 text-lg font-semibold mb-2">
-                  <span className="text-2xl">✓</span>
-                  Correto!
-                </div>
-                <span className="font-semibold">{correctAnswer}</span> é a tradução certa!
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {showFeedback && selectedOption !== correctIndex && (
-        <Alert className="border-red-500 bg-red-50 dark:bg-red-950 animate-fade-in">
-          <AlertDescription className="text-red-700 dark:text-red-300">
-            <div className="flex items-start gap-4">
-              <img 
-                src={pitecoSad} 
-                alt="Piteco triste" 
-                className="w-16 h-16 object-contain flex-shrink-0"
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 text-lg font-semibold mb-2">
-                  <span className="text-2xl">✗</span>
-                  Incorreto
-                </div>
-                A resposta correta é: <span className="font-semibold">{correctAnswer}</span>
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {showFeedback && (
-        <div className="flex flex-col items-center gap-2 animate-fade-in">
-          <Button onClick={runPendingAdvance} size="lg" className="min-w-[190px]">
-            Próximo agora
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            Próximo card automaticamente em {secondsRemaining}s
-          </p>
-        </div>
+        <StudyFeedbackPanel
+          status={isCorrect ? "correct" : "incorrect"}
+          title={isCorrect ? "Muito bem!" : undefined}
+          message={isCorrect ? "Você escolheu a tradução certa." : "Compare sua escolha com a resposta correta."}
+          userAnswer={isCorrect ? null : selectedAnswer}
+          correctAnswer={correctAnswer}
+          actionLabel="Próximo agora"
+          actionHint={`Próximo card automaticamente em ${secondsRemaining}s`}
+          onAction={runPendingAdvance}
+        />
       )}
     </div>
   );

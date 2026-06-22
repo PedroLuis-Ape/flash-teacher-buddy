@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Volume2, RotateCcw, Check } from "lucide-react";
@@ -9,6 +9,7 @@ import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
+import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
@@ -36,137 +37,130 @@ interface UnscrambleStudyViewProps {
   onSkip: () => void;
 }
 
-const shuffleArray = <T,>(array: T[]): T[] => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
-
 interface WordItem {
   word: string;
   id: string;
 }
 
-export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA, mergedHintsA, mergedHintsB, direction, langA = "en", langB = "pt", isFavorite = false, isRedListed = false, onToggleFavorite, onToggleRedList, isSpecial = false, onToggleSpecial, onCorrect, onIncorrect, onSkip }: UnscrambleStudyViewProps) => {
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+};
+
+const cleanSentence = (sentence: string) => sentence
+  .split(/\s+/)
+  .filter((word) => !word.includes("(") && !word.includes(")"))
+  .join(" ");
+
+const createWordItems = (sentence: string): WordItem[] => cleanSentence(sentence)
+  .split(/\s+/)
+  .map((word, index) => ({ word, id: `${word}-${index}-${Math.random()}` }));
+
+export const UnscrambleStudyView = ({
+  front,
+  back,
+  hint,
+  flashcardId,
+  wordHintsA,
+  mergedHintsA,
+  mergedHintsB,
+  direction,
+  langA = "en",
+  langB = "pt",
+  isFavorite = false,
+  isRedListed = false,
+  onToggleFavorite,
+  onToggleRedList,
+  isSpecial = false,
+  onToggleSpecial,
+  onCorrect,
+  onIncorrect,
+  onSkip,
+}: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
-  
-  // --- Centralized Side Resolution ---
+
   const sideA = { text: front, lang: langA, label: "" };
   const sideB = { text: back, lang: langB, label: "" };
-
   const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
-
-  // word_hints contain bindings for both sides; segmentText auto-filters by text match
   const promptWordHints = wordHintsA;
   const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
-
   const question = promptSide.text;
   const correctSentence = answerSide.text;
-
+  const normalizedCorrectSentence = cleanSentence(correctSentence);
   const questionLang = toBCP47(promptSide.lang);
+  const userSentence = selectedWords.map((item) => item.word).join(" ");
 
-  useEffect(() => {
-    // Remove palavras que contêm parênteses (são apenas notas/explicações)
-    const cleanSentence = correctSentence.split(/\s+/)
-      .filter(word => !word.includes("(") && !word.includes(")"))
-      .join(" ");
-    
-    const words = cleanSentence.split(/\s+/);
-    const wordItems: WordItem[] = words.map((word, index) => ({
-      word,
-      id: `${word}-${index}-${Math.random()}`
-    }));
-    setAvailableWords(shuffleArray(wordItems));
+  const resetExercise = () => {
+    setAvailableWords(shuffleArray(createWordItems(correctSentence)));
     setSelectedWords([]);
     setSubmitted(false);
     setIsCorrect(false);
+  };
+
+  useEffect(() => {
+    resetExercise();
   }, [front, back, correctSentence]);
 
-  // Keyboard shortcuts for unscramble: confirm = submit/check, skip = skip card.
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isTypingTarget(e.target)) return;
-      const k = normalizeKey(e.key);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return;
+      const key = normalizeKey(event.key);
       const confirmKey = normalizeKey(shortcuts.confirm);
       const skipKey = normalizeKey(shortcuts.skip);
+      const nextKey = normalizeKey(shortcuts.nextCard);
 
-      if (k === confirmKey && !submitted && selectedWords.length > 0) {
-        e.preventDefault();
+      if (submitted && key === nextKey) {
+        event.preventDefault();
+        if (isCorrect) onCorrect();
+        else onIncorrect();
+        return;
+      }
+      if (key === confirmKey && !submitted && selectedWords.length > 0) {
+        event.preventDefault();
         handleSubmit();
         return;
       }
-      if (k === skipKey && !submitted) {
-        e.preventDefault();
+      if (key === skipKey && !submitted) {
+        event.preventDefault();
         onSkip();
-        return;
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [shortcuts, submitted, selectedWords.length, onSkip]);
+  }, [shortcuts, submitted, selectedWords.length, isCorrect, onCorrect, onIncorrect, onSkip]);
 
   const handleWordClick = (item: WordItem, fromAvailable: boolean) => {
     if (submitted) return;
-
     if (fromAvailable) {
-      setAvailableWords((prev) => prev.filter((w) => w.id !== item.id));
-      setSelectedWords((prev) => [...prev, item]);
+      setAvailableWords((previous) => previous.filter((word) => word.id !== item.id));
+      setSelectedWords((previous) => [...previous, item]);
     } else {
-      setSelectedWords((prev) => prev.filter((w) => w.id !== item.id));
-      setAvailableWords((prev) => [...prev, item]);
+      setSelectedWords((previous) => previous.filter((word) => word.id !== item.id));
+      setAvailableWords((previous) => [...previous, item]);
     }
-  };
-
-  const handleReset = () => {
-    // Remove palavras que contêm parênteses (são apenas notas/explicações)
-    const cleanSentence = correctSentence.split(/\s+/)
-      .filter(word => !word.includes("(") && !word.includes(")"))
-      .join(" ");
-    
-    const words = cleanSentence.split(/\s+/);
-    const wordItems: WordItem[] = words.map((word, index) => ({
-      word,
-      id: `${word}-${index}-${Math.random()}`
-    }));
-    setAvailableWords(shuffleArray(wordItems));
-    setSelectedWords([]);
-    setSubmitted(false);
-    setIsCorrect(false);
   };
 
   const handleSubmit = () => {
-    // Remove palavras com parênteses da frase correta antes de comparar
-    const cleanCorrectSentence = correctSentence.split(/\s+/)
-      .filter(word => !word.includes("(") && !word.includes(")"))
-      .join(" ");
-    
-    const userAnswer = selectedWords.map(item => item.word).join(" ").toLowerCase().trim();
-    const correct = userAnswer === cleanCorrectSentence.toLowerCase().trim();
+    const correct = userSentence.toLowerCase().trim() === normalizedCorrectSentence.toLowerCase().trim();
     setIsCorrect(correct);
     setSubmitted(true);
-    
-    // Play sound effect
-    if (correct) {
-      playCorrect();
-    } else {
-      playWrong();
-    }
+    if (correct) playCorrect();
+    else playWrong();
   };
 
   const handleNext = () => {
-    if (isCorrect) {
-      onCorrect();
-    } else {
-      onIncorrect();
-    }
+    if (isCorrect) onCorrect();
+    else onIncorrect();
   };
 
   const handlePlayAudio = () => {
@@ -175,14 +169,9 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-2xl mx-auto px-2 sm:p-4">
-      <Card className={cn("w-full p-4 sm:p-6 bg-card relative", getRedListCardClass(isRedListed))}>
-        {/*
-          Layout limpo: ferramentas secundárias ficam ancoradas no canto superior
-          direito do card (menu único). O áudio fica próximo ao enunciado como
-          ação primária. Título discreto no topo para não competir com a frase.
-        */}
-        <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-2 sm:gap-6 sm:p-4">
+      <Card className={cn("relative w-full bg-card p-4 sm:p-6", getRedListCardClass(isRedListed))}>
+        <div className="absolute right-2 top-2 z-10" onClick={(event) => event.stopPropagation()}>
           <StudyToolsMenu
             hint={hint}
             isFavorite={isFavorite}
@@ -193,64 +182,48 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
             onToggleSpecial={onToggleSpecial}
           />
         </div>
-        <p className="text-[11px] sm:text-xs uppercase tracking-wide text-muted-foreground mb-3 pr-20">
-          Organize as palavras
-        </p>
-        <div className="flex items-start justify-center gap-2 mb-2">
-          <p className="text-xl sm:text-2xl font-bold text-center break-words px-1 flex-1">
+        <p className="mb-3 pr-20 text-[11px] uppercase tracking-wide text-muted-foreground sm:text-xs">Organize as palavras</p>
+        <div className="mb-2 flex items-start justify-center gap-2">
+          <p className="flex-1 break-words px-1 text-center text-xl font-bold sm:text-2xl">
             <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} />
           </p>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handlePlayAudio}
-            className="shrink-0 h-9 w-9 text-primary hover:text-primary/80 mt-0.5"
-            title="Ouvir frase"
-          >
-            <Volume2 className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={handlePlayAudio} className="mt-0.5 h-9 w-9 shrink-0 text-primary hover:text-primary/80" title="Ouvir frase">
+            <Volume2 className="h-5 w-5" />
           </Button>
         </div>
       </Card>
 
-      {/* Selected words area — answer zone */}
-      <Card className="w-full min-h-[60px] sm:min-h-[80px] p-3 sm:p-4 bg-primary/5 border-2 border-dashed border-primary/20">
-        <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
+      <Card className="min-h-[60px] w-full border-2 border-dashed border-primary/20 bg-primary/5 p-3 sm:min-h-[80px] sm:p-4">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {selectedWords.length === 0 ? (
-            <p className="text-xs sm:text-sm text-muted-foreground text-center w-full">Toque nas palavras abaixo para montar a frase</p>
-          ) : (
-            selectedWords.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleWordClick(item, false)}
-                disabled={submitted}
-                className={cn(
-                  "inline-flex items-center rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5",
-                  "text-xs sm:text-sm font-medium transition-colors",
-                  "bg-primary text-primary-foreground shadow-sm",
-                  !submitted && "hover:bg-primary/80 active:scale-95 cursor-pointer",
-                  submitted && "opacity-70 cursor-default"
-                )}
-              >
-                {item.word}
-              </button>
-            ))
-          )}
+            <p className="w-full text-center text-xs text-muted-foreground sm:text-sm">Toque nas palavras abaixo para montar a frase</p>
+          ) : selectedWords.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleWordClick(item, false)}
+              disabled={submitted}
+              className={cn(
+                "inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground shadow-sm transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+                !submitted && "cursor-pointer hover:bg-primary/80 active:scale-95",
+                submitted && "cursor-default opacity-70",
+              )}
+            >
+              {item.word}
+            </button>
+          ))}
         </div>
       </Card>
 
-      {/* Available words — word bank */}
-      <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center w-full">
+      <div className="flex w-full flex-wrap justify-center gap-1.5 sm:gap-2">
         {availableWords.map((item) => (
           <button
             key={item.id}
             onClick={() => handleWordClick(item, true)}
             disabled={submitted}
             className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5",
-              "text-xs sm:text-sm font-medium transition-colors",
-              "bg-muted text-muted-foreground border border-border shadow-sm",
-              !submitted && "hover:bg-accent hover:text-accent-foreground active:scale-95 cursor-pointer",
-              submitted && "opacity-50 cursor-default"
+              "inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+              !submitted && "cursor-pointer hover:bg-accent hover:text-accent-foreground active:scale-95",
+              submitted && "cursor-default opacity-50",
             )}
           >
             {item.word}
@@ -258,51 +231,27 @@ export const UnscrambleStudyView = ({ front, back, hint, flashcardId, wordHintsA
         ))}
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-3 w-full">
-        <Button
-          variant="outline"
-          onClick={handleReset}
-          disabled={submitted}
-          className="flex-1"
-        >
-          <RotateCcw className="w-4 h-4 mr-2" />
-          Reiniciar
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={selectedWords.length === 0 || submitted}
-          className="flex-1"
-        >
-          <Check className="w-4 h-4 mr-2" />
-          Verificar
-        </Button>
-      </div>
+      {!submitted && (
+        <div className="flex w-full gap-3">
+          <Button variant="outline" onClick={resetExercise} className="flex-1">
+            <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar
+          </Button>
+          <Button onClick={handleSubmit} disabled={selectedWords.length === 0} className="flex-1">
+            <Check className="mr-2 h-4 w-4" /> Verificar
+          </Button>
+        </div>
+      )}
 
-      {/* Result feedback */}
       {submitted && (
-        <Card className={`w-full p-6 ${isCorrect ? "bg-green-500/10 border-green-500" : "bg-red-500/10 border-red-500"}`}>
-          <p className={`text-center text-lg font-semibold ${isCorrect ? "text-green-600" : "text-red-600"}`}>
-            {isCorrect ? "✓ Correto!" : "✗ Incorreto"}
-          </p>
-          {!isCorrect && (
-            <p className="text-center mt-2 text-muted-foreground">
-              Resposta correta: <span className="font-semibold">
-                {correctSentence.split(/\s+/).filter(word => !word.includes("(") && !word.includes(")")).join(" ")}
-              </span>
-            </p>
-          )}
-          <div className="flex justify-center mt-4">
-            <Button
-              onClick={handleNext}
-              size="lg"
-              className={isCorrect ? "bg-green-600 hover:bg-green-700" : ""}
-              variant={isCorrect ? "default" : "destructive"}
-            >
-              {isCorrect ? "Próximo" : "Continuar"}
-            </Button>
-          </div>
-        </Card>
+        <StudyFeedbackPanel
+          status={isCorrect ? "correct" : "incorrect"}
+          title={isCorrect ? "Muito bem!" : undefined}
+          message={isCorrect ? "Você colocou todas as palavras na ordem correta." : "Confira a ordem da frase antes de continuar."}
+          userAnswer={isCorrect ? null : userSentence}
+          correctAnswer={normalizedCorrectSentence}
+          actionLabel={isCorrect ? "Próximo card" : "Continuar"}
+          onAction={handleNext}
+        />
       )}
     </div>
   );
