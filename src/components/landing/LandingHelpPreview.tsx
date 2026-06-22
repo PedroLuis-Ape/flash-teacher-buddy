@@ -16,10 +16,12 @@ import {
   Sparkles,
   Target,
   Users,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -36,6 +38,8 @@ interface BenefitItem {
   title: string;
   description: string;
 }
+
+const LANDING_HELP_STORAGE_KEY = "ape-landing-help-v1-dismissed";
 
 const ACCOUNT_BENEFITS: BenefitItem[] = [
   {
@@ -134,26 +138,43 @@ function BenefitsGrid({ items }: { items: BenefitItem[] }) {
   );
 }
 
-export function LandingHelpPreview() {
+function hasDismissedHelp(): boolean {
+  try {
+    return window.localStorage.getItem(LANDING_HELP_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function rememberHelpDismissal(): void {
+  try {
+    window.localStorage.setItem(LANDING_HELP_STORAGE_KEY, "true");
+  } catch {
+    // The overlay still closes when storage is unavailable.
+  }
+}
+
+export function LandingHelpOverlay() {
   const [searchParams] = useSearchParams();
-  const enabled = searchParams.get("help-preview") === "1";
+  const forcePreview = searchParams.get("help-preview") === "1";
   const [open, setOpen] = useState(false);
   const [screen, setScreen] = useState<HelpScreen>("choose");
 
   useEffect(() => {
-    if (enabled) setOpen(true);
-  }, [enabled]);
+    if (forcePreview || !hasDismissedHelp()) {
+      setOpen(true);
+    }
+  }, [forcePreview]);
 
-  if (!enabled) return null;
-
-  const resetAndClose = () => {
+  const closeHelp = () => {
+    if (!forcePreview) rememberHelpDismissal();
     setOpen(false);
     setScreen("choose");
   };
 
   return (
     <>
-      {!open && (
+      {forcePreview && !open && (
         <Button
           type="button"
           size="sm"
@@ -168,17 +189,31 @@ export function LandingHelpPreview() {
       <Dialog
         open={open}
         onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) setScreen("choose");
+          if (nextOpen) setOpen(true);
+          else closeHelp();
         }}
       >
-        <DialogContent className="bottom-0 left-0 top-auto max-h-[94svh] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-[2rem] border-x-0 border-b-0 bg-card/95 p-0 shadow-2xl backdrop-blur-xl sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-w-xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-[2rem] sm:border">
+        <DialogContent
+          hideClose
+          className="bottom-0 left-0 top-auto max-h-[94svh] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-[2rem] border-x-0 border-b-0 bg-card/95 p-0 shadow-2xl backdrop-blur-xl sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-w-xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-[2rem] sm:border"
+        >
           <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-accent px-5 pb-6 pt-5 text-primary-foreground sm:px-7 sm:pb-7 sm:pt-6">
             <div aria-hidden="true" className="absolute -right-14 -top-16 h-44 w-44 rounded-full border border-white/15 bg-white/10" />
             <div aria-hidden="true" className="absolute -bottom-20 -left-16 h-40 w-40 rounded-full bg-primary-glow/30 blur-3xl" />
             <div aria-hidden="true" className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:18px_18px]" />
 
-            <div className="relative flex items-center gap-4 pr-8">
+            <DialogClose asChild>
+              <button
+                type="button"
+                aria-label="Fechar ajuda"
+                title="Fechar ajuda"
+                className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/35 bg-black/20 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </DialogClose>
+
+            <div className="relative flex items-center gap-4 pr-10">
               <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-[1.4rem] border border-white/25 bg-white/15 shadow-xl backdrop-blur-md sm:h-20 sm:w-20">
                 <div className="absolute inset-2 rounded-2xl bg-white/10" aria-hidden="true" />
                 <PitecoLogo className="relative h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]" />
@@ -186,10 +221,11 @@ export function LandingHelpPreview() {
 
               <div className="min-w-0">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/90 backdrop-blur">
-                  <FlaskConical className="h-3 w-3" /> Preview de rascunho
+                  {forcePreview ? <FlaskConical className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                  {forcePreview ? "Preview de rascunho" : "Guia rápido"}
                 </span>
                 <p className="mt-2 text-lg font-extrabold leading-tight sm:text-xl">Olá! Eu sou o Piteco.</p>
-                <p className="mt-0.5 text-xs text-white/75 sm:text-sm">Vou mostrar só o caminho essencial.</p>
+                <p className="mt-0.5 text-xs text-white/80 sm:text-sm">Vou mostrar só o caminho essencial.</p>
               </div>
             </div>
           </div>
@@ -279,12 +315,12 @@ export function LandingHelpPreview() {
 
                 <div className="mt-5 grid gap-2.5">
                   <Button asChild className="btn-premium h-11 gap-1.5 rounded-xl font-bold">
-                    <Link to="/auth?mode=signup&role=student" onClick={resetAndClose}>
+                    <Link to="/auth?mode=signup&role=student" onClick={closeHelp}>
                       Criar conta gratuita <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="h-11 gap-1.5 rounded-xl font-bold">
-                    <Link to="/portal" onClick={resetAndClose}>
+                    <Link to="/portal" onClick={closeHelp}>
                       Continuar sem conta
                     </Link>
                   </Button>
@@ -321,12 +357,12 @@ export function LandingHelpPreview() {
 
                 <div className="mt-5 grid gap-2.5">
                   <Button asChild className="btn-premium h-11 gap-1.5 rounded-xl font-bold">
-                    <Link to="/auth?mode=signup&role=teacher" onClick={resetAndClose}>
+                    <Link to="/auth?mode=signup&role=teacher" onClick={closeHelp}>
                       Criar conta de professor <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
-                    <Link to="/auth?role=teacher" onClick={resetAndClose}>Já tenho uma conta</Link>
+                    <Link to="/auth?role=teacher" onClick={closeHelp}>Já tenho uma conta</Link>
                   </Button>
                   <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-9 gap-1.5 text-muted-foreground">
                     <ArrowLeft className="h-4 w-4" /> Voltar
@@ -362,12 +398,12 @@ export function LandingHelpPreview() {
 
                 <div className="mt-5 grid gap-2.5">
                   <Button asChild className="btn-premium h-11 gap-1.5 rounded-xl font-bold">
-                    <Link to="/portal" onClick={resetAndClose}>
+                    <Link to="/portal" onClick={closeHelp}>
                       Abrir portal público <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
-                    <Link to="/auth?mode=signup&role=student" onClick={resetAndClose}>Criar conta gratuita</Link>
+                    <Link to="/auth?mode=signup&role=student" onClick={closeHelp}>Criar conta gratuita</Link>
                   </Button>
                   <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-9 gap-1.5 text-muted-foreground">
                     <ArrowLeft className="h-4 w-4" /> Voltar
@@ -376,9 +412,11 @@ export function LandingHelpPreview() {
               </>
             )}
 
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-              <FlaskConical className="h-3.5 w-3.5 text-primary" />
-              Fluxo modular de rascunho. Nenhuma escolha será salva.
+            <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+              {forcePreview ? <FlaskConical className="h-3.5 w-3.5 shrink-0 text-primary" /> : <X className="h-3.5 w-3.5 shrink-0" />}
+              {forcePreview
+                ? "Fluxo modular de rascunho. Nenhuma escolha será salva."
+                : "Você pode fechar este guia e continuar explorando a landing normalmente."}
             </div>
           </div>
         </DialogContent>
@@ -386,3 +424,5 @@ export function LandingHelpPreview() {
     </>
   );
 }
+
+export const LandingHelpPreview = LandingHelpOverlay;
