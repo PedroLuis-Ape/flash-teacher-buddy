@@ -1,0 +1,16 @@
+/*
+ * Preserve the complete Galaxy artwork while giving route content priority.
+ * The route transition flag lives for only a few frames. Animations resume
+ * immediately after the new page has painted; no visual layer is removed.
+ */
+html[data-palette="galaxy"][data-route-transitioning] .space-galaxy-effects,
+html[data-palette="galaxy"][data-route-transitioning] .space-galaxy-effects *,
+html[data-palette="galaxy"][data-route-transitioning] .space-ui-shell::before,
+html[data-palette="galaxy"][data-route-transitioning] .space-ui-shell::after,
+html[data-palette="galaxy"][data-route-transitioning] .space-ui-main::after {
+  animation-play-state: paused !important;
+}
+
+html[data-palette="galaxy"][data-route-transitioning] .space-galaxy-effects {
+  contain: strict;
+}
