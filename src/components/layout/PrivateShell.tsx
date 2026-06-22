@@ -38,7 +38,6 @@ import "@/styles/space-ui-v1.css";
 import "@/styles/space-ui-components.css";
 import "@/styles/space-ui-widgets.css";
 import "@/styles/space-ui-reference-match.css";
-import "@/styles/space-ui-piteco-fullbody.css";
 import "@/styles/space-ui-performance.css";
 
 const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
