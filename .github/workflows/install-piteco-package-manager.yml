@@ -1,0 +1,306 @@
+name: Install Piteco package manager
+
+on:
+  push:
+    branches: [feat-piteco-package-manager]
+    paths: [.github/piteco-package-manager-ready]
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat-piteco-package-manager
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          root = Path('.')
+          package_dir = root / 'store-packages'
+          scripts_dir = root / 'scripts/store-packages'
+          package_dir.mkdir(parents=True, exist_ok=True)
+          scripts_dir.mkdir(parents=True, exist_ok=True)
+
+          catalog = {
+            'schema': 'app-piteco-store-catalog',
+            'version': 1,
+            'packages': [
+              {'id':'piteco_prime','name':'Piteco Prime','description':'O lendário líder da tribo.','rarity':'legendary','price_pitecoin':750,'active':True},
+              {'id':'piteco_vampiro','name':'Piteco Vampiro','description':'Elegante nas noites mais sombrias.','rarity':'epic','price_pitecoin':500,'active':True},
+              {'id':'piteco_zombie','name':'Piteco Zombie','description':'Direto das cavernas mais escuras.','rarity':'rare','price_pitecoin':300,'active':True},
+              {'id':'piteco_ninja','name':'Piteco Ninja','description':'Rápido, focado e imparável.','rarity':'epic','price_pitecoin':500,'active':True},
+              {'id':'piteco_astronauta','name':'Piteco Astronauta','description':'Explorando o universo do conhecimento.','rarity':'epic','price_pitecoin':500,'active':True},
+              {'id':'piteco_explorador','name':'Piteco Explorador','description':'Sempre pronto para novas descobertas.','rarity':'rare','price_pitecoin':300,'active':True},
+            ]
+          }
+          (package_dir / 'catalog.json').write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          readme = '''# Gerenciador oficial de pacotes da Loja do App Piteco
+
+Esta pasta é o único caminho para adicionar, substituir ou arquivar pacotes da loja.
+
+## Regra estrutural
+
+Cada pacote é um produto único e inseparável:
+
+- `card.avif`: card colecionável vertical;
+- `avatar.avif`: foto de perfil correspondente.
+
+## Estrutura
+
+```text
+store-packages/
+├── catalog.json
+├── piteco_prime/
+│   ├── card.avif
+│   └── avatar.avif
+└── ...
+```
+
+O `id` do catálogo deve ser igual ao nome da pasta. Nunca altere o ID de um pacote já publicado, pois ele preserva compras, inventários e itens equipados.
+
+## Comandos
+
+```bash
+npm run store:validate
+npm run store:sync
+npm run store:sync -- --dry-run
+```
+
+A sincronização exige `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`. Os arquivos são publicados no bucket público `piteco-store` e os registros são atualizados em `skins_catalog` e `public_catalog`.
+
+## Adicionar
+
+1. Criar `store-packages/<id>/`.
+2. Colocar `card.avif` e `avatar.avif`.
+3. Registrar o pacote em `catalog.json`.
+4. Validar e sincronizar.
+
+## Substituir arte
+
+Trocar um ou ambos os arquivos mantendo o mesmo ID e sincronizar novamente.
+
+## Arquivar
+
+Alterar `active` para `false` no catálogo e sincronizar. O pacote some da loja, mas continua disponível no inventário de quem já comprou.
+
+## Exclusão física
+
+Somente depois de confirmar que não existem compras, inventários ou perfis vinculados. O fluxo padrão é arquivamento, não exclusão.
+
+## Preços atuais
+
+- Raro: 300 PiteCOIN
+- Épico: 500 PiteCOIN
+- Lendário: 750 PiteCOIN
+'''
+          (package_dir / 'README.md').write_text(readme, encoding='utf-8')
+
+          validate = r'''import { access, readFile, stat } from "node:fs/promises";
+import path from "node:path";
+
+const root = process.cwd();
+const packagesDir = path.join(root, "store-packages");
+const catalog = JSON.parse(await readFile(path.join(packagesDir, "catalog.json"), "utf8"));
+const metadataOnly = process.argv.includes("--metadata-only");
+const rarities = new Set(["normal", "rare", "epic", "legendary"]);
+const extensions = ["avif", "webp", "png", "jpg", "jpeg"];
+const errors = [];
+const ids = new Set();
+
+async function locateAsset(id, basename) {
+  for (const ext of extensions) {
+    for (const suffix of [`.${ext}`, `.${ext}.b64`]) {
+      const filename = path.join(packagesDir, id, `${basename}${suffix}`);
+      try {
+        await access(filename);
+        if ((await stat(filename)).size > 0) return filename;
+      } catch {}
+    }
+  }
+  return null;
+}
+
+if (catalog.schema !== "app-piteco-store-catalog" || catalog.version !== 1 || !Array.isArray(catalog.packages)) {
+  errors.push("catalog.json não segue app-piteco-store-catalog v1.");
+} else {
+  for (const item of catalog.packages) {
+    const label = `[${item?.id || "sem_id"}]`;
+    if (!/^[a-z0-9_]+$/.test(item?.id || "")) errors.push(`${label} ID inválido.`);
+    if (ids.has(item.id)) errors.push(`${label} ID duplicado.`);
+    ids.add(item.id);
+    if (!item.name || typeof item.name !== "string") errors.push(`${label} nome ausente.`);
+    if (!rarities.has(item.rarity)) errors.push(`${label} raridade inválida.`);
+    if (!Number.isInteger(item.price_pitecoin) || item.price_pitecoin < 0) errors.push(`${label} preço inválido.`);
+    if (item.active === false || metadataOnly) continue;
+    const card = await locateAsset(item.id, "card");
+    const avatar = await locateAsset(item.id, "avatar");
+    if (!card) errors.push(`${label} card obrigatório ausente.`);
+    if (!avatar) errors.push(`${label} avatar obrigatório ausente.`);
+    if (card && avatar) console.log(`✓ ${item.name}: card + avatar`);
+  }
+}
+
+if (errors.length) {
+  console.error("\nFalha na validação:\n" + errors.map(error => `- ${error}`).join("\n"));
+  process.exit(1);
+}
+console.log(`\nCatálogo válido: ${catalog.packages.length} pacote(s).`);
+'''
+          (scripts_dir / 'validate.mjs').write_text(validate, encoding='utf-8')
+
+          sync = r'''import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { createClient } from "@supabase/supabase-js";
+
+const root = process.cwd();
+const packagesDir = path.join(root, "store-packages");
+const catalog = JSON.parse(await readFile(path.join(packagesDir, "catalog.json"), "utf8"));
+const dryRun = process.argv.includes("--dry-run");
+const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const bucket = process.env.SUPABASE_STORE_BUCKET || "piteco-store";
+
+if (!url || !key) throw new Error("Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.");
+const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+const mime = { avif:"image/avif", webp:"image/webp", png:"image/png", jpg:"image/jpeg", jpeg:"image/jpeg" };
+
+async function asset(id, basename) {
+  for (const [ext, contentType] of Object.entries(mime)) {
+    for (const encoded of [false, true]) {
+      const file = path.join(packagesDir, id, `${basename}.${ext}${encoded ? ".b64" : ""}`);
+      try {
+        const raw = await readFile(file);
+        const bytes = encoded ? Buffer.from(raw.toString("utf8").replace(/\s+/g, ""), "base64") : raw;
+        if (bytes.length) return { bytes, ext, contentType };
+      } catch {}
+    }
+  }
+  throw new Error(`[${id}] ${basename} ausente.`);
+}
+
+async function ensureBucket() {
+  const { data } = await supabase.storage.getBucket(bucket);
+  if (data) return;
+  const { error } = await supabase.storage.createBucket(bucket, { public:true, fileSizeLimit:8388608, allowedMimeTypes:Object.values(mime) });
+  if (error) throw error;
+}
+
+async function upload(id, basename) {
+  const file = await asset(id, basename);
+  const hash = createHash("sha256").update(file.bytes).digest("hex").slice(0, 12);
+  const objectPath = `${id}/${basename}-${hash}.${file.ext}`;
+  if (!dryRun) {
+    const { error } = await supabase.storage.from(bucket).upload(objectPath, file.bytes, { contentType:file.contentType, cacheControl:"31536000", upsert:true });
+    if (error) throw error;
+  }
+  return `${url}/storage/v1/object/public/${bucket}/${objectPath}`;
+}
+
+await ensureBucket();
+for (const item of catalog.packages) {
+  if (item.active === false) {
+    console.log(`${dryRun ? "[simulação] " : ""}Arquivando ${item.name}`);
+    if (!dryRun) {
+      for (const table of ["skins_catalog", "public_catalog"]) {
+        const { error } = await supabase.from(table).update({ is_active:false, approved:false, status:"archived", updated_at:new Date().toISOString() }).eq("id", item.id);
+        if (error) throw error;
+      }
+    }
+    continue;
+  }
+
+  const avatarUrl = await upload(item.id, "avatar");
+  const cardUrl = await upload(item.id, "card");
+  console.log(`${dryRun ? "[simulação] " : ""}Publicando ${item.name}`);
+  if (dryRun) continue;
+
+  const common = {
+    id:item.id,
+    sku:item.sku || `${item.id.toUpperCase()}_BUNDLE_V1`,
+    slug:item.id,
+    name:item.name,
+    description:item.description || `${item.name}: card e foto de perfil.`,
+    rarity:item.rarity,
+    type:"bundle",
+    price_pitecoin:item.price_pitecoin,
+    avatar_original:avatarUrl,
+    card_original:cardUrl,
+    avatar_final:avatarUrl,
+    card_final:cardUrl,
+    is_active:true,
+    approved:true,
+    status:"published",
+    version:Number(item.version || 1),
+    updated_at:new Date().toISOString()
+  };
+  const source = { ...common, avatar_src:avatarUrl, card_src:cardUrl, avatar_img:avatarUrl, card_img:cardUrl };
+  const { error: sourceError } = await supabase.from("skins_catalog").upsert(source, { onConflict:"id" });
+  if (sourceError) throw sourceError;
+  const { error: publicError } = await supabase.from("public_catalog").upsert(common, { onConflict:"id" });
+  if (publicError) throw publicError;
+}
+console.log(`Sincronização concluída: ${catalog.packages.length} pacote(s).`);
+'''
+          (scripts_dir / 'sync.mjs').write_text(sync, encoding='utf-8')
+
+          package_json_path = root / 'package.json'
+          package_json = json.loads(package_json_path.read_text(encoding='utf-8'))
+          package_json.setdefault('scripts', {})['store:validate'] = 'node scripts/store-packages/validate.mjs'
+          package_json['scripts']['store:sync'] = 'npm run store:validate && node scripts/store-packages/sync.mjs'
+          package_json_path.write_text(json.dumps(package_json, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          store_path = root / 'src/lib/storeEngine.ts'
+          store = store_path.read_text(encoding='utf-8')
+          store, removed = re.subn(r"\n// Allowed slugs for store[\s\S]*?\n\];\n", "\n", store, count=1)
+          if removed != 1:
+            raise RuntimeError('Whitelist antiga não encontrada no storeEngine.')
+          store = store.replace(" * Fetch all available skins from catalog (approved and whitelisted only)", " * Fetch all active and approved packages from the Supabase catalog")
+          store = store.replace("      .eq('approved', true)\n      .in('slug', ALLOWED_SLUGS)\n      .order", "      .eq('approved', true)\n      .eq('status', 'published')\n      .eq('type', 'bundle')\n      .order", 1)
+          store_path.write_text(store, encoding='utf-8')
+
+          marker = root / '.github/piteco-package-manager-ready'
+          marker.unlink(missing_ok=True)
+          (root / '.github/workflows/install-piteco-package-manager.yml').unlink(missing_ok=True)
+          PY
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: Validate catalog metadata
+        run: npm run store:validate -- --metadata-only
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit clean implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Implement canonical Piteco package manager"
+          git push origin feat-piteco-package-manager
