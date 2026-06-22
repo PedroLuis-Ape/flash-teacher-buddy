@@ -1,0 +1,1 @@
+Sincronização de avatar do perfil.
