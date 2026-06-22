@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APE · Preview do feedback de estudo</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Nunito, Inter, system-ui, sans-serif;
+      --bg: #f4f5f8;
+      --card: #ffffff;
+      --fg: #181b24;
+      --muted: #697080;
+      --border: #d8dce5;
+      --green: #16a34a;
+      --amber: #d97706;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); }
+    button { font: inherit; }
+    main { width: min(100% - 28px, 980px); margin: 0 auto; padding: 36px 0 72px; }
+    .top { margin-bottom: 26px; }
+    .badge { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px; background: var(--card); color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 13px 0 6px; font-size: clamp(28px, 5vw, 46px); line-height: 1.05; }
+    .intro { margin: 0; color: var(--muted); }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 16px; }
+    .tab { min-height: 40px; border: 1px solid var(--border); border-radius: 12px; padding: 0 15px; background: var(--card); color: var(--fg); cursor: pointer; font-weight: 800; }
+    .tab.active { color: white; border-color: transparent; }
+    .tab[data-status="correct"].active { background: var(--green); }
+    .tab[data-status="almost"].active { background: var(--amber); }
+    .tab[data-status="incorrect"].active { background: var(--red); }
+    .stage { border: 1px solid var(--border); border-radius: 28px; padding: clamp(16px, 4vw, 38px); background: #0d1017; box-shadow: 0 24px 70px rgba(20,25,40,.18); }
+    .question { width: min(100%, 680px); margin: 0 auto 18px; border: 1px solid #343946; border-radius: 20px; padding: 25px; background: #171a21; text-align: center; color: #f5f7fb; }
+    .question small { color: #aeb4c2; }
+    .question p { margin: 14px 0 6px; font-size: clamp(23px, 4vw, 34px); font-weight: 800; }
+    .input { width: min(100%, 680px); min-height: 54px; margin: 0 auto 16px; display: flex; align-items: center; border: 2px solid #4b5262; border-radius: 16px; padding: 0 15px; color: #8d94a2; background: #151820; }
+    .panel { position: relative; width: min(100%, 680px); margin: 0 auto; overflow: hidden; border: 1px solid #39404d; border-left-width: 5px; border-radius: 20px; padding: 17px; background: #181b23; color: #f5f7fb; box-shadow: 0 16px 36px rgba(0,0,0,.24); }
+    .panel::after { content: ""; position: absolute; width: 130px; height: 130px; right: -55px; top: -58px; border-radius: 50%; background: rgba(255,255,255,.025); }
+    .panel.correct { border-left-color: var(--green); }
+    .panel.almost { border-left-color: var(--amber); }
+    .panel.incorrect { border-left-color: var(--red); }
+    .layout { position: relative; display: grid; grid-template-columns: auto 1fr auto; gap: 15px; align-items: center; }
+    .mascot { width: 76px; height: 76px; display: grid; place-items: center; border: 1px solid #3b414e; border-radius: 20px; padding: 3px; background: #242832; }
+    .mascot img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 5px 8px rgba(0,0,0,.28)); }
+    .heading { display: flex; align-items: center; gap: 8px; }
+    .state-icon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; font-weight: 900; }
+    .correct .state-icon { color: #86efac; background: rgba(22,163,74,.16); }
+    .almost .state-icon { color: #fcd34d; background: rgba(217,119,6,.16); }
+    .incorrect .state-icon { color: #fca5a5; background: rgba(220,38,38,.16); }
+    h2 { margin: 0; font-size: 19px; }
+    .correct h2 { color: #86efac; }
+    .almost h2 { color: #fcd34d; }
+    .incorrect h2 { color: #fca5a5; }
+    .message { margin: 7px 0 0; color: #b5bbc8; font-size: 13px; line-height: 1.45; }
+    .answers { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+    .answer { min-width: 0; border: 1px solid #3b414e; border-radius: 12px; padding: 10px; background: #11141b; }
+    .answer label { display: block; color: #8f97a7; font-size: 9px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+    .answer p { margin: 5px 0 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 800; }
+    .answer.correct-answer { border-color: rgba(22,163,74,.4); background: rgba(22,163,74,.10); color: #a7f3d0; }
+    .incorrect .user p { text-decoration: line-through; text-decoration-color: #ef4444; }
+    .action { width: 155px; min-height: 44px; border: 0; border-radius: 12px; color: white; cursor: pointer; font-weight: 900; }
+    .correct .action { background: var(--green); }
+    .almost .action { background: var(--amber); }
+    .incorrect .action { background: var(--red); }
+    .hint { margin: 6px 0 0; color: #8f97a7; text-align: center; font-size: 9px; }
+    @media (max-width: 700px) {
+      main { width: min(100% - 18px, 980px); padding-top: 20px; }
+      .stage { padding: 12px; border-radius: 22px; }
+      .layout { grid-template-columns: auto 1fr; align-items: start; }
+      .action-wrap { grid-column: 1 / -1; }
+      .action { width: 100%; }
+      .answers { grid-template-columns: 1fr; }
+      .mascot { width: 64px; height: 64px; border-radius: 17px; }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #080a0f; --card: #171a21; --fg: #f4f6fa; --muted: #a7adba; --border: #343946; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="top">
+      <span class="badge">Preview de rascunho</span>
+      <h1>Novo feedback dos modos de estudo</h1>
+      <p class="intro">Alterne os estados para comparar o Piteco, as respostas e o botão integrado.</p>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-status="correct">Acertou</button>
+      <button class="tab" data-status="almost">Quase acertou</button>
+      <button class="tab" data-status="incorrect">Errou</button>
+    </div>
+
+    <section class="stage">
+      <div class="question">
+        <small>Português</small>
+        <p>Ele é econômico. Em outras palavras, gasta muito pouco.</p>
+        <small>Traduza para English</small>
+      </div>
+      <div class="input" id="input-example">He is frugal. In other words, he spends very little.</div>
+
+      <article class="panel correct" id="panel">
+        <div class="layout">
+          <div class="mascot"><img id="mascot" src="/branding/piteco-3d-face.png" alt="Piteco" /></div>
+          <div>
+            <div class="heading"><span class="state-icon" id="state-icon">✓</span><h2 id="title">Muito bem!</h2></div>
+            <p class="message" id="message">Sua resposta está correta.</p>
+            <div class="answers" id="answers">
+              <div class="answer correct-answer"><label>Resposta correta</label><p id="correct-answer">He is frugal. In other words, he spends very little.</p></div>
+            </div>
+          </div>
+          <div class="action-wrap">
+            <button class="action" id="action">Próximo card →</button>
+            <p class="hint" id="hint"></p>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const data = {
+      correct: {
+        icon: '✓', title: 'Muito bem!', message: 'Sua resposta está correta.', mascot: '/branding/piteco-3d-face.png',
+        user: null, input: 'He is frugal. In other words, he spends very little.', action: 'Próximo card →', hint: ''
+      },
+      almost: {
+        icon: '!', title: 'Quase perfeito!', message: 'Faltou apenas um caractere. O resultado contará como acerto.', mascot: '/branding/piteco-3d-face.png',
+        user: 'He is fruga. In other words, he spends very little.', input: 'He is fruga. In other words, he spends very little.', action: 'Próximo card →', hint: ''
+      },
+      incorrect: {
+        icon: '×', title: 'Quase! Vamos corrigir.', message: 'Compare sua resposta com a forma correta antes de continuar.', mascot: '/branding/piteco-3d-sad.png',
+        user: 'adadsad', input: 'adadsad', action: 'Continuar →', hint: ''
+      }
+    };
+
+    const panel = document.querySelector('#panel');
+    const mascot = document.querySelector('#mascot');
+    const icon = document.querySelector('#state-icon');
+    const title = document.querySelector('#title');
+    const message = document.querySelector('#message');
+    const answers = document.querySelector('#answers');
+    const action = document.querySelector('#action');
+    const hint = document.querySelector('#hint');
+    const input = document.querySelector('#input-example');
+    const correct = 'He is frugal. In other words, he spends very little.';
+
+    function render(status) {
+      const state = data[status];
+      panel.className = `panel ${status}`;
+      mascot.src = state.mascot;
+      icon.textContent = state.icon;
+      title.textContent = state.title;
+      message.textContent = state.message;
+      action.textContent = state.action;
+      hint.textContent = state.hint;
+      input.textContent = state.input;
+      answers.innerHTML = state.user
+        ? `<div class="answer user"><label>Você respondeu</label><p>${state.user}</p></div><div class="answer correct-answer"><label>Resposta correta</label><p>${correct}</p></div>`
+        : `<div class="answer correct-answer"><label>Resposta correta</label><p>${correct}</p></div>`;
+      document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.status === status));
+    }
+
+    document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => render(tab.dataset.status)));
+  </script>
+</body>
+</html>
