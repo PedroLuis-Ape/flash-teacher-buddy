@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APE · Preview da ajuda inicial</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --background: #f7f8fb;
+      --card: #ffffff;
+      --foreground: #172033;
+      --muted: #667085;
+      --border: #dce1ea;
+      --primary: #6f47d7;
+      --primary-soft: #f1edff;
+      --shadow: 0 24px 70px rgba(28, 24, 56, .22);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--background); color: var(--foreground); }
+    button, a { font: inherit; }
+    .landing {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(111,71,215,.16), transparent 28rem),
+        radial-gradient(circle at 90% 70%, rgba(71,151,215,.12), transparent 28rem),
+        var(--background);
+    }
+    .nav { height: 58px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.78); backdrop-filter: blur(14px); }
+    .brand { font-size: 20px; font-weight: 800; }
+    .hero { max-width: 1080px; margin: 0 auto; padding: 72px 24px; }
+    .hero h1 { max-width: 700px; margin: 0; font-size: clamp(36px, 7vw, 66px); line-height: 1; color: var(--primary); }
+    .hero p { max-width: 600px; color: var(--muted); font-size: 18px; line-height: 1.6; }
+    .fake-actions { display: flex; gap: 10px; margin-top: 28px; }
+    .fake-action { height: 44px; border-radius: 12px; border: 1px solid var(--border); padding: 0 18px; background: var(--card); color: var(--foreground); font-weight: 700; }
+    .fake-action.primary { background: var(--primary); color: white; border-color: var(--primary); }
+    .overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(12,15,25,.68); z-index: 10; }
+    .dialog { width: min(100%, 520px); border: 1px solid var(--border); border-radius: 24px; background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
+    .dialog-inner { padding: 22px; }
+    .mascot-row { display: flex; align-items: center; gap: 14px; padding-right: 34px; }
+    .mascot { width: 62px; height: 62px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 22px; background: var(--primary-soft); font-size: 38px; }
+    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; background: #fff5d9; color: #8a5700; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .microcopy { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .close { position: absolute; right: 20px; top: 18px; width: 34px; height: 34px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; }
+    .dialog-wrap { position: relative; }
+    h2 { margin: 22px 0 7px; font-size: 26px; line-height: 1.15; }
+    .subtitle { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
+    .choices { display: grid; gap: 10px; }
+    .choice { width: 100%; min-height: 74px; display: flex; align-items: center; gap: 13px; border: 1px solid var(--border); border-radius: 18px; padding: 12px; background: var(--card); color: var(--foreground); text-align: left; cursor: pointer; transition: .18s ease; }
+    .choice:hover, .choice:focus-visible { border-color: var(--primary); background: var(--primary-soft); outline: none; transform: translateY(-1px); }
+    .choice-icon { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 14px; background: var(--primary-soft); font-size: 22px; }
+    .choice-copy { min-width: 0; flex: 1; }
+    .choice-title { display: block; font-weight: 800; }
+    .choice-description { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
+    .arrow { color: var(--muted); font-size: 20px; }
+    .footnote { margin: 14px 0 0; color: var(--muted); text-align: center; font-size: 11px; }
+    .recommendation { display: flex; gap: 12px; margin: 18px 0; padding: 16px; border: 1px solid rgba(111,71,215,.35); border-radius: 18px; background: var(--primary-soft); }
+    .recommendation strong { display: block; }
+    .recommendation p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    .actions { display: grid; grid-template-columns: auto 1fr; gap: 9px; }
+    .action { min-height: 43px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid var(--border); padding: 0 15px; background: var(--card); color: var(--foreground); font-weight: 800; text-decoration: none; cursor: pointer; }
+    .action.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .reopen { position: fixed; right: 16px; top: 76px; display: none; border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; background: var(--card); color: var(--foreground); box-shadow: 0 8px 24px rgba(20,25,40,.15); cursor: pointer; font-weight: 800; }
+    @media (max-width: 640px) {
+      .hero { padding: 46px 18px; }
+      .hero p { font-size: 15px; }
+      .overlay { align-items: end; padding: 0; }
+      .dialog { width: 100%; border-radius: 26px 26px 0 0; border-bottom: 0; }
+      .dialog-inner { padding: 18px 16px 16px; }
+      .mascot { width: 56px; height: 56px; font-size: 34px; }
+      h2 { margin-top: 18px; font-size: 22px; }
+      .actions { grid-template-columns: 1fr; }
+      .fake-actions { display: grid; }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --background: #10131c; --card: #181d29; --foreground: #f3f5f8; --muted: #aab2c2; --border: #303849; --primary: #a78bfa; --primary-soft: #28213f; --shadow: 0 24px 70px rgba(0,0,0,.5); }
+      .nav { background: rgba(16,19,28,.8); }
+      .badge { background: #392d11; color: #ffd979; }
+    }
+  </style>
+</head>
+<body>
+  <div class="landing">
+    <div class="nav"><span class="brand">🐵 APE</span></div>
+    <main class="hero">
+      <h1>Inglês com flashcards, jogos e prática ativa</h1>
+      <p>Prévia isolada da primeira etapa do sistema de ajuda. A landing real não foi alterada nesta demonstração.</p>
+      <div class="fake-actions">
+        <button class="fake-action primary">Começar a estudar</button>
+        <button class="fake-action">Ver uma atividade</button>
+      </div>
+    </main>
+  </div>
+
+  <button id="reopen" class="reopen">🧪 Abrir rascunho</button>
+
+  <div id="overlay" class="overlay">
+    <section class="dialog dialog-wrap" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <button id="close" class="close" aria-label="Fechar">✕</button>
+      <div class="dialog-inner">
+        <div class="mascot-row">
+          <div class="mascot" aria-hidden="true">🐵</div>
+          <div>
+            <span class="badge">🧪 Preview de rascunho</span>
+            <p class="microcopy">Primeiro pedaço · somente a escolha inicial</p>
+          </div>
+        </div>
+
+        <div id="choice-screen">
+          <h2 id="dialog-title">Como você quer usar o APE?</h2>
+          <p class="subtitle">Escolha uma opção e eu mostro apenas o próximo passo essencial.</p>
+          <div class="choices">
+            <button class="choice" data-kind="student" data-title="Quero estudar inglês" data-description="Abrir atividades e começar a praticar." data-action="Ver atividades">
+              <span class="choice-icon">🎓</span><span class="choice-copy"><span class="choice-title">Quero estudar inglês</span><span class="choice-description">Abrir atividades e começar a praticar.</span></span><span class="arrow">→</span>
+            </button>
+            <button class="choice" data-kind="teacher" data-title="Quero ensinar" data-description="Conhecer listas, materiais e turmas." data-action="Ver recursos para professores">
+              <span class="choice-icon">👨‍🏫</span><span class="choice-copy"><span class="choice-title">Quero ensinar</span><span class="choice-description">Conhecer listas, materiais e turmas.</span></span><span class="arrow">→</span>
+            </button>
+            <button class="choice" data-kind="explore" data-title="Quero apenas explorar" data-description="Testar materiais públicos sem compromisso." data-action="Abrir portal público">
+              <span class="choice-icon">🧭</span><span class="choice-copy"><span class="choice-title">Quero apenas explorar</span><span class="choice-description">Testar materiais públicos sem compromisso.</span></span><span class="arrow">→</span>
+            </button>
+          </div>
+          <p class="footnote">Nada será salvo nesta versão de rascunho.</p>
+        </div>
+
+        <div id="result-screen" hidden>
+          <h2>Comece por aqui</h2>
+          <p class="subtitle">Sem passeio pela página inteira. Este é o caminho mais direto para o seu objetivo.</p>
+          <div class="recommendation"><div class="choice-icon" id="result-icon">🎓</div><div><strong id="result-title"></strong><p id="result-description"></p></div></div>
+          <div class="actions"><button id="back" class="action">← Voltar</button><button id="continue" class="action primary"></button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const overlay = document.querySelector('#overlay');
+    const reopen = document.querySelector('#reopen');
+    const choiceScreen = document.querySelector('#choice-screen');
+    const resultScreen = document.querySelector('#result-screen');
+    const icons = { student: '🎓', teacher: '👨‍🏫', explore: '🧭' };
+
+    function showChoices() {
+      choiceScreen.hidden = false;
+      resultScreen.hidden = true;
+    }
+
+    document.querySelectorAll('.choice').forEach((button) => {
+      button.addEventListener('click', () => {
+        choiceScreen.hidden = true;
+        resultScreen.hidden = false;
+        document.querySelector('#result-icon').textContent = icons[button.dataset.kind];
+        document.querySelector('#result-title').textContent = button.dataset.title;
+        document.querySelector('#result-description').textContent = button.dataset.description;
+        document.querySelector('#continue').textContent = `${button.dataset.action} →`;
+      });
+    });
+
+    document.querySelector('#back').addEventListener('click', showChoices);
+    document.querySelector('#continue').addEventListener('click', () => alert('Na implementação real, este botão abre o caminho escolhido.'));
+    document.querySelector('#close').addEventListener('click', () => { overlay.style.display = 'none'; reopen.style.display = 'block'; showChoices(); });
+    reopen.addEventListener('click', () => { overlay.style.display = 'grid'; reopen.style.display = 'none'; });
+  </script>
+</body>
+</html>
