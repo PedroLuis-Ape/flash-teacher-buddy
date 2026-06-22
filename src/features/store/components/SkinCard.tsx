@@ -11,7 +11,7 @@ interface SkinCardProps {
   skin: SkinItem;
   owned: boolean;
   onPurchase: (skinId: string, price: number) => Promise<void>;
-  onOpenInventory: () => void;
+  onOpenInventory?: () => void;
   loading: boolean;
 }
 
@@ -30,7 +30,11 @@ export function SkinCard({
 
   const handleOpenInventory = () => {
     setShowDetail(false);
-    onOpenInventory();
+    if (onOpenInventory) {
+      onOpenInventory();
+      return;
+    }
+    window.location.assign("/store/inventory");
   };
 
   return (
