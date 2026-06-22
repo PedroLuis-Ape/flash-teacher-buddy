@@ -11,24 +11,34 @@ const emojiCss = readFileSync(
   'utf8',
 );
 
+const glitterCss = readFileSync(
+  new URL('./space-ui-glitter.css', import.meta.url),
+  'utf8',
+);
+
 describe('Galaxy critical controls visibility', () => {
   it('never removes pseudo-elements from every button', () => {
     expect(galaxyMobileCss).not.toContain('.space-ui main button::before');
     expect(galaxyMobileCss).not.toContain('.space-ui main button::after');
   });
 
-  it('keeps a native SVG fallback when :has is unavailable', () => {
-    expect(emojiCss).toContain('@supports selector(:has(*))');
-    expect(emojiCss).toContain('display:inline-flex');
-    expect(emojiCss.indexOf('display:inline-flex')).toBeLessThan(
-      emojiCss.indexOf('@supports selector(:has(*))'),
-    );
+  it('does not use button pseudo-elements for Galaxy glitter', () => {
+    expect(glitterCss).not.toContain('button:not([role="switch"])::before');
+    expect(glitterCss).not.toContain('study-tools-floating-trigger::before');
   });
 
-  it('defines visible identities for layout and card-status controls', () => {
-    expect(emojiCss).toContain('content:"⚙️"');
-    expect(emojiCss).toContain('content:"⭐"');
-    expect(emojiCss).toContain('content:"🔥"');
-    expect(emojiCss).toContain('content:"💎"');
+  it('keeps real critical SVG controls visible', () => {
+    expect(emojiCss).toContain('.lucide-settings');
+    expect(emojiCss).toContain('.lucide-star');
+    expect(emojiCss).toContain('.lucide-flame');
+    expect(emojiCss).toContain('.lucide-gem');
+    expect(emojiCss).toContain('display: inline-flex !important');
+    expect(emojiCss).toContain('visibility: visible !important');
+  });
+
+  it('forbids an extra mascot in the dashboard banner', () => {
+    expect(glitterCss).toContain('.welcome-banner::after');
+    expect(glitterCss).toContain('content:none!important');
+    expect(glitterCss).toContain('background-image:none!important');
   });
 });
