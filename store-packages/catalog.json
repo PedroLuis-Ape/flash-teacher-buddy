@@ -1,0 +1,73 @@
+{
+  "schema": "app-piteco-store-catalog",
+  "version": 1,
+  "bucket": "piteco-store",
+  "packages": [
+    {
+      "id": "piteco_prime",
+      "slug": "piteco_prime",
+      "name": "Piteco Prime",
+      "description": "O lendário líder da tribo.",
+      "rarity": "legendary",
+      "price_pitecoin": 750,
+      "active": false,
+      "version": 1,
+      "assets": { "card": "card.avif", "avatar": "avatar.avif" }
+    },
+    {
+      "id": "piteco_vampiro",
+      "slug": "piteco_vampiro",
+      "name": "Piteco Vampiro",
+      "description": "Elegante nas noites mais sombrias.",
+      "rarity": "epic",
+      "price_pitecoin": 500,
+      "active": false,
+      "version": 1,
+      "assets": { "card": "card.avif", "avatar": "avatar.avif" }
+    },
+    {
+      "id": "piteco_zombie",
+      "slug": "piteco_zombie",
+      "name": "Piteco Zombie",
+      "description": "Direto das cavernas mais escuras.",
+      "rarity": "rare",
+      "price_pitecoin": 300,
+      "active": false,
+      "version": 1,
+      "assets": { "card": "card.avif", "avatar": "avatar.avif" }
+    },
+    {
+      "id": "piteco_ninja",
+      "slug": "piteco_ninja",
+      "name": "Piteco Ninja",
+      "description": "Rápido, focado e imparável.",
+      "rarity": "epic",
+      "price_pitecoin": 500,
+      "active": false,
+      "version": 1,
+      "assets": { "card": "card.avif", "avatar": "avatar.avif" }
+    },
+    {
+      "id": "piteco_astronauta",
+      "slug": "piteco_astronauta",
+      "name": "Piteco Astronauta",
+      "description": "Explorando o universo do conhecimento.",
+      "rarity": "epic",
+      "price_pitecoin": 500,
+      "active": false,
+      "version": 1,
+      "assets": { "card": "card.avif", "avatar": "avatar.avif" }
+    },
+    {
+      "id": "piteco_explorador",
+      "slug": "piteco_explorador",
+      "name": "Piteco Explorador",
+      "description": "Sempre pronto para novas descobertas.",
+      "rarity": "rare",
+      "price_pitecoin": 300,
+      "active": false,
+      "version": 1,
+      "assets": { "card": "card.avif", "avatar": "avatar.avif" }
+    }
+  ]
+}

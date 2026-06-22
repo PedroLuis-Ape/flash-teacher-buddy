@@ -1,0 +1,14 @@
+{
+  "id": "piteco_exemplo",
+  "slug": "piteco_exemplo",
+  "name": "Piteco Exemplo",
+  "description": "Descrição curta do pacote.",
+  "rarity": "rare",
+  "price_pitecoin": 300,
+  "active": false,
+  "version": 1,
+  "assets": {
+    "card": "card.avif",
+    "avatar": "avatar.avif"
+  }
+}
