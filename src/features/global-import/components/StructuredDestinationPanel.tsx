@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FolderInput, FolderPlus, FolderTree } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -21,13 +21,70 @@ interface Props {
   onListConflictPolicyChange: (value: ExistingListConflictPolicy) => void;
 }
 
+interface SavedStructuredDestination {
+  mode: GlobalImportDestinationMode;
+  listConflictPolicy: ExistingListConflictPolicy;
+}
+
+function destinationStorageKey(): string {
+  if (typeof window === "undefined") return "app-piteco:guided-import-destination:server";
+  const entryKey = typeof window.history.state?.key === "string"
+    ? window.history.state.key
+    : window.location.pathname;
+  return `app-piteco:guided-import-destination:${entryKey}`;
+}
+
+function readSavedDestination(key: string): SavedStructuredDestination | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const parsed = JSON.parse(window.sessionStorage.getItem(key) ?? "null") as Partial<SavedStructuredDestination> | null;
+    const validMode = parsed?.mode === "existing-folder" || parsed?.mode === "new-folder" || parsed?.mode === "from-file";
+    const validPolicy = parsed?.listConflictPolicy === "append"
+      || parsed?.listConflictPolicy === "replace"
+      || parsed?.listConflictPolicy === "rename"
+      || parsed?.listConflictPolicy === "skip";
+    return validMode && validPolicy
+      ? { mode: parsed.mode!, listConflictPolicy: parsed.listConflictPolicy! }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function StructuredDestinationPanel(props: Props) {
+  const [storageKey] = useState(destinationStorageKey);
+
   useEffect(() => {
-    if (props.mode === "from-file") props.onModeChange("existing-folder");
-    if (props.listConflictPolicy === "append") props.onListConflictPolicyChange("rename");
-    // Define somente os padrões iniciais seguros; escolhas feitas depois da montagem são preservadas.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const initial = readSavedDestination(storageKey) ?? {
+      mode: "existing-folder" as const,
+      listConflictPolicy: "rename" as const,
+    };
+    if (typeof window !== "undefined") window.sessionStorage.setItem(storageKey, JSON.stringify(initial));
+    props.onModeChange(initial.mode);
+    props.onListConflictPolicyChange(initial.listConflictPolicy);
+  }, [props.onListConflictPolicyChange, props.onModeChange, storageKey]);
+
+  const saveDestination = (
+    nextMode: GlobalImportDestinationMode,
+    nextPolicy: ExistingListConflictPolicy,
+  ) => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(storageKey, JSON.stringify({
+        mode: nextMode,
+        listConflictPolicy: nextPolicy,
+      } satisfies SavedStructuredDestination));
+    }
+  };
+
+  const changeMode = (next: GlobalImportDestinationMode) => {
+    saveDestination(next, props.listConflictPolicy);
+    props.onModeChange(next);
+  };
+
+  const changePolicy = (next: ExistingListConflictPolicy) => {
+    saveDestination(props.mode, next);
+    props.onListConflictPolicyChange(next);
+  };
 
   return (
     <Card className="space-y-5 p-5">
@@ -38,7 +95,7 @@ export function StructuredDestinationPanel(props: Props) {
           <p className="text-sm text-muted-foreground">Cada lista do JSON será tratada separadamente.</p>
         </div>
       </div>
-      <RadioGroup value={props.mode} onValueChange={(value) => props.onModeChange(value as GlobalImportDestinationMode)} className="grid gap-3 md:grid-cols-3">
+      <RadioGroup value={props.mode} onValueChange={(value) => changeMode(value as GlobalImportDestinationMode)} className="grid gap-3 md:grid-cols-3">
         <ModeOption value="existing-folder" title="Dentro de uma pasta existente" description="Exemplo: 3 listas no JSON serão criadas ou reaproveitadas dentro da pasta escolhida." icon={FolderInput} recommended />
         <ModeOption value="new-folder" title="Dentro de uma nova pasta" description="Cria uma pasta e mantém todas as listas do JSON separadas dentro dela." icon={FolderPlus} />
         <ModeOption value="from-file" title="Usar toda a estrutura do arquivo" description="Preserva as pastas e listas do JSON e permite mapear cada destino depois." icon={FolderTree} />
@@ -57,7 +114,7 @@ export function StructuredDestinationPanel(props: Props) {
           </div>
           <div className="space-y-1.5">
             <Label>Se já existir uma lista com o mesmo nome</Label>
-            <Select value={props.listConflictPolicy} onValueChange={(value) => props.onListConflictPolicyChange(value as ExistingListConflictPolicy)}>
+            <Select value={props.listConflictPolicy} onValueChange={(value) => changePolicy(value as ExistingListConflictPolicy)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="rename">Criar outra lista numerada — recomendado</SelectItem>
