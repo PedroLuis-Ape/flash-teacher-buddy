@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
+import { readTurmaCreateFunctionError } from '@/features/classroom/lib/turmaCreateErrors';
 import { readTurmaUpdateFunctionError } from '@/features/classroom/lib/turmaUpdateErrors';
 
 export function useTurmasMine() {
@@ -41,16 +42,30 @@ export function useCreateTurma() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ nome, descricao, public: isPublic }: { nome: string; descricao?: string; public?: boolean }) => {
+      const normalizedName = nome.trim();
+      if (!normalizedName) throw new Error('Nome é obrigatório');
+
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
+      if (!session) throw new Error('Sua sessão expirou. Entre novamente para criar a turma.');
       const { data, error } = await supabase.functions.invoke('turmas-create', {
-        body: { nome, descricao, public: isPublic === true },
+        body: {
+          nome: normalizedName,
+          descricao: descricao?.trim() || undefined,
+          public: isPublic === true,
+        },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (error) throw error;
+      if (error) throw await readTurmaCreateFunctionError(error);
+      if (!data?.turma?.id) throw new Error('O servidor não confirmou a criação da turma.');
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['turmas', 'mine'] }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['turmas', 'mine'] }),
+        queryClient.invalidateQueries({ queryKey: ['turmas'] }),
+        queryClient.invalidateQueries({ queryKey: ['public-teacher-turmas'] }),
+      ]);
+    },
   });
 }
 
