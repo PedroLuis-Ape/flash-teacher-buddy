@@ -1,0 +1,34 @@
+import { buildFinalGlobalImportPrompt } from "./finalPrompt";
+import type {
+  GlobalImportAiPreset,
+  GlobalImportPromptDestinationContext,
+} from "./presets";
+import {
+  SMART_LAYER_REFERENCE,
+  SMART_LAYER_RULES,
+  smartInterviewRules,
+} from "./smartInterview";
+
+export function buildOwnerFinalImportPrompt(
+  preset: GlobalImportAiPreset,
+  context: GlobalImportPromptDestinationContext,
+): string {
+  const canarySections = [
+    "CONFIGURAÇÃO DA VERSÃO CANÁRIO",
+    ...smartInterviewRules(preset, context.scope),
+    "",
+    ...SMART_LAYER_RULES,
+    "",
+    SMART_LAYER_REFERENCE,
+    "",
+    "CONFIGURAÇÃO CONFIRMADA PELO USUÁRIO",
+    "- As respostas da entrevista definem os recursos usados no documento final.",
+    "- A primeira resposta contém somente a entrevista, sem JSON.",
+    "- Depois da resposta do usuário, a saída contém somente o JSON final.",
+    "- A resposta 'usar os padrões' confirma as opções iniciais do perfil.",
+    "- O Glossário Global precisa de confirmação explícita.",
+    "- Não junte traduções alternativas com barra, pipe ou ponto e vírgula.",
+  ];
+
+  return [buildFinalGlobalImportPrompt(preset, context), "", ...canarySections].join("\n");
+}
