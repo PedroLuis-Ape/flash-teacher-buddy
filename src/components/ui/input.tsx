@@ -5,11 +5,9 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, placeholder, autoComplete, spellCheck, title, ...props }, ref) => {
     const placeholderText = String(placeholder ?? "");
     const isSearch = type === "search" || placeholderText.toLocaleLowerCase().startsWith("buscar");
-    const resolvedPlaceholder = placeholderText === "Buscar card..."
-      ? "Buscar card — filtra enquanto digita"
-      : placeholderText === "Buscar lista..."
-        ? "Buscar lista — filtra enquanto digita"
-        : placeholder;
+    const resolvedPlaceholder = isSearch && placeholderText.endsWith("...")
+      ? `${placeholderText.slice(0, -3)} — filtra enquanto digita`
+      : placeholder;
 
     return (
       <input
