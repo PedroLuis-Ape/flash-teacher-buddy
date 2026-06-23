@@ -7,16 +7,24 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { copyText } from "../copyText";
 import { buildFinalGlobalImportPrompt } from "../prompts/finalPrompt";
+import { buildOwnerFinalImportPrompt } from "../prompts/ownerFinalPrompt";
 import { GLOBAL_IMPORT_AI_PRESETS, type GlobalImportAiPreset, type GlobalImportPromptDestinationContext } from "../prompts/presets";
 
-interface Props { context?: GlobalImportPromptDestinationContext }
+interface Props {
+  context?: GlobalImportPromptDestinationContext;
+  smartInterview?: boolean;
+}
 
 const ICONS = { batch: Layers3, detailed: BookOpenCheck, complete: LibraryBig } satisfies Record<GlobalImportAiPreset, typeof Layers3>;
 
-export function AiPromptPresetSelector({ context }: Props) {
+export function AiPromptPresetSelector({ context, smartInterview = false }: Props) {
   const [preset, setPreset] = useState<GlobalImportAiPreset>("batch");
   const [visible, setVisible] = useState(false);
-  const prompt = useMemo(() => buildFinalGlobalImportPrompt(preset, context), [preset, context]);
+  const prompt = useMemo(() => (
+    smartInterview && context
+      ? buildOwnerFinalImportPrompt(preset, context)
+      : buildFinalGlobalImportPrompt(preset, context)
+  ), [preset, context, smartInterview]);
   const selected = GLOBAL_IMPORT_AI_PRESETS.find((item) => item.id === preset)!;
 
   const copyPrompt = () => {
