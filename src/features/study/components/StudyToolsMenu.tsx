@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   DropdownMenu,
@@ -12,6 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Flame, Gauge, Gem, Lightbulb, Loader2, Settings2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { buildStudyHintContent } from "@/features/study/lib/buildStudyHintContent";
+import {
+  getCurrentDetailedExplanation,
+  subscribeCurrentDetailedExplanation,
+} from "@/features/study/lib/currentDetailedExplanation";
 import { HintModal } from "./HintModal";
 import "./study-tools-menu.css";
 
@@ -21,7 +26,6 @@ const TOOL_EMOJI = {
   redList: "\u{1F525}",
   special: "\u{1F48E}",
   hint: "\u{1F4A1}",
-  explanation: "\u{2728}",
 } as const;
 
 function readRate(): number {
@@ -40,8 +44,6 @@ interface StudyToolsMenuProps {
   favoritePending?: boolean;
   redListPending?: boolean;
   specialPending?: boolean;
-  hasDetailedExplanation?: boolean;
-  onShowDetailedExplanation?: () => void;
   className?: string;
 }
 
@@ -115,8 +117,6 @@ export function StudyToolsMenu({
   favoritePending,
   redListPending,
   specialPending,
-  hasDetailedExplanation,
-  onShowDetailedExplanation,
   className,
 }: StudyToolsMenuProps) {
   const { user } = useAuthUser();
@@ -125,6 +125,17 @@ export function StudyToolsMenu({
   const [rate, setRate] = useState<number>(() => readRate());
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
+  const detailed = useSyncExternalStore(
+    subscribeCurrentDetailedExplanation,
+    getCurrentDetailedExplanation,
+    getCurrentDetailedExplanation,
+  );
+  const combinedHint = buildStudyHintContent({
+    hint,
+    detailed_explanation: detailed.explanation,
+    usage_notes: detailed.usageNotes,
+    common_mistakes: detailed.commonMistakes,
+  });
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -166,7 +177,7 @@ export function StudyToolsMenu({
     window.dispatchEvent(new CustomEvent("speechRateChanged", { detail: next }));
   };
 
-  const hasHint = !!hint && hint.trim().length > 0;
+  const hasHint = !!combinedHint && combinedHint.trim().length > 0;
   const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial);
   const rateLabel = rate === 1
     ? "Velocidade da fala: natural (1x)"
@@ -281,18 +292,6 @@ export function StudyToolsMenu({
 
           {hasAccount && (onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
 
-          {hasDetailedExplanation && onShowDetailedExplanation && (
-            <DropdownMenuItem
-              onSelect={(event) => {
-                event.preventDefault();
-                onShowDetailedExplanation();
-              }}
-            >
-              <EmojiIcon value={TOOL_EMOJI.explanation} className="mr-2" />
-              Ver explicação detalhada
-            </DropdownMenuItem>
-          )}
-
           <DropdownMenuItem
             disabled={!hasHint}
             onSelect={(event) => {
@@ -301,7 +300,7 @@ export function StudyToolsMenu({
             }}
           >
             <span className="mr-2 inline-flex w-5 justify-center">{hintIcon}</span>
-            {hasHint ? "Ver dica" : "Sem dica"}
+            {hasHint ? "Ver dica e explicação" : "Sem dica"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -337,15 +336,8 @@ export function StudyToolsMenu({
           icon={specialIcon}
         />
       )}
-      {hasDetailedExplanation && onShowDetailedExplanation && (
-        <InlineToolButton
-          label="Explicação detalhada"
-          onClick={onShowDetailedExplanation}
-          icon={<EmojiIcon value={TOOL_EMOJI.explanation} />}
-        />
-      )}
       <InlineToolButton
-        label={hasHint ? "Ver dica" : "Sem dica"}
+        label={hasHint ? "Dica e explicação" : "Sem dica"}
         disabled={!hasHint}
         onClick={() => setShowHint(true)}
         icon={hintIcon}
@@ -367,7 +359,7 @@ export function StudyToolsMenu({
     <>
       <span ref={anchorRef} className="study-tools-anchor-placeholder" aria-hidden="true" />
       {portalHost ? createPortal(<>{mobileMenu}{desktopTools}</>, portalHost) : null}
-      <HintModal hint={hint} isOpen={showHint} onClose={() => setShowHint(false)} />
+      <HintModal hint={combinedHint} isOpen={showHint} onClose={() => setShowHint(false)} />
     </>
   );
 }

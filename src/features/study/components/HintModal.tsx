@@ -29,17 +29,16 @@ const renderInline = (text: string): React.ReactNode[] => {
 };
 
 const renderHintBody = (raw: string): React.ReactNode => {
-  // Split into blocks separated by blank lines
   const blocks = raw.replace(/\r\n/g, "\n").split(/\n\s*\n/);
 
   return blocks.map((block, bi) => {
-    const lines = block.split("\n").map((l) => l.trimEnd());
-    const isList = lines.every((l) => /^\s*[-*]\s+/.test(l) || l.trim() === "");
+    const lines = block.split("\n").map((line) => line.trimEnd());
+    const isList = lines.every((line) => /^\s*[-*]\s+/.test(line) || line.trim() === "");
 
-    if (isList && lines.some((l) => l.trim() !== "")) {
+    if (isList && lines.some((line) => line.trim() !== "")) {
       const items = lines
-        .filter((l) => l.trim() !== "")
-        .map((l) => l.replace(/^\s*[-*]\s+/, ""));
+        .filter((line) => line.trim() !== "")
+        .map((line) => line.replace(/^\s*[-*]\s+/, ""));
       return (
         <ul
           key={bi}
@@ -67,16 +66,21 @@ const renderHintBody = (raw: string): React.ReactNode => {
 export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
   if (!isOpen) return null;
 
-  const hasHint = hint && hint.trim().length > 0;
+  const hasHint = Boolean(hint && hint.trim().length > 0);
+  const hasDetailedExplanation = Boolean(
+    hint?.includes("**Explicação detalhada**")
+      || hint?.includes("**Quando usar**")
+      || hint?.includes("**Erros comuns**"),
+  );
 
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-4"
       onClick={onClose}
     >
-      <Card 
-        className={`relative w-full max-w-lg max-h-[80vh] p-5 sm:p-6 animate-fade-in ${hasHint ? 'border-warning/50' : 'border-muted'}`}
-        onClick={(e) => e.stopPropagation()}
+      <Card
+        className={`relative w-full max-w-lg max-h-[85dvh] p-4 sm:p-6 animate-fade-in ${hasHint ? "border-warning/50" : "border-muted"}`}
+        onClick={(event) => event.stopPropagation()}
       >
         <Button
           variant="ghost"
@@ -86,23 +90,18 @@ export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
         >
           <X className="h-4 w-4" />
         </Button>
-        
+
         <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-full shrink-0 ${hasHint ? 'bg-warning/20' : 'bg-muted'}`}>
-            <Lightbulb className={`h-5 w-5 ${hasHint ? 'text-warning' : 'text-muted-foreground'}`} />
+          <div className={`p-2 rounded-full shrink-0 ${hasHint ? "bg-warning/20" : "bg-muted"}`}>
+            <Lightbulb className={`h-5 w-5 ${hasHint ? "text-warning" : "text-muted-foreground"}`} />
           </div>
           <div className="flex-1 pt-1 min-w-0">
-            <h3 className={`font-semibold mb-2 ${hasHint ? 'text-warning' : 'text-muted-foreground'}`}>
-              {hasHint ? 'Dica' : 'Sem dica'}
+            <h3 className={`font-semibold mb-2 pr-8 ${hasHint ? "text-warning" : "text-muted-foreground"}`}>
+              {hasHint
+                ? hasDetailedExplanation ? "Dica e explicação" : "Dica"
+                : "Sem dica"}
             </h3>
-            {/*
-              Renders teacher-authored hint text with light markdown:
-              - paragraphs separated by blank lines
-              - "- " / "* " lines become bullet lists
-              - **text** becomes bold
-              Long text is scrollable; line breaks are preserved (pre-line).
-            */}
-            <div className="text-foreground text-[15px] sm:text-base max-h-[60vh] overflow-y-auto pr-2">
+            <div className="text-foreground text-[15px] sm:text-base max-h-[68dvh] overflow-y-auto overscroll-contain pr-2">
               {hasHint
                 ? renderHintBody(hint as string)
                 : (
