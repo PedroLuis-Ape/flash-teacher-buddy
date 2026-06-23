@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Users, ArrowLeft, Globe2, Lock, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,12 +14,13 @@ import { toast } from 'sonner';
 
 export default function TurmasProfessor() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data, isLoading } = useTurmasMine();
   const createTurma = useCreateTurma();
   const enrollAluno = useEnrollAluno();
   const updateTurma = useUpdateTurma();
 
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(searchParams.get('create') === '1');
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [selectedTurmaId, setSelectedTurmaId] = useState<string | null>(null);
 
@@ -28,9 +29,22 @@ export default function TurmasProfessor() {
   const [newTurmaPublic, setNewTurmaPublic] = useState(false);
   const [enrollApeId, setEnrollApeId] = useState('');
 
+  useEffect(() => {
+    if (searchParams.get('create') === '1') setCreateDialogOpen(true);
+  }, [searchParams]);
+
+  const handleCreateDialogChange = (open: boolean) => {
+    setCreateDialogOpen(open);
+    if (!open && searchParams.has('create')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('create');
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   const handleCreateTurma = async () => {
     if (!newTurmaNome.trim()) {
-      toast.error('❌ Nome é obrigatório');
+      toast.error('Nome é obrigatório');
       return;
     }
 
@@ -40,8 +54,8 @@ export default function TurmasProfessor() {
         descricao: newTurmaDesc,
         public: newTurmaPublic,
       });
-      toast.success('✅ Turma criada com sucesso!');
-      setCreateDialogOpen(false);
+      toast.success('Turma criada com sucesso!');
+      handleCreateDialogChange(false);
       setNewTurmaNome('');
       setNewTurmaDesc('');
       setNewTurmaPublic(false);
@@ -49,8 +63,8 @@ export default function TurmasProfessor() {
       if (result?.turma?.id) {
         navigate(`/turmas/${result.turma.id}`);
       }
-    } catch (error) {
-      toast.error('❌ Erro ao criar turma');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao criar turma');
     }
   };
 
@@ -116,23 +130,28 @@ export default function TurmasProfessor() {
   return (
     <div className="min-h-screen bg-background p-4 lg:px-8 pb-24">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Minhas Turmas</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold">Minhas Turmas</h1>
+            <p className="text-sm text-muted-foreground">
+              {turmas.length} {turmas.length === 1 ? 'turma criada' : 'turmas criadas'}. Você pode criar quantas turmas precisar.
+            </p>
+          </div>
         </div>
 
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <Dialog open={createDialogOpen} onOpenChange={handleCreateDialogChange}>
           <DialogTrigger asChild>
-            <Button className="w-full">
+            <Button className="w-full min-h-[48px]">
               <Plus className="h-4 w-4 mr-2" />
               Criar Nova Turma
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Criar Turma</DialogTitle>
+              <DialogTitle>Criar uma nova turma</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -142,6 +161,7 @@ export default function TurmasProfessor() {
                   value={newTurmaNome}
                   onChange={(e) => setNewTurmaNome(e.target.value)}
                   placeholder="Ex: Inglês Básico"
+                  maxLength={120}
                 />
               </div>
               <div>
@@ -151,6 +171,7 @@ export default function TurmasProfessor() {
                   value={newTurmaDesc}
                   onChange={(e) => setNewTurmaDesc(e.target.value)}
                   placeholder="Descrição da turma..."
+                  maxLength={1000}
                 />
               </div>
               <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
@@ -170,7 +191,7 @@ export default function TurmasProfessor() {
                   aria-label="Permitir acesso público à turma"
                 />
               </div>
-              <Button onClick={handleCreateTurma} disabled={createTurma.isPending} className="w-full">
+              <Button onClick={handleCreateTurma} disabled={createTurma.isPending} className="w-full min-h-[48px]">
                 {createTurma.isPending ? 'Criando...' : 'Criar Turma'}
               </Button>
             </div>
@@ -202,8 +223,12 @@ export default function TurmasProfessor() {
         <div className="space-y-4">
           {turmas.length === 0 ? (
             <Card className="p-8 text-center">
-              <p className="text-muted-foreground">Nenhuma turma criada ainda.</p>
-              <p className="text-sm text-muted-foreground mt-2">Clique em "Criar Nova Turma" para começar.</p>
+              <Users className="mx-auto h-10 w-10 text-primary" />
+              <p className="mt-4 font-semibold">Nenhuma turma criada ainda.</p>
+              <p className="text-sm text-muted-foreground mt-2">Crie sua primeira turma para organizar alunos e conteúdos separadamente.</p>
+              <Button className="mt-5" onClick={() => handleCreateDialogChange(true)}>
+                <Plus className="mr-2 h-4 w-4" />Criar primeira turma
+              </Button>
             </Card>
           ) : (
             turmas.map((turma: any) => (
