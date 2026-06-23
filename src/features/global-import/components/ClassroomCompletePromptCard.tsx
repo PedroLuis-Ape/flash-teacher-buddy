@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Clipboard, Eye, GraduationCap, Layers3, LibraryBig } from "lucide-react";
+import { Clipboard, Eye, GraduationCap, LibraryBig, ListPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -63,14 +63,14 @@ export function ClassroomCompletePromptCard({ context }: Props) {
           <p className="mt-1 text-muted-foreground">Explicações, exemplos, notas de uso, erros comuns, word hints e glossário.</p>
         </div>
         <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-          <Layers3 className="mb-2 h-4 w-4 text-primary" />
-          <strong>Camadas preservadas</strong>
-          <p className="mt-1 text-muted-foreground">Usos e significados relacionados podem ser agrupados em cards em camadas.</p>
+          <ListPlus className="mb-2 h-4 w-4 text-primary" />
+          <strong>Interpretações separadas</strong>
+          <p className="mt-1 text-muted-foreground">Cada significado útil vira um card normal independente, pronto para mesclagem manual depois.</p>
         </div>
       </div>
 
       <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-        Os cards, explicações e camadas serão importados na turma atual. As entradas de glossário irão para a Caixa de Glossário central da conta do professor, sem criar cópias por turma.
+        Os cards e explicações serão importados na turma atual. As entradas de glossário irão para a Caixa de Glossário central da conta do professor, sem criar cópias por turma.
       </p>
 
       <div className="grid gap-2 sm:grid-cols-2">
