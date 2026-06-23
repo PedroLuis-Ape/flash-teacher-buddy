@@ -51,6 +51,9 @@ describe("existing folder with multiple imported lists", () => {
       1: { mode: "create", name: "Negativo" },
       2: { mode: "create", name: "Interrogativo" },
     });
+    expect(prepared.warnings[0]).toContain("3 lista(s) recebidas");
+    expect(prepared.warnings[0]).toContain("3 serão importadas separadamente");
+    expect(prepared.warnings[0]).toContain("3 nova(s)");
   });
 
   it("creates a numbered list instead of silently appending when names collide", () => {
