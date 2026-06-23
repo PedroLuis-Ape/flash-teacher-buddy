@@ -5,6 +5,7 @@ import { resolveTurmaViewMode } from '@/features/classroom/lib/turmaAccess';
 import { AssignmentOrderManager } from '@/features/classroom/components/AssignmentOrderManager';
 import { ClassroomContentToolbar } from '@/features/classroom/components/ClassroomContentToolbar';
 import { ClassroomSuperImportLaunchCard } from '@/features/classroom/components/ClassroomSuperImportLaunchCard';
+import { TeacherClassNavigation } from '@/features/classroom/components/TeacherClassNavigation';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import TurmaPrivateDetail from '@/pages/TurmaPrivateDetail';
 import TurmaPublicPage from '@/pages/TurmaPublicPage';
@@ -51,6 +52,7 @@ export default function TurmaDetailWithContent() {
     const isOwner = Boolean(user && accessQuery.data?.owner_teacher_id === user.id);
     return (
       <>
+        {isOwner && <TeacherClassNavigation />}
         {isOwner && turmaId && <ClassroomContentToolbar turmaId={turmaId} />}
         {isOwner && turmaId && <ClassroomSuperImportLaunchCard turmaId={turmaId} />}
         <div data-classroom-assignments>
