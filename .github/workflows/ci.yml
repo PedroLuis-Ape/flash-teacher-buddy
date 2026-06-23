@@ -32,8 +32,11 @@ jobs:
       - name: Generate Phase 0 inventory
         run: node scripts/audit-phase-zero.mjs --out phase-zero-audit.json
 
-      - name: Validate canonization matrix
+      - name: Validate canonization and test account matrices
         run: node scripts/validate-canonization-matrix.mjs
+
+      - name: Validate Phase 0 evidence templates
+        run: node scripts/validate-phase-zero-evidence.mjs
 
       - name: Upload Phase 0 inventory
         uses: actions/upload-artifact@v4
