@@ -11,6 +11,7 @@ import { StudyCardDeck } from "./StudyCardDeck";
 import { getBalancedDirection, type RuntimeDirection } from "@/features/study/lib/runtimeStudySchedule";
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import "./studyMobileActions.css";
 
 const LazyWriteStudyView = lazy(() =>
   import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
