@@ -21,11 +21,13 @@ export function flattenSuperImportLayers(
   let groupsFlattened = 0;
   let cardsCreated = 0;
 
-  const folders = value.package.folders.map((folder) => ({
-    ...folder,
-    lists: folder.lists.map((list) => ({
-      ...list,
-      cards: list.cards.flatMap<SmartNormalCard>((card) => {
+  const folders = value.package.folders.map((folder) => {
+    let folderChanged = false;
+    const lists = folder.lists.map((list) => {
+      if (!list.cards.some((card) => card.type === "layered")) return list;
+
+      folderChanged = true;
+      const cards = list.cards.flatMap<SmartNormalCard>((card) => {
         if (card.type === "normal") return [card];
 
         groupsFlattened += 1;
@@ -36,9 +38,17 @@ export function flattenSuperImportLayers(
           type: "normal" as const,
           context_tag: layer.context_tag ?? card.group_title,
         }));
-      }),
-    })),
-  }));
+      });
+
+      return { ...list, cards };
+    });
+
+    return folderChanged ? { ...folder, lists } : folder;
+  });
+
+  if (groupsFlattened === 0) {
+    return { packageValue: value, groupsFlattened: 0, cardsCreated: 0 };
+  }
 
   const { declared_totals: _staleTotals, ...withoutTotals } = value;
   const packageValue = withSmartDeclaredTotals({
