@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { playNext } from "@/lib/sfx";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import pitecoSad from "@/assets/piteco-sad.png";
 
@@ -76,6 +77,11 @@ export function StudyFeedbackPanel({
   const config = STATUS_CONFIG[status];
   const StatusIcon = config.icon;
   const showAnswers = Boolean(userAnswer || correctAnswer);
+
+  const handleAction = () => {
+    playNext();
+    onAction?.();
+  };
 
   return (
     <Card
@@ -154,7 +160,7 @@ export function StudyFeedbackPanel({
             <Button
               type="button"
               size="lg"
-              onClick={onAction}
+              onClick={handleAction}
               className={cn("h-11 w-full gap-2 rounded-xl font-bold shadow-sm", config.buttonClass)}
             >
               {actionLabel}
