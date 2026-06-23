@@ -48,7 +48,7 @@ describe("public signup onboarding", () => {
 
   it("routes users from the persisted profile after confirmation", () => {
     expect(callback).toContain('select("first_name, is_teacher, public_slug")');
-    expect(callback).toContain('profile.is_teacher');
+    expect(callback).toContain("profile.is_teacher");
     expect(callback).toContain('"/painel-professor"');
     expect(callback).toContain('"/settings/public-profile"');
   });
@@ -58,10 +58,16 @@ describe("public signup onboarding", () => {
     expect(callback).toContain('flow === "link-google"');
   });
 
-  it("creates profile and base role in one Auth trigger", () => {
-    expect(triggerMigration).toContain("CREATE OR REPLACE FUNCTION public.handle_new_user()");
+  it("replaces every legacy signup trigger with one canonical trigger", () => {
     expect(triggerMigration).toContain("DROP TRIGGER IF EXISTS on_auth_user_created_assign_role");
+    expect(triggerMigration).toContain("DROP TRIGGER IF EXISTS on_auth_user_created_profile");
+    expect(triggerMigration).toContain("DROP TRIGGER IF EXISTS on_auth_user_created_role");
+    expect(triggerMigration.match(/CREATE TRIGGER on_auth_user_created/g)).toHaveLength(1);
+  });
+
+  it("creates one persisted role per user", () => {
     expect(triggerMigration).toContain("INSERT INTO public.user_roles");
+    expect(triggerMigration).toContain("ON CONFLICT (user_id) DO UPDATE");
     expect(triggerMigration).toContain("requested_account_type");
   });
 
