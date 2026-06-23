@@ -6,6 +6,7 @@ import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSch
 import { repairSmartImportJsonText } from "./smartJsonRepair";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
 import { looksLikeAdvancedSmartCsv, parseSmartImportSource } from "@/features/smart-import/sourceParser";
+import type { SmartImportPackage } from "@/features/smart-import/schema";
 
 interface UseGlobalImportSourceOptions {
   repairSmartJson?: boolean;
@@ -24,7 +25,11 @@ function looksLikeJson(value: string): boolean {
 
 function withoutAutomaticLayers(
   validation: GlobalImportV2ValidationResult,
-): { validation: GlobalImportV2ValidationResult; note?: string } {
+): {
+  validation: GlobalImportV2ValidationResult;
+  note?: string;
+  normalizedPackage?: SmartImportPackage;
+} {
   if (!validation.smartPackage) return { validation };
 
   const flattened = flattenSuperImportLayers(validation.smartPackage);
@@ -32,6 +37,7 @@ function withoutAutomaticLayers(
 
   return {
     validation: validateGlobalImportInput(flattened.packageValue, null),
+    normalizedPackage: flattened.packageValue,
     note: `${flattened.groupsFlattened} grupo(s) em camadas foram convertidos em ${flattened.cardsCreated} cards normais. Você pode mesclá-los manualmente depois na tela da lista.`,
   };
 }
@@ -93,7 +99,11 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
     if (checkedValidation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
     if (checkedValidation.sourceFormat === "legacy") nextNotes.push("Formato legado aceito por compatibilidade.");
     if (normalized.note) nextNotes.push(normalized.note);
-    setRaw(repair.changed ? repair.text : value);
+    setRaw(normalized.normalizedPackage
+      ? JSON.stringify(normalized.normalizedPackage, null, 2)
+      : repair.changed
+        ? repair.text
+        : value);
     setValidation(checkedValidation);
     setNotes(nextNotes);
     return checkedValidation;
