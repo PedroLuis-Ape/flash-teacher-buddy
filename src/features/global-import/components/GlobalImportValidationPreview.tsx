@@ -1,10 +1,11 @@
-import { AlertTriangle, FolderTree } from "lucide-react";
+import { AlertTriangle, FolderTree, Wrench } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { summarizeSmartImport } from "@/features/smart-import/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { GlobalImportList, GlobalImportPackage } from "../schema";
-import type { GlobalImportV2ValidationResult } from "../validation";
+import type { GlobalImportIssue, GlobalImportV2ValidationResult } from "../validation";
 
 interface Props {
   validation: GlobalImportV2ValidationResult;
@@ -13,6 +14,14 @@ interface Props {
   notes: string[];
   destinationErrors: string[];
   destinationWarnings: string[];
+}
+
+interface GroupedIssue {
+  key: string;
+  code: string;
+  message: string;
+  severity: GlobalImportIssue["severity"];
+  paths: string[];
 }
 
 function sourceLabel(sourceFormat: GlobalImportV2ValidationResult["sourceFormat"]): string {
@@ -34,13 +43,58 @@ function listDirection(list: GlobalImportList, packageValue: GlobalImportPackage
   return front && back ? `${front} → ${back}` : null;
 }
 
+function normalizeEmail(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function groupIssues(issues: GlobalImportIssue[]): GroupedIssue[] {
+  const groups = new Map<string, GroupedIssue>();
+  issues.forEach((issue) => {
+    const key = `${issue.severity}|${issue.code}|${issue.message}`;
+    const current = groups.get(key);
+    if (current) current.paths.push(issue.path);
+    else groups.set(key, {
+      key,
+      code: issue.code,
+      message: issue.message,
+      severity: issue.severity,
+      paths: [issue.path],
+    });
+  });
+  return [...groups.values()].sort((a, b) => {
+    if (a.severity !== b.severity) return a.severity === "error" ? -1 : 1;
+    return b.paths.length - a.paths.length;
+  });
+}
+
 export function GlobalImportValidationPreview(props: Props) {
+  const { user } = useAuth();
+  const ownerEmail = normalizeEmail(import.meta.env.VITE_OWNER_EMAIL);
+  const ownerCanary = Boolean(ownerEmail && normalizeEmail(user?.email) === ownerEmail);
   const errors = props.validation.issues.filter((issue) => issue.severity === "error");
   const warnings = props.validation.issues.filter((issue) => issue.severity === "warning");
   const smart = props.validation.smartPackage ? summarizeSmartImport(props.validation.smartPackage) : null;
+  const groupedIssues = ownerCanary ? groupIssues(props.validation.issues) : [];
+  const repairNotes = ownerCanary
+    ? props.notes.filter((note) => note.toLowerCase().includes("correç") || note.includes("convertido"))
+    : [];
 
   return (
     <>
+      {repairNotes.length > 0 && (
+        <Card className="border-emerald-500/30 bg-emerald-500/5 p-4">
+          <div className="flex items-start gap-3">
+            <Wrench className="mt-0.5 h-5 w-5 text-emerald-500" />
+            <div>
+              <h3 className="font-semibold">Correções automáticas aplicadas</h3>
+              <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                {repairNotes.map((note) => <p key={note}>{note}</p>)}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-5">
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">{props.counts.folders} pasta(s)</Badge>
@@ -62,7 +116,7 @@ export function GlobalImportValidationPreview(props: Props) {
             A contagem principal representa unidades jogáveis: cards normais valem 1 e cada camada dentro de um grupo vale 1. Os grupos não serão achatados.
           </p>
         )}
-        {[...props.notes, ...props.destinationWarnings].map((note) => (
+        {[...props.notes.filter((note) => !repairNotes.includes(note)), ...props.destinationWarnings].map((note) => (
           <p key={note} className="mt-2 text-xs text-muted-foreground">ℹ️ {note}</p>
         ))}
         {props.destinationErrors.map((error) => (
@@ -73,14 +127,36 @@ export function GlobalImportValidationPreview(props: Props) {
       {props.validation.issues.length > 0 && (
         <Card className="space-y-3 p-5">
           <h2 className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" />Validação</h2>
-          <ScrollArea className="max-h-56">
+          {ownerCanary && errors.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Erros iguais foram agrupados. Corrija o tipo de problema, não cada linha individualmente.
+            </p>
+          )}
+          <ScrollArea className="max-h-72">
             <div className="space-y-2 pr-3">
-              {props.validation.issues.map((issue, index) => (
-                <div key={`${issue.path}-${issue.code}-${index}`} className="rounded border p-3 text-sm">
-                  <div className="font-mono text-xs text-muted-foreground">{issue.code} · {issue.path}</div>
-                  <div>{issue.message}</div>
-                </div>
-              ))}
+              {ownerCanary
+                ? groupedIssues.map((group) => (
+                    <div key={group.key} className="rounded border p-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={group.severity === "error" ? "destructive" : "secondary"}>
+                          {group.severity === "error" ? "Erro" : "Aviso"}
+                        </Badge>
+                        <Badge variant="outline">{group.paths.length} ocorrência(s)</Badge>
+                        <span className="font-mono text-xs text-muted-foreground">{group.code}</span>
+                      </div>
+                      <div className="mt-2 font-medium">{group.message}</div>
+                      <div className="mt-2 rounded bg-muted/40 p-2 font-mono text-xs text-muted-foreground">
+                        {group.paths.slice(0, 3).map((path) => <div key={path}>{path}</div>)}
+                        {group.paths.length > 3 && <div>… e mais {group.paths.length - 3} caminho(s)</div>}
+                      </div>
+                    </div>
+                  ))
+                : props.validation.issues.map((issue, index) => (
+                    <div key={`${issue.path}-${issue.code}-${index}`} className="rounded border p-3 text-sm">
+                      <div className="font-mono text-xs text-muted-foreground">{issue.code} · {issue.path}</div>
+                      <div>{issue.message}</div>
+                    </div>
+                  ))}
             </div>
           </ScrollArea>
         </Card>
@@ -89,7 +165,7 @@ export function GlobalImportValidationPreview(props: Props) {
       {props.packageValue && (
         <Card className="space-y-4 p-5">
           <h2 className="flex items-center gap-2 font-semibold">
-            <FolderTree className="h-4 w-4" />3. Prévia: {props.packageValue.package.name}
+            <FolderTree className="h-4 w-4" />Prévia recebida: {props.packageValue.package.name}
           </h2>
           <div className="space-y-3">
             {props.packageValue.package.folders.map((folder, folderIndex) => (
