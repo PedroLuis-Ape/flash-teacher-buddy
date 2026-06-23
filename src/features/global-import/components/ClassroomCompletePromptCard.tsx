@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Clipboard, Eye, GraduationCap, Layers3, LibraryBig } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,17 +9,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { copyText } from "../copyText";
 import { buildFinalGlobalImportPrompt } from "../prompts/finalPrompt";
 import type { GlobalImportPromptDestinationContext } from "../prompts/presets";
+import { AiPromptPresetSelector } from "./AiPromptPresetSelector";
 
 interface Props {
   context: GlobalImportPromptDestinationContext;
 }
 
+function normalized(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 export function ClassroomCompletePromptCard({ context }: Props) {
+  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
+  const ownerEmail = normalized(import.meta.env.VITE_OWNER_EMAIL);
+  const ownerCanary = Boolean(ownerEmail && normalized(user?.email) === ownerEmail);
   const prompt = useMemo(
     () => buildFinalGlobalImportPrompt("complete", context),
     [context],
   );
+
+  if (ownerCanary) {
+    return <AiPromptPresetSelector context={context} smartInterview />;
+  }
 
   const copyPrompt = () => {
     if (copyText(prompt)) toast.success("Prompt completo para turma copiado.");
