@@ -16,11 +16,12 @@ interface Props {
   folderTitle?: string;
   label?: string;
   compact?: boolean;
+  className?: string;
   stopPropagation?: boolean;
   variant?: "default" | "outline" | "secondary" | "ghost";
 }
 
-export function FolderGlossarySyncDialog({ folderId, folderTitle, label = "Sincronizar glossário", compact = false, stopPropagation = false, variant = "outline" }: Props) {
+export function FolderGlossarySyncDialog({ folderId, folderTitle, label = "Sincronizar glossário", compact = false, className, stopPropagation = false, variant = "outline" }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const initialStatus = readFolderGlossarySyncStatus(folderId);
@@ -51,7 +52,7 @@ export function FolderGlossarySyncDialog({ folderId, folderTitle, label = "Sincr
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant={variant} size={compact ? "icon" : "sm"} title={label} onClick={(event) => { if (stopPropagation) event.stopPropagation(); }}>
+        <Button type="button" variant={variant} size={compact ? "icon" : "sm"} className={className} title={label} onClick={(event) => { if (stopPropagation) event.stopPropagation(); }}>
           <RefreshCw className={compact ? "h-4 w-4" : "mr-2 h-4 w-4"} />
           {!compact && label}
         </Button>
