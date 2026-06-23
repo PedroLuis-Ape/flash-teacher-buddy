@@ -29,7 +29,7 @@ export interface ServiceWorkerRegistrationLike {
 }
 
 export interface ServiceWorkerContainerLike {
-  getRegistrations(): Promise<ServiceWorkerRegistrationLike[]>;
+  getRegistrations(): Promise<readonly ServiceWorkerRegistrationLike[]>;
 }
 
 export function isAppOwnedCacheName(name: string): boolean {
