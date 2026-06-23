@@ -1,0 +1,55 @@
+{
+  "schema": "app-piteco-backend-evidence",
+  "version": "1.0",
+  "status": "pending",
+  "captured_at": null,
+  "captured_by": null,
+  "published_app_url": "https://www.apeeducation.org",
+  "documented_project_ref": "ymahldldyxvwjeruaxpr",
+  "observed_project_ref": null,
+  "browser": null,
+  "session_type": null,
+  "services": {
+    "auth": {
+      "observed_host": null,
+      "request_path_example": null,
+      "status_code": null,
+      "matches_observed_project_ref": null
+    },
+    "rest": {
+      "observed_host": null,
+      "request_path_example": null,
+      "status_code": null,
+      "matches_observed_project_ref": null
+    },
+    "rpc": {
+      "observed_host": null,
+      "request_path_example": null,
+      "status_code": null,
+      "matches_observed_project_ref": null
+    },
+    "storage": {
+      "observed_host": null,
+      "request_path_example": null,
+      "status_code": null,
+      "matches_observed_project_ref": null
+    },
+    "functions": {
+      "observed_host": null,
+      "request_path_example": null,
+      "status_code": null,
+      "matches_observed_project_ref": null
+    }
+  },
+  "administrative_access": {
+    "available": false,
+    "project_ref": null,
+    "schema_snapshot_saved": false,
+    "policies_snapshot_saved": false,
+    "grants_snapshot_saved": false,
+    "functions_snapshot_saved": false,
+    "migrations_snapshot_saved": false
+  },
+  "evidence_files": [],
+  "notes": "Do not include access tokens, authorization headers, cookies, passwords, service-role keys or personal data."
+}
