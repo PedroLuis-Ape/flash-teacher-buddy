@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { resolveTurmaViewMode } from '@/features/classroom/lib/turmaAccess';
 import { AssignmentOrderManager } from '@/features/classroom/components/AssignmentOrderManager';
 import { ClassroomContentToolbar } from '@/features/classroom/components/ClassroomContentToolbar';
+import { ClassroomFolderExportPanel } from '@/features/classroom/components/ClassroomFolderExportPanel';
 import { ClassroomSuperImportLaunchCard } from '@/features/classroom/components/ClassroomSuperImportLaunchCard';
 import { TeacherClassNavigation } from '@/features/classroom/components/TeacherClassNavigation';
 import { useAuthUser } from '@/hooks/useAuthUser';
@@ -54,6 +55,7 @@ export default function TurmaDetailWithContent() {
       <>
         {isOwner && <TeacherClassNavigation />}
         {isOwner && turmaId && <ClassroomContentToolbar turmaId={turmaId} />}
+        {isOwner && turmaId && <ClassroomFolderExportPanel turmaId={turmaId} />}
         {isOwner && turmaId && <ClassroomSuperImportLaunchCard turmaId={turmaId} />}
         <div data-classroom-assignments>
           <TurmaPrivateDetail />
