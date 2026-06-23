@@ -108,7 +108,7 @@ export function useGoogleLinking() {
       const { error } = await supabase.auth.linkIdentity({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?flow=link-google`,
         },
       });
 
