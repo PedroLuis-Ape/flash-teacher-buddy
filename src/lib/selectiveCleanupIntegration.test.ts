@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const boot = readFileSync(new URL("./bootStability.ts", import.meta.url), "utf8");
 const safeMode = readFileSync(new URL("../components/SafeMode.tsx", import.meta.url), "utf8");
+const profile = readFileSync(new URL("../pages/Profile.tsx", import.meta.url), "utf8");
 const worker = readFileSync(new URL("../../public/sw.js", import.meta.url), "utf8");
 
 describe("selective cleanup integration", () => {
@@ -19,6 +20,13 @@ describe("selective cleanup integration", () => {
     expect(safeMode).toContain("ape_outbox_");
     expect(safeMode).toContain("app-piteco:");
     expect(safeMode).not.toContain("localStorage.clear()");
+  });
+
+  it("routes profile update cleanup through the selective policy", () => {
+    expect(profile).toContain("cleanupAppOwnedCaches");
+    expect(profile).toContain("unregisterLegacyAppServiceWorkers");
+    expect(profile).not.toContain("names.map((name) => caches.delete(name))");
+    expect(profile).not.toContain("regs.map((registration) => registration.unregister())");
   });
 
   it("keeps unknown caches out of the cleanup worker deletion list", () => {
