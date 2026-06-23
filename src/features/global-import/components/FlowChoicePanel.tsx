@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Check, FolderTree, ListPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -26,6 +27,12 @@ const OPTIONS = [
 ];
 
 export function FlowChoicePanel({ value, onChange }: Props) {
+  useEffect(() => {
+    if (value === "quick") onChange("structured");
+    // O modo estruturado é o padrão seguro. A escolha manual por "quick" depois da montagem é preservada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="space-y-3">
       <div>
