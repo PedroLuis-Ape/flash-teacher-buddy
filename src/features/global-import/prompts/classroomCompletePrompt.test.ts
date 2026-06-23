@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildFinalGlobalImportPrompt } from "./finalPrompt";
 
 describe("complete classroom prompt", () => {
-  it("requires a pedagogically complete v2 package", () => {
+  it("builds a complete package using normal cards", () => {
     const prompt = buildFinalGlobalImportPrompt("complete", {
       scope: "classroom",
       intent: "structured",
@@ -13,11 +13,13 @@ describe("complete classroom prompt", () => {
     expect(prompt).toContain("detailed_explanation");
     expect(prompt).toContain("example_translation");
     expect(prompt).toContain("word_hints");
-    expect(prompt).toContain("Use cards layered");
+    expect(prompt).toContain("Inclua somente cards com type=normal");
+    expect(prompt).toContain("um card para ser e outro para estar");
     expect(prompt).toContain("glossary será centralizado na conta do professor");
+    expect(prompt).not.toContain("Use cards layered");
   });
 
-  it("does not force classroom rules into the global complete preset", () => {
+  it("keeps classroom-only rules out of the personal preset", () => {
     const prompt = buildFinalGlobalImportPrompt("complete", {
       scope: "personal",
       intent: "structured",
