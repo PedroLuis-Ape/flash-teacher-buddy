@@ -1,0 +1,63 @@
+name: Public Classroom Metadata Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/public-classroom-metadata-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        run: |
+          supabase start
+          supabase db reset --local --no-seed
+
+      - name: Export metadata
+        run: |
+          psql "$DATABASE_URL" -P pager=off -c "
+            select n.nspname as schema_name,
+                   c.relname,
+                   c.relkind,
+                   c.relrowsecurity,
+                   c.reloptions
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public'
+              and c.relname in (
+                'turmas',
+                'public_turmas',
+                'public_turma_atribuicoes',
+                'public_turma_lists',
+                'public_turma_flashcards'
+              )
+            order by c.relname;
+          " | tee public-classroom-metadata.log
+
+      - name: Upload metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-classroom-metadata
+          path: public-classroom-metadata.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
