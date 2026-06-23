@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { analyzeGlobalImportText } from "./analysisService";
 import { parseGlobalImportCsv } from "./csvPackage";
+import { buildLayerChecks } from "./layerChecks";
 import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSchema";
 import { repairSmartImportJsonText } from "./smartJsonRepair";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
@@ -8,6 +9,7 @@ import { looksLikeAdvancedSmartCsv, parseSmartImportSource } from "@/features/sm
 
 interface UseGlobalImportSourceOptions {
   repairSmartJson?: boolean;
+  reviewLayers?: boolean;
 }
 
 function looksLikeLegacyCsv(value: string): boolean {
@@ -19,6 +21,19 @@ function looksLikeLegacyCsv(value: string): boolean {
 function looksLikeJson(value: string): boolean {
   const normalized = value.trim().replace(/^```(?:json)?\s*/i, "");
   return normalized.startsWith("{") || normalized.startsWith("[");
+}
+
+function withLayerChecks(
+  validation: GlobalImportV2ValidationResult,
+  enabled: boolean,
+): GlobalImportV2ValidationResult {
+  if (!enabled || !validation.smartPackage) return validation;
+  const issues = [...validation.issues, ...buildLayerChecks(validation.smartPackage)];
+  return {
+    ...validation,
+    issues,
+    valid: !issues.some((issue) => issue.severity === "error"),
+  };
 }
 
 export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}) {
@@ -41,7 +56,10 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
         frontLanguage: "en",
         backLanguage: "pt-BR",
       });
-      const nextValidation = validateGlobalImportInput(smart.packageValue, null);
+      const nextValidation = withLayerChecks(
+        validateGlobalImportInput(smart.packageValue, null),
+        Boolean(options.reviewLayers),
+      );
       setRaw(value);
       setValidation(nextValidation);
       setNotes([...smart.notes, ...smart.warnings]);
@@ -50,7 +68,10 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
 
     if (looksLikeLegacyCsv(value)) {
       const csv = parseGlobalImportCsv(value);
-      const nextValidation = validateGlobalImportInput(csv.packageValue, null);
+      const nextValidation = withLayerChecks(
+        validateGlobalImportInput(csv.packageValue, null),
+        Boolean(options.reviewLayers),
+      );
       setRaw(value);
       setValidation(nextValidation);
       setNotes([`CSV ${csv.schema} reconhecido com ${csv.rows} flashcard(s).`, ...csv.notes]);
@@ -61,16 +82,17 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
       ? repairSmartImportJsonText(value)
       : { text: value, changed: false, notes: [] as string[] };
     const result = analyzeGlobalImportText(repair.text);
+    const checkedValidation = withLayerChecks(result.validation, Boolean(options.reviewLayers));
     const nextNotes: string[] = [...repair.notes];
     if (result.parsed.extracted) nextNotes.push("Uma única cerca Markdown externa foi removida.");
-    if (result.validation.sourceFormat === "smart") nextNotes.push("Contrato app-piteco-super-import 2.0 validado.");
-    if (result.validation.sourceFormat === "official") nextNotes.push("Contrato oficial app-piteco-super-import 1.0 validado.");
-    if (result.validation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
-    if (result.validation.sourceFormat === "legacy") nextNotes.push("Formato legado aceito por compatibilidade.");
+    if (checkedValidation.sourceFormat === "smart") nextNotes.push("Contrato app-piteco-super-import 2.0 validado.");
+    if (checkedValidation.sourceFormat === "official") nextNotes.push("Contrato oficial app-piteco-super-import 1.0 validado.");
+    if (checkedValidation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
+    if (checkedValidation.sourceFormat === "legacy") nextNotes.push("Formato legado aceito por compatibilidade.");
     setRaw(repair.changed ? repair.text : value);
-    setValidation(result.validation);
+    setValidation(checkedValidation);
     setNotes(nextNotes);
-    return result.validation;
+    return checkedValidation;
   };
 
   const readFile = async (file?: File) => {
