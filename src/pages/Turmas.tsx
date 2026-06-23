@@ -61,10 +61,15 @@ export default function Turmas() {
             </TabsList>
 
             <TabsContent value="professor" className="space-y-4 mt-4">
-              <Button onClick={() => navigate('/turmas/professor')} className="w-full min-h-[48px]">
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Nova Turma
-              </Button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button onClick={() => navigate('/turmas/professor?create=1')} className="min-h-[48px]">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Nova Turma
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/turmas/professor')} className="min-h-[48px]">
+                  Gerenciar todas ({turmasProfessor.length})
+                </Button>
+              </div>
               {turmasProfessor.length === 0 ? (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground">Nenhuma turma criada ainda.</p>
