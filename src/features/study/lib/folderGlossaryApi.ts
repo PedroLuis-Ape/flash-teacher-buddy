@@ -47,7 +47,7 @@ function readString(value: unknown): string {
 function hintEntry(value: unknown): GlossaryTransferEntry | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
-  const original = readString(row.original_text || row.original || row.term || row.word);
+  const original = readString(row.original_text || row.original || row.text || row.term || row.word);
   const translated = readString(row.translated_text || row.translation || row.meaning || row.definition);
   if (!original || !translated) return null;
   const side = readString(row.side).toUpperCase() === "B" ? "B" : "A";
