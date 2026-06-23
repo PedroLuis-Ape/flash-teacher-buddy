@@ -1,16 +1,22 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
+const ROOT = process.cwd();
+const read = (...segments: string[]) => readFileSync(join(ROOT, ...segments), 'utf8');
 
-const shortcut = read('../../components/TurmaShortcut.tsx');
-const overview = read('../../pages/Turmas.tsx');
-const manager = read('../../pages/TurmasProfessor.tsx');
-const detail = read('../../pages/TurmaDetailWithContent.tsx');
-const hooks = read('./hooks/useTurmas.ts');
-const createFunction = read('../../../supabase/functions/turmas-create/index.ts');
-const mineFunction = read('../../../supabase/functions/turmas-mine/index.ts');
-const baseMigration = read('../../../supabase/migrations/20251112133153_a8d645c2-0432-4de3-941b-d941495d61d4.sql');
+const shortcut = read('src', 'components', 'TurmaShortcut.tsx');
+const overview = read('src', 'pages', 'Turmas.tsx');
+const manager = read('src', 'pages', 'TurmasProfessor.tsx');
+const detail = read('src', 'pages', 'TurmaDetailWithContent.tsx');
+const hooks = read('src', 'features', 'classroom', 'hooks', 'useTurmas.ts');
+const createFunction = read('supabase', 'functions', 'turmas-create', 'index.ts');
+const mineFunction = read('supabase', 'functions', 'turmas-mine', 'index.ts');
+const baseMigration = read(
+  'supabase',
+  'migrations',
+  '20251112133153_a8d645c2-0432-4de3-941b-d941495d61d4.sql',
+);
 
 describe('multiple teacher classes', () => {
   it('always exposes class management and creation on the teacher dashboard', () => {
@@ -19,7 +25,7 @@ describe('multiple teacher classes', () => {
     expect(shortcut).not.toContain('/turmas-professor');
     expect(shortcut).toContain('if (!isTeacher && turmas.length === 0) return null');
     expect(shortcut).toContain('Nova turma');
-    expect(shortcut).toContain('Criar sua primeira turma');
+    expect(shortcut).toContain('Crie sua primeira turma');
   });
 
   it('opens the creation form directly from every teacher entry point', () => {
