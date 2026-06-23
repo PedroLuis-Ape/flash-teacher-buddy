@@ -113,6 +113,26 @@ function clearRequestId(storageKey: string): void {
   memoryRequestIds.delete(storageKey);
 }
 
+function importDatabaseError(error: unknown): Error {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : String(error ?? "");
+
+  if (
+    message.includes("global_import_batches_schema_version_check")
+    || (message.includes("global_import_batches") && message.includes("schema_version"))
+  ) {
+    return new Error(
+      "O banco conectado ao preview ainda não recebeu a migration do Super Importador 2.0. "
+      + "Aplique a migration 20260623003000_fix_global_import_batch_schema_version_v2.sql e tente novamente.",
+    );
+  }
+
+  return error instanceof Error ? error : new Error(message || "A importação falhou no banco de dados.");
+}
+
 export async function executeMappedGlobalImport(
   packageValue: GlobalImportPackage,
   options: ExecuteMappedImportOptions,
@@ -160,7 +180,7 @@ export async function executeMappedGlobalImport(
 
   const { data, error } = await (supabase.rpc as any)(rpcName, rpcPayload);
 
-  if (error) throw error;
+  if (error) throw importDatabaseError(error);
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("O banco não devolveu o relatório da importação.");
   }
@@ -183,5 +203,5 @@ export async function undoGlobalImport(
   const { error } = await (supabase.rpc as any)(rpcName, {
     _batch_id: batchId,
   });
-  if (error) throw error;
+  if (error) throw importDatabaseError(error);
 }
