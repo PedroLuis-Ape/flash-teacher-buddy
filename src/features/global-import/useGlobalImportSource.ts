@@ -40,6 +40,7 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
   const [raw, setRaw] = useState("");
   const [validation, setValidation] = useState<GlobalImportV2ValidationResult | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
+  const layerReviewEnabled = Boolean(options.reviewLayers ?? options.repairSmartJson);
 
   const reset = (value: string) => {
     setRaw(value);
@@ -58,7 +59,7 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
       });
       const nextValidation = withLayerChecks(
         validateGlobalImportInput(smart.packageValue, null),
-        Boolean(options.reviewLayers),
+        layerReviewEnabled,
       );
       setRaw(value);
       setValidation(nextValidation);
@@ -70,7 +71,7 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
       const csv = parseGlobalImportCsv(value);
       const nextValidation = withLayerChecks(
         validateGlobalImportInput(csv.packageValue, null),
-        Boolean(options.reviewLayers),
+        layerReviewEnabled,
       );
       setRaw(value);
       setValidation(nextValidation);
@@ -82,7 +83,7 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
       ? repairSmartImportJsonText(value)
       : { text: value, changed: false, notes: [] as string[] };
     const result = analyzeGlobalImportText(repair.text);
-    const checkedValidation = withLayerChecks(result.validation, Boolean(options.reviewLayers));
+    const checkedValidation = withLayerChecks(result.validation, layerReviewEnabled);
     const nextNotes: string[] = [...repair.notes];
     if (result.parsed.extracted) nextNotes.push("Uma única cerca Markdown externa foi removida.");
     if (checkedValidation.sourceFormat === "smart") nextNotes.push("Contrato app-piteco-super-import 2.0 validado.");
