@@ -24,6 +24,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import {
+  cleanupAppOwnedCaches,
+  unregisterLegacyAppServiceWorkers,
+} from "@/lib/appCacheCleanup";
 import { equipAvatarAsPhoto } from "@/lib/storeEngine";
 import { GoogleAccountSection } from "@/features/auth/components/GoogleAccountSection";
 
@@ -52,14 +56,10 @@ const Profile = () => {
     setIsCheckingUpdate(true);
     toast.info("Buscando atualizações...");
     try {
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((registration) => registration.unregister()));
-      }
-      if (typeof caches !== "undefined") {
-        const names = await caches.keys();
-        await Promise.all(names.map((name) => caches.delete(name)));
-      }
+      await Promise.allSettled([
+        unregisterLegacyAppServiceWorkers(),
+        cleanupAppOwnedCaches(),
+      ]);
       try { localStorage.removeItem("app_build_id"); } catch { /* noop */ }
       try { sessionStorage.removeItem("app_build_reload_guard"); } catch { /* noop */ }
     } catch (error) {
