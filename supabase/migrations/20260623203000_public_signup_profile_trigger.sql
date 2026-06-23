@@ -68,8 +68,13 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.user_roles (user_id, role)
-  VALUES (NEW.id, v_role)
-  ON CONFLICT (user_id, role) DO NOTHING;
+  SELECT NEW.id, v_role
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.user_roles
+    WHERE user_id = NEW.id
+      AND role = v_role
+  );
 
   RETURN NEW;
 END;
