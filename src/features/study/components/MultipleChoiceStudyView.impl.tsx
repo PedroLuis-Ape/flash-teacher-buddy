@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
@@ -16,8 +16,6 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { pickSmartDistractors } from "@/features/study/lib/smartDistractors";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
-
-const AUTO_ADVANCE_DELAY_MS = 3500;
 
 interface MultipleChoiceStudyViewProps {
   currentCard: {
@@ -67,10 +65,6 @@ export const MultipleChoiceStudyView = ({
   const [showFeedback, setShowFeedback] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctIndex, setCorrectIndex] = useState(0);
-  const [secondsRemaining, setSecondsRemaining] = useState(Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000));
-  const autoAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pendingAdvanceRef = useRef<(() => void) | null>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
 
@@ -85,40 +79,6 @@ export const MultipleChoiceStudyView = ({
   const promptLabel = promptSide.label;
   const answerLabel = answerSide.label;
   const promptLang = toBCP47(promptSide.lang);
-
-  const clearAutoAdvance = useCallback(() => {
-    if (autoAdvanceTimeoutRef.current) {
-      clearTimeout(autoAdvanceTimeoutRef.current);
-      autoAdvanceTimeoutRef.current = null;
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-    pendingAdvanceRef.current = null;
-  }, []);
-
-  const runPendingAdvance = useCallback(() => {
-    const pendingAdvance = pendingAdvanceRef.current;
-    clearAutoAdvance();
-    pendingAdvance?.();
-  }, [clearAutoAdvance]);
-
-  const scheduleAutoAdvance = useCallback((advance: () => void) => {
-    clearAutoAdvance();
-    pendingAdvanceRef.current = advance;
-
-    const startedAt = Date.now();
-    setSecondsRemaining(Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000));
-
-    countdownIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startedAt;
-      const remaining = Math.max(0, AUTO_ADVANCE_DELAY_MS - elapsed);
-      setSecondsRemaining(Math.ceil(remaining / 1000));
-    }, 250);
-
-    autoAdvanceTimeoutRef.current = setTimeout(runPendingAdvance, AUTO_ADVANCE_DELAY_MS);
-  }, [clearAutoAdvance, runPendingAdvance]);
 
   useEffect(() => {
     const wrongOptions = allCards
@@ -138,31 +98,25 @@ export const MultipleChoiceStudyView = ({
     }
 
     const shuffled = [...shuffledWrong, correctAnswer].sort(() => Math.random() - 0.5);
-
-    clearAutoAdvance();
     setOptions(shuffled);
     setCorrectIndex(shuffled.indexOf(correctAnswer));
     setSelectedOption(null);
     setShowFeedback(false);
-    setSecondsRemaining(Math.ceil(AUTO_ADVANCE_DELAY_MS / 1000));
-  }, [currentCard, allCards, isAFirst, correctAnswer, clearAutoAdvance]);
-
-  useEffect(() => () => clearAutoAdvance(), [clearAutoAdvance]);
+  }, [currentCard, allCards, isAFirst, correctAnswer]);
 
   const handleOptionClick = useCallback((index: number) => {
     if (showFeedback) return;
-
     setSelectedOption(index);
     setShowFeedback(true);
+    if (index === correctIndex) playCorrect();
+    else playWrong();
+  }, [showFeedback, correctIndex]);
 
-    if (index === correctIndex) {
-      playCorrect();
-      scheduleAutoAdvance(onCorrect);
-    } else {
-      playWrong();
-      scheduleAutoAdvance(onIncorrect);
-    }
-  }, [showFeedback, correctIndex, scheduleAutoAdvance, onCorrect, onIncorrect]);
+  const advanceSelected = useCallback(() => {
+    if (!showFeedback || selectedOption === null) return;
+    if (selectedOption === correctIndex) onCorrect();
+    else onIncorrect();
+  }, [showFeedback, selectedOption, correctIndex, onCorrect, onIncorrect]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -173,7 +127,7 @@ export const MultipleChoiceStudyView = ({
         const nextKey = normalizeKey(shortcuts.nextCard);
         if (key === nextKey) {
           event.preventDefault();
-          runPendingAdvance();
+          advanceSelected();
         }
         return;
       }
@@ -192,7 +146,7 @@ export const MultipleChoiceStudyView = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showFeedback, options.length, shortcuts, handleOptionClick, runPendingAdvance]);
+  }, [showFeedback, options.length, shortcuts, handleOptionClick, advanceSelected]);
 
   const getOptionClassName = (index: number) => {
     if (!showFeedback) return "hover:bg-accent/50 cursor-pointer transition-colors";
@@ -232,6 +186,7 @@ export const MultipleChoiceStudyView = ({
               />
             </p>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               className="h-8 w-8 shrink-0 p-0"
@@ -271,9 +226,8 @@ export const MultipleChoiceStudyView = ({
           message={isCorrect ? "Você escolheu a tradução certa." : "Compare sua escolha com a resposta correta."}
           userAnswer={isCorrect ? null : selectedAnswer}
           correctAnswer={correctAnswer}
-          actionLabel="Próximo agora"
-          actionHint={`Próximo card automaticamente em ${secondsRemaining}s`}
-          onAction={runPendingAdvance}
+          actionLabel="Próximo card"
+          onAction={advanceSelected}
         />
       )}
     </div>
