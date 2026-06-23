@@ -10,18 +10,18 @@ interface Props {
 
 const OPTIONS = [
   {
-    id: "quick" as const,
-    title: "Adicionar cards a uma lista",
-    description: "Escolha uma lista existente. Nenhuma pasta ou lista nova será criada.",
-    badge: "Recomendado para o dia a dia",
-    icon: ListPlus,
+    id: "structured" as const,
+    title: "Criar listas dentro de uma pasta",
+    description: "Escolha uma pasta existente ou crie uma nova. Cada lista presente no JSON continua como uma lista separada.",
+    badge: "Recomendado para pacotes com várias listas",
+    icon: FolderTree,
   },
   {
-    id: "structured" as const,
-    title: "Criar ou atualizar uma estrutura",
-    description: "Use para pacotes com várias pastas, listas, camadas, explicações e glossário.",
-    badge: "Pacotes completos",
-    icon: FolderTree,
+    id: "quick" as const,
+    title: "Adicionar cards a uma única lista",
+    description: "Escolha uma lista já existente. Este modo não cria pastas nem listas novas.",
+    badge: "Somente para uma lista pronta",
+    icon: ListPlus,
   },
 ];
 
@@ -30,7 +30,7 @@ export function FlowChoicePanel({ value, onChange }: Props) {
     <div className="space-y-3">
       <div>
         <h2 className="text-xl font-semibold">O que você deseja fazer?</h2>
-        <p className="text-sm text-muted-foreground">Escolha primeiro a tarefa. O aplicativo mostrará somente as opções necessárias.</p>
+        <p className="text-sm text-muted-foreground">Para importar duas ou mais listas, escolha a primeira opção.</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {OPTIONS.map((option) => {
