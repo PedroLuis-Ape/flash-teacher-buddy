@@ -2,8 +2,13 @@ import { useState } from "react";
 import { analyzeGlobalImportText } from "./analysisService";
 import { parseGlobalImportCsv } from "./csvPackage";
 import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSchema";
+import { repairSmartImportJsonText } from "./smartJsonRepair";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
 import { looksLikeAdvancedSmartCsv, parseSmartImportSource } from "@/features/smart-import/sourceParser";
+
+interface UseGlobalImportSourceOptions {
+  repairSmartJson?: boolean;
+}
 
 function looksLikeLegacyCsv(value: string): boolean {
   const normalized = value.trim().replace(/^```(?:csv)?\s*/i, "");
@@ -16,7 +21,7 @@ function looksLikeJson(value: string): boolean {
   return normalized.startsWith("{") || normalized.startsWith("[");
 }
 
-export function useGlobalImportSource() {
+export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}) {
   const [raw, setRaw] = useState("");
   const [validation, setValidation] = useState<GlobalImportV2ValidationResult | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
@@ -52,14 +57,17 @@ export function useGlobalImportSource() {
       return nextValidation;
     }
 
-    const result = analyzeGlobalImportText(value);
-    const nextNotes: string[] = [];
+    const repair = options.repairSmartJson
+      ? repairSmartImportJsonText(value)
+      : { text: value, changed: false, notes: [] as string[] };
+    const result = analyzeGlobalImportText(repair.text);
+    const nextNotes: string[] = [...repair.notes];
     if (result.parsed.extracted) nextNotes.push("Uma única cerca Markdown externa foi removida.");
     if (result.validation.sourceFormat === "smart") nextNotes.push("Contrato app-piteco-super-import 2.0 validado.");
     if (result.validation.sourceFormat === "official") nextNotes.push("Contrato oficial app-piteco-super-import 1.0 validado.");
     if (result.validation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
     if (result.validation.sourceFormat === "legacy") nextNotes.push("Formato legado aceito por compatibilidade.");
-    setRaw(value);
+    setRaw(repair.changed ? repair.text : value);
     setValidation(result.validation);
     setNotes(nextNotes);
     return result.validation;
