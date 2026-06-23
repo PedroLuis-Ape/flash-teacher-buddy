@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, ChevronRight, Plus, Sparkles, Users } from "lucide-react";
 import { useTurmasAsAluno, useTurmasMine } from "@/features/classroom/hooks/useTurmas";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
+import { cn } from "@/lib/utils";
 
 interface Props {
   isTeacher: boolean;
@@ -27,20 +28,26 @@ export function TurmaShortcut({ isTeacher }: Props) {
   const title = isTeacher ? "Minhas Turmas" : "Suas Turmas";
 
   return (
-    <section className="home-turma-shortcut w-full min-w-0 space-y-3" aria-label={title}>
-      <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
+    <section className="home-turma-shortcut w-full min-w-0 space-y-2 sm:space-y-3" aria-label={title}>
+      <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-2">
           <Sparkles className="h-5 w-5 shrink-0 text-primary" />
           <div className="min-w-0 truncate">
             <ApeSectionTitle>{title}</ApeSectionTitle>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+
+        <div
+          className={cn(
+            "w-full gap-2 sm:w-auto",
+            isTeacher ? "grid grid-cols-2 sm:flex sm:flex-wrap" : "flex justify-end",
+          )}
+        >
           {isTeacher && (
             <Button
               size="sm"
               onClick={() => navigate(createRoute)}
-              className="min-h-[36px] shrink-0 px-3"
+              className="min-h-[36px] w-full px-2 sm:w-auto sm:px-3"
             >
               <Plus className="mr-1 h-4 w-4" />
               Nova turma
@@ -50,7 +57,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
             variant="ghost"
             size="sm"
             onClick={() => navigate(managementRoute)}
-            className="min-h-[36px] shrink-0 px-3 text-primary hover:text-primary"
+            className="min-h-[36px] w-full px-2 text-primary hover:text-primary sm:w-auto sm:px-3"
           >
             {isTeacher ? `Gerenciar (${turmas.length})` : `Ver todas (${turmas.length})`}
             <ChevronRight className="ml-1 h-4 w-4 shrink-0" />
@@ -59,7 +66,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
       </div>
 
       <Card className="card-premium w-full min-w-0 overflow-hidden">
-        <CardContent className="w-full min-w-0 space-y-3 p-4">
+        <CardContent className="w-full min-w-0 space-y-2 p-3 sm:space-y-3 sm:p-4">
           {turmas.length === 0 ? (
             <div className="rounded-xl border border-dashed border-primary/30 bg-primary/[0.04] p-5 text-center">
               <Users className="mx-auto h-8 w-8 text-primary" />
