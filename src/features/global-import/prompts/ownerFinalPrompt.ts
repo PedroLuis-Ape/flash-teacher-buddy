@@ -15,7 +15,7 @@ export function buildOwnerFinalImportPrompt(
 ): string {
   const canarySections = [
     "REGRA FINAL DA VERSÃO CANÁRIO",
-    "- Esta seção substitui o comportamento inicial descrito anteriormente.",
+    "- As escolhas confirmadas na entrevista valem mais do que os padrões iniciais do perfil.",
     "- A primeira resposta deve ser a entrevista; o JSON só pode ser produzido depois da resposta do usuário.",
     ...smartInterviewRules(preset, context.scope),
     "",
@@ -25,6 +25,7 @@ export function buildOwnerFinalImportPrompt(
     "",
     "CONFIGURAÇÃO CONFIRMADA PELO USUÁRIO",
     "- As respostas da entrevista definem os recursos usados no documento final.",
+    "- Não inclua um recurso recusado pelo usuário.",
     "- A primeira resposta contém somente a entrevista, sem JSON.",
     "- Depois da resposta do usuário, a saída contém somente o JSON final.",
     "- A resposta 'usar os padrões' confirma as opções iniciais do perfil.",
