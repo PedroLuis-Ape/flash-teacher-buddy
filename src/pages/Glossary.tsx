@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AccountGlossaryManager } from "@/features/study/components/AccountGlossaryManager";
+import { AllFoldersGlossarySyncPanel } from "@/features/study/components/AllFoldersGlossarySyncPanel";
 import { FolderGlossarySyncDialog } from "@/features/study/components/FolderGlossarySyncDialog";
 import { useFolderGlossary } from "@/hooks/useFolderGlossary";
 import { matchesSearchQuery } from "@/lib/searchText";
@@ -24,6 +25,7 @@ export default function Glossary() {
               <h1 className="text-xl font-semibold">Glossário central da sua conta</h1>
               <p className="mt-1 text-sm text-muted-foreground">Cada palavra ou expressão é armazenada uma única vez. Todas as listas atuais e futuras consultam esta mesma caixa automaticamente.</p>
             </div>
+            <AllFoldersGlossarySyncPanel />
             <AccountGlossaryManager defaultExpanded />
           </>
         )}
