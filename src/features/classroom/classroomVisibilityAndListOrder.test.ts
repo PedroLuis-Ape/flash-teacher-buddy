@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const layoutSource = readFileSync(new URL('../../components/layout/GlobalLayout.tsx', import.meta.url), 'utf8');
+const folderWorkspaceSource = readFileSync(
+  new URL('../../pages/FolderWorkspace.tsx', import.meta.url),
+  'utf8',
+);
 const assignmentManagerSource = readFileSync(
   new URL('./components/AssignmentOrderManager.tsx', import.meta.url),
   'utf8',
@@ -20,12 +24,15 @@ const guestCardsSql = readFileSync(
 );
 
 describe('classroom visibility inheritance and list ordering', () => {
-  it('places both organization controls at the top', () => {
+  it('keeps organization controls visible without covering folder content on mobile', () => {
     expect(assignmentManagerSource).toContain('top-24');
     expect(assignmentManagerSource).not.toContain('bottom-6');
     expect(listManagerSource).toContain('Organizar listas');
-    expect(listManagerSource).toContain('top-24');
-    expect(layoutSource).toContain('<ListSequenceDialog folderId={privateFolderId} />');
+    expect(listManagerSource).toContain('triggerClassName');
+    expect(folderWorkspaceSource).toContain('<ListSequenceDialog');
+    expect(folderWorkspaceSource).toContain('pb-24 md:contents');
+    expect(folderWorkspaceSource).toContain('md:fixed md:right-4 md:top-24');
+    expect(layoutSource).not.toContain('<ListSequenceDialog');
   });
 
   it('persists list positions with one-based indexes', () => {

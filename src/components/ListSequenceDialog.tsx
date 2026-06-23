@@ -9,9 +9,11 @@ import { assignmentPositionLabel, moveAssignmentToPosition } from '@/features/cl
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 interface ListSequenceDialogProps {
   folderId: string;
+  triggerClassName?: string;
 }
 
 interface OrderedList {
@@ -36,7 +38,7 @@ function sortLists(items: OrderedList[]) {
   });
 }
 
-export function ListSequenceDialog({ folderId }: ListSequenceDialogProps) {
+export function ListSequenceDialog({ folderId, triggerClassName }: ListSequenceDialogProps) {
   const { user } = useAuthUser();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -115,7 +117,10 @@ export function ListSequenceDialog({ folderId }: ListSequenceDialogProps) {
         type="button"
         variant="outline"
         size="sm"
-        className="fixed right-3 top-20 z-40 w-auto max-w-[calc(100vw-1.5rem)] gap-1.5 whitespace-nowrap px-3 text-xs shadow-lg sm:right-4 sm:top-24 sm:max-w-none sm:gap-2 sm:text-sm"
+        className={cn(
+          'gap-2 whitespace-nowrap',
+          triggerClassName ?? 'fixed right-3 top-20 z-40 w-auto max-w-[calc(100vw-1.5rem)] px-3 text-xs shadow-lg sm:right-4 sm:top-24 sm:max-w-none sm:text-sm',
+        )}
         onClick={() => setOpen(true)}
       >
         <ListOrdered className="h-4 w-4" />
