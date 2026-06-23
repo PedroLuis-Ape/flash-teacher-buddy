@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentProps } from "react";
+import { lazy, Suspense, useEffect, useRef, type ComponentProps } from "react";
 import { StudyCardDeck } from "./StudyCardDeck";
 import { WriteStudyView } from "./WriteStudyView";
 import {
@@ -18,6 +18,20 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
   const cardKey = props.currentCard.id || `${props.currentCard.term}:${props.currentCard.translation}`;
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const renderWrite = isMixedStudySession() && getMixedMultipleSlotMode(cardKey) === "write";
+  const navigationLockedRef = useRef(false);
+
+  useEffect(() => {
+    navigationLockedRef.current = false;
+  }, [cardKey, direction, renderWrite]);
+
+  const runOnce = (action: () => void) => {
+    if (navigationLockedRef.current) return;
+    navigationLockedRef.current = true;
+    action();
+  };
+
+  const onCorrect = () => runOnce(props.onCorrect);
+  const onIncorrect = () => runOnce(props.onIncorrect);
 
   if (renderWrite) {
     return (
@@ -38,9 +52,9 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
         onToggleRedList={props.onToggleRedList}
         isSpecial={props.isSpecial}
         onToggleSpecial={props.onToggleSpecial}
-        onCorrect={props.onCorrect}
-        onIncorrect={props.onIncorrect}
-        onSkip={props.onIncorrect}
+        onCorrect={onCorrect}
+        onIncorrect={onIncorrect}
+        onSkip={onIncorrect}
       />
     );
   }
@@ -48,7 +62,12 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
   return (
     <StudyCardDeck cardKey={cardKey} density="compact">
       <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando atividade...</div>}>
-        <LazyMultipleChoiceStudyView {...props} direction={direction} />
+        <LazyMultipleChoiceStudyView
+          {...props}
+          direction={direction}
+          onCorrect={onCorrect}
+          onIncorrect={onIncorrect}
+        />
       </Suspense>
     </StudyCardDeck>
   );
