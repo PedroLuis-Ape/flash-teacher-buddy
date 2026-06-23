@@ -40,13 +40,12 @@ export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFor
 
     const timer = window.setTimeout(async () => {
       setCheckingUsername(true);
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("public_slug")
-        .eq("public_slug", cleanUsername)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc(
+        "is_public_slug_available_v1" as never,
+        { p_slug: cleanUsername } as never,
+      );
 
-      setUsernameAvailable(!data && !error);
+      setUsernameAvailable(!error && data === true);
       setCheckingUsername(false);
     }, 500);
 
