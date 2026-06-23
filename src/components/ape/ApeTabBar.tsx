@@ -31,6 +31,15 @@ export function ApeTabBar() {
     return path !== "/" && location.pathname.startsWith(path + "/");
   };
 
+  const isSuperImportRoute =
+    location.pathname === "/import/super" ||
+    /^\/turmas\/[^/]+\/import\/super\/?$/.test(location.pathname);
+
+  // The Super Importer owns the bottom action area. Keeping the global tab bar
+  // mounted there creates two fixed interactive layers competing for clicks,
+  // especially below the desktop breakpoint.
+  if (isSuperImportRoute) return null;
+
   return (
     <nav
       className={cn(
