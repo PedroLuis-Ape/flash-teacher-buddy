@@ -1,0 +1,150 @@
+{
+  "schema": "app-piteco-phase-zero-findings",
+  "version": "1.0",
+  "updated_at": "2026-06-23",
+  "allowed_severities": ["P0", "P1", "P2"],
+  "allowed_statuses": [
+    "open",
+    "blocked_external_access",
+    "mitigated_in_draft_pr",
+    "read_only_evidence",
+    "procedure_ready"
+  ],
+  "findings": [
+    {
+      "id": "P0-ENV-001",
+      "severity": "P0",
+      "title": "Backend atual documentado não está disponível na conexão administrativa",
+      "status": "blocked_external_access",
+      "scope": "environment",
+      "evidence": [
+        ".env and supabase/config.toml reference ymahldldyxvwjeruaxpr",
+        "connected Supabase account lists only rnriudxxafcnftjiysue and xrnfhhoxmmstagmelvyi"
+      ],
+      "risk": "Não é possível provar schema, policies, grants, migrations, Storage e Edge Functions do backend que atende a produção.",
+      "required_action": "Obter acesso administrativo ou snapshot verificável do projeto ymahldldyxvwjeruaxpr.",
+      "exit_proof": "Snapshots de schema, policies, grants, funções, migrations, buckets e Edge Functions anexados."
+    },
+    {
+      "id": "P0-ENV-002",
+      "severity": "P0",
+      "title": "Chamadas reais do aplicativo publicado ainda não foram capturadas",
+      "status": "blocked_external_access",
+      "scope": "published-runtime",
+      "evidence": [
+        "backend-evidence.template.json remains pending",
+        "public search did not expose inspectable application resources"
+      ],
+      "risk": "O contrato versionado pode divergir do build realmente publicado.",
+      "required_action": "Executar o coletor sanitizado no aplicativo publicado e preencher a evidência de Auth, REST, RPC, Storage e Functions.",
+      "exit_proof": "Project ref observado e hosts dos cinco serviços correspondem ao ambiente aprovado."
+    },
+    {
+      "id": "P1-PERF-001",
+      "severity": "P1",
+      "title": "Baseline real de desktop e Android ainda não foi medida",
+      "status": "open",
+      "scope": "performance",
+      "evidence": [
+        "runtime-baseline.template.json remains pending"
+      ],
+      "risk": "Regressões de boot, retomada, navegação de cards e pastas podem chegar à publicação sem referência comparável.",
+      "required_action": "Preencher os dois perfis de baseline no build publicado.",
+      "exit_proof": "Métricas e aprovação de desktop/mobile registradas sem bloqueios P0/P1."
+    },
+    {
+      "id": "P1-AUTHZ-001",
+      "severity": "P1",
+      "title": "Cinco gates de VITE_OWNER_EMAIL permanecem na main",
+      "status": "mitigated_in_draft_pr",
+      "scope": "super-importer",
+      "evidence": [
+        "phase-zero-audit artifact reports five owner-email references",
+        "draft PR #154 replaces them with explicit test rollout"
+      ],
+      "risk": "Funções oficiais podem depender de identidade fixa no frontend.",
+      "required_action": "Homologar e revisar o PR #154; comprovar autorização equivalente no backend oficial.",
+      "exit_proof": "Main não usa e-mail fixo para liberar funções e testes negativos de backend passam."
+    },
+    {
+      "id": "P1-STUDY-001",
+      "severity": "P1",
+      "title": "Estabilidade do modo escrita aguarda teste manual",
+      "status": "mitigated_in_draft_pr",
+      "scope": "study-engine",
+      "evidence": [
+        "draft PR #153 removes automatic advance and duplicate transitions",
+        "CI and tests pass"
+      ],
+      "risk": "Aluno pode observar transição duplicada ou perda de controle do card.",
+      "required_action": "Executar roteiro manual em escrita normal e modo misto.",
+      "exit_proof": "Acerto, erro, Enter repetido, clique duplo, próximo e voltar passam no navegador."
+    },
+    {
+      "id": "P1-MIG-001",
+      "severity": "P1",
+      "title": "Drift de migrations entre repositório e backend oficial é desconhecido",
+      "status": "blocked_external_access",
+      "scope": "database-migrations",
+      "evidence": [
+        "repository inventory reports 182 SQL migration files",
+        "administrative access to ymahldldyxvwjeruaxpr is unavailable"
+      ],
+      "risk": "Aplicar migration sem conhecer o histórico oficial pode duplicar, sobrescrever ou corromper estrutura.",
+      "required_action": "Comparar histórico do repositório com o backend oficial antes de qualquer DDL.",
+      "exit_proof": "Relatório de drift classifica cada migration como aplicada, pendente, substituída ou incompatível."
+    },
+    {
+      "id": "P1-XRNF-001",
+      "severity": "P1",
+      "title": "Destino de migração possui tabelas com RLS sem policies",
+      "status": "read_only_evidence",
+      "scope": "xrnf-migration-target",
+      "evidence": [
+        "read-only audit found seven public tables with RLS enabled and no policies"
+      ],
+      "risk": "Acesso legítimo pode ficar bloqueado ou depender exclusivamente de funções privilegiadas não auditadas.",
+      "required_action": "Justificar cada tabela e testar o desenho quando xrnf entrar no plano de migração.",
+      "exit_proof": "Cada tabela possui policy mínima correta ou justificativa formal com API segura."
+    },
+    {
+      "id": "P1-XRNF-002",
+      "severity": "P1",
+      "title": "Função SECURITY DEFINER de glossário é executável por anônimo no destino de migração",
+      "status": "read_only_evidence",
+      "scope": "xrnf-migration-target",
+      "evidence": [
+        "get_account_glossary_for_list_v1(_list_id uuid) has anon EXECUTE"
+      ],
+      "risk": "List IDs forjados podem expor glossário privado se a função não validar escopo internamente.",
+      "required_action": "Auditar função, auth.uid, ownership, search_path e grants antes de usar xrnf.",
+      "exit_proof": "Anônimo e usuário B não acessam glossário privado do usuário A."
+    },
+    {
+      "id": "P1-XRNF-003",
+      "severity": "P1",
+      "title": "Rotinas SECURITY DEFINER autenticadas exigem revisão no destino de migração",
+      "status": "read_only_evidence",
+      "scope": "xrnf-migration-target",
+      "evidence": [
+        "profile, purchase, exchange and update functions are executable by authenticated role"
+      ],
+      "risk": "Parâmetros como user_id, buyer_id, price ou operation_id podem ser forjados se não houver validação interna.",
+      "required_action": "Executar testes diretos com usuário A/B e payloads adulterados.",
+      "exit_proof": "Todas as rotinas derivam identidade do token, validam ownership e são idempotentes."
+    },
+    {
+      "id": "P2-CONFIG-001",
+      "severity": "P2",
+      "title": ".env pública permanece versionada por compatibilidade",
+      "status": "procedure_ready",
+      "scope": "repository-config",
+      "evidence": [
+        "environment contract permits only public VITE variables and validates project/key consistency"
+      ],
+      "risk": "Um segredo pode ser adicionado por engano em alteração futura.",
+      "required_action": "Manter CI bloqueando variáveis privadas e migrar para variáveis da plataforma após preview comprovado.",
+      "exit_proof": "Deploy funciona sem .env versionada e nenhum segredo aparece no histórico novo."
+    }
+  ]
+}
