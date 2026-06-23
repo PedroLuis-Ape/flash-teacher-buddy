@@ -65,16 +65,23 @@ BEGIN
     v_slug,
     v_is_teacher AND v_slug IS NOT NULL
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE
+  SET first_name = COALESCE(EXCLUDED.first_name, public.profiles.first_name),
+      avatar_url = COALESCE(EXCLUDED.avatar_url, public.profiles.avatar_url),
+      role = EXCLUDED.role,
+      is_teacher = EXCLUDED.is_teacher,
+      user_type = EXCLUDED.user_type,
+      public_slug = COALESCE(public.profiles.public_slug, EXCLUDED.public_slug),
+      public_access_enabled = CASE
+        WHEN EXCLUDED.is_teacher THEN COALESCE(public.profiles.public_slug, EXCLUDED.public_slug) IS NOT NULL
+        ELSE false
+      END,
+      updated_at = now();
 
   INSERT INTO public.user_roles (user_id, role)
-  SELECT NEW.id, v_role
-  WHERE NOT EXISTS (
-    SELECT 1
-    FROM public.user_roles
-    WHERE user_id = NEW.id
-      AND role = v_role
-  );
+  VALUES (NEW.id, v_role)
+  ON CONFLICT (user_id) DO UPDATE
+  SET role = EXCLUDED.role;
 
   RETURN NEW;
 END;
@@ -82,6 +89,8 @@ $$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP TRIGGER IF EXISTS on_auth_user_created_assign_role ON auth.users;
+DROP TRIGGER IF EXISTS on_auth_user_created_profile ON auth.users;
+DROP TRIGGER IF EXISTS on_auth_user_created_role ON auth.users;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
