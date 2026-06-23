@@ -1,7 +1,13 @@
 import * as React from "react";
 import { Lightbulb, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface HintModalProps {
   hint?: string | null;
@@ -42,7 +48,7 @@ const renderHintBody = (raw: string): React.ReactNode => {
       return (
         <ul
           key={bi}
-          className="list-disc pl-5 space-y-1.5 my-2 marker:text-muted-foreground"
+          className="my-2 list-disc space-y-1.5 pl-5 marker:text-muted-foreground"
         >
           {items.map((item, ii) => (
             <li key={ii} className="leading-relaxed">{renderInline(item)}</li>
@@ -54,7 +60,7 @@ const renderHintBody = (raw: string): React.ReactNode => {
     return (
       <p
         key={bi}
-        className="leading-relaxed mb-3 last:mb-0"
+        className="mb-3 leading-relaxed last:mb-0"
         style={{ whiteSpace: "pre-line" }}
       >
         {renderInline(block)}
@@ -72,47 +78,58 @@ export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
       || hint?.includes("**Quando usar**")
       || hint?.includes("**Erros comuns**"),
   );
+  const title = hasHint
+    ? hasDetailedExplanation ? "Dica e explicação" : "Dica"
+    : "Sem dica";
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-4"
-      onClick={onClose}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
     >
-      <Card
-        className={`relative w-full max-w-lg max-h-[85dvh] p-4 sm:p-6 animate-fade-in ${hasHint ? "border-warning/50" : "border-muted"}`}
-        onClick={(event) => event.stopPropagation()}
+      <DialogContent
+        hideClose
+        className={`max-h-[85dvh] max-w-lg overflow-hidden p-0 ${hasHint ? "border-warning/50" : "border-muted"}`}
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-2 right-2 h-8 w-8 p-0"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="relative p-4 sm:p-6">
+          <DialogClose asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-2 top-2 z-10 h-8 min-h-8 w-8 min-w-8 p-0"
+              aria-label="Fechar dica"
+              title="Fechar dica"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogClose>
 
-        <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-full shrink-0 ${hasHint ? "bg-warning/20" : "bg-muted"}`}>
-            <Lightbulb className={`h-5 w-5 ${hasHint ? "text-warning" : "text-muted-foreground"}`} />
-          </div>
-          <div className="flex-1 pt-1 min-w-0">
-            <h3 className={`font-semibold mb-2 pr-8 ${hasHint ? "text-warning" : "text-muted-foreground"}`}>
-              {hasHint
-                ? hasDetailedExplanation ? "Dica e explicação" : "Dica"
-                : "Sem dica"}
-            </h3>
-            <div className="text-foreground text-[15px] sm:text-base max-h-[68dvh] overflow-y-auto overscroll-contain pr-2">
-              {hasHint
-                ? renderHintBody(hint as string)
-                : (
-                  <p className="leading-relaxed text-muted-foreground">
-                    Nenhuma dica disponível para este card.
-                  </p>
-                )}
+          <div className="flex items-start gap-3">
+            <div className={`shrink-0 rounded-full p-2 ${hasHint ? "bg-warning/20" : "bg-muted"}`}>
+              <Lightbulb className={`h-5 w-5 ${hasHint ? "text-warning" : "text-muted-foreground"}`} />
+            </div>
+            <div className="min-w-0 flex-1 pt-1">
+              <DialogTitle className={`mb-2 pr-8 text-base font-semibold ${hasHint ? "text-warning" : "text-muted-foreground"}`}>
+                {title}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Conteúdo de apoio do flashcard atual.
+              </DialogDescription>
+              <div className="max-h-[68dvh] touch-pan-y overflow-y-auto overscroll-contain pr-2 text-[15px] text-foreground sm:text-base">
+                {hasHint
+                  ? renderHintBody(hint as string)
+                  : (
+                    <p className="leading-relaxed text-muted-foreground">
+                      Nenhuma dica disponível para este card.
+                    </p>
+                  )}
+              </div>
             </div>
           </div>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
