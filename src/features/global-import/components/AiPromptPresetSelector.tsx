@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { BookOpenCheck, Check, Clipboard, Eye, Layers3, LibraryBig } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,14 +18,21 @@ interface Props {
 
 const ICONS = { batch: Layers3, detailed: BookOpenCheck, complete: LibraryBig } satisfies Record<GlobalImportAiPreset, typeof Layers3>;
 
+function normalized(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 export function AiPromptPresetSelector({ context, smartInterview = false }: Props) {
+  const { user } = useAuth();
   const [preset, setPreset] = useState<GlobalImportAiPreset>("batch");
   const [visible, setVisible] = useState(false);
+  const ownerEmail = normalized(import.meta.env.VITE_OWNER_EMAIL);
+  const ownerInterview = smartInterview || Boolean(ownerEmail && normalized(user?.email) === ownerEmail);
   const prompt = useMemo(() => (
-    smartInterview && context
+    ownerInterview && context
       ? buildOwnerFinalImportPrompt(preset, context)
       : buildFinalGlobalImportPrompt(preset, context)
-  ), [preset, context, smartInterview]);
+  ), [preset, context, ownerInterview]);
   const selected = GLOBAL_IMPORT_AI_PRESETS.find((item) => item.id === preset)!;
 
   const copyPrompt = () => {
@@ -33,7 +41,7 @@ export function AiPromptPresetSelector({ context, smartInterview = false }: Prop
   };
 
   return <Card className="space-y-5 p-5">
-    <div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">Criar conteúdo com IA</h2><Badge variant="secondary">contrato 2.0</Badge></div><p className="mt-1 text-sm text-muted-foreground">Escolha o nível de conteúdo. O prompt exige um JSON que o App Piteco consegue validar e importar.</p></div>
+    <div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">Criar conteúdo com IA</h2><Badge variant="secondary">contrato 2.0</Badge>{ownerInterview && <Badge>entrevista guiada</Badge>}</div><p className="mt-1 text-sm text-muted-foreground">{ownerInterview ? "O perfil escolhido é o ponto de partida. A IA confirma suas preferências antes de gerar o JSON." : "Escolha o nível de conteúdo. O prompt exige um JSON que o App Piteco consegue validar e importar."}</p></div>
     <div className="grid gap-3 lg:grid-cols-3">
       {GLOBAL_IMPORT_AI_PRESETS.map((item) => {
         const Icon = ICONS[item.id];
