@@ -7,16 +7,18 @@ export type CurrentDetailedExplanation = {
 let currentValue: CurrentDetailedExplanation = {};
 const subscribers = new Set<() => void>();
 
-export function setCurrentDetailedExplanation(value: CurrentDetailedExplanation) {
+export function setCurrentDetailedExplanation(value: CurrentDetailedExplanation): void {
   currentValue = value;
   subscribers.forEach((callback) => callback());
 }
 
-export function getCurrentDetailedExplanation() {
+export function getCurrentDetailedExplanation(): CurrentDetailedExplanation {
   return currentValue;
 }
 
-export function subscribeCurrentDetailedExplanation(callback: () => void) {
+export function subscribeCurrentDetailedExplanation(callback: () => void): () => void {
   subscribers.add(callback);
-  return () => subscribers.delete(callback);
+  return function cleanup() {
+    subscribers.delete(callback);
+  };
 }
