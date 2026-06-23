@@ -11,7 +11,7 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Get the session - Supabase handles the OAuth callback automatically
+        const flow = new URLSearchParams(window.location.search).get("flow");
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -21,39 +21,48 @@ const AuthCallback = () => {
           return;
         }
 
-        if (session) {
-          // Check if this was a link identity operation (Google connect)
-          const { data: identitiesData } = await supabase.auth.getUserIdentities();
-          const hasGoogle = identitiesData?.identities?.some(i => i.provider === "google") ?? false;
-
-          if (hasGoogle) {
-            // Update google_connected_at in profile
-            await supabase.rpc('update_own_profile', {
-              p_user_id: session.user.id,
-              p_google_connected_at: new Date().toISOString()
-            });
-
-            toast.success("Google conectado com sucesso! 🎉");
-          } else {
-            // Regular login success
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("first_name")
-              .eq("id", session.user.id)
-              .maybeSingle();
-
-            toast.success(`Bem-vindo${profile?.first_name ? `, ${profile.first_name}` : ""}!`);
-          }
-
-          setMessage("Redirecionando...");
-          navigate("/dashboard", { replace: true });
-        } else {
-          // No session, redirect to auth
+        if (!session) {
           navigate("/auth", { replace: true });
+          return;
         }
+
+        setMessage("Concluindo seu perfil...");
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("first_name, is_teacher, public_slug")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+        if (!profile) {
+          throw new Error("Sua conta foi confirmada, mas o perfil ainda não foi criado.");
+        }
+
+        if (flow === "link-google") {
+          await supabase.rpc("update_own_profile", {
+            p_user_id: session.user.id,
+            p_google_connected_at: new Date().toISOString(),
+          });
+          toast.success("Google conectado com sucesso! 🎉");
+        } else {
+          toast.success(
+            flow === "signup"
+              ? `Conta confirmada${profile.first_name ? `, ${profile.first_name}` : ""}!`
+              : `Bem-vindo${profile.first_name ? `, ${profile.first_name}` : ""}!`,
+          );
+        }
+
+        setMessage("Redirecionando...");
+        const route = profile.is_teacher
+          ? profile.public_slug
+            ? "/painel-professor"
+            : "/settings/public-profile"
+          : "/dashboard";
+        navigate(route, { replace: true });
       } catch (error) {
         console.error("[AuthCallback] Error:", error);
-        toast.error("Erro inesperado. Tente novamente.");
+        const message = error instanceof Error ? error.message : "Erro inesperado. Tente novamente.";
+        toast.error(message);
         navigate("/auth", { replace: true });
       }
     };
