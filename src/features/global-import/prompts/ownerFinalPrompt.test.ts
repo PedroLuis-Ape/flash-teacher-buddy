@@ -19,25 +19,27 @@ describe("owner guided import prompt", () => {
     expect(prompt).toContain("usar os padrões");
   });
 
-  it("defines the semantic difference between layers and alternative translations", () => {
+  it("generates useful interpretations as separate normal cards", () => {
     const prompt = buildOwnerFinalImportPrompt("detailed", {
       ...classroomContext,
       scope: "personal",
     });
 
-    expect(prompt).toContain("CONTRATO SEMÂNTICO DE CAMADAS");
-    expect(prompt).toContain("group_title deve ser o termo-base estudado");
-    expect(prompt).toContain("Traduções sinônimas da mesma ideia não viram layers diferentes");
-    expect(prompt).toContain("short_observation");
+    expect(prompt).toContain("CARDS NORMAIS APENAS");
+    expect(prompt).toContain("Nunca gere objetos com type=layered");
+    expect(prompt).toContain("to be");
+    expect(prompt).toContain('"back": "ser"');
+    expect(prompt).toContain('"back": "estar"');
     expect(prompt).toContain("turn up");
-    expect(prompt).toContain("context_tag");
-    expect(prompt).toContain("Não una traduções alternativas");
+    expect(prompt).toContain("Mesclar em camadas");
+    expect(prompt).not.toContain("CONTRATO SEMÂNTICO DE CAMADAS");
   });
 
-  it("keeps the regular prompt unchanged outside the owner canary builder", () => {
+  it("keeps the regular prompt without the owner interview", () => {
     const regularPrompt = buildFinalGlobalImportPrompt("complete", classroomContext);
 
     expect(regularPrompt).not.toContain("ENTREVISTA INICIAL EM DUAS FASES");
-    expect(regularPrompt).not.toContain("CONFIGURAÇÃO DA VERSÃO CANÁRIO");
+    expect(regularPrompt).toContain("Inclua somente cards com type=normal");
+    expect(regularPrompt).toContain("um card para ser e outro para estar");
   });
 });

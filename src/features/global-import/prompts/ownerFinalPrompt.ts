@@ -4,8 +4,8 @@ import type {
   GlobalImportPromptDestinationContext,
 } from "./presets";
 import {
-  SMART_LAYER_REFERENCE,
-  SMART_LAYER_RULES,
+  NORMAL_CARD_INTERPRETATION_RULES,
+  NORMAL_CARD_REFERENCE,
   smartInterviewRules,
 } from "./smartInterview";
 
@@ -19,9 +19,9 @@ export function buildOwnerFinalImportPrompt(
     "- A primeira resposta deve ser a entrevista; o JSON só pode ser produzido depois da resposta do usuário.",
     ...smartInterviewRules(preset, context.scope),
     "",
-    ...SMART_LAYER_RULES,
+    ...NORMAL_CARD_INTERPRETATION_RULES,
     "",
-    SMART_LAYER_REFERENCE,
+    NORMAL_CARD_REFERENCE,
     "",
     "CONFIGURAÇÃO CONFIRMADA PELO USUÁRIO",
     "- As respostas da entrevista definem os recursos usados no documento final.",
@@ -30,7 +30,7 @@ export function buildOwnerFinalImportPrompt(
     "- Depois da resposta do usuário, a saída contém somente o JSON final.",
     "- A resposta 'usar os padrões' confirma as opções iniciais do perfil.",
     "- O Glossário Global precisa de confirmação explícita.",
-    "- Não junte traduções alternativas com barra, pipe ou ponto e vírgula.",
+    "- Nunca gere cards layered. Gere interpretações úteis como cards normais separados.",
   ];
 
   return [buildFinalGlobalImportPrompt(preset, context), "", ...canarySections].join("\n");
