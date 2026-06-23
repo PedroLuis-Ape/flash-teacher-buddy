@@ -31,6 +31,7 @@ const ParaProfessores = lazy(() => import("./pages/seo/ParaProfessores"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
 const Folder = lazy(() => import("./pages/Folder"));
+const FolderWithExport = lazy(() => import("./pages/FolderWithExport"));
 const ListDetail = lazy(() => import("./pages/ListDetail"));
 const Collection = lazy(() => import("./pages/Collection"));
 const PublicCollection = lazy(() => import("./pages/PublicCollection"));
@@ -141,7 +142,7 @@ const App = () => {
                           <Route path="/folders" element={<Folders />} />
                           <Route path="/glossary" element={<Glossary />} />
                           <Route path="/search" element={<Search />} />
-                          <Route path="/folder/:id" element={<Folder />} />
+                          <Route path="/folder/:id" element={<FolderWithExport />} />
                           <Route path="/list/:id" element={<ListDetail />} />
                           <Route path="/list/:id/games" element={<ListDirectionGate><GamesHub /></ListDirectionGate>} />
                           <Route path="/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
