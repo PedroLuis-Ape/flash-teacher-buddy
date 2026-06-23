@@ -111,7 +111,13 @@ export function ListSequenceDialog({ folderId }: ListSequenceDialogProps) {
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" className="fixed right-4 top-24 z-40 gap-2 shadow-lg" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="fixed right-3 top-20 z-40 w-auto max-w-[calc(100vw-1.5rem)] gap-1.5 whitespace-nowrap px-3 text-xs shadow-lg sm:right-4 sm:top-24 sm:max-w-none sm:gap-2 sm:text-sm"
+        onClick={() => setOpen(true)}
+      >
         <ListOrdered className="h-4 w-4" />
         Organizar listas
       </Button>
