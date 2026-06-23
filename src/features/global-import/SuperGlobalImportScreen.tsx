@@ -6,6 +6,7 @@ import {
   isSuperImportLegacyForced,
   isSuperImportTestRolloutEnabled,
 } from "./testRollout";
+import "./superImportTestRollout.css";
 
 function globalGuidedEnabled(): boolean {
   if (isSuperImportLegacyForced()) return false;
@@ -23,7 +24,14 @@ export default function SuperGlobalImportScreen() {
     );
   }
 
-  if (isSuperImportTestRolloutEnabled()) return <OwnerGuidedImportWizard />;
+  if (isSuperImportTestRolloutEnabled()) {
+    return (
+      <div data-super-import-test-rollout="true">
+        <OwnerGuidedImportWizard />
+      </div>
+    );
+  }
+
   if (globalGuidedEnabled()) return <GuidedGlobalImportScreen />;
   return <SuperGlobalImportScreenV2 />;
 }
