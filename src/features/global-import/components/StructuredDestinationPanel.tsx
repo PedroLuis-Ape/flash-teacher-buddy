@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { FolderInput, FolderPlus, FolderTree } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -21,6 +22,13 @@ interface Props {
 }
 
 export function StructuredDestinationPanel(props: Props) {
+  useEffect(() => {
+    if (props.mode === "from-file") props.onModeChange("existing-folder");
+    if (props.listConflictPolicy === "append") props.onListConflictPolicyChange("rename");
+    // Define somente os padrões iniciais seguros; escolhas feitas depois da montagem são preservadas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Card className="space-y-5 p-5">
       <div className="flex items-start gap-3">
