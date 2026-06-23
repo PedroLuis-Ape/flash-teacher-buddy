@@ -12,5 +12,9 @@ export default function SuperGlobalImportScreen() {
     );
   }
 
-  return <OwnerGuidedImportWizard />;
+  return (
+    <div className="canonical-super-import">
+      <OwnerGuidedImportWizard />
+    </div>
+  );
 }
