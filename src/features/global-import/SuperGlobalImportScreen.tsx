@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import GuidedGlobalImportScreen from "./GuidedGlobalImportScreen";
+import OwnerGuidedImportWizard from "./OwnerGuidedImportWizard";
 import SuperGlobalImportScreenV2 from "./SuperGlobalImportScreenV2";
 
 const STORAGE_KEY = "app-piteco:super-import-v3";
@@ -18,19 +19,18 @@ function isOwnerCanaryAccount(user: ReturnType<typeof useAuth>["user"]): boolean
   );
 }
 
-function shouldUseGuidedVersion(isOwnerCanary: boolean): boolean {
+function legacyForced(): boolean {
   if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("superImport") === "legacy";
+}
 
-  const forced = new URLSearchParams(window.location.search).get("superImport");
-  if (forced === "legacy") return false;
+function ownerCanUseWizard(isOwnerCanary: boolean): boolean {
+  if (!isOwnerCanary || typeof window === "undefined" || legacyForced()) return false;
+  return window.localStorage.getItem(STORAGE_KEY) !== "disabled";
+}
 
-  if (isOwnerCanary) {
-    if (forced === "v3") return true;
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "disabled") return false;
-    return true;
-  }
-
+function globalGuidedEnabled(): boolean {
+  if (typeof window === "undefined" || legacyForced()) return false;
   return import.meta.env.VITE_SUPER_IMPORT_V3 === "true";
 }
 
@@ -45,6 +45,8 @@ export default function SuperGlobalImportScreen() {
     );
   }
 
-  const guided = shouldUseGuidedVersion(isOwnerCanaryAccount(user));
-  return guided ? <GuidedGlobalImportScreen /> : <SuperGlobalImportScreenV2 />;
+  const isOwnerCanary = isOwnerCanaryAccount(user);
+  if (ownerCanUseWizard(isOwnerCanary)) return <OwnerGuidedImportWizard />;
+  if (globalGuidedEnabled()) return <GuidedGlobalImportScreen />;
+  return <SuperGlobalImportScreenV2 />;
 }
