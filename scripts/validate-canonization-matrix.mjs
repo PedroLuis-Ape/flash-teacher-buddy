@@ -1,8 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const filePath = resolve(process.cwd(), "docs/implementation/canonization-matrix.json");
-const matrix = JSON.parse(readFileSync(filePath, "utf8"));
+function readJson(relativePath) {
+  return JSON.parse(readFileSync(resolve(process.cwd(), relativePath), "utf8"));
+}
+
+const matrix = readJson("docs/implementation/canonization-matrix.json");
+const accounts = readJson("docs/implementation/test-accounts-matrix.json");
 const errors = [];
 
 if (matrix.schema !== "app-piteco-canonization-matrix") {
@@ -19,8 +23,8 @@ if (!Array.isArray(matrix.features) || matrix.features.length === 0) {
 }
 
 const allowedStatuses = new Set(matrix.statuses ?? []);
-const seenIds = new Set();
-const requiredFields = [
+const featureIds = new Set();
+const requiredFeatureFields = [
   "id",
   "name",
   "audience",
@@ -33,8 +37,8 @@ const requiredFields = [
 ];
 
 for (const [index, feature] of (matrix.features ?? []).entries()) {
-  const label = feature?.id || `índice ${index}`;
-  for (const field of requiredFields) {
+  const label = feature?.id || `função no índice ${index}`;
+  for (const field of requiredFeatureFields) {
     const value = feature?.[field];
     const emptyArray = Array.isArray(value) && value.length === 0;
     if (value === undefined || value === null || value === "" || emptyArray) {
@@ -42,8 +46,8 @@ for (const [index, feature] of (matrix.features ?? []).entries()) {
     }
   }
 
-  if (seenIds.has(feature.id)) errors.push(`ID duplicado: ${feature.id}`);
-  seenIds.add(feature.id);
+  if (featureIds.has(feature.id)) errors.push(`ID de função duplicado: ${feature.id}`);
+  featureIds.add(feature.id);
 
   if (!allowedStatuses.has(feature.status)) {
     errors.push(`${label}: status não permitido: ${feature.status}`);
@@ -62,6 +66,62 @@ for (const [index, feature] of (matrix.features ?? []).entries()) {
   }
 }
 
+if (accounts.schema !== "app-piteco-test-accounts-matrix") {
+  errors.push("Schema inválido para a matriz de contas de teste.");
+}
+if (accounts.version !== "1.0") {
+  errors.push("Versão inválida para a matriz de contas de teste.");
+}
+if (!Array.isArray(accounts.personas) || accounts.personas.length < 6) {
+  errors.push("A matriz de contas deve conter pelo menos seis personas.");
+}
+
+const personaIds = new Set();
+const requiredPersonaFields = [
+  "id",
+  "role",
+  "account_state",
+  "must_access",
+  "must_not_access",
+  "proofs",
+];
+
+for (const [index, persona] of (accounts.personas ?? []).entries()) {
+  const label = persona?.id || `persona no índice ${index}`;
+  for (const field of requiredPersonaFields) {
+    const value = persona?.[field];
+    const emptyArray = Array.isArray(value) && value.length === 0;
+    if (value === undefined || value === null || value === "" || emptyArray) {
+      errors.push(`${label}: campo obrigatório ausente ou vazio: ${field}`);
+    }
+  }
+
+  if (personaIds.has(persona.id)) errors.push(`ID de persona duplicado: ${persona.id}`);
+  personaIds.add(persona.id);
+
+  for (const field of ["must_access", "must_not_access", "proofs"]) {
+    if (!Array.isArray(persona[field]) || !persona[field].every((item) => typeof item === "string")) {
+      errors.push(`${label}: ${field} deve ser uma lista de strings.`);
+    }
+  }
+}
+
+for (const requiredPersona of [
+  "teacher-a",
+  "teacher-b",
+  "student-a",
+  "student-b",
+  "visitor",
+  "incomplete-profile",
+]) {
+  if (!personaIds.has(requiredPersona)) errors.push(`Persona obrigatória ausente: ${requiredPersona}`);
+}
+
+const serializedAccounts = JSON.stringify(accounts).toLowerCase();
+if (serializedAccounts.includes("@") || serializedAccounts.includes("password")) {
+  errors.push("A matriz de contas não pode conter e-mails ou senhas reais.");
+}
+
 if (errors.length > 0) {
   errors.forEach((error) => console.error(`ERRO: ${error}`));
   process.exit(1);
@@ -75,4 +135,5 @@ const counts = Object.fromEntries(
 );
 
 console.log(`Matriz de canonização válida: ${matrix.features.length} funções.`);
+console.log(`Matriz de contas válida: ${accounts.personas.length} personas.`);
 console.log(JSON.stringify(counts));
