@@ -117,9 +117,11 @@ for (const requiredPersona of [
   if (!personaIds.has(requiredPersona)) errors.push(`Persona obrigatória ausente: ${requiredPersona}`);
 }
 
-const serializedAccounts = JSON.stringify(accounts).toLowerCase();
-if (serializedAccounts.includes("@") || serializedAccounts.includes("password")) {
-  errors.push("A matriz de contas não pode conter e-mails ou senhas reais.");
+const serializedAccounts = JSON.stringify(accounts);
+const realEmailPattern = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+const populatedCredentialField = /"(?:email|password|token|secret)"\s*:\s*"[^"\s]+"/i;
+if (realEmailPattern.test(serializedAccounts) || populatedCredentialField.test(serializedAccounts)) {
+  errors.push("A matriz de contas não pode conter credenciais preenchidas.");
 }
 
 if (errors.length > 0) {
