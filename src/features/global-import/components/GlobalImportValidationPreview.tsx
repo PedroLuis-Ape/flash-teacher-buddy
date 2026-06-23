@@ -1,10 +1,10 @@
 import { AlertTriangle, FolderTree, Wrench } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { summarizeSmartImport } from "@/features/smart-import/schema";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { GlobalImportList, GlobalImportPackage } from "../schema";
+import { isSuperImportTestRolloutEnabled } from "../testRollout";
 import type { GlobalImportIssue, GlobalImportV2ValidationResult } from "../validation";
 
 interface Props {
@@ -43,10 +43,6 @@ function listDirection(list: GlobalImportList, packageValue: GlobalImportPackage
   return front && back ? `${front} → ${back}` : null;
 }
 
-function normalizeEmail(value: unknown): string {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
 function groupIssues(issues: GlobalImportIssue[]): GroupedIssue[] {
   const groups = new Map<string, GroupedIssue>();
   issues.forEach((issue) => {
@@ -68,14 +64,12 @@ function groupIssues(issues: GlobalImportIssue[]): GroupedIssue[] {
 }
 
 export function GlobalImportValidationPreview(props: Props) {
-  const { user } = useAuth();
-  const ownerEmail = normalizeEmail(import.meta.env.VITE_OWNER_EMAIL);
-  const ownerCanary = Boolean(ownerEmail && normalizeEmail(user?.email) === ownerEmail);
+  const testRollout = isSuperImportTestRolloutEnabled();
   const errors = props.validation.issues.filter((issue) => issue.severity === "error");
   const warnings = props.validation.issues.filter((issue) => issue.severity === "warning");
   const smart = props.validation.smartPackage ? summarizeSmartImport(props.validation.smartPackage) : null;
-  const groupedIssues = ownerCanary ? groupIssues(props.validation.issues) : [];
-  const repairNotes = ownerCanary
+  const groupedIssues = testRollout ? groupIssues(props.validation.issues) : [];
+  const repairNotes = testRollout
     ? props.notes.filter((note) => note.toLowerCase().includes("correç") || note.includes("convertido"))
     : [];
 
@@ -127,14 +121,14 @@ export function GlobalImportValidationPreview(props: Props) {
       {props.validation.issues.length > 0 && (
         <Card className="space-y-3 p-5">
           <h2 className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" />Validação</h2>
-          {ownerCanary && errors.length > 0 && (
+          {testRollout && errors.length > 0 && (
             <p className="text-sm text-muted-foreground">
               Erros iguais foram agrupados. Corrija o tipo de problema, não cada linha individualmente.
             </p>
           )}
           <ScrollArea className="max-h-72">
             <div className="space-y-2 pr-3">
-              {ownerCanary
+              {testRollout
                 ? groupedIssues.map((group) => (
                     <div key={group.key} className="rounded border p-3 text-sm">
                       <div className="flex flex-wrap items-center gap-2">
