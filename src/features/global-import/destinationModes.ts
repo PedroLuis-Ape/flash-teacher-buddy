@@ -79,7 +79,7 @@ export function prepareGlobalImportDestination(
     "Os nomes de pasta presentes no conteúdo serão ignorados porque uma pasta única foi escolhida na interface.",
   ];
   const errors: string[] = [];
-  const conflictPolicy = config.listConflictPolicy ?? "append";
+  const conflictPolicy = config.listConflictPolicy ?? "rename";
   const incomingLists = packageValue.package.folders.flatMap((folder) => folder.lists);
 
   let folderName = "";
@@ -151,6 +151,13 @@ export function prepareGlobalImportDestination(
     errors.push("Nenhuma lista restou para importar com a política escolhida.");
     return { packageValue: null, plan: null, warnings, errors, skippedLists };
   }
+
+  const destinations = Object.values(listPlan);
+  const listsToCreate = destinations.filter((destination) => destination.mode === "create").length;
+  const listsToReuse = destinations.filter((destination) => destination.mode === "existing").length;
+  warnings.unshift(
+    `Resumo do destino: ${incomingLists.length} lista(s) recebidas; ${preparedLists.length} serão importadas separadamente em “${folderName}” (${listsToCreate} nova(s) e ${listsToReuse} existente(s)).`,
+  );
 
   const totalCards = preparedLists.reduce((sum, list) => sum + list.cards.length, 0);
   const preparedPackage: GlobalImportPackage = {

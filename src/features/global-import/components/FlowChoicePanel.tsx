@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Check, FolderTree, ListPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -10,27 +11,54 @@ interface Props {
 
 const OPTIONS = [
   {
-    id: "quick" as const,
-    title: "Adicionar cards a uma lista",
-    description: "Escolha uma lista existente. Nenhuma pasta ou lista nova será criada.",
-    badge: "Recomendado para o dia a dia",
-    icon: ListPlus,
+    id: "structured" as const,
+    title: "Criar listas dentro de uma pasta",
+    description: "Escolha uma pasta existente ou crie uma nova. Cada lista presente no JSON continua como uma lista separada.",
+    badge: "Recomendado para pacotes com várias listas",
+    icon: FolderTree,
   },
   {
-    id: "structured" as const,
-    title: "Criar ou atualizar uma estrutura",
-    description: "Use para pacotes com várias pastas, listas, camadas, explicações e glossário.",
-    badge: "Pacotes completos",
-    icon: FolderTree,
+    id: "quick" as const,
+    title: "Adicionar cards a uma única lista",
+    description: "Escolha uma lista já existente. Este modo não cria pastas nem listas novas.",
+    badge: "Somente para uma lista pronta",
+    icon: ListPlus,
   },
 ];
 
+function flowStorageKey(): string {
+  if (typeof window === "undefined") return "app-piteco:guided-import-flow:server";
+  const entryKey = typeof window.history.state?.key === "string"
+    ? window.history.state.key
+    : window.location.pathname;
+  return `app-piteco:guided-import-flow:${entryKey}`;
+}
+
+function savedFlow(key: string): V3FlowKind | null {
+  if (typeof window === "undefined") return null;
+  const saved = window.sessionStorage.getItem(key);
+  return saved === "quick" || saved === "structured" ? saved : null;
+}
+
 export function FlowChoicePanel({ value, onChange }: Props) {
+  const [storageKey] = useState(flowStorageKey);
+
+  useEffect(() => {
+    const initial = savedFlow(storageKey) ?? "structured";
+    if (typeof window !== "undefined") window.sessionStorage.setItem(storageKey, initial);
+    onChange(initial);
+  }, [onChange, storageKey]);
+
+  const selectFlow = (next: V3FlowKind) => {
+    if (typeof window !== "undefined") window.sessionStorage.setItem(storageKey, next);
+    onChange(next);
+  };
+
   return (
     <div className="space-y-3">
       <div>
         <h2 className="text-xl font-semibold">O que você deseja fazer?</h2>
-        <p className="text-sm text-muted-foreground">Escolha primeiro a tarefa. O aplicativo mostrará somente as opções necessárias.</p>
+        <p className="text-sm text-muted-foreground">Para importar duas ou mais listas, escolha a primeira opção.</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {OPTIONS.map((option) => {
@@ -40,7 +68,7 @@ export function FlowChoicePanel({ value, onChange }: Props) {
             <button
               key={option.id}
               type="button"
-              onClick={() => onChange(option.id)}
+              onClick={() => selectFlow(option.id)}
               aria-pressed={active}
               className={`relative rounded-xl border p-5 text-left transition-colors ${active ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:border-primary/40 hover:bg-muted/40"}`}
             >
