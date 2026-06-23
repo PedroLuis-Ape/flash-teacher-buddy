@@ -33,9 +33,13 @@ export default function TurmaDetailWithContent() {
     },
     enabled: !!turmaId && !!user && !authLoading && !publicPreview,
     retry: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 
-  if (authLoading || (user && accessQuery.isLoading)) {
+  if (authLoading || (user && accessQuery.isLoading && !accessQuery.data)) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <p className="text-muted-foreground">Carregando turma...</p>

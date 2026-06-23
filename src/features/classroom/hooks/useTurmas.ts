@@ -120,7 +120,7 @@ export function useUpdateTurma() {
       }
       return { turma: updated };
     },
-    onSuccess: async ({ turma }) => {
+    onSuccess: ({ turma }) => {
       queryClient.setQueryData(['turmas', 'mine'], (current: any) => {
         if (!current?.turmas || !turma?.id) return current;
         return {
@@ -128,12 +128,24 @@ export function useUpdateTurma() {
           turmas: current.turmas.map((item: any) => item.id === turma.id ? { ...item, ...turma } : item),
         };
       });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['turmas'] }),
-        queryClient.invalidateQueries({ queryKey: ['turma'] }),
-        queryClient.invalidateQueries({ queryKey: ['public-turma'] }),
-        queryClient.invalidateQueries({ queryKey: ['public-teacher-turmas'] }),
-      ]);
+
+      queryClient.setQueryData(['turma', turma.id], (current: any) => {
+        if (!current?.turma) return current;
+        return {
+          ...current,
+          turma: {
+            ...current.turma,
+            ...turma,
+            turma_membros: current.turma.turma_membros,
+          },
+        };
+      });
+
+      // Keep the current screen stable. Public/listing views refresh in the
+      // background instead of making the save action wait for broad refetches.
+      void queryClient.invalidateQueries({ queryKey: ['turmas', 'mine'], refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: ['public-turma', turma.id], refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: ['public-teacher-turmas'], refetchType: 'active' });
     },
   });
 }
