@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { Clipboard, Eye, GraduationCap, LibraryBig, ListPlus } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,27 +8,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { copyText } from "../copyText";
 import { buildFinalGlobalImportPrompt } from "../prompts/finalPrompt";
 import type { GlobalImportPromptDestinationContext } from "../prompts/presets";
+import { isSuperImportTestRolloutEnabled } from "../testRollout";
 import { AiPromptPresetSelector } from "./AiPromptPresetSelector";
 
 interface Props {
   context: GlobalImportPromptDestinationContext;
 }
 
-function normalized(value: unknown): string {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
 export function ClassroomCompletePromptCard({ context }: Props) {
-  const { user } = useAuth();
   const [visible, setVisible] = useState(false);
-  const ownerEmail = normalized(import.meta.env.VITE_OWNER_EMAIL);
-  const ownerCanary = Boolean(ownerEmail && normalized(user?.email) === ownerEmail);
+  const testRollout = isSuperImportTestRolloutEnabled();
   const prompt = useMemo(
     () => buildFinalGlobalImportPrompt("complete", context),
     [context],
   );
 
-  if (ownerCanary) {
+  if (testRollout) {
     return <AiPromptPresetSelector context={context} smartInterview />;
   }
 
@@ -74,8 +68,8 @@ export function ClassroomCompletePromptCard({ context }: Props) {
       </p>
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <Button onClick={copyPrompt}><Clipboard className="mr-2 h-4 w-4" />Copiar prompt completo</Button>
-        <Button variant="outline" onClick={() => setVisible((value) => !value)}>
+        <Button type="button" onClick={copyPrompt}><Clipboard className="mr-2 h-4 w-4" />Copiar prompt completo</Button>
+        <Button type="button" variant="outline" onClick={() => setVisible((value) => !value)}>
           <Eye className="mr-2 h-4 w-4" />{visible ? "Ocultar prompt" : "Visualizar prompt"}
         </Button>
       </div>

@@ -1,0 +1,8 @@
+[data-super-import-test-rollout="true"] h1 + span {
+  font-size: 0;
+}
+
+[data-super-import-test-rollout="true"] h1 + span::after {
+  content: "Rollout de teste";
+  font-size: 0.75rem;
+}
