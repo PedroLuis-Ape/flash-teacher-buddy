@@ -28,25 +28,25 @@ export const GLOBAL_IMPORT_AI_PRESETS: GlobalImportAiPresetDefinition[] = [
     id: "batch",
     title: "Flashcards em lote",
     shortTitle: "Lote simples",
-    description: "Cria muitos cards com frente e verso, sem preencher recursos pedagógicos extras automaticamente.",
+    description: "Cria muitos cards normais com frente e verso, separando interpretações úteis em cards diferentes.",
     badge: "Rápido",
-    includes: ["Cards normais", "Pastas e listas", "Camadas quando solicitadas"],
+    includes: ["Cards normais", "Pastas e listas", "Interpretações separadas"],
   },
   {
     id: "detailed",
     title: "Lote com explicação detalhada",
     shortTitle: "Com explicações",
-    description: "Cria cards enriquecidos com explicações, exemplos, notas de uso e erros comuns quando forem úteis.",
+    description: "Cria cards normais enriquecidos com explicações, exemplos, notas de uso e erros comuns quando forem úteis.",
     badge: "Didático",
-    includes: ["Explicações", "Exemplos", "Camadas completas"],
+    includes: ["Explicações", "Exemplos", "Interpretações separadas"],
   },
   {
     id: "complete",
     title: "Pacote completo + Glossário Global",
     shortTitle: "Completo",
-    description: "Cria cards enriquecidos, dicas contextuais e entradas deduplicadas para a Caixa de Glossário central.",
+    description: "Cria cards normais enriquecidos, dicas contextuais e entradas deduplicadas para a Caixa de Glossário central.",
     badge: "Mais completo",
-    includes: ["Explicações", "Word hints", "Glossário da conta", "Camadas completas"],
+    includes: ["Explicações", "Word hints", "Glossário da conta", "Interpretações separadas"],
   },
 ];
 
@@ -82,36 +82,33 @@ function presetRules(preset: GlobalImportAiPreset): string[] {
   if (preset === "batch") {
     return [
       "MODO SELECIONADO: FLASHCARDS EM LOTE",
-      "- Crie cards normais com type, front e back.",
-      "- Não crie hint, short_observation, detailed_explanation, usage_notes, common_mistakes, example, example_translation, context_tag, tags, word_hints ou glossário.",
+      "- Crie somente cards normais com type, front e back.",
+      "- context_tag pode ser usado apenas para diferenciar interpretações úteis do mesmo termo.",
+      "- Não crie hint, short_observation, detailed_explanation, usage_notes, common_mistakes, example, example_translation, tags, word_hints ou glossário.",
       "- Mantenha glossary como array vazio em todas as listas.",
-      "- Cards em camadas são permitidos somente quando o usuário pedir camadas ou pedir vários sentidos/usos agrupados para o mesmo termo.",
-      "- Em cards em camadas, cada layer deve conter somente front e back, salvo pedido explícito compatível com outro modo.",
     ];
   }
 
   if (preset === "detailed") {
     return [
       "MODO SELECIONADO: FLASHCARDS COM EXPLICAÇÃO DETALHADA",
-      "- Crie front e back e use os campos pedagógicos somente quando acrescentarem valor real.",
-      "- Campos permitidos por card ou layer: hint, short_observation, detailed_explanation, usage_notes, common_mistakes, example, example_translation, context_tag e tags.",
+      "- Crie somente cards normais e use os campos pedagógicos quando acrescentarem valor real.",
+      "- Campos permitidos por card: hint, short_observation, detailed_explanation, usage_notes, common_mistakes, example, example_translation, context_tag e tags.",
       "- O exemplo deve ser diferente do conteúdo principal do card.",
       "- Não repita a mesma explicação em todos os cards e não preencha campos com texto genérico.",
       "- Não crie glossary nem word_hints neste modo; mantenha glossary como array vazio.",
-      "- Cards em camadas podem conter explicações e exemplos diferentes em cada layer.",
     ];
   }
 
   return [
     "MODO SELECIONADO: PACOTE COMPLETO COM GLOSSÁRIO GLOBAL",
-    "- Crie cards enriquecidos com explicações, exemplos, notas de uso e erros comuns quando forem pedagogicamente úteis.",
-    "- Inclua word_hints para palavras ou chunks que precisem de ajuda contextual dentro de um card ou layer.",
+    "- Crie somente cards normais enriquecidos com explicações, exemplos, notas de uso e erros comuns quando forem pedagogicamente úteis.",
+    "- Inclua word_hints para palavras ou chunks que precisem de ajuda contextual dentro de cada card.",
     "- Inclua as entradas destinadas à Caixa de Glossário central em package.folders[].lists[].glossary.",
     "- O App Piteco centraliza e deduplica essas entradas na conta; não crie um objeto de glossário fora das listas.",
-    "- Cada identidade composta por side + term + translation deve aparecer uma única vez no pacote, mesmo que o termo apareça em muitos cards ou listas.",
-    "- Traduções realmente diferentes do mesmo termo podem aparecer como entradas separadas e serão tratadas como camadas de significado.",
+    "- Cada identidade composta por side + term + translation deve aparecer uma única vez no pacote.",
+    "- Interpretações diferentes do mesmo termo podem aparecer como entradas separadas no glossário e como cards normais separados.",
     "- Preserve termos sobrepostos independentes, por exemplo: because, of e because of.",
-    "- Cards em camadas devem preservar explicações, exemplos e word_hints específicos de cada layer.",
   ];
 }
 
@@ -122,23 +119,23 @@ const STRUCTURE_EXAMPLE = `{
     "folders": 1,
     "lists": 1,
     "cards": 3,
-    "glossary_entries": 1,
-    "layered_groups": 1
+    "glossary_entries": 2,
+    "layered_groups": 0
   },
   "package": {
-    "name": "Nome do pacote",
+    "name": "Verbos com interpretações úteis",
     "source_language": "en",
     "target_language": "pt-BR",
     "level": "A2",
-    "theme": "Tema do conteúdo",
+    "theme": "Interpretações separadas",
     "folders": [
       {
-        "name": "Nome da pasta",
-        "description": "Descrição opcional",
+        "name": "Verbos",
+        "description": "Cada interpretação útil vira um card normal",
         "lists": [
           {
-            "name": "Nome da lista",
-            "description": "Descrição opcional",
+            "name": "To be e usos",
+            "description": "Cards normais que podem ser mesclados manualmente depois",
             "front_language": "en",
             "back_language": "pt-BR",
             "primary_side": "a",
@@ -148,32 +145,38 @@ const STRUCTURE_EXAMPLE = `{
             "tts_enabled": true,
             "glossary": [
               {
-                "term": "look after",
-                "translation": "cuidar de",
+                "term": "to be",
+                "translation": "ser",
                 "side": "A",
-                "note": "Phrasal verb",
+                "note": "Identidade ou característica",
+                "active": true
+              },
+              {
+                "term": "to be",
+                "translation": "estar",
+                "side": "A",
+                "note": "Estado ou localização",
                 "active": true
               }
             ],
             "cards": [
               {
                 "type": "normal",
-                "front": "I look after my brother.",
-                "back": "Eu cuido do meu irmão."
+                "front": "to be",
+                "back": "ser",
+                "context_tag": "identidade ou característica"
               },
               {
-                "type": "layered",
-                "group_title": "look up",
-                "layers": [
-                  {
-                    "front": "I looked up the word.",
-                    "back": "Eu pesquisei a palavra."
-                  },
-                  {
-                    "front": "Things are looking up.",
-                    "back": "As coisas estão melhorando."
-                  }
-                ]
+                "type": "normal",
+                "front": "to be",
+                "back": "estar",
+                "context_tag": "estado ou localização"
+              },
+              {
+                "type": "normal",
+                "front": "turn up",
+                "back": "aparecer",
+                "context_tag": "chegar ou aparecer"
               }
             ]
           }
@@ -206,18 +209,20 @@ export function buildGlobalImportPresetPrompt(
     "- Pergunte no máximo uma coisa curta somente quando idioma, direção ou uma contradição real impedir a geração.",
     "- Preserve exatamente a direção dos idiomas solicitada no lado A e no lado B.",
     "- Use códigos de idioma claros, preferencialmente BCP 47, como en, pt-BR, es, fr, de e it.",
-    "- Não repita cards nem use frases quase idênticas apenas para completar quantidade.",
+    "- Não repita cards quase idênticos apenas para completar quantidade.",
     "- Nunca deixe front ou back vazios.",
     "",
-    "CARDS NORMAIS E CARDS EM CAMADAS",
-    "- Card normal: {\"type\":\"normal\",\"front\":\"...\",\"back\":\"...\"}.",
-    "- Card em camadas: {\"type\":\"layered\",\"group_title\":\"...\",\"layers\":[{\"front\":\"...\",\"back\":\"...\"},{\"front\":\"...\",\"back\":\"...\"}]}.",
-    "- Um grupo layered precisa ter pelo menos duas layers jogáveis.",
-    "- Não use layers para guardar explicações ou exemplos; esses dados pertencem aos campos pedagógicos da própria layer.",
-    "- Não agrupe frases sem relação semântica apenas para reduzir a quantidade de cards.",
+    "CARDS NORMAIS APENAS",
+    "- Use exclusivamente {\"type\":\"normal\",\"front\":\"...\",\"back\":\"...\"}.",
+    "- Nunca gere type=layered, group_title ou layers.",
+    "- Quando um verbo, phrasal verb, expressão ou palavra tiver interpretações úteis realmente diferentes, crie um card normal separado para cada interpretação.",
+    "- Exemplo obrigatório: to be deve gerar um card com back=ser e outro card com back=estar quando os dois sentidos forem úteis.",
+    "- Não junte interpretações no mesmo lado usando barra, pipe, ponto e vírgula ou uma lista de traduções.",
+    "- Use context_tag, exemplo ou short_observation para deixar claro o uso de cada interpretação, conforme o modo selecionado.",
+    "- O usuário poderá mesclar manualmente os cards depois pela função Mesclar em camadas na tela da lista.",
     "",
     "GLOSSÁRIO CONTEXTUAL",
-    "- word_hints é um array por card ou layer.",
+    "- word_hints é um array por card.",
     "- Cada item pode usar side, text, translation, note, occurrence, start_index e end_index.",
     "- occurrence pode ser \"all\" ou um índice inteiro não negativo.",
     "- start_index e end_index devem aparecer juntos e end_index precisa ser maior que start_index.",
@@ -226,8 +231,8 @@ export function buildGlobalImportPresetPrompt(
     "- declared_totals.folders deve ser igual ao número real de pastas.",
     "- declared_totals.lists deve ser igual ao número real de listas.",
     "- declared_totals.glossary_entries deve ser igual ao total real de entradas em todos os arrays glossary.",
-    "- declared_totals.layered_groups deve ser igual à quantidade de objetos com type=layered.",
-    "- declared_totals.cards representa unidades jogáveis: cada card normal vale 1 e cada layer de um grupo vale 1.",
+    "- declared_totals.layered_groups deve ser sempre 0.",
+    "- declared_totals.cards deve ser igual à quantidade total de cards normais.",
     "- Conte tudo silenciosamente antes de responder.",
     "",
     "ESTRUTURA DE REFERÊNCIA",
@@ -247,6 +252,6 @@ export function buildGlobalImportPresetPrompt(
     "- Se o usuário enviar este prompt junto com um pedido, gere diretamente o JSON final.",
     "",
     "VALIDAÇÃO SILENCIOSA ANTES DA RESPOSTA",
-    "Confirme schema, version, JSON válido, campos permitidos pelo modo, idiomas, direção, nomes, contagens, cards em camadas válidos, glossário válido e ausência de texto fora do JSON.",
+    "Confirme schema, version, JSON válido, campos permitidos pelo modo, idiomas, direção, nomes, contagens, somente cards normais, interpretações úteis separadas, glossário válido e ausência de texto fora do JSON.",
   ].join("\n");
 }
