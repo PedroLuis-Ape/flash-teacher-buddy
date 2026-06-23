@@ -1,0 +1,223 @@
+{
+  "schema": "app-piteco-canonization-matrix",
+  "version": "1.0",
+  "updated_at": "2026-06-23",
+  "statuses": [
+    "official",
+    "test_rollout",
+    "disabled",
+    "blocked_backend_evidence",
+    "pending_audit"
+  ],
+  "features": [
+    {
+      "id": "auth-signup-professor",
+      "name": "Cadastro de professor",
+      "audience": ["visitor"],
+      "frontend_entry": ["/auth"],
+      "authorization_source": "Supabase Auth + trigger/profile role in backend",
+      "flag_or_gate": "none",
+      "status": "blocked_backend_evidence",
+      "required_action": "Confirmar trigger, perfil e papel no backend ymah; testar conta nova.",
+      "proof_test": "Professor novo recebe perfil único e painel de professor após confirmação e novo login."
+    },
+    {
+      "id": "auth-signup-student",
+      "name": "Cadastro de aluno",
+      "audience": ["visitor"],
+      "frontend_entry": ["/auth"],
+      "authorization_source": "Supabase Auth + trigger/profile role in backend",
+      "flag_or_gate": "none",
+      "status": "blocked_backend_evidence",
+      "required_action": "Confirmar trigger, perfil e papel no backend ymah; testar conta nova.",
+      "proof_test": "Aluno novo recebe perfil único e experiência estudantil após confirmação e novo login."
+    },
+    {
+      "id": "personal-library",
+      "name": "Biblioteca pessoal",
+      "audience": ["authenticated_user"],
+      "frontend_entry": ["/folders", "/folder/:id", "/list/:id"],
+      "authorization_source": "RLS por owner_id/user_id",
+      "flag_or_gate": "none",
+      "status": "blocked_backend_evidence",
+      "required_action": "Provar isolamento entre usuário A e B no backend oficial.",
+      "proof_test": "Usuário A não lê, altera ou exclui pasta/lista do usuário B por API direta."
+    },
+    {
+      "id": "account-glossary",
+      "name": "Glossário central por conta",
+      "audience": ["authenticated_user", "teacher"],
+      "frontend_entry": ["/glossary", "/list/:id/study"],
+      "authorization_source": "RLS/RPC com auth.uid e ownership da lista",
+      "flag_or_gate": "FEATURE_FLAGS.glossary_enabled",
+      "status": "blocked_backend_evidence",
+      "required_action": "Auditar grants e SECURITY DEFINER no backend oficial.",
+      "proof_test": "Anônimo e outro usuário não consultam o glossário privado usando list_id forjado."
+    },
+    {
+      "id": "study-flip",
+      "name": "Modo Flip",
+      "audience": ["authenticated_user", "class_guest_when_assigned"],
+      "frontend_entry": ["/list/:id/study", "/portal/list/:id/study"],
+      "authorization_source": "Acesso à lista/atribuição validado no backend",
+      "flag_or_gate": "none",
+      "status": "official",
+      "required_action": "Manter regressão de direção, camadas, voltar e avançar.",
+      "proof_test": "Sessão completa sem salto de card, vazamento de lista ou inversão indevida."
+    },
+    {
+      "id": "study-write",
+      "name": "Modo Escrita",
+      "audience": ["authenticated_user", "class_guest_when_assigned"],
+      "frontend_entry": ["/list/:id/study", "/portal/list/:id/study"],
+      "authorization_source": "Acesso à lista/atribuição validado no backend",
+      "flag_or_gate": "none",
+      "status": "test_rollout",
+      "required_action": "Concluir teste manual do PR #153 e promover somente após homologação.",
+      "proof_test": "Acerto e erro permanecem até ação explícita; Enter e clique duplo causam uma transição."
+    },
+    {
+      "id": "study-multiple-choice",
+      "name": "Múltipla escolha",
+      "audience": ["authenticated_user", "class_guest_when_assigned"],
+      "frontend_entry": ["/list/:id/study", "/portal/list/:id/study"],
+      "authorization_source": "Acesso à lista/atribuição validado no backend",
+      "flag_or_gate": "FEATURE_FLAGS.intelligent_study_engine for smart distractors",
+      "status": "test_rollout",
+      "required_action": "Concluir teste manual do PR #153; manter motor inteligente desligado.",
+      "proof_test": "Nenhum avanço automático; próximo card exige ação explícita."
+    },
+    {
+      "id": "study-unscramble",
+      "name": "Organizar frase",
+      "audience": ["authenticated_user", "class_guest_when_assigned"],
+      "frontend_entry": ["/list/:id/study", "/portal/list/:id/study"],
+      "authorization_source": "Acesso à lista/atribuição validado no backend",
+      "flag_or_gate": "none",
+      "status": "pending_audit",
+      "required_action": "Executar auditoria individual da Fase 10.",
+      "proof_test": "Embaralhamento, resposta, voltar, camadas e direção passam em desktop e mobile."
+    },
+    {
+      "id": "study-pronunciation",
+      "name": "Pronúncia",
+      "audience": ["authenticated_user"],
+      "frontend_entry": ["/list/:id/study"],
+      "authorization_source": "Acesso à lista validado no backend; reconhecimento no cliente",
+      "flag_or_gate": "browser capability fallback",
+      "status": "pending_audit",
+      "required_action": "Testar permissões, navegadores sem suporte e fallback.",
+      "proof_test": "Falha de microfone ou ausência de API não trava a sessão."
+    },
+    {
+      "id": "classes-professor",
+      "name": "Gestão de turmas pelo professor",
+      "audience": ["teacher"],
+      "frontend_entry": ["/turmas/professor", "/turmas/:turmaId", "/painel-professor"],
+      "authorization_source": "RLS/Edge Functions validando professor e ownership da turma",
+      "flag_or_gate": "FEATURE_FLAGS.classes_enabled",
+      "status": "blocked_backend_evidence",
+      "required_action": "Auditar ymah e executar testes cruzados Professor A/B.",
+      "proof_test": "Professor A não administra turma do Professor B mesmo com ID forjado."
+    },
+    {
+      "id": "classes-student",
+      "name": "Participação do aluno em turma",
+      "audience": ["student"],
+      "frontend_entry": ["/turmas/aluno", "/turmas/:turmaId"],
+      "authorization_source": "Membership ativo validado no backend",
+      "flag_or_gate": "FEATURE_FLAGS.classes_enabled",
+      "status": "blocked_backend_evidence",
+      "required_action": "Testar entrada, remoção e perda imediata de acesso.",
+      "proof_test": "Aluno removido recebe bloqueio mesmo usando URL antiga ou chamada direta."
+    },
+    {
+      "id": "classroom-super-import",
+      "name": "Super Importador em turma",
+      "audience": ["teacher_owner_of_class"],
+      "frontend_entry": ["/turmas/:turmaId/import/super"],
+      "authorization_source": "RPC/RLS/Edge Function com professor e turma validados",
+      "flag_or_gate": "VITE_SUPER_IMPORT_TEST_ROLLOUT or superImport query",
+      "status": "test_rollout",
+      "required_action": "Executar testes manuais do PR #154 e confirmar autorização no ymah.",
+      "proof_test": "Professor elegível importa e desfaz; outro professor, aluno e visitante são bloqueados."
+    },
+    {
+      "id": "personal-super-import",
+      "name": "Super Importador pessoal",
+      "audience": ["authenticated_user"],
+      "frontend_entry": ["/import/super"],
+      "authorization_source": "RLS/RPC por auth.uid",
+      "flag_or_gate": "VITE_SUPER_IMPORT_TEST_ROLLOUT or superImport query",
+      "status": "test_rollout",
+      "required_action": "Executar testes manuais do PR #154 com conta comum.",
+      "proof_test": "Importação, cancelamento e desfazer não afetam dados de outro usuário."
+    },
+    {
+      "id": "public-portal",
+      "name": "Portal público do professor",
+      "audience": ["visitor"],
+      "frontend_entry": ["/portal", "/portal/professor/:slug", "/portal/folder/:id"],
+      "authorization_source": "Somente registros explicitamente publicados",
+      "flag_or_gate": "none",
+      "status": "pending_audit",
+      "required_action": "Auditar enumeração, IDs privados e dados pessoais expostos.",
+      "proof_test": "Visitante recebe apenas conteúdo publicado e nenhum campo privado."
+    },
+    {
+      "id": "pitecoin",
+      "name": "PiTECoin e progresso",
+      "audience": ["authenticated_user"],
+      "frontend_entry": ["/store", "/profile", "/list/:id/study"],
+      "authorization_source": "RPC transacional com auth.uid e idempotência",
+      "flag_or_gate": "FEATURE_FLAGS.economy_enabled",
+      "status": "blocked_backend_evidence",
+      "required_action": "Auditar funções SECURITY DEFINER e impedir user_id/preço forjados.",
+      "proof_test": "Usuário não credita saldo, compra para terceiro ou repete operação idempotente."
+    },
+    {
+      "id": "store",
+      "name": "Loja e inventário",
+      "audience": ["authenticated_user"],
+      "frontend_entry": ["/store", "/store/inventory", "/store/exchange"],
+      "authorization_source": "RPC transacional e catálogo validado no backend",
+      "flag_or_gate": "FEATURE_FLAGS.store_visible",
+      "status": "blocked_backend_evidence",
+      "required_action": "Confirmar backend ymah e migração futura para xrnf sem corte prematuro.",
+      "proof_test": "Preço, comprador e item são validados no servidor; saldo nunca fica negativo."
+    },
+    {
+      "id": "admin-catalog",
+      "name": "Administração de catálogo",
+      "audience": ["authorized_admin"],
+      "frontend_entry": ["/admin/catalog", "/admin/logs", "/admin/gifts"],
+      "authorization_source": "Papel administrativo validado no backend",
+      "flag_or_gate": "feature flags plus backend role",
+      "status": "blocked_backend_evidence",
+      "required_action": "Provar que esconder rota não é a única proteção.",
+      "proof_test": "Professor comum, aluno e visitante recebem 403 em chamada direta."
+    },
+    {
+      "id": "offline-mode",
+      "name": "Modo offline",
+      "audience": ["authenticated_user"],
+      "frontend_entry": ["/list/:id"],
+      "authorization_source": "Conteúdo autorizado antes do cache local",
+      "flag_or_gate": "FEATURE_FLAGS.offline_mode_enabled=false",
+      "status": "disabled",
+      "required_action": "Manter desligado até auditoria de cache, logout e dados compartilhados.",
+      "proof_test": "Logout remove ou isola conteúdo offline e outro usuário não acessa o cache anterior."
+    },
+    {
+      "id": "new-card-status-pipeline",
+      "name": "Novo pipeline de favoritos e lista vermelha",
+      "audience": ["authenticated_user"],
+      "frontend_entry": ["study tools"],
+      "authorization_source": "RLS por usuário e identidade estável do grupo",
+      "flag_or_gate": "FEATURE_FLAGS.new_status_pipeline=off",
+      "status": "disabled",
+      "required_action": "Promover por off → shadow → on com telemetria de divergência.",
+      "proof_test": "Cold start, camadas e contas no mesmo dispositivo mantêm isolamento e consistência."
+    }
+  ]
+}

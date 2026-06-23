@@ -1,0 +1,80 @@
+{
+  "schema": "app-piteco-runtime-baseline",
+  "version": "1.0",
+  "status": "pending",
+  "captured_at": null,
+  "published_app_url": "https://www.apeeducation.org",
+  "build_identifier": null,
+  "profiles": [
+    {
+      "id": "desktop-standard",
+      "device": null,
+      "os_browser": null,
+      "network": "broadband",
+      "cold_boot": {
+        "ttfb_ms": null,
+        "fcp_ms": null,
+        "lcp_ms": null,
+        "interactive_ms": null
+      },
+      "resume": {
+        "after_minutes": 5,
+        "session_restored": null,
+        "route_preserved": null
+      },
+      "study_navigation": {
+        "forward_cards": 20,
+        "backward_cards": 10,
+        "long_tasks": null,
+        "visible_freezes": null,
+        "unexpected_card_changes": null
+      },
+      "folders": {
+        "small_request_count": null,
+        "small_duration_ms": null,
+        "large_request_count": null,
+        "large_duration_ms": null
+      }
+    },
+    {
+      "id": "android-midrange",
+      "device": null,
+      "os_browser": null,
+      "network": "regular-4g",
+      "cold_boot": {
+        "ttfb_ms": null,
+        "fcp_ms": null,
+        "lcp_ms": null,
+        "interactive_ms": null
+      },
+      "resume": {
+        "after_minutes": 30,
+        "session_restored": null,
+        "route_preserved": null
+      },
+      "study_navigation": {
+        "forward_cards": 20,
+        "backward_cards": 10,
+        "long_tasks": null,
+        "visible_freezes": null,
+        "unexpected_card_changes": null
+      },
+      "folders": {
+        "small_request_count": null,
+        "small_duration_ms": null,
+        "large_request_count": null,
+        "large_duration_ms": null
+      }
+    }
+  ],
+  "canonical_domain": {
+    "apex_redirects_to_www": null,
+    "path_query_fragment_preserved": null,
+    "redirect_loop_absent": null
+  },
+  "approval": {
+    "desktop_approved": false,
+    "mobile_approved": false,
+    "blocking_issues": []
+  }
+}

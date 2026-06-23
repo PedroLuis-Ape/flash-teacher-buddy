@@ -1,0 +1,99 @@
+{
+  "schema": "app-piteco-test-accounts-matrix",
+  "version": "1.0",
+  "updated_at": "2026-06-23",
+  "credential_policy": "Credentials and real emails must never be committed. Runtime values belong in the approved test vault or manual QA record.",
+  "personas": [
+    {
+      "id": "teacher-a",
+      "role": "teacher",
+      "account_state": "new_confirmed",
+      "owns": ["class-a", "folder-a", "list-a"],
+      "must_access": ["teacher-dashboard", "class-a", "folder-a", "list-a", "personal-super-import"],
+      "must_not_access": ["class-b-private", "folder-b-private", "admin-only"],
+      "proofs": [
+        "signup creates one teacher profile",
+        "session restores after browser restart",
+        "cannot read or mutate Teacher B private data",
+        "can create and manage own class"
+      ]
+    },
+    {
+      "id": "teacher-b",
+      "role": "teacher",
+      "account_state": "existing_confirmed",
+      "owns": ["class-b", "folder-b", "list-b"],
+      "must_access": ["teacher-dashboard", "class-b", "folder-b", "list-b"],
+      "must_not_access": ["class-a-private", "folder-a-private", "admin-only"],
+      "proofs": [
+        "cannot use forged IDs to operate on Teacher A resources",
+        "cannot see Teacher A students or private progress",
+        "own data remains unchanged during Teacher A tests"
+      ]
+    },
+    {
+      "id": "student-a",
+      "role": "student",
+      "account_state": "new_confirmed",
+      "member_of": ["class-a"],
+      "must_access": ["student-dashboard", "class-a-assigned-content", "own-progress"],
+      "must_not_access": ["teacher-dashboard", "class-management", "student-b-progress", "admin-only"],
+      "proofs": [
+        "signup creates one student profile",
+        "sees only active memberships and assignments",
+        "cannot promote own role",
+        "cannot mutate another student's progress"
+      ]
+    },
+    {
+      "id": "student-b",
+      "role": "student",
+      "account_state": "existing_confirmed",
+      "member_of": ["class-b"],
+      "must_access": ["student-dashboard", "class-b-assigned-content", "own-progress"],
+      "must_not_access": ["class-a-private", "student-a-progress", "teacher-functions"],
+      "proofs": [
+        "cannot enumerate memberships from another class",
+        "cannot open assignments with forged turma or assignment IDs",
+        "removal from class revokes access immediately"
+      ]
+    },
+    {
+      "id": "visitor",
+      "role": "anonymous",
+      "account_state": "no_account",
+      "must_access": ["landing", "public-seo-pages", "explicitly-published-portal-content"],
+      "must_not_access": ["private-library", "private-class", "private-progress", "imports", "admin-only"],
+      "proofs": [
+        "private API calls return predictable unauthorized responses",
+        "public pages do not expose private identifiers or fields",
+        "guest classroom access requires a valid public assignment contract"
+      ]
+    },
+    {
+      "id": "incomplete-profile",
+      "role": "unknown_or_pending",
+      "account_state": "auth_user_without_complete_profile",
+      "must_access": ["profile-recovery-or-safe-onboarding"],
+      "must_not_access": ["teacher-only", "student-only-until-role-resolved", "admin-only"],
+      "proofs": [
+        "app does not enter redirect loop",
+        "no default privileged role is assumed",
+        "recovery is deterministic and idempotent",
+        "user receives an understandable next action"
+      ]
+    }
+  ],
+  "shared_scenarios": [
+    "duplicate signup",
+    "double submit",
+    "wrong password",
+    "password recovery",
+    "expired session",
+    "slow network",
+    "offline during profile creation",
+    "forged resource IDs",
+    "same browser used by different accounts",
+    "logout followed by cold restart"
+  ]
+}
