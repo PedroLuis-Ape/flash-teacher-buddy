@@ -17,7 +17,7 @@ BEGIN
     'classroom-import@app-piteco.local',
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
-    '{}'::jsonb,
+    '{"first_name":"Importer Smoke","requested_account_type":"teacher","requested_public_slug":"classroom_importer_smoke"}'::jsonb,
     now(),
     now()
   ) ON CONFLICT (id) DO NOTHING;
@@ -25,9 +25,17 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', v_teacher_id::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-  INSERT INTO public.profiles(id, first_name, is_teacher)
-  VALUES (v_teacher_id, 'Importer Smoke', true)
-  ON CONFLICT (id) DO UPDATE SET is_teacher = true;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    JOIN public.user_roles ur ON ur.user_id = p.id
+    WHERE p.id = v_teacher_id
+      AND p.is_teacher = true
+      AND p.user_type::text = 'professor'
+      AND ur.role::text = 'owner'
+  ) THEN
+    RAISE EXCEPTION 'Signup trigger did not create the classroom teacher contract.';
+  END IF;
 
   INSERT INTO public.turmas(id, owner_teacher_id, nome, ativo, public)
   VALUES (v_turma_id, v_teacher_id, 'Classroom importer smoke', true, true)

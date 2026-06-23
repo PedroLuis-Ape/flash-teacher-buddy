@@ -9,8 +9,12 @@ import { cn } from "@/lib/utils";
 
 interface SignupFormProps {
   initialAccountType?: "student" | "teacher";
-  onSuccess?: () => void;
+  onSuccess?: (route?: string) => void;
   onLogin?: () => void;
+}
+
+function sanitizePublicSlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9_]/g, "");
 }
 
 export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFormProps) {
@@ -28,21 +32,20 @@ export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFor
   }, [initialAccountType]);
 
   useEffect(() => {
-    if (!isProfessor || username.length < 3) {
+    const cleanUsername = sanitizePublicSlug(username);
+    if (!isProfessor || cleanUsername.length < 3) {
       setUsernameAvailable(null);
       return;
     }
 
     const timer = window.setTimeout(async () => {
       setCheckingUsername(true);
-      const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, "");
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("public_slug")
-        .eq("public_slug", cleanUsername)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc(
+        "is_public_slug_available_v1" as never,
+        { p_slug: cleanUsername } as never,
+      );
 
-      setUsernameAvailable(!data && !error);
+      setUsernameAvailable(!error && data === true);
       setCheckingUsername(false);
     }, 500);
 
@@ -52,12 +55,13 @@ export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFor
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isProfessor && username.length < 3) {
-      toast.error("O username deve ter pelo menos 3 caracteres.");
+    const cleanUsername = isProfessor ? sanitizePublicSlug(username) : null;
+    if (isProfessor && (!cleanUsername || cleanUsername.length < 3)) {
+      toast.error("O username deve ter pelo menos 3 caracteres válidos.");
       return;
     }
-    if (isProfessor && usernameAvailable === false) {
-      toast.error("Este username já está em uso.");
+    if (isProfessor && usernameAvailable !== true) {
+      toast.error(checkingUsername ? "Aguarde a verificação do username." : "Escolha um username disponível.");
       return;
     }
 
@@ -67,48 +71,33 @@ export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFor
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?flow=signup`,
+          data: {
+            first_name: firstName.trim(),
+            requested_account_type: isProfessor ? "teacher" : "student",
+            requested_public_slug: cleanUsername,
+          },
         },
       });
       if (error) throw error;
-
       if (!data.user) throw new Error("Não foi possível criar a conta.");
-
-      const cleanUsername = isProfessor
-        ? username.toLowerCase().replace(/[^a-z0-9_]/g, "")
-        : null;
-
-      const { error: profileError } = await supabase.rpc("update_own_profile", {
-        p_user_id: data.user.id,
-        p_first_name: firstName,
-        p_public_slug: cleanUsername,
-        p_public_access_enabled: isProfessor,
-        p_is_teacher: isProfessor,
-        p_user_type: isProfessor ? "professor" : "aluno",
-      });
-      if (profileError) throw profileError;
-
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: data.user.id,
-        role: "student",
-      });
-      if (roleError && roleError.code !== "23505" && !roleError.message?.includes("duplicate")) {
-        console.error("Erro ao criar role:", roleError);
-      }
 
       if (data.session) {
         toast.success("Conta criada com sucesso!");
-        onSuccess?.();
+        onSuccess?.(isProfessor ? "/painel-professor" : "/dashboard");
       } else {
         toast.success("Conta criada. Confira seu e-mail para confirmar o acesso.");
         onLogin?.();
       }
-    } catch (error: any) {
-      toast.error(error?.message || "Não foi possível criar a conta.");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Não foi possível criar a conta.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
+
+  const sanitizedUsernameLength = sanitizePublicSlug(username).length;
 
   return (
     <div className="w-full">
@@ -138,7 +127,7 @@ export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFor
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
               <Input id="signup-username" value={username} onChange={(event) => setUsername(event.target.value)} className="pl-8" minLength={3} autoComplete="username" required />
             </div>
-            {username.length >= 3 && (
+            {sanitizedUsernameLength >= 3 && (
               <p className={cn("text-xs", checkingUsername ? "text-muted-foreground" : usernameAvailable ? "text-emerald-600" : "text-destructive")}>
                 {checkingUsername ? "Verificando..." : usernameAvailable ? "Disponível" : "Já está em uso"}
               </p>
@@ -157,7 +146,7 @@ export function SignupForm({ initialAccountType, onSuccess, onLogin }: SignupFor
           <p className="text-xs text-muted-foreground">Use pelo menos 6 caracteres.</p>
         </div>
 
-        <Button type="submit" className="h-11 w-full" disabled={loading}>
+        <Button type="submit" className="h-11 w-full" disabled={loading || checkingUsername}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {loading ? "Criando conta..." : "Criar conta"}
         </Button>

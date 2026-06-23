@@ -19,19 +19,20 @@ export default function AuthRedesign() {
       : undefined;
 
   useEffect(() => {
+    const canAutoRedirect = mode !== "signup";
     const logoutFlag = Boolean(sessionStorage.getItem("logoutInProgress"));
-    if (!logoutFlag) {
+    if (!logoutFlag && canAutoRedirect) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) navigate("/dashboard", { replace: true });
       });
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate("/dashboard", { replace: true });
+      if (session && canAutoRedirect) navigate("/dashboard", { replace: true });
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, mode]);
 
   const setMode = (nextMode: "login" | "signup") => {
     const nextParams = new URLSearchParams(searchParams);
@@ -40,7 +41,7 @@ export default function AuthRedesign() {
     setSearchParams(nextParams, { replace: true });
   };
 
-  const handleSuccess = () => navigate("/dashboard", { replace: true });
+  const handleSuccess = (route = "/dashboard") => navigate(route, { replace: true });
 
   return (
     <main className="relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6">
