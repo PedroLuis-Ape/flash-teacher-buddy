@@ -1,0 +1,1 @@
+Pacote de cadastro público preparado em 23 de junho de 2026. Inclui trigger de perfil e papel, RPC idempotente de onboarding, callback após confirmação de e-mail e remoção de escrita direta em user_roles. Aplicação no backend oficial depende de acesso administrativo ao projeto documentado.
