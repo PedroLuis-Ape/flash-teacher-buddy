@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { analyzeGlobalImportText } from "./analysisService";
 import { parseGlobalImportCsv } from "./csvPackage";
-import { buildLayerChecks } from "./layerChecks";
+import { flattenSuperImportLayers } from "./flattenSuperImportLayers";
 import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSchema";
 import { repairSmartImportJsonText } from "./smartJsonRepair";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
@@ -9,7 +9,6 @@ import { looksLikeAdvancedSmartCsv, parseSmartImportSource } from "@/features/sm
 
 interface UseGlobalImportSourceOptions {
   repairSmartJson?: boolean;
-  reviewLayers?: boolean;
 }
 
 function looksLikeLegacyCsv(value: string): boolean {
@@ -23,16 +22,17 @@ function looksLikeJson(value: string): boolean {
   return normalized.startsWith("{") || normalized.startsWith("[");
 }
 
-function withLayerChecks(
+function withoutAutomaticLayers(
   validation: GlobalImportV2ValidationResult,
-  enabled: boolean,
-): GlobalImportV2ValidationResult {
-  if (!enabled || !validation.smartPackage) return validation;
-  const issues = [...validation.issues, ...buildLayerChecks(validation.smartPackage)];
+): { validation: GlobalImportV2ValidationResult; note?: string } {
+  if (!validation.smartPackage) return { validation };
+
+  const flattened = flattenSuperImportLayers(validation.smartPackage);
+  if (flattened.groupsFlattened === 0) return { validation };
+
   return {
-    ...validation,
-    issues,
-    valid: !issues.some((issue) => issue.severity === "error"),
+    validation: validateGlobalImportInput(flattened.packageValue, null),
+    note: `${flattened.groupsFlattened} grupo(s) em camadas foram convertidos em ${flattened.cardsCreated} cards normais. Você pode mesclá-los manualmente depois na tela da lista.`,
   };
 }
 
@@ -40,7 +40,6 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
   const [raw, setRaw] = useState("");
   const [validation, setValidation] = useState<GlobalImportV2ValidationResult | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
-  const layerReviewEnabled = Boolean(options.reviewLayers ?? options.repairSmartJson);
 
   const reset = (value: string) => {
     setRaw(value);
@@ -57,39 +56,43 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
         frontLanguage: "en",
         backLanguage: "pt-BR",
       });
-      const nextValidation = withLayerChecks(
-        validateGlobalImportInput(smart.packageValue, null),
-        layerReviewEnabled,
-      );
+      const normalized = withoutAutomaticLayers(validateGlobalImportInput(smart.packageValue, null));
       setRaw(value);
-      setValidation(nextValidation);
-      setNotes([...smart.notes, ...smart.warnings]);
-      return nextValidation;
+      setValidation(normalized.validation);
+      setNotes([
+        ...smart.notes,
+        ...smart.warnings,
+        ...(normalized.note ? [normalized.note] : []),
+      ]);
+      return normalized.validation;
     }
 
     if (looksLikeLegacyCsv(value)) {
       const csv = parseGlobalImportCsv(value);
-      const nextValidation = withLayerChecks(
-        validateGlobalImportInput(csv.packageValue, null),
-        layerReviewEnabled,
-      );
+      const normalized = withoutAutomaticLayers(validateGlobalImportInput(csv.packageValue, null));
       setRaw(value);
-      setValidation(nextValidation);
-      setNotes([`CSV ${csv.schema} reconhecido com ${csv.rows} flashcard(s).`, ...csv.notes]);
-      return nextValidation;
+      setValidation(normalized.validation);
+      setNotes([
+        `CSV ${csv.schema} reconhecido com ${csv.rows} flashcard(s).`,
+        ...csv.notes,
+        ...(normalized.note ? [normalized.note] : []),
+      ]);
+      return normalized.validation;
     }
 
     const repair = options.repairSmartJson
       ? repairSmartImportJsonText(value)
       : { text: value, changed: false, notes: [] as string[] };
     const result = analyzeGlobalImportText(repair.text);
-    const checkedValidation = withLayerChecks(result.validation, layerReviewEnabled);
+    const normalized = withoutAutomaticLayers(result.validation);
+    const checkedValidation = normalized.validation;
     const nextNotes: string[] = [...repair.notes];
     if (result.parsed.extracted) nextNotes.push("Uma única cerca Markdown externa foi removida.");
     if (checkedValidation.sourceFormat === "smart") nextNotes.push("Contrato app-piteco-super-import 2.0 validado.");
     if (checkedValidation.sourceFormat === "official") nextNotes.push("Contrato oficial app-piteco-super-import 1.0 validado.");
     if (checkedValidation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
     if (checkedValidation.sourceFormat === "legacy") nextNotes.push("Formato legado aceito por compatibilidade.");
+    if (normalized.note) nextNotes.push(normalized.note);
     setRaw(repair.changed ? repair.text : value);
     setValidation(checkedValidation);
     setNotes(nextNotes);
