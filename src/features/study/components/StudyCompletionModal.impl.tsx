@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Trophy, RotateCcw, CheckCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,6 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { playNext, playRound } from "@/lib/sfx";
 
 interface StudyCompletionModalProps {
   open: boolean;
@@ -38,6 +40,19 @@ export const StudyCompletionModal = ({
   onGoToGoals,
 }: StudyCompletionModalProps) => {
   const accuracy = totalCards > 0 ? Math.round((correctCount / totalCards) * 100) : 0;
+  const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      playRound();
+    }
+    wasOpenRef.current = open;
+  }, [open]);
+
+  const runTransition = (action: () => void) => {
+    playNext();
+    action();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,31 +90,31 @@ export const StudyCompletionModal = ({
 
         <div className="flex flex-col gap-2 pt-2">
           <Button
-            onClick={onComplete}
+            onClick={() => runTransition(onComplete)}
             className="w-full bg-green-600 hover:bg-green-700 text-lg font-bold min-h-[48px]"
           >
             <CheckCircle className="mr-2 h-5 w-5" />
             CONCLUIR SESSÃO
           </Button>
 
-          <Button variant="secondary" onClick={onRestart} className="w-full">
+          <Button variant="secondary" onClick={() => runTransition(onRestart)} className="w-full">
             <RotateCcw className="mr-2 h-4 w-4" />
             Jogar Novamente
           </Button>
 
           {onReviewErrors && errorCount > 0 && (
-            <Button variant="outline" onClick={onReviewErrors} className="w-full">
+            <Button variant="outline" onClick={() => runTransition(onReviewErrors)} className="w-full">
               Rever Errados ({errorCount})
             </Button>
           )}
 
           {fromGoalId && onGoToGoals && (
-            <Button variant="outline" onClick={onGoToGoals} className="w-full">
+            <Button variant="outline" onClick={() => runTransition(onGoToGoals)} className="w-full">
               ← Voltar para Metas
             </Button>
           )}
 
-          <Button variant="ghost" onClick={onExit} className="w-full">
+          <Button variant="ghost" onClick={() => runTransition(onExit)} className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar à Lista
           </Button>
