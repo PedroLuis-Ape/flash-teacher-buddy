@@ -14,7 +14,9 @@ export function buildOwnerFinalImportPrompt(
   context: GlobalImportPromptDestinationContext,
 ): string {
   const canarySections = [
-    "CONFIGURAÇÃO DA VERSÃO CANÁRIO",
+    "REGRA FINAL DA VERSÃO CANÁRIO",
+    "- Esta seção substitui o comportamento inicial descrito anteriormente.",
+    "- A primeira resposta deve ser a entrevista; o JSON só pode ser produzido depois da resposta do usuário.",
     ...smartInterviewRules(preset, context.scope),
     "",
     ...SMART_LAYER_RULES,
