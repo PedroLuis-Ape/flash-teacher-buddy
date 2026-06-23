@@ -31,6 +31,10 @@ BEGIN
     'g'
   ));
 
+  IF length(v_slug) >= 3 THEN
+    PERFORM pg_advisory_xact_lock(hashtextextended(v_slug, 0));
+  END IF;
+
   IF length(v_slug) < 3 OR EXISTS (
     SELECT 1 FROM public.profiles WHERE public_slug = v_slug
   ) THEN
