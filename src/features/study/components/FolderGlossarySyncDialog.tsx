@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { previewFolderGlossarySync, syncFolderGlossary, type FolderGlossarySyncReport } from "@/features/study/lib/folderGlossaryApi";
+import { previewFolderGlossarySync, readFolderGlossarySyncStatus, syncFolderGlossary, type FolderGlossarySyncReport } from "@/features/study/lib/folderGlossaryApi";
 import { ACCOUNT_GLOSSARY_QUERY_KEY } from "@/hooks/useAccountGlossary";
 
 interface Props {
@@ -23,9 +23,11 @@ interface Props {
 export function FolderGlossarySyncDialog({ folderId, folderTitle, label = "Sincronizar glossário", compact = false, stopPropagation = false, variant = "outline" }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [includeCards, setIncludeCards] = useState(false);
+  const initialStatus = readFolderGlossarySyncStatus(folderId);
+  const [includeCards, setIncludeCards] = useState(initialStatus.includeNormalCards);
   const [busy, setBusy] = useState<"preview" | "sync" | null>(null);
   const [result, setResult] = useState<FolderGlossarySyncReport | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(initialStatus.lastSyncedAt);
 
   const run = async (dryRun: boolean) => {
     setBusy(dryRun ? "preview" : "sync");
@@ -35,6 +37,7 @@ export function FolderGlossarySyncDialog({ folderId, folderTitle, label = "Sincr
         : await syncFolderGlossary(folderId, includeCards);
       setResult(next);
       if (!dryRun) {
+        setLastSyncedAt(next.syncedAt);
         await queryClient.invalidateQueries({ queryKey: ACCOUNT_GLOSSARY_QUERY_KEY });
         toast.success(`${next.inserted} entrada(s) adicionada(s); ${next.skipped} já existiam.`);
       }
@@ -60,6 +63,8 @@ export function FolderGlossarySyncDialog({ folderId, folderTitle, label = "Sincr
         </DialogHeader>
 
         <div className="space-y-4">
+          {lastSyncedAt && <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline">Sincronizada</Badge><span>Última vez: {new Date(lastSyncedAt).toLocaleString("pt-BR")}</span></div>}
+
           <div className="flex items-start gap-3 rounded-lg border p-3">
             <Checkbox id={`folder-cards-${folderId}`} checked={includeCards} onCheckedChange={(value) => { setIncludeCards(Boolean(value)); setResult(null); }} />
             <div>
