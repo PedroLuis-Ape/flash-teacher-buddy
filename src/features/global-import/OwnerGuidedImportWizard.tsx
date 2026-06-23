@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, GraduationCap, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, ArrowLeft, Check, ChevronLeft, ChevronRight, GraduationCap, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,8 @@ export default function OwnerGuidedImportWizard() {
   const [quickListId, setQuickListId] = useState("");
   const [quickStrategy, setQuickStrategy] = useState<QuickListStrategy>("append");
   const [catalog, setCatalog] = useState<ImportDestinationCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [destinationPlan, setDestinationPlan] = useState<GlobalImportDestinationPlan | null>(null);
   const [cardConflict, setCardConflict] = useState<CardConflictPolicy>("skip");
   const [busy, setBusy] = useState(false);
@@ -94,15 +96,31 @@ export default function OwnerGuidedImportWizard() {
   const [undoing, setUndoing] = useState(false);
   const [cancelRequested, setCancelRequested] = useState(false);
 
+  const refreshCatalog = useCallback(async (showErrorToast = true): Promise<ImportDestinationCatalog> => {
+    setCatalogLoading(true);
+    setCatalogError(null);
+    try {
+      const nextCatalog = await loadImportDestinationCatalog(turmaId);
+      setCatalog(nextCatalog);
+      return nextCatalog;
+    } catch (error: any) {
+      const message = error?.message || "Não foi possível carregar as pastas e listas disponíveis.";
+      setCatalog(null);
+      setCatalogError(message);
+      if (showErrorToast) toast.error(message);
+      throw error;
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [turmaId]);
+
   useEffect(() => {
     setCatalog(null);
     setSelectedFolderId("");
     setQuickFolderId("");
     setQuickListId("");
-    loadImportDestinationCatalog(turmaId)
-      .then(setCatalog)
-      .catch((error) => toast.error(error?.message || "Não foi possível carregar as pastas disponíveis."));
-  }, [turmaId]);
+    void refreshCatalog(false).catch(() => undefined);
+  }, [refreshCatalog]);
 
   useEffect(() => {
     if (flow === "structured" && destinationMode === "from-file" && source.validation?.valid && source.validation.package) {
@@ -175,6 +193,11 @@ export default function OwnerGuidedImportWizard() {
       || (destinationMode === "existing-folder" && Boolean(selectedFolderId))
       || (destinationMode === "new-folder" && Boolean(newFolderName.trim()));
 
+  const catalogRequiredNow = flow === "quick"
+    || (flow === "structured" && destinationMode === "existing-folder");
+  const canContinueFromDestination = destinationReady
+    && (!catalogRequiredNow || Boolean(catalog));
+
   const promptContext: GlobalImportPromptDestinationContext = {
     scope: classroomMode ? "classroom" : "personal",
     intent: flow,
@@ -192,11 +215,11 @@ export default function OwnerGuidedImportWizard() {
       return;
     }
     if (validation.requestId) updateGlobalImportManifestStatus(validation.requestId, "validated");
-    const nextCatalog = catalog ?? await loadImportDestinationCatalog(turmaId);
-    setCatalog(nextCatalog);
+    const nextCatalog = catalog ?? await refreshCatalog(true);
     setDestinationPlan(flow === "structured" && destinationMode === "from-file"
       ? buildCreateAllDestinationPlan(validation.package)
       : null);
+    setCatalog(nextCatalog);
     setStep(3);
     toast.success("Pacote válido. Confira a simulação antes de importar.");
   };
@@ -379,6 +402,41 @@ export default function OwnerGuidedImportWizard() {
             {flow === "quick"
               ? <QuickDestinationPanel catalog={catalog} folderId={quickFolderId} listId={quickListId} strategy={quickStrategy} onFolderChange={(value) => { setQuickFolderId(value); setQuickListId(""); }} onListChange={setQuickListId} onStrategyChange={setQuickStrategy} />
               : <StructuredDestinationPanel mode={destinationMode} onModeChange={setDestinationMode} catalog={catalog} selectedFolderId={selectedFolderId} onSelectedFolderChange={setSelectedFolderId} newFolderName={newFolderName} onNewFolderNameChange={setNewFolderName} listConflictPolicy={listConflictPolicy} onListConflictPolicyChange={setListConflictPolicy} />}
+
+            {catalogLoading && (
+              <Card className="flex items-center gap-3 p-4 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando as pastas e listas da {classroomMode ? "turma" : "conta"}...
+              </Card>
+            )}
+
+            {catalogError && (
+              <Card className="space-y-3 border-destructive/30 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 text-destructive" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">Não foi possível carregar as pastas e listas.</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{catalogError}</p>
+                    {!catalogRequiredNow && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Você pode continuar com a estrutura do arquivo. O aplicativo tentará carregar os destinos novamente após analisar o JSON.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    void refreshCatalog(true)
+                      .then(() => toast.success("Pastas e listas carregadas."))
+                      .catch(() => undefined);
+                  }}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />Tentar carregar novamente
+                </Button>
+              </Card>
+            )}
           </section>
         )}
 
@@ -473,8 +531,10 @@ export default function OwnerGuidedImportWizard() {
                 </Button>
               )}
               {step === 1 && (
-                <Button onClick={() => setStep(2)} disabled={!destinationReady || !catalog}>
-                  Continuar<ChevronRight className="ml-2 h-4 w-4" />
+                <Button onClick={() => setStep(2)} disabled={!canContinueFromDestination}>
+                  {catalogLoading && catalogRequiredNow
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando destinos...</>
+                    : <>Continuar<ChevronRight className="ml-2 h-4 w-4" /></>}
                 </Button>
               )}
               {step === 2 && source.validation?.valid && (
