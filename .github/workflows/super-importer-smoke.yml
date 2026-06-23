@@ -68,13 +68,25 @@ jobs:
               crypt('smoke-password', gen_salt('bf')),
               now(),
               '{"provider":"email","providers":["email"]}'::jsonb,
-              '{}'::jsonb,
+              '{"first_name":"Super Importer Smoke","requested_account_type":"teacher","requested_public_slug":"super_importer_smoke"}'::jsonb,
               now(),
               now()
             ) ON CONFLICT (id) DO NOTHING;
 
             PERFORM set_config('request.jwt.claim.sub', smoke_user::text, true);
             PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+            IF NOT EXISTS (
+              SELECT 1
+              FROM public.profiles p
+              JOIN public.user_roles ur ON ur.user_id = p.id
+              WHERE p.id = smoke_user
+                AND p.is_teacher = true
+                AND p.user_type::text = 'professor'
+                AND ur.role::text = 'owner'
+            ) THEN
+              RAISE EXCEPTION 'Signup trigger did not create the importer owner contract.';
+            END IF;
 
             SELECT public.import_app_piteco_super_package_v1(
               '22222222-2222-4222-8222-222222222222',
