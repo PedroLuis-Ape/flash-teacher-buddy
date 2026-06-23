@@ -1,12 +1,17 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+function readText(relativePath) {
+  return readFileSync(resolve(process.cwd(), relativePath), "utf8");
+}
+
 function readJson(relativePath) {
-  return JSON.parse(readFileSync(resolve(process.cwd(), relativePath), "utf8"));
+  return JSON.parse(readText(relativePath));
 }
 
 const backend = readJson("docs/implementation/backend-evidence.template.json");
 const runtime = readJson("docs/implementation/runtime-baseline.template.json");
+const collector = readText("scripts/collect-phase-zero-browser-evidence.js");
 const errors = [];
 
 if (backend.schema !== "app-piteco-backend-evidence" || backend.version !== "1.0") {
@@ -45,15 +50,36 @@ for (const profile of runtime.profiles ?? []) {
 }
 
 const serialized = `${JSON.stringify(backend)}${JSON.stringify(runtime)}`;
-const forbidden = [
+const forbiddenEvidencePatterns = [
   /eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\./,
   /sb_(?:secret|publishable)_[a-zA-Z0-9_-]+/i,
   /service_role/i,
   /authorization\s*:/i,
   /password\s*:/i,
 ];
-if (forbidden.some((pattern) => pattern.test(serialized))) {
+if (forbiddenEvidencePatterns.some((pattern) => pattern.test(serialized))) {
   errors.push("Templates de evidência contêm padrão semelhante a credencial ou segredo.");
+}
+
+const forbiddenCollectorApis = [
+  "document.cookie",
+  "localStorage",
+  "sessionStorage",
+  "indexedDB",
+  "getAllResponseHeaders",
+  "authorizationHeader",
+];
+for (const api of forbiddenCollectorApis) {
+  if (collector.includes(api)) errors.push(`Coletor não pode acessar: ${api}`);
+}
+if (!collector.includes("sanitizeResource")) {
+  errors.push("Coletor deve sanitizar URLs de recursos.");
+}
+if (!collector.includes("cookies_collected: false")) {
+  errors.push("Coletor deve declarar que cookies não são coletados.");
+}
+if (!collector.includes("query_values_collected: false")) {
+  errors.push("Coletor deve declarar que valores de query não são coletados.");
 }
 
 if (errors.length > 0) {
@@ -61,4 +87,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log("Templates de evidência da Fase 0 válidos.");
+console.log("Templates e coletor de evidência da Fase 0 válidos.");
