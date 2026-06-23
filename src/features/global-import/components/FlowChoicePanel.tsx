@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Check, FolderTree, ListPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -26,12 +26,33 @@ const OPTIONS = [
   },
 ];
 
+function flowStorageKey(): string {
+  if (typeof window === "undefined") return "app-piteco:guided-import-flow:server";
+  const entryKey = typeof window.history.state?.key === "string"
+    ? window.history.state.key
+    : window.location.pathname;
+  return `app-piteco:guided-import-flow:${entryKey}`;
+}
+
+function savedFlow(key: string): V3FlowKind | null {
+  if (typeof window === "undefined") return null;
+  const saved = window.sessionStorage.getItem(key);
+  return saved === "quick" || saved === "structured" ? saved : null;
+}
+
 export function FlowChoicePanel({ value, onChange }: Props) {
+  const [storageKey] = useState(flowStorageKey);
+
   useEffect(() => {
-    if (value === "quick") onChange("structured");
-    // O modo estruturado é o padrão seguro. A escolha manual por "quick" depois da montagem é preservada.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const initial = savedFlow(storageKey) ?? "structured";
+    if (typeof window !== "undefined") window.sessionStorage.setItem(storageKey, initial);
+    onChange(initial);
+  }, [onChange, storageKey]);
+
+  const selectFlow = (next: V3FlowKind) => {
+    if (typeof window !== "undefined") window.sessionStorage.setItem(storageKey, next);
+    onChange(next);
+  };
 
   return (
     <div className="space-y-3">
@@ -47,7 +68,7 @@ export function FlowChoicePanel({ value, onChange }: Props) {
             <button
               key={option.id}
               type="button"
-              onClick={() => onChange(option.id)}
+              onClick={() => selectFlow(option.id)}
               aria-pressed={active}
               className={`relative rounded-xl border p-5 text-left transition-colors ${active ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:border-primary/40 hover:bg-muted/40"}`}
             >
