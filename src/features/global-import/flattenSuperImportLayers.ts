@@ -40,8 +40,9 @@ export function flattenSuperImportLayers(
     })),
   }));
 
+  const { declared_totals: _staleTotals, ...withoutTotals } = value;
   const packageValue = withSmartDeclaredTotals({
-    ...value,
+    ...withoutTotals,
     package: {
       ...value.package,
       folders,
