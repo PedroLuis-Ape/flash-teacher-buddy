@@ -7,12 +7,18 @@ const modal = readFileSync(
 );
 
 describe("Study completion integration", () => {
-  it("delegates completion through the shared callback", () => {
-    expect(modal).toContain("onClick={onComplete}");
+  it("delegates completion through the shared transition callback", () => {
+    expect(modal).toContain("runTransition(onComplete)");
+    expect(modal).toContain("playNext();");
   });
 
   it("keeps restart and exit actions independent", () => {
-    expect(modal).toContain("onClick={onRestart}");
-    expect(modal).toContain("onClick={onExit}");
+    expect(modal).toContain("runTransition(onRestart)");
+    expect(modal).toContain("runTransition(onExit)");
+  });
+
+  it("plays the round cue when the completion dialog opens", () => {
+    expect(modal).toContain("playRound();");
+    expect(modal).toContain("wasOpenRef.current = open");
   });
 });
