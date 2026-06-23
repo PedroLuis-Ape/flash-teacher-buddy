@@ -9,6 +9,13 @@ describe("teacher classes", () => {
     expect(read("src/pages/TurmasProfessor.tsx")).toContain("create");
   });
 
+  it("keeps the home shortcut compact on mobile", () => {
+    const shortcut = read("src/components/TurmaShortcut.tsx");
+    expect(shortcut).toContain("grid grid-cols-2 sm:flex");
+    expect(shortcut).toContain("space-y-2 sm:space-y-3");
+    expect(shortcut).toContain("w-full px-2 sm:w-auto");
+  });
+
   it("keeps owner navigation", () => {
     const workspace = read("src/pages/TurmaDetailWorkspace.tsx");
     expect(workspace).toContain("TeacherClassNavigation");
