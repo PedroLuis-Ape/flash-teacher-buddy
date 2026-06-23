@@ -69,17 +69,24 @@ describe("flattenSuperImportLayers", () => {
     });
   });
 
-  it("keeps normal-only packages unchanged", () => {
+  it("does not clone a package that already contains normal cards only", () => {
     const value = packageWithLayers();
     value.package.folders[0].lists[0].cards = [
       { type: "normal", front: "to be", back: "ser" },
       { type: "normal", front: "to be", back: "estar" },
     ];
+    value.declared_totals = {
+      folders: 1,
+      lists: 1,
+      cards: 2,
+      glossary_entries: 0,
+      layered_groups: 0,
+    };
 
     const result = flattenSuperImportLayers(value);
 
     expect(result.groupsFlattened).toBe(0);
     expect(result.cardsCreated).toBe(0);
-    expect(result.packageValue.declared_totals?.layered_groups).toBe(0);
+    expect(result.packageValue).toBe(value);
   });
 });
