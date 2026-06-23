@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { setCurrentDetailedExplanation } from "@/features/study/lib/currentDetailedExplanation";
 
 interface DetailedExplanationPanelProps {
@@ -17,7 +17,7 @@ export function DetailedExplanationPanel({
   usageNotes,
   commonMistakes,
 }: DetailedExplanationPanelProps) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     setCurrentDetailedExplanation({ explanation, usageNotes, commonMistakes });
   }, [explanation, usageNotes, commonMistakes]);
 
