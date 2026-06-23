@@ -1,6 +1,7 @@
 import { FolderArchive } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { FolderExportDialog } from '@/features/export/FolderExportDialog';
+import type { FolderExportSource } from '@/features/export/folderExport';
 import { useAtribuicoesByTurma } from '@/features/classroom/hooks/useAtribuicoes';
 
 interface ClassroomFolderExportPanelProps {
@@ -13,9 +14,9 @@ export function ClassroomFolderExportPanel({ turmaId }: ClassroomFolderExportPan
     (assignment: any) => assignment?.fonte_tipo === 'pasta' && assignment?.fonte_id,
   );
   const sources = Array.from(
-    new Map(
+    new Map<string, FolderExportSource>(
       folderAssignments.map((assignment: any) => [
-        assignment.fonte_id,
+        assignment.fonte_id as string,
         { id: assignment.fonte_id as string, title: assignment.titulo as string },
       ]),
     ).values(),
