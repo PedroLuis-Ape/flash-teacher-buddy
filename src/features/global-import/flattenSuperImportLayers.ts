@@ -50,7 +50,8 @@ export function flattenSuperImportLayers(
     return { packageValue: value, groupsFlattened: 0, cardsCreated: 0 };
   }
 
-  const { declared_totals: _staleTotals, ...withoutTotals } = value;
+  const { declared_totals: staleTotals, ...withoutTotals } = value;
+  void staleTotals;
   const packageValue = withSmartDeclaredTotals({
     ...withoutTotals,
     package: {
