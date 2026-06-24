@@ -6,6 +6,7 @@ import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useListActivity } from "@/hooks/useListActivity";
 import { updateGoalProgress } from "@/hooks/useGoals";
 import { useTurmaActivity } from "@/features/classroom/hooks/useTurmaActivity";
+import { useTurmaEngagementTracking } from "@/features/classroom/hooks/useTurmaEngagementTracking";
 import { perfLog } from "@/lib/perfLog";
 import {
   orderByIntelligence,
@@ -149,6 +150,7 @@ export function useStudyEngine(
 
   // Turma activity tracking (for professor dashboard)
   const { initTurmaTracking, updateTurmaActivity, flushActivity } = useTurmaActivity();
+  const { trackCardViewed, trackAnswer, trackCompleted } = useTurmaEngagementTracking({ listId, mode });
 
   // Create stable signature from flashcard IDs to detect meaningful changes
   const cardsSignature = useMemo(() => 
@@ -748,6 +750,8 @@ export function useStudyEngine(
       );
     }
 
+    trackAnswer(flashcardId, correct, skipped);
+
     if (!isAuthenticated || !listId || skipped) return;
 
     // Track study activity (debounced by the hook)
@@ -770,7 +774,7 @@ export function useStudyEngine(
       totalCards: cardsOrder.length,
       currentIndex
     });
-  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, mode, cardsOrder.length, currentIndex]);
+  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex]);
 
   const goToNext = useCallback(() => {
     if (currentIndex < cardsOrder.length - 1) {
@@ -955,6 +959,16 @@ export function useStudyEngine(
   useEffect(() => {
     initializeSession();
   }, [listId, cardsSignature, mode, sessionScopeKey]); // Only reinit on meaningful changes (scope included)
+
+  useEffect(() => {
+    if (isLoading) return;
+    const cardId = cardsOrder[currentIndex];
+    if (cardId) trackCardViewed(cardId, `${roundNumber}:${currentIndex}:${cardsOrder.length}`);
+  }, [cardsOrder, currentIndex, isLoading, roundNumber, trackCardViewed]);
+
+  useEffect(() => {
+    if (isFinished) trackCompleted();
+  }, [isFinished, trackCompleted]);
 
   // Save progress on index change
   useEffect(() => {
