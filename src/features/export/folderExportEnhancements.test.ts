@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { validateGlobalImportInput } from "@/features/global-import/validation";
 import { SMART_IMPORT_LIMITS, smartNormalCardSchema } from "@/features/smart-import/schema";
 import {
   clearFolderExportHistory,
@@ -32,6 +33,43 @@ describe("large folder exports", () => {
     expect(result.success).toBe(true);
     expect(SMART_IMPORT_LIMITS.maxTextLength).toBe(250_000);
     expect(SMART_IMPORT_LIMITS.maxFileBytes).toBe(50 * 1024 * 1024);
+  });
+
+  it("keeps large cards valid after the smart package is converted for import", () => {
+    const validation = validateGlobalImportInput({
+      schema: "app-piteco-super-import",
+      version: "2.0",
+      declared_totals: {
+        folders: 1,
+        lists: 1,
+        cards: 1,
+        glossary_entries: 0,
+        layered_groups: 0,
+      },
+      package: {
+        name: "Pacote grande",
+        folders: [{
+          name: "Pasta grande",
+          lists: [{
+            name: "Lista grande",
+            front_language: "en",
+            back_language: "pt-BR",
+            primary_side: "a",
+            study_type: "language",
+            tts_enabled: true,
+            glossary: [],
+            cards: [{
+              type: "normal",
+              front: "A".repeat(12_000),
+              back: "B".repeat(12_000),
+            }],
+          }],
+        }],
+      },
+    }, null);
+
+    expect(validation.valid).toBe(true);
+    expect(validation.sourceFormat).toBe("smart");
   });
 
   it("keeps a high technical ceiling instead of an unlimited browser payload", () => {
