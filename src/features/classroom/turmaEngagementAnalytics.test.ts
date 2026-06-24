@@ -80,15 +80,20 @@ describe("turma engagement analytics", () => {
 
   it("keeps guest identities private and connects study tracking to the panel", () => {
     const migration = read("supabase/migrations/20260624210000_turma_engagement_analytics_v1.sql");
+    const teacherExclusion = read("supabase/migrations/20260624210100_exclude_teacher_preview_from_engagement.sql");
     const tracker = read("src/features/classroom/hooks/useTurmaEngagementTracking.ts");
+    const engine = read("src/features/study/hooks/useStudyEngine.ts");
     const panel = read("src/features/classroom/components/TurmaEngagementPanel.tsx");
 
     expect(migration).toContain("digest(_visitor_token, 'sha256')");
     expect(migration).toContain("get_turma_engagement_report_v1");
     expect(migration).toContain("Only the classroom owner");
     expect(migration).not.toContain("ip_address");
+    expect(teacherExclusion).toContain("teacher_preview");
     expect(tracker).toContain("record_turma_engagement_v1");
     expect(tracker).toContain("trackCardViewed");
+    expect(engine).toContain("useTurmaEngagementTracking");
+    expect(engine).toContain("trackCompleted");
     expect(panel).toContain("Cards mais praticados");
     expect(panel).toContain("acessos sem conta entram apenas nos totais");
   });
