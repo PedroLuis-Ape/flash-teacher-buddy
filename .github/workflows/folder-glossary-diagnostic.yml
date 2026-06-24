@@ -1,0 +1,40 @@
+name: Folder Glossary Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - "src/features/study/**"
+      - "src/features/global-import/**"
+      - "src/pages/Glossary.tsx"
+      - "src/pages/FolderWorkspace.tsx"
+      - "supabase/migrations/2026062412*.sql"
+      - ".github/workflows/folder-glossary-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Run folder glossary tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npx vitest run src/features/study/folderGlossaryRegression.test.ts src/features/study/lib/glossaryMerge.test.ts src/features/study/lib/glossaryLayers.test.ts --reporter=verbose 2>&1 | tee folder-glossary-tests.log
+      - name: Upload focused test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: folder-glossary-test-log
+          path: folder-glossary-tests.log
+          if-no-files-found: warn
+          retention-days: 3
