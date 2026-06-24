@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Layers3 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Layers3, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { getPerfSettings } from "@/lib/performanceSettings";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getSpeechRate } from "./SpeechRateControl";
@@ -22,6 +32,9 @@ interface InteractiveTextProps {
   speakOnHintClick?: boolean;
   speakLang?: string;
 }
+
+const normalize = (value: string) =>
+  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 
 export const InteractiveText = ({
   text = "",
@@ -69,7 +82,9 @@ export const InteractiveText = ({
             onActivate={handleHintActivate}
           />
         ) : (
-          <span key={`plain-${segment.startIndex}-${segment.endIndex}-${index}`}>{segment.value}</span>
+          <span key={`plain-${segment.startIndex}-${segment.endIndex}-${index}`}>
+            {segment.value}
+          </span>
         )
       ))}
     </span>
@@ -77,13 +92,144 @@ export const InteractiveText = ({
 };
 
 function uniqueTranslations(match: LayeredHintMatch) {
-  const seen = new Set<string>();
-  return match.translations.filter((translation) => {
-    const key = `${translation.text.trim().toLocaleLowerCase()}|${translation.note ?? ""}|${translation.source}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  const grouped = new Map<string, {
+    text: string;
+    note?: string;
+    source: "global" | "manual";
+  }>();
+
+  for (const translation of match.translations) {
+    const key = normalize(translation.text);
+    if (!key) continue;
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, { ...translation });
+      continue;
+    }
+
+    const notes = [existing.note, translation.note]
+      .filter((note): note is string => Boolean(note?.trim()));
+    const uniqueNotes = Array.from(new Map(
+      notes.map((note) => [normalize(note), note.trim()]),
+    ).values());
+
+    grouped.set(key, {
+      text: existing.text,
+      note: uniqueNotes.join(" · ") || undefined,
+      source: existing.source === "manual" || translation.source === "manual"
+        ? "manual"
+        : "global",
+    });
+  }
+
+  return Array.from(grouped.values());
+}
+
+function prioritizedMatches(value: string, matches: LayeredHintMatch[]) {
+  const clicked = normalize(value);
+  const exact = matches.filter((match) => normalize(match.text) === clicked);
+  const candidates = exact.length > 0 ? exact : matches;
+  const grouped = new Map<string, LayeredHintMatch>();
+
+  for (const match of candidates) {
+    const key = normalize(match.text);
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        ...match,
+        translations: [...match.translations],
+      });
+      continue;
+    }
+
+    existing.translations.push(...match.translations);
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    const aExpression = /\s/u.test(a.text.trim()) ? 1 : 0;
+    const bExpression = /\s/u.test(b.text.trim()) ? 1 : 0;
+    if (aExpression !== bExpression) return aExpression - bExpression;
+    return a.text.length - b.text.length || a.text.localeCompare(b.text);
   });
+}
+
+function GlossaryPanel({
+  value,
+  matches,
+  mobile = false,
+}: {
+  value: string;
+  matches: LayeredHintMatch[];
+  mobile?: boolean;
+}) {
+  const prioritized = prioritizedMatches(value, matches);
+  const visible = prioritized.slice(0, 3);
+  const hiddenCount = Math.max(0, prioritized.length - visible.length);
+
+  return (
+    <div className={cn("flex min-h-0 flex-col bg-background", mobile && "max-h-[72dvh]")}>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Glossário da pasta
+          </p>
+          <p className="truncate text-base font-semibold">{value}</p>
+        </div>
+        {prioritized.length > 1 && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+            <Layers3 className="h-3 w-3" />
+            {prioritized.length} camadas
+          </span>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain">
+        {visible.map((match) => {
+          const translations = uniqueTranslations(match);
+          const isExact = normalize(match.text) === normalize(value);
+          const isExpression = /\s/u.test(match.text.trim());
+
+          return (
+            <section
+              key={`${match.key}-${match.startIndex}-${match.endIndex}`}
+              className="space-y-2 px-4 py-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 break-words text-sm font-semibold text-foreground">
+                  {match.text}
+                </span>
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {isExact ? "exata" : isExpression ? "expressão" : "relacionada"}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {translations.map((translation) => (
+                  <div key={normalize(translation.text)}>
+                    <p className="text-sm font-medium leading-snug">
+                      {translation.text}
+                    </p>
+                    {translation.note && (
+                      <p className="mt-1 text-xs italic leading-relaxed text-muted-foreground">
+                        {translation.note}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+
+        {hiddenCount > 0 && (
+          <p className="px-4 py-3 text-xs text-muted-foreground">
+            {hiddenCount} camada{hiddenCount === 1 ? "" : "s"} adicional
+            {hiddenCount === 1 ? "" : "is"} foi ocultada para manter a leitura organizada.
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function LayeredHintToken({
@@ -96,88 +242,69 @@ function LayeredHintToken({
   onActivate?: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const layerCount = matches.length;
+  const isMobile = useIsMobile();
+  const layerCount = prioritizedMatches(value, matches).length;
 
-  useEffect(() => {
-    if (!open) return;
-    const timer = window.setTimeout(() => setOpen(false), 5000);
-    return () => window.clearTimeout(timer);
-  }, [open]);
+  const trigger = (
+    <button
+      type="button"
+      className={cn(
+        "inline cursor-pointer rounded-sm border-0 border-b-2 border-dashed border-primary/55 bg-transparent px-0.5 py-0 font-inherit text-inherit -mx-0.5",
+        "transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        open && "border-primary bg-primary/10 text-primary",
+        layerCount > 1 && "border-b-[3px] border-double",
+      )}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onActivate?.(value);
+      }}
+      aria-label={`${value}: abrir ${layerCount} entrada${layerCount === 1 ? "" : "s"} do glossário da pasta`}
+    >
+      {value}
+    </button>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>{trigger}</SheetTrigger>
+        <SheetContent
+          side="bottom"
+          className="max-h-[78dvh] rounded-t-2xl border-t bg-background p-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Glossário da pasta: {value}</SheetTitle>
+          </SheetHeader>
+          <GlossaryPanel value={value} matches={matches} mobile />
+          <div className="shrink-0 border-t bg-background px-4 py-3">
+            <SheetClose asChild>
+              <Button variant="outline" className="w-full">
+                <X className="mr-2 h-4 w-4" />
+                Fechar
+              </Button>
+            </SheetClose>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "inline cursor-pointer rounded-sm border-0 border-b-2 border-dashed border-primary/55 bg-transparent px-0.5 py-0 font-inherit text-inherit -mx-0.5",
-            "transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-            open && "border-primary bg-primary/10 text-primary",
-            layerCount > 1 && "border-b-[3px] border-double",
-          )}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onActivate?.(value);
-          }}
-          aria-label={`${value}: abrir ${layerCount} entrada${layerCount === 1 ? "" : "s"} do glossário`}
-        >
-          {value}
-        </button>
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
-        side="top"
+        side="bottom"
         align="center"
         sideOffset={8}
         collisionPadding={12}
-        className="w-[min(20rem,calc(100vw-1.5rem))] max-h-[min(22rem,66vh)] overflow-y-auto p-0 shadow-lg"
+        className="w-[min(19rem,calc(100vw-1.5rem))] max-h-[min(18rem,60vh)] overflow-hidden bg-background p-0 shadow-lg"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-popover px-3 py-2">
-          <div className="min-w-0">
-            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Glossário</p>
-            <p className="truncate text-sm font-semibold">{value}</p>
-          </div>
-          {layerCount > 1 && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
-              <Layers3 className="h-3 w-3" />
-              {layerCount} camadas
-            </span>
-          )}
-        </div>
-
-        <div className="divide-y">
-          {matches.map((match) => {
-            const translations = uniqueTranslations(match);
-            const isExpression = /\s/u.test(match.text.trim());
-            return (
-              <div key={`${match.key}-${match.startIndex}-${match.endIndex}`} className="space-y-2 px-3 py-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 break-words text-xs font-semibold text-foreground">{match.text}</span>
-                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
-                    {isExpression ? "expressão" : "palavra"}
-                  </span>
-                </div>
-                {translations.map((translation, index) => (
-                  <div key={`${translation.text}-${translation.source}-${index}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-medium leading-snug">{translation.text}</span>
-                      {layerCount > 1 && (
-                        <span className="shrink-0 text-[9px] uppercase tracking-wide text-muted-foreground">
-                          {translation.source === "manual" ? "card" : "lista"}
-                        </span>
-                      )}
-                    </div>
-                    {translation.note && (
-                      <p className="mt-1 text-xs italic leading-relaxed text-muted-foreground">{translation.note}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
+        <GlossaryPanel value={value} matches={matches} />
       </PopoverContent>
     </Popover>
   );

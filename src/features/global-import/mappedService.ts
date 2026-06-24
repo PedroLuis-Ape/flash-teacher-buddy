@@ -45,6 +45,8 @@ export interface GlobalImportExecutionReport {
   layered_groups_created?: number;
   glossary_created?: number;
   glossary_updated?: number;
+  glossary_skipped?: number;
+  glossary_scope?: "folder";
   assignments_created?: number;
   target_scope?: ImportTargetScope;
   turma_id?: string;
@@ -64,6 +66,24 @@ function countCards(packageValue: GlobalImportPackage): number {
     ),
     0,
   );
+}
+
+export function stripGlossariesForFolderImport<T>(packageValue: T): T {
+  const clone = JSON.parse(JSON.stringify(packageValue)) as T;
+  const packageRecord = clone as {
+    package?: {
+      folders?: Array<{
+        glossary?: unknown;
+        lists?: Array<{ glossary?: unknown }>;
+      }>;
+    };
+  };
+
+  for (const folder of packageRecord.package?.folders ?? []) {
+    delete folder.glossary;
+    for (const list of folder.lists ?? []) delete list.glossary;
+  }
+  return clone;
 }
 
 function requestStorageKey(
@@ -133,6 +153,16 @@ function importDatabaseError(error: unknown): Error {
   return error instanceof Error ? error : new Error(message || "A importação falhou no banco de dados.");
 }
 
+async function rollbackImportedBatch(
+  batchId: string,
+  targetScope: ImportTargetScope,
+): Promise<void> {
+  const rpcName = targetScope === "classroom"
+    ? "undo_classroom_global_import_v1"
+    : "undo_global_import_v1";
+  await (supabase.rpc as any)(rpcName, { _batch_id: batchId });
+}
+
 export async function executeMappedGlobalImport(
   packageValue: GlobalImportPackage,
   options: ExecuteMappedImportOptions,
@@ -140,6 +170,7 @@ export async function executeMappedGlobalImport(
   const totalCards = countCards(packageValue);
   const sourceSmart = options.smartPackage ?? legacyPackageToSmartImport(packageValue);
   const smartPackage = smartPackageForEffectiveLegacy(sourceSmart, packageValue);
+  const cardPackage = stripGlossariesForFolderImport(smartPackage);
   const request = getOrCreateRequestId(packageValue, smartPackage, options);
 
   if (
@@ -165,38 +196,79 @@ export async function executeMappedGlobalImport(
   const rpcPayload = options.turmaId
     ? {
         _request_id: request.requestId,
-        _payload: smartPackage,
+        _payload: cardPackage,
         _destination_plan: options.destinationPlan,
         _turma_id: options.turmaId,
         _card_conflict: options.cardConflict,
       }
     : {
         _request_id: request.requestId,
-        _payload: smartPackage,
+        _payload: cardPackage,
         _destination_plan: options.destinationPlan,
         _card_conflict: options.cardConflict,
         _institution_id: options.institutionId ?? null,
       };
 
   const { data, error } = await (supabase.rpc as any)(rpcName, rpcPayload);
-
   if (error) throw importDatabaseError(error);
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("O banco não devolveu o relatório da importação.");
   }
+
+  const baseReport = data as GlobalImportExecutionReport;
+  options.onProgress?.(
+    totalCards,
+    totalCards,
+    "Consolidando o glossário dentro de cada pasta",
+  );
+
+  const { data: glossaryData, error: glossaryError } = await (supabase.rpc as any)(
+    "sync_folder_glossaries_from_super_import_v1",
+    {
+      _batch_id: baseReport.batch_id,
+      _payload: smartPackage,
+    },
+  );
+
+  if (glossaryError) {
+    await rollbackImportedBatch(
+      baseReport.batch_id,
+      options.turmaId ? "classroom" : "personal",
+    );
+    throw importDatabaseError(glossaryError);
+  }
+
+  const glossaryReport = (glossaryData ?? {}) as {
+    glossary_created?: number;
+    glossary_updated?: number;
+    glossary_skipped?: number;
+  };
+  const finalReport: GlobalImportExecutionReport = {
+    ...baseReport,
+    glossary_scope: "folder",
+    glossary_created: glossaryReport.glossary_created ?? 0,
+    glossary_updated: glossaryReport.glossary_updated ?? 0,
+    glossary_skipped: glossaryReport.glossary_skipped ?? 0,
+  };
 
   if (options.canonicalPackage) {
     updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");
   }
   clearRequestId(request.storageKey);
   options.onProgress?.(totalCards, totalCards, "Importação concluída");
-  return data as GlobalImportExecutionReport;
+  return finalReport;
 }
 
 export async function undoGlobalImport(
   batchId: string,
   targetScope: ImportTargetScope = "personal",
 ): Promise<void> {
+  const folderUndo = await (supabase.rpc as any)(
+    "undo_folder_glossary_batch_v1",
+    { _batch_id: batchId },
+  );
+  if (folderUndo.error) throw importDatabaseError(folderUndo.error);
+
   const rpcName = targetScope === "classroom"
     ? "undo_classroom_global_import_v1"
     : "undo_global_import_v1";
