@@ -18,6 +18,15 @@ function safeScope(value: string | null | undefined): string {
   return (value || "anon").replace(/[^a-zA-Z0-9:_-]/g, "_");
 }
 
+function hashScope(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 export function buildStudySnapshotKey(input: {
   userScope?: string | null;
   listId?: string | null;
@@ -31,7 +40,7 @@ export function buildStudySnapshotKey(input: {
     safeScope(input.listId || "no-list"),
     safeScope(input.mode),
     safeScope(input.sessionScopeKey),
-    safeScope(input.cardsSignature),
+    hashScope(input.cardsSignature),
   ].join(":");
 }
 
