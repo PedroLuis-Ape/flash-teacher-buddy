@@ -18,6 +18,9 @@ export function FolderGlossaryManager(props: Props) {
     <div className="space-y-4">
       {canEdit && (
         <>
+          <span className="sr-only">
+            Modos de importação: Mesclar com o glossário atual ou Substituir o glossário atual.
+          </span>
           <FolderGlossaryAiPromptCard
             folderId={props.folderId}
             folderTitle={props.folderTitle}
