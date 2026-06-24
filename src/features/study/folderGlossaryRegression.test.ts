@@ -77,10 +77,11 @@ describe("folder-scoped glossary", () => {
     expect(migration).toContain("sync_folder_glossaries_from_super_import_v1");
   });
 
-  it("uses a bottom sheet on mobile and removes automatic closing", () => {
+  it("uses a bottom sheet on mobile and prioritizes the exact clicked term", () => {
     expect(interactiveText).toContain("<Sheet");
     expect(interactiveText).toContain('side="bottom"');
     expect(interactiveText).toContain("safe-area-inset-bottom");
+    expect(interactiveText).toContain("exact.length > 0 ? exact : matches");
     expect(interactiveText).not.toContain("setTimeout(() => setOpen(false)");
   });
 
