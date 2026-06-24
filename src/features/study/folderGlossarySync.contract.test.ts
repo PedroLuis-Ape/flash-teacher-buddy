@@ -4,25 +4,33 @@ import { describe, expect, it } from "vitest";
 const read = (path: string) => readFileSync(path, "utf8");
 
 describe("folder glossary synchronization", () => {
-  it("keeps the account glossary as the single destination", () => {
+  it("uses the folder glossary as the canonical destination", () => {
     const api = read("src/features/study/lib/folderGlossaryApi.ts");
-    expect(api).toContain("importAccountGlossary");
-    expect(api).toContain("includeNormalCards = false");
-    expect(api).toContain("glossaryEntryIdentity");
+    const importer = read("src/features/global-import/mappedService.ts");
+    expect(api).toContain("get_folder_glossary_v1");
+    expect(api).toContain("import_folder_glossary_v1");
+    expect(api).not.toContain("importAccountGlossary");
+    expect(importer).toContain("stripGlossariesForFolderImport");
+    expect(importer).toContain("sync_folder_glossaries_from_super_import_v1");
   });
 
-  it("offers individual and classroom-wide manual synchronization", () => {
-    const dialog = read("src/features/study/components/FolderGlossarySyncDialog.tsx");
+  it("offers a special folder entry and read-only classroom mode", () => {
+    const card = read("src/features/study/components/FolderGlossaryCard.tsx");
+    const manager = read("src/features/study/components/FolderGlossaryManager.tsx");
     const classroom = read("src/features/classroom/components/ClassroomLibraryActions.tsx");
-    expect(dialog).toContain("Também usar cards normais");
-    expect(classroom).toContain("Sincronizar todas as pastas");
+    expect(card).toContain("Glossário da pasta");
+    expect(card).toContain("Somente leitura");
+    expect(manager).toContain("canEdit");
+    expect(manager).toContain("Mesclar com o glossário atual");
+    expect(manager).toContain("Substituir o glossário atual");
     expect(classroom).toContain("FolderGlossarySyncDialog");
   });
 
-  it("exposes a folder-filtered glossary view", () => {
+  it("exposes the folder glossary view", () => {
     const page = read("src/pages/Glossary.tsx");
     expect(page).toContain('params.get("folder")');
-    expect(page).toContain("Glossário desta pasta");
+    expect(page).toContain("Glossário da pasta");
+    expect(page).toContain("O glossário agora pertence à pasta");
   });
 
   it("marks search inputs as instant search fields", () => {
