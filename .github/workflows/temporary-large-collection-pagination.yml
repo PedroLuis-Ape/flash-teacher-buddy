@@ -1,0 +1,38 @@
+name: Temporary large collection pagination
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply pagination patches
+        run: |
+          node scripts/patch-card-pagination.mjs
+          node scripts/patch-folder-pagination.mjs
+          node scripts/patch-export-pagination.mjs
+          node scripts/patch-status-pagination.mjs
+      - name: Commit pagination changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/ListDetail.tsx src/pages/Study.tsx src/pages/Folder.tsx src/components/ListSequenceDialog.tsx src/features/export/folderExport.ts src/features/study/lib/folderGlossarySyncApi.ts src/hooks/useFavorites.ts src/hooks/useRedList.ts
+          if git diff --cached --quiet; then
+            echo "Pagination patches already applied."
+          else
+            git commit -m "fix: paginate large folders cards and glossaries"
+            git push
+          fi
