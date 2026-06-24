@@ -72,20 +72,23 @@ describe("folder glossary coverage audit", () => {
       folderTitle: "Avançado",
       report,
     })) as { entries: Array<Record<string, unknown>> };
+    const statusByTerm = new Map(
+      exported.entries.map((row) => [String(row.term), String(row.coverage_status)]),
+    );
 
-    expect(exported.entries.map((row) => row.term)).toEqual([
+    expect(Array.from(statusByTerm.keys()).sort()).toEqual([
+      "freedom",
       "on",
       "what",
       "you",
-      "freedom",
     ]);
+    expect(statusByTerm).toEqual(new Map([
+      ["freedom", "missing"],
+      ["on", "missing"],
+      ["what", "inactive"],
+      ["you", "wrong_side"],
+    ]));
     expect(exported.entries.every((row) => row.translation === "")).toBe(true);
-    expect(exported.entries.map((row) => row.coverage_status)).toEqual([
-      "missing",
-      "inactive",
-      "wrong_side",
-      "missing",
-    ]);
   });
 
   it("exports glossary entries that are actually used by cards", () => {
