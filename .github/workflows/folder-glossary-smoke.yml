@@ -1,0 +1,63 @@
+name: Folder Glossary Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/2026062412*.sql"
+      - "supabase/tests/folder_glossary_smoke.sql"
+      - ".github/workflows/folder-glossary-smoke.yml"
+      - "src/features/global-import/mappedService.ts"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/2026062412*.sql"
+      - "supabase/tests/folder_glossary_smoke.sql"
+      - ".github/workflows/folder-glossary-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  folder-glossary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase start 2>&1 | tee folder-glossary-db.log
+          supabase db reset --local --no-seed 2>&1 | tee -a folder-glossary-db.log
+
+      - name: Verify folder glossary contract
+        shell: bash
+        run: |
+          set -o pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/folder_glossary_smoke.sql 2>&1 | tee folder-glossary-smoke.log
+
+      - name: Upload folder glossary diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: folder-glossary-smoke-diagnostics
+          path: |
+            folder-glossary-db.log
+            folder-glossary-smoke.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
