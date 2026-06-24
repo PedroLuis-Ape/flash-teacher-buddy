@@ -9,6 +9,75 @@ import type {
 
 export { syncFolderGlossary } from "./folderGlossarySyncApi";
 
+const DEFAULT_IMPORT_CHUNK_SIZE = 180;
+const MIN_IMPORT_CHUNK_SIZE = 20;
+
+export interface FolderGlossaryImportProgress {
+  processed: number;
+  total: number;
+}
+
+export interface FolderGlossaryImportOptions {
+  chunkSize?: number;
+  onProgress?: (progress: FolderGlossaryImportProgress) => void;
+}
+
+function isStatementTimeout(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : String(error ?? "");
+
+  return /statement timeout|canceling statement due to statement timeout|57014/iu.test(message);
+}
+
+function emptyImportResult(
+  folderId: string,
+  mode: "merge" | "replace",
+  dryRun: boolean,
+): FolderGlossaryImportResult {
+  return {
+    folder_id: folderId,
+    mode,
+    dry_run: dryRun,
+    inserted: 0,
+    updated: 0,
+    skipped: 0,
+    removed: 0,
+  };
+}
+
+function addImportResult(
+  target: FolderGlossaryImportResult,
+  source: FolderGlossaryImportResult,
+): void {
+  target.inserted += Number(source.inserted ?? 0);
+  target.updated += Number(source.updated ?? 0);
+  target.skipped += Number(source.skipped ?? 0);
+  target.removed += Number(source.removed ?? 0);
+}
+
+async function importFolderGlossaryChunk(
+  folderId: string,
+  entries: FolderGlossaryInput[],
+  mode: "merge" | "replace",
+  dryRun: boolean,
+): Promise<FolderGlossaryImportResult> {
+  const { data, error } = await (supabase as any).rpc(
+    "import_folder_glossary_v1",
+    {
+      _folder_id: folderId,
+      _entries: entries,
+      _mode: mode,
+      _dry_run: dryRun,
+    },
+  );
+
+  if (error) throw error;
+  return data as FolderGlossaryImportResult;
+}
+
 export async function loadFolderGlossary(folderId: string): Promise<FolderGlossaryQueryResult> {
   const [{ data, error }, permission] = await Promise.all([
     (supabase as any).rpc("get_folder_glossary_v1", { _folder_id: folderId }),
@@ -36,18 +105,61 @@ export async function importFolderGlossary(
   entries: FolderGlossaryInput[],
   mode: "merge" | "replace" = "merge",
   dryRun = false,
+  options: FolderGlossaryImportOptions = {},
 ): Promise<FolderGlossaryImportResult> {
-  const { data, error } = await (supabase as any).rpc(
-    "import_folder_glossary_v1",
-    {
-      _folder_id: folderId,
-      _entries: entries,
-      _mode: mode,
-      _dry_run: dryRun,
-    },
-  );
-  if (error) throw error;
-  return data as FolderGlossaryImportResult;
+  const total = entries.length;
+  const requestedChunkSize = Math.floor(options.chunkSize ?? DEFAULT_IMPORT_CHUNK_SIZE);
+  const chunkSize = Math.max(MIN_IMPORT_CHUNK_SIZE, requestedChunkSize);
+
+  // Dry-run must remain a single transaction so replace-mode counts stay accurate.
+  if (dryRun || total <= chunkSize) {
+    const result = await importFolderGlossaryChunk(folderId, entries, mode, dryRun);
+    options.onProgress?.({ processed: total, total });
+    return result;
+  }
+
+  const aggregate = emptyImportResult(folderId, mode, dryRun);
+  let processed = 0;
+  let replaceStillPending = mode === "replace";
+
+  const runAdaptiveChunk = async (
+    chunk: FolderGlossaryInput[],
+    chunkMode: "merge" | "replace",
+  ): Promise<void> => {
+    try {
+      const result = await importFolderGlossaryChunk(folderId, chunk, chunkMode, false);
+      addImportResult(aggregate, result);
+      processed += chunk.length;
+      options.onProgress?.({ processed, total });
+      return;
+    } catch (error) {
+      if (!isStatementTimeout(error) || chunk.length <= MIN_IMPORT_CHUNK_SIZE) {
+        if (isStatementTimeout(error)) {
+          throw new Error(
+            `O banco ainda excedeu o tempo ao importar um lote de ${chunk.length} entradas. `
+            + `Tente novamente; as entradas já concluídas podem ser mescladas sem duplicação.`,
+          );
+        }
+        throw error;
+      }
+
+      const middle = Math.ceil(chunk.length / 2);
+      const left = chunk.slice(0, middle);
+      const right = chunk.slice(middle);
+
+      await runAdaptiveChunk(left, chunkMode);
+      if (right.length > 0) await runAdaptiveChunk(right, "merge");
+    }
+  };
+
+  for (let offset = 0; offset < total; offset += chunkSize) {
+    const chunk = entries.slice(offset, offset + chunkSize);
+    const chunkMode: "merge" | "replace" = replaceStillPending ? "replace" : "merge";
+    await runAdaptiveChunk(chunk, chunkMode);
+    replaceStillPending = false;
+  }
+
+  return aggregate;
 }
 
 export async function addFolderGlossaryEntry(
