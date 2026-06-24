@@ -1,5 +1,28 @@
 import type { FolderGlossaryEntry, FolderGlossaryInput } from "./folderGlossaryTypes";
 
+function sanitizeFolderGlossaryJsonText(text: string): string {
+  const withoutBom = text.replace(/^\uFEFF/u, "").trim();
+  const fenced = withoutBom.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/iu);
+  return (fenced?.[1] ?? withoutBom).trim();
+}
+
+function describeJsonSyntaxError(error: unknown, text: string): string {
+  if (!(error instanceof SyntaxError)) return "JSON inválido.";
+
+  const positionMatch = error.message.match(/position\s+(\d+)/iu);
+  const position = positionMatch ? Number(positionMatch[1]) : Number.NaN;
+  if (!Number.isFinite(position)) {
+    return `JSON inválido: ${error.message}`;
+  }
+
+  const beforeError = text.slice(0, position);
+  const line = beforeError.split("\n").length;
+  const lastLineBreak = beforeError.lastIndexOf("\n");
+  const column = position - lastLineBreak;
+
+  return `JSON inválido na linha ${line}, coluna ${column}. Selecione o arquivo .json original ou confira se o conteúdo foi copiado por inteiro.`;
+}
+
 export function normalizeFolderGlossaryInput(value: unknown): FolderGlossaryInput | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;
@@ -25,7 +48,16 @@ export function normalizeFolderGlossaryInput(value: unknown): FolderGlossaryInpu
 }
 
 export function parseFolderGlossaryJson(text: string): FolderGlossaryInput[] {
-  const parsed = JSON.parse(text) as unknown;
+  const normalizedText = sanitizeFolderGlossaryJsonText(text);
+  if (!normalizedText) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(normalizedText) as unknown;
+  } catch (error) {
+    throw new Error(describeJsonSyntaxError(error, normalizedText));
+  }
+
   const container = parsed && typeof parsed === "object" && !Array.isArray(parsed)
     ? parsed as Record<string, unknown>
     : null;
@@ -36,6 +68,11 @@ export function parseFolderGlossaryJson(text: string): FolderGlossaryInput[] {
       : Array.isArray(container?.glossary)
         ? container.glossary
         : [];
+
+  if (rows.length === 0) {
+    throw new Error('O arquivo não contém uma lista "entries" ou "glossary" com entradas.');
+  }
+
   return rows.map(normalizeFolderGlossaryInput).filter((entry): entry is FolderGlossaryInput => Boolean(entry));
 }
 
