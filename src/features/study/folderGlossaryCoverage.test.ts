@@ -1,0 +1,97 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
+
+import {
+  analyzeFolderGlossaryCoverageRows,
+  serializeMissingCoverageTerms,
+} from "./lib/folderGlossaryCoverage";
+import type { FolderGlossaryEntry } from "./lib/folderGlossaryTypes";
+
+const makeEntry = (
+  id: string,
+  original_text: string,
+  primary_translation: string,
+  options: Partial<FolderGlossaryEntry> = {},
+): FolderGlossaryEntry => ({
+  id,
+  folder_id: "folder-1",
+  owner_id: "owner-1",
+  original_text,
+  primary_translation,
+  alternative_translations: [],
+  note: null,
+  side: "A",
+  source_language: null,
+  target_language: null,
+  is_active: true,
+  created_at: "2026-06-24T00:00:00.000Z",
+  updated_at: "2026-06-24T00:00:00.000Z",
+  ...options,
+});
+
+const glossary = [
+  makeEntry("that", "that", "isso"),
+  makeEntry("depends", "depends", "depende"),
+  makeEntry("mean-by", "mean by", "querer dizer com"),
+  makeEntry("what", "what", "o que", { is_active: false }),
+  makeEntry("you", "you", "você", { side: "B" }),
+];
+
+const report = analyzeFolderGlossaryCoverageRows({
+  folderId: "folder-1",
+  lists: [{ id: "list-1", title: "Filosofia" }],
+  cards: [{
+    id: "card-1",
+    list_id: "list-1",
+    term: "That depends on what you mean by freedom.",
+    translation: "",
+  }],
+  glossary,
+});
+
+describe("folder glossary coverage audit", () => {
+  it("separates exact, expression, inactive, wrong-side and missing terms", () => {
+    const status = new Map(report.terms.map((term) => [term.normalized, term.status]));
+    expect(status.get("that")).toBe("covered");
+    expect(status.get("depends")).toBe("covered");
+    expect(status.get("mean")).toBe("expression");
+    expect(status.get("by")).toBe("expression");
+    expect(status.get("what")).toBe("inactive");
+    expect(status.get("you")).toBe("wrong_side");
+    expect(status.get("freedom")).toBe("missing");
+    expect(report).toMatchObject({
+      coveredTerms: 2,
+      expressionTerms: 2,
+      inactiveTerms: 1,
+      wrongSideTerms: 1,
+      missingTerms: 2,
+    });
+  });
+
+  it("exports only unresolved terms for AI completion", () => {
+    const exported = JSON.parse(serializeMissingCoverageTerms({
+      folderTitle: "Avançado",
+      report,
+    })) as { entries: Array<Record<string, unknown>> };
+    const statuses = new Map(
+      exported.entries.map((row) => [String(row.term), String(row.coverage_status)]),
+    );
+    expect(Array.from(statuses.keys()).sort()).toEqual(["freedom", "on", "what", "you"]);
+    expect(statuses.get("what")).toBe("inactive");
+    expect(statuses.get("you")).toBe("wrong_side");
+    expect(exported.entries.every((row) => row.translation === "")).toBe(true);
+  });
+
+  it("exposes export and import controls on the glossary screen", () => {
+    const component = readFileSync(
+      "src/features/study/components/FolderGlossaryCoverageCard.tsx",
+      "utf8",
+    );
+    expect(component).toContain("Auditar cobertura do glossário");
+    expect(component).toContain("Exportar pendências JSON");
+    expect(component).toContain("Exportar cobertas JSON");
+    expect(component).toContain("Importar pendências preenchidas");
+  });
+});
