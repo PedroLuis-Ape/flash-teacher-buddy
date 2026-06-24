@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Bug, Menu } from "lucide-react";
 import { PitecoLogo } from "@/features/gamification/components/PitecoLogo";
 import { AuthAwareCTA } from "@/components/auth/AuthAwareLink";
 import { PublicThemeToggle } from "@/components/seo/PublicThemeToggle";
@@ -41,6 +41,13 @@ export function PublicNav() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+          <Button asChild variant="ghost" size="sm" className="hidden gap-1.5 xl:inline-flex">
+            <Link to="/reportar-problema">
+              <Bug className="h-4 w-4" />
+              Relatar problema
+            </Link>
+          </Button>
+
           <InstallAppButton
             compact
             className="shrink-0 max-[480px]:h-9 max-[480px]:w-9 max-[480px]:gap-0 max-[480px]:px-0 max-[480px]:[&>span]:hidden"
@@ -72,6 +79,14 @@ export function PublicNav() {
                     {link.label}
                   </Link>
                 ))}
+                <Link
+                  to="/reportar-problema"
+                  onClick={() => setOpen(false)}
+                  className="mt-2 flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-3 font-medium text-primary"
+                >
+                  <Bug className="h-4 w-4" />
+                  Relatar problema
+                </Link>
                 <div className="my-3 h-px bg-border" />
                 <AuthAwareCTA guestMode="login" variant="outline" onClick={() => setOpen(false)}>
                   Entrar
@@ -93,9 +108,10 @@ export function PublicFooter() {
     <footer className="mt-16 border-t border-border/50 py-8 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-6">
         <p>© {new Date().getFullYear()} APE — Apprentice Practice & Enhancement</p>
-        <nav className="flex flex-wrap gap-4">
+        <nav className="flex flex-wrap justify-center gap-4">
           <Link to="/about" className="nav-link-animated hover:text-foreground">Sobre</Link>
           <Link to="/portal" className="nav-link-animated hover:text-foreground">Portal</Link>
+          <Link to="/reportar-problema" className="nav-link-animated font-medium text-primary hover:text-primary/80">Relatar problema</Link>
           <Link to="/auth" className="nav-link-animated hover:text-foreground">Entrar</Link>
         </nav>
       </div>
