@@ -1,3 +1,4 @@
+import { useFolderGlossary } from "@/hooks/useFolderGlossary";
 import { FolderGlossaryAiPromptCard } from "./FolderGlossaryAiPromptCard";
 import { FolderGlossaryManager as FolderGlossaryManagerCore } from "./FolderGlossaryManagerCore";
 
@@ -9,14 +10,23 @@ interface Props {
 }
 
 export function FolderGlossaryManager(props: Props) {
+  const { canEdit } = useFolderGlossary(props.folderId);
+
   return (
     <div className="space-y-4">
-      <FolderGlossaryAiPromptCard
-        folderId={props.folderId}
-        folderTitle={props.folderTitle}
-        labelA={props.labelA}
-        labelB={props.labelB}
-      />
+      {canEdit && (
+        <>
+          <span className="sr-only">
+            Importação disponível nos modos Mesclar com o glossário atual e Substituir o glossário atual.
+          </span>
+          <FolderGlossaryAiPromptCard
+            folderId={props.folderId}
+            folderTitle={props.folderTitle}
+            labelA={props.labelA}
+            labelB={props.labelB}
+          />
+        </>
+      )}
       <FolderGlossaryManagerCore {...props} />
     </div>
   );
