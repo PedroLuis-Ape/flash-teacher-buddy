@@ -1,5 +1,16 @@
-import { useMemo, useState } from "react";
-import { Download, FileUp, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  FileJson,
+  FileUp,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +56,8 @@ interface Draft {
   active: boolean;
 }
 
+const MAX_IMPORT_FILE_SIZE = 25 * 1024 * 1024;
+
 const blankDraft = (): Draft => ({
   term: "",
   translation: "",
@@ -69,12 +82,14 @@ export function FolderGlossaryManager({
     deleteEntry,
     importEntries,
   } = useFolderGlossary(folderId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [sideFilter, setSideFilter] = useState<"all" | GlossarySide>("all");
   const [draft, setDraft] = useState<Draft>(blankDraft());
   const [editorOpen, setEditorOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
+  const [importFileName, setImportFileName] = useState("");
   const [importMode, setImportMode] = useState<"merge" | "replace">("merge");
 
   const filtered = useMemo(() => {
@@ -90,6 +105,24 @@ export function FolderGlossaryManager({
       ].some((value) => value.toLocaleLowerCase().includes(query));
     });
   }, [entries, search, sideFilter]);
+
+  const importPreview = useMemo<{
+    entries: FolderGlossaryInput[];
+    error: string | null;
+  }>(() => {
+    if (!importText.trim()) return { entries: [], error: null };
+    try {
+      const parsed = parseFolderGlossaryJson(importText);
+      return parsed.length > 0
+        ? { entries: parsed, error: null }
+        : { entries: [], error: "Nenhuma entrada válida foi encontrada." };
+    } catch (error) {
+      return {
+        entries: [],
+        error: error instanceof Error ? error.message : "JSON inválido.",
+      };
+    }
+  }, [importText]);
 
   const openEditor = (entry?: FolderGlossaryEntry) => {
     setDraft(entry ? {
@@ -134,18 +167,57 @@ export function FolderGlossaryManager({
     setEditorOpen(false);
   };
 
-  const runImport = async () => {
+  const resetImportSource = () => {
+    setImportText("");
+    setImportFileName("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const readImportFile = async (file?: File) => {
+    if (!file) return;
+
+    if (!file.name.toLocaleLowerCase().endsWith(".json") && file.type !== "application/json") {
+      toast.error("Selecione um arquivo com extensão .json.");
+      return;
+    }
+    if (file.size > MAX_IMPORT_FILE_SIZE) {
+      toast.error("O arquivo excede o limite de 25 MB.");
+      return;
+    }
+
     try {
-      const parsed = parseFolderGlossaryJson(importText);
-      if (parsed.length === 0) {
-        toast.error("Nenhuma entrada válida foi encontrada.");
-        return;
-      }
-      await importEntries.mutateAsync({ entries: parsed, mode: importMode });
-      setImportText("");
-      setImportOpen(false);
+      const text = await file.text();
+      setImportFileName(file.name);
+      setImportText(text);
+
+      const parsed = parseFolderGlossaryJson(text);
+      toast.success(
+        `${file.name} reconhecido: ${parsed.length.toLocaleString("pt-BR")} entrada(s).`,
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "JSON inválido.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível ler o arquivo JSON.");
+    }
+  };
+
+  const runImport = async () => {
+    if (importPreview.error) {
+      toast.error(importPreview.error);
+      return;
+    }
+    if (importPreview.entries.length === 0) {
+      toast.error("Selecione um arquivo JSON válido.");
+      return;
+    }
+
+    try {
+      await importEntries.mutateAsync({
+        entries: importPreview.entries,
+        mode: importMode,
+      });
+      resetImportSource();
+      setImportOpen(false);
+    } catch {
+      return;
     }
   };
 
@@ -328,14 +400,15 @@ export function FolderGlossaryManager({
       </Dialog>
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Importar glossário para esta pasta</DialogTitle>
             <DialogDescription>
               O conteúdo ficará disponível para todas as listas de “{folderTitle}”.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+
+          <div className="space-y-4">
             <Select value={importMode} onValueChange={(value) => setImportMode(value as "merge" | "replace")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -343,22 +416,113 @@ export function FolderGlossaryManager({
                 <SelectItem value="replace">Substituir o glossário atual</SelectItem>
               </SelectContent>
             </Select>
+
             {importMode === "replace" && (
               <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                 Substituir removerá as entradas atuais desta pasta antes de importar.
               </p>
             )}
-            <Textarea
-              value={importText}
-              onChange={(event) => setImportText(event.target.value)}
-              className="min-h-[300px] font-mono text-xs"
-              placeholder='{"entries":[{"term":"could","translation":"poderia","alternatives":["conseguia"],"side":"A"}]}'
-            />
+
+            <section className="space-y-3 rounded-xl border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium">Selecione o arquivo do glossário</p>
+                  <p className="text-sm text-muted-foreground">
+                    Formato aceito: .json de até 25 MB. Não é necessário copiar e colar.
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    void readImportFile(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importEntries.isPending}
+                >
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Selecionar arquivo JSON
+                </Button>
+              </div>
+
+              {importText && (
+                <div className={`flex items-start gap-3 rounded-lg border p-3 ${
+                  importPreview.error
+                    ? "border-destructive/30 bg-destructive/5"
+                    : "border-emerald-500/30 bg-emerald-500/10"
+                }`}>
+                  {importPreview.error
+                    ? <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                    : <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />}
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {importPreview.error ? "O arquivo precisa de correção" : "Arquivo validado"}
+                    </p>
+                    <p className="break-all text-sm text-muted-foreground">
+                      {importFileName || "Conteúdo colado"} · {importPreview.entries.length.toLocaleString("pt-BR")} entrada(s) reconhecida(s)
+                    </p>
+                    {importPreview.error && (
+                      <p className="mt-1 text-sm text-destructive">{importPreview.error}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <details className="rounded-xl border bg-muted/20">
+              <summary className="flex cursor-pointer items-center gap-2 p-3 text-sm font-medium">
+                <FileJson className="h-4 w-4" />
+                Ver ou colar o conteúdo manualmente
+              </summary>
+              <div className="border-t p-3">
+                <Textarea
+                  value={importText}
+                  onChange={(event) => {
+                    setImportText(event.target.value);
+                    setImportFileName("");
+                  }}
+                  className="min-h-[220px] max-h-[40vh] font-mono text-xs"
+                  placeholder='{"entries":[{"term":"could","translation":"poderia","alternatives":["conseguia"],"side":"A"}]}'
+                  disabled={importEntries.isPending}
+                />
+              </div>
+            </details>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button>
-            <Button onClick={() => void runImport()} disabled={!importText.trim() || importEntries.isPending}>
-              Importar
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetImportSource();
+                setImportOpen(false);
+              }}
+              disabled={importEntries.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => void runImport()}
+              disabled={
+                importEntries.isPending
+                || importPreview.entries.length === 0
+                || Boolean(importPreview.error)
+              }
+            >
+              {importEntries.isPending
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <FileUp className="mr-2 h-4 w-4" />}
+              {importEntries.isPending
+                ? "Importando..."
+                : `Importar ${importPreview.entries.length.toLocaleString("pt-BR")} entrada(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>
