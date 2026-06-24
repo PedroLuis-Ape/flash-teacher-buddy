@@ -53,9 +53,9 @@ import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
 import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
-import { ArrowLeft, Trophy, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft } from "lucide-react";
+import { ArrowLeft, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { safeGoBack, getFallbackRoute } from "@/lib/safeNavigation";
+import { buildStudyReturnRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
 
 interface Flashcard {
@@ -196,6 +196,13 @@ const Study = () => {
     const scope = authUserId || "anon";
     return `study-completed:${scope}:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
   }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly, authUserId]);
+
+  const returnRoute = useMemo(() => buildStudyReturnRoute({
+    pathname: window.location.pathname,
+    resolvedId,
+    isListRoute,
+    searchParams,
+  }), [resolvedId, isListRoute, searchParams]);
   // isListRoute is now derived once at the top of the component (from useParams).
   
   // Fetch favorites for filtering (strictly scoped to the current list/collection)
@@ -303,6 +310,8 @@ const Study = () => {
     results,
     isFinished,
     isLoading: studyLoading,
+    isCompleting,
+    isRestarting,
     totalCards,
     recordResult,
     goToNext,
@@ -326,7 +335,7 @@ const Study = () => {
     completeSession,
     cardsOrder,
     saveProgressNow,
-  } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds);
+  } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
@@ -658,9 +667,23 @@ const Study = () => {
     }
   };
 
-  const handleExit = () => {
-    const fallback = getFallbackRoute(window.location.pathname);
-    safeGoBack(navigate, fallback);
+  const handleExit = async () => {
+    await saveProgressNow();
+    navigate(returnRoute, { replace: true });
+  };
+
+  const handleCompleteAndExit = async () => {
+    const completed = await completeSession();
+    if (!completed) return;
+    setShowCompletionModal(false);
+    navigate(returnRoute, { replace: true });
+  };
+
+  const handleFinishedExit = async () => {
+    const completed = await completeSession();
+    if (!completed) return;
+    setShowCompletionModal(false);
+    navigate(returnRoute, { replace: true });
   };
 
   const handleDirectionChange = (value: string) => {
@@ -704,13 +727,12 @@ const Study = () => {
     // pede explicitamente em "Reiniciar Jogo".
   };
 
-  const handleRestartWithSettings = () => {
+  const handleRestartWithSettings = async () => {
     setShowCompletionModal(false);
-    // Clear persistent completion state on restart
     if (completionKey) {
       try { localStorage.removeItem(completionKey); } catch {}
     }
-    restartSession(gameSettings);
+    await restartSession(gameSettings);
   };
 
   // Use engine's cardsOrder to resolve the actual current card
@@ -1156,12 +1178,20 @@ const Study = () => {
       <div className="min-h-screen bg-background py-12 px-4 pb-32 md:pb-12">
         <div className="container mx-auto max-w-2xl">
           <Card className="p-8 text-center space-y-6">
-            <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-              <Trophy className="h-10 w-10 text-primary" />
+            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-amber-300/25 via-yellow-400/10 to-orange-500/20 shadow-[0_18px_45px_-18px_rgba(245,158,11,0.9)] ring-1 ring-amber-300/30">
+              <span
+                role="img"
+                aria-label="Troféu"
+                className="select-none text-6xl leading-none drop-shadow-[0_8px_8px_rgba(0,0,0,0.4)] [filter:saturate(1.2)_contrast(1.05)]"
+              >
+                🏆
+              </span>
             </div>
 
             <h1 className="text-3xl font-bold">
-              {isGameComplete ? "Parabéns! Todos os cards dominados! 🎉" : `Rodada ${roundNumber} Concluída!`}
+              {isGameComplete && correctCount === totalCards && errorCount === 0 && skippedCount === 0
+                ? "Parabéns! Todos os cards dominados! 🎉"
+                : "Sessão finalizada!"}
             </h1>
 
             <div className="grid grid-cols-3 gap-4 py-6">
@@ -1206,11 +1236,13 @@ const Study = () => {
               <Button 
                 variant="default" 
                 size="lg" 
-                onClick={completeSession}
+                type="button"
+                onClick={() => void handleCompleteAndExit()}
+                disabled={isCompleting || isRestarting}
                 className="w-full sm:w-auto min-w-[220px] text-lg font-bold shadow-lg bg-green-600 hover:bg-green-700"
               >
-                <CheckCircle className="mr-2 h-6 w-6" />
-                CONCLUIR SESSÃO
+                {isCompleting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CheckCircle className="mr-2 h-6 w-6" />}
+                {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
               </Button>
 
               {showNextRound && (
@@ -1224,10 +1256,11 @@ const Study = () => {
                 <Button 
                   variant="secondary" 
                   size="lg" 
-                  onClick={handleRestartWithSettings}
+                  onClick={() => void handleRestartWithSettings()}
+                  disabled={isCompleting || isRestarting}
                 >
-                  <RotateCcw className="mr-2 h-5 w-5" />
-                  Jogar Novamente
+                  {isRestarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RotateCcw className="mr-2 h-5 w-5" />}
+                  {isRestarting ? "Reiniciando..." : "Jogar Novamente"}
                 </Button>
               )}
               
@@ -1251,7 +1284,8 @@ const Study = () => {
               <Button 
                 variant="ghost" 
                 size="lg" 
-                onClick={handleExit}
+                onClick={() => void handleFinishedExit()}
+                disabled={isCompleting || isRestarting}
               >
                 Voltar à Lista
               </Button>
@@ -1266,9 +1300,9 @@ const Study = () => {
                 </Button>
               )}
               {!showNextRound && (
-                <Button variant="secondary" size="sm" onClick={handleRestartWithSettings}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Jogar Novamente
+                <Button variant="secondary" size="sm" onClick={() => void handleRestartWithSettings()} disabled={isCompleting || isRestarting}>
+                  {isRestarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                  {isRestarting ? "Reiniciando..." : "Jogar Novamente"}
                 </Button>
               )}
               {isFlipMode && errorCount > 0 && (
@@ -1281,7 +1315,7 @@ const Study = () => {
                   ← Metas
                 </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={handleExit}>
+              <Button variant="ghost" size="sm" onClick={() => void handleFinishedExit()} disabled={isCompleting || isRestarting}>
                 Voltar
               </Button>
             </div>
@@ -1293,11 +1327,13 @@ const Study = () => {
           <Button 
             variant="default" 
             size="lg" 
-            onClick={completeSession}
+            type="button"
+            onClick={() => void handleCompleteAndExit()}
+            disabled={isCompleting || isRestarting}
             className="w-full text-lg font-bold shadow-lg bg-green-600 hover:bg-green-700 min-h-[56px]"
           >
-            <CheckCircle className="mr-2 h-6 w-6" />
-            CONCLUIR SESSÃO
+            {isCompleting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CheckCircle className="mr-2 h-6 w-6" />}
+            {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
           </Button>
         </div>
       </div>
@@ -1616,19 +1652,12 @@ const Study = () => {
         errorCount={errorCount}
         skippedCount={skippedCount}
         totalCards={totalCards}
-        onComplete={() => {
-          setShowCompletionModal(false);
-          if (completionKey) {
-            try { localStorage.removeItem(completionKey); } catch {}
-          }
-          completeSession();
-        }}
-        onRestart={handleRestartWithSettings}
+        onComplete={() => void handleCompleteAndExit()}
+        onRestart={() => void handleRestartWithSettings()}
+        isCompleting={isCompleting}
+        isRestarting={isRestarting}
         onReviewErrors={errorCount > 0 ? handleReviewErrors : undefined}
-        onExit={() => {
-          setShowCompletionModal(false);
-          handleExit();
-        }}
+        onExit={() => void handleFinishedExit()}
         onOpenChange={setShowCompletionModal}
         fromGoalId={fromGoalId}
         onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
