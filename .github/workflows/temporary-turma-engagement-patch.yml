@@ -1,0 +1,67 @@
+name: Temporary turma engagement patch
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Integrate classroom engagement tracking
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/features/study/hooks/useStudyEngine.ts')
+          source = path.read_text()
+          replacements = [
+            (
+              'import { useTurmaActivity } from "@/features/classroom/hooks/useTurmaActivity";\n',
+              'import { useTurmaActivity } from "@/features/classroom/hooks/useTurmaActivity";\nimport { useTurmaEngagementTracking } from "@/features/classroom/hooks/useTurmaEngagementTracking";\n',
+            ),
+            (
+              '  const { initTurmaTracking, updateTurmaActivity, flushActivity } = useTurmaActivity();\n',
+              '  const { initTurmaTracking, updateTurmaActivity, flushActivity } = useTurmaActivity();\n  const { trackCardViewed, trackAnswer, trackCompleted } = useTurmaEngagementTracking({ listId, mode });\n',
+            ),
+            (
+              '    if (!isAuthenticated || !listId || skipped) return;\n',
+              '    trackAnswer(flashcardId, correct, skipped);\n\n    if (!isAuthenticated || !listId || skipped) return;\n',
+            ),
+            (
+              '  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, mode, cardsOrder.length, currentIndex]);\n',
+              '  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex]);\n',
+            ),
+            (
+              '  // Save progress on index change\n',
+              '  useEffect(() => {\n    if (isLoading) return;\n    const cardId = cardsOrder[currentIndex];\n    if (cardId) trackCardViewed(cardId, `${roundNumber}:${currentIndex}:${cardsOrder.length}`);\n  }, [cardsOrder, currentIndex, isLoading, roundNumber, trackCardViewed]);\n\n  useEffect(() => {\n    if (isFinished) trackCompleted();\n  }, [isFinished, trackCompleted]);\n\n  // Save progress on index change\n',
+            ),
+          ]
+          for old, new in replacements:
+            if source.count(old) != 1:
+              raise SystemExit(f'Expected exactly one patch point, found {source.count(old)} for {old[:60]!r}')
+            source = source.replace(old, new)
+          path.write_text(source)
+          PY
+      - name: Commit patched study engine
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study/hooks/useStudyEngine.ts
+          if git diff --cached --quiet; then
+            echo "Patch already applied."
+          else
+            git commit -m "feat: record classroom engagement during study"
+            git push
+          fi
