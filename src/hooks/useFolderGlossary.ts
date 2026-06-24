@@ -6,6 +6,7 @@ import {
   importFolderGlossary,
   loadFolderGlossary,
   updateFolderGlossaryEntry,
+  type FolderGlossaryImportProgress,
 } from "@/features/study/lib/folderGlossaryApi";
 import type {
   FolderGlossaryEntry,
@@ -58,10 +59,12 @@ export function useFolderGlossary(folderId?: string) {
     mutationFn: ({
       entries,
       mode,
+      onProgress,
     }: {
       entries: FolderGlossaryInput[];
       mode: "merge" | "replace";
-    }) => importFolderGlossary(folderId as string, entries, mode, false),
+      onProgress?: (progress: FolderGlossaryImportProgress) => void;
+    }) => importFolderGlossary(folderId as string, entries, mode, false, { onProgress }),
     onSuccess: (result) => {
       void invalidate();
       toast.success(
