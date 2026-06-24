@@ -23,8 +23,8 @@ patchFile("src/features/study/hooks/useStudyEngine.ts", [
   },
   {
     label: "return discard",
-    search: `    completeSession,\n    resetSession,\n`,
-    replacement: `    completeSession,\n    discardSession,\n    resetSession,\n`,
+    search: `    startNextRound,\n    resetSession,\n`,
+    replacement: `    startNextRound,\n    discardSession,\n    resetSession,\n`,
   },
 ]);
 
