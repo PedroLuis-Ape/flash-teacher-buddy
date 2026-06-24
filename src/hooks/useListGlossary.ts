@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,10 @@ import {
   loadFolderGlossaryForList,
   updateFolderGlossaryEntry,
 } from "@/features/study/lib/folderGlossaryApi";
+import {
+  publishFolderGlossaryRefresh,
+  subscribeFolderGlossaryRefresh,
+} from "@/features/study/lib/folderGlossaryRefresh";
 
 export interface GlossaryEntry extends AccountGlossaryEntry {
   list_id?: string;
@@ -50,13 +55,32 @@ export function useListGlossary(listId?: string) {
     queryFn: () => loadListGlossaryContext(listId as string),
     enabled: Boolean(listId),
     staleTime: 60_000,
+    refetchOnMount: "always",
   });
 
   const folderId = query.data?.folderId;
   const glossary = query.data?.glossary ?? [];
+
+  useEffect(() => subscribeFolderGlossaryRefresh((report) => {
+    if (!folderId || report.folderId !== folderId) return;
+    void queryClient.invalidateQueries({
+      queryKey: FOLDER_GLOSSARY_QUERY_KEY,
+      refetchType: "active",
+    });
+  }), [folderId, queryClient]);
+
   const requireFolder = () => {
     if (!folderId) throw new Error("Abra uma lista vinculada a uma pasta para editar o glossário.");
     return folderId;
+  };
+
+  const announceEdit = () => {
+    if (!folderId) return;
+    publishFolderGlossaryRefresh({
+      folderId,
+      syncedAt: new Date().toISOString(),
+      source: "edit",
+    });
   };
 
   const addEntry = useMutation({
@@ -71,6 +95,7 @@ export function useListGlossary(listId?: string) {
     },
     onSuccess: () => {
       void invalidate();
+      announceEdit();
       toast.success("Entrada adicionada ao glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -88,6 +113,7 @@ export function useListGlossary(listId?: string) {
     },
     onSuccess: () => {
       void invalidate();
+      announceEdit();
       toast.success("Entrada atualizada no glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -97,6 +123,7 @@ export function useListGlossary(listId?: string) {
     mutationFn: async (id: string) => deleteFolderGlossaryEntries([id]),
     onSuccess: () => {
       void invalidate();
+      announceEdit();
       toast.success("Entrada removida do glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -105,7 +132,10 @@ export function useListGlossary(listId?: string) {
   const toggleActive = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
       updateFolderGlossaryEntry(id, { is_active }),
-    onSuccess: () => void invalidate(),
+    onSuccess: () => {
+      void invalidate();
+      announceEdit();
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
@@ -113,6 +143,7 @@ export function useListGlossary(listId?: string) {
     mutationFn: deleteFolderGlossaryEntries,
     onSuccess: () => {
       void invalidate();
+      announceEdit();
       toast.success("Entradas removidas do glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -128,14 +159,18 @@ export function useListGlossary(listId?: string) {
         });
       }
     },
-    onSuccess: () => void invalidate(),
+    onSuccess: () => {
+      void invalidate();
+      announceEdit();
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 
   const importEntries = useMutation({
     mutationFn: async (entries: GlossaryTransferEntry[]): Promise<GlossaryImportResult> => {
+      const currentFolderId = requireFolder();
       const result = await importFolderGlossary(
-        requireFolder(),
+        currentFolderId,
         entries.map((entry) => ({
           term: entry.original_text,
           translation: entry.translated_text,
@@ -154,6 +189,13 @@ export function useListGlossary(listId?: string) {
     },
     onSuccess: (result) => {
       void invalidate();
+      if (folderId) {
+        publishFolderGlossaryRefresh({
+          folderId,
+          syncedAt: new Date().toISOString(),
+          source: "import",
+        });
+      }
       toast.success(`Glossário da pasta: ${result.inserted} nova(s), ${result.updated} alterada(s).`);
     },
     onError: (error: Error) => toast.error(error.message),
