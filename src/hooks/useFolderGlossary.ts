@@ -38,7 +38,7 @@ export function useFolderGlossary(folderId?: string, listId?: string) {
     staleTime: 10 * 60_000,
   });
 
-  const { data: glossary = [], isLoading, error } = useQuery({
+  const glossaryQuery = useQuery({
     queryKey,
     queryFn: () => {
       if (folderId) return loadFolderGlossary(folderId, true);
@@ -49,6 +49,8 @@ export function useFolderGlossary(folderId?: string, listId?: string) {
     staleTime: 5 * 60_000,
     gcTime: 20 * 60_000,
   });
+
+  const glossary = glossaryQuery.data ?? [];
 
   const addEntry = useMutation({
     mutationFn: async ({ folder_id: explicitFolderId, list_id: _listId, ...entry }: GlossaryInsert) => {
@@ -113,5 +115,5 @@ export function useFolderGlossary(folderId?: string, listId?: string) {
     onError: (mutationError: any) => toast.error("Erro ao importar glossário: " + mutationError.message),
   });
 
-  return { glossary, activeGlossary: glossary.filter((entry) => entry.is_active), folderId: resolvedFolderId, isLoading, error, addEntry, updateEntry, deleteEntry, toggleActive, bulkDelete, bulkSwapTerms, importEntries };
+  return { ...glossaryQuery, data: glossary, glossary, activeGlossary: glossary.filter((entry) => entry.is_active), folderId: resolvedFolderId, addEntry, updateEntry, deleteEntry, toggleActive, bulkDelete, bulkSwapTerms, importEntries };
 }
