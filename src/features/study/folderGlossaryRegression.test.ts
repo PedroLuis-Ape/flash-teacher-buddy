@@ -8,11 +8,18 @@ const migration = readFileSync(
   "utf8",
 );
 const interactiveText = readFileSync(new URL("./components/InteractiveText.tsx", import.meta.url), "utf8");
+const folderGlossaryManager = readFileSync(
+  new URL("./components/FolderGlossaryManagerCore.tsx", import.meta.url),
+  "utf8",
+);
 const glossaryPage = readFileSync(new URL("../../pages/Glossary.tsx", import.meta.url), "utf8");
 
 describe("folder-scoped glossary", () => {
   it("parses the official folder glossary JSON", () => {
     expect(parseFolderGlossaryJson(JSON.stringify({
+      schema: "app-piteco-folder-glossary",
+      version: "1.0",
+      folder: { name: "Avançado" },
       entries: [{
         term: "could",
         translation: "poderia",
@@ -27,6 +34,27 @@ describe("folder-scoped glossary", () => {
         side: "A",
       }),
     ]);
+  });
+
+  it("accepts JSON files with BOM or a complete markdown code fence", () => {
+    const payload = JSON.stringify({
+      entries: [{ term: "however", translation: "porém", side: "A" }],
+    });
+
+    expect(parseFolderGlossaryJson(`\uFEFF${payload}`)).toHaveLength(1);
+    expect(parseFolderGlossaryJson(`\`\`\`json\n${payload}\n\`\`\``)).toHaveLength(1);
+  });
+
+  it("explains when pasted JSON is incomplete", () => {
+    expect(() => parseFolderGlossaryJson('{"entries":[{"term":"could"}'))
+      .toThrow(/arquivo \.json original|copiado por inteiro/iu);
+  });
+
+  it("offers direct JSON file selection in the folder import dialog", () => {
+    expect(folderGlossaryManager).toContain('type="file"');
+    expect(folderGlossaryManager).toContain('accept=".json,application/json"');
+    expect(folderGlossaryManager).toContain("Selecionar arquivo JSON");
+    expect(folderGlossaryManager).toContain("entrada(s) reconhecida(s)");
   });
 
   it("removes list glossaries from the legacy Super Importer payload", async () => {
