@@ -125,17 +125,30 @@ function uniqueTranslations(match: LayeredHintMatch) {
   return Array.from(grouped.values());
 }
 
-function orderedMatches(value: string, matches: LayeredHintMatch[]) {
+function prioritizedMatches(value: string, matches: LayeredHintMatch[]) {
   const clicked = normalize(value);
-  return [...matches].sort((a, b) => {
-    const aExact = normalize(a.text) === clicked ? 0 : 1;
-    const bExact = normalize(b.text) === clicked ? 0 : 1;
-    if (aExact !== bExact) return aExact - bExact;
+  const exact = matches.filter((match) => normalize(match.text) === clicked);
+  const candidates = exact.length > 0 ? exact : matches;
+  const grouped = new Map<string, LayeredHintMatch>();
 
+  for (const match of candidates) {
+    const key = normalize(match.text);
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        ...match,
+        translations: [...match.translations],
+      });
+      continue;
+    }
+
+    existing.translations.push(...match.translations);
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => {
     const aExpression = /\s/u.test(a.text.trim()) ? 1 : 0;
     const bExpression = /\s/u.test(b.text.trim()) ? 1 : 0;
     if (aExpression !== bExpression) return aExpression - bExpression;
-
     return a.text.length - b.text.length || a.text.localeCompare(b.text);
   });
 }
@@ -149,9 +162,9 @@ function GlossaryPanel({
   matches: LayeredHintMatch[];
   mobile?: boolean;
 }) {
-  const ordered = orderedMatches(value, matches);
-  const visible = ordered.slice(0, 4);
-  const hiddenCount = Math.max(0, ordered.length - visible.length);
+  const prioritized = prioritizedMatches(value, matches);
+  const visible = prioritized.slice(0, 3);
+  const hiddenCount = Math.max(0, prioritized.length - visible.length);
 
   return (
     <div className={cn("flex min-h-0 flex-col bg-background", mobile && "max-h-[72dvh]")}>
@@ -162,18 +175,20 @@ function GlossaryPanel({
           </p>
           <p className="truncate text-base font-semibold">{value}</p>
         </div>
-        {matches.length > 1 && (
+        {prioritized.length > 1 && (
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
             <Layers3 className="h-3 w-3" />
-            {matches.length} camadas
+            {prioritized.length} camadas
           </span>
         )}
       </div>
 
       <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain">
-        {visible.map((match, matchIndex) => {
+        {visible.map((match) => {
           const translations = uniqueTranslations(match);
+          const isExact = normalize(match.text) === normalize(value);
           const isExpression = /\s/u.test(match.text.trim());
+
           return (
             <section
               key={`${match.key}-${match.startIndex}-${match.endIndex}`}
@@ -184,9 +199,7 @@ function GlossaryPanel({
                   {match.text}
                 </span>
                 <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
-                  {matchIndex === 0 && normalize(match.text) === normalize(value)
-                    ? "exata"
-                    : isExpression ? "expressão" : "relacionada"}
+                  {isExact ? "exata" : isExpression ? "expressão" : "relacionada"}
                 </span>
               </div>
 
@@ -230,7 +243,7 @@ function LayeredHintToken({
 }) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
-  const layerCount = matches.length;
+  const layerCount = prioritizedMatches(value, matches).length;
 
   const trigger = (
     <button
@@ -283,11 +296,11 @@ function LayeredHintToken({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
-        side="top"
+        side="bottom"
         align="center"
         sideOffset={8}
         collisionPadding={12}
-        className="w-[min(20rem,calc(100vw-1.5rem))] max-h-[min(22rem,66vh)] overflow-hidden bg-background p-0 shadow-lg"
+        className="w-[min(19rem,calc(100vw-1.5rem))] max-h-[min(18rem,60vh)] overflow-hidden bg-background p-0 shadow-lg"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
