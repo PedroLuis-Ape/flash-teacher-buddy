@@ -29,7 +29,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useFolderGlossary } from "@/hooks/useFolderGlossary";
+import { loadFolderGlossary } from "@/features/study/lib/folderGlossaryApi";
 import { parseFolderGlossaryJson } from "@/features/study/lib/folderGlossaryTransfer";
+import type { FolderGlossaryEntry } from "@/features/study/lib/folderGlossaryTypes";
 import {
   loadFolderGlossaryCoverage,
   serializeMissingCoverageTerms,
@@ -61,6 +63,10 @@ const statusClasses: Record<FolderGlossaryCoverageStatus, string> = {
   missing: "border-destructive/30 bg-destructive/10 text-destructive",
 };
 
+function normalize(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -90,20 +96,23 @@ export function FolderGlossaryCoverageCard({
   labelB,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { entries, canEdit, isLoading: glossaryLoading, importEntries } = useFolderGlossary(folderId);
+  const { canEdit, importEntries } = useFolderGlossary(folderId);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<FolderGlossaryCoverageReport | null>(null);
+  const [auditGlossary, setAuditGlossary] = useState<FolderGlossaryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | FolderGlossaryCoverageStatus>("missing");
 
   const runAudit = async () => {
-    if (loading || glossaryLoading) return;
+    if (loading) return;
     setLoading(true);
     setError(null);
     try {
-      const next = await loadFolderGlossaryCoverage(folderId, entries);
+      const latest = await loadFolderGlossary(folderId);
+      const next = await loadFolderGlossaryCoverage(folderId, latest.entries);
+      setAuditGlossary(latest.entries);
       setReport(next);
       if (next.missingTerms === 0 && next.inactiveTerms === 0 && next.wrongSideTerms === 0) {
         setStatusFilter("all");
@@ -117,7 +126,7 @@ export function FolderGlossaryCoverageCard({
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (nextOpen && !report && !loading && !glossaryLoading) void runAudit();
+    if (nextOpen && !report && !loading) void runAudit();
   };
 
   const filteredTerms = useMemo(() => {
@@ -144,9 +153,20 @@ export function FolderGlossaryCoverageCard({
 
   const exportCovered = () => {
     if (!report) return;
-    const content = serializeUsedCoverageEntries({ folderTitle, report, glossary: entries });
+    const coveredKeys = new Set(
+      report.terms
+        .filter((term) => term.status === "covered" || term.status === "expression")
+        .flatMap((term) => term.matchedGlossaryTerms.map((match) => `${term.side}|${normalize(match)}`)),
+    );
+    const coveredGlossary = auditGlossary.filter((entry) =>
+      entry.is_active && coveredKeys.has(`${entry.side}|${normalize(entry.original_text)}`));
+    const content = serializeUsedCoverageEntries({
+      folderTitle,
+      report,
+      glossary: coveredGlossary,
+    });
     downloadJson(content, `app-piteco-cobertas-${slugify(folderTitle)}.json`);
-    toast.success("Entradas utilizadas nos cards foram exportadas.");
+    toast.success("Entradas realmente cobertas nos cards foram exportadas.");
   };
 
   const importCompletedFile = async (file?: File) => {
