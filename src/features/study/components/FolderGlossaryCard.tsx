@@ -18,7 +18,7 @@ export function FolderGlossaryCard({ folderId, className }: FolderGlossaryCardPr
     <button
       type="button"
       className={cn("w-full text-left", className)}
-      onClick={() => navigate(`/folder/${folderId}/glossary`)}
+      onClick={() => navigate(`/glossary?folder=${folderId}`)}
     >
       <Card className="border-primary/30 bg-primary/5 transition-all hover:border-primary/60 hover:bg-primary/10 hover:shadow-md active:scale-[0.99]">
         <CardContent className="flex items-center gap-3 p-3">
