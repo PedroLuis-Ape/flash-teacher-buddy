@@ -4,19 +4,21 @@ export const GLOBAL_IMPORT_SCHEMA = "appteco-global-import" as const;
 export const GLOBAL_IMPORT_VERSION = 1 as const;
 
 export const GLOBAL_IMPORT_LIMITS = {
-  maxFileBytes: 5 * 1024 * 1024,
-  maxFolders: 100,
-  maxLists: 500,
-  maxCards: 10_000,
+  maxFileBytes: 50 * 1024 * 1024,
+  maxFolders: 200,
+  maxLists: 1_000,
+  maxCards: 20_000,
   maxNameLength: 160,
-  maxTextLength: 8_000,
+  maxTextLength: 250_000,
   maxTagsPerCard: 30,
 } as const;
+
+const formatLimit = (value: number) => value.toLocaleString("pt-BR");
 
 const trimmedText = (label: string, max: number) =>
   z.string()
     .transform((value) => value.trim())
-    .pipe(z.string().min(1, `${label} não pode ficar vazio.`).max(max, `${label} excede ${max} caracteres.`));
+    .pipe(z.string().min(1, `${label} não pode ficar vazio.`).max(max, `${label} excede ${formatLimit(max)} caracteres.`));
 
 const optionalTrimmedText = (max: number) =>
   z.string()
