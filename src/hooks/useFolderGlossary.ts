@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -8,6 +9,11 @@ import {
   updateFolderGlossaryEntry,
   type FolderGlossaryImportProgress,
 } from "@/features/study/lib/folderGlossaryApi";
+import {
+  publishFolderGlossaryRefresh,
+  subscribeFolderGlossaryRefresh,
+  type FolderGlossaryRefreshSource,
+} from "@/features/study/lib/folderGlossaryRefresh";
 import type {
   FolderGlossaryEntry,
   FolderGlossaryInput,
@@ -19,18 +25,36 @@ export function useFolderGlossary(folderId?: string) {
   const queryClient = useQueryClient();
   const queryKey = [...FOLDER_GLOSSARY_QUERY_KEY, folderId ?? "none"];
   const invalidate = () => queryClient.invalidateQueries({ queryKey: FOLDER_GLOSSARY_QUERY_KEY });
+  const announceRefresh = (source: FolderGlossaryRefreshSource) => {
+    if (!folderId) return;
+    publishFolderGlossaryRefresh({
+      folderId,
+      syncedAt: new Date().toISOString(),
+      source,
+    });
+  };
+
+  useEffect(() => subscribeFolderGlossaryRefresh((report) => {
+    if (!folderId || report.folderId !== folderId) return;
+    void queryClient.invalidateQueries({
+      queryKey: FOLDER_GLOSSARY_QUERY_KEY,
+      refetchType: "active",
+    });
+  }), [folderId, queryClient]);
 
   const query = useQuery({
     queryKey,
     queryFn: () => loadFolderGlossary(folderId as string),
     enabled: Boolean(folderId),
     staleTime: 60_000,
+    refetchOnMount: "always",
   });
 
   const addEntry = useMutation({
     mutationFn: (entry: FolderGlossaryInput) => addFolderGlossaryEntry(folderId as string, entry),
     onSuccess: () => {
       void invalidate();
+      announceRefresh("edit");
       toast.success("Entrada adicionada ao glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -41,6 +65,7 @@ export function useFolderGlossary(folderId?: string) {
       updateFolderGlossaryEntry(id, fields),
     onSuccess: () => {
       void invalidate();
+      announceRefresh("edit");
       toast.success("Entrada atualizada.");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -50,6 +75,7 @@ export function useFolderGlossary(folderId?: string) {
     mutationFn: (id: string) => deleteFolderGlossaryEntries([id]),
     onSuccess: () => {
       void invalidate();
+      announceRefresh("edit");
       toast.success("Entrada removida.");
     },
     onError: (error: Error) => toast.error(error.message),
@@ -67,6 +93,7 @@ export function useFolderGlossary(folderId?: string) {
     }) => importFolderGlossary(folderId as string, entries, mode, false, { onProgress }),
     onSuccess: (result) => {
       void invalidate();
+      announceRefresh("import");
       toast.success(
         `Glossário atualizado: ${result.inserted} nova(s), ${result.updated} alterada(s), ${result.skipped} ignorada(s).`,
       );
