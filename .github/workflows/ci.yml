@@ -74,7 +74,19 @@ jobs:
         run: npm run typecheck
 
       - name: Tests
-        run: npm run test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test 2>&1 | tee test-report.log
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test-report.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Lint
         run: npm run lint -- --format json --output-file lint-report.json
@@ -85,7 +97,7 @@ jobs:
         with:
           name: lint-report
           path: lint-report.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 3
 
       - name: Production build
