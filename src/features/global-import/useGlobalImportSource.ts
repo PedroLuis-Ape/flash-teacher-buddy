@@ -6,7 +6,7 @@ import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSch
 import { repairSmartImportJsonText } from "./smartJsonRepair";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
 import { looksLikeAdvancedSmartCsv, parseSmartImportSource } from "@/features/smart-import/sourceParser";
-import type { SmartImportPackage } from "@/features/smart-import/schema";
+import { SMART_IMPORT_LIMITS, type SmartImportPackage } from "@/features/smart-import/schema";
 
 interface UseGlobalImportSourceOptions {
   repairSmartJson?: boolean;
@@ -111,7 +111,13 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
 
   const readFile = async (file?: File) => {
     if (!file) return null;
-    if (file.size > APP_PITECO_SUPER_IMPORT_LIMITS.maxFileBytes) throw new Error("O arquivo excede 10 MB.");
+    const maxFileBytes = Math.max(
+      APP_PITECO_SUPER_IMPORT_LIMITS.maxFileBytes,
+      SMART_IMPORT_LIMITS.maxFileBytes,
+    );
+    if (file.size > maxFileBytes) {
+      throw new Error(`O arquivo excede ${Math.round(maxFileBytes / 1024 / 1024)} MB.`);
+    }
     const text = await file.text();
     reset(text);
     return { text, validation: analyze(text) };
