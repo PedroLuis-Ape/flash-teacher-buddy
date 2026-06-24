@@ -75,6 +75,7 @@ const KeyboardShortcutsPage = lazy(() => import("./pages/KeyboardShortcuts"));
 const SpecialCards = lazy(() => import("./pages/SpecialCards"));
 const SystemStatus = lazy(() => import("./pages/SystemStatus"));
 const Glossary = lazy(() => import("./pages/Glossary"));
+const BugReport = lazy(() => import("./pages/BugReport"));
 
 function PublicListGamesRoute() {
   const [searchParams] = useSearchParams();
@@ -191,6 +192,7 @@ const App = () => {
                           <Route path="/audit" element={<AuditRepair />} />
                           <Route path="/special-cards" element={<SpecialCards />} />
                           <Route path="/system-status" element={<SystemStatus />} />
+                          <Route path="/reportar-problema" element={<BugReport />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </PageTransition>
