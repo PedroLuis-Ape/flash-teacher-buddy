@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Menu, Building2, Plus, Check, Trash2, StickyNote, Target, ChevronRight,
-  Home, Library, Store, User, GraduationCap, Search, Globe, Gem, Sparkles
+  Home, Library, Store, User, GraduationCap, Search, Globe, Gem, Sparkles, MessageSquareWarning
 } from "lucide-react";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -160,6 +160,22 @@ export function AppSidebar() {
               >
                 <Search className="h-4 w-4" />
                 <span>{t('sidebar.search', 'Buscar')}</span>
+              </Button>
+              <Button
+                variant={location.pathname === '/reportar-problema' ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  location.pathname === '/reportar-problema' && "bg-primary/10 text-primary font-medium"
+                )}
+                onMouseEnter={() => prefetchRoute('/reportar-problema')}
+                onTouchStart={() => prefetchRoute('/reportar-problema')}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/reportar-problema');
+                }}
+              >
+                <MessageSquareWarning className="h-4 w-4" />
+                <span>Reportar problema</span>
               </Button>
               <Button
                 variant={location.pathname === '/special-cards' ? "secondary" : "ghost"}
