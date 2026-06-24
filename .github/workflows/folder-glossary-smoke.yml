@@ -45,9 +45,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT SELECT ON public.account_glossary, public.list_glossary TO authenticated;"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT SELECT ON public.account_glossary, public.list_glossary, public.profiles TO authenticated;"
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/folder_glossary_smoke.sql 2>&1 | tee folder-glossary-smoke.log
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "REVOKE SELECT ON public.account_glossary, public.list_glossary FROM authenticated;"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "REVOKE SELECT ON public.account_glossary, public.list_glossary, public.profiles FROM authenticated;"
 
       - name: Upload folder glossary diagnostics
         if: always()
