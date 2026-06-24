@@ -17,6 +17,12 @@ import {
   buildCanonicalToPlayableMap,
   mapCanonicalIdsToPlayable,
 } from "@/features/cards/lib/cardStatusIdentity";
+import {
+  buildStudySnapshotKey,
+  clearStudySnapshot,
+  readStudySnapshot,
+  writeStudySnapshot,
+} from "@/features/study/lib/studySessionSnapshot";
 
 export interface StudyResult {
   flashcardId: string;
@@ -106,7 +112,8 @@ export function useStudyEngine(
   unlimitedMode: boolean = false,
   favoriteIds: string[] = [],
   initialSettings?: Partial<GameSettings>,
-  redListIds: string[] = []
+  redListIds: string[] = [],
+  userScope?: string | null,
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -116,6 +123,8 @@ export function useStudyEngine(
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
   
   // Refs for preventing duplicate init, debouncing saves, and batching progress
   const lastInitSignatureRef = useRef<string>("");
@@ -123,7 +132,8 @@ export function useStudyEngine(
   const progressBufferRef = useRef<Map<string, { correct: boolean; timestamp: number }>>(new Map());
   const flushProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFlushRef = useRef<number>(0);
-  const authUserIdRef = useRef<string | null>(null);
+  const authUserIdRef = useRef<string | null>(userScope ?? null);
+  const completionInFlightRef = useRef(false);
 
   // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -185,6 +195,14 @@ export function useStudyEngine(
     return `${sub}:${order}:${red}`;
   }, [gameSettings.subset, gameSettings.mode, gameSettings.redFocus]);
 
+  const studySnapshotKey = useMemo(() => buildStudySnapshotKey({
+    userScope: userScope || 'anon',
+    listId,
+    mode,
+    sessionScopeKey,
+    cardsSignature,
+  }), [userScope, listId, mode, sessionScopeKey, cardsSignature]);
+
   const correctCount = results.filter((r) => r.correct && !r.skipped).length;
   const errorCount = results.filter((r) => !r.correct && !r.skipped).length;
   const skippedCount = results.filter((r) => r.skipped).length;
@@ -228,9 +246,9 @@ export function useStudyEngine(
   // Scoped flip-progress storage key — keeps "all" and "favorites" (and red focus)
   // progress separate so toggling between them never wipes the other trail.
   const flipProgressKey = useMemo(() => {
-    const uid = authUserIdRef.current ?? 'anon';
+    const uid = userScope || 'anon';
     return `flip-progress-${uid}-${listId ?? 'no-list'}-${mode}-${sessionScopeKey}`;
-  }, [listId, mode, sessionScopeKey]);
+  }, [userScope, listId, mode, sessionScopeKey]);
 
   // Load flip mode progress from localStorage (scoped)
   const loadFlipProgress = useCallback(() => {
@@ -286,9 +304,19 @@ export function useStudyEngine(
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      authUserIdRef.current = user?.id ?? null;
+      authUserIdRef.current = user?.id ?? userScope ?? null;
+      const snapshotCardIds = new Set(flashcards.map((card) => card.id));
+      const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds);
 
       if (!user) {
+        if (localSnapshot) {
+          setCardsOrder(localSnapshot.cardsOrder);
+          setCurrentIndex(localSnapshot.currentIndex);
+          setResults(localSnapshot.results);
+          toast.success("Continuando de onde você parou!");
+          setIsLoading(false);
+          return;
+        }
         setIsAuthenticated(false);
 
         // For flip mode without auth: use EXACT order from flashcards (already ordered by Study.tsx)
@@ -384,6 +412,9 @@ export function useStudyEngine(
             setSessionId(matchingSession.id);
             setCurrentIndex(safeIndex);
             setCardsOrder(scopedOrder);
+            if (localSnapshot?.sessionId === matchingSession.id) {
+              setResults(localSnapshot.results);
+            }
             toast.success("Continuando de onde você parou!");
             setIsLoading(false);
             return;
@@ -395,7 +426,8 @@ export function useStudyEngine(
         
         // CRITICAL FIX: Use the exact order from flashcards passed by Study.tsx
         // Study.tsx already applied random/sequential ordering before passing here
-        const orderedCards = flashcards.map(f => f.id);
+        const orderedCards = localSnapshot?.cardsOrder ?? flashcards.map(f => f.id);
+        const restoredIndex = localSnapshot?.currentIndex ?? savedProgress?.index ?? 0;
         
         // Create new session in database for flip mode
         const { data: newSession, error } = await supabase
@@ -404,7 +436,7 @@ export function useStudyEngine(
             user_id: user.id,
             list_id: listId,
             mode,
-            current_index: savedProgress?.index || 0,
+            current_index: restoredIndex,
             cards_order: orderedCards,
             completed: false
           })
@@ -417,9 +449,12 @@ export function useStudyEngine(
         
         setCardsOrder(orderedCards);
         
-        if (savedProgress && savedProgress.index < orderedCards.length) {
+        if (localSnapshot) {
+          setCurrentIndex(restoredIndex);
+          setResults(localSnapshot.results);
+          toast.success("Continuando de onde você parou!");
+        } else if (savedProgress && savedProgress.index < orderedCards.length) {
           setCurrentIndex(savedProgress.index);
-          // Restore known cards to results
           const restoredResults = savedProgress.knownCards?.map((id: string) => ({
             flashcardId: id,
             correct: true,
@@ -465,6 +500,9 @@ export function useStudyEngine(
           setSessionId(matchingSession.id);
           setCurrentIndex(safeIndex);
           setCardsOrder(scopedOrder);
+          if (localSnapshot?.sessionId === matchingSession.id) {
+            setResults(localSnapshot.results);
+          }
           toast.success("Continuando de onde você parou!");
           setIsLoading(false);
           return;
@@ -472,13 +510,16 @@ export function useStudyEngine(
       }
 
       // Create new session with ALL flashcards (straight-through, no batching)
-      let orderedCards = await getPrioritizedFlashcards(user.id, listId, flashcards, true);
-      // Inject red-list spaced repetitions when studying favorites
-      orderedCards = injectRedListRepetitions(
-        orderedCards,
-        effectiveRedPlayableIds,
-        gameSettings.subset === 'favorites',
-      );
+      let orderedCards = localSnapshot?.cardsOrder
+        ?? await getPrioritizedFlashcards(user.id, listId, flashcards, true);
+      // A restored snapshot already contains its exact repetition order.
+      if (!localSnapshot) {
+        orderedCards = injectRedListRepetitions(
+          orderedCards,
+          effectiveRedPlayableIds,
+          gameSettings.subset === 'favorites',
+        );
+      }
       
       const { data: newSession, error } = await supabase
         .from('study_sessions')
@@ -486,7 +527,7 @@ export function useStudyEngine(
           user_id: user.id,
           list_id: listId,
           mode,
-          current_index: 0,
+          current_index: localSnapshot?.currentIndex ?? 0,
           cards_order: orderedCards,
           completed: false
         })
@@ -497,7 +538,11 @@ export function useStudyEngine(
 
       setSessionId(newSession.id);
       setCardsOrder(orderedCards);
-      setCurrentIndex(0);
+      setCurrentIndex(localSnapshot?.currentIndex ?? 0);
+      if (localSnapshot) {
+        setResults(localSnapshot.results);
+        toast.success("Continuando de onde você parou!");
+      }
     } catch (error) {
       console.error('Erro ao inicializar sessão:', error);
       const shuffledIds = flashcards
@@ -512,7 +557,7 @@ export function useStudyEngine(
     }
     // Includes gameSettings.subset and redListIds because they materially affect
     // the cardsOrder shape (favorites scope + red-list spaced repetition injection).
-  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey]);
+  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey, studySnapshotKey, userScope]);
   
   // Store flashcards in a ref for stable access
   const flashcardsRef = useRef(flashcards);
@@ -823,62 +868,51 @@ export function useStudyEngine(
     }
   }, [generateNextRound, isGameComplete, roundNumber]);
 
-  const completeSession = useCallback(async () => {
-    if (!isAuthenticated) return;
-
-    // Flush any pending progress updates before completing
-    await flushProgressBuffer();
+  const completeSession = useCallback(async (): Promise<boolean> => {
+    if (completionInFlightRef.current) return false;
+    completionInFlightRef.current = true;
+    setIsCompleting(true);
 
     try {
+      await flushProgressBuffer();
       const userId = authUserIdRef.current;
 
-      if (userId && FEATURE_FLAGS.economy_enabled) {
-        await awardPoints(userId, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
-      }
-
-      if (sessionId) {
-        await supabase
+      if (isAuthenticated && sessionId) {
+        const { error: completionError } = await supabase
           .from('study_sessions')
-          .update({ completed: true })
+          .update({ completed: true, updated_at: new Date().toISOString() })
           .eq('id', sessionId);
+        if (completionError) throw completionError;
 
-        // === UPDATE GOAL PROGRESS ===
-        // Check if this completed session counts toward any active goals
-        // FREIO #1: Ler from_step do URL para priorizar aquela etapa
+        if (userId && FEATURE_FLAGS.economy_enabled) {
+          await awardPoints(userId, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
+        }
+
         if (userId && listId) {
           try {
             const urlParams = new URLSearchParams(window.location.search);
             const fromStepId = urlParams.get('from_step');
-            
             const result = await updateGoalProgress(userId, sessionId, listId, mode, fromStepId);
             if (result.updated) {
-              if (result.goalCompleted) {
-                toast.success("🎯 Meta concluída! Parabéns!");
-              } else if (result.stepInfo) {
-                toast.info(`Meta atualizada: Etapa (${result.stepInfo})`);
-              }
+              if (result.goalCompleted) toast.success("🎯 Meta concluída! Parabéns!");
+              else if (result.stepInfo) toast.info(`Meta atualizada: Etapa (${result.stepInfo})`);
             }
           } catch (goalError) {
             console.error('Erro ao atualizar progresso de metas:', goalError);
-            // Non-blocking: don't fail session completion if goal update fails
           }
         }
       }
 
-      // Update the parent list's updated_at to move it to the top of "Recentes"
-      if (listId) {
+      if (isAuthenticated && listId) {
         await supabase
           .from('lists')
           .update({ updated_at: new Date().toISOString() })
           .eq('id', listId);
-
-        // Also update the parent folder's updated_at
         const { data: listData } = await supabase
           .from('lists')
           .select('folder_id')
           .eq('id', listId)
-          .single();
-
+          .maybeSingle();
         if (listData?.folder_id) {
           await supabase
             .from('folders')
@@ -887,16 +921,36 @@ export function useStudyEngine(
         }
       }
 
-      // Clear flip mode progress
-      if (isFlipMode && listId) {
-        localStorage.removeItem(flipProgressKey);
-      }
-
+      clearStudySnapshot(studySnapshotKey);
+      if (isFlipMode && listId) localStorage.removeItem(flipProgressKey);
+      setSessionId(null);
       toast.success("Sessão de estudo concluída! 🎉");
+      return true;
     } catch (error) {
       console.error('Erro ao completar sessão:', error);
+      toast.error("Não foi possível concluir a sessão. Tente novamente.");
+      return false;
+    } finally {
+      completionInFlightRef.current = false;
+      setIsCompleting(false);
     }
-  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey]);
+  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey, studySnapshotKey]);
+
+  const discardSession = useCallback(async () => {
+    clearStudySnapshot(studySnapshotKey);
+    if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
+    const currentSessionId = sessionId;
+    setSessionId(null);
+    if (!currentSessionId || !isAuthenticated) return;
+    try {
+      await supabase
+        .from('study_sessions')
+        .update({ completed: true, updated_at: new Date().toISOString() })
+        .eq('id', currentSessionId);
+    } catch (error) {
+      console.error('[StudyEngine] Falha ao descartar sessão restaurada:', error);
+    }
+  }, [studySnapshotKey, listId, isFlipMode, flipProgressKey, sessionId, isAuthenticated]);
 
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
@@ -913,36 +967,31 @@ export function useStudyEngine(
   }, [listId, isFlipMode, flashcards, initializeSession, flipProgressKey]);
 
   // Restart session with new settings
-  const restartSession = useCallback((newSettings?: Partial<GameSettings>) => {
+  const restartSession = useCallback(async (newSettings?: Partial<GameSettings>) => {
+    if (isRestarting) return;
+    setIsRestarting(true);
     const settings = { ...gameSettings, ...newSettings };
     setGameSettings(settings);
 
-    // Use flashcards directly — Study.tsx already filtered by favorites/subset
     if (flashcards.length === 0) {
       toast.error('Nenhum card encontrado com os filtros selecionados');
+      setIsRestarting(false);
       return;
     }
 
-    // Get card IDs
     let cardIds = flashcards.map(f => f.id);
-
-    // Apply ordering
-    if (settings.mode === 'random') {
-      cardIds = cardIds.sort(() => Math.random() - 0.5);
-    }
-
-    // Inject red-list spaced repetitions when studying favorites
+    if (settings.mode === 'random') cardIds = cardIds.sort(() => Math.random() - 0.5);
     cardIds = injectRedListRepetitions(
       cardIds,
       effectiveRedPlayableIds,
       settings.subset === 'favorites',
     );
 
-    // Reset state
-    if (listId && isFlipMode) {
-      localStorage.removeItem(flipProgressKey);
-    }
+    const previousSessionId = sessionId;
+    clearStudySnapshot(studySnapshotKey);
+    if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
 
+    setSessionId(null);
     setCardsOrder(cardIds);
     setCurrentIndex(0);
     setResults([]);
@@ -952,8 +1001,38 @@ export function useStudyEngine(
     setRoundNumber(1);
     setIsFinished(false);
 
-    toast.success('Jogo reiniciado!');
-  }, [gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey]);
+    try {
+      const userId = authUserIdRef.current;
+      if (isAuthenticated && userId && listId) {
+        if (previousSessionId) {
+          await supabase
+            .from('study_sessions')
+            .update({ completed: true, updated_at: new Date().toISOString() })
+            .eq('id', previousSessionId);
+        }
+        const { data: newSession, error } = await supabase
+          .from('study_sessions')
+          .insert({
+            user_id: userId,
+            list_id: listId,
+            mode,
+            current_index: 0,
+            cards_order: cardIds,
+            completed: false,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        setSessionId(newSession.id);
+      }
+      toast.success('Jogo reiniciado!');
+    } catch (error) {
+      console.error('[StudyEngine] Falha ao criar nova sessão após reinício:', error);
+      toast.warning('O jogo reiniciou neste aparelho, mas a sincronização online falhou.');
+    } finally {
+      setIsRestarting(false);
+    }
+  }, [isRestarting, gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, isAuthenticated, mode]);
 
   // Initialize session on mount
   useEffect(() => {
@@ -984,10 +1063,32 @@ export function useStudyEngine(
     }
   }, [currentIndex, results, isLoading, isFlipMode, saveFlipProgress]);
 
+  useEffect(() => {
+    if (isLoading || isFinished || cardsOrder.length === 0) return;
+    writeStudySnapshot(studySnapshotKey, {
+      version: 2,
+      sessionId,
+      currentIndex,
+      cardsOrder,
+      results,
+      timestamp: Date.now(),
+    });
+  }, [studySnapshotKey, sessionId, currentIndex, cardsOrder, results, isLoading, isFinished]);
+
   // Force-save current index immediately (no debounce). Used when switching
   // study scope so the previous trail's index isn't lost while waiting for
   // the debounced save to fire.
   const saveProgressNow = useCallback(async () => {
+    if (cardsOrder.length > 0 && !isFinished) {
+      writeStudySnapshot(studySnapshotKey, {
+        version: 2,
+        sessionId,
+        currentIndex,
+        cardsOrder,
+        results,
+        timestamp: Date.now(),
+      });
+    }
     if (!sessionId || !listId || !authUserIdRef.current) return;
     try {
       await supabase
@@ -1000,7 +1101,20 @@ export function useStudyEngine(
     } catch (error) {
       console.error('[StudyEngine] saveProgressNow falhou:', error);
     }
-  }, [sessionId, currentIndex, listId]);
+  }, [sessionId, currentIndex, listId, cardsOrder, results, isFinished, studySnapshotKey]);
+
+  useEffect(() => {
+    const flushBeforeLeave = () => { void saveProgressNow(); };
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') void saveProgressNow();
+    };
+    window.addEventListener('pagehide', flushBeforeLeave);
+    document.addEventListener('visibilitychange', flushWhenHidden);
+    return () => {
+      window.removeEventListener('pagehide', flushBeforeLeave);
+      document.removeEventListener('visibilitychange', flushWhenHidden);
+    };
+  }, [saveProgressNow]);
 
   // Cleanup: flush progress buffer and turma activity on unmount
   useEffect(() => {
@@ -1036,6 +1150,8 @@ export function useStudyEngine(
     results,
     isFinished,
     isLoading,
+    isCompleting,
+    isRestarting,
     currentCard,
     cardsOrder,
     totalCards: cardsOrder.length,
@@ -1054,6 +1170,7 @@ export function useStudyEngine(
     hasMoreRounds,
     isGameComplete,
     startNextRound,
+    discardSession,
     resetSession,
     restartSession,
     gameSettings,

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Trophy, RotateCcw, CheckCircle, ArrowLeft } from "lucide-react";
+import { RotateCcw, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,6 +23,8 @@ interface StudyCompletionModalProps {
   onOpenChange: (open: boolean) => void;
   fromGoalId?: string | null;
   onGoToGoals?: () => void;
+  isCompleting?: boolean;
+  isRestarting?: boolean;
 }
 
 export const StudyCompletionModal = ({
@@ -38,6 +40,8 @@ export const StudyCompletionModal = ({
   onOpenChange,
   fromGoalId,
   onGoToGoals,
+  isCompleting = false,
+  isRestarting = false,
 }: StudyCompletionModalProps) => {
   const accuracy = totalCards > 0 ? Math.round((correctCount / totalCards) * 100) : 0;
   const wasOpenRef = useRef(false);
@@ -58,8 +62,8 @@ export const StudyCompletionModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="text-center items-center">
-          <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-            <Trophy className="h-8 w-8 text-primary" />
+          <div className="mx-auto mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-300/25 via-yellow-400/10 to-orange-500/20 shadow-[0_16px_36px_-16px_rgba(245,158,11,0.9)] ring-1 ring-amber-300/30">
+            <span role="img" aria-label="Troféu" className="select-none text-5xl leading-none drop-shadow-[0_7px_7px_rgba(0,0,0,0.4)]">🏆</span>
           </div>
           <DialogTitle className="text-xl">Atividade Concluída!</DialogTitle>
           <DialogDescription>
@@ -91,15 +95,16 @@ export const StudyCompletionModal = ({
         <div className="flex flex-col gap-2 pt-2">
           <Button
             onClick={() => runTransition(onComplete)}
+            disabled={isCompleting || isRestarting}
             className="w-full bg-green-600 hover:bg-green-700 text-lg font-bold min-h-[48px]"
           >
-            <CheckCircle className="mr-2 h-5 w-5" />
-            CONCLUIR SESSÃO
+            {isCompleting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5" />}
+            {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
           </Button>
 
-          <Button variant="secondary" onClick={() => runTransition(onRestart)} className="w-full">
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Jogar Novamente
+          <Button variant="secondary" onClick={() => runTransition(onRestart)} disabled={isCompleting || isRestarting} className="w-full">
+            {isRestarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+            {isRestarting ? "Reiniciando..." : "Jogar Novamente"}
           </Button>
 
           {onReviewErrors && errorCount > 0 && (
@@ -114,7 +119,7 @@ export const StudyCompletionModal = ({
             </Button>
           )}
 
-          <Button variant="ghost" onClick={() => runTransition(onExit)} className="w-full">
+          <Button variant="ghost" onClick={() => runTransition(onExit)} disabled={isCompleting || isRestarting} className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar à Lista
           </Button>
