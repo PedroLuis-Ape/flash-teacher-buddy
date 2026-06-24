@@ -1,5 +1,6 @@
 import { useFolderGlossary } from "@/hooks/useFolderGlossary";
 import { FolderGlossaryAiPromptCard } from "./FolderGlossaryAiPromptCard";
+import { FolderGlossaryForceSyncCard } from "./FolderGlossaryForceSyncCard";
 import { FolderGlossaryManager as FolderGlossaryManagerCore } from "./FolderGlossaryManagerCore";
 
 interface Props {
@@ -24,6 +25,10 @@ export function FolderGlossaryManager(props: Props) {
             folderTitle={props.folderTitle}
             labelA={props.labelA}
             labelB={props.labelB}
+          />
+          <FolderGlossaryForceSyncCard
+            folderId={props.folderId}
+            folderTitle={props.folderTitle}
           />
         </>
       )}
