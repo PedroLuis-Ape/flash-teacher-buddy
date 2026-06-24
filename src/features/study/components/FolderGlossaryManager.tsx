@@ -1,5 +1,6 @@
 import { useFolderGlossary } from "@/hooks/useFolderGlossary";
 import { FolderGlossaryAiPromptCard } from "./FolderGlossaryAiPromptCard";
+import { FolderGlossaryCoverageCard } from "./FolderGlossaryCoverageCard";
 import { FolderGlossaryForceSyncCard } from "./FolderGlossaryForceSyncCard";
 import { FolderGlossaryManager as FolderGlossaryManagerCore } from "./FolderGlossaryManagerCore";
 
@@ -17,10 +18,13 @@ export function FolderGlossaryManager(props: Props) {
     <div className="space-y-4">
       {canEdit && (
         <>
-          <span className="sr-only">
-            Importação disponível nos modos Mesclar com o glossário atual e Substituir o glossário atual.
-          </span>
           <FolderGlossaryAiPromptCard
+            folderId={props.folderId}
+            folderTitle={props.folderTitle}
+            labelA={props.labelA}
+            labelB={props.labelB}
+          />
+          <FolderGlossaryCoverageCard
             folderId={props.folderId}
             folderTitle={props.folderTitle}
             labelA={props.labelA}
