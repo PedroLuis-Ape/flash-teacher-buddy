@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, ListOrdered, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
 import { assignmentPositionLabel, moveAssignmentToPosition } from '@/features/classroom/lib/assignmentOrder';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -59,14 +60,18 @@ export function ListSequenceDialog({ folderId, triggerClassName }: ListSequenceD
         return { visible: false, lists: [] as OrderedList[] };
       }
 
-      const { data, error } = await supabase
-        .from('lists')
-        .select('id, title, order_index, created_at')
-        .eq('folder_id', folderId)
-        .is('deleted_at', null);
+      const data = await fetchAllSupabaseRows<OrderedList>((from, to) =>
+        (supabase as any)
+          .from('lists')
+          .select('id, title, order_index, created_at')
+          .eq('folder_id', folderId)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to),
+      );
 
-      if (error) throw error;
-      return { visible: true, lists: sortLists((data ?? []) as OrderedList[]) };
+      return { visible: true, lists: sortLists(data) };
     },
     enabled: Boolean(user && folderId),
   });

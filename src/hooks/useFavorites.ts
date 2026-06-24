@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
 import { toast } from 'sonner';
 import { removeFromRedListIfNeeded } from '@/hooks/useRedList';
 
@@ -23,15 +24,18 @@ const hasScope = (scope?: FavoriteScope) =>
  * client, no missing layered favorites after a cold restart.
  */
 async function fetchScopedFlashcardGroupIds(scope: FavoriteScope): Promise<string[]> {
-  const { data, error } = await (supabase as any).rpc('get_scoped_flashcard_favorites', {
-    p_list_id: scope.listId ?? null,
-    p_collection_id: scope.collectionId ?? null,
-    p_folder_id: scope.folderId ?? null,
-    p_institution_id: scope.institutionId ?? null,
-  });
-  if (error) throw error;
+  const data = await fetchAllSupabaseRows<{ group_id: string }>((from, to) =>
+    (supabase as any)
+      .rpc('get_scoped_flashcard_favorites', {
+        p_list_id: scope.listId ?? null,
+        p_collection_id: scope.collectionId ?? null,
+        p_folder_id: scope.folderId ?? null,
+        p_institution_id: scope.institutionId ?? null,
+      })
+      .range(from, to),
+  );
   const seen = new Set<string>();
-  for (const row of (data ?? []) as Array<{ group_id: string }>) {
+  for (const row of data) {
     if (row?.group_id) seen.add(row.group_id);
   }
   return Array.from(seen);
@@ -43,14 +47,17 @@ async function fetchFavoritesByScope(
   scope?: FavoriteScope
 ): Promise<string[]> {
   if (resourceType !== 'flashcard' || !hasScope(scope)) {
-    const { data, error } = await supabase
-      .from('user_favorites')
-      .select('resource_id')
-      .eq('user_id', userId)
-      .eq('resource_type', resourceType);
+    const data = await fetchAllSupabaseRows<{ resource_id: string }>((from, to) =>
+      (supabase as any)
+        .from('user_favorites')
+        .select('resource_id')
+        .eq('user_id', userId)
+        .eq('resource_type', resourceType)
+        .order('resource_id', { ascending: true })
+        .range(from, to),
+    );
 
-    if (error) throw error;
-    return data?.map((favorite) => favorite.resource_id) ?? [];
+    return data.map((favorite) => favorite.resource_id);
   }
 
   return fetchScopedFlashcardGroupIds(scope!);

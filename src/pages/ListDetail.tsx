@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback, memo, useRef, useEffect } from "react";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -377,25 +378,25 @@ const ListDetail = () => {
     queryKey: ["flashcards", id],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
-        const { data, error } = await supabase.rpc('get_portal_flashcards', { 
-          _list_id: id 
-        });
-        if (error) throw error;
-        return data as Flashcard[];
+        return fetchAllSupabaseRows<Flashcard>((from, to) =>
+          (supabase as any)
+            .rpc('get_portal_flashcards', { _list_id: id })
+            .range(from, to),
+        );
       }
-      
-      const { data, error } = await supabase
-        .from("flashcards")
-        .select("*")
-        .eq("list_id", id)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true });
-      
-      if (error) throw error;
-      return data as Flashcard[];
+
+      return fetchAllSupabaseRows<Flashcard>((from, to) =>
+        (supabase as any)
+          .from("flashcards")
+          .select("*")
+          .eq("list_id", id)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
     },
     staleTime: 30_000,
   });

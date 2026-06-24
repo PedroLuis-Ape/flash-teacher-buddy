@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useKeyboardShortcuts as useStudyShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { hashToBool } from "@/features/study/lib/gameCore";
@@ -501,18 +502,13 @@ const Study = () => {
     const session = authSession;
 
     if (isListRoute && !session) {
-      const { data, error } = await supabase.rpc('get_portal_flashcards', { 
-        _list_id: resolvedId 
-      });
+      const data = await fetchAllSupabaseRows<Flashcard>((from, to) =>
+        (supabase as any)
+          .rpc('get_portal_flashcards', { _list_id: resolvedId })
+          .range(from, to),
+      );
 
-      if (error) {
-        console.error("Erro ao carregar flashcards:", error);
-        toast.error("Erro ao carregar flashcards");
-        setLoading(false);
-        return;
-      }
-
-      if (!data || data.length === 0) {
+      if (data.length === 0) {
         toast.error("Esta lista não possui flashcards");
         setLoading(false);
         return;
@@ -528,11 +524,16 @@ const Study = () => {
     const queryColumn = isListRoute ? "list_id" : "collection_id";
     
     // ── PERF: Fetch flashcards + list metadata in parallel ──
-    const cardsPromise = supabase
-      .from("flashcards")
-      .select("*")
-      .eq(queryColumn, resolvedId)
-      .is("deleted_at", null);
+    const cardsPromise = fetchAllSupabaseRows<Flashcard>((from, to) =>
+      (supabase as any)
+        .from("flashcards")
+        .select("*")
+        .eq(queryColumn, resolvedId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
 
     const listPromise = isListRoute
       ? supabase
@@ -542,15 +543,9 @@ const Study = () => {
           .maybeSingle()
       : Promise.resolve({ data: null });
 
-    const [cardsResult, listResult] = await Promise.all([cardsPromise, listPromise]);
+    const [cardsData, listResult] = await Promise.all([cardsPromise, listPromise]);
 
-    if (cardsResult.error) {
-      toast.error("Erro ao carregar flashcards");
-      navigate(isListRoute ? `/list/${resolvedId}` : (isPublicRoute ? `/portal/collection/${resolvedId}` : "/"));
-      return;
-    }
-
-    if (!cardsResult.data || cardsResult.data.length === 0) {
+    if (cardsData.length === 0) {
       toast.error(isListRoute ? "Esta lista não tem flashcards ainda" : "Esta coleção não tem flashcards ainda");
       navigate(isListRoute ? `/list/${resolvedId}` : (isPublicRoute ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}`));
       return;
@@ -560,7 +555,7 @@ const Study = () => {
     // The entry-point carries `__layers` with the full ordered group; the
     // view then lets the user navigate "Camada anterior/Próxima camada"
     // INSIDE the same deck position. Principals/aggregators never play.
-    const studyableCards = prepareLayeredStudyDeck(cardsResult.data as any[]);
+    const studyableCards = prepareLayeredStudyDeck(cardsData as any[]);
     const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──

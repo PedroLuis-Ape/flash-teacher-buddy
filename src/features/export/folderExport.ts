@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
 import {
   smartImportPackageSchema,
   withSmartDeclaredTotals,
@@ -222,27 +223,35 @@ function cardsForExport(rows: FlashcardRow[]): SmartCard[] {
 }
 
 async function loadFolders(folderIds: string[]): Promise<FolderRow[]> {
-  const { data, error } = await (supabase.from('folders') as any)
-    .select('id, title, description, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled')
-    .in('id', folderIds)
-    .is('deleted_at', null);
-
-  if (error) throw error;
-  return (data ?? []) as FolderRow[];
+  const result: FolderRow[] = [];
+  for (const ids of chunk(folderIds, QUERY_CHUNK_SIZE)) {
+    const rows = await fetchAllSupabaseRows<FolderRow>((from, to) =>
+      (supabase.from('folders') as any)
+        .select('id, title, description, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled')
+        .in('id', ids)
+        .is('deleted_at', null)
+        .order('id', { ascending: true })
+        .range(from, to),
+    );
+    result.push(...rows);
+  }
+  return result;
 }
 
 async function loadLists(folderIds: string[]): Promise<ListRow[]> {
   const result: ListRow[] = [];
   for (const ids of chunk(folderIds, QUERY_CHUNK_SIZE)) {
-    const { data, error } = await (supabase.from('lists') as any)
-      .select('id, folder_id, title, description, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, primary_side, order_index, created_at')
-      .in('folder_id', ids)
-      .is('deleted_at', null)
-      .order('order_index', { ascending: true })
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    result.push(...((data ?? []) as ListRow[]));
+    const rows = await fetchAllSupabaseRows<ListRow>((from, to) =>
+      (supabase.from('lists') as any)
+        .select('id, folder_id, title, description, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, primary_side, order_index, created_at')
+        .in('folder_id', ids)
+        .is('deleted_at', null)
+        .order('order_index', { ascending: true })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    );
+    result.push(...rows);
   }
   return result;
 }
