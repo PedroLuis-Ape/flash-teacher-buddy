@@ -7,6 +7,8 @@ import type {
   FolderGlossaryQueryResult,
 } from "./folderGlossaryTypes";
 
+export { syncFolderGlossary } from "./folderGlossarySyncApi";
+
 export async function loadFolderGlossary(folderId: string): Promise<FolderGlossaryQueryResult> {
   const [{ data, error }, permission] = await Promise.all([
     (supabase as any).rpc("get_folder_glossary_v1", { _folder_id: folderId }),
