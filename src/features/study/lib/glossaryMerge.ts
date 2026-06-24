@@ -1,5 +1,5 @@
 /**
- * Merges glossary entries with per-card manual hints.
+ * Merges folder glossary entries with per-card manual hints.
  * Entries are additive: shorter words and longer expressions coexist.
  */
 
@@ -26,7 +26,33 @@ export interface ExtendedWordHint extends WordHint {
   suppressGlobal?: boolean;
 }
 
-const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+const normalize = (value: string) =>
+  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+
+function mergeNotes(current?: string, next?: string | null) {
+  const notes = [current, next]
+    .filter((note): note is string => Boolean(note?.trim()))
+    .map((note) => note.trim());
+  return Array.from(new Map(
+    notes.map((note) => [normalize(note), note]),
+  ).values()).join(" · ") || undefined;
+}
+
+function addTranslation(
+  translations: MergedHint["translations"],
+  next: MergedHint["translations"][number],
+) {
+  const existing = translations.find(
+    (item) => normalize(item.text) === normalize(next.text),
+  );
+  if (!existing) {
+    translations.push({ ...next, note: next.note?.trim() || undefined });
+    return;
+  }
+
+  existing.note = mergeNotes(existing.note, next.note);
+  if (next.source === "manual") existing.source = "manual";
+}
 
 export function splitGlossaryAlternatives(value: string): string[] {
   const unique = new Map<string, string>();
@@ -56,7 +82,7 @@ function manualHintBelongsToSide(hint: ExtendedWordHint, side: "A" | "B") {
   return hintSide === side;
 }
 
-function addGlobalTranslation(
+function addFolderTranslation(
   hintMap: Map<string, MergedHint>,
   suppressedTexts: Set<string>,
   text: string,
@@ -73,16 +99,11 @@ function addGlobalTranslation(
   if (suppressedTexts.has(key)) return;
 
   const merged = hintMap.get(key) ?? { text: cleanMatch, translations: [] };
-  if (!merged.translations.some((translation) =>
-    normalize(translation.text) === normalize(cleanTranslation)
-    && translation.source === "global"
-  )) {
-    merged.translations.push({
-      text: cleanTranslation,
-      note: note || undefined,
-      source: "global",
-    });
-  }
+  addTranslation(merged.translations, {
+    text: cleanTranslation,
+    note: note || undefined,
+    source: "global",
+  });
   hintMap.set(key, merged);
 }
 
@@ -104,7 +125,7 @@ export function mergeGlossaryAndManual(
   );
 
   for (const candidate of findRelevantGlossaryMatches(text, side, glossary)) {
-    addGlobalTranslation(
+    addFolderTranslation(
       hintMap,
       suppressedTexts,
       text,
@@ -115,7 +136,11 @@ export function mergeGlossaryAndManual(
   }
 
   for (const hint of relevantManual) {
-    if (findGlossaryOccurrences(text, hint.text).length === 0 && hint.startIndex === undefined) continue;
+    if (
+      findGlossaryOccurrences(text, hint.text).length === 0
+      && hint.startIndex === undefined
+    ) continue;
+
     const key = normalize(hint.text);
     const merged = hintMap.get(key) ?? {
       text: hint.text,
@@ -129,14 +154,11 @@ export function mergeGlossaryAndManual(
       merged.endIndex = hint.endIndex;
     }
 
-    const translation = hint.translation.trim();
-    if (!merged.translations.some((item) => item.text === translation && item.source === "manual")) {
-      merged.translations.push({
-        text: translation,
-        note: hint.note || undefined,
-        source: "manual",
-      });
-    }
+    addTranslation(merged.translations, {
+      text: hint.translation.trim(),
+      note: hint.note || undefined,
+      source: "manual",
+    });
     hintMap.set(key, merged);
   }
 
