@@ -1,23 +1,27 @@
 name: Refresh security lockfiles
 
 on:
-  push:
+  pull_request:
     branches:
-      - fix/dependency-security
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
 
 jobs:
   refresh:
-    if: ${{ !contains(github.event.head_commit.message, '[lock-refresh]') }}
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout branch
+      - name: Checkout pull request branch
         uses: actions/checkout@v4
         with:
-          ref: fix/dependency-security
+          ref: ${{ github.head_ref }}
 
       - name: Use Node.js
         uses: actions/setup-node@v4
