@@ -4,21 +4,23 @@ export const SMART_IMPORT_SCHEMA = "app-piteco-super-import" as const;
 export const SMART_IMPORT_VERSION = "2.0" as const;
 
 export const SMART_IMPORT_LIMITS = {
-  maxFileBytes: 10 * 1024 * 1024,
+  maxFileBytes: 50 * 1024 * 1024,
   maxFolders: 200,
   maxLists: 1_000,
   maxCards: 20_000,
   maxGlossaryEntries: 20_000,
-  maxTextLength: 8_000,
+  maxTextLength: 250_000,
   maxNameLength: 160,
   maxWordHintsPerCard: 200,
   maxLayersPerGroup: 500,
 } as const;
 
+const formatLimit = (value: number) => value.toLocaleString("pt-BR");
+
 const trimmed = (label: string, max: number = SMART_IMPORT_LIMITS.maxTextLength) =>
   z.string()
     .transform((value) => value.trim())
-    .pipe(z.string().min(1, `${label} não pode ficar vazio.`).max(max, `${label} excede ${max} caracteres.`));
+    .pipe(z.string().min(1, `${label} não pode ficar vazio.`).max(max, `${label} excede ${formatLimit(max)} caracteres.`));
 
 const optionalTrimmed = (max: number = SMART_IMPORT_LIMITS.maxTextLength) =>
   z.string()
