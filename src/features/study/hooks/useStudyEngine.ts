@@ -512,12 +512,14 @@ export function useStudyEngine(
       // Create new session with ALL flashcards (straight-through, no batching)
       let orderedCards = localSnapshot?.cardsOrder
         ?? await getPrioritizedFlashcards(user.id, listId, flashcards, true);
-      // Inject red-list spaced repetitions when studying favorites
-      orderedCards = injectRedListRepetitions(
-        orderedCards,
-        effectiveRedPlayableIds,
-        gameSettings.subset === 'favorites',
-      );
+      // A restored snapshot already contains its exact repetition order.
+      if (!localSnapshot) {
+        orderedCards = injectRedListRepetitions(
+          orderedCards,
+          effectiveRedPlayableIds,
+          gameSettings.subset === 'favorites',
+        );
+      }
       
       const { data: newSession, error } = await supabase
         .from('study_sessions')
@@ -934,6 +936,22 @@ export function useStudyEngine(
     }
   }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey, studySnapshotKey]);
 
+  const discardSession = useCallback(async () => {
+    clearStudySnapshot(studySnapshotKey);
+    if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
+    const currentSessionId = sessionId;
+    setSessionId(null);
+    if (!currentSessionId || !isAuthenticated) return;
+    try {
+      await supabase
+        .from('study_sessions')
+        .update({ completed: true, updated_at: new Date().toISOString() })
+        .eq('id', currentSessionId);
+    } catch (error) {
+      console.error('[StudyEngine] Falha ao descartar sessão restaurada:', error);
+    }
+  }, [studySnapshotKey, listId, isFlipMode, flipProgressKey, sessionId, isAuthenticated]);
+
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
     if (listId && isFlipMode) {
@@ -1152,6 +1170,7 @@ export function useStudyEngine(
     hasMoreRounds,
     isGameComplete,
     startNextRound,
+    discardSession,
     resetSession,
     restartSession,
     gameSettings,

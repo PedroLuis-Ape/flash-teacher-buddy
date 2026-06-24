@@ -185,6 +185,7 @@ const Study = () => {
   
   // Completion modal
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionWasRestored, setCompletionWasRestored] = useState(false);
 
   // Persistent completion key — uses urlFavoritesOnly (the prefs-derived value),
   // which is the SSOT before engine init. After init, gameSettings.subset is the
@@ -333,6 +334,7 @@ const Study = () => {
     unseenCardsCount,
     missedCardsCount,
     completeSession,
+    discardSession,
     cardsOrder,
     saveProgressNow,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId);
@@ -429,6 +431,7 @@ const Study = () => {
   // Auto-open completion modal when activity finishes OR on re-entry if already completed
   useEffect(() => {
     if (isFinished) {
+      setCompletionWasRestored(false);
       setShowCompletionModal(true);
       // Persist completion state
       if (completionKey) {
@@ -443,6 +446,7 @@ const Study = () => {
     try {
       const saved = localStorage.getItem(completionKey);
       if (saved) {
+        setCompletionWasRestored(true);
         setShowCompletionModal(true);
       }
     } catch {}
@@ -672,19 +676,19 @@ const Study = () => {
     navigate(returnRoute, { replace: true });
   };
 
-  const handleCompleteAndExit = async () => {
-    const completed = await completeSession();
-    if (!completed) return;
+  const finishAndReturn = async () => {
+    if (completionWasRestored) {
+      await discardSession();
+    } else {
+      const completed = await completeSession();
+      if (!completed) return;
+    }
     setShowCompletionModal(false);
     navigate(returnRoute, { replace: true });
   };
 
-  const handleFinishedExit = async () => {
-    const completed = await completeSession();
-    if (!completed) return;
-    setShowCompletionModal(false);
-    navigate(returnRoute, { replace: true });
-  };
+  const handleCompleteAndExit = finishAndReturn;
+  const handleFinishedExit = finishAndReturn;
 
   const handleDirectionChange = (value: string) => {
     const dir = normalizeDirection(value);
@@ -728,6 +732,7 @@ const Study = () => {
   };
 
   const handleRestartWithSettings = async () => {
+    setCompletionWasRestored(false);
     setShowCompletionModal(false);
     if (completionKey) {
       try { localStorage.removeItem(completionKey); } catch {}
