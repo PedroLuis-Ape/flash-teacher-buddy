@@ -1,0 +1,57 @@
+name: Temporary dependency autofix
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  autofix:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Use Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Apply semver-compatible npm security fixes
+        shell: bash
+        run: |
+          npm audit fix --package-lock-only --legacy-peer-deps --no-fund || true
+          npm install --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      - name: Regenerate Bun lockfile from the remediated manifest
+        shell: bash
+        run: |
+          rm -f bun.lock
+          bun install --lockfile-only --ignore-scripts
+
+      - name: Commit remediated lockfiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json bun.lock
+          if git diff --cached --quiet; then
+            echo "Lockfiles already contain all compatible fixes."
+          else
+            git commit -m "chore: apply compatible dependency security fixes [security-autofix]"
+            git push
+          fi
