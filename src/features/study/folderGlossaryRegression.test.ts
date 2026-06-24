@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mergeGlossaryAndManual, type GlossaryItem } from "./lib/glossaryMerge";
 import { parseFolderGlossaryJson } from "./lib/folderGlossaryTransfer";
-import { stripGlossariesForFolderImport } from "../global-import/mappedService";
 
 const migration = readFileSync(
   new URL("../../../supabase/migrations/20260624120000_folder_glossary_v1.sql", import.meta.url),
@@ -30,7 +29,13 @@ describe("folder-scoped glossary", () => {
     ]);
   });
 
-  it("removes list glossaries from the legacy Super Importer payload", () => {
+  it("removes list glossaries from the legacy Super Importer payload", async () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    });
+    const { stripGlossariesForFolderImport } = await import("../global-import/mappedService");
     const original = {
       package: {
         folders: [{
@@ -43,6 +48,7 @@ describe("folder-scoped glossary", () => {
     expect(stripped.package.folders[0]).not.toHaveProperty("glossary");
     expect(stripped.package.folders[0].lists[0]).not.toHaveProperty("glossary");
     expect(original.package.folders[0].lists[0]).toHaveProperty("glossary");
+    vi.unstubAllGlobals();
   });
 
   it("deduplicates equal manual and folder translations", () => {
