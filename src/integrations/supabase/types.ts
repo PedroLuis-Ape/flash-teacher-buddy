@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_glossary: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          note: string | null
+          original_text: string
+          owner_id: string
+          side: string
+          translated_text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          original_text: string
+          owner_id: string
+          side?: string
+          translated_text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          original_text?: string
+          owner_id?: string
+          side?: string
+          translated_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       activity_progress: {
         Row: {
           activity_id: string
@@ -880,6 +916,62 @@ export type Database = {
           },
         ]
       }
+      folder_glossary: {
+        Row: {
+          alternative_translations: string[]
+          created_at: string
+          folder_id: string
+          id: string
+          is_active: boolean
+          note: string | null
+          original_text: string
+          owner_id: string
+          primary_translation: string
+          side: string
+          source_language: string | null
+          target_language: string | null
+          updated_at: string
+        }
+        Insert: {
+          alternative_translations?: string[]
+          created_at?: string
+          folder_id: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          original_text: string
+          owner_id: string
+          primary_translation: string
+          side?: string
+          source_language?: string | null
+          target_language?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alternative_translations?: string[]
+          created_at?: string
+          folder_id?: string
+          id?: string
+          is_active?: boolean
+          note?: string | null
+          original_text?: string
+          owner_id?: string
+          primary_translation?: string
+          side?: string
+          source_language?: string | null
+          target_language?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folder_glossary_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folder_texts: {
         Row: {
           content: string
@@ -1381,6 +1473,7 @@ export type Database = {
           lang_b: string | null
           order_index: number
           owner_id: string
+          primary_side: string
           study_type: string
           title: string
           tts_enabled: boolean
@@ -1402,6 +1495,7 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id: string
+          primary_side?: string
           study_type?: string
           title: string
           tts_enabled?: boolean
@@ -1423,6 +1517,7 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id?: string
+          primary_side?: string
           study_type?: string
           title?: string
           tts_enabled?: boolean
@@ -1877,6 +1972,7 @@ export type Database = {
           rarity: string
           sku: string | null
           slug: string | null
+          status: string | null
           type: string | null
           updated_at: string
           version: number | null
@@ -1896,6 +1992,7 @@ export type Database = {
           rarity: string
           sku?: string | null
           slug?: string | null
+          status?: string | null
           type?: string | null
           updated_at?: string
           version?: number | null
@@ -1915,6 +2012,7 @@ export type Database = {
           rarity?: string
           sku?: string | null
           slug?: string | null
+          status?: string | null
           type?: string | null
           updated_at?: string
           version?: number | null
@@ -2821,6 +2919,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_manage_folder_glossary_v1: {
+        Args: { _folder_id: string; _user_id?: string }
+        Returns: boolean
+      }
+      can_read_folder_glossary_v1: {
+        Args: { _folder_id: string; _user_id?: string }
+        Returns: boolean
+      }
       check_message_rate_limit: {
         Args: { _thread_key: string; _user_id: string }
         Returns: boolean
@@ -2859,10 +2965,57 @@ export type Database = {
       generate_class_code: { Args: never; Returns: string }
       generate_public_id: { Args: { p_user_type: string }; Returns: string }
       generate_user_tag: { Args: never; Returns: string }
+      get_account_glossary_for_list_v1: {
+        Args: { _list_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          is_active: boolean
+          note: string
+          original_text: string
+          owner_id: string
+          side: string
+          translated_text: string
+          updated_at: string
+        }[]
+      }
       get_exchange_config: { Args: never; Returns: Json }
       get_exchange_quote: {
         Args: { p_pts: number; p_user_id: string }
         Returns: Json
+      }
+      get_folder_glossary_for_list_v1: {
+        Args: { _list_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          is_active: boolean
+          note: string
+          original_text: string
+          owner_id: string
+          side: string
+          translated_text: string
+          updated_at: string
+        }[]
+      }
+      get_folder_glossary_v1: {
+        Args: { _folder_id: string }
+        Returns: {
+          alternative_translations: string[]
+          can_edit: boolean
+          created_at: string
+          folder_id: string
+          id: string
+          is_active: boolean
+          note: string
+          original_text: string
+          owner_id: string
+          primary_translation: string
+          side: string
+          source_language: string
+          target_language: string
+          updated_at: string
+        }[]
       }
       get_lists_with_card_counts: {
         Args: { _folder_id: string }
@@ -2875,6 +3028,7 @@ export type Database = {
           id: string
           institution_id: string
           lang: string
+          last_activity: string
           order_index: number
           owner_id: string
           title: string
@@ -3013,6 +3167,7 @@ export type Database = {
           lang_b: string | null
           order_index: number
           owner_id: string
+          primary_side: string
           study_type: string
           title: string
           tts_enabled: boolean
@@ -3146,6 +3301,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_account_glossary_v1: {
+        Args: { _dry_run?: boolean; _entries: Json }
+        Returns: Json
+      }
       import_app_piteco_super_package_to_class_v1: {
         Args: {
           _card_conflict?: string
@@ -3163,6 +3322,15 @@ export type Database = {
           _institution_id?: string
           _payload: Json
           _request_id: string
+        }
+        Returns: Json
+      }
+      import_folder_glossary_v1: {
+        Args: {
+          _dry_run?: boolean
+          _entries: Json
+          _folder_id: string
+          _mode?: string
         }
         Returns: Json
       }
@@ -3186,6 +3354,28 @@ export type Database = {
         }
         Returns: Json
       }
+      import_smart_list_content_v2: {
+        Args: {
+          _batch_id?: string
+          _card_conflict?: string
+          _list: Json
+          _list_id: string
+          _list_path?: string
+          _uid: string
+        }
+        Returns: Json
+      }
+      import_smart_list_content_v2_impl: {
+        Args: {
+          _batch_id?: string
+          _card_conflict?: string
+          _list: Json
+          _list_id: string
+          _list_path?: string
+          _uid: string
+        }
+        Returns: Json
+      }
       init_public_id: { Args: { p_user_id: string }; Returns: Json }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
@@ -3196,6 +3386,10 @@ export type Database = {
         Returns: boolean
       }
       is_developer_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_public_slug_available_v1: {
+        Args: { p_slug: string }
+        Returns: boolean
+      }
       is_turma_member: {
         Args: { _turma_id: string; _user_id: string }
         Returns: boolean
@@ -3211,6 +3405,16 @@ export type Database = {
       merge_flashcard_into_group: {
         Args: { p_child_id: string; p_parent_id: string }
         Returns: Json
+      }
+      normalize_account_glossary_entries_v1: {
+        Args: { _entries: Json }
+        Returns: {
+          is_active: boolean
+          note: string
+          original_text: string
+          side: string
+          translated_text: string
+        }[]
       }
       process_exchange: {
         Args: { p_operation_id: string; p_pts: number; p_user_id: string }
@@ -3373,6 +3577,7 @@ export type Database = {
         Args: { _folder_id: string; _is_public: boolean }
         Returns: Json
       }
+      smart_word_hints_for_db_v2: { Args: { _raw: Json }; Returns: Json }
       soft_delete_folder: {
         Args: { p_folder_id: string; p_user_id: string }
         Returns: Json
@@ -3383,7 +3588,15 @@ export type Database = {
       }
       swap_flashcards_sides: { Args: { _list_id: string }; Returns: Json }
       swap_list_sides: { Args: { _list_id: string }; Returns: Json }
+      sync_folder_glossaries_from_super_import_v1: {
+        Args: { _batch_id: string; _payload: Json }
+        Returns: Json
+      }
       undo_classroom_global_import_v1: {
+        Args: { _batch_id: string }
+        Returns: undefined
+      }
+      undo_folder_glossary_batch_v1: {
         Args: { _batch_id: string }
         Returns: undefined
       }

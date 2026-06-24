@@ -49,10 +49,9 @@ Deno.serve(async (req) => {
     // Verificar o token JWT diretamente usando o Admin client
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
-    console.log('[announcements-create] User lookup:', { 
-      userId: user?.id, 
-      email: user?.email,
-      error: authError?.message 
+    console.log('[announcements-create] User lookup:', {
+      userId: user?.id,
+      error: authError?.message,
     });
     
     if (authError || !user) {
