@@ -15,8 +15,9 @@
     "store:sync": "npm run store:validate && node scripts/store-packages/sync.mjs",
     "check:environment": "node scripts/validate-environment.mjs",
     "check:security": "node scripts/audit-security.mjs",
+    "check:dependencies": "node scripts/audit-dependencies.mjs",
     "check:bundle": "node scripts/report-bundle.mjs",
-    "check": "npm run check:environment && npm run check:security && npm run store:validate && npm run typecheck && npm run test && npm run lint && npm run build"
+    "check": "npm run check:environment && npm run check:security && npm run check:dependencies && npm run store:validate && npm run typecheck && npm run test && npm run lint && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -47,10 +48,9 @@
     "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
-    "@supabase/supabase-js": "^2.58.0",
+    "@supabase/supabase-js": "^2.106.2",
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-virtual": "3.13.6",
-    "@types/uuid": "^11.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -68,15 +68,12 @@
     "react-hook-form": "^7.61.1",
     "react-i18next": "^16.3.5",
     "react-resizable-panels": "^2.1.9",
-    "react-router-dom": "^6.30.1",
+    "react-router-dom": "6.30.4",
     "recharts": "^2.15.4",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "uuid": "^13.0.0",
     "vaul": "^0.9.9",
-    "vite-plugin-pwa": "^1.1.0",
-    "vitest": "^4.0.18",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -96,6 +93,12 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^5.4.19"
+    "vite": "6.4.3",
+    "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "lodash": "4.18.1",
+    "rollup": "4.59.0",
+    "ws": "8.21.0"
   }
 }

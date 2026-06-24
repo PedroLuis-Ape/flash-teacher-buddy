@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    groups:
+      security-tooling:
+        patterns:
+          - vite
+          - vitest
+          - "@vitejs/*"
+          - rollup
+      supabase-client:
+        patterns:
+          - "@supabase/*"
+      react-router:
+        patterns:
+          - react-router
+          - react-router-dom
+          - "@remix-run/router"
+    labels:
+      - dependencies
+      - security
