@@ -1,0 +1,34 @@
+name: Temporary study completion patch
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply deterministic patch
+        run: node scripts/patch-study-completion-persistence.mjs
+      - name: Commit patched study flow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study/hooks/useStudyEngine.ts src/pages/Study.tsx src/features/study/components/StudyCompletionModal.impl.tsx
+          if git diff --cached --quiet; then
+            echo "Patch already applied."
+          else
+            git commit -m "fix: repair study completion actions and persistence"
+            git push
+          fi
