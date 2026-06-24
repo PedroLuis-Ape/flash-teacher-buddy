@@ -17,7 +17,7 @@ permissions:
 jobs:
   focused-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,11 +30,18 @@ jobs:
         run: |
           set -o pipefail
           npx vitest run src/features/study/folderGlossaryRegression.test.ts src/features/study/lib/glossaryMerge.test.ts src/features/study/lib/glossaryLayers.test.ts --reporter=verbose 2>&1 | tee folder-glossary-tests.log
-      - name: Upload focused test log
+      - name: Run complete test suite
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test -- --reporter=verbose 2>&1 | tee full-test-suite.log
+      - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: folder-glossary-test-log
-          path: folder-glossary-tests.log
+          path: |
+            folder-glossary-tests.log
+            full-test-suite.log
           if-no-files-found: warn
           retention-days: 3
