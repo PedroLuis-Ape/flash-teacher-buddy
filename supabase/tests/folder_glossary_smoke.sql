@@ -199,20 +199,27 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Super Importer did not save the glossary in the destination folder.';
   END IF;
+END;
+$$;
 
+RESET ROLE;
+
+DO $$
+BEGIN
   IF EXISTS (
-    SELECT 1 FROM public.account_glossary
-    WHERE owner_id = auth.uid() AND original_text = 'must'
+    SELECT 1
+    FROM public.account_glossary
+    WHERE owner_id = 'a1000000-0000-4000-8000-000000000001'
+      AND original_text = 'must'
   ) OR EXISTS (
-    SELECT 1 FROM public.list_glossary
+    SELECT 1
+    FROM public.list_glossary
     WHERE original_text = 'must'
   ) THEN
     RAISE EXCEPTION 'Super Importer leaked the folder glossary into a legacy table.';
   END IF;
 END;
 $$;
-
-RESET ROLE;
 
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'a1000000-0000-4000-8000-000000000002', false);
