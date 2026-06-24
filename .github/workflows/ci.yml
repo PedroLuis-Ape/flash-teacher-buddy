@@ -58,6 +58,18 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Dependency vulnerability audit
+        run: npm run check:dependencies
+
+      - name: Upload dependency audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-report
+          path: dependency-audit-report.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Typecheck
         run: npm run typecheck
 
