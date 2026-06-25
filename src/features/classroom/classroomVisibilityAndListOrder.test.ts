@@ -14,6 +14,10 @@ const listManagerSource = readFileSync(
   new URL('../../components/ListSequenceDialog.tsx', import.meta.url),
   'utf8',
 );
+const floatingActionSource = readFileSync(
+  new URL('./lib/floatingOrderAction.ts', import.meta.url),
+  'utf8',
+);
 const visibilityRowsSql = readFileSync(
   new URL('../../../supabase/migrations/20260620033100_classroom_visibility_rows.sql', import.meta.url),
   'utf8',
@@ -24,14 +28,16 @@ const guestCardsSql = readFileSync(
 );
 
 describe('classroom visibility inheritance and list ordering', () => {
-  it('keeps organization controls visible without covering folder content on mobile', () => {
-    expect(assignmentManagerSource).toContain('top-24');
-    expect(assignmentManagerSource).not.toContain('bottom-6');
-    expect(listManagerSource).toContain('Organizar listas');
+  it('keeps organization controls fixed above the mobile tab bar and iPhone safe area', () => {
+    expect(assignmentManagerSource).toContain('floatingOrderActionClass');
+    expect(listManagerSource).toContain('floatingOrderActionClass');
+    expect(floatingActionSource).toContain('safe-area-inset-bottom');
+    expect(floatingActionSource).toContain('bottom-[calc(env(safe-area-inset-bottom)+5.75rem)]');
+    expect(floatingActionSource).toContain('md:bottom-6');
+    expect(listManagerSource).toContain('Organizar sequência');
     expect(listManagerSource).toContain('triggerClassName');
-    expect(folderWorkspaceSource).toContain('<ListSequenceDialog');
-    expect(folderWorkspaceSource).toContain('pb-24 md:contents');
-    expect(folderWorkspaceSource).toContain('md:fixed md:right-4 md:top-24');
+    expect(folderWorkspaceSource).toContain('<ListSequenceDialog folderId={id} />');
+    expect(folderWorkspaceSource).toContain('md:bottom-20');
     expect(layoutSource).not.toContain('<ListSequenceDialog');
   });
 
