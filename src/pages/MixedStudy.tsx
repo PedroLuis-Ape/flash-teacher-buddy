@@ -255,8 +255,37 @@ export default function MixedStudy() {
   }, [mixed, recordAttempt]);
 
   const exit = () => {
-    if (window.history.state?.idx > 0) navigate(-1);
-    else navigate(isListRoute ? `/list/${resolvedId}/games` : `/collection/${resolvedId}/games`);
+    if (window.history.state?.idx > 0) {
+      navigate(-1);
+      return;
+    }
+
+    const contextParams = new URLSearchParams();
+    for (const key of ["guest", "turma", "atribuicao"]) {
+      const value = searchParams.get(key);
+      if (value) contextParams.set(key, value);
+    }
+    const query = contextParams.toString();
+
+    if (location.pathname.startsWith("/portal/list/")) {
+      navigate(`/portal/list/${resolvedId}/games${query ? `?${query}` : ""}`);
+    } else if (location.pathname.startsWith("/portal/collection/")) {
+      navigate(`/portal/collection/${resolvedId}`);
+    } else {
+      navigate(isListRoute ? `/list/${resolvedId}/games` : `/collection/${resolvedId}/games`);
+    }
+  };
+
+  const restartRoundManually = () => {
+    if (window.confirm("Reiniciar somente esta rodada? O percurso completo será preservado.")) {
+      mixed.restartRound();
+    }
+  };
+
+  const restartJourneyManually = () => {
+    if (window.confirm("Reiniciar todo o percurso da Prática Mista desde o começo?")) {
+      mixed.restartJourney();
+    }
   };
 
   if (loading || !mixed.state || !mixed.progress) {
@@ -377,6 +406,14 @@ export default function MixedStudy() {
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{progress.masteredCards} de {progress.totalCards} dominados</span>
             <span>{progress.pendingCards} revisões pendentes</span>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
+            <Button variant="ghost" size="sm" onClick={restartRoundManually}>
+              <RefreshCcw className="mr-1 h-4 w-4" /> Reiniciar rodada
+            </Button>
+            <Button variant="ghost" size="sm" onClick={restartJourneyManually}>
+              Reiniciar percurso
+            </Button>
           </div>
         </Card>
 
