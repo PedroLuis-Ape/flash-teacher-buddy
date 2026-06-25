@@ -67,7 +67,7 @@ export function MixedModeRecommendationBubble() {
     <aside
       className={cn(
         "fixed right-2 z-40 w-[min(15.5rem,calc(100vw-1rem))] rounded-xl border border-primary/25",
-        "bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] bg-background/96 p-2.5 shadow-lg backdrop-blur-md",
+        "bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] bg-background/95 p-2.5 shadow-lg backdrop-blur-md",
         "animate-in slide-in-from-bottom-2 fade-in duration-200",
         "sm:bottom-6 sm:right-6 sm:w-[320px] sm:rounded-2xl sm:p-4 sm:shadow-xl",
       )}
