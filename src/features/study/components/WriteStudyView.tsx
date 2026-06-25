@@ -123,12 +123,13 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   };
 
   const handleKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!(event.target instanceof HTMLInputElement)) return;
+    if (!(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement)) return;
 
     const key = normalizeKey(event.key);
     const confirmKey = normalizeKey(shortcuts.confirm);
     const skipKey = normalizeKey(shortcuts.skip);
     if (key !== confirmKey && key !== skipKey) return;
+    if (event.target instanceof HTMLTextAreaElement && event.key === "Enter" && event.shiftKey) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -141,7 +142,9 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     const button = event.target.closest("button");
     if (!button?.textContent?.toLocaleLowerCase().includes("corrigir")) return;
 
-    const value = boundaryRef.current?.querySelector<HTMLInputElement>("input")?.value.trim();
+    const value = boundaryRef.current
+      ?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")
+      ?.value.trim();
     if (!value) return;
     if (!submitLockedRef.current) {
       submitLockedRef.current = true;
