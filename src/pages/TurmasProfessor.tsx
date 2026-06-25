@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Users, ArrowLeft, Globe2, Lock, Copy } from 'lucide-react';
+import { Plus, Users, ArrowLeft, Globe2, Lock, Copy, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -144,80 +144,83 @@ export default function TurmasProfessor() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 lg:px-8 pb-24">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+    <div className="min-h-screen bg-background px-3 pb-24 pt-4 sm:p-4 sm:pb-24 lg:px-8">
+      <div className="mx-auto max-w-6xl space-y-5 sm:space-y-6">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold">Minhas Turmas</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl font-bold leading-tight sm:text-3xl">Minhas Turmas</h1>
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">
               {turmas.length} {turmas.length === 1 ? 'turma criada' : 'turmas criadas'}. Você pode criar quantas turmas precisar.
             </p>
           </div>
         </div>
 
-        <PublicTurmaOrderManager turmas={rawTurmas} />
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:justify-end">
+          <PublicTurmaOrderManager turmas={rawTurmas} />
 
-        <Dialog open={createDialogOpen} onOpenChange={handleCreateDialogChange}>
-          <DialogTrigger asChild>
-            <Button className="w-full min-h-[48px]">
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Nova Turma
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar uma nova turma</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="nome">Nome da Turma</Label>
-                <Input
-                  id="nome"
-                  value={newTurmaNome}
-                  onChange={(e) => setNewTurmaNome(e.target.value)}
-                  placeholder="Ex: Inglês Básico"
-                  maxLength={120}
-                />
-              </div>
-              <div>
-                <Label htmlFor="descricao">Descrição (opcional)</Label>
-                <Textarea
-                  id="descricao"
-                  value={newTurmaDesc}
-                  onChange={(e) => setNewTurmaDesc(e.target.value)}
-                  placeholder="Descrição da turma..."
-                  maxLength={1000}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
-                <div className="space-y-1">
-                  <Label htmlFor="turma-publica" className="flex items-center gap-2">
-                    <Globe2 className="h-4 w-4 text-primary" />
-                    Turma pública
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Qualquer pessoa com o link poderá ver as atividades em modo somente leitura.
-                  </p>
-                </div>
-                <Switch
-                  id="turma-publica"
-                  checked={newTurmaPublic}
-                  onCheckedChange={setNewTurmaPublic}
-                  aria-label="Permitir acesso público à turma"
-                />
-              </div>
-              <Button onClick={handleCreateTurma} disabled={createTurma.isPending} className="w-full min-h-[48px]">
-                {createTurma.isPending ? 'Criando...' : 'Criar Turma'}
+          <Dialog open={createDialogOpen} onOpenChange={handleCreateDialogChange}>
+            <DialogTrigger asChild>
+              <Button className="h-11 w-full rounded-xl sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Nova Turma
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="w-[calc(100vw-1rem)] max-w-lg rounded-2xl sm:w-full">
+              <DialogHeader>
+                <DialogTitle>Criar uma nova turma</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="nome">Nome da Turma</Label>
+                  <Input
+                    id="nome"
+                    value={newTurmaNome}
+                    onChange={(e) => setNewTurmaNome(e.target.value)}
+                    placeholder="Ex: Inglês Básico"
+                    maxLength={120}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="descricao">Descrição (opcional)</Label>
+                  <Textarea
+                    id="descricao"
+                    value={newTurmaDesc}
+                    onChange={(e) => setNewTurmaDesc(e.target.value)}
+                    placeholder="Descrição da turma..."
+                    maxLength={1000}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+                  <div className="min-w-0 space-y-1">
+                    <Label htmlFor="turma-publica" className="flex items-center gap-2">
+                      <Globe2 className="h-4 w-4 text-primary" />
+                      Turma pública
+                    </Label>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Qualquer pessoa com o link poderá ver as atividades em modo somente leitura.
+                    </p>
+                  </div>
+                  <Switch
+                    id="turma-publica"
+                    checked={newTurmaPublic}
+                    onCheckedChange={setNewTurmaPublic}
+                    aria-label="Permitir acesso público à turma"
+                    className="shrink-0"
+                  />
+                </div>
+                <Button onClick={handleCreateTurma} disabled={createTurma.isPending} className="min-h-[48px] w-full">
+                  {createTurma.isPending ? 'Criando...' : 'Criar Turma'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
-          <DialogContent>
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-lg rounded-2xl sm:w-full">
             <DialogHeader>
               <DialogTitle>Matricular Aluno</DialogTitle>
             </DialogHeader>
@@ -238,13 +241,13 @@ export default function TurmasProfessor() {
           </DialogContent>
         </Dialog>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {turmas.length === 0 ? (
-            <Card className="p-8 text-center">
+            <Card className="p-6 text-center sm:p-8">
               <Users className="mx-auto h-10 w-10 text-primary" />
               <p className="mt-4 font-semibold">Nenhuma turma criada ainda.</p>
-              <p className="text-sm text-muted-foreground mt-2">Crie sua primeira turma para organizar alunos e conteúdos separadamente.</p>
-              <Button className="mt-5" onClick={() => handleCreateDialogChange(true)}>
+              <p className="mt-2 text-sm text-muted-foreground">Crie sua primeira turma para organizar alunos e conteúdos separadamente.</p>
+              <Button className="mt-5 w-full sm:w-auto" onClick={() => handleCreateDialogChange(true)}>
                 <Plus className="mr-2 h-4 w-4" />Criar primeira turma
               </Button>
             </Card>
@@ -252,57 +255,73 @@ export default function TurmasProfessor() {
             turmas.map((turma: any) => {
               const publicPosition = publicPositionById.get(turma.id);
               return (
-                <Card key={turma.id} className="p-6">
+                <Card key={turma.id} className="p-4 sm:p-6">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-semibold">{turma.nome}</h3>
-                        <Badge variant={turma.public ? 'default' : 'secondary'}>
-                          {turma.public ? <Globe2 className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
+                        <h3 className="min-w-0 break-words text-base font-semibold sm:text-lg">{turma.nome}</h3>
+                        <Badge variant={turma.public ? 'default' : 'secondary'} className="shrink-0">
+                          {turma.public ? <Globe2 className="mr-1 h-3 w-3" /> : <Lock className="mr-1 h-3 w-3" />}
                           {turma.public ? 'Pública' : 'Privada'}
                         </Badge>
                         {turma.public && publicPosition !== undefined && (
-                          <Badge variant="outline" className="font-mono text-primary">
+                          <Badge variant="outline" className="shrink-0 font-mono text-primary">
                             {publicTurmaPositionLabel(publicPosition)}
                           </Badge>
                         )}
                       </div>
                       {turma.descricao && (
-                        <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{turma.descricao}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                      <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="h-4 w-4" />
                         <span>{turma.turma_membros?.[0]?.count || 0} alunos</span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
                       <Button
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
                         disabled={updateTurma.isPending}
                         onClick={() => handleTogglePublic(turma)}
                       >
-                        {turma.public ? <Lock className="h-4 w-4 mr-1" /> : <Globe2 className="h-4 w-4 mr-1" />}
-                        {turma.public ? 'Tornar privada' : 'Publicar'}
+                        {turma.public ? <Lock className="mr-1 h-4 w-4" /> : <Globe2 className="mr-1 h-4 w-4" />}
+                        {turma.public ? 'Privar' : 'Publicar'}
                       </Button>
+
                       {turma.public && (
-                        <Button size="sm" variant="outline" onClick={() => handleCopyPublicLink(turma.id)}>
-                          <Copy className="h-4 w-4 mr-1" />
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => handleCopyPublicLink(turma.id)}>
+                          <Copy className="mr-1 h-4 w-4" />
                           Copiar link
                         </Button>
                       )}
+
                       <Button
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => navigate(`/turmas/${turma.id}?tab=trafego`)}
+                      >
+                        <BarChart3 className="mr-1 h-4 w-4" />
+                        Tráfego
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           setSelectedTurmaId(turma.id);
                           setEnrollDialogOpen(true);
                         }}
                       >
-                        <Plus className="h-4 w-4 mr-1" />
+                        <Plus className="mr-1 h-4 w-4" />
                         Aluno
                       </Button>
-                      <Button size="sm" onClick={() => navigate(`/turmas/${turma.id}`)}>
+
+                      <Button size="sm" className="col-span-2 w-full sm:w-auto" onClick={() => navigate(`/turmas/${turma.id}`)}>
                         Gerenciar
                       </Button>
                     </div>
