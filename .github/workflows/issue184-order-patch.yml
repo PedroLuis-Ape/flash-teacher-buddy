@@ -1,0 +1,87 @@
+name: Issue 184 validated order patch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.head_ref == 'issue-184'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: issue-184
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply narrow study-order corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/features/study/hooks/useStudyEngine.ts')
+          text = path.read_text()
+
+          replacements = [
+            (
+              '''        // For quiz modes without auth: shuffle all cards (straight-through)\n        const shuffledIds = flashcards\n          .map(f => f.id)\n          .sort(() => Math.random() - 0.5);\n\n        setCardsOrder(shuffledIds);''',
+              '''        // Standard modes respect the order chosen in the hub. Mixed mode\n        // owns its adaptive order and therefore remains randomized.\n        const baseIds = flashcards.map(f => f.id);\n        const orderedIds = mode === "mixed" || gameSettings.mode === "random"\n          ? [...baseIds].sort(() => Math.random() - 0.5)\n          : baseIds;\n\n        setCardsOrder(orderedIds);''',
+            ),
+            (
+              '''        // No listId (e.g. collection or portal route) — still mount cards\n        const cardIds = flashcards.map(f => f.id).sort(() => Math.random() - 0.5);\n        setCardsOrder(cardIds);''',
+              '''        // No listId (e.g. collection or portal route) — standard modes\n        // respect the order already prepared by Study.tsx.\n        const baseIds = flashcards.map(f => f.id);\n        const cardIds = mode === "mixed" || gameSettings.mode === "random"\n          ? [...baseIds].sort(() => Math.random() - 0.5)\n          : baseIds;\n        setCardsOrder(cardIds);''',
+            ),
+            (
+              '''      let orderedCards = localSnapshot?.cardsOrder\n        ?? await getPrioritizedFlashcards(user.id, listId, flashcards, true);''',
+              '''      let orderedCards = localSnapshot?.cardsOrder\n        ?? (mode === "mixed"\n          ? await getPrioritizedFlashcards(user.id, listId, flashcards, true)\n          : gameSettings.mode === "sequential"\n            ? flashcards.map(card => card.id)\n            : flashcards.map(card => card.id).sort(() => Math.random() - 0.5));''',
+            ),
+            (
+              '''      const shuffledIds = flashcards\n        .map(f => f.id)\n        .sort(() => Math.random() - 0.5);\n      \n      setCardsOrder(shuffledIds);''',
+              '''      const baseIds = flashcards.map(f => f.id);\n      const fallbackIds = mode === "mixed" || gameSettings.mode === "random"\n        ? [...baseIds].sort(() => Math.random() - 0.5)\n        : baseIds;\n      \n      setCardsOrder(fallbackIds);''',
+            ),
+            (
+              '''      FEATURE_FLAGS.intelligent_study_engine &&\n      !isFlipMode &&\n      !skipped &&\n      !correct''',
+              '''      FEATURE_FLAGS.intelligent_study_engine &&\n      mode === "mixed" &&\n      !skipped &&\n      !correct''',
+            ),
+            (
+              '''  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey, studySnapshotKey, userScope]);''',
+              '''  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.mode, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey, studySnapshotKey, userScope]);''',
+            ),
+          ]
+
+          for old, new in replacements:
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f'Expected exactly one match, found {count}: {old[:90]!r}')
+            text = text.replace(old, new)
+
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate patch
+        run: |
+          npm run typecheck
+          npm test -- --run
+          npm run lint
+          npm run build
+
+      - name: Commit validated correction and remove temporary workflow
+        run: |
+          rm .github/workflows/issue184-order-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study/hooks/useStudyEngine.ts .github/workflows/issue184-order-patch.yml
+          git commit -m "fix: respeitar ordem escolhida nos modos normais"
+          git push origin HEAD:issue-184
