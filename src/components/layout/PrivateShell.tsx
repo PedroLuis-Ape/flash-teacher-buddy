@@ -84,9 +84,13 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   useActivityHeartbeat(secondaryReady && !safeMode ? user?.id : undefined);
   useSwipeNavigation({ enabled: !!user && !safeMode && FEATURE_FLAGS.swipe_navigation_enabled });
 
-  const isFullScreenPage = location.pathname.includes("/study");
+  const isActiveStudyRoute =
+    location.pathname.endsWith("/study") ||
+    location.pathname.endsWith("/mixed-study");
+  const isGameHubRoute = location.pathname.endsWith("/games");
+  const isFullScreenPage = isActiveStudyRoute;
   const isHome = location.pathname === "/dashboard";
-  const isGameRoute = location.pathname.includes("/study") || location.pathname.includes("/games");
+  const isGameRoute = isActiveStudyRoute || isGameHubRoute;
   const showSecondaryActions = !isGameRoute && !isHome;
   const showCurrencyHeader = !isHome && !isGameRoute;
   const showInstitutionBar = isHome;
@@ -103,7 +107,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
       <OfflineIndicator />
       <StudyResumeAgent />
 
-      {FEATURE_FLAGS.currency_header_enabled && user && (
+      {FEATURE_FLAGS.currency_header_enabled && user && !isActiveStudyRoute && (
         <header
           className={cn(
             "space-ui-header sticky top-0 z-50 w-full border-b",
@@ -167,11 +171,13 @@ function PrivateShellInner({ children }: PrivateShellProps) {
         <Suspense fallback={null}><AnnouncementModal /></Suspense>
       )}
 
-      <div className="space-ui-version-badge fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
-        <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
-          {formatVersionLabel()}
-        </Badge>
-      </div>
+      {!isActiveStudyRoute && (
+        <div className="space-ui-version-badge fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
+          <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
+            {formatVersionLabel()}
+          </Badge>
+        </div>
+      )}
     </div>
   );
 }
