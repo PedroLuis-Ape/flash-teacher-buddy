@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Coins, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus } from "lucide-react";
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
@@ -27,7 +27,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
-import pitecoinIcon from "@/assets/pitecoin.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -235,7 +234,7 @@ const Index = () => {
             onClick={() => navigate('/store')}
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="icon-tile !w-9 !h-9"><img src={pitecoinIcon} alt="" className="h-5 w-5" /></span>
+              <span className="icon-tile !h-9 !w-9"><Coins className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">PiteCOIN</span>
             </div>
             {loading ? (

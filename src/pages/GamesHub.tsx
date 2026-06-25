@@ -263,13 +263,13 @@ const GamesHub = () => {
                 <SelectContent>
                   <SelectItem value="a-b">{listLabels.labelsA} → {listLabels.labelsB}</SelectItem>
                   <SelectItem value="b-a">{listLabels.labelsB} → {listLabels.labelsA}</SelectItem>
-                  <SelectItem value="any">Misto</SelectItem>
+                  <SelectItem value="any">Alternar lados (padrão)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium">Ordem dos modos normais</label>
+              <label className="mb-1.5 block text-xs font-medium">Ordem dos cards</label>
               <Select
                 value={selectedOrder}
                 onValueChange={(value: typeof prefs.order) => {

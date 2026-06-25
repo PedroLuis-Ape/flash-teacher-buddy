@@ -17,6 +17,28 @@ const DEFAULTS: StudyPreferences = {
   fastMode: false,
 };
 
+export const STUDY_PREFERENCES_VERSION = 2;
+
+export function normalizeStoredStudyPreferences(value: unknown): StudyPreferences {
+  const parsed = value && typeof value === "object"
+    ? value as Record<string, unknown>
+    : {};
+  const currentVersion = Number(parsed.version) >= STUDY_PREFERENCES_VERSION;
+  const parsedDirection = typeof parsed.direction === "string" ? parsed.direction : "";
+
+  return {
+    favoritesOnly: typeof parsed.favoritesOnly === "boolean" ? parsed.favoritesOnly : DEFAULTS.favoritesOnly,
+    order: parsed.order === "sequential" ? "sequential" : DEFAULTS.order,
+    // Preferences saved before v2 often inherited a list's primary side without
+    // an explicit student choice. Reset that legacy value to the global default.
+    direction: currentVersion && ["a-b", "b-a", "any"].includes(parsedDirection)
+      ? parsedDirection as Direction
+      : DEFAULTS.direction,
+    mode: typeof parsed.mode === "string" ? parsed.mode : DEFAULTS.mode,
+    fastMode: typeof parsed.fastMode === "boolean" ? parsed.fastMode : DEFAULTS.fastMode,
+  };
+}
+
 function storageKey(userId: string | undefined): string {
   return userId ? `studyPreferences:${userId}` : "studyPreferences:anon";
 }
@@ -29,18 +51,7 @@ function load(userId: string | undefined): StudyPreferences {
   let base: StudyPreferences;
   try {
     const raw = localStorage.getItem(storageKey(userId));
-    if (!raw) {
-      base = { ...DEFAULTS };
-    } else {
-      const parsed = JSON.parse(raw);
-      base = {
-        favoritesOnly: typeof parsed.favoritesOnly === "boolean" ? parsed.favoritesOnly : DEFAULTS.favoritesOnly,
-        order: parsed.order === "sequential" ? "sequential" : "random",
-        direction: ["a-b", "b-a", "any"].includes(parsed.direction) ? parsed.direction : DEFAULTS.direction,
-        mode: typeof parsed.mode === "string" ? parsed.mode : DEFAULTS.mode,
-        fastMode: typeof parsed.fastMode === "boolean" ? parsed.fastMode : DEFAULTS.fastMode,
-      };
-    }
+    base = raw ? normalizeStoredStudyPreferences(JSON.parse(raw)) : { ...DEFAULTS };
   } catch {
     base = { ...DEFAULTS };
   }
@@ -75,7 +86,7 @@ function load(userId: string | undefined): StudyPreferences {
 
 function save(userId: string | undefined, prefs: StudyPreferences) {
   try {
-    localStorage.setItem(storageKey(userId), JSON.stringify(prefs));
+    localStorage.setItem(storageKey(userId), JSON.stringify({ version: STUDY_PREFERENCES_VERSION, ...prefs }));
   } catch {
     // storage full or unavailable — fail silently
   }

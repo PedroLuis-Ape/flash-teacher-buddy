@@ -81,7 +81,7 @@ export default function PublicClassGamesHub() {
   const [searchParams] = useSearchParams();
   const turmaId = searchParams.get('turma');
   const assignmentId = searchParams.get('atribuicao');
-  const [direction, setDirection] = useState<Direction>('a-b');
+  const [direction, setDirection] = useState<Direction>('any');
   const [order, setOrder] = useState<StudyOrder>('random');
 
   const validContext = Boolean(id && turmaId && assignmentId);
@@ -193,13 +193,13 @@ export default function PublicClassGamesHub() {
                 <SelectContent>
                   <SelectItem value="a-b">Lado A → Lado B</SelectItem>
                   <SelectItem value="b-a">Lado B → Lado A</SelectItem>
-                  <SelectItem value="any">Misto</SelectItem>
+                  <SelectItem value="any">Alternar lados (padrão)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium sm:mb-2 sm:text-sm">Ordem dos modos normais</label>
+              <label className="mb-1.5 block text-xs font-medium sm:mb-2 sm:text-sm">Ordem dos cards</label>
               <Select value={order} onValueChange={(value) => setOrder(value as StudyOrder)}>
                 <SelectTrigger className="h-10 sm:h-11">
                   <SelectValue />
