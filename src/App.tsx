@@ -41,6 +41,7 @@ const PublicProfileSettings = lazy(() => import("./pages/PublicProfileSettings")
 const GamesHub = lazy(() => import("./pages/GamesHub"));
 const PublicClassGamesHub = lazy(() => import("./pages/PublicClassGamesHub"));
 const Study = lazy(() => import("./pages/Study"));
+const MixedStudy = lazy(() => import("./pages/MixedStudy"));
 const Search = lazy(() => import("./pages/Search"));
 const Store = lazy(() => import("./pages/Store"));
 const PresentBox = lazy(() => import("./pages/PresentBox"));
@@ -147,16 +148,20 @@ const App = () => {
                           <Route path="/list/:id" element={<ListDetail />} />
                           <Route path="/list/:id/games" element={<ListDirectionGate><GamesHub /></ListDirectionGate>} />
                           <Route path="/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
+                          <Route path="/list/:id/mixed-study" element={<ListDirectionGate><MixedStudy /></ListDirectionGate>} />
                           <Route path="/collection/:id" element={<Collection />} />
                           <Route path="/collection/:id/games" element={<GamesHub />} />
                           <Route path="/collection/:id/study" element={<Study />} />
+                          <Route path="/collection/:id/mixed-study" element={<MixedStudy />} />
                           <Route path="/portal" element={<PublicPortal />} />
                           <Route path="/portal/professor/:slug" element={<PublicTeacherProfile />} />
                           <Route path="/portal/folder/:id" element={<Folder />} />
                           <Route path="/portal/list/:id/games" element={<PublicListGamesRoute />} />
                           <Route path="/portal/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
+                          <Route path="/portal/list/:id/mixed-study" element={<ListDirectionGate><MixedStudy /></ListDirectionGate>} />
                           <Route path="/portal/collection/:id" element={<PublicCollection />} />
                           <Route path="/portal/collection/:id/study" element={<Study />} />
+                          <Route path="/portal/collection/:id/mixed-study" element={<MixedStudy />} />
                           <Route path="/store" element={<Store />} />
                           <Route path="/gifts" element={<PresentBox />} />
                           <Route path="/reinos" element={<Reinos />} />
