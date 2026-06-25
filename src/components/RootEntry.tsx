@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import LandingPage from "@/pages/LandingPage";
-import { LandingHelpOverlay } from "@/components/landing/LandingHelpPreview";
+import { ResponsiveLandingHelpOverlay } from "@/components/landing/ResponsiveLandingHelpOverlay";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 /**
@@ -27,7 +27,7 @@ export default function RootEntry() {
   return (
     <>
       <LandingPage />
-      <LandingHelpOverlay />
+      <ResponsiveLandingHelpOverlay />
     </>
   );
 }
