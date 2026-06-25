@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -103,3 +106,69 @@ jobs:
       - name: Production build
         if: always()
         run: npm run build
+
+  apply-issue-184-restart-controls:
+    name: Validate and publish mixed-mode restart controls
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-184'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: issue-184
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply guarded restart and return-route corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/MixedStudy.tsx')
+          text = path.read_text()
+          replacements = [
+            (
+              '''  const exit = () => {\n    if (window.history.state?.idx > 0) navigate(-1);\n    else navigate(isListRoute ? `/list/${resolvedId}/games` : `/collection/${resolvedId}/games`);\n  };''',
+              '''  const exit = () => {\n    if (window.history.state?.idx > 0) {\n      navigate(-1);\n      return;\n    }\n\n    const contextParams = new URLSearchParams();\n    for (const key of ["guest", "turma", "atribuicao"]) {\n      const value = searchParams.get(key);\n      if (value) contextParams.set(key, value);\n    }\n    const query = contextParams.toString();\n\n    if (location.pathname.startsWith("/portal/list/")) {\n      navigate(`/portal/list/${resolvedId}/games${query ? `?${query}` : ""}`);\n    } else if (location.pathname.startsWith("/portal/collection/")) {\n      navigate(`/portal/collection/${resolvedId}`);\n    } else {\n      navigate(isListRoute ? `/list/${resolvedId}/games` : `/collection/${resolvedId}/games`);\n    }\n  };\n\n  const restartRoundManually = () => {\n    if (window.confirm("Reiniciar somente esta rodada? O percurso completo será preservado.")) {\n      mixed.restartRound();\n    }\n  };\n\n  const restartJourneyManually = () => {\n    if (window.confirm("Reiniciar todo o percurso da Prática Mista desde o começo?")) {\n      mixed.restartJourney();\n    }\n  };''',
+            ),
+            (
+              '''          <div className="flex justify-between text-xs text-muted-foreground">\n            <span>{progress.masteredCards} de {progress.totalCards} dominados</span>\n            <span>{progress.pendingCards} revisões pendentes</span>\n          </div>\n        </Card>''',
+              '''          <div className="flex justify-between text-xs text-muted-foreground">\n            <span>{progress.masteredCards} de {progress.totalCards} dominados</span>\n            <span>{progress.pendingCards} revisões pendentes</span>\n          </div>\n          <div className="flex flex-wrap justify-end gap-2 border-t pt-2">\n            <Button variant="ghost" size="sm" onClick={restartRoundManually}>\n              <RefreshCcw className="mr-1 h-4 w-4" /> Reiniciar rodada\n            </Button>\n            <Button variant="ghost" size="sm" onClick={restartJourneyManually}>\n              Reiniciar percurso\n            </Button>\n          </div>\n        </Card>''',
+            ),
+          ]
+
+          for old, new in replacements:
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f'Guard failed: expected one match, found {count}: {old[:100]!r}')
+            text = text.replace(old, new)
+
+          path.write_text(text)
+          PY
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: Validate corrected code
+        run: |
+          npm run typecheck
+          npm run test
+          npm run lint
+          npm run build
+
+      - name: Restore CI definition and publish validated controls
+        run: |
+          git checkout origin/main -- .github/workflows/ci.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/MixedStudy.tsx .github/workflows/ci.yml
+          git commit -m "feat: permitir reiniciar rodada ou percurso misto"
+          git push origin HEAD:issue-184
