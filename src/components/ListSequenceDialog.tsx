@@ -7,6 +7,7 @@ import { useAuthUser } from '@/hooks/useAuthUser';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
 import { assignmentPositionLabel, moveAssignmentToPosition } from '@/features/classroom/lib/assignmentOrder';
+import { floatingOrderActionClass } from '@/features/classroom/lib/floatingOrderAction';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -122,14 +123,12 @@ export function ListSequenceDialog({ folderId, triggerClassName }: ListSequenceD
         type="button"
         variant="outline"
         size="sm"
-        className={cn(
-          'gap-2 whitespace-nowrap',
-          triggerClassName ?? 'fixed right-3 top-20 z-40 w-auto max-w-[calc(100vw-1.5rem)] px-3 text-xs shadow-lg sm:right-4 sm:top-24 sm:max-w-none sm:text-sm',
-        )}
+        className={cn(floatingOrderActionClass, triggerClassName)}
         onClick={() => setOpen(true)}
+        aria-label="Organizar sequência das listas"
       >
         <ListOrdered className="h-4 w-4" />
-        Organizar listas
+        Organizar sequência
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
