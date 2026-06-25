@@ -328,12 +328,14 @@ export function useStudyEngine(
           return;
         }
 
-        // For quiz modes without auth: shuffle all cards (straight-through)
-        const shuffledIds = flashcards
-          .map(f => f.id)
-          .sort(() => Math.random() - 0.5);
+        // Standard modes respect the order chosen in the hub. Mixed mode
+        // owns its adaptive order and therefore remains randomized.
+        const baseIds = flashcards.map(f => f.id);
+        const orderedIds = mode === "mixed" || gameSettings.mode === "random"
+          ? [...baseIds].sort(() => Math.random() - 0.5)
+          : baseIds;
 
-        setCardsOrder(shuffledIds);
+        setCardsOrder(orderedIds);
         setCurrentIndex(0);
         setIsLoading(false);
         return;
@@ -342,8 +344,12 @@ export function useStudyEngine(
       setIsAuthenticated(true);
 
       if (!listId) {
-        // No listId (e.g. collection or portal route) — still mount cards
-        const cardIds = flashcards.map(f => f.id).sort(() => Math.random() - 0.5);
+        // No listId (e.g. collection or portal route) — standard modes
+        // respect the order already prepared by Study.tsx.
+        const baseIds = flashcards.map(f => f.id);
+        const cardIds = mode === "mixed" || gameSettings.mode === "random"
+          ? [...baseIds].sort(() => Math.random() - 0.5)
+          : baseIds;
         setCardsOrder(cardIds);
         setCurrentIndex(0);
         setIsLoading(false);
@@ -511,7 +517,11 @@ export function useStudyEngine(
 
       // Create new session with ALL flashcards (straight-through, no batching)
       let orderedCards = localSnapshot?.cardsOrder
-        ?? await getPrioritizedFlashcards(user.id, listId, flashcards, true);
+        ?? (mode === "mixed"
+          ? await getPrioritizedFlashcards(user.id, listId, flashcards, true)
+          : gameSettings.mode === "sequential"
+            ? flashcards.map(card => card.id)
+            : flashcards.map(card => card.id).sort(() => Math.random() - 0.5));
       // A restored snapshot already contains its exact repetition order.
       if (!localSnapshot) {
         orderedCards = injectRedListRepetitions(
@@ -545,11 +555,12 @@ export function useStudyEngine(
       }
     } catch (error) {
       console.error('Erro ao inicializar sessão:', error);
-      const shuffledIds = flashcards
-        .map(f => f.id)
-        .sort(() => Math.random() - 0.5);
+      const baseIds = flashcards.map(f => f.id);
+      const fallbackIds = mode === "mixed" || gameSettings.mode === "random"
+        ? [...baseIds].sort(() => Math.random() - 0.5)
+        : baseIds;
       
-      setCardsOrder(shuffledIds);
+      setCardsOrder(fallbackIds);
       setCurrentIndex(0);
     } finally {
       setIsLoading(false);
@@ -557,7 +568,7 @@ export function useStudyEngine(
     }
     // Includes gameSettings.subset and redListIds because they materially affect
     // the cardsOrder shape (favorites scope + red-list spaced repetition injection).
-  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey, studySnapshotKey, userScope]);
+  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.mode, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey, studySnapshotKey, userScope]);
   
   // Store flashcards in a ref for stable access
   const flashcardsRef = useRef(flashcards);
@@ -786,7 +797,7 @@ export function useStudyEngine(
     // Pure positional update; does not touch persistence or counters.
     if (
       FEATURE_FLAGS.intelligent_study_engine &&
-      !isFlipMode &&
+      mode === "mixed" &&
       !skipped &&
       !correct
     ) {
