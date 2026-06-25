@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import type { AccountGlossaryEntry } from "./accountGlossaryTypes";
 import type {
   FolderGlossaryEntry,
@@ -78,26 +79,64 @@ async function importFolderGlossaryChunk(
   return data as FolderGlossaryImportResult;
 }
 
+async function loadFolderGlossaryRows(folderId: string): Promise<FolderGlossaryEntry[]> {
+  return fetchAllSupabaseRows<FolderGlossaryEntry>((from, to) =>
+    (supabase as any)
+      .from("folder_glossary")
+      .select("*")
+      .eq("folder_id", folderId)
+      .order("original_text", { ascending: true })
+      .order("side", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+}
+
 export async function loadFolderGlossary(folderId: string): Promise<FolderGlossaryQueryResult> {
-  const [{ data, error }, permission] = await Promise.all([
-    (supabase as any).rpc("get_folder_glossary_v1", { _folder_id: folderId }),
+  const [entries, permission] = await Promise.all([
+    loadFolderGlossaryRows(folderId),
     (supabase as any).rpc("can_manage_folder_glossary_v1", { _folder_id: folderId }),
   ]);
-  if (error) throw error;
+
   if (permission.error) throw permission.error;
+  const canEdit = permission.data === true;
   return {
-    entries: (data ?? []) as FolderGlossaryEntry[],
-    canEdit: permission.data === true,
+    entries: entries.map((entry) => ({ ...entry, can_edit: canEdit })),
+    canEdit,
   };
 }
 
 export async function loadFolderGlossaryForList(listId: string): Promise<AccountGlossaryEntry[]> {
-  const { data, error } = await (supabase as any).rpc(
-    "get_folder_glossary_for_list_v1",
-    { _list_id: listId },
-  );
-  if (error) throw error;
-  return (data ?? []) as AccountGlossaryEntry[];
+  const { data: list, error: listError } = await supabase
+    .from("lists")
+    .select("folder_id")
+    .eq("id", listId)
+    .maybeSingle();
+  if (listError) throw listError;
+  if (!list?.folder_id) return [];
+
+  const rows = (await loadFolderGlossaryRows(list.folder_id as string))
+    .filter((entry) => entry.is_active);
+
+  return rows.flatMap<AccountGlossaryEntry>((entry) => {
+    const translations = [
+      entry.primary_translation,
+      ...(entry.alternative_translations ?? []),
+    ].filter((value, index, values) => value && values.indexOf(value) === index);
+
+    return translations.map((translatedText) => ({
+      id: entry.id,
+      owner_id: entry.owner_id,
+      original_text: entry.original_text,
+      translated_text: translatedText,
+      note: entry.note,
+      side: entry.side,
+      is_active: entry.is_active,
+      created_at: entry.created_at,
+      updated_at: entry.updated_at,
+    }));
+  });
 }
 
 export async function importFolderGlossary(
@@ -206,9 +245,12 @@ export async function updateFolderGlossaryEntry(
 
 export async function deleteFolderGlossaryEntries(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const { error } = await (supabase as any)
-    .from("folder_glossary")
-    .delete()
-    .in("id", ids);
-  if (error) throw error;
+  const chunkSize = 250;
+  for (let index = 0; index < ids.length; index += chunkSize) {
+    const { error } = await (supabase as any)
+      .from("folder_glossary")
+      .delete()
+      .in("id", ids.slice(index, index + chunkSize));
+    if (error) throw error;
+  }
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -207,24 +208,21 @@ const Folder = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Use RPC to get lists with card counts in a single query (eliminates N+1)
+      // Read every RPC page instead of accepting PostgREST's 1,000-row cap.
       if (session) {
-        const { data, error } = await supabase.rpc('get_lists_with_card_counts', { 
-          _folder_id: id 
-        });
-        if (error) throw error;
-        setLists((data as any[]) || []);
+        const data = await fetchAllSupabaseRows<ListType>((from, to) =>
+          (supabase as any)
+            .rpc('get_lists_with_card_counts', { _folder_id: id })
+            .range(from, to),
+        );
+        setLists(data);
       } else {
-        // Public portal access - use RPC with counts
-        const { data, error } = await supabase.rpc('get_portal_lists_with_counts', { 
-          _folder_id: id 
-        });
-        
-        if (error) {
-          console.error("Erro RPC get_portal_lists_with_counts:", error);
-        }
-        
-        setLists((data as any[]) || []);
+        const data = await fetchAllSupabaseRows<ListType>((from, to) =>
+          (supabase as any)
+            .rpc('get_portal_lists_with_counts', { _folder_id: id })
+            .range(from, to),
+        );
+        setLists(data);
       }
     } catch (error: any) {
       toast.error("Erro ao carregar listas: " + error.message);

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
 import { toast } from 'sonner';
 
 /**
@@ -11,25 +12,31 @@ async function fetchRedList(
 ): Promise<string[]> {
   if (!listScope) {
     // Global (all red-listed flashcards for the user)
-    const { data, error } = await supabase
-      .from('user_red_list' as any)
-      .select('flashcard_id')
-      .eq('user_id', userId);
+    const data = await fetchAllSupabaseRows<{ flashcard_id: string }>((from, to) =>
+      (supabase as any)
+        .from('user_red_list')
+        .select('flashcard_id')
+        .eq('user_id', userId)
+        .order('flashcard_id', { ascending: true })
+        .range(from, to),
+    );
 
-    if (error) throw error;
-    return (data as any[])?.map((r: any) => r.flashcard_id) ?? [];
+    return data.map((row) => row.flashcard_id);
   }
 
   // CLARA MASTER P0 — server-side RPC returns canonical group ids only.
-  const { data, error } = await (supabase as any).rpc('get_scoped_flashcard_red_list', {
-    p_list_id: listScope,
-    p_collection_id: null,
-    p_folder_id: null,
-    p_institution_id: null,
-  });
-  if (error) throw error;
+  const data = await fetchAllSupabaseRows<{ group_id: string }>((from, to) =>
+    (supabase as any)
+      .rpc('get_scoped_flashcard_red_list', {
+        p_list_id: listScope,
+        p_collection_id: null,
+        p_folder_id: null,
+        p_institution_id: null,
+      })
+      .range(from, to),
+  );
   const seen = new Set<string>();
-  for (const row of (data ?? []) as Array<{ group_id: string }>) {
+  for (const row of data) {
     if (row?.group_id) seen.add(row.group_id);
   }
   return Array.from(seen);

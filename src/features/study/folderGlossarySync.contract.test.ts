@@ -7,7 +7,8 @@ describe("folder glossary synchronization", () => {
   it("uses the folder glossary as the canonical destination", () => {
     const api = read("src/features/study/lib/folderGlossaryApi.ts");
     const importer = read("src/features/global-import/mappedService.ts");
-    expect(api).toContain("get_folder_glossary_v1");
+    expect(api).toContain('.from("folder_glossary")');
+    expect(api).toContain("fetchAllSupabaseRows<FolderGlossaryEntry>");
     expect(api).toContain("import_folder_glossary_v1");
     expect(api).not.toContain("importAccountGlossary");
     expect(importer).toContain("stripGlossariesForFolderImport");

@@ -1,8 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import type { GlossaryTransferEntry } from "./glossaryTransfer";
 import type { AccountGlossaryEntry } from "./accountGlossaryTypes";
-
-const PAGE_SIZE = 1000;
 
 export async function currentUserId() {
   const { data, error } = await supabase.auth.getUser();
@@ -13,33 +12,23 @@ export async function currentUserId() {
 
 export async function loadOwnAccountGlossary(): Promise<AccountGlossaryEntry[]> {
   const ownerId = await currentUserId();
-  const rows: AccountGlossaryEntry[] = [];
-  let from = 0;
-
-  while (true) {
-    const { data, error } = await (supabase as any)
+  return fetchAllSupabaseRows<AccountGlossaryEntry>((from, to) =>
+    (supabase as any)
       .from("account_glossary")
       .select("*")
       .eq("owner_id", ownerId)
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
-    if (error) throw error;
-    rows.push(...((data ?? []) as AccountGlossaryEntry[]));
-    if ((data?.length ?? 0) < PAGE_SIZE) break;
-    from += PAGE_SIZE;
-  }
-
-  return rows;
+      .range(from, to),
+  );
 }
 
 export async function loadAccountGlossaryForList(listId: string) {
-  const { data, error } = await (supabase as any).rpc(
-    "get_account_glossary_for_list_v1",
-    { _list_id: listId },
+  return fetchAllSupabaseRows<AccountGlossaryEntry>((from, to) =>
+    (supabase as any)
+      .rpc("get_account_glossary_for_list_v1", { _list_id: listId })
+      .range(from, to),
   );
-  if (error) throw error;
-  return (data ?? []) as AccountGlossaryEntry[];
 }
 
 export async function importAccountGlossary(entries: GlossaryTransferEntry[], dryRun = false) {

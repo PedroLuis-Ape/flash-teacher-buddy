@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import type {
   FolderGlossaryImportResult,
   FolderGlossaryInput,
@@ -87,15 +88,18 @@ function addEntry(
 }
 
 async function loadFolderCards(folderId: string) {
-  const { data: lists, error: listError } = await supabase
-    .from("lists")
-    .select("id")
-    .eq("folder_id", folderId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true });
-  if (listError) throw listError;
+  const lists = await fetchAllSupabaseRows<{ id: string }>((from, to) =>
+    (supabase as any)
+      .from("lists")
+      .select("id")
+      .eq("folder_id", folderId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 
-  const listIds = (lists ?? []).map((row) => row.id);
+  const listIds = lists.map((row) => row.id);
   if (listIds.length === 0) return { listIds, cards: [] as FolderCardRow[] };
 
   const cards: FolderCardRow[] = [];
