@@ -60,16 +60,23 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_should_assign boolean := false;
 BEGIN
   IF COALESCE(NEW.public, false) = false OR COALESCE(NEW.ativo, true) = false THEN
     NEW.public_order_index := NULL;
     RETURN NEW;
   END IF;
 
-  IF TG_OP = 'INSERT'
-     OR COALESCE(OLD.public, false) = false
-     OR COALESCE(OLD.ativo, true) = false
-     OR COALESCE(NEW.public_order_index, 0) <= 0 THEN
+  IF TG_OP = 'INSERT' THEN
+    v_should_assign := COALESCE(NEW.public_order_index, 0) <= 0;
+  ELSE
+    v_should_assign := COALESCE(OLD.public, false) = false
+      OR COALESCE(OLD.ativo, true) = false
+      OR COALESCE(NEW.public_order_index, 0) <= 0;
+  END IF;
+
+  IF v_should_assign THEN
     PERFORM pg_advisory_xact_lock(hashtextextended(NEW.owner_teacher_id::text, 0));
 
     SELECT COALESCE(MAX(t.public_order_index), 0) + 1
