@@ -47,7 +47,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
               size="sm"
               variant="outline"
               onClick={() => navigate(createRoute)}
-              className="h-8 w-full rounded-lg px-2 text-xs sm:h-9 sm:w-auto sm:px-3"
+              className="w-full px-2 sm:w-auto h-8 rounded-lg text-xs sm:h-9 sm:px-3"
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
               <span className="sm:hidden">Nova</span>
@@ -59,7 +59,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
             variant="ghost"
             size="sm"
             onClick={() => navigate(managementRoute)}
-            className="h-8 w-full rounded-lg px-2 text-xs text-primary hover:text-primary sm:h-9 sm:w-auto sm:px-3"
+            className="w-full px-2 sm:w-auto h-8 rounded-lg text-xs text-primary hover:text-primary sm:h-9 sm:px-3"
           >
             <span className="sm:hidden">Ver todas</span>
             <span className="hidden sm:inline">
