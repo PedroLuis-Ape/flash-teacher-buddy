@@ -1,0 +1,34 @@
+name: Temporary PiteCOIN frontend patch
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply PiteCOIN integration patch
+        run: node scripts/patch-pitecoin-frontend.mjs
+      - name: Commit patched frontend
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study/hooks/useStudyEngine.ts src/features/study/components/FlipStudyView.impl.tsx src/pages/Index.tsx
+          if git diff --cached --quiet; then
+            echo "Patch already applied."
+          else
+            git commit -m "fix: activate PiteCOIN rewards in study flow"
+            git push
+          fi
