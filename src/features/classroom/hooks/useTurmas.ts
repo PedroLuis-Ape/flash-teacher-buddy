@@ -150,6 +150,65 @@ export function useUpdateTurma() {
   });
 }
 
+export function useReorderPublicTurmas() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ordered_ids }: { ordered_ids: string[] }) => {
+      if (ordered_ids.length < 2) {
+        throw new Error('São necessárias pelo menos duas turmas públicas para organizar.');
+      }
+      if (new Set(ordered_ids).size !== ordered_ids.length) {
+        throw new Error('A sequência contém turmas repetidas.');
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sua sessão expirou. Entre novamente para organizar as turmas.');
+
+      const { data, error } = await (supabase.rpc as any)('reorder_public_turmas', {
+        _ordered_ids: ordered_ids,
+      });
+
+      if (error) {
+        const details = `${error.message ?? ''} ${error.details ?? ''}`.toLowerCase();
+        if (error.code === 'PGRST202' || details.includes('reorder_public_turmas')) {
+          throw new Error('A ordenação de turmas públicas ainda não foi instalada no servidor.');
+        }
+        throw new Error('Não foi possível salvar a ordem das turmas públicas.');
+      }
+
+      if (!data?.success) {
+        const code = String(data?.error ?? 'UNKNOWN');
+        if (code === 'CLASS_SET_MISMATCH') {
+          throw new Error('A lista de turmas mudou. Feche a janela, abra novamente e tente outra vez.');
+        }
+        if (code === 'FORBIDDEN_CLASS') {
+          throw new Error('Uma das turmas não pertence à sua conta ou deixou de ser pública.');
+        }
+        throw new Error('O servidor não confirmou a nova ordem das turmas.');
+      }
+
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      const positionById = new Map(variables.ordered_ids.map((id, index) => [id, index + 1]));
+      queryClient.setQueryData(['turmas', 'mine'], (current: any) => {
+        if (!current?.turmas) return current;
+        return {
+          ...current,
+          turmas: current.turmas.map((turma: any) => {
+            const position = positionById.get(turma.id);
+            return position ? { ...turma, public_order_index: position } : turma;
+          }),
+        };
+      });
+
+      void queryClient.invalidateQueries({ queryKey: ['turmas', 'mine'], refetchType: 'active' });
+      void queryClient.invalidateQueries({ queryKey: ['public-teacher-turmas'], refetchType: 'active' });
+    },
+  });
+}
+
 export function useDeleteTurma() {
   const queryClient = useQueryClient();
   return useMutation({
