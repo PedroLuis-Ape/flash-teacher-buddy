@@ -122,15 +122,20 @@ const HELP_PATHS = [
 
 function BenefitsGrid({ items }: { items: BenefitItem[] }) {
   return (
-    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+    <div className="mt-3 grid gap-1.5 sm:mt-4 sm:grid-cols-2 sm:gap-2">
       {items.map(({ icon: Icon, title, description }) => (
-        <div key={title} className="flex gap-2.5 rounded-xl border border-border/70 bg-muted/30 p-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="h-4 w-4" />
+        <div
+          key={title}
+          className="flex gap-2 rounded-xl border border-border/70 bg-muted/30 p-2.5 sm:gap-2.5 sm:p-3"
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary sm:h-8 sm:w-8">
+            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </span>
           <div>
-            <p className="text-xs font-extrabold leading-tight text-foreground sm:text-sm">{title}</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">{description}</p>
+            <p className="text-[11px] font-extrabold leading-tight text-foreground sm:text-sm">{title}</p>
+            <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground sm:mt-1 sm:text-xs sm:leading-relaxed">
+              {description}
+            </p>
           </div>
         </div>
       ))}
@@ -195,43 +200,54 @@ export function LandingHelpOverlay() {
       >
         <DialogContent
           hideClose
-          className="bottom-0 left-0 top-auto max-h-[94svh] w-full max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-[2rem] border-x-0 border-b-0 bg-card/95 p-0 shadow-2xl backdrop-blur-xl sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-w-xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-[2rem] sm:border"
+          className="bottom-0 left-0 top-auto grid max-h-[84svh] w-full max-w-none grid-rows-[auto_minmax(0,1fr)] translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-t-[1.6rem] border-x-0 border-b-0 bg-card/95 p-0 shadow-2xl backdrop-blur-xl sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-h-[90vh] sm:max-w-xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-[2rem] sm:border"
         >
-          <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-accent px-5 pb-6 pt-5 text-primary-foreground sm:px-7 sm:pb-7 sm:pt-6">
-            <div aria-hidden="true" className="absolute -right-14 -top-16 h-44 w-44 rounded-full border border-white/15 bg-white/10" />
-            <div aria-hidden="true" className="absolute -bottom-20 -left-16 h-40 w-40 rounded-full bg-primary-glow/30 blur-3xl" />
-            <div aria-hidden="true" className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:18px_18px]" />
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-accent px-4 pb-4 pt-4 text-primary-foreground sm:px-7 sm:pb-7 sm:pt-6">
+            <div
+              aria-hidden="true"
+              className="absolute -right-14 -top-16 h-44 w-44 rounded-full border border-white/15 bg-white/10"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-20 -left-16 h-40 w-40 rounded-full bg-primary-glow/30 blur-3xl"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:18px_18px]"
+            />
 
             <DialogClose asChild>
               <button
                 type="button"
                 aria-label="Fechar ajuda"
                 title="Fechar ajuda"
-                className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/35 bg-black/20 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+                className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/35 bg-black/20 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary sm:right-4 sm:top-4 sm:h-10 sm:w-10"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
               </button>
             </DialogClose>
 
-            <div className="relative flex items-center gap-4 pr-10">
-              <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-[1.4rem] border border-white/25 bg-white/15 shadow-xl backdrop-blur-md sm:h-20 sm:w-20">
-                <div className="absolute inset-2 rounded-2xl bg-white/10" aria-hidden="true" />
-                <PitecoLogo className="relative h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]" />
+            <div className="relative flex items-center gap-3 pr-9 sm:gap-4 sm:pr-10">
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.1rem] border border-white/25 bg-white/15 shadow-xl backdrop-blur-md sm:h-20 sm:w-20 sm:rounded-[1.4rem]">
+                <div className="absolute inset-1.5 rounded-xl bg-white/10 sm:inset-2 sm:rounded-2xl" aria-hidden="true" />
+                <PitecoLogo className="relative h-12 w-12 sm:h-[4.5rem] sm:w-[4.5rem]" />
               </div>
 
               <div className="min-w-0">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/90 backdrop-blur">
-                  {forcePreview ? <FlaskConical className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/90 backdrop-blur sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[10px] sm:tracking-[0.12em]">
+                  {forcePreview ? <FlaskConical className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> : <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
                   {forcePreview ? "Preview de rascunho" : "Guia rápido"}
                 </span>
-                <p className="mt-2 text-lg font-extrabold leading-tight sm:text-xl">Olá! Eu sou o Piteco.</p>
-                <p className="mt-0.5 text-xs text-white/80 sm:text-sm">Vou mostrar só o caminho essencial.</p>
+                <p className="mt-1.5 text-base font-extrabold leading-tight sm:mt-2 sm:text-xl">Olá! Eu sou o Piteco.</p>
+                <p className="mt-0.5 text-[11px] leading-tight text-white/80 sm:text-sm sm:leading-normal">
+                  Vou mostrar só o caminho essencial.
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="overflow-y-auto px-4 pb-4 pt-5 sm:px-7 sm:pb-7 sm:pt-6">
-            <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          <div className="min-h-0 overscroll-contain overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 sm:px-7 sm:pb-7 sm:pt-6">
+            <div className="mb-2.5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground sm:mb-4 sm:text-[10px] sm:tracking-[0.14em]">
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
                 {screen === "choose" ? "1" : "2"}
               </span>
@@ -242,34 +258,40 @@ export function LandingHelpOverlay() {
             {screen === "choose" && (
               <>
                 <DialogHeader className="text-left">
-                  <DialogTitle className="text-2xl font-extrabold leading-tight sm:text-[1.75rem]">Como você quer usar o APE?</DialogTitle>
-                  <DialogDescription className="mt-1 text-sm leading-relaxed">
+                  <DialogTitle className="text-xl font-extrabold leading-tight sm:text-[1.75rem]">
+                    Como você quer usar o APE?
+                  </DialogTitle>
+                  <DialogDescription className="mt-0.5 text-xs leading-snug sm:mt-1 sm:text-sm sm:leading-relaxed">
                     Escolha uma opção. A ajuda mostra somente o próximo passo certo para você.
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-5 grid gap-3">
+                <div className="mt-3 grid gap-2 sm:mt-5 sm:gap-3">
                   {HELP_PATHS.map(({ id, icon: Icon, eyebrow, title, description, cardClass, iconClass, eyebrowClass }) => (
                     <button
                       key={id}
                       type="button"
                       onClick={() => setScreen(id)}
                       className={cn(
-                        "group flex min-h-[5.35rem] w-full items-center gap-3.5 rounded-[1.35rem] border p-3.5 text-left text-foreground shadow-sm transition-all duration-200",
+                        "group flex min-h-[4.35rem] w-full items-center gap-2.5 rounded-[1.1rem] border p-2.5 text-left text-foreground shadow-sm transition-all duration-200 sm:min-h-[5.35rem] sm:gap-3.5 sm:rounded-[1.35rem] sm:p-3.5",
                         "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         cardClass,
                       )}
                     >
-                      <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border", iconClass)}>
-                        <Icon className="h-5 w-5" />
+                      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border sm:h-12 sm:w-12 sm:rounded-2xl", iconClass)}>
+                        <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className={cn("block text-[10px] font-extrabold uppercase tracking-[0.14em]", eyebrowClass)}>{eyebrow}</span>
-                        <span className="mt-0.5 block text-[15px] font-extrabold leading-tight text-foreground sm:text-base">{title}</span>
-                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground sm:text-[13px]">{description}</span>
+                        <span className={cn("block text-[9px] font-extrabold uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.14em]", eyebrowClass)}>
+                          {eyebrow}
+                        </span>
+                        <span className="mt-0.5 block text-sm font-extrabold leading-tight text-foreground sm:text-base">{title}</span>
+                        <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground sm:mt-1 sm:text-[13px] sm:leading-relaxed">
+                          {description}
+                        </span>
                       </span>
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground">
-                        <ArrowRight className="h-4 w-4" />
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted/60 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground sm:h-8 sm:w-8">
+                        <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </span>
                     </button>
                   ))}
@@ -280,51 +302,53 @@ export function LandingHelpOverlay() {
             {screen === "student" && (
               <>
                 <DialogHeader className="text-left">
-                  <DialogTitle className="text-2xl font-extrabold leading-tight sm:text-[1.75rem]">Você pode estudar com ou sem conta</DialogTitle>
-                  <DialogDescription className="mt-1 text-sm leading-relaxed">
+                  <DialogTitle className="text-xl font-extrabold leading-tight sm:text-[1.75rem]">
+                    Você pode estudar com ou sem conta
+                  </DialogTitle>
+                  <DialogDescription className="mt-0.5 text-xs leading-snug sm:mt-1 sm:text-sm sm:leading-relaxed">
                     O conteúdo público continua aberto. A conta gratuita libera o sistema completo de progresso e recompensas.
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-5 rounded-[1.4rem] border border-primary/35 bg-card p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-                      <Sparkles className="h-5 w-5" />
+                <div className="mt-3 rounded-[1.2rem] border border-primary/35 bg-card p-3 shadow-sm sm:mt-5 sm:rounded-[1.4rem] sm:p-4">
+                  <div className="flex items-start gap-2.5 sm:gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm sm:h-11 sm:w-11 sm:rounded-2xl">
+                      <Sparkles className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                     </span>
                     <div>
-                      <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-primary">Conta gratuita</p>
-                      <p className="mt-1 font-extrabold text-foreground">Estude e desbloqueie todos os benefícios</p>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.11em] text-primary sm:text-xs sm:tracking-[0.12em]">Conta gratuita</p>
+                      <p className="mt-0.5 text-sm font-extrabold text-foreground sm:mt-1 sm:text-base">
+                        Estude e desbloqueie todos os benefícios
+                      </p>
                     </div>
                   </div>
                   <BenefitsGrid items={ACCOUNT_BENEFITS} />
                 </div>
 
-                <div className="mt-3 rounded-[1.25rem] border border-border bg-muted/25 p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-background text-muted-foreground shadow-sm">
-                      <BookOpenCheck className="h-5 w-5" />
+                <div className="mt-2.5 rounded-[1.1rem] border border-border bg-muted/25 p-3 sm:mt-3 sm:rounded-[1.25rem] sm:p-4">
+                  <div className="flex items-start gap-2.5 sm:gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-background text-muted-foreground shadow-sm sm:h-10 sm:w-10">
+                      <BookOpenCheck className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                     </span>
                     <div>
-                      <p className="font-extrabold text-foreground">Estudar sem conta</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      <p className="text-sm font-extrabold text-foreground sm:text-base">Estudar sem conta</p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground sm:mt-1 sm:text-xs sm:leading-relaxed">
                         Você pode acessar professores, materiais e jogos públicos. Porém, não recebe Pontos ou PiteCOIN, não usa a loja nem os pacotes visuais de card e avatar, e o progresso não fica sincronizado em uma conta.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-2.5">
-                  <Button asChild className="btn-premium h-11 gap-1.5 rounded-xl font-bold">
+                <div className="mt-4 grid gap-2 sm:mt-5 sm:gap-2.5">
+                  <Button asChild className="btn-premium h-10 gap-1.5 rounded-xl font-bold sm:h-11">
                     <Link to="/auth?mode=signup&role=student" onClick={closeHelp}>
                       Criar conta gratuita <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-11 gap-1.5 rounded-xl font-bold">
-                    <Link to="/portal" onClick={closeHelp}>
-                      Continuar sem conta
-                    </Link>
+                  <Button asChild variant="outline" className="h-10 gap-1.5 rounded-xl font-bold sm:h-11">
+                    <Link to="/portal" onClick={closeHelp}>Continuar sem conta</Link>
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-9 gap-1.5 text-muted-foreground">
+                  <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-8 gap-1.5 text-muted-foreground sm:h-9">
                     <ArrowLeft className="h-4 w-4" /> Voltar
                   </Button>
                 </div>
@@ -334,37 +358,37 @@ export function LandingHelpOverlay() {
             {screen === "teacher" && (
               <>
                 <DialogHeader className="text-left">
-                  <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold leading-tight sm:text-[1.75rem]">
-                    <LockKeyhole className="h-6 w-6 text-secondary" /> Conta obrigatória para ensinar
+                  <DialogTitle className="flex items-center gap-2 text-xl font-extrabold leading-tight sm:text-[1.75rem]">
+                    <LockKeyhole className="h-5 w-5 text-secondary sm:h-6 sm:w-6" /> Conta obrigatória para ensinar
                   </DialogTitle>
-                  <DialogDescription className="mt-1 text-sm leading-relaxed">
+                  <DialogDescription className="mt-0.5 text-xs leading-snug sm:mt-1 sm:text-sm sm:leading-relaxed">
                     Os recursos de professor precisam de uma conta para proteger materiais, turmas e dados dos alunos.
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-5 rounded-[1.4rem] border border-secondary/35 bg-card p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground shadow-sm">
-                      <Presentation className="h-5 w-5" />
+                <div className="mt-3 rounded-[1.2rem] border border-secondary/35 bg-card p-3 shadow-sm sm:mt-5 sm:rounded-[1.4rem] sm:p-4">
+                  <div className="flex items-start gap-2.5 sm:gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground shadow-sm sm:h-11 sm:w-11 sm:rounded-2xl">
+                      <Presentation className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                     </span>
                     <div>
-                      <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-secondary">Conta de professor</p>
-                      <p className="mt-1 font-extrabold text-foreground">Organize, compartilhe e acompanhe</p>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.11em] text-secondary sm:text-xs sm:tracking-[0.12em]">Conta de professor</p>
+                      <p className="mt-0.5 text-sm font-extrabold text-foreground sm:mt-1 sm:text-base">Organize, compartilhe e acompanhe</p>
                     </div>
                   </div>
                   <BenefitsGrid items={TEACHER_BENEFITS} />
                 </div>
 
-                <div className="mt-5 grid gap-2.5">
-                  <Button asChild className="btn-premium h-11 gap-1.5 rounded-xl font-bold">
+                <div className="mt-4 grid gap-2 sm:mt-5 sm:gap-2.5">
+                  <Button asChild className="btn-premium h-10 gap-1.5 rounded-xl font-bold sm:h-11">
                     <Link to="/auth?mode=signup&role=teacher" onClick={closeHelp}>
                       Criar conta de professor <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
+                  <Button asChild variant="outline" className="h-10 rounded-xl font-bold sm:h-11">
                     <Link to="/auth?role=teacher" onClick={closeHelp}>Já tenho uma conta</Link>
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-9 gap-1.5 text-muted-foreground">
+                  <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-8 gap-1.5 text-muted-foreground sm:h-9">
                     <ArrowLeft className="h-4 w-4" /> Voltar
                   </Button>
                 </div>
@@ -374,20 +398,20 @@ export function LandingHelpOverlay() {
             {screen === "explore" && (
               <>
                 <DialogHeader className="text-left">
-                  <DialogTitle className="text-2xl font-extrabold leading-tight sm:text-[1.75rem]">Explore o portal público</DialogTitle>
-                  <DialogDescription className="mt-1 text-sm leading-relaxed">
+                  <DialogTitle className="text-xl font-extrabold leading-tight sm:text-[1.75rem]">Explore o portal público</DialogTitle>
+                  <DialogDescription className="mt-0.5 text-xs leading-snug sm:mt-1 sm:text-sm sm:leading-relaxed">
                     Você será levado à lista de professores públicos. Por enquanto, o Professor Pedro é o perfil principal disponível.
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-5 rounded-[1.4rem] border border-accent/35 bg-card p-4 shadow-sm">
-                  <div className="flex gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-sm">
-                      <Compass className="h-5 w-5" />
+                <div className="mt-3 rounded-[1.2rem] border border-accent/35 bg-card p-3 shadow-sm sm:mt-5 sm:rounded-[1.4rem] sm:p-4">
+                  <div className="flex gap-2.5 sm:gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm sm:h-11 sm:w-11 sm:rounded-2xl">
+                      <Compass className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                     </span>
                     <div>
-                      <p className="font-extrabold text-foreground">O que você encontra</p>
-                      <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+                      <p className="text-sm font-extrabold text-foreground sm:text-base">O que você encontra</p>
+                      <div className="mt-1.5 space-y-1 text-[11px] leading-snug text-muted-foreground sm:mt-2 sm:space-y-1.5 sm:text-xs sm:leading-relaxed">
                         <p className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" /> Perfis de professores e seus materiais públicos.</p>
                         <p className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" /> Atividades, listas e jogos que podem ser abertos sem conta.</p>
                         <p className="flex gap-2"><LockKeyhole className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /> Pontuação, PiteCOIN, loja e pacotes visuais exigem conta.</p>
@@ -396,23 +420,23 @@ export function LandingHelpOverlay() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-2.5">
-                  <Button asChild className="btn-premium h-11 gap-1.5 rounded-xl font-bold">
+                <div className="mt-4 grid gap-2 sm:mt-5 sm:gap-2.5">
+                  <Button asChild className="btn-premium h-10 gap-1.5 rounded-xl font-bold sm:h-11">
                     <Link to="/portal" onClick={closeHelp}>
                       Abrir portal público <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
+                  <Button asChild variant="outline" className="h-10 rounded-xl font-bold sm:h-11">
                     <Link to="/auth?mode=signup&role=student" onClick={closeHelp}>Criar conta gratuita</Link>
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-9 gap-1.5 text-muted-foreground">
+                  <Button type="button" variant="ghost" onClick={() => setScreen("choose")} className="h-8 gap-1.5 text-muted-foreground sm:h-9">
                     <ArrowLeft className="h-4 w-4" /> Voltar
                   </Button>
                 </div>
               </>
             )}
 
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+            <div className="mt-4 hidden items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground sm:flex">
               {forcePreview ? <FlaskConical className="h-3.5 w-3.5 shrink-0 text-primary" /> : <X className="h-3.5 w-3.5 shrink-0" />}
               {forcePreview
                 ? "Fluxo modular de rascunho. Nenhuma escolha será salva."
