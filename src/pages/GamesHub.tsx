@@ -52,12 +52,13 @@ const gameOptions: Array<{
   visualKey: GameModeVisualKey;
   title: string;
   beta?: boolean;
+  recommended?: boolean;
 }> = [
   { mode: "flip", visualKey: "flip", title: "Virar Cartas" },
   { mode: "write", visualKey: "write", title: "Escrever" },
   { mode: "multiple", visualKey: "multiple", title: "Múltipla Escolha" },
   { mode: "unscramble", visualKey: "unscramble", title: "Desembaralhar" },
-  { mode: "mixed", visualKey: "mixed", title: "Estudo Misto" },
+  { mode: "mixed", visualKey: "mixed", title: "Prática Mista", recommended: true },
   { mode: "pronunciation", visualKey: "pronunciation", title: "Prática de Pronúncia", beta: true },
 ];
 
@@ -180,6 +181,14 @@ const GamesHub = () => {
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id!);
     const useFavoritesOnly = liveFavoritesOnly && favoritesCount > 0;
+
+    if (mode === "mixed") {
+      const params = new URLSearchParams({ dir: liveDirection });
+      if (useFavoritesOnly) params.set("favorites", "true");
+      navigate(`${basePath}/mixed-study?${params.toString()}`);
+      return;
+    }
+
     const favoriteParam = useFavoritesOnly ? "&favorites=true" : "";
 
     if (import.meta.env.DEV) {
@@ -260,7 +269,7 @@ const GamesHub = () => {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium">Ordem</label>
+              <label className="mb-1.5 block text-xs font-medium">Ordem dos modos normais</label>
               <Select
                 value={selectedOrder}
                 onValueChange={(value: typeof prefs.order) => {
@@ -302,7 +311,7 @@ const GamesHub = () => {
           )}
 
           <div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3 lg:grid-cols-6">
-            {gameOptions.map(({ mode, visualKey, title, beta }) => {
+            {gameOptions.map(({ mode, visualKey, title, beta, recommended }) => {
               const visual = GAME_MODE_VISUALS[visualKey];
               return (
                 <button
@@ -312,9 +321,15 @@ const GamesHub = () => {
                   className={cn(
                     "relative flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-xl border p-3 text-center shadow-sm transition-all",
                     "hover:-translate-y-0.5 hover:shadow-md",
+                    recommended && "border-primary/60 ring-2 ring-primary/15",
                     visual.cardClass,
                   )}
                 >
+                  {recommended && (
+                    <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-primary-foreground shadow-sm">
+                      RECOMENDADO
+                    </span>
+                  )}
                   {beta && (
                     <span className="absolute right-2 top-2 rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow-sm">
                       BETA
