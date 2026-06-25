@@ -102,6 +102,16 @@ export const UnscrambleStudyView = ({
   const normalizedCorrectSentence = cleanSentence(correctSentence);
   const questionLang = toBCP47(promptSide.lang);
   const userSentence = selectedWords.map((item) => item.word).join(" ");
+  const sentenceWordCount = normalizedCorrectSentence.split(/\s+/).filter(Boolean).length;
+  const questionLength = question.trim().length;
+  const questionSizeClass = questionLength <= 32
+    ? "text-[clamp(1.5rem,7vw,2rem)]"
+    : questionLength <= 76
+      ? "text-[clamp(1.28rem,5.8vw,1.75rem)]"
+      : "text-[clamp(1.08rem,4.7vw,1.45rem)]";
+  const chipSizeClass = sentenceWordCount > 10
+    ? "px-2.5 py-1.5 text-[0.8125rem]"
+    : "px-3.5 py-2 text-sm";
 
   const resetExercise = () => {
     setAvailableWords(shuffleArray(createWordItems(correctSentence)));
@@ -173,8 +183,8 @@ export const UnscrambleStudyView = ({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-2 sm:gap-6 sm:p-4">
-      <Card className={cn("relative w-full bg-card p-4 sm:p-6", getRedListCardClass(isRedListed))}>
+    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-5 px-1 sm:gap-6 sm:p-4">
+      <Card className={cn("relative flex min-h-[150px] w-full flex-col justify-center bg-card p-5 sm:min-h-0 sm:p-6", getRedListCardClass(isRedListed))}>
         <div className="absolute right-2 top-2 z-10" onClick={(event) => event.stopPropagation()}>
           <StudyToolsMenu
             hint={hint}
@@ -188,28 +198,29 @@ export const UnscrambleStudyView = ({
             onRestartJourney={onRestartJourney}
           />
         </div>
-        <p className="mb-3 pr-20 text-[11px] uppercase tracking-wide text-muted-foreground sm:text-xs">Organize as palavras</p>
-        <div className="mb-2 flex items-start justify-center gap-2">
-          <p className="flex-1 break-words px-1 text-center text-xl font-bold sm:text-2xl">
+        <p className="mb-4 pr-20 text-[11px] uppercase tracking-wide text-muted-foreground sm:mb-3 sm:text-xs">Organize as palavras</p>
+        <div className="flex items-start justify-center gap-2">
+          <p className={cn("flex-1 break-words px-1 text-center font-bold leading-tight [text-wrap:balance] sm:text-2xl", questionSizeClass)}>
             <InteractiveText text={question} wordHints={promptWordHints} mergedHints={promptMergedHints} speakOnHintClick speakLang={questionLang} />
           </p>
-          <Button variant="ghost" size="icon" onClick={handlePlayAudio} className="mt-0.5 h-9 w-9 shrink-0 text-primary hover:text-primary/80" title="Ouvir frase">
+          <Button variant="ghost" size="icon" onClick={handlePlayAudio} className="mt-0.5 h-10 w-10 shrink-0 text-primary hover:text-primary/80" title="Ouvir frase">
             <Volume2 className="h-5 w-5" />
           </Button>
         </div>
       </Card>
 
-      <Card className="min-h-[60px] w-full border-2 border-dashed border-primary/20 bg-primary/5 p-3 sm:min-h-[80px] sm:p-4">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <Card className="flex min-h-[96px] w-full items-center justify-center border-2 border-dashed border-primary/20 bg-primary/5 p-4 sm:min-h-[88px] sm:p-4">
+        <div className="flex w-full flex-wrap items-center justify-center gap-2">
           {selectedWords.length === 0 ? (
-            <p className="w-full text-center text-xs text-muted-foreground sm:text-sm">Toque nas palavras abaixo para montar a frase</p>
+            <p className="w-full px-4 text-center text-sm leading-relaxed text-muted-foreground">Toque nas palavras abaixo para montar a frase</p>
           ) : selectedWords.map((item) => (
             <button
               key={item.id}
               onClick={() => handleWordClick(item, false)}
               disabled={submitted}
               className={cn(
-                "inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground shadow-sm transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+                "inline-flex min-h-9 max-w-full items-center justify-center whitespace-normal break-words rounded-full bg-primary text-center font-medium leading-tight text-primary-foreground shadow-sm transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+                chipSizeClass,
                 !submitted && "cursor-pointer hover:bg-primary/80 active:scale-95",
                 submitted && "cursor-default opacity-70",
               )}
@@ -220,14 +231,15 @@ export const UnscrambleStudyView = ({
         </div>
       </Card>
 
-      <div className="flex w-full flex-wrap justify-center gap-1.5 sm:gap-2">
+      <div className="flex min-h-[56px] w-full flex-wrap items-center justify-center gap-2 px-1">
         {availableWords.map((item) => (
           <button
             key={item.id}
             onClick={() => handleWordClick(item, true)}
             disabled={submitted}
             className={cn(
-              "inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+              "inline-flex min-h-9 max-w-full items-center justify-center whitespace-normal break-words rounded-full border border-border bg-muted text-center font-medium leading-tight text-foreground shadow-sm transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+              chipSizeClass,
               !submitted && "cursor-pointer hover:bg-accent hover:text-accent-foreground active:scale-95",
               submitted && "cursor-default opacity-50",
             )}
@@ -239,10 +251,10 @@ export const UnscrambleStudyView = ({
 
       {!submitted && (
         <div className="flex w-full gap-3">
-          <Button variant="outline" onClick={resetExercise} className="flex-1">
+          <Button variant="outline" onClick={resetExercise} className="min-h-12 flex-1 text-sm">
             <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar
           </Button>
-          <Button onClick={handleSubmit} disabled={selectedWords.length === 0} className="flex-1">
+          <Button onClick={handleSubmit} disabled={selectedWords.length === 0} className="min-h-12 flex-1 text-sm font-semibold">
             <Check className="mr-2 h-4 w-4" /> Verificar
           </Button>
         </div>
