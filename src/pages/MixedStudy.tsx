@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Heart, RefreshCcw, Settings2, Sparkles, Trophy } from "lucide-react";
+import { ArrowLeft, Heart, RefreshCcw, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
@@ -14,14 +14,6 @@ import { UnscrambleStudyView } from "@/features/study/components/UnscrambleStudy
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 interface MixedFlashcard {
@@ -389,6 +381,8 @@ export default function MixedStudy() {
     onCorrect: () => handleAnswer(true),
     onIncorrect: () => handleAnswer(false),
     onSkip: () => handleAnswer(false, true),
+    onRestartRound: restartRoundManually,
+    onRestartJourney: restartJourneyManually,
   };
 
   return (
@@ -398,27 +392,8 @@ export default function MixedStudy() {
           <Button variant="ghost" size="sm" className="h-8 px-2" onClick={exit}>
             <ArrowLeft className="mr-1 h-4 w-4" />Sair
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary sm:px-3 sm:text-xs">
-              ⭐ Recomendado
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Configurações da sessão">
-                  <Settings2 className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Configurações da sessão</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={restartRoundManually}>
-                  <RefreshCcw className="mr-2 h-4 w-4" /> Reiniciar rodada
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={restartJourneyManually}>
-                  Reiniciar percurso
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary sm:px-3 sm:text-xs">
+            ⭐ Recomendado
           </div>
         </div>
 
@@ -455,6 +430,8 @@ export default function MixedStudy() {
               langB={labels.langB}
               onCorrect={() => handleAnswer(true)}
               onIncorrect={() => handleAnswer(false)}
+              onRestartRound={restartRoundManually}
+              onRestartJourney={restartJourneyManually}
             />
           )}
           {mixed.activityMode === "unscramble" && <UnscrambleStudyView {...sharedProps} />}

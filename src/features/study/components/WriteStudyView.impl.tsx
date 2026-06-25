@@ -39,6 +39,8 @@ interface WriteStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  onRestartRound?: () => void;
+  onRestartJourney?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -63,6 +65,8 @@ export const WriteStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  onRestartRound,
+  onRestartJourney,
   onCorrect,
   onIncorrect,
   onSkip,
@@ -177,6 +181,8 @@ export const WriteStudyView = ({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
+            onRestartRound={onRestartRound}
+            onRestartJourney={onRestartJourney}
           />
         </div>
 

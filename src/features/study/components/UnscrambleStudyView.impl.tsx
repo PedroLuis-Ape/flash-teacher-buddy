@@ -32,6 +32,8 @@ interface UnscrambleStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  onRestartRound?: () => void;
+  onRestartJourney?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
@@ -77,6 +79,8 @@ export const UnscrambleStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  onRestartRound,
+  onRestartJourney,
   onCorrect,
   onIncorrect,
   onSkip,
@@ -180,6 +184,8 @@ export const UnscrambleStudyView = ({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
+            onRestartRound={onRestartRound}
+            onRestartJourney={onRestartJourney}
           />
         </div>
         <p className="mb-3 pr-20 text-[11px] uppercase tracking-wide text-muted-foreground sm:text-xs">Organize as palavras</p>

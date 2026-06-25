@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Flame, Gauge, Gem, Lightbulb, Loader2, Settings2, Star } from "lucide-react";
+import { Flame, Gauge, Gem, Lightbulb, Loader2, RotateCcw, Settings2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { buildStudyHintContent } from "@/features/study/lib/buildStudyHintContent";
@@ -44,6 +44,8 @@ interface StudyToolsMenuProps {
   favoritePending?: boolean;
   redListPending?: boolean;
   specialPending?: boolean;
+  onRestartRound?: () => void;
+  onRestartJourney?: () => void;
   className?: string;
 }
 
@@ -117,6 +119,8 @@ export function StudyToolsMenu({
   favoritePending,
   redListPending,
   specialPending,
+  onRestartRound,
+  onRestartJourney,
   className,
 }: StudyToolsMenuProps) {
   const { user } = useAuthUser();
@@ -179,6 +183,7 @@ export function StudyToolsMenu({
 
   const hasHint = !!combinedHint && combinedHint.trim().length > 0;
   const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial);
+  const hasSessionActions = Boolean(onRestartRound || onRestartJourney);
   const rateLabel = rate === 1
     ? "Velocidade da fala: natural (1x)"
     : "Fala didática: palavras separadas e termos difíceis articulados em partes (0.5x)";
@@ -302,6 +307,30 @@ export function StudyToolsMenu({
             <span className="mr-2 inline-flex w-5 justify-center">{hintIcon}</span>
             {hasHint ? "Ver dica e explicação" : "Sem dica"}
           </DropdownMenuItem>
+
+          {hasSessionActions && <DropdownMenuSeparator />}
+          {onRestartRound && (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                onRestartRound();
+              }}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reiniciar rodada
+            </DropdownMenuItem>
+          )}
+          {onRestartJourney && (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                onRestartJourney();
+              }}
+            >
+              <Settings2 className="mr-2 h-4 w-4" />
+              Reiniciar percurso
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -352,6 +381,29 @@ export function StudyToolsMenu({
           </span>
         }
       />
+      {hasSessionActions && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className="h-9 w-9 px-0" aria-label="Configurações da sessão">
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Configurações da sessão</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {onRestartRound && (
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); onRestartRound(); }}>
+                <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar rodada
+              </DropdownMenuItem>
+            )}
+            {onRestartJourney && (
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); onRestartJourney(); }}>
+                Reiniciar percurso
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 

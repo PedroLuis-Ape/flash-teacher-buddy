@@ -40,6 +40,8 @@ interface MultipleChoiceStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  onRestartRound?: () => void;
+  onRestartJourney?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
 }
@@ -58,6 +60,8 @@ export const MultipleChoiceStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  onRestartRound,
+  onRestartJourney,
   onCorrect,
   onIncorrect,
 }: MultipleChoiceStudyViewProps) => {
@@ -170,6 +174,8 @@ export const MultipleChoiceStudyView = ({
             onToggleRedList={onToggleRedList}
             isSpecial={isSpecial}
             onToggleSpecial={onToggleSpecial}
+            onRestartRound={onRestartRound}
+            onRestartJourney={onRestartJourney}
           />
         </div>
 
