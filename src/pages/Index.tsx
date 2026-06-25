@@ -27,11 +27,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
+import pitecoinIcon from "@/assets/pitecoin.png";
 
 const Index = () => {
   const navigate = useNavigate();
   const { last, recents, recentFolders, stats, loading, refetch } = useHomeData();
-  const { pts_weekly, level, current_streak } = useEconomy();
+  const { pts_weekly, balance_pitecoin, level, current_streak } = useEconomy();
   const { selectedInstitution } = useInstitution();
   const { soundEnabled, toggleSound, notificationsEnabled, toggleNotifications } = useSoundSettings();
   const { user, isLoading: authLoading } = useAuthUser();
@@ -216,7 +217,7 @@ const Index = () => {
         </Card>
 
         {/* Statistics Cards — premium stat tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3 xl:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 xl:gap-4">
           <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><TrendingUp className="h-4 w-4 text-primary" /></span>
@@ -226,6 +227,21 @@ const Index = () => {
               <Skeleton className="h-8 w-16" />
             ) : (
               <p className="text-3xl font-bold tracking-tight">{pts_weekly}</p>
+            )}
+          </Card>
+
+          <Card
+            className="stat-tile cursor-pointer p-4 border-0"
+            onClick={() => navigate('/store')}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="icon-tile !w-9 !h-9"><img src={pitecoinIcon} alt="" className="h-5 w-5" /></span>
+              <span className="text-xs text-muted-foreground">PiteCOIN</span>
+            </div>
+            {loading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <p className="text-3xl font-bold tracking-tight">₱{balance_pitecoin}</p>
             )}
           </Card>
 

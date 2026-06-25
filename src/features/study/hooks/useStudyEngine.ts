@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
+import { recordStudyAnswer, settleStudySession } from "@/lib/rewardEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { useListActivity } from "@/hooks/useListActivity";
 import { updateGoalProgress } from "@/hooks/useGoals";
@@ -134,6 +134,7 @@ export function useStudyEngine(
   const lastFlushRef = useRef<number>(0);
   const authUserIdRef = useRef<string | null>(userScope ?? null);
   const completionInFlightRef = useRef(false);
+  const pitecoinWritesRef = useRef<Set<Promise<unknown>>>(new Set());
 
   // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -808,16 +809,25 @@ export function useStudyEngine(
 
     trackAnswer(flashcardId, correct, skipped);
 
+    // Persist the exact card result for the server-authoritative PiteCOIN
+    // settlement. The write is queued so the UI stays responsive, then all
+    // pending writes are flushed before the session reward is calculated.
+    if (isAuthenticated && sessionId && FEATURE_FLAGS.economy_enabled) {
+      const write = recordStudyAnswer(sessionId, flashcardId, correct, skipped);
+      pitecoinWritesRef.current.add(write);
+      void write
+        .then((result) => {
+          if (!result.success) {
+            console.warn('[PiteCOIN] Answer not recorded:', result.error);
+          }
+        })
+        .finally(() => pitecoinWritesRef.current.delete(write));
+    }
+
     if (!isAuthenticated || !listId || skipped) return;
 
     // Track study activity (debounced by the hook)
     trackListStudied(listId);
-
-    // Award points non-blocking (fire-and-forget so UI transitions aren't delayed)
-    if (authUserIdRef.current && correct && FEATURE_FLAGS.economy_enabled) {
-      awardPoints(authUserIdRef.current, REWARD_AMOUNTS.CORRECT_ANSWER, 'Resposta correta')
-        .catch(err => console.error('Erro ao atribuir pontos:', err));
-    }
 
     // Buffer the progress update instead of writing immediately
     progressBufferRef.current.set(flashcardId, { correct, timestamp: Date.now() });
@@ -830,7 +840,7 @@ export function useStudyEngine(
       totalCards: cardsOrder.length,
       currentIndex
     });
-  }, [listId, isAuthenticated, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex]);
+  }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex]);
 
   const goToNext = useCallback(() => {
     if (currentIndex < cardsOrder.length - 1) {
@@ -889,15 +899,39 @@ export function useStudyEngine(
       const userId = authUserIdRef.current;
 
       if (isAuthenticated && sessionId) {
+        // The reward RPC owns the final settlement and must run before the
+        // session is hidden from the active-session pool. Flush every answer
+        // write first so the final card is never lost in a race.
+        if (FEATURE_FLAGS.economy_enabled) {
+          await Promise.allSettled(Array.from(pitecoinWritesRef.current));
+          const reward = await settleStudySession(sessionId, true);
+
+          if (reward.success && !reward.alreadyProcessed) {
+            const pieces = [
+              reward.pitecoinAwarded > 0 ? '+₱' + reward.pitecoinAwarded : null,
+              reward.ptsAwarded > 0 ? '+' + reward.ptsAwarded + ' PTS' : null,
+              reward.xpAwarded > 0 ? '+' + reward.xpAwarded + ' XP' : null,
+            ].filter(Boolean);
+            if (pieces.length > 0) {
+              toast.success('Recompensa recebida: ' + pieces.join(' · '), { duration: 6000 });
+            }
+          } else if (!reward.success && reward.error) {
+            const messages: Record<string, string> = {
+              LIST_TOO_SHORT: 'Esta lista precisa ter pelo menos 5 cards para gerar recompensa.',
+              SESSION_TOO_SHORT: 'Pratique pelo menos 5 cards antes de receber recompensa.',
+              SESSION_NOT_FOUND: 'A sessão foi concluída, mas a recompensa não encontrou o registro ativo.',
+            };
+            toast.info(messages[reward.error] ?? 'Sessão concluída sem recompensa desta vez.');
+          }
+        }
+
+        // Harmless fallback for environments where the reward RPC only
+        // calculates values but does not mark the session itself.
         const { error: completionError } = await supabase
           .from('study_sessions')
           .update({ completed: true, updated_at: new Date().toISOString() })
           .eq('id', sessionId);
         if (completionError) throw completionError;
-
-        if (userId && FEATURE_FLAGS.economy_enabled) {
-          await awardPoints(userId, REWARD_AMOUNTS.SESSION_COMPLETE, 'Sessão completa');
-        }
 
         if (userId && listId) {
           try {
