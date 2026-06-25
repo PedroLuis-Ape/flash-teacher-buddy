@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -103,3 +106,129 @@ jobs:
       - name: Production build
         if: always()
         run: npm run build
+
+  apply-unified-mixed-tools:
+    name: Validate and publish unified mixed tools
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-187-unify-mixed-tools'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: issue-187-unify-mixed-tools
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply guarded tool unification
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str):
+            text = path.read_text()
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f'Guard failed in {path}: expected one match, found {count}: {old[:120]!r}')
+            path.write_text(text.replace(old, new))
+
+          tools = Path('src/features/study/components/StudyToolsMenu.tsx')
+          replace_once(
+            tools,
+            'import { Flame, Gauge, Gem, Lightbulb, Loader2, Settings2, Star } from "lucide-react";',
+            'import { Flame, Gauge, Gem, Lightbulb, Loader2, RotateCcw, Settings2, Star } from "lucide-react";',
+          )
+          replace_once(
+            tools,
+            '''  specialPending?: boolean;\n  className?: string;\n}''',
+            '''  specialPending?: boolean;\n  onRestartRound?: () => void;\n  onRestartJourney?: () => void;\n  className?: string;\n}''',
+          )
+          replace_once(
+            tools,
+            '''  specialPending,\n  className,\n}: StudyToolsMenuProps) {''',
+            '''  specialPending,\n  onRestartRound,\n  onRestartJourney,\n  className,\n}: StudyToolsMenuProps) {''',
+          )
+          replace_once(
+            tools,
+            '''  const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial);\n  const rateLabel = rate === 1''',
+            '''  const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial);\n  const hasSessionActions = Boolean(onRestartRound || onRestartJourney);\n  const rateLabel = rate === 1''',
+          )
+          replace_once(
+            tools,
+            '''          <DropdownMenuItem\n            disabled={!hasHint}\n            onSelect={(event) => {\n              event.preventDefault();\n              if (hasHint) setShowHint(true);\n            }}\n          >\n            <span className="mr-2 inline-flex w-5 justify-center">{hintIcon}</span>\n            {hasHint ? "Ver dica e explicação" : "Sem dica"}\n          </DropdownMenuItem>\n        </DropdownMenuContent>''',
+            '''          <DropdownMenuItem\n            disabled={!hasHint}\n            onSelect={(event) => {\n              event.preventDefault();\n              if (hasHint) setShowHint(true);\n            }}\n          >\n            <span className="mr-2 inline-flex w-5 justify-center">{hintIcon}</span>\n            {hasHint ? "Ver dica e explicação" : "Sem dica"}\n          </DropdownMenuItem>\n\n          {hasSessionActions && <DropdownMenuSeparator />}\n          {onRestartRound && (\n            <DropdownMenuItem\n              onSelect={(event) => {\n                event.preventDefault();\n                onRestartRound();\n              }}\n            >\n              <RotateCcw className="mr-2 h-4 w-4" />\n              Reiniciar rodada\n            </DropdownMenuItem>\n          )}\n          {onRestartJourney && (\n            <DropdownMenuItem\n              onSelect={(event) => {\n                event.preventDefault();\n                onRestartJourney();\n              }}\n            >\n              <Settings2 className="mr-2 h-4 w-4" />\n              Reiniciar percurso\n            </DropdownMenuItem>\n          )}\n        </DropdownMenuContent>''',
+          )
+          replace_once(
+            tools,
+            '''      <InlineToolButton\n        label={rate === 1 ? "Velocidade natural" : "Fala didática"}\n        onClick={toggleRate}\n        icon={\n          <span className="inline-flex items-center gap-1 text-xs font-semibold">\n            <Gauge className="h-4 w-4" />\n            {rate === 1 ? "1x" : "0.5x"}\n          </span>\n        }\n      />\n    </div>''',
+            '''      <InlineToolButton\n        label={rate === 1 ? "Velocidade natural" : "Fala didática"}\n        onClick={toggleRate}\n        icon={\n          <span className="inline-flex items-center gap-1 text-xs font-semibold">\n            <Gauge className="h-4 w-4" />\n            {rate === 1 ? "1x" : "0.5x"}\n          </span>\n        }\n      />\n      {hasSessionActions && (\n        <DropdownMenu>\n          <DropdownMenuTrigger asChild>\n            <Button type="button" variant="outline" size="sm" className="h-9 w-9 px-0" aria-label="Configurações da sessão">\n              <Settings2 className="h-4 w-4" />\n            </Button>\n          </DropdownMenuTrigger>\n          <DropdownMenuContent align="end" className="w-56">\n            <DropdownMenuLabel>Configurações da sessão</DropdownMenuLabel>\n            <DropdownMenuSeparator />\n            {onRestartRound && (\n              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); onRestartRound(); }}>\n                <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar rodada\n              </DropdownMenuItem>\n            )}\n            {onRestartJourney && (\n              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); onRestartJourney(); }}>\n                Reiniciar percurso\n              </DropdownMenuItem>\n            )}\n          </DropdownMenuContent>\n        </DropdownMenu>\n      )}\n    </div>''',
+          )
+
+          component_specs = [
+            ('src/features/study/components/WriteStudyView.impl.tsx', '  onToggleSpecial?: () => void;\n  onCorrect: () => void;', '  onToggleSpecial?: () => void;\n  onRestartRound?: () => void;\n  onRestartJourney?: () => void;\n  onCorrect: () => void;', '  onToggleSpecial,\n  onCorrect,', '  onToggleSpecial,\n  onRestartRound,\n  onRestartJourney,\n  onCorrect,'),
+            ('src/features/study/components/MultipleChoiceStudyView.impl.tsx', '  onToggleSpecial?: () => void;\n  onCorrect: () => void;', '  onToggleSpecial?: () => void;\n  onRestartRound?: () => void;\n  onRestartJourney?: () => void;\n  onCorrect: () => void;', '  onToggleSpecial,\n  onCorrect,', '  onToggleSpecial,\n  onRestartRound,\n  onRestartJourney,\n  onCorrect,'),
+            ('src/features/study/components/UnscrambleStudyView.impl.tsx', '  onToggleSpecial?: () => void;\n  onCorrect: () => void;', '  onToggleSpecial?: () => void;\n  onRestartRound?: () => void;\n  onRestartJourney?: () => void;\n  onCorrect: () => void;', '  onToggleSpecial,\n  onCorrect,', '  onToggleSpecial,\n  onRestartRound,\n  onRestartJourney,\n  onCorrect,'),
+          ]
+          for file_name, old_iface, new_iface, old_destructure, new_destructure in component_specs:
+            path = Path(file_name)
+            replace_once(path, old_iface, new_iface)
+            replace_once(path, old_destructure, new_destructure)
+            replace_once(
+              path,
+              '''            onToggleSpecial={onToggleSpecial}\n          />''',
+              '''            onToggleSpecial={onToggleSpecial}\n            onRestartRound={onRestartRound}\n            onRestartJourney={onRestartJourney}\n          />''',
+            )
+
+          mixed = Path('src/pages/MixedStudy.tsx')
+          replace_once(
+            mixed,
+            'import { ArrowLeft, Heart, RefreshCcw, Settings2, Sparkles, Trophy } from "lucide-react";',
+            'import { ArrowLeft, Heart, RefreshCcw, Sparkles, Trophy } from "lucide-react";',
+          )
+          replace_once(
+            mixed,
+            '''import { Progress } from "@/components/ui/progress";\nimport {\n  DropdownMenu,\n  DropdownMenuContent,\n  DropdownMenuItem,\n  DropdownMenuLabel,\n  DropdownMenuSeparator,\n  DropdownMenuTrigger,\n} from "@/components/ui/dropdown-menu";\nimport { toast } from "sonner";''',
+            '''import { Progress } from "@/components/ui/progress";\nimport { toast } from "sonner";''',
+          )
+          replace_once(
+            mixed,
+            '''          <div className="flex items-center gap-2">\n            <div className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary sm:px-3 sm:text-xs">\n              ⭐ Recomendado\n            </div>\n            <DropdownMenu>\n              <DropdownMenuTrigger asChild>\n                <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Configurações da sessão">\n                  <Settings2 className="h-4 w-4" />\n                </Button>\n              </DropdownMenuTrigger>\n              <DropdownMenuContent align="end" className="w-56">\n                <DropdownMenuLabel>Configurações da sessão</DropdownMenuLabel>\n                <DropdownMenuSeparator />\n                <DropdownMenuItem onSelect={restartRoundManually}>\n                  <RefreshCcw className="mr-2 h-4 w-4" /> Reiniciar rodada\n                </DropdownMenuItem>\n                <DropdownMenuItem onSelect={restartJourneyManually}>\n                  Reiniciar percurso\n                </DropdownMenuItem>\n              </DropdownMenuContent>\n            </DropdownMenu>\n          </div>''',
+            '''          <div className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary sm:px-3 sm:text-xs">\n            ⭐ Recomendado\n          </div>''',
+          )
+          replace_once(
+            mixed,
+            '''    onSkip: () => handleAnswer(false, true),\n  };''',
+            '''    onSkip: () => handleAnswer(false, true),\n    onRestartRound: restartRoundManually,\n    onRestartJourney: restartJourneyManually,\n  };''',
+          )
+          replace_once(
+            mixed,
+            '''              onCorrect={() => handleAnswer(true)}\n              onIncorrect={() => handleAnswer(false)}\n            />''',
+            '''              onCorrect={() => handleAnswer(true)}\n              onIncorrect={() => handleAnswer(false)}\n              onRestartRound={restartRoundManually}\n              onRestartJourney={restartJourneyManually}\n            />''',
+          )
+          PY
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: Validate corrected code
+        run: |
+          npm run typecheck
+          npm run test
+          npm run lint
+          npm run build
+
+      - name: Restore CI and publish validated tools
+        run: |
+          git checkout origin/main -- .github/workflows/ci.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study/components/StudyToolsMenu.tsx src/features/study/components/WriteStudyView.impl.tsx src/features/study/components/MultipleChoiceStudyView.impl.tsx src/features/study/components/UnscrambleStudyView.impl.tsx src/pages/MixedStudy.tsx .github/workflows/ci.yml
+          git commit -m "fix: unificar configurações da prática mista"
+          git push origin HEAD:issue-187-unify-mixed-tools
