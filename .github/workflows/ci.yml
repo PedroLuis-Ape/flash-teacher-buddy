@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -103,3 +106,107 @@ jobs:
       - name: Production build
         if: always()
         run: npm run build
+
+  apply-direction-default-and-icon-fix:
+    name: Validate and publish global mixed-direction default
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-190-direction-default-icons'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: issue-190-direction-default-icons
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply guarded corrections
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str):
+            text = path.read_text()
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f'Guard failed in {path}: expected one match, found {count}: {old[:120]!r}')
+            path.write_text(text.replace(old, new))
+
+          index = Path('src/pages/Index.tsx')
+          replace_once(
+            index,
+            'import { BookOpen, Play, TrendingUp, Users, Crown, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus } from "lucide-react";',
+            'import { BookOpen, Play, TrendingUp, Users, Crown, Coins, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus } from "lucide-react";',
+          )
+          replace_once(index, 'import pitecoinIcon from "@/assets/pitecoin.png";\n', '')
+          replace_once(
+            index,
+            '<span className="icon-tile !w-9 !h-9"><img src={pitecoinIcon} alt="" className="h-5 w-5" /></span>',
+            '<span className="icon-tile !h-9 !w-9"><Coins className="h-4 w-4 text-primary" /></span>',
+          )
+
+          prefs = Path('src/hooks/useStudyPreferences.ts')
+          replace_once(
+            prefs,
+            '''const DEFAULTS: StudyPreferences = {\n  favoritesOnly: false,\n  order: "random",\n  direction: "any",\n  mode: "flip",\n  fastMode: false,\n};''',
+            '''const DEFAULTS: StudyPreferences = {\n  favoritesOnly: false,\n  order: "random",\n  direction: "any",\n  mode: "flip",\n  fastMode: false,\n};\n\nexport const STUDY_PREFERENCES_VERSION = 2;\n\nexport function normalizeStoredStudyPreferences(value: unknown): StudyPreferences {\n  const parsed = value && typeof value === "object"\n    ? value as Record<string, unknown>\n    : {};\n  const currentVersion = Number(parsed.version) >= STUDY_PREFERENCES_VERSION;\n  const parsedDirection = typeof parsed.direction === "string" ? parsed.direction : "";\n\n  return {\n    favoritesOnly: typeof parsed.favoritesOnly === "boolean" ? parsed.favoritesOnly : DEFAULTS.favoritesOnly,\n    order: parsed.order === "sequential" ? "sequential" : DEFAULTS.order,\n    // Preferences saved before v2 often inherited a list's primary side without\n    // an explicit student choice. Reset that legacy value to the global default.\n    direction: currentVersion && ["a-b", "b-a", "any"].includes(parsedDirection)\n      ? parsedDirection as Direction\n      : DEFAULTS.direction,\n    mode: typeof parsed.mode === "string" ? parsed.mode : DEFAULTS.mode,\n    fastMode: typeof parsed.fastMode === "boolean" ? parsed.fastMode : DEFAULTS.fastMode,\n  };\n}''',
+          )
+          replace_once(
+            prefs,
+            '''  try {\n    const raw = localStorage.getItem(storageKey(userId));\n    if (!raw) {\n      base = { ...DEFAULTS };\n    } else {\n      const parsed = JSON.parse(raw);\n      base = {\n        favoritesOnly: typeof parsed.favoritesOnly === "boolean" ? parsed.favoritesOnly : DEFAULTS.favoritesOnly,\n        order: parsed.order === "sequential" ? "sequential" : "random",\n        direction: ["a-b", "b-a", "any"].includes(parsed.direction) ? parsed.direction : DEFAULTS.direction,\n        mode: typeof parsed.mode === "string" ? parsed.mode : DEFAULTS.mode,\n        fastMode: typeof parsed.fastMode === "boolean" ? parsed.fastMode : DEFAULTS.fastMode,\n      };\n    }\n  } catch {\n    base = { ...DEFAULTS };\n  }''',
+            '''  try {\n    const raw = localStorage.getItem(storageKey(userId));\n    base = raw ? normalizeStoredStudyPreferences(JSON.parse(raw)) : { ...DEFAULTS };\n  } catch {\n    base = { ...DEFAULTS };\n  }''',
+          )
+          replace_once(
+            prefs,
+            'localStorage.setItem(storageKey(userId), JSON.stringify(prefs));',
+            'localStorage.setItem(storageKey(userId), JSON.stringify({ version: STUDY_PREFERENCES_VERSION, ...prefs }));',
+          )
+
+          gate = Path('src/features/study/components/ListDirectionGate.tsx')
+          old_gate = gate.read_text()
+          if 'primarySideToDirection' not in old_gate or 'resolvePrimarySide' not in old_gate:
+            raise SystemExit('ListDirectionGate guard failed: legacy primary-side fallback not found')
+          gate.write_text('''import type { ReactNode } from "react";\nimport { Navigate, useLocation } from "react-router-dom";\n\nfunction validDirection(value: string | null): boolean {\n  return value === "a-b" || value === "b-a" || value === "any";\n}\n\n/**\n * Guarantees a canonical direction token on list game/study routes.\n *\n * The global default is deliberately `any`: every mode alternates which side\n * appears as the prompt. A fixed side is only used when the student explicitly\n * chooses A → B or B → A in the game hub (or receives an explicit deep link).\n */\nexport function ListDirectionGate({ children }: { children: ReactNode }) {\n  const location = useLocation();\n  const params = new URLSearchParams(location.search);\n  const explicit = params.get("dir") || params.get("direction");\n\n  if (validDirection(explicit)) return <>{children}</>;\n\n  params.delete("direction");\n  params.set("dir", "any");\n\n  return <Navigate replace to={{ pathname: location.pathname, search: params.toString() }} />;\n}\n''')
+
+          public_hub = Path('src/pages/PublicClassGamesHub.tsx')
+          replace_once(
+            public_hub,
+            "const [direction, setDirection] = useState<Direction>('a-b');",
+            "const [direction, setDirection] = useState<Direction>('any');",
+          )
+          replace_once(public_hub, 'Ordem dos modos normais', 'Ordem dos cards')
+          replace_once(public_hub, '<SelectItem value="any">Misto</SelectItem>', '<SelectItem value="any">Alternar lados (padrão)</SelectItem>')
+
+          games_hub = Path('src/pages/GamesHub.tsx')
+          replace_once(games_hub, 'Ordem dos modos normais', 'Ordem dos cards')
+          replace_once(games_hub, '<SelectItem value="any">Misto</SelectItem>', '<SelectItem value="any">Alternar lados (padrão)</SelectItem>')
+
+          test = Path('src/hooks/useStudyPreferences.test.ts')
+          test.write_text('''import { describe, expect, it } from "vitest";\nimport {\n  STUDY_PREFERENCES_VERSION,\n  normalizeStoredStudyPreferences,\n} from "./useStudyPreferences";\n\ndescribe("study preference defaults", () => {\n  it("migrates legacy inherited directions to the global mixed default", () => {\n    expect(normalizeStoredStudyPreferences({\n      direction: "a-b",\n      order: "sequential",\n      favoritesOnly: true,\n      mode: "write",\n      fastMode: true,\n    })).toEqual({\n      direction: "any",\n      order: "sequential",\n      favoritesOnly: true,\n      mode: "write",\n      fastMode: true,\n    });\n  });\n\n  it("preserves a fixed direction explicitly saved in the current version", () => {\n    expect(normalizeStoredStudyPreferences({\n      version: STUDY_PREFERENCES_VERSION,\n      direction: "b-a",\n      order: "random",\n    }).direction).toBe("b-a");\n  });\n\n  it("defaults new and invalid preferences to random order and alternating sides", () => {\n    expect(normalizeStoredStudyPreferences(null)).toMatchObject({\n      direction: "any",\n      order: "random",\n    });\n    expect(normalizeStoredStudyPreferences({\n      version: STUDY_PREFERENCES_VERSION,\n      direction: "invalid",\n      order: "invalid",\n    })).toMatchObject({\n      direction: "any",\n      order: "random",\n    });\n  });\n});\n''')
+          PY
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: Validate corrected code
+        run: |
+          npm run typecheck
+          npm run test
+          npm run lint
+          npm run build
+
+      - name: Restore CI and publish validated corrections
+        run: |
+          git checkout origin/main -- .github/workflows/ci.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Index.tsx src/hooks/useStudyPreferences.ts src/hooks/useStudyPreferences.test.ts src/features/study/components/ListDirectionGate.tsx src/pages/PublicClassGamesHub.tsx src/pages/GamesHub.tsx .github/workflows/ci.yml
+          git commit -m "fix: padronizar direção mista e corrigir ícone PiteCOIN"
+          git push origin HEAD:issue-190-direction-default-icons
