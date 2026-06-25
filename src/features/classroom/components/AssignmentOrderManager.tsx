@@ -7,6 +7,7 @@ import {
   moveAssignmentToPosition,
   sortAssignmentsByOrder,
 } from '@/features/classroom/lib/assignmentOrder';
+import { floatingOrderActionClass } from '@/features/classroom/lib/floatingOrderAction';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,7 +83,7 @@ export function AssignmentOrderManager({ turmaId }: AssignmentOrderManagerProps)
         type="button"
         variant="outline"
         size="sm"
-        className="fixed right-4 top-24 z-40 gap-2 shadow-lg sm:right-6"
+        className={floatingOrderActionClass}
         onClick={() => setOpen(true)}
       >
         <ListOrdered className="h-4 w-4" />
