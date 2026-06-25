@@ -95,6 +95,24 @@ describe("adaptive mixed session", () => {
     expect(state.status).toBe("journey-complete");
   });
 
+  it("permite refazer uma rodada concluída sem duplicar progresso", () => {
+    let state = createAdaptiveMixedSession(ids(20), { random: fixedRandom });
+    const completedRound = [...state.currentRoundCardIds].sort();
+
+    state.currentRoundCardIds.forEach(() => {
+      state = answerCurrent(state, true);
+    });
+
+    expect(state.status).toBe("round-complete");
+    expect(state.masteredCardIds).toHaveLength(10);
+
+    state = restartAdaptiveMixedRound(state, fixedRandom);
+    expect(state.status).toBe("active");
+    expect(state.masteredCardIds).toHaveLength(0);
+    expect(state.pendingCardIds).toHaveLength(0);
+    expect([...state.currentRoundCardIds].sort()).toEqual(completedRound);
+  });
+
   it("calcula o progresso geral por cards dominados, não pelo tamanho da fila", () => {
     let state = createAdaptiveMixedSession(ids(20), { random: fixedRandom });
     state.currentRoundCardIds.forEach(() => {

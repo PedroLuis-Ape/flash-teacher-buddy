@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Heart, RefreshCcw, Sparkles, Trophy } from "lucide-react";
+import { ArrowLeft, Heart, RefreshCcw, Settings2, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
@@ -14,6 +14,14 @@ import { UnscrambleStudyView } from "@/features/study/components/UnscrambleStudy
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 interface MixedFlashcard {
@@ -337,6 +345,12 @@ export default function MixedStudy() {
             <div className="rounded-xl border p-3"><strong className="block text-xl">{progress.unseenCards}</strong>novos</div>
           </div>
           <Button size="lg" className="w-full" onClick={mixed.nextRound}>Começar próxima rodada</Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={restartRoundManually}>
+              <RefreshCcw className="mr-2 h-4 w-4" /> Refazer rodada
+            </Button>
+            <Button variant="ghost" onClick={restartJourneyManually}>Reiniciar percurso</Button>
+          </div>
           <Button variant="ghost" onClick={exit}>Sair e continuar depois</Button>
         </Card>
       </div>
@@ -378,16 +392,37 @@ export default function MixedStudy() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-3 py-4 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-5xl space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="ghost" size="sm" onClick={exit}><ArrowLeft className="mr-1 h-4 w-4" />Sair</Button>
-          <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            ⭐ Modo recomendado
+    <div className="min-h-screen bg-background px-2 py-2 sm:px-6 sm:py-6">
+      <div className="mx-auto max-w-5xl space-y-2 sm:space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={exit}>
+            <ArrowLeft className="mr-1 h-4 w-4" />Sair
+          </Button>
+          <div className="flex items-center gap-2">
+            <div className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary sm:px-3 sm:text-xs">
+              ⭐ Recomendado
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Configurações da sessão">
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Configurações da sessão</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={restartRoundManually}>
+                  <RefreshCcw className="mr-2 h-4 w-4" /> Reiniciar rodada
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={restartJourneyManually}>
+                  Reiniciar percurso
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        <Card className="space-y-3 p-3 sm:p-4">
+        <Card className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">Rodada {state.roundNumber} · Tentativa {state.attemptNumber}</p>
@@ -397,7 +432,7 @@ export default function MixedStudy() {
               {Array.from({ length: state.maxHearts }).map((_, index) => (
                 <Heart
                   key={index}
-                  className={index < state.hearts ? "h-7 w-7 fill-red-500 text-red-500" : "h-7 w-7 text-muted-foreground/30"}
+                  className={index < state.hearts ? "h-6 w-6 fill-red-500 text-red-500 sm:h-7 sm:w-7" : "h-6 w-6 text-muted-foreground/30 sm:h-7 sm:w-7"}
                 />
               ))}
             </div>
@@ -407,14 +442,7 @@ export default function MixedStudy() {
             <span>{progress.masteredCards} de {progress.totalCards} dominados</span>
             <span>{progress.pendingCards} revisões pendentes</span>
           </div>
-          <div className="flex flex-wrap justify-end gap-2 border-t pt-2">
-            <Button variant="ghost" size="sm" onClick={restartRoundManually}>
-              <RefreshCcw className="mr-1 h-4 w-4" /> Reiniciar rodada
-            </Button>
-            <Button variant="ghost" size="sm" onClick={restartJourneyManually}>
-              Reiniciar percurso
-            </Button>
-          </div>
+
         </Card>
 
         <div key={`${state.roundNumber}:${state.attemptNumber}:${currentCard.id}:${mixed.activityMode}`}>

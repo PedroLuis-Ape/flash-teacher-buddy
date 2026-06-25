@@ -252,11 +252,24 @@ export function restartAdaptiveMixedRound(
   state: AdaptiveMixedSessionState,
   random: () => number = Math.random,
 ): AdaptiveMixedSessionState {
-  if (state.status !== "round-failed" && state.status !== "active") return state;
+  if (state.status !== "round-failed" && state.status !== "round-complete" && state.status !== "active") return state;
+
+  const pending = new Set(state.pendingCardIds);
+  const mastered = new Set(state.masteredCardIds);
+  if (state.status === "round-complete") {
+    state.currentRoundCardIds.forEach((cardId) => {
+      mastered.delete(cardId);
+      if (state.currentRoundOrigins[cardId] === "pending") pending.add(cardId);
+      else pending.delete(cardId);
+    });
+  }
+
   const currentRoundCardIds = shuffleMixedCards(state.currentRoundCardIds, random);
   const activities = assignActivities(currentRoundCardIds, state.lastActivityByCardId, random);
   return {
     ...state,
+    pendingCardIds: unique([...pending]),
+    masteredCardIds: unique([...mastered]),
     currentRoundCardIds,
     currentRoundErrors: [],
     currentRoundAnswered: [],
