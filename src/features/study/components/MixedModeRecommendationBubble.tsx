@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+// The recommendation is intentionally transient so it never becomes permanent UI chrome.
 const DISPLAY_DURATION_MS = 10_000;
 
 function buildMixedTarget(pathname: string, search: string): string {
