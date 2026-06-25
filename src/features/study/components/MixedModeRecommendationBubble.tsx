@@ -30,10 +30,14 @@ function shouldShow(pathname: string): boolean {
   return false;
 }
 
+function shouldStartExpanded(pathname: string): boolean {
+  return !pathname.endsWith("/study");
+}
+
 export function MixedModeRecommendationBubble() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(() => shouldStartExpanded(location.pathname));
   const visible = shouldShow(location.pathname);
   const target = useMemo(
     () => buildMixedTarget(location.pathname, location.search),
@@ -41,7 +45,7 @@ export function MixedModeRecommendationBubble() {
   );
 
   useEffect(() => {
-    setExpanded(true);
+    setExpanded(shouldStartExpanded(location.pathname));
   }, [location.pathname]);
 
   if (!visible) return null;
