@@ -8,8 +8,6 @@ import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
-import { awardPoints, REWARD_AMOUNTS } from "@/lib/rewardEngine";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -125,12 +123,10 @@ export const FlipStudyView = ({
     handleFlip();
   };
   
-  const handleKnew = async () => {
+  const handleKnew = () => {
     playCorrect();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      await awardPoints(session.user.id, REWARD_AMOUNTS.CORRECT_ANSWER, 'flashcard_correct');
-    }
+    // useStudyEngine records the explicit session/card answer once. Keeping
+    // reward writes out of this view prevents duplicate and out-of-order calls.
     onKnew();
   };
 

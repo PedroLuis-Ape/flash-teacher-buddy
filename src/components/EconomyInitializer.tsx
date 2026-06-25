@@ -1,11 +1,13 @@
 /**
- * EconomyInitializer - Runs economy checks on app init
- * - Checks for daily login bonus
- * - Performs missed weekly conversions
+ * EconomyInitializer - prepares the authenticated user's economy state.
+ *
+ * Daily/streak rewards are granted by the server when the first valid study
+ * session is settled. This initializer must never mint a separate client-side
+ * login reward.
  */
 
 import { useEffect, useRef } from "react";
-import { checkDailyLogin } from "@/lib/rewardEngine";
+import { getEconomyProfile } from "@/lib/rewardEngine";
 import { checkAndPerformConversion } from "@/lib/conversionEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { isSafeModeEnabled } from "@/lib/safeMode";
@@ -14,13 +16,10 @@ import { toast } from "sonner";
 
 export function EconomyInitializer() {
   const { status, userId } = useAuth();
-  // Guard against double-execution per session (StrictMode / re-mount).
   const ranForRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!FEATURE_FLAGS.economy_enabled) return;
-    if (isSafeModeEnabled()) return;
-    // Wait for a confirmed authenticated user — never run on optimistic state.
+    if (!FEATURE_FLAGS.economy_enabled || isSafeModeEnabled()) return;
     if (status !== "authenticated" || !userId) return;
     if (ranForRef.current === userId) return;
 
@@ -29,31 +28,30 @@ export function EconomyInitializer() {
 
     ranForRef.current = userId;
 
-    // Defer economy init by 3s so it never competes with critical boot paths
     const delayTimer = setTimeout(async () => {
       try {
-        const gotBonus = await checkDailyLogin(userId);
-        if (gotBonus) {
-          toast.success("🎉 Bônus de login diário recebido!");
-        }
+        // Creates/repairs the economy profile through the canonical server RPC.
+        await getEconomyProfile(userId);
 
-        // Check and perform missed conversion (silent unless it happens)
+        // Automatic conversion remains opt-in. Manual exchange is available in
+        // the store and is the default production behavior.
         if (FEATURE_FLAGS.conversion_cron_enabled) {
           const result = await checkAndPerformConversion(userId);
           if (result.success) {
+            window.dispatchEvent(new CustomEvent("pitecoin:changed"));
             toast.success(
               `💰 Conversão semanal concluída! +₱${result.pitecoinAwarded}`,
-              { duration: 5000 }
+              { duration: 5000 },
             );
           }
         }
       } catch (error) {
-        console.error('[EconomyInitializer] Error:', error);
+        console.error("[EconomyInitializer] Error:", error);
       }
     }, 3000);
 
     return () => clearTimeout(delayTimer);
   }, [status, userId]);
 
-  return null; // This component only runs side effects
+  return null;
 }
