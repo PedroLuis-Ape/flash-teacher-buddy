@@ -5,6 +5,7 @@ import { resolveTurmaViewMode } from "@/features/classroom/lib/turmaAccess";
 import { AssignmentOrderManager } from "@/features/classroom/components/AssignmentOrderManager";
 import { ClassroomLibraryActions } from "@/features/classroom/components/ClassroomLibraryActions";
 import { TeacherClassNavigation } from "@/features/classroom/components/TeacherClassNavigation";
+import { ClassTrafficDashboard } from "@/features/classroom/components/ClassTrafficDashboard";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import TurmaPrivateDetail from "@/pages/TurmaPrivateDetail";
 import TurmaPublicPage from "@/pages/TurmaPublicPage";
@@ -33,11 +34,22 @@ export default function TurmaDetailWorkspace() {
   if (authLoading || (user && access.isLoading && !access.data)) return <div className="min-h-screen grid place-items-center">Carregando turma...</div>;
   const mode = resolveTurmaViewMode({ publicPreview, authenticated: Boolean(user), hasPrivateAccess: Boolean(access.data) });
   if (mode !== "private") return <TurmaPublicPage />;
+
   const isOwner = Boolean(user && access.data?.owner_teacher_id === user.id);
-  return <>
-    {isOwner && <TeacherClassNavigation />}
-    {isOwner && turmaId && <ClassroomLibraryActions turmaId={turmaId} />}
-    <div data-classroom-assignments><TurmaPrivateDetail /></div>
-    {isOwner && turmaId && <AssignmentOrderManager turmaId={turmaId} />}
-  </>;
+  const trafficView = isOwner && params.get("tab") === "trafego";
+
+  return (
+    <>
+      {isOwner && <TeacherClassNavigation />}
+      {trafficView && turmaId ? (
+        <ClassTrafficDashboard turmaId={turmaId} />
+      ) : (
+        <>
+          {isOwner && turmaId && <ClassroomLibraryActions turmaId={turmaId} />}
+          <div data-classroom-assignments><TurmaPrivateDetail /></div>
+          {isOwner && turmaId && <AssignmentOrderManager turmaId={turmaId} />}
+        </>
+      )}
+    </>
+  );
 }

@@ -125,7 +125,7 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
 
   if (reportQuery.isLoading && liveQuery.isLoading) {
     return (
-      <Card className="p-6 text-center text-sm text-muted-foreground">
+      <Card className="p-5 text-center text-sm text-muted-foreground sm:p-6">
         <Loader2 className="mr-2 inline h-5 w-5 animate-spin" />
         Carregando interesse da turma...
       </Card>
@@ -133,19 +133,19 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
   }
 
   return (
-    <Card className="space-y-5 p-4">
+    <Card className="space-y-4 p-3 sm:space-y-5 sm:p-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h3 className="flex items-center gap-2 font-semibold">
-            <BarChart3 className="h-4 w-4" /> Interesse e atividade
+            <BarChart3 className="h-4 w-4 shrink-0" /> Interesse e atividade
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
             Alunos com conta aparecem pelo nome; acessos sem conta entram apenas nos totais.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_2.5rem] gap-2 sm:flex sm:w-auto">
           <Select value={String(days)} onValueChange={(value) => setDays(Number(value))}>
-            <SelectTrigger className="w-[138px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[138px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Últimos 7 dias</SelectItem>
               <SelectItem value="30">Últimos 30 dias</SelectItem>
@@ -155,6 +155,7 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
           <Button
             variant="outline"
             size="icon"
+            className="h-10 w-10"
             aria-label="Atualizar métricas"
             onClick={() => {
               void reportQuery.refetch();
@@ -167,22 +168,22 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
       </header>
 
       {reportQuery.data?.available === false && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-          As métricas detalhadas serão ativadas assim que a migration do painel for publicada.
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-relaxed sm:text-sm">
+          O painel está pronto no aplicativo, mas a migration de métricas ainda precisa ser publicada no banco de produção.
         </div>
       )}
 
-      <section className={`rounded-xl border p-4 ${signalClass[signal.level]}`}>
+      <section className={`rounded-xl border p-3 sm:p-4 ${signalClass[signal.level]}`}>
         <div className="flex gap-3">
           <Sparkles className="mt-0.5 h-5 w-5 shrink-0" />
-          <div>
+          <div className="min-w-0">
             <p className="font-semibold">{signal.label}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{signal.description}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">{signal.description}</p>
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {[
           [Users, report.summary.total_visitors, "Pessoas alcançadas"],
           [UserRound, report.summary.registered_visitors, "Com conta"],
@@ -192,20 +193,23 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
         ].map(([Icon, value, label], index) => {
           const MetricIcon = Icon as typeof Users;
           return (
-            <div key={String(label)} className={`rounded-lg border bg-muted/20 p-3 ${index === 4 ? "col-span-2 lg:col-span-1" : ""}`}>
+            <div
+              key={String(label)}
+              className={`min-w-0 rounded-xl border bg-muted/20 p-2.5 sm:p-3 ${index === 4 ? "col-span-2 sm:col-span-1" : ""}`}
+            >
               <MetricIcon className="h-4 w-4 text-primary" />
-              <p className="mt-2 text-2xl font-bold">{String(value)}</p>
-              <p className="text-xs text-muted-foreground">{String(label)}</p>
+              <p className="mt-1.5 text-xl font-bold sm:mt-2 sm:text-2xl">{String(value)}</p>
+              <p className="truncate text-[10px] text-muted-foreground sm:text-xs" title={String(label)}>{String(label)}</p>
             </div>
           );
         })}
       </section>
 
       {report.summary.sessions > 0 && (
-        <section className="space-y-2 rounded-lg border p-3">
-          <div className="flex justify-between text-sm">
+        <section className="space-y-2 rounded-xl border p-3">
+          <div className="flex justify-between gap-3 text-sm">
             <span className="font-medium">Sessões concluídas</span>
-            <span className="text-muted-foreground">{completion}%</span>
+            <span className="shrink-0 text-muted-foreground">{completion}%</span>
           </div>
           <Progress value={completion} className="h-2" />
           <p className="text-xs text-muted-foreground">
@@ -215,46 +219,46 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="space-y-2">
+        <section className="min-w-0 space-y-2">
           <h4 className="font-medium">Listas mais praticadas</h4>
           {report.top_lists.length === 0 ? (
-            <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">Ainda sem dados.</p>
+            <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground sm:p-5">Ainda sem dados.</p>
           ) : report.top_lists.slice(0, 5).map((list, index) => (
-            <div key={list.list_id} className="flex items-center gap-3 rounded-lg border p-3">
-              <span className="font-mono text-xs text-primary">#{index + 1}</span>
+            <div key={list.list_id} className="flex min-w-0 items-center gap-2 rounded-xl border p-2.5 sm:gap-3 sm:p-3">
+              <span className="shrink-0 font-mono text-xs text-primary">#{index + 1}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{list.title}</p>
-                <p className="text-xs text-muted-foreground">{list.unique_visitors} pessoa(s) · {list.sessions} sessão(ões)</p>
+                <p className="truncate text-[11px] text-muted-foreground sm:text-xs">{list.unique_visitors} pessoa(s) · {list.sessions} sessão(ões)</p>
               </div>
-              <Badge variant="secondary">{list.card_views} cards</Badge>
+              <Badge variant="secondary" className="shrink-0 text-[10px] sm:text-xs">{list.card_views} cards</Badge>
             </div>
           ))}
         </section>
 
-        <section className="space-y-2">
+        <section className="min-w-0 space-y-2">
           <h4 className="font-medium">Cards mais praticados</h4>
           {report.top_cards.length === 0 ? (
-            <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">Os cards mais vistos aparecerão aqui.</p>
+            <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground sm:p-5">Os cards mais vistos aparecerão aqui.</p>
           ) : report.top_cards.slice(0, 5).map((card, index) => (
-            <div key={card.card_id} className="rounded-lg border p-3">
-              <div className="flex gap-3">
-                <span className="font-mono text-xs text-violet-600">#{index + 1}</span>
+            <div key={card.card_id} className="rounded-xl border p-2.5 sm:p-3">
+              <div className="flex min-w-0 gap-2 sm:gap-3">
+                <span className="shrink-0 font-mono text-xs text-violet-600">#{index + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-sm font-medium">{card.term || "Card sem texto"}</p>
                   <p className="line-clamp-1 text-xs text-muted-foreground">{card.translation}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{card.list_title}</p>
+                  <p className="mt-1 truncate text-[11px] text-muted-foreground">{card.list_title}</p>
                 </div>
-                <Badge variant="secondary">{card.views}×</Badge>
+                <Badge variant="secondary" className="h-fit shrink-0">{card.views}×</Badge>
               </div>
             </div>
           ))}
         </section>
       </div>
 
-      <section className="space-y-2">
+      <section className="min-w-0 space-y-2">
         <h4 className="font-medium">Alunos com conta</h4>
         {membros.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">Nenhum aluno inscrito.</p>
+          <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground sm:p-5">Nenhum aluno inscrito.</p>
         ) : membros.map((membro) => {
           const student = studentsMap.get(membro.user_id);
           const live = liveMap.get(membro.user_id);
@@ -263,7 +267,7 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
             : false;
           const last = student?.last_activity_at ?? live?.last_activity_at ?? null;
           return (
-            <div key={membro.user_id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div key={membro.user_id} className="flex flex-col gap-2 rounded-xl border p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-medium">{membro.profiles?.first_name || student?.first_name || "Aluno"}</p>
@@ -272,9 +276,9 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
                 <p className="text-xs text-muted-foreground">
                   {membro.profiles?.ape_id ? `@${membro.profiles.ape_id} · ` : ""}{relativeTime(last)}
                 </p>
-                {live?.list_title && <p className="mt-1 text-xs text-muted-foreground">Agora: {live.list_title}</p>}
+                {live?.list_title && <p className="mt-1 truncate text-xs text-muted-foreground">Agora: {live.list_title}</p>}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">{student?.sessions ?? 0} sessões</Badge>
                 <Badge variant="outline">{student?.card_views ?? 0} cards</Badge>
               </div>
@@ -283,7 +287,7 @@ export function TurmaEngagementPanel({ turmaId, membros }: Props) {
         })}
       </section>
 
-      <p className="border-t pt-3 text-xs text-muted-foreground">
+      <p className="border-t pt-3 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
         Período analisado: {days} dias. Visitantes sem conta não têm nome ou perfil exibido.
       </p>
     </Card>
