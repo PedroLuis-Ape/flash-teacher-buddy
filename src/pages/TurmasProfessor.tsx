@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Users, ArrowLeft, Globe2, Lock, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useTurmasMine, useCreateTurma, useEnrollAluno, useUpdateTurma } from '@/features/classroom/hooks/useTurmas';
+import { PublicTurmaOrderManager } from '@/features/classroom/components/PublicTurmaOrderManager';
+import {
+  publicTurmaPositionLabel,
+  sortPublicTurmasByOrder,
+  sortTurmasForManagement,
+} from '@/features/classroom/lib/publicTurmaOrder';
 import { toast } from 'sonner';
 
 export default function TurmasProfessor() {
@@ -117,6 +123,18 @@ export default function TurmasProfessor() {
     }
   };
 
+  const rawTurmas = useMemo(
+    () => Array.isArray(data?.turmas) ? data.turmas : [],
+    [data?.turmas],
+  );
+  const turmas = useMemo(() => sortTurmasForManagement(rawTurmas), [rawTurmas]);
+  const publicPositionById = useMemo(() => {
+    const ordered = sortPublicTurmasByOrder(
+      rawTurmas.filter((turma: any) => turma.public === true && turma.ativo !== false),
+    );
+    return new Map(ordered.map((turma: any, index: number) => [turma.id, index]));
+  }, [rawTurmas]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
@@ -124,8 +142,6 @@ export default function TurmasProfessor() {
       </div>
     );
   }
-
-  const turmas = data?.turmas || [];
 
   return (
     <div className="min-h-screen bg-background p-4 lg:px-8 pb-24">
@@ -141,6 +157,8 @@ export default function TurmasProfessor() {
             </p>
           </div>
         </div>
+
+        <PublicTurmaOrderManager turmas={rawTurmas} />
 
         <Dialog open={createDialogOpen} onOpenChange={handleCreateDialogChange}>
           <DialogTrigger asChild>
@@ -231,59 +249,67 @@ export default function TurmasProfessor() {
               </Button>
             </Card>
           ) : (
-            turmas.map((turma: any) => (
-              <Card key={turma.id} className="p-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold">{turma.nome}</h3>
-                      <Badge variant={turma.public ? 'default' : 'secondary'}>
-                        {turma.public ? <Globe2 className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
-                        {turma.public ? 'Pública' : 'Privada'}
-                      </Badge>
+            turmas.map((turma: any) => {
+              const publicPosition = publicPositionById.get(turma.id);
+              return (
+                <Card key={turma.id} className="p-6">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold">{turma.nome}</h3>
+                        <Badge variant={turma.public ? 'default' : 'secondary'}>
+                          {turma.public ? <Globe2 className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
+                          {turma.public ? 'Pública' : 'Privada'}
+                        </Badge>
+                        {turma.public && publicPosition !== undefined && (
+                          <Badge variant="outline" className="font-mono text-primary">
+                            {publicTurmaPositionLabel(publicPosition)}
+                          </Badge>
+                        )}
+                      </div>
+                      {turma.descricao && (
+                        <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        <span>{turma.turma_membros?.[0]?.count || 0} alunos</span>
+                      </div>
                     </div>
-                    {turma.descricao && (
-                      <p className="text-sm text-muted-foreground mt-1">{turma.descricao}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>{turma.turma_membros?.[0]?.count || 0} alunos</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={updateTurma.isPending}
-                      onClick={() => handleTogglePublic(turma)}
-                    >
-                      {turma.public ? <Lock className="h-4 w-4 mr-1" /> : <Globe2 className="h-4 w-4 mr-1" />}
-                      {turma.public ? 'Tornar privada' : 'Publicar'}
-                    </Button>
-                    {turma.public && (
-                      <Button size="sm" variant="outline" onClick={() => handleCopyPublicLink(turma.id)}>
-                        <Copy className="h-4 w-4 mr-1" />
-                        Copiar link
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={updateTurma.isPending}
+                        onClick={() => handleTogglePublic(turma)}
+                      >
+                        {turma.public ? <Lock className="h-4 w-4 mr-1" /> : <Globe2 className="h-4 w-4 mr-1" />}
+                        {turma.public ? 'Tornar privada' : 'Publicar'}
                       </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedTurmaId(turma.id);
-                        setEnrollDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Aluno
-                    </Button>
-                    <Button size="sm" onClick={() => navigate(`/turmas/${turma.id}`)}>
-                      Gerenciar
-                    </Button>
+                      {turma.public && (
+                        <Button size="sm" variant="outline" onClick={() => handleCopyPublicLink(turma.id)}>
+                          <Copy className="h-4 w-4 mr-1" />
+                          Copiar link
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedTurmaId(turma.id);
+                          setEnrollDialogOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Aluno
+                      </Button>
+                      <Button size="sm" onClick={() => navigate(`/turmas/${turma.id}`)}>
+                        Gerenciar
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))
+                </Card>
+              );
+            })
           )}
         </div>
       </div>
