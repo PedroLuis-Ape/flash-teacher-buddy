@@ -34,6 +34,7 @@ const gameOptions: Array<{
   visualKey: GameModeVisualKey;
   title: string;
   description: string;
+  recommended?: boolean;
 }> = [
   {
     mode: 'flip',
@@ -62,8 +63,9 @@ const gameOptions: Array<{
   {
     mode: 'mixed',
     visualKey: 'mixed',
-    title: 'Estudo Misto',
-    description: 'Alterne entre diferentes desafios.',
+    title: 'Prática Mista',
+    description: 'Rodadas curtas, três corações e revisão dos erros.',
+    recommended: true,
   },
   {
     mode: 'pronunciation',
@@ -114,6 +116,18 @@ export default function PublicClassGamesHub() {
   const startGame = (rawMode: StudyMode | 'multiple') => {
     if (!id || !turmaId || !assignmentId) return;
     const mode = normalizeStudyMode(rawMode);
+
+    if (mode === 'mixed') {
+      const mixedParams = new URLSearchParams({
+        dir: direction,
+        guest: 'true',
+        turma: turmaId,
+        atribuicao: assignmentId,
+      });
+      navigate(`/portal/list/${id}/mixed-study?${mixedParams.toString()}`);
+      return;
+    }
+
     const params = new URLSearchParams({
       mode: studyModeToUrlParam(mode),
       dir: direction,
@@ -185,7 +199,7 @@ export default function PublicClassGamesHub() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium sm:mb-2 sm:text-sm">Ordem</label>
+              <label className="mb-1.5 block text-xs font-medium sm:mb-2 sm:text-sm">Ordem dos modos normais</label>
               <Select value={order} onValueChange={(value) => setOrder(value as StudyOrder)}>
                 <SelectTrigger className="h-10 sm:h-11">
                   <SelectValue />
@@ -207,7 +221,7 @@ export default function PublicClassGamesHub() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {gameOptions.map(({ mode, visualKey, title, description }) => {
+              {gameOptions.map(({ mode, visualKey, title, description, recommended }) => {
                 const visual = GAME_MODE_VISUALS[visualKey];
                 return (
                   <button
@@ -216,12 +230,18 @@ export default function PublicClassGamesHub() {
                     disabled={!listQuery.data}
                     onClick={() => startGame(mode)}
                     className={cn(
-                      'group flex min-h-[116px] flex-col items-start justify-between rounded-2xl border p-3 text-left shadow-sm transition-all',
+                      'group relative flex min-h-[116px] flex-col items-start justify-between rounded-2xl border p-3 text-left shadow-sm transition-all',
                       'hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50',
                       'sm:min-h-40 sm:p-5',
+                      recommended && 'border-primary/60 ring-2 ring-primary/15',
                       visual.cardClass,
                     )}
                   >
+                    {recommended && (
+                      <span className="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-extrabold text-primary-foreground shadow-sm">
+                        RECOMENDADO
+                      </span>
+                    )}
                     <div
                       className={cn(
                         'flex h-11 w-11 items-center justify-center rounded-2xl border text-2xl shadow-sm sm:h-13 sm:w-13 sm:text-3xl',
