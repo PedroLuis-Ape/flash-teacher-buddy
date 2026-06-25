@@ -89,7 +89,7 @@ export function TurmaShortcut({ isTeacher }: Props) {
               )}
               onClick={() => navigate(`/turmas/${turma.id}`)}
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 sm:h-10 sm:w-10 sm:rounded-xl">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 sm:h-10 sm:w-10 sm:rounded-xl">
                 <Icon className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
               </span>
 
