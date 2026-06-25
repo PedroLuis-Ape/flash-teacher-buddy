@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, SkipForward, Volume2 } from "lucide-react";
 import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
@@ -90,12 +90,18 @@ export const WriteStudyView = ({
   const answerLabel = answerSide.label;
   const promptLang = toBCP47(promptSide.lang);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
 
   const acceptedAnswers = [correctAnswer, ...(answerSide.acceptedAnswers || [])];
   const alternativeAnswers = acceptedAnswers.slice(1).filter((item, index, values) => values.indexOf(item) === index);
+  const promptLength = prompt.trim().length;
+  const promptSizeClass = promptLength <= 32
+    ? "text-[clamp(1.55rem,7vw,2.15rem)]"
+    : promptLength <= 76
+      ? "text-[clamp(1.3rem,5.8vw,1.85rem)]"
+      : "text-[clamp(1.12rem,4.8vw,1.55rem)]";
 
   useEffect(() => {
     setAnswer("");
@@ -106,6 +112,15 @@ export const WriteStudyView = ({
     setShake(false);
     window.setTimeout(() => inputRef.current?.focus(), 100);
   }, [front, back]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    input.style.height = "auto";
+    const nextHeight = Math.min(Math.max(input.scrollHeight, 80), 168);
+    input.style.height = `${nextHeight}px`;
+  }, [answer]);
 
   const handleSubmit = () => {
     const userOriginalAnswer = answer.trim();
@@ -150,7 +165,9 @@ export const WriteStudyView = ({
     }
   };
 
-  const handleKeyPress = (event: React.KeyboardEvent) => {
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && event.shiftKey) return;
+
     const key = normalizeKey(event.key);
     const confirmKey = normalizeKey(shortcuts.confirm);
     const skipKey = normalizeKey(shortcuts.skip);
@@ -170,8 +187,8 @@ export const WriteStudyView = ({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 sm:gap-6">
-      <Card className={cn("relative bg-gradient-to-br from-card to-muted/20 p-4 sm:p-8", getRedListCardClass(isRedListed))}>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
+      <Card className={cn("relative min-h-[168px] bg-gradient-to-br from-card to-muted/20 p-5 sm:min-h-0 sm:p-8", getRedListCardClass(isRedListed))}>
         <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-4 sm:top-4 sm:gap-2">
           <StudyToolsMenu
             hint={hint}
@@ -186,10 +203,10 @@ export const WriteStudyView = ({
           />
         </div>
 
-        <div className="text-center">
-          <p className="mb-3 text-xs text-muted-foreground sm:mb-4 sm:text-sm">{promptLabel}</p>
-          <div className="mb-4 flex flex-col items-center justify-center gap-2 sm:mb-8 sm:flex-row sm:gap-3">
-            <p className="max-w-full break-words px-2 text-xl font-semibold sm:text-3xl">
+        <div className="flex min-h-[128px] flex-col items-center justify-center pt-2 text-center sm:min-h-0 sm:pt-0">
+          <p className="mb-3 pr-20 text-xs text-muted-foreground sm:mb-4 sm:pr-0 sm:text-sm">{promptLabel}</p>
+          <div className="mb-4 flex w-full flex-col items-center justify-center gap-2 sm:mb-8 sm:flex-row sm:gap-3">
+            <p className={cn("mx-auto max-w-[94%] break-words px-2 font-semibold leading-tight [text-wrap:balance] sm:text-3xl", promptSizeClass)}>
               <InteractiveText
                 text={prompt}
                 wordHints={promptWordHints}
@@ -201,16 +218,17 @@ export const WriteStudyView = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-9 w-9 shrink-0 p-0"
               onClick={() => {
                 const rate = getSpeechRate();
                 speak(prompt, { langOverride: promptLang, rate });
               }}
+              aria-label="Ouvir frase"
             >
-              <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Volume2 className="h-5 w-5" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground sm:text-sm">Traduza para {answerLabel}:</p>
+          <p className="text-sm text-muted-foreground sm:text-sm">Traduza para {answerLabel}:</p>
         </div>
       </Card>
 
@@ -221,9 +239,10 @@ export const WriteStudyView = ({
         </Alert>
       )}
 
-      <div className="space-y-4" onKeyDown={handleKeyPress} tabIndex={-1}>
-        <Input
+      <div className="space-y-4" tabIndex={-1}>
+        <Textarea
           ref={inputRef}
+          rows={2}
           value={answer}
           onChange={(event) => setAnswer(event.target.value)}
           onKeyDown={handleKeyPress}
@@ -232,15 +251,16 @@ export const WriteStudyView = ({
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
-          spellCheck="false"
+          spellCheck={false}
+          enterKeyHint="done"
+          aria-label="Digite sua resposta"
           className={cn(
-            "h-14 text-lg transition-all duration-300",
+            "min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
             shake && "animate-[shake_0.5s_ease-in-out]",
             feedback === "correct" && "border-2 border-emerald-500 bg-emerald-500/8",
             feedback === "almost" && "border-2 border-amber-500 bg-amber-500/8",
             feedback === "incorrect" && "border-2 border-destructive bg-destructive/6",
           )}
-          style={{ fontSize: "1.125rem" }}
         />
 
         {feedback === "correct" && (
@@ -302,7 +322,7 @@ export const WriteStudyView = ({
               <Lightbulb className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Dica</span>
             </Button>
-            <Button onClick={handleSubmit} size="lg" className="min-h-[48px] flex-1 text-base font-semibold shadow-md">
+            <Button onClick={handleSubmit} size="lg" className="min-h-[50px] flex-1 text-base font-semibold shadow-md">
               Corrigir
             </Button>
           </div>
