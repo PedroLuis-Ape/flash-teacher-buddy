@@ -8,6 +8,8 @@ const indexHtml = read("index.html");
 const robotsTxt = read("public/robots.txt");
 const sitemapXml = read("public/sitemap.xml");
 const redirects = read("public/_redirects");
+const llmsTxt = read("public/llms.txt");
+const notFoundSource = read("src/pages/NotFound.tsx");
 const manifest = JSON.parse(read("public/manifest.webmanifest"));
 
 const errors = [];
@@ -111,6 +113,43 @@ for (const path of REQUIRED_PUBLIC_PATHS) {
 assert(!sitemapPaths.includes("/landing"), "/landing must redirect to / and must not be in sitemap.xml.");
 assert(!sitemapPaths.includes("/auth"), "/auth is private and must not be in sitemap.xml.");
 
+const llmsUrls = [...llmsTxt.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)]
+  .map((match) => match[1].trim())
+  .filter((value) => /^https?:\/\//i.test(value));
+const llmsPaths = llmsUrls.map(pathFromUrl).filter(Boolean);
+
+assert(llmsUrls.length > 0, "llms.txt must link to canonical public pages.");
+assert(
+  llmsTxt.includes("Somente páginas e materiais explicitamente públicos"),
+  "llms.txt must explain that private user data is outside its discovery scope.",
+);
+
+for (const url of llmsUrls) {
+  assert(
+    url.startsWith(`${SITE_ORIGIN}/`),
+    `llms.txt URL must use the canonical origin: ${url}`,
+  );
+  const path = pathFromUrl(url);
+  assert(path && !isBlocked(path, disallowRules), `llms.txt links to a robots-blocked path: ${url}`);
+}
+
+for (const path of REQUIRED_PUBLIC_PATHS) {
+  assert(llmsPaths.includes(path), `Required public path is missing from llms.txt: ${path}`);
+}
+
+assert(
+  /robots=["']noindex,nofollow,noarchive["']/.test(notFoundSource),
+  "NotFound must emit a noindex,nofollow,noarchive robots directive.",
+);
+assert(
+  /canonicalPath=\{null\}/.test(notFoundSource),
+  "NotFound must not emit a canonical URL for invalid routes.",
+);
+assert(
+  notFoundSource.includes("Página não encontrada"),
+  "NotFound must present a localized Portuguese heading.",
+);
+
 const redirectLines = redirects
   .split(/\r?\n/)
   .map((line) => line.replace(/#.*$/, "").trim())
@@ -137,5 +176,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `SEO/GEO validation passed: ${sitemapUrls.length} sitemap URLs and ${disallowRules.length} private-route rules.`,
+  `SEO/GEO validation passed: ${sitemapUrls.length} sitemap URLs, ${llmsUrls.length} llms.txt URLs and ${disallowRules.length} private-route rules.`,
 );
