@@ -12,7 +12,7 @@ import "./i18n/config";
 import { SafeMode } from "./components/SafeMode";
 import { HelmetProvider } from "react-helmet-async";
 import { bootPalette } from "./lib/palettes";
-import { runBootStability } from "./lib/bootStability";
+import { isPreviewContext, runBootStability } from "./lib/bootStability";
 
 const OFFICIAL_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
 const RUNTIME_CONFIG_URL =
@@ -111,14 +111,21 @@ async function loadRuntimeConfig() {
   const envPublicValue = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
   if (envProjectId && envUrl && envPublicValue) {
-    const config = validateRuntimeConfig({
-      projectId: envProjectId,
-      url: envUrl,
-      publishableKey: envPublicValue,
-    });
-    runtimeWindow.__APE_SUPABASE_CONFIG__ = config;
-    cacheRuntimeConfig(config);
-    return;
+    try {
+      const config = validateRuntimeConfig({
+        projectId: envProjectId,
+        url: envUrl,
+        publishableKey: envPublicValue,
+      });
+      runtimeWindow.__APE_SUPABASE_CONFIG__ = config;
+      cacheRuntimeConfig(config);
+      return;
+    } catch (error) {
+      console.warn(
+        "[Bootstrap] Ignoring incompatible injected Supabase environment and using the official runtime endpoint.",
+        error,
+      );
+    }
   }
 
   try {
@@ -184,6 +191,11 @@ function finishAndHide() {
 }
 
 async function attemptAutomaticRecovery(error: unknown) {
+  if (isPreviewContext()) {
+    console.warn("[Bootstrap] Preview/iframe context — skipping cache recovery.", error);
+    return false;
+  }
+
   try {
     if (window.sessionStorage.getItem(BOOT_RECOVERY_KEY) === "1") return false;
     window.sessionStorage.setItem(BOOT_RECOVERY_KEY, "1");
