@@ -1,0 +1,201 @@
+[
+  {
+    "path": "/",
+    "title": "APE — Inglês com Flashcards, Jogos e Prática Ativa",
+    "description": "Estude inglês com flashcards, atividades interativas, vocabulário, frases e jogos de revisão criados para alunos e professores.",
+    "h1": "Inglês com flashcards, jogos e prática ativa",
+    "intro": "O APE, também conhecido como App Piteco, reúne materiais, flashcards e modos de prática para alunos e professores de inglês.",
+    "sections": [
+      {
+        "heading": "Estudo ativo em sessões curtas",
+        "paragraphs": [
+          "Crie ou abra listas de vocabulário e frases, ouça o conteúdo e pratique com desafios diferentes usando o mesmo material.",
+          "O aplicativo oferece revisão com flashcards, escrita, múltipla escolha, organização de frases e acompanhamento de progresso."
+        ]
+      },
+      {
+        "heading": "Recursos para professores",
+        "paragraphs": [
+          "Professores podem organizar pastas e listas, compartilhar materiais e reunir atividades em turmas.",
+          "O portal público permite consultar materiais que foram publicados para acesso aberto."
+        ]
+      }
+    ],
+    "links": [
+      { "href": "/portal", "label": "Explorar materiais públicos" },
+      { "href": "/ingles-para-iniciantes", "label": "Inglês para iniciantes" },
+      { "href": "/para-professores", "label": "Recursos para professores" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/portal",
+    "title": "Portal Público de Materiais de Inglês | APE",
+    "description": "Explore professores, pastas, listas e atividades de inglês publicados para acesso público no App Piteco.",
+    "h1": "Portal público de materiais de inglês",
+    "intro": "O portal do APE reúne materiais que professores decidiram publicar para estudo e prática sem acesso a dados privados de alunos.",
+    "sections": [
+      {
+        "heading": "Materiais publicados por professores",
+        "paragraphs": [
+          "Encontre pastas e listas organizadas por tema, nível ou objetivo de aprendizagem.",
+          "Cada perfil público pode apresentar biografia profissional, especialidades, turmas abertas e materiais compartilhados."
+        ]
+      },
+      {
+        "heading": "Privacidade por padrão",
+        "paragraphs": [
+          "Somente conteúdo marcado como público aparece neste diretório. Progresso individual, associações privadas e informações de conta não fazem parte do portal."
+        ]
+      }
+    ],
+    "links": [
+      { "href": "/", "label": "Conhecer o APE" },
+      { "href": "/atividades-de-ingles", "label": "Atividades de inglês" },
+      { "href": "/flashcards-de-ingles", "label": "Flashcards de inglês" }
+    ],
+    "schemaType": "CollectionPage"
+  },
+  {
+    "path": "/ingles-para-iniciantes",
+    "title": "Inglês para Iniciantes com Atividades e Flashcards | APE",
+    "description": "Pratique inglês básico com vocabulário, frases simples, tradução, flashcards e atividades guiadas para iniciantes.",
+    "h1": "Inglês para iniciantes com prática ativa",
+    "intro": "Comece com vocabulário frequente, frases curtas, áudio e revisões pequenas que ajudam a transformar reconhecimento em uso ativo.",
+    "sections": [
+      {
+        "heading": "Por onde começar",
+        "paragraphs": [
+          "Organize palavras e frases por situações reais, como apresentação pessoal, rotina, compras, trabalho e viagens.",
+          "Depois de compreender o conteúdo, alterne reconhecimento, escrita e produção oral em sessões curtas."
+        ]
+      },
+      {
+        "heading": "Atividades para o nível básico",
+        "items": [
+          "Tradução guiada de palavras frequentes.",
+          "Múltipla escolha para reconhecer significados.",
+          "Escrita simples para fixar a forma das palavras.",
+          "Revisão direcionada do conteúdo mais difícil."
+        ]
+      }
+    ],
+    "links": [
+      { "href": "/portal", "label": "Ver materiais públicos" },
+      { "href": "/flashcards-de-ingles", "label": "Como usar flashcards" }
+    ],
+    "schemaType": "LearningResource",
+    "educationalLevel": "Beginner"
+  },
+  {
+    "path": "/atividades-de-ingles",
+    "title": "Atividades de Inglês para Praticar Vocabulário e Frases | APE",
+    "description": "Pratique inglês com atividades de tradução, escrita, múltipla escolha, organização de frases e revisão ativa.",
+    "h1": "Atividades de inglês para praticar de verdade",
+    "intro": "Transforme uma lista de palavras ou frases em desafios diferentes para desenvolver reconhecimento, memória e produção.",
+    "sections": [
+      {
+        "heading": "Modos de prática",
+        "items": [
+          "Flashcards para revisar significado, áudio e contexto.",
+          "Escrita para recuperar a resposta sem apenas reconhecê-la.",
+          "Múltipla escolha para consolidar diferenças entre alternativas.",
+          "Organização de frases para praticar ordem e estrutura."
+        ]
+      },
+      {
+        "heading": "Materiais reutilizáveis",
+        "paragraphs": [
+          "A mesma lista pode ser usada em várias atividades, permitindo repetir o conteúdo sem repetir exatamente a mesma tarefa.",
+          "Professores podem organizar materiais em pastas e turmas; alunos podem acompanhar o próprio progresso quando entram em uma conta."
+        ]
+      }
+    ],
+    "links": [
+      { "href": "/portal", "label": "Explorar atividades públicas" },
+      { "href": "/ingles-para-iniciantes", "label": "Conteúdo para iniciantes" }
+    ],
+    "schemaType": "LearningResource"
+  },
+  {
+    "path": "/flashcards-de-ingles",
+    "title": "Flashcards de Inglês com Áudio e Revisão Ativa | APE",
+    "description": "Use flashcards de inglês com tradução, áudio, frases, escrita e jogos para revisar vocabulário de forma ativa.",
+    "h1": "Flashcards de inglês além de virar cartões",
+    "intro": "No APE, uma lista de flashcards pode alimentar atividades de reconhecimento, escrita, tradução, organização de frases e pronúncia.",
+    "sections": [
+      {
+        "heading": "Como estudar com flashcards",
+        "paragraphs": [
+          "Leia ou ouça o lado de origem, tente recuperar a resposta antes de virar o cartão e marque o conteúdo que exige revisão adicional.",
+          "Misture palavras e frases para estudar significado, estrutura e uso em contexto."
+        ]
+      },
+      {
+        "heading": "Para alunos e professores",
+        "paragraphs": [
+          "Alunos podem praticar listas próprias ou materiais públicos. Professores podem criar, importar, organizar e compartilhar conjuntos de estudo."
+        ]
+      }
+    ],
+    "links": [
+      { "href": "/portal", "label": "Encontrar flashcards públicos" },
+      { "href": "/atividades-de-ingles", "label": "Conhecer os modos de prática" }
+    ],
+    "schemaType": "LearningResource"
+  },
+  {
+    "path": "/para-professores",
+    "title": "Flashcards, Materiais e Turmas para Professores | APE",
+    "description": "Organize materiais de inglês, crie listas e pastas, publique atividades e acompanhe turmas no App Piteco.",
+    "h1": "Ferramentas para professores organizarem prática ativa",
+    "intro": "O APE ajuda professores a transformar vocabulário e frases em materiais reutilizáveis para aula, tarefa e revisão.",
+    "sections": [
+      {
+        "heading": "Organização de conteúdo",
+        "paragraphs": [
+          "Separe materiais em pastas e listas, importe conjuntos estruturados e reutilize o mesmo conteúdo em diferentes modos de prática."
+        ]
+      },
+      {
+        "heading": "Turmas e publicação",
+        "paragraphs": [
+          "Reúna atividades em turmas, compartilhe materiais aprovados e mantenha dados privados separados do portal público.",
+          "Perfis públicos ajudam alunos e visitantes a encontrar o professor e seus materiais publicados."
+        ]
+      }
+    ],
+    "links": [
+      { "href": "/portal", "label": "Ver o portal público" },
+      { "href": "/about", "label": "Sobre o projeto" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/about",
+    "title": "Sobre o APE e o App Piteco",
+    "description": "Conheça o propósito do APE, aplicativo educacional criado por Pedro Luis para estudo ativo com flashcards, atividades e turmas.",
+    "h1": "Sobre o APE — App Piteco",
+    "intro": "APE significa Apprentice Practice & Enhancement. O projeto foi criado por Pedro Luis de Oliveira Silva para reunir criação de materiais, prática ativa e organização de estudos.",
+    "sections": [
+      {
+        "heading": "Propósito",
+        "paragraphs": [
+          "O aplicativo aproxima a organização feita pelo professor da prática realizada pelo aluno, usando o mesmo conteúdo em atividades diferentes.",
+          "O foco inicial é o ensino de inglês, com estrutura que também pode representar outros pares de termo e definição."
+        ]
+      },
+      {
+        "heading": "APE Education",
+        "paragraphs": [
+          "A APE Education publica o aplicativo, seus recursos institucionais e as páginas públicas usadas para apresentar materiais e professores."
+        ]
+      }
+    ],
+    "links": [
+      { "href": "/", "label": "Página inicial" },
+      { "href": "/portal", "label": "Portal público" }
+    ],
+    "schemaType": "AboutPage"
+  }
+]
