@@ -16,7 +16,7 @@ import { runBootStability } from "./lib/bootStability";
 
 const OFFICIAL_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
 const RUNTIME_CONFIG_URL =
-  "https://xrnfhhoxmmstagmelvyi.functions.supabase.co/app-public-config";
+  "https://xrnfhhoxmmstagmelvyi.supabase.co/functions/v1/app-public-config";
 
 type RuntimeSupabaseConfig = {
   projectId: string;
