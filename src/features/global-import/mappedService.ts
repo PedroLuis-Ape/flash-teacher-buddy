@@ -133,12 +133,39 @@ function clearRequestId(storageKey: string): void {
   memoryRequestIds.delete(storageKey);
 }
 
+function databaseErrorDetails(error: unknown): { code: string; message: string } {
+  if (error instanceof Error) {
+    return {
+      code: "code" in error ? String((error as Error & { code?: unknown }).code ?? "") : "",
+      message: error.message,
+    };
+  }
+  if (typeof error === "object" && error !== null) {
+    const record = error as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown };
+    return {
+      code: String(record.code ?? ""),
+      message: [record.message, record.details, record.hint]
+        .filter((value) => typeof value === "string" && value.trim())
+        .join(" "),
+    };
+  }
+  return { code: "", message: String(error ?? "") };
+}
+
+export function isMissingRpcSchemaCacheError(error: unknown, rpcName?: string): boolean {
+  const { code, message } = databaseErrorDetails(error);
+  const normalized = message.toLowerCase();
+  const missingFromCache = code === "PGRST202"
+    || (
+      normalized.includes("could not find the function")
+      && normalized.includes("schema cache")
+    );
+  if (!missingFromCache) return false;
+  return !rpcName || normalized.includes(rpcName.toLowerCase());
+}
+
 function importDatabaseError(error: unknown): Error {
-  const message = error instanceof Error
-    ? error.message
-    : typeof error === "object" && error !== null && "message" in error
-      ? String((error as { message?: unknown }).message ?? "")
-      : String(error ?? "");
+  const { message } = databaseErrorDetails(error);
 
   if (
     message.includes("global_import_batches_schema_version_check")
@@ -209,13 +236,70 @@ export async function executeMappedGlobalImport(
         _institution_id: options.institutionId ?? null,
       };
 
-  const { data, error } = await (supabase.rpc as any)(rpcName, rpcPayload);
+  let rpcResult = await (supabase.rpc as any)(rpcName, rpcPayload);
+  let usedLegacyOfficialFallback = false;
+
+  if (
+    rpcResult.error
+    && !options.turmaId
+    && options.officialPackage
+    && options.officialPackage.version === "1.0"
+    && isMissingRpcSchemaCacheError(rpcResult.error, rpcName)
+  ) {
+    options.onProgress?.(
+      0,
+      totalCards,
+      "O motor 2.0 não está disponível neste banco; usando o importador oficial compatível",
+    );
+
+    rpcResult = await (supabase.rpc as any)(
+      "import_app_piteco_super_package_v1",
+      {
+        _request_id: request.requestId,
+        _payload: options.officialPackage,
+        _destination_plan: options.destinationPlan,
+        _card_conflict: options.cardConflict,
+        _institution_id: options.institutionId ?? null,
+      },
+    );
+    usedLegacyOfficialFallback = !rpcResult.error;
+
+    if (
+      rpcResult.error
+      && isMissingRpcSchemaCacheError(rpcResult.error, "import_app_piteco_super_package_v1")
+    ) {
+      throw new Error(
+        "O banco conectado ao aplicativo não publicou os motores do Super Importador. "
+        + "As funções v2 e v1 estão ausentes do cache de schema deste backend.",
+      );
+    }
+  }
+
+  const { data, error } = rpcResult;
   if (error) throw importDatabaseError(error);
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("O banco não devolveu o relatório da importação.");
   }
 
   const baseReport = data as GlobalImportExecutionReport;
+
+  if (usedLegacyOfficialFallback) {
+    const finalReport: GlobalImportExecutionReport = {
+      ...baseReport,
+      target_scope: "personal",
+      glossary_scope: "folder",
+      glossary_created: 0,
+      glossary_updated: 0,
+      glossary_skipped: 0,
+    };
+    if (options.canonicalPackage) {
+      updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");
+    }
+    clearRequestId(request.storageKey);
+    options.onProgress?.(totalCards, totalCards, "Importação concluída pelo motor compatível");
+    return finalReport;
+  }
+
   options.onProgress?.(
     totalCards,
     totalCards,
