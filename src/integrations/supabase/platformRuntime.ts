@@ -23,14 +23,6 @@ function normalize(value: string | undefined): string | undefined {
   return result || undefined;
 }
 
-function isOfficialProductionRuntime(input: PlatformRuntimeInput): boolean {
-  const projectId = normalize(input.projectId);
-  const url = normalize(input.url);
-  return projectId === PRODUCTION_PROJECT_ID
-    || url === PRODUCTION_RUNTIME.url
-    || Boolean(url?.includes(PRODUCTION_PROJECT_ID));
-}
-
 export function resolvePlatformRuntime(
   input: PlatformRuntimeInput,
   testMode = false,
@@ -48,30 +40,17 @@ export function resolvePlatformRuntime(
     };
   }
 
-  // Local development may intentionally point to another project.
+  // Only local development may intentionally point at a different project.
   if (allowDevelopmentOverride && url && publicValue) {
     return { projectId, url, publicValue };
   }
 
-  // Production is locked to the Lovable Cloud project that contains the real
-  // App Piteco accounts, folders, lists and flashcards. A stale Lovable/Supabase
-  // integration may inject another project at build time; accepting that value
-  // makes the app look empty even though the user's data still exists.
-  if (url && publicValue && isOfficialProductionRuntime(input)) {
-    return {
-      projectId: PRODUCTION_PROJECT_ID,
-      url: PRODUCTION_RUNTIME.url,
-      publicValue,
-    };
-  }
-
-  if (url && publicValue) {
+  // Production is deliberately atomic and immutable. Lovable may inject stale
+  // values from another linked Supabase project; accepting any part of that set
+  // makes valid accounts and flashcards appear to have disappeared.
+  if (url && url !== PRODUCTION_RUNTIME.url) {
     console.error(
-      `[PlatformRuntime] Ignoring unexpected production backend ${projectId ?? url}; using ${PRODUCTION_PROJECT_ID}.`,
-    );
-  } else {
-    console.warn(
-      "[PlatformRuntime] Build configuration was not injected; using the bundled production browser configuration.",
+      `[PlatformRuntime] Ignoring injected production backend ${projectId ?? url}; using ${PRODUCTION_PROJECT_ID}.`,
     );
   }
 
