@@ -60,7 +60,7 @@ function buildWebsite(): JsonLdNode {
   };
 }
 
-function buildApplication(description: string): JsonLdNode {
+function buildApplication(): JsonLdNode {
   return {
     "@type": "SoftwareApplication",
     "@id": APP_ID,
@@ -69,7 +69,8 @@ function buildApplication(description: string): JsonLdNode {
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     inLanguage: "pt-BR",
-    description,
+    description:
+      "Aplicativo educacional de flashcards, jogos, prática ativa e organização de materiais para alunos e professores.",
     url: `${SITE_URL}/`,
     publisher: { "@id": ORGANIZATION_ID },
   };
@@ -114,7 +115,7 @@ export function buildPublicPageStructuredData({
   const graph: JsonLdNode[] = [
     buildOrganization(),
     buildWebsite(),
-    buildApplication(description),
+    buildApplication(),
   ];
 
   const rawEntities = mainEntity
