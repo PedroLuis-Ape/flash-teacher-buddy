@@ -16,18 +16,17 @@ describe("platform runtime", () => {
     expect(runtime.publicValue).toMatch(/^eyJ/);
   });
 
-  it("accepts the official injected Lovable production runtime", () => {
+  it("keeps the complete official production set atomic", () => {
     const runtime = resolvePlatformRuntime({
       projectId: "ymahldldyxvwjeruaxpr",
       url: productionUrl,
-      publicValue: "official-injected-public-value",
+      publicValue: "stale-or-mismatched-injected-value",
     });
 
-    expect(runtime).toEqual({
-      projectId: "ymahldldyxvwjeruaxpr",
-      url: productionUrl,
-      publicValue: "official-injected-public-value",
-    });
+    expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
+    expect(runtime.url).toBe(productionUrl);
+    expect(runtime.publicValue).toMatch(/^eyJ/);
+    expect(runtime.publicValue).not.toBe("stale-or-mismatched-injected-value");
   });
 
   it("allows an explicit non-production override only during development", () => {
