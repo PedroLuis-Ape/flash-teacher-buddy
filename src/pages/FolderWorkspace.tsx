@@ -14,14 +14,18 @@ export default function FolderWorkspace() {
       <Folder />
 
       {user && id && (
-        <>
-          <section className="container mx-auto px-4 pb-3" aria-label="Glossário da pasta">
+        <div className="container mx-auto space-y-3 px-3 pb-24 sm:px-4 md:contents">
+          <section className="space-y-2" aria-label="Glossário e organização da pasta">
+            <div className="flex justify-end">
+              <ListSequenceDialog
+                folderId={id}
+                triggerClassName="!static !bottom-auto !right-auto !z-auto !max-w-none h-9 rounded-xl px-3 text-xs shadow-none"
+              />
+            </div>
             <FolderGlossaryCard folderId={id} />
           </section>
 
-          <ListSequenceDialog folderId={id} />
-
-          <section className="container mx-auto px-4 pb-24 md:contents" aria-label="Ações da pasta">
+          <section aria-label="Ações da pasta">
             <div className="rounded-2xl border bg-card p-3 shadow-sm md:contents">
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground md:hidden">
                 Ações da pasta
@@ -34,7 +38,7 @@ export default function FolderWorkspace() {
               />
             </div>
           </section>
-        </>
+        </div>
       )}
     </>
   );
