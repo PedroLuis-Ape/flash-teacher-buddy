@@ -1,5 +1,8 @@
 project_id = "ymahldldyxvwjeruaxpr"
 
+[functions.app-public-config]
+verify_jwt = false
+
 [functions.tts]
 verify_jwt = true
 
