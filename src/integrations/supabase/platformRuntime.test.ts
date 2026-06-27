@@ -1,57 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { resolvePlatformRuntime } from "./platformRuntime";
 
-const productionUrl = "https://ymahldldyxvwjeruaxpr.supabase.co";
-
 describe("platform runtime", () => {
-  it("locks production to the backend that contains the real App Piteco data", () => {
-    const runtime = resolvePlatformRuntime({
-      projectId: "xrnfhhoxmmstagmelvyi",
-      url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
-      publicValue: "wrong-project-public-value",
-    });
-
-    expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
-    expect(runtime.url).toBe(productionUrl);
-    expect(runtime.publicValue).toMatch(/^eyJ/);
-  });
-
-  it("keeps the complete official production set atomic", () => {
-    const runtime = resolvePlatformRuntime({
-      projectId: "ymahldldyxvwjeruaxpr",
-      url: productionUrl,
-      publicValue: "stale-or-mismatched-injected-value",
-    });
-
-    expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
-    expect(runtime.url).toBe(productionUrl);
-    expect(runtime.publicValue).toMatch(/^eyJ/);
-    expect(runtime.publicValue).not.toBe("stale-or-mismatched-injected-value");
-  });
-
-  it("allows an explicit non-production override only during development", () => {
+  it("uses the complete Lovable-injected configuration as the source of truth", () => {
     expect(
-      resolvePlatformRuntime(
-        {
-          projectId: "abcdefghijklmnopqrst",
-          url: "https://abcdefghijklmnopqrst.supabase.co",
-          publicValue: "development-public-value",
-        },
-        false,
-        true,
-      ),
+      resolvePlatformRuntime({
+        projectId: "abcdefghijklmnopqrst",
+        url: "https://abcdefghijklmnopqrst.supabase.co",
+        publicValue: "current-publishable-value",
+      }),
     ).toEqual({
       projectId: "abcdefghijklmnopqrst",
       url: "https://abcdefghijklmnopqrst.supabase.co",
-      publicValue: "development-public-value",
+      publicValue: "current-publishable-value",
     });
   });
 
-  it("uses the production runtime when build configuration is absent or partial", () => {
+  it("does not replace a current injected key with a bundled legacy key", () => {
+    const runtime = resolvePlatformRuntime({
+      projectId: "ymahldldyxvwjeruaxpr",
+      url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+      publicValue: "fresh-current-key",
+    });
+
+    expect(runtime.publicValue).toBe("fresh-current-key");
+  });
+
+  it("uses one coherent fallback when the injected configuration is absent or partial", () => {
     for (const input of [{}, { url: "https://other.supabase.co" }]) {
       const runtime = resolvePlatformRuntime(input);
       expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
-      expect(runtime.url).toBe(productionUrl);
+      expect(runtime.url).toBe("https://ymahldldyxvwjeruaxpr.supabase.co");
       expect(runtime.publicValue).toMatch(/^eyJ/);
     }
   });
