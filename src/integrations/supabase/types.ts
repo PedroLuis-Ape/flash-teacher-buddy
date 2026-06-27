@@ -2300,6 +2300,135 @@ export type Database = {
           },
         ]
       }
+      turma_engagement_cards: {
+        Row: {
+          answer_count: number
+          card_id: string
+          correct_count: number
+          incorrect_count: number
+          last_practiced_at: string
+          list_id: string
+          session_id: string
+          turma_id: string
+          view_count: number
+        }
+        Insert: {
+          answer_count?: number
+          card_id: string
+          correct_count?: number
+          incorrect_count?: number
+          last_practiced_at?: string
+          list_id: string
+          session_id: string
+          turma_id: string
+          view_count?: number
+        }
+        Update: {
+          answer_count?: number
+          card_id?: string
+          correct_count?: number
+          incorrect_count?: number
+          last_practiced_at?: string
+          list_id?: string
+          session_id?: string
+          turma_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turma_engagement_cards_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_engagement_cards_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_engagement_cards_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "turma_engagement_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_engagement_cards_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turma_engagement_sessions: {
+        Row: {
+          atribuicao_id: string | null
+          completed_at: string | null
+          id: string
+          last_activity_at: string
+          list_id: string
+          mode: string | null
+          session_token: string
+          started_at: string
+          turma_id: string
+          user_id: string | null
+          visitor_hash: string
+        }
+        Insert: {
+          atribuicao_id?: string | null
+          completed_at?: string | null
+          id?: string
+          last_activity_at?: string
+          list_id: string
+          mode?: string | null
+          session_token: string
+          started_at?: string
+          turma_id: string
+          user_id?: string | null
+          visitor_hash: string
+        }
+        Update: {
+          atribuicao_id?: string | null
+          completed_at?: string | null
+          id?: string
+          last_activity_at?: string
+          list_id?: string
+          mode?: string | null
+          session_token?: string
+          started_at?: string
+          turma_id?: string
+          user_id?: string | null
+          visitor_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turma_engagement_sessions_atribuicao_id_fkey"
+            columns: ["atribuicao_id"]
+            isOneToOne: false
+            referencedRelation: "atribuicoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_engagement_sessions_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_engagement_sessions_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       turma_membros: {
         Row: {
           ativo: boolean
@@ -2396,6 +2525,7 @@ export type Database = {
           nome: string
           owner_teacher_id: string
           public: boolean
+          public_order_index: number | null
           updated_at: string
         }
         Insert: {
@@ -2407,6 +2537,7 @@ export type Database = {
           nome: string
           owner_teacher_id: string
           public?: boolean
+          public_order_index?: number | null
           updated_at?: string
         }
         Update: {
@@ -2418,6 +2549,7 @@ export type Database = {
           nome?: string
           owner_teacher_id?: string
           public?: boolean
+          public_order_index?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -3283,6 +3415,10 @@ export type Database = {
           teacher_id: string
         }[]
       }
+      get_turma_engagement_report_v1: {
+        Args: { _days?: number; _turma_id: string }
+        Returns: Json
+      }
       get_user_card_counts: {
         Args: { _institution_id?: string; _user_id: string }
         Returns: {
@@ -3485,6 +3621,21 @@ export type Database = {
       }
       publish_skin_to_store: { Args: { p_skin_id: string }; Returns: Json }
       purge_expired_trash: { Args: never; Returns: Json }
+      record_turma_engagement_v1: {
+        Args: {
+          _atribuicao_id?: string
+          _card_id?: string
+          _correct?: boolean
+          _event_type: string
+          _list_id: string
+          _mode?: string
+          _session_token: string
+          _turma_id: string
+          _visitor_token: string
+        }
+        Returns: Json
+      }
+      reorder_public_turmas: { Args: { _ordered_ids: string[] }; Returns: Json }
       restore_flashcard: {
         Args: { p_flashcard_id: string; p_user_id: string }
         Returns: Json
