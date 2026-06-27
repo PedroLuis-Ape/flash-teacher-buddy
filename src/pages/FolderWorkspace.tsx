@@ -16,11 +16,8 @@ export default function FolderWorkspace() {
       {user && id && (
         <div className="container mx-auto space-y-3 px-3 pb-24 sm:px-4 md:contents">
           <section className="space-y-2" aria-label="Glossário e organização da pasta">
-            <div className="flex justify-end">
-              <ListSequenceDialog
-                folderId={id}
-                triggerClassName="!static !bottom-auto !right-auto !z-auto !max-w-none h-9 rounded-xl px-3 text-xs shadow-none"
-              />
+            <div className="flex justify-end [&>button]:!static [&>button]:!bottom-auto [&>button]:!right-auto [&>button]:!z-auto [&>button]:!max-w-none [&>button]:h-9 [&>button]:rounded-xl [&>button]:px-3 [&>button]:text-xs [&>button]:shadow-none">
+              <ListSequenceDialog folderId={id} />
             </div>
             <FolderGlossaryCard folderId={id} />
           </section>
