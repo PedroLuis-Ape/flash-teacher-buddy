@@ -25,7 +25,7 @@ describe("turma Edge Function security contracts", () => {
   const config = readFileSync(join(ROOT, "supabase", "config.toml"), "utf8");
 
   it("keeps the official project ref", () => {
-    expect(config).toMatch(/^project_id\s*=\s*"ymahldldyxvwjeruaxpr"/m);
+    expect(config).toMatch(/^project_id\s*=\s*"xrnfhhoxmmstagmelvyi"/m);
   });
 
   it.each(FUNCTION_NAMES)("registers %s with JWT verification", (name) => {
