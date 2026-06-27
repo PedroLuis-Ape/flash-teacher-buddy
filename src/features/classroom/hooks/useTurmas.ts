@@ -12,11 +12,19 @@ export function useTurmasMine() {
       if (!FEATURE_FLAGS.classes_enabled) return { turmas: [] };
       const session = await getFreshSession();
       if (!session) return { turmas: [] };
-      const { data, error } = await supabase.functions.invoke('turmas-mine', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+
+      // Read-only listing does not need an Edge Function. Querying through the
+      // authenticated Supabase client avoids gateway JWT incompatibilities and
+      // still respects the table's RLS policies.
+      const { data, error } = await supabase
+        .from('turmas')
+        .select('*, turma_membros(count)')
+        .eq('owner_teacher_id', session.user.id)
+        .eq('ativo', true)
+        .order('created_at', { ascending: false });
+
       if (error) throw error;
-      return data;
+      return { turmas: data ?? [] };
     },
     enabled: FEATURE_FLAGS.classes_enabled,
   });
@@ -29,11 +37,26 @@ export function useTurmasAsAluno() {
       if (!FEATURE_FLAGS.classes_enabled) return { turmas: [] };
       const session = await getFreshSession();
       if (!session) return { turmas: [] };
-      const { data, error } = await supabase.functions.invoke('turmas-as-aluno', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+
+      const { data: memberships, error: membershipsError } = await supabase
+        .from('turma_membros')
+        .select('turma_id')
+        .eq('user_id', session.user.id)
+        .eq('ativo', true);
+
+      if (membershipsError) throw membershipsError;
+      const turmaIds = Array.from(new Set((memberships ?? []).map((item) => item.turma_id)));
+      if (turmaIds.length === 0) return { turmas: [] };
+
+      const { data, error } = await supabase
+        .from('turmas')
+        .select('*')
+        .in('id', turmaIds)
+        .eq('ativo', true)
+        .order('created_at', { ascending: false });
+
       if (error) throw error;
-      return data;
+      return { turmas: data ?? [] };
     },
     enabled: FEATURE_FLAGS.classes_enabled,
   });
@@ -142,8 +165,6 @@ export function useUpdateTurma() {
         };
       });
 
-      // Keep the current screen stable. Public/listing views refresh in the
-      // background instead of making the save action wait for broad refetches.
       void queryClient.invalidateQueries({ queryKey: ['turmas', 'mine'], refetchType: 'active' });
       void queryClient.invalidateQueries({ queryKey: ['public-turma', turma.id], refetchType: 'active' });
       void queryClient.invalidateQueries({ queryKey: ['public-teacher-turmas'], refetchType: 'active' });
