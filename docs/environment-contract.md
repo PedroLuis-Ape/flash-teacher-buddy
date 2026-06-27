@@ -1,48 +1,53 @@
 # Contrato de ambiente do App Piteco
 
-## Estado confirmado
+## Fonte oficial
 
-O frontend versionado e `supabase/config.toml` apontam para o mesmo project ref de produção documentado: `ymahldldyxvwjeruaxpr`.
+O único backend autorizado do App Piteco é o projeto Supabase:
 
-A conexão Supabase disponível nesta automação lista apenas:
+`xrnfhhoxmmstagmelvyi`
 
-- `rnriudxxafcnftjiysue` — projeto legado inativo;
-- `xrnfhhoxmmstagmelvyi` — projeto novo ativo, mas sem evidência de que atende o domínio publicado.
+Repositório oficial: `PedroLuis-Ape/flash-teacher-buddy`.
 
-Nenhuma migration, Edge Function ou alteração de dados deve ser aplicada nesses dois projetos apenas por semelhança de nome. Mudanças de backend permanecem bloqueadas até existir acesso explícito ao projeto `ymahldldyxvwjeruaxpr` ou uma evidência verificável de migração do ambiente publicado.
+Toda configuração de frontend, migration, Edge Function, RLS, Storage, documentação e automação deve apontar para esse project ref. Nenhum outro projeto pode ser usado como fallback, produção alternativa ou destino implícito.
+
+## Configuração pública do frontend
+
+A configuração pública necessária para inicializar o navegador é entregue pela Edge Function `app-public-config` do próprio projeto oficial.
+
+Fluxo:
+
+1. `src/main.tsx` consulta `https://xrnfhhoxmmstagmelvyi.functions.supabase.co/app-public-config`;
+2. a resposta informa somente os valores públicos necessários para criar o cliente;
+3. o bootstrap valida o project ref e o hostname;
+4. somente depois dessa validação o módulo principal do aplicativo é carregado;
+5. qualquer divergência interrompe a inicialização e exibe um erro seguro.
+
+Variáveis `VITE_SUPABASE_*` continuam aceitas para desenvolvimento ou deploy controlado, mas precisam formar um conjunto completo e corresponder ao projeto oficial.
+
+## Política de arquivos de ambiente
+
+- `.env` e `.env.*` não podem ser versionados;
+- `.env.example` é o único modelo permitido;
+- chaves administrativas, service role, senhas, tokens e segredos nunca podem entrar no frontend;
+- a chave pública do navegador não é autorização: RLS, RPCs e Edge Functions continuam responsáveis pela segurança.
 
 ## Invariantes verificadas pelo CI
 
-O comando `npm run check:environment` bloqueia publicação quando:
+`npm run check:environment` bloqueia publicação quando:
 
-- `VITE_SUPABASE_PROJECT_ID`, `VITE_SUPABASE_URL` ou a chave publicável estiver ausente;
-- a URL não usar HTTPS;
-- o host da URL não corresponder ao project ref;
-- `supabase/config.toml` apontar para outro projeto;
-- a chave JWT do frontend não tiver role `anon`;
-- a chave publicável pertencer a outro project ref;
-- a `.env` versionada contiver variáveis de servidor, senhas, service role, token administrativo, segredo JWT ou chave privada;
-- a `.env` versionada contiver variáveis que não sejam públicas e prefixadas com `VITE_`.
+- `supabase/config.toml` não declara um project ref válido;
+- o endpoint público de runtime aponta para outro projeto;
+- `src/main.tsx` ou o cliente Supabase divergem do project ref oficial;
+- `app-public-config` não está registrada como função pública;
+- uma configuração `VITE_SUPABASE_*` parcial ou incompatível é fornecida;
+- arquivos de ambiente versionados contêm variáveis privadas ou não públicas.
 
-O validador nunca imprime a chave publicável.
+## Backend desbloqueado
 
-## Política temporária da `.env`
+A conexão administrativa disponível possui acesso ao projeto oficial. Alterações de backend podem ser executadas nele desde que:
 
-A `.env` ainda permanece no repositório por compatibilidade com o deploy atual. Apesar de os valores `VITE_` serem enviados ao navegador por definição, isso não autoriza colocar segredos nesse arquivo.
-
-Enquanto as variáveis da plataforma de publicação não forem confirmadas, a regra é:
-
-1. somente valores públicos `VITE_` podem existir na `.env` versionada;
-2. sobrescritas locais devem usar `.env.local` ou `.env.*.local`;
-3. nenhuma chave service role, senha do banco, token da Management API ou segredo de assinatura pode ser adicionada;
-4. a retirada definitiva da `.env` só deve ocorrer depois de um preview comprovar que a plataforma injeta todas as variáveis necessárias.
-
-## Critério para desbloquear o backend
-
-A fase de banco será desbloqueada quando pelo menos uma destas condições for atendida:
-
-- o projeto `ymahldldyxvwjeruaxpr` aparecer na conexão administrativa disponível;
-- houver acesso administrativo explícito a esse projeto;
-- o ambiente publicado passar a apontar para outro project ref e essa alteração estiver comprovada no frontend, na plataforma de deploy e no Supabase.
-
-Até lá, o trabalho seguro limita-se a validações de frontend, CI, documentação, testes e mudanças que não escrevam em banco desconhecido.
+- sejam versionadas como migrations ou Edge Functions;
+- tenham rollback ou procedimento de correção;
+- passem pelas auditorias de segurança e desempenho;
+- não apaguem dados sem inventário e proteção apropriada;
+- sejam testadas antes da integração em `main`.
