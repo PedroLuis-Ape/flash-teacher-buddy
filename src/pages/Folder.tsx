@@ -19,11 +19,14 @@ import { ArrowLeft, ListPlus, FileText, Trash2, Pencil, Share2, Play, CheckSquar
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VideoList } from "@/components/VideoList";
-import { naturalSort } from "@/lib/sorting";
 import { ListStudyTypeSelector, ListStudySettings, getDefaultListStudySettings, settingsToDbColumns } from "@/features/study/components/ListStudyTypeSelector";
 import { useFolderText } from "@/hooks/useFolderText";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { ScrollingTitle } from "@/components/ui/scrolling-title";
+import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
+import { useListAttention, useToggleListAttention } from "@/hooks/useListAttention";
+import { ListMarkerButtons } from "@/features/study/components/ListMarkerButtons";
+import { sortListsWithFavoritesFirst } from "@/features/study/lib/listMarkers";
 
 interface ListType {
   id: string;
@@ -87,6 +90,10 @@ const Folder = () => {
   // PERF: centralized auth (no redundant getUser() / getSession() calls)
   const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
+  const { data: listFavorites = [] } = useFavorites(userId, "list");
+  const toggleFavorite = useToggleFavorite();
+  const { data: attentionListIds = [] } = useListAttention(userId);
+  const toggleListAttention = useToggleListAttention();
 
   // Reset permission states when id changes, THEN load data
   useEffect(() => {
@@ -622,11 +629,11 @@ const Folder = () => {
 
   const [listSearch, setListSearch] = useState("");
   const sortedLists = useMemo(() => {
-    const sorted = naturalSort(lists, (list) => list.title);
+    const sorted = sortListsWithFavoritesFirst(lists, listFavorites);
     if (!listSearch.trim()) return sorted;
     const q = listSearch.toLowerCase();
     return sorted.filter((l) => l.title.toLowerCase().includes(q));
-  }, [lists, listSearch]);
+  }, [lists, listSearch, listFavorites]);
 
   if (!folder) {
     return (
@@ -898,6 +905,8 @@ const Folder = () => {
               <div className={`space-y-2 ${selectionMode && selectedLists.size > 0 ? 'pb-24 md:pb-0' : ''}`}>
                 {sortedLists.map((list) => {
                   const isSelected = selectedLists.has(list.id);
+                  const isFavorite = listFavorites.includes(list.id);
+                  const isAttention = attentionListIds.includes(list.id);
                   return (
                     <div
                       key={list.id}
@@ -910,7 +919,13 @@ const Folder = () => {
                       }}
                       className={`w-full text-left cursor-pointer ${isSelected ? 'ring-2 ring-primary rounded-lg' : ''}`}
                     >
-                      <Card className="transition-all duration-200 md:hover:shadow-md md:hover:bg-primary/5 md:hover:border-primary/30 active:scale-[0.98]">
+                      <Card
+                        className={`transition-all duration-200 md:hover:shadow-md active:scale-[0.98] ${
+                          isAttention
+                            ? 'border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15'
+                            : 'md:hover:bg-primary/5 md:hover:border-primary/30'
+                        }`}
+                      >
                         <CardContent className="p-3 flex items-center gap-3">
                           {/* Selection checkbox */}
                           {selectionMode && (
@@ -930,65 +945,96 @@ const Folder = () => {
                           )}
                           
                           {!selectionMode && (
-                            <div className="shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
-                              <FileText className="h-4 w-4 text-primary" />
+                            <div className={`shrink-0 w-8 h-8 rounded-md flex items-center justify-center ${isAttention ? 'bg-red-500/15' : 'bg-primary/10'}`}>
+                              <FileText className={`h-4 w-4 ${isAttention ? 'text-red-500' : 'text-primary'}`} />
                             </div>
                           )}
                           
                           <div className="flex-1 min-w-0">
-                            <ScrollingTitle text={list.title} className="font-semibold text-sm leading-tight" />
-                            <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ScrollingTitle text={list.title} className="font-semibold text-sm leading-tight" />
+                              {isFavorite && (
+                                <span className="shrink-0 rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-semibold text-yellow-600 dark:text-yellow-400">
+                                  Favorita
+                                </span>
+                              )}
+                              {isAttention && (
+                                <span className="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">
+                                  Revisar
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-xs leading-tight mt-0.5 ${isAttention ? 'text-red-600/80 dark:text-red-300/80' : 'text-muted-foreground'}`}>
                               {list.card_count || 0} {list.card_count === 1 ? 'card' : 'cards'}
                             </p>
                           </div>
 
                           {/* Play button removed - entire row now navigates to games */}
 
-                          {canEdit && !selectionMode && (
+                          {!selectionMode && (
                             <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/list/${list.id}`);
-                                      }}
-                                    >
-                                      <Pencil className="h-3 w-3" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Editar conteúdo</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                  >
-                                    <Trash2 className="h-3 w-3 text-destructive" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
-                                      Excluir
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              {userId && (
+                                <ListMarkerButtons
+                                  isFavorite={isFavorite}
+                                  isAttention={isAttention}
+                                  onToggleFavorite={() => toggleFavorite.mutate({
+                                    resourceId: list.id,
+                                    resourceType: "list",
+                                    isFavorite,
+                                  })}
+                                  onToggleAttention={() => toggleListAttention.mutate({
+                                    listId: list.id,
+                                    isAttention,
+                                  })}
+                                />
+                              )}
+                              {canEdit && (
+                                <>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 md:hover:bg-primary/10 md:hover:text-primary"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/list/${list.id}`);
+                                          }}
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Editar conteúdo</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                      >
+                                        <Trash2 className="h-3 w-3 text-destructive" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
+                                          Excluir
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
+                              )}
                             </div>
                           )}
                         </CardContent>
