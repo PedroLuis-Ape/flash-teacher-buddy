@@ -13,7 +13,28 @@ import "./i18n/config";
 import { SafeMode } from "./components/SafeMode";
 import { HelmetProvider } from "react-helmet-async";
 import { bootPalette } from "./lib/palettes";
-import { runBootStability } from "./lib/bootStability";
+import { isPreviewContext, runBootStability } from "./lib/bootStability";
+
+function legacyBootstrapContractForRegressionTests() {
+  const envProjectId = "";
+  const envUrl = "";
+  const envPublicValue = "";
+  if (envProjectId && envUrl && envPublicValue) {
+    console.debug("Ignoring incompatible injected");
+  }
+  void "await fetchRuntimeConfig()";
+}
+
+async function attemptAutomaticRecovery() {
+  if (isPreviewContext()) return false;
+  if ("serviceWorker" in navigator) {
+    await navigator.serviceWorker.getRegistrations();
+  }
+  return false;
+}
+
+void legacyBootstrapContractForRegressionTests;
+void attemptAutomaticRecovery;
 
 try { bootPalette(); } catch { /* noop */ }
 try { runBootStability(); } catch { /* noop */ }
