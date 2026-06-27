@@ -13,9 +13,6 @@ export function useTurmasMine() {
       const session = await getFreshSession();
       if (!session) return { turmas: [] };
 
-      // Read-only listing does not need an Edge Function. Querying through the
-      // authenticated Supabase client avoids gateway JWT incompatibilities and
-      // still respects the table's RLS policies.
       const { data, error } = await supabase
         .from('turmas')
         .select('*, turma_membros(count)')
@@ -23,7 +20,10 @@ export function useTurmasMine() {
         .eq('ativo', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useTurmasMine] read failed; keeping the rest of the app available', error);
+        return { turmas: [] };
+      }
       return { turmas: data ?? [] };
     },
     enabled: FEATURE_FLAGS.classes_enabled,
@@ -44,7 +44,10 @@ export function useTurmasAsAluno() {
         .eq('user_id', session.user.id)
         .eq('ativo', true);
 
-      if (membershipsError) throw membershipsError;
+      if (membershipsError) {
+        console.error('[useTurmasAsAluno] membership read failed; keeping the rest of the app available', membershipsError);
+        return { turmas: [] };
+      }
       const turmaIds = Array.from(new Set((memberships ?? []).map((item) => item.turma_id)));
       if (turmaIds.length === 0) return { turmas: [] };
 
@@ -55,7 +58,10 @@ export function useTurmasAsAluno() {
         .eq('ativo', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useTurmasAsAluno] class read failed; keeping the rest of the app available', error);
+        return { turmas: [] };
+      }
       return { turmas: data ?? [] };
     },
     enabled: FEATURE_FLAGS.classes_enabled,
