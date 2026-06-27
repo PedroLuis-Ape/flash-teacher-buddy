@@ -2,64 +2,38 @@
 
 Updated: 2026-06-27
 
-## Environment gate
+## Official backend
 
-The repository, the versioned public frontend environment, and `supabase/config.toml`
-all identify the documented production Supabase project as:
+App Piteco uses Supabase project `xrnfhhoxmmstagmelvyi`.
 
-`ymahldldyxvwjeruaxpr`
+Repository configuration, frontend initialization, database changes and documentation must remain aligned with this project.
 
-The administrative Supabase connection available during this audit does not expose
-that project. It exposes only a legacy inactive project and a separate newer project.
-Therefore:
+## Completed foundation
 
-- frontend, documentation, tests, crawl controls, metadata and static public files may be changed;
-- no migration, Edge Function deployment, RLS change or data write may be applied through
-  the currently connected Supabase projects;
-- backend implementation is unlocked only when the administrative connection exposes
-  `ymahldldyxvwjeruaxpr`, or when a verified deployment migration changes the production ref.
+- canonical crawler policy in `robots.txt`;
+- canonical public routes in `sitemap.xml`;
+- permanent `/landing` redirect;
+- correct Portuguese document language;
+- corrected organization and founder structured data;
+- reusable page metadata controls;
+- SEO consistency validation in CI.
 
-This is a safety boundary, not an uncertainty about the project ref used by the current
-versioned frontend.
+## Current environment work
 
-## Phase 1 — crawl and metadata foundation
+- `supabase/config.toml` uses the official project;
+- versioned environment files were removed;
+- the frontend obtains its public runtime settings from the official project;
+- the bootstrap validates project identity before loading the application;
+- CI validates runtime and optional deployment settings.
 
-This branch implements the low-risk foundation:
+## Remaining work
 
-- one canonical public discovery policy in `robots.txt`;
-- removal of bot-specific groups that accidentally bypassed private-route exclusions;
-- a sitemap containing only canonical public routes;
-- permanent `/landing` → `/` redirect before the SPA fallback;
-- Portuguese document language and corrected organization/founder entities;
-- removal of the invalid public `SearchAction`;
-- reusable robots directives, language, image alt text, localized alternates and safer JSON-LD serialization in `SEOHead`;
-- an independent `scripts/validate-seo.mjs` consistency check;
-- automatic execution of the SEO/GEO check in the pull-request CI workflow.
-
-## Deliberate limits of this phase
-
-- The SPA fallback can still return HTTP 200 before React determines that an unknown route
-  is missing. A true HTTP 404 requires hosting or edge-level routing.
-- Dynamic public teachers, classes and materials are not added to the sitemap until the
-  documented production Supabase project is administratively available.
-- Search and citation crawling remains allowed on public routes. This phase does not add
-  a new policy for foundation-model training.
-- International URLs and `hreflang` are supported by the metadata component but are not
-  published until stable `/pt/` and `/en/` routes exist.
-- The existing `llms.txt` remains unchanged in this branch because the connected write
-  layer rejected automated modifications to that file. It must be revised separately so
-  it no longer links to blocked product areas.
-- The SEO validation script is not exposed as an npm alias because the connected write
-  layer rejected automated `package.json` changes. CI runs it directly with
-  `node scripts/validate-seo.mjs`.
-
-## Next implementation phases
-
-1. Pre-render or server-render the canonical static public routes.
-2. Build a production-backed dynamic sitemap for published teachers and materials.
-3. Return real 404/410 status codes for missing public entities.
-4. Expand entity markup for APE, Pedro, teachers and learning resources.
-5. Publish first-party, citation-worthy educational evidence and methodology pages.
-6. Add Real User Monitoring for INP, LCP and CLS.
-7. Introduce stable international URLs and `hreflang`.
-8. Add recurring citation and Share-of-Model monitoring.
+1. Verify the runtime configuration endpoint.
+2. Pre-render canonical public routes.
+3. Generate a dynamic sitemap for public teachers and materials.
+4. Return real HTTP 404 or 410 responses for missing public entities.
+5. Expand structured entities for APE, Pedro, teachers and learning resources.
+6. Publish first-party educational evidence and methodology pages.
+7. Add real-user INP, LCP and CLS monitoring.
+8. Add stable international URLs and `hreflang`.
+9. Monitor AI citations and Share of Model.

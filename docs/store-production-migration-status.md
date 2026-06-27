@@ -1,7 +1,7 @@
-# Estado da migração de produção da Loja do App Piteco
+# Estado da loja do App Piteco
 
-- Backend usado atualmente pela Lovable: `ymahldldyxvwjeruaxpr`.
-- Projeto novo preparado para receber a migração: `xrnfhhoxmmstagmelvyi`.
-- O backend antigo não pode ser removido nem trocado antes de backup, migração integral, validação e corte controlado.
-- O hotfix de compatibilidade mantém a loja atual visível no backend antigo sem consultar o projeto novo.
-- A troca definitiva deve ocorrer apenas depois da migração de Auth, tabelas, dados, RPCs, RLS, Storage e Edge Functions.
+Backend oficial: `xrnfhhoxmmstagmelvyi`.
+
+O catálogo público e o catálogo administrativo pertencem a esse projeto. Mudanças de loja, inventário, compras e PiTECoin devem ser verificadas e aplicadas somente nele.
+
+Antes de alterações destrutivas, registrar contagens, dependências, rollback e testes com contas separadas.

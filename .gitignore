@@ -12,11 +12,10 @@ dist
 dist-ssr
 *.local
 
-# Local environment overrides
-.env.local
-.env.*.local
-.env.development
-.env.production
+# Environment files stay outside Git. Keep only the public template.
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*

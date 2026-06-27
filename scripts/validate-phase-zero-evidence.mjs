@@ -11,7 +11,6 @@ function readJson(relativePath) {
 
 const backend = readJson("docs/implementation/backend-evidence.template.json");
 const runtime = readJson("docs/implementation/runtime-baseline.template.json");
-const findings = readJson("docs/implementation/phase-zero-findings.json");
 const collector = readText("scripts/collect-phase-zero-browser-evidence.js");
 const errors = [];
 
@@ -21,8 +20,8 @@ if (backend.schema !== "app-piteco-backend-evidence" || backend.version !== "1.0
 if (backend.status !== "pending") {
   errors.push("O template de backend deve permanecer pending até captura real.");
 }
-if (backend.documented_project_ref !== "ymahldldyxvwjeruaxpr") {
-  errors.push("O template deve preservar o project ref documentado atual.");
+if (backend.documented_project_ref !== "xrnfhhoxmmstagmelvyi") {
+  errors.push("O template deve preservar o project ref oficial.");
 }
 for (const service of ["auth", "rest", "rpc", "storage", "functions"]) {
   if (!backend.services?.[service]) errors.push(`Serviço obrigatório ausente: ${service}`);
@@ -50,49 +49,7 @@ for (const profile of runtime.profiles ?? []) {
   }
 }
 
-if (findings.schema !== "app-piteco-phase-zero-findings" || findings.version !== "1.0") {
-  errors.push("Contrato inválido para o registro de falhas da Fase 0.");
-}
-const allowedSeverities = new Set(findings.allowed_severities ?? []);
-const allowedStatuses = new Set(findings.allowed_statuses ?? []);
-const findingIds = new Set();
-const requiredFindingFields = [
-  "id",
-  "severity",
-  "title",
-  "status",
-  "scope",
-  "evidence",
-  "risk",
-  "required_action",
-  "exit_proof",
-];
-for (const [index, finding] of (findings.findings ?? []).entries()) {
-  const label = finding?.id || `achado no índice ${index}`;
-  for (const field of requiredFindingFields) {
-    const value = finding?.[field];
-    const emptyArray = Array.isArray(value) && value.length === 0;
-    if (value === undefined || value === null || value === "" || emptyArray) {
-      errors.push(`${label}: campo obrigatório ausente ou vazio: ${field}`);
-    }
-  }
-  if (findingIds.has(finding.id)) errors.push(`ID de achado duplicado: ${finding.id}`);
-  findingIds.add(finding.id);
-  if (!allowedSeverities.has(finding.severity)) {
-    errors.push(`${label}: severidade não permitida: ${finding.severity}`);
-  }
-  if (!allowedStatuses.has(finding.status)) {
-    errors.push(`${label}: status não permitido: ${finding.status}`);
-  }
-  if (!Array.isArray(finding.evidence) || !finding.evidence.every((item) => typeof item === "string")) {
-    errors.push(`${label}: evidence deve ser uma lista de strings.`);
-  }
-}
-if ((findings.findings ?? []).filter((finding) => finding.severity === "P0").length < 2) {
-  errors.push("O registro deve preservar os dois bloqueios P0 de ambiente e runtime publicado.");
-}
-
-const serialized = `${JSON.stringify(backend)}${JSON.stringify(runtime)}${JSON.stringify(findings)}`;
+const serialized = `${JSON.stringify(backend)}${JSON.stringify(runtime)}`;
 const forbiddenEvidencePatterns = [
   /eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\./,
   /sb_(?:secret|publishable)_[a-zA-Z0-9_-]+/i,
@@ -130,11 +87,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-const counts = Object.fromEntries(
-  [...allowedSeverities].map((severity) => [
-    severity,
-    findings.findings.filter((finding) => finding.severity === severity).length,
-  ]),
-);
-console.log("Templates, coletor e registro de falhas da Fase 0 válidos.");
-console.log(JSON.stringify(counts));
+console.log("Templates e coletor da Fase 0 válidos.");

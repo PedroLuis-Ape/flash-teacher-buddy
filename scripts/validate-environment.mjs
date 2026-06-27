@@ -48,19 +48,88 @@ function decodeJwtPayload(token) {
   }
 }
 
+function validatePublicValue(value, projectId, label) {
+  if (!value) {
+    errors.push(`${label} está ausente.`);
+    return;
+  }
+
+  if (value.startsWith("sb_publishable_")) return;
+
+  const payload = decodeJwtPayload(value);
+  if (!payload) {
+    errors.push(`${label} não possui formato reconhecido.`);
+    return;
+  }
+  if (payload.role !== "anon") {
+    errors.push(`${label} não possui role anon.`);
+  }
+  if (payload.ref && payload.ref !== projectId) {
+    errors.push(`${label} pertence a outro projeto Supabase.`);
+  }
+}
+
+function validateProjectUrl(value, projectId, label) {
+  try {
+    const parsedUrl = new URL(value);
+    const expectedHost = `${projectId}.supabase.co`;
+
+    if (parsedUrl.protocol !== "https:") errors.push(`${label} deve usar HTTPS.`);
+    if (parsedUrl.hostname !== expectedHost) {
+      errors.push(`${label} não corresponde ao project ref oficial.`);
+    }
+    if (parsedUrl.pathname !== "/" && parsedUrl.pathname !== "") {
+      errors.push(`${label} deve apontar para a raiz do projeto.`);
+    }
+  } catch {
+    errors.push(`${label} não é uma URL válida.`);
+  }
+}
+
 const envSource = readText(".env");
 const envFile = envSource ? parseEnv(envSource) : {};
-const env = { ...envFile, ...process.env };
-const configSource = readText("supabase/config.toml");
+const configSource = readText("supabase/config.toml") ?? "";
+const mainSource = readText("src/main.tsx") ?? "";
+const clientSource = readText("src/integrations/supabase/client.ts") ?? "";
+const runtimeFunctionSource = readText("supabase/functions/app-public-config/index.ts") ?? "";
 
-const requiredKeys = [
-  "VITE_SUPABASE_PROJECT_ID",
-  "VITE_SUPABASE_URL",
-  "VITE_SUPABASE_PUBLISHABLE_KEY",
-];
+const configProjectId = configSource.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
+if (!configProjectId) {
+  errors.push("supabase/config.toml não declara project_id.");
+} else if (!/^[a-z]{20}$/.test(configProjectId)) {
+  errors.push("project_id não possui o formato esperado de project ref.");
+}
 
-for (const key of requiredKeys) {
-  if (!env[key]) errors.push(`Variável obrigatória ausente: ${key}`);
+const runtimeEndpointProjectId = mainSource.match(
+  /https:\/\/([a-z]{20})\.functions\.supabase\.co\/app-public-config/,
+)?.[1];
+
+if (!runtimeEndpointProjectId) {
+  errors.push("src/main.tsx não declara o endpoint oficial app-public-config.");
+} else if (configProjectId && runtimeEndpointProjectId !== configProjectId) {
+  errors.push("O endpoint de configuração pública aponta para outro projeto.");
+}
+
+for (const [path, source] of [
+  ["src/main.tsx", mainSource],
+  ["src/integrations/supabase/client.ts", clientSource],
+]) {
+  if (configProjectId && !source.includes(configProjectId)) {
+    errors.push(`${path} não fixa o project ref oficial.`);
+  }
+}
+
+const runtimeSection = configSource.match(
+  /\[functions\.app-public-config\]([\s\S]*?)(?=\n\[|$)/,
+)?.[1];
+if (!runtimeSection || !/verify_jwt\s*=\s*false/.test(runtimeSection)) {
+  errors.push("app-public-config deve estar explicitamente público em supabase/config.toml.");
+}
+
+for (const requiredFragment of ["SUPABASE_URL", "SUPABASE_ANON_KEY", "projectId", "publishableKey"]) {
+  if (!runtimeFunctionSource.includes(requiredFragment)) {
+    errors.push(`app-public-config não contém o contrato obrigatório: ${requiredFragment}`);
+  }
 }
 
 const forbiddenKeyPatterns = [
@@ -79,81 +148,47 @@ for (const key of Object.keys(envFile)) {
   if (forbiddenKeyPatterns.some((pattern) => pattern.test(key))) {
     errors.push(`A .env versionada contém uma variável proibida: ${key}`);
   }
-
   if (!key.startsWith("VITE_")) {
     errors.push(`A .env versionada deve conter apenas valores públicos VITE_: ${key}`);
   }
 }
 
-const projectId = env.VITE_SUPABASE_PROJECT_ID;
-const supabaseUrl = env.VITE_SUPABASE_URL;
-const publishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const suppliedEnv = {
+  projectId: process.env.VITE_SUPABASE_PROJECT_ID || envFile.VITE_SUPABASE_PROJECT_ID,
+  url: process.env.VITE_SUPABASE_URL || envFile.VITE_SUPABASE_URL,
+  publicValue:
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || envFile.VITE_SUPABASE_PUBLISHABLE_KEY,
+};
+const suppliedCount = Object.values(suppliedEnv).filter(Boolean).length;
 
-if (projectId && !/^[a-z]{20}$/.test(projectId)) {
-  errors.push("VITE_SUPABASE_PROJECT_ID não possui o formato esperado de project ref.");
+if (suppliedCount > 0 && suppliedCount < 3) {
+  errors.push("As variáveis VITE_SUPABASE_* devem ser fornecidas como um conjunto completo.");
 }
 
-if (projectId && supabaseUrl) {
-  try {
-    const parsedUrl = new URL(supabaseUrl);
-    const expectedHost = `${projectId}.supabase.co`;
-
-    if (parsedUrl.protocol !== "https:") {
-      errors.push("VITE_SUPABASE_URL deve usar HTTPS.");
-    }
-    if (parsedUrl.hostname !== expectedHost) {
-      errors.push("VITE_SUPABASE_URL não corresponde ao VITE_SUPABASE_PROJECT_ID.");
-    }
-    if (parsedUrl.pathname !== "/" && parsedUrl.pathname !== "") {
-      errors.push("VITE_SUPABASE_URL deve apontar para a raiz do projeto.");
-    }
-  } catch {
-    errors.push("VITE_SUPABASE_URL não é uma URL válida.");
+if (suppliedCount === 3 && configProjectId) {
+  if (suppliedEnv.projectId !== configProjectId) {
+    errors.push("VITE_SUPABASE_PROJECT_ID não corresponde ao projeto oficial.");
   }
-}
-
-if (!configSource) {
-  errors.push("supabase/config.toml não foi encontrado.");
-} else {
-  const configProjectId = configSource.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
-  if (!configProjectId) {
-    errors.push("supabase/config.toml não declara project_id.");
-  } else if (projectId && configProjectId !== projectId) {
-    errors.push("supabase/config.toml e o frontend apontam para projetos diferentes.");
-  }
-}
-
-if (publishableKey) {
-  if (publishableKey.startsWith("sb_publishable_")) {
-    // Modern publishable key. No JWT payload to inspect.
-  } else {
-    const payload = decodeJwtPayload(publishableKey);
-    if (!payload) {
-      errors.push("VITE_SUPABASE_PUBLISHABLE_KEY não é uma chave publicável reconhecida.");
-    } else {
-      if (payload.role !== "anon") {
-        errors.push("A chave do frontend não possui role anon.");
-      }
-      if (projectId && payload.ref && payload.ref !== projectId) {
-        errors.push("A chave publicável pertence a outro projeto Supabase.");
-      }
-    }
-  }
+  validateProjectUrl(suppliedEnv.url, configProjectId, "VITE_SUPABASE_URL");
+  validatePublicValue(
+    suppliedEnv.publicValue,
+    configProjectId,
+    "VITE_SUPABASE_PUBLISHABLE_KEY",
+  );
 }
 
 if (envSource) {
   warnings.push(
-    "A .env ainda é versionada por compatibilidade de deploy. Ela deve permanecer limitada a valores públicos VITE_ até a migração para variáveis da plataforma.",
+    "A .env versionada ainda existe. Prefira o endpoint público de runtime ou variáveis seguras da plataforma.",
   );
 } else {
-  warnings.push("A .env não está versionada; o build depende das variáveis configuradas na plataforma.");
+  warnings.push(
+    "A configuração pública é obtida em runtime por app-public-config; nenhuma credencial de frontend fica versionada.",
+  );
 }
 
 for (const warning of warnings) console.warn(`AVISO: ${warning}`);
+for (const error of errors) console.error(`ERRO: ${error}`);
 
-if (errors.length > 0) {
-  for (const error of errors) console.error(`ERRO: ${error}`);
-  process.exit(1);
-}
-
-console.log(`Contrato de ambiente válido para o projeto ${projectId}.`);
+if (errors.length > 0) process.exit(1);
+console.log(`Contrato de ambiente válido para o projeto ${configProjectId}.`);
