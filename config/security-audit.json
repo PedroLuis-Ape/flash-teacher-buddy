@@ -1,11 +1,12 @@
 {
   "publicFunctions": {
-    "ping": "Health check público, somente leitura e sem acesso ao banco"
+    "ping": "Public health check",
+    "app-public-config": "Public runtime configuration"
   },
   "elevatedFunctions": [
     "kingdoms-import-csv",
     "audit-ab-consistency",
     "repair-ab",
-    "announcements\u002dcreate"
+    "announcements-create"
   ]
 }
