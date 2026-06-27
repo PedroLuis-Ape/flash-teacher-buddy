@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
+import { getFreshSession } from '@/lib/freshSession';
 import { readTurmaCreateFunctionError } from '@/features/classroom/lib/turmaCreateErrors';
 import { readTurmaUpdateFunctionError } from '@/features/classroom/lib/turmaUpdateErrors';
 
@@ -9,7 +10,7 @@ export function useTurmasMine() {
     queryKey: ['turmas', 'mine'],
     queryFn: async () => {
       if (!FEATURE_FLAGS.classes_enabled) return { turmas: [] };
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getFreshSession();
       if (!session) return { turmas: [] };
       const { data, error } = await supabase.functions.invoke('turmas-mine', {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -26,7 +27,7 @@ export function useTurmasAsAluno() {
     queryKey: ['turmas', 'as-aluno'],
     queryFn: async () => {
       if (!FEATURE_FLAGS.classes_enabled) return { turmas: [] };
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getFreshSession();
       if (!session) return { turmas: [] };
       const { data, error } = await supabase.functions.invoke('turmas-as-aluno', {
         headers: { Authorization: `Bearer ${session.access_token}` },
