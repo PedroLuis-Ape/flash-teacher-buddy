@@ -4,6 +4,7 @@ import {
   smartPackageForEffectiveLegacy,
 } from "@/features/smart-import/adapters";
 import type { SmartImportPackage } from "@/features/smart-import/schema";
+import { atomicImportDatabaseError, executeAtomicSuperImport } from "./atomicExecutor";
 import type { GlobalImportPackage } from "./schema";
 import type {
   GlobalImportDestinationPlan,
@@ -133,36 +134,6 @@ function clearRequestId(storageKey: string): void {
   memoryRequestIds.delete(storageKey);
 }
 
-function importDatabaseError(error: unknown): Error {
-  const message = error instanceof Error
-    ? error.message
-    : typeof error === "object" && error !== null && "message" in error
-      ? String((error as { message?: unknown }).message ?? "")
-      : String(error ?? "");
-
-  if (
-    message.includes("global_import_batches_schema_version_check")
-    || (message.includes("global_import_batches") && message.includes("schema_version"))
-  ) {
-    return new Error(
-      "O banco conectado ao preview ainda não recebeu a migration do Super Importador 2.0. "
-      + "Aplique a migration 20260623003000_fix_global_import_batch_schema_version_v2.sql e tente novamente.",
-    );
-  }
-
-  return error instanceof Error ? error : new Error(message || "A importação falhou no banco de dados.");
-}
-
-async function rollbackImportedBatch(
-  batchId: string,
-  targetScope: ImportTargetScope,
-): Promise<void> {
-  const rpcName = targetScope === "classroom"
-    ? "undo_classroom_global_import_v1"
-    : "undo_global_import_v1";
-  await (supabase.rpc as any)(rpcName, { _batch_id: batchId });
-}
-
 export async function executeMappedGlobalImport(
   packageValue: GlobalImportPackage,
   options: ExecuteMappedImportOptions,
@@ -186,70 +157,19 @@ export async function executeMappedGlobalImport(
     0,
     totalCards,
     options.turmaId
-      ? "Enviando o pacote para uma transação segura dentro da turma"
-      : "Enviando pacote enriquecido para uma transação segura",
+      ? "Importando cards e glossário em uma transação segura na turma"
+      : "Importando cards e glossário em uma transação segura",
   );
 
-  const rpcName = options.turmaId
-    ? "import_app_piteco_super_package_to_class_v1"
-    : "import_app_piteco_super_package_v2";
-  const rpcPayload = options.turmaId
-    ? {
-        _request_id: request.requestId,
-        _payload: cardPackage,
-        _destination_plan: options.destinationPlan,
-        _turma_id: options.turmaId,
-        _card_conflict: options.cardConflict,
-      }
-    : {
-        _request_id: request.requestId,
-        _payload: cardPackage,
-        _destination_plan: options.destinationPlan,
-        _card_conflict: options.cardConflict,
-        _institution_id: options.institutionId ?? null,
-      };
-
-  const { data, error } = await (supabase.rpc as any)(rpcName, rpcPayload);
-  if (error) throw importDatabaseError(error);
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    throw new Error("O banco não devolveu o relatório da importação.");
-  }
-
-  const baseReport = data as GlobalImportExecutionReport;
-  options.onProgress?.(
-    totalCards,
-    totalCards,
-    "Consolidando o glossário dentro de cada pasta",
-  );
-
-  const { data: glossaryData, error: glossaryError } = await (supabase.rpc as any)(
-    "sync_folder_glossaries_from_super_import_v1",
-    {
-      _batch_id: baseReport.batch_id,
-      _payload: smartPackage,
-    },
-  );
-
-  if (glossaryError) {
-    await rollbackImportedBatch(
-      baseReport.batch_id,
-      options.turmaId ? "classroom" : "personal",
-    );
-    throw importDatabaseError(glossaryError);
-  }
-
-  const glossaryReport = (glossaryData ?? {}) as {
-    glossary_created?: number;
-    glossary_updated?: number;
-    glossary_skipped?: number;
-  };
-  const finalReport: GlobalImportExecutionReport = {
-    ...baseReport,
-    glossary_scope: "folder",
-    glossary_created: glossaryReport.glossary_created ?? 0,
-    glossary_updated: glossaryReport.glossary_updated ?? 0,
-    glossary_skipped: glossaryReport.glossary_skipped ?? 0,
-  };
+  const finalReport = await executeAtomicSuperImport({
+    requestId: request.requestId,
+    cardPayload: cardPackage,
+    glossaryPayload: smartPackage,
+    destinationPlan: options.destinationPlan,
+    cardConflict: options.cardConflict,
+    institutionId: options.institutionId,
+    turmaId: options.turmaId,
+  });
 
   if (options.canonicalPackage) {
     updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");
@@ -267,7 +187,7 @@ export async function undoGlobalImport(
     "undo_folder_glossary_batch_v1",
     { _batch_id: batchId },
   );
-  if (folderUndo.error) throw importDatabaseError(folderUndo.error);
+  if (folderUndo.error) throw atomicImportDatabaseError(folderUndo.error);
 
   const rpcName = targetScope === "classroom"
     ? "undo_classroom_global_import_v1"
@@ -275,5 +195,5 @@ export async function undoGlobalImport(
   const { error } = await (supabase.rpc as any)(rpcName, {
     _batch_id: batchId,
   });
-  if (error) throw importDatabaseError(error);
+  if (error) throw atomicImportDatabaseError(error);
 }
