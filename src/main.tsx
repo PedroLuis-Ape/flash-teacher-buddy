@@ -67,10 +67,9 @@ async function loadRuntimeConfig() {
     return;
   }
 
-  const response = await fetch(RUNTIME_CONFIG_URL, {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
+  // Keep this request simple so browsers do not need a CORS preflight merely
+  // to obtain the public bootstrap values.
+  const response = await fetch(RUNTIME_CONFIG_URL);
 
   if (!response.ok) {
     throw new Error(`Runtime config request failed with status ${response.status}.`);

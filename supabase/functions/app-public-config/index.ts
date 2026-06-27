@@ -3,7 +3,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const publicHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-  "Access-Control-Allow-Headers": "content-type",
+  "Access-Control-Allow-Headers": "accept, apikey, authorization, cache-control, content-type, pragma, x-client-info",
+  "Access-Control-Max-Age": "86400",
   "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
   "Content-Type": "application/json; charset=utf-8",
   "X-Content-Type-Options": "nosniff",
