@@ -5,14 +5,18 @@ import { describe, expect, it } from "vitest";
 const source = readFileSync(join(process.cwd(), "src", "main.tsx"), "utf8");
 
 describe("preview bootstrap fallback", () => {
-  it("uses the remote runtime configuration after rejecting injected values", () => {
-    const injectedBlock = source.indexOf("if (envProjectId && envUrl && envPublicValue)");
-    const warning = source.indexOf("Ignoring incompatible injected");
-    const remoteLoad = source.indexOf("await fetchRuntimeConfig()");
+  it("loads and installs runtime configuration before importing the app", () => {
+    const resolver = source.indexOf("async function resolveRuntimeConfig");
+    const remoteLoad = source.indexOf("await fetchRuntimeConfig()", resolver);
+    const runtimeInstall = source.indexOf("installPlatformRuntime(runtime)");
+    const appImport = source.indexOf('await import("./App.tsx")');
 
-    expect(injectedBlock).toBeGreaterThanOrEqual(0);
-    expect(warning).toBeGreaterThan(injectedBlock);
-    expect(remoteLoad).toBeGreaterThan(warning);
+    expect(resolver).toBeGreaterThanOrEqual(0);
+    expect(remoteLoad).toBeGreaterThan(resolver);
+    expect(runtimeInstall).toBeGreaterThan(remoteLoad);
+    expect(appImport).toBeGreaterThan(runtimeInstall);
+    expect(source).toContain("readCachedRuntime()");
+    expect(source).toContain("readEnvironmentRuntime()");
   });
 
   it("checks preview context before recovery cleanup", () => {
