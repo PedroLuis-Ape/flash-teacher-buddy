@@ -6,6 +6,10 @@ const distDir = resolve(root, "dist");
 const templatePath = resolve(distDir, "index.html");
 const pagesPath = resolve(root, "config/public-seo-pages.json");
 const siteUrl = "https://www.apeeducation.org";
+const organizationId = `${siteUrl}/#organization`;
+const websiteId = `${siteUrl}/#website`;
+const appId = `${siteUrl}/#app`;
+const pageSchemaTypes = new Set(["WebPage", "CollectionPage", "AboutPage"]);
 
 if (!existsSync(templatePath)) {
   console.error("ERRO: dist/index.html não encontrado. Execute o build do Vite primeiro.");
@@ -65,34 +69,121 @@ function renderStaticContent(page) {
 </main>`;
 }
 
+function buildOrganization() {
+  return {
+    "@type": "Organization",
+    "@id": organizationId,
+    name: "APE Education",
+    alternateName: ["APE", "App Piteco"],
+    url: `${siteUrl}/`,
+    logo: {
+      "@type": "ImageObject",
+      url: `${siteUrl}/branding/icon.png`,
+    },
+    description:
+      "Plataforma educacional brasileira de flashcards, estudo ativo e organização de materiais para alunos e professores.",
+  };
+}
+
+function buildWebsite() {
+  return {
+    "@type": "WebSite",
+    "@id": websiteId,
+    name: "APE — Apprentice Practice & Enhancement",
+    alternateName: "App Piteco",
+    url: `${siteUrl}/`,
+    inLanguage: "pt-BR",
+    publisher: { "@id": organizationId },
+  };
+}
+
+function buildApplication() {
+  return {
+    "@type": "SoftwareApplication",
+    "@id": appId,
+    name: "APE — App Piteco",
+    alternateName: "Apprentice Practice & Enhancement",
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
+    inLanguage: "pt-BR",
+    description:
+      "Aplicativo educacional de flashcards, jogos, prática ativa e organização de materiais para alunos e professores.",
+    url: `${siteUrl}/`,
+    publisher: { "@id": organizationId },
+  };
+}
+
+function buildBreadcrumb(page, canonical) {
+  if (page.path === "/") return null;
+
+  return {
+    "@type": "BreadcrumbList",
+    "@id": `${canonical}#breadcrumb`,
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Início",
+        item: `${siteUrl}/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: page.h1,
+        item: canonical,
+      },
+    ],
+  };
+}
+
 function buildSchema(page, canonical) {
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": page.schemaType,
+  const pageId = `${canonical}#webpage`;
+  const graph = [buildOrganization(), buildWebsite(), buildApplication()];
+  const breadcrumb = buildBreadcrumb(page, canonical);
+  const mainEntity = [];
+
+  if (breadcrumb) graph.push(breadcrumb);
+
+  if (page.path === "/") {
+    mainEntity.push({ "@id": appId });
+  }
+
+  if (!pageSchemaTypes.has(page.schemaType)) {
+    const learningResourceId = `${canonical}#learning-resource`;
+    const learningResource = {
+      "@type": page.schemaType,
+      "@id": learningResourceId,
+      name: page.h1,
+      description: page.description,
+      url: canonical,
+      inLanguage: "pt-BR",
+      mainEntityOfPage: { "@id": pageId },
+      provider: { "@id": organizationId },
+      ...(page.educationalLevel ? { educationalLevel: page.educationalLevel } : {}),
+    };
+    graph.push(learningResource);
+    mainEntity.push({ "@id": learningResourceId });
+  }
+
+  graph.push({
+    "@type": pageSchemaTypes.has(page.schemaType) ? page.schemaType : "WebPage",
+    "@id": pageId,
     name: page.h1,
-    headline: page.h1,
+    headline: page.title,
     description: page.description,
     url: canonical,
     inLanguage: "pt-BR",
-    isPartOf: {
-      "@type": "WebSite",
-      name: "APE — Apprentice Practice & Enhancement",
-      url: `${siteUrl}/`,
-    },
-    author: {
-      "@type": "Person",
-      name: "Pedro Luis de Oliveira Silva",
-    },
-    publisher: {
-      "@type": "EducationalOrganization",
-      name: "APE Education",
-      url: `${siteUrl}/`,
-    },
-    dateModified: "2026-06-27",
-  };
+    isPartOf: { "@id": websiteId },
+    about: { "@id": appId },
+    publisher: { "@id": organizationId },
+    ...(breadcrumb ? { breadcrumb: { "@id": breadcrumb["@id"] } } : {}),
+    ...(mainEntity.length > 0 ? { mainEntity } : {}),
+  });
 
-  if (page.educationalLevel) schema.educationalLevel = page.educationalLevel;
-  return schema;
+  return {
+    "@context": "https://schema.org",
+    "@graph": graph,
+  };
 }
 
 const staticStyle = `<style id="seo-static-style">
