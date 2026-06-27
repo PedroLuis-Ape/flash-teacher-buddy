@@ -3,6 +3,7 @@
  * © 2025 APE Education. Todos os direitos reservados.
  */
 
+import "./lib/bootWatchdog";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./styles/store-package-avatar.css";
