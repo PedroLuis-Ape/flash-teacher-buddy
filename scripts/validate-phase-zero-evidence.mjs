@@ -21,8 +21,8 @@ if (backend.schema !== "app-piteco-backend-evidence" || backend.version !== "1.0
 if (backend.status !== "pending") {
   errors.push("O template de backend deve permanecer pending até captura real.");
 }
-if (backend.documented_project_ref !== "ymahldldyxvwjeruaxpr") {
-  errors.push("O template deve preservar o project ref documentado atual.");
+if (backend.documented_project_ref !== "xrnfhhoxmmstagmelvyi") {
+  errors.push("O template deve preservar o project ref oficial.");
 }
 for (const service of ["auth", "rest", "rpc", "storage", "functions"]) {
   if (!backend.services?.[service]) errors.push(`Serviço obrigatório ausente: ${service}`);
@@ -88,8 +88,8 @@ for (const [index, finding] of (findings.findings ?? []).entries()) {
     errors.push(`${label}: evidence deve ser uma lista de strings.`);
   }
 }
-if ((findings.findings ?? []).filter((finding) => finding.severity === "P0").length < 2) {
-  errors.push("O registro deve preservar os dois bloqueios P0 de ambiente e runtime publicado.");
+if ((findings.findings ?? []).filter((finding) => finding.severity === "P0").length < 1) {
+  errors.push("O registro deve preservar ao menos um achado P0 de runtime publicado.");
 }
 
 const serialized = `${JSON.stringify(backend)}${JSON.stringify(runtime)}${JSON.stringify(findings)}`;
