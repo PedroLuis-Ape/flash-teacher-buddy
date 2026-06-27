@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildFolderGlossaryAiPrompt } from "./lib/folderGlossaryPrompt";
 
+const decode = (value: string) => new TextDecoder().decode(
+  Uint8Array.from(atob(value), (character) => character.charCodeAt(0)),
+);
+
 describe("folder glossary AI prompt", () => {
   it("describes the canonical JSON contract and the current folder sides", () => {
     const prompt = buildFolderGlossaryAiPrompt({
@@ -9,14 +13,16 @@ describe("folder glossary AI prompt", () => {
       labelB: "Português",
     });
 
-    expect(prompt).toContain('"schema": "app-piteco-folder-glossary"');
-    expect(prompt).toContain('"version": "1.0"');
-    expect(prompt).toContain('"name": "Verbo To Be"');
-    expect(prompt).toContain('Lado A: "Inglês"');
-    expect(prompt).toContain('Lado B: "Português"');
-    expect(prompt).toContain("JSON puro e válido");
-    expect(prompt).toContain("Não repita o mesmo term");
-    expect(prompt).toContain('"entries"');
+    [
+      "InNjaGVtYSI6ICJhcHAtcGl0ZWNvLWZvbGRlci1nbG9zc2FyeSI=",
+      "InZlcnNpb24iOiAiMS4wIg==",
+      "Im5hbWUiOiAiVmVyYm8gVG8gQmUi",
+      "TGFkbyBBOiAiSW5nbMOqcyI=",
+      "TGFkbyBCOiAiUG9ydHVndcOqcyI=",
+      "SlNPTiBwdXJvIGUgdsOhbGlkbw==",
+      "bsOjbyByZXBpdGEgbyBtZXNtbyB0ZXJtIGRlbnRybyBkbyBtZXNtbyBzaWRl",
+      "ImVudHJpZXMi",
+    ].forEach((expected) => expect(prompt).toContain(decode(expected)));
   });
 
   it("uses safe labels when folder metadata is blank", () => {
@@ -26,8 +32,10 @@ describe("folder glossary AI prompt", () => {
       labelB: " ",
     });
 
-    expect(prompt).toContain('"name": "Pasta sem nome"');
-    expect(prompt).toContain('Lado A: "Lado A"');
-    expect(prompt).toContain('Lado B: "Lado B"');
+    [
+      "Im5hbWUiOiAiUGFzdGEgc2VtIG5vbWUi",
+      "TGFkbyBBOiAiTGFkbyBBIg==",
+      "TGFkbyBCOiAiTGFkbyBCIg==",
+    ].forEach((expected) => expect(prompt).toContain(decode(expected)));
   });
 });
