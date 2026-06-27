@@ -33,7 +33,8 @@ This branch implements the low-risk foundation:
 - Portuguese document language and corrected organization/founder entities;
 - removal of the invalid public `SearchAction`;
 - reusable robots directives, language, image alt text, localized alternates and safer JSON-LD serialization in `SEOHead`;
-- an independent `scripts/validate-seo.mjs` consistency check.
+- an independent `scripts/validate-seo.mjs` consistency check;
+- automatic execution of the SEO/GEO check in the pull-request CI workflow.
 
 ## Deliberate limits of this phase
 
@@ -48,8 +49,8 @@ This branch implements the low-risk foundation:
 - The existing `llms.txt` remains unchanged in this branch because the connected write
   layer rejected automated modifications to that file. It must be revised separately so
   it no longer links to blocked product areas.
-- The SEO validation script is present but is not yet wired into `package.json`, because
-  the connected write layer rejected automated package-script changes. It can be run with
+- The SEO validation script is not exposed as an npm alias because the connected write
+  layer rejected automated `package.json` changes. CI runs it directly with
   `node scripts/validate-seo.mjs`.
 
 ## Next implementation phases
