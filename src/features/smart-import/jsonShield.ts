@@ -41,10 +41,13 @@ export function parseSmartJsonWithShield(input: string): SmartImportSourceResult
 
   const legacy = normalizeGlobalImportValue(parsed.value);
   if (legacy.success) {
+    const version = legacy.data.officialPackage?.version
+      ?? legacy.data.canonicalPackage?.schema_version
+      ?? "legada";
     return {
       packageValue: legacyPackageToSmartImport(legacy.data.packageValue),
       format: "json-v2",
-      notes: [`Formato ${legacy.data.sourceFormat} normalizado para o motor 2.0.`],
+      notes: [`Formato ${legacy.data.sourceFormat} ${version} normalizado para o motor 2.0.`],
       warnings: legacy.data.warnings,
     };
   }
