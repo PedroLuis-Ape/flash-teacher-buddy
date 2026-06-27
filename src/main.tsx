@@ -24,11 +24,9 @@ type RuntimeSupabaseConfig = {
   publishableKey: string;
 };
 
-declare global {
-  interface Window {
-    __APE_SUPABASE_CONFIG__?: RuntimeSupabaseConfig;
-  }
-}
+const runtimeWindow = window as typeof window & {
+  __APE_SUPABASE_CONFIG__?: RuntimeSupabaseConfig;
+};
 
 try { bootPalette(); } catch { /* noop */ }
 try { runBootStability(); } catch { /* noop */ }
@@ -61,7 +59,7 @@ async function loadRuntimeConfig() {
   const envPublicValue = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 
   if (envProjectId && envUrl && envPublicValue) {
-    window.__APE_SUPABASE_CONFIG__ = validateRuntimeConfig({
+    runtimeWindow.__APE_SUPABASE_CONFIG__ = validateRuntimeConfig({
       projectId: envProjectId,
       url: envUrl,
       publishableKey: envPublicValue,
@@ -87,7 +85,7 @@ async function loadRuntimeConfig() {
     throw new Error("Runtime config response is invalid.");
   }
 
-  window.__APE_SUPABASE_CONFIG__ = validateRuntimeConfig({
+  runtimeWindow.__APE_SUPABASE_CONFIG__ = validateRuntimeConfig({
     projectId: payload.projectId,
     url: payload.url,
     publishableKey: payload.publishableKey,
