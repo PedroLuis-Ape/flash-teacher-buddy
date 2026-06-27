@@ -1,10 +1,4 @@
-/*
- * APE legacy PWA reset worker.
- *
- * This file intentionally does not cache anything. It replaces older workers,
- * clears their Cache Storage entries, refreshes open app windows once and then
- * unregisters itself. Keep the filename stable so installed apps can update it.
- */
+/* Compatibility alias for older APE service-worker registrations. */
 
 const RESET_VERSION = "2026-06-27-pwa-reset-1";
 const RESET_PARAM = "_ape_pwa_reset";
