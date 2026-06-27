@@ -16,11 +16,12 @@ A configuração pública necessária para inicializar o navegador é entregue p
 
 Fluxo:
 
-1. `src/main.tsx` consulta `https://xrnfhhoxmmstagmelvyi.functions.supabase.co/app-public-config`;
+1. `src/main.tsx` consulta `https://xrnfhhoxmmstagmelvyi.supabase.co/functions/v1/app-public-config`;
 2. a resposta informa somente os valores públicos necessários para criar o cliente;
 3. o bootstrap valida o project ref e o hostname;
 4. somente depois dessa validação o módulo principal do aplicativo é carregado;
-5. qualquer divergência interrompe a inicialização e exibe um erro seguro.
+5. em falhas transitórias, o app tenta a configuração pública validada em cache;
+6. em falhas de bundle ou cache antigo, o app limpa Service Worker e Cache Storage uma vez antes de exibir erro.
 
 Variáveis `VITE_SUPABASE_*` continuam aceitas para desenvolvimento ou deploy controlado, mas precisam formar um conjunto completo e corresponder ao projeto oficial.
 
@@ -37,6 +38,7 @@ Variáveis `VITE_SUPABASE_*` continuam aceitas para desenvolvimento ou deploy co
 
 - `supabase/config.toml` não declara um project ref válido;
 - o endpoint público de runtime aponta para outro projeto;
+- o formato da URL da Edge Function não usa `/functions/v1/...`;
 - `src/main.tsx` ou o cliente Supabase divergem do project ref oficial;
 - `app-public-config` não está registrada como função pública;
 - uma configuração `VITE_SUPABASE_*` parcial ou incompatível é fornecida;
