@@ -1,55 +1,50 @@
 # Contrato de ambiente do App Piteco
 
-## Fonte oficial
+## Produção com dados reais
 
-O único backend autorizado do App Piteco é o projeto Supabase:
+O frontend publicado do App Piteco deve usar o projeto Lovable Cloud que contém as contas e os dados existentes:
+
+`ymahldldyxvwjeruaxpr`
+
+Esse é o backend de produção do navegador para autenticação, perfis, pastas, listas, flashcards e glossários já existentes.
+
+## Projeto Supabase conectado às ferramentas administrativas
+
+O projeto abaixo permanece conectado para operações administrativas, migrations e auditorias específicas:
 
 `xrnfhhoxmmstagmelvyi`
 
-Repositório oficial: `PedroLuis-Ape/flash-teacher-buddy`.
+Ele não deve substituir automaticamente o backend do frontend enquanto não existir uma migração de dados completa, validada e explicitamente aprovada. Apontar o aplicativo publicado para esse projeto faz contas e flashcards existentes parecerem ausentes.
 
-Toda configuração de frontend, migration, Edge Function, RLS, Storage, documentação e automação deve apontar para esse project ref. Nenhum outro projeto pode ser usado como fallback, produção alternativa ou destino implícito.
+## Regra obrigatória do frontend
 
-## Configuração pública do frontend
+- `src/integrations/supabase/platformRuntime.ts` é a única fonte de configuração do cliente do navegador.
+- Em produção, URL, project ref e chave pública devem formar um conjunto atômico do projeto `ymahldldyxvwjeruaxpr`.
+- Valores `VITE_SUPABASE_*` injetados por uma integração antiga não podem trocar o backend de produção.
+- Overrides para outro projeto são permitidos somente em desenvolvimento local explícito.
+- Todos os clientes do navegador, incluindo sincronização de convidado, devem usar `readPlatformRuntime()`.
 
-A configuração pública necessária para inicializar o navegador é entregue pela Edge Function `app-public-config` do próprio projeto oficial.
+## Segurança
 
-Fluxo:
+A URL e a chave anon são configurações públicas enviadas ao navegador. A segurança continua dependendo de RLS, RPCs, Edge Functions e autorização no servidor.
 
-1. `src/main.tsx` consulta `https://xrnfhhoxmmstagmelvyi.supabase.co/functions/v1/app-public-config`;
-2. a resposta informa somente os valores públicos necessários para criar o cliente;
-3. o bootstrap valida o project ref e o hostname;
-4. somente depois dessa validação o módulo principal do aplicativo é carregado;
-5. em falhas transitórias, o app tenta a configuração pública validada em cache;
-6. em falhas de bundle ou cache antigo, o app limpa Service Worker e Cache Storage uma vez antes de exibir erro.
+Nunca colocar no frontend:
 
-Variáveis `VITE_SUPABASE_*` continuam aceitas para desenvolvimento ou deploy controlado, mas precisam formar um conjunto completo e corresponder ao projeto oficial.
+- service role;
+- senha de banco;
+- tokens administrativos;
+- segredos de Edge Functions.
 
-## Política de arquivos de ambiente
+## Mudança futura de backend
 
-- `.env` e `.env.*` não podem ser versionados;
-- `.env.example` é o único modelo permitido;
-- chaves administrativas, service role, senhas, tokens e segredos nunca podem entrar no frontend;
-- a chave pública do navegador não é autorização: RLS, RPCs e Edge Functions continuam responsáveis pela segurança.
+Uma troca do projeto de produção só pode ocorrer após:
 
-## Invariantes verificadas pelo CI
+1. inventário das contas e registros;
+2. migração integral dos dados;
+3. validação de autenticação e ownership;
+4. comparação de contagens;
+5. testes de leitura e escrita;
+6. plano de rollback;
+7. aprovação explícita do proprietário do App Piteco.
 
-`npm run check:environment` bloqueia publicação quando:
-
-- `supabase/config.toml` não declara um project ref válido;
-- o endpoint público de runtime aponta para outro projeto;
-- o formato da URL da Edge Function não usa `/functions/v1/...`;
-- `src/main.tsx` ou o cliente Supabase divergem do project ref oficial;
-- `app-public-config` não está registrada como função pública;
-- uma configuração `VITE_SUPABASE_*` parcial ou incompatível é fornecida;
-- arquivos de ambiente versionados contêm variáveis privadas ou não públicas.
-
-## Backend desbloqueado
-
-A conexão administrativa disponível possui acesso ao projeto oficial. Alterações de backend podem ser executadas nele desde que:
-
-- sejam versionadas como migrations ou Edge Functions;
-- tenham rollback ou procedimento de correção;
-- passem pelas auditorias de segurança e desempenho;
-- não apaguem dados sem inventário e proteção apropriada;
-- sejam testadas antes da integração em `main`.
+Até essa migração existir, o frontend de produção permanece bloqueado em `ymahldldyxvwjeruaxpr`.
