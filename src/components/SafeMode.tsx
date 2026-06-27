@@ -1,8 +1,20 @@
-import { Component, ReactNode, ErrorInfo } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import {
+  cleanupAppOwnedCaches,
+  unregisterLegacyAppServiceWorkers,
+} from "@/lib/appCacheCleanup";
 import { clearErrorBurst } from "@/lib/errorCapture";
 
 const CRASH_KEY = "ape_last_crash";
 const CRASH_COUNT_KEY = "ape_crash_count";
+const PRESERVE_STORAGE_PREFIXES = [
+  "sb-",
+  "ape_outbox_",
+  "ape_pref_",
+  "app-piteco:",
+  "study-",
+] as const;
+const PRESERVE_STORAGE_KEYS = new Set(["theme", "i18nextLng"]);
 
 interface ZombieDetail {
   reason?: string;
@@ -17,6 +29,11 @@ interface SafeModeState {
   zombieDetected: boolean;
 }
 
+function shouldPreserveStorageKey(key: string): boolean {
+  return PRESERVE_STORAGE_KEYS.has(key)
+    || PRESERVE_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
 export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> {
   state: SafeModeState = {
     hasError: false,
@@ -26,10 +43,7 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
   };
 
   private zombieHandler = ((event: Event) => {
-    const e = event as CustomEvent<ZombieDetail>;
-    const detail = e.detail;
-
-    // Só aceita eventos explicitamente fatais
+    const detail = (event as CustomEvent<ZombieDetail>).detail;
     if (detail?.severity !== "fatal-sync") {
       console.warn("[SafeMode] Ignored non-fatal zombie event:", detail);
       return;
@@ -38,7 +52,7 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
     this.setState({
       hasError: true,
       zombieDetected: true,
-      error: new Error(detail?.reason || "App entered recovery mode"),
+      error: new Error(detail.reason || "App entered recovery mode"),
       errorInfo: "SafeMode detected repeated fatal synchronous errors.",
     });
   }) as EventListener;
@@ -56,23 +70,19 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    const msg = `${error?.message || "Unknown error"}\n${info?.componentStack?.slice(0, 500) || ""}`;
-    this.setState({ errorInfo: msg });
+    const message = `${error.message || "Unknown error"}\n${info.componentStack?.slice(0, 500) || ""}`;
+    this.setState({ errorInfo: message });
 
     try {
-      localStorage.setItem(
-        CRASH_KEY,
-        JSON.stringify({
-          message: error?.message,
-          stack: error?.stack?.slice(0, 800),
-          time: Date.now(),
-        })
-      );
-
-      const count = parseInt(localStorage.getItem(CRASH_COUNT_KEY) || "0", 10);
+      localStorage.setItem(CRASH_KEY, JSON.stringify({
+        message: error.message,
+        stack: error.stack?.slice(0, 800),
+        time: Date.now(),
+      }));
+      const count = Number.parseInt(localStorage.getItem(CRASH_COUNT_KEY) || "0", 10);
       localStorage.setItem(CRASH_COUNT_KEY, String(count + 1));
     } catch {
-      // ignore
+      // Best-effort diagnostics only.
     }
 
     console.error("[SafeMode] Fatal React error caught:", error, info);
@@ -95,41 +105,24 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
 
   handleClearAndReload = async () => {
     try {
-      // Namespace-scoped cleanup. We intentionally do NOT call
-      // localStorage.clear() — that would wipe Supabase auth tokens
-      // (sb-*) and the offline outbox (ape_outbox_*) that the user
-      // needs to recover gracefully.
-      //
-      // Preserved prefixes:
-      //   - sb-*           → Supabase auth session
-      //   - ape_outbox_*   → pending offline mutations (Phase 5)
-      //   - ape_pref_*     → user preferences that survive recovery
-      const PRESERVE_PREFIXES = ["sb-", "ape_outbox_", "ape_pref_"];
-      const shouldPreserve = (key: string) =>
-        PRESERVE_PREFIXES.some((p) => key.startsWith(p));
-
-      const toRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && !shouldPreserve(k)) toRemove.push(k);
+      const removableKeys: string[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key && !shouldPreserveStorageKey(key)) removableKeys.push(key);
       }
-      toRemove.forEach((k) => {
-        try { localStorage.removeItem(k); } catch { /* ignore */ }
+      removableKeys.forEach((key) => {
+        try {
+          localStorage.removeItem(key);
+        } catch {
+          // Continue cleaning the remaining keys.
+        }
       });
 
-      // Service workers and HTTP caches are safe to wipe — they are
-      // owned by the build, not by the user's data.
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.allSettled(regs.map((r) => r.unregister()));
-      }
+      await Promise.allSettled([
+        unregisterLegacyAppServiceWorkers(),
+        cleanupAppOwnedCaches(),
+      ]);
 
-      if ("caches" in window) {
-        const names = await caches.keys();
-        await Promise.allSettled(names.map((n) => caches.delete(n)));
-      }
-
-      // sessionStorage is per-tab and transient — safe to clear fully.
       sessionStorage.clear();
     } catch (error) {
       console.warn("[SafeMode] Falha ao limpar cache:", error);
@@ -142,14 +135,13 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
     if (!this.state.hasError) return this.props.children;
 
     const isZombie = this.state.zombieDetected;
-
     return (
       <div style={{
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "24px",
+        padding: 24,
         fontFamily: "system-ui, -apple-system, sans-serif",
         background: "#1a1a2e",
         color: "#e0e0e0",
@@ -192,51 +184,40 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <button
-              onClick={this.handleRetry}
-              style={{
-                padding: "12px 20px",
-                borderRadius: 8,
-                border: "none",
-                background: "#4CAF50",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: 15,
-                cursor: "pointer",
-              }}
-            >
+            <button type="button" onClick={this.handleRetry} style={{
+              padding: "12px 20px",
+              borderRadius: 8,
+              border: "none",
+              background: "#4CAF50",
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: 15,
+              cursor: "pointer",
+            }}>
               ⚡ Tentar recuperar
             </button>
-
-            <button
-              onClick={this.handleReload}
-              style={{
-                padding: "12px 20px",
-                borderRadius: 8,
-                border: "none",
-                background: "#FFD700",
-                color: "#1a1a2e",
-                fontWeight: 600,
-                fontSize: 15,
-                cursor: "pointer",
-              }}
-            >
+            <button type="button" onClick={this.handleReload} style={{
+              padding: "12px 20px",
+              borderRadius: 8,
+              border: "none",
+              background: "#FFD700",
+              color: "#1a1a2e",
+              fontWeight: 600,
+              fontSize: 15,
+              cursor: "pointer",
+            }}>
               🔄 Recarregar
             </button>
-
-            <button
-              onClick={this.handleClearAndReload}
-              style={{
-                padding: "12px 20px",
-                borderRadius: 8,
-                border: "1px solid #555",
-                background: "transparent",
-                color: "#e0e0e0",
-                fontWeight: 500,
-                fontSize: 14,
-                cursor: "pointer",
-              }}
-            >
+            <button type="button" onClick={this.handleClearAndReload} style={{
+              padding: "12px 20px",
+              borderRadius: 8,
+              border: "1px solid #555",
+              background: "transparent",
+              color: "#e0e0e0",
+              fontWeight: 500,
+              fontSize: 14,
+              cursor: "pointer",
+            }}>
               🧹 Limpar cache e reiniciar
             </button>
           </div>
