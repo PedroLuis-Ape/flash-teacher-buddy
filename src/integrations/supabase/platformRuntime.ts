@@ -7,8 +7,6 @@ export type PlatformRuntime = {
 export const OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
 export const OFFICIAL_SUPABASE_URL = `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`;
 
-const RUNTIME_GLOBAL_KEY = "__APE_PLATFORM_RUNTIME__";
-
 type RuntimeWindow = Window & {
   __APE_PLATFORM_RUNTIME__?: PlatformRuntime;
 };
@@ -44,7 +42,7 @@ function assertOfficialRuntime(runtime: PlatformRuntime): PlatformRuntime {
 export function installPlatformRuntime(runtime: PlatformRuntime): PlatformRuntime {
   const validated = assertOfficialRuntime(runtime);
   if (typeof window !== "undefined") {
-    (window as RuntimeWindow)[RUNTIME_GLOBAL_KEY as keyof RuntimeWindow] = validated as never;
+    (window as RuntimeWindow).__APE_PLATFORM_RUNTIME__ = validated;
   }
   return validated;
 }
