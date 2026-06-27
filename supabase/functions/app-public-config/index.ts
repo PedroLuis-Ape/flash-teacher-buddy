@@ -5,7 +5,7 @@ const publicHeaders = {
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
   "Access-Control-Allow-Headers": "content-type",
   "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
-  "Content-Type": "application/javascript; charset=utf-8",
+  "Content-Type": "application/json; charset=utf-8",
   "X-Content-Type-Options": "nosniff",
 };
 
@@ -15,7 +15,7 @@ Deno.serve((request: Request) => {
   }
 
   if (request.method !== "GET" && request.method !== "HEAD") {
-    return new Response("Method not allowed", {
+    return new Response(JSON.stringify({ error: "method_not_allowed" }), {
       status: 405,
       headers: { ...publicHeaders, Allow: "GET, HEAD, OPTIONS" },
     });
@@ -25,17 +25,16 @@ Deno.serve((request: Request) => {
   const publishableKey = Deno.env.get("SUPABASE_ANON_KEY");
 
   if (!url || !publishableKey) {
-    return new Response("Runtime configuration unavailable", {
+    return new Response(JSON.stringify({ error: "runtime_config_unavailable" }), {
       status: 503,
       headers: { ...publicHeaders, "Cache-Control": "no-store" },
     });
   }
 
   const projectId = new URL(url).hostname.split(".")[0] ?? "";
-  const payload = JSON.stringify({ projectId, url, publishableKey }).replaceAll("<", "\\u003c");
-  const source = `window.__APE_SUPABASE_CONFIG__ = Object.freeze(${payload});\n`;
+  const body = JSON.stringify({ projectId, url, publishableKey });
 
-  return new Response(request.method === "HEAD" ? null : source, {
+  return new Response(request.method === "HEAD" ? null : body, {
     status: 200,
     headers: publicHeaders,
   });
