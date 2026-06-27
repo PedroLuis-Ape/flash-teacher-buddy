@@ -16,7 +16,7 @@ A configuração pública necessária para inicializar o navegador é entregue p
 
 Fluxo:
 
-1. `src/main.tsx` consulta `https://xrnfhhoxmmstagmelvyi.functions.supabase.co/app-public-config`;
+1. `src/main.tsx` consulta `https://xrnfhhoxmmstagmelvyi.supabase.co/functions/v1/app-public-config`;
 2. a resposta informa somente os valores públicos necessários para criar o cliente;
 3. o bootstrap valida o project ref e o hostname;
 4. somente depois dessa validação o módulo principal do aplicativo é carregado;
@@ -37,6 +37,7 @@ Variáveis `VITE_SUPABASE_*` continuam aceitas para desenvolvimento ou deploy co
 
 - `supabase/config.toml` não declara um project ref válido;
 - o endpoint público de runtime aponta para outro projeto;
+- o formato da URL da Edge Function não é o formato canônico `/functions/v1/...`;
 - `src/main.tsx` ou o cliente Supabase divergem do project ref oficial;
 - `app-public-config` não está registrada como função pública;
 - uma configuração `VITE_SUPABASE_*` parcial ou incompatível é fornecida;
