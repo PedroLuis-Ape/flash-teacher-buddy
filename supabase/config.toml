@@ -54,11 +54,15 @@ verify_jwt = true
 [functions.turmas-enroll]
 verify_jwt = true
 
+# These read-only functions validate the Authorization header inside their own
+# handler with supabase.auth.getUser(). Disabling the legacy gateway check
+# prevents UNAUTHORIZED_LEGACY_JWT after key rotation while preserving user
+# authentication and RLS inside the function.
 [functions.turmas-mine]
-verify_jwt = true
+verify_jwt = false
 
 [functions.turmas-as-aluno]
-verify_jwt = true
+verify_jwt = false
 
 [functions.turmas-update]
 verify_jwt = true
