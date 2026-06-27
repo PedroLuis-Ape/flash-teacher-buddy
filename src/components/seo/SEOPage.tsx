@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SEOHead, type SEOHeadProps } from "@/components/seo/SEOHead";
 import { PublicNav, PublicFooter } from "@/components/seo/PublicNav";
 import { PublicBackBar } from "@/components/seo/PublicBackBar";
+import { buildPublicPageStructuredData } from "@/components/seo/publicStructuredData";
 
 interface SEOPageProps extends SEOHeadProps {
   h1: string;
@@ -14,9 +15,59 @@ interface SEOPageProps extends SEOHeadProps {
   finalCta?: { title: string; text: string; buttonLabel?: string };
 }
 
+type PageSchemaType = "WebPage" | "CollectionPage" | "AboutPage";
+
+const PAGE_SCHEMA_TYPES = new Set<PageSchemaType>([
+  "WebPage",
+  "CollectionPage",
+  "AboutPage",
+]);
+
+function splitPageSchema(jsonLd: SEOHeadProps["jsonLd"]) {
+  if (!jsonLd || Array.isArray(jsonLd)) {
+    return {
+      pageType: "WebPage" as const,
+      pageProperties: {},
+      mainEntity: jsonLd,
+    };
+  }
+
+  const declaredType = jsonLd["@type"];
+  if (typeof declaredType !== "string" || !PAGE_SCHEMA_TYPES.has(declaredType as PageSchemaType)) {
+    return {
+      pageType: "WebPage" as const,
+      pageProperties: {},
+      mainEntity: jsonLd,
+    };
+  }
+
+  const {
+    "@context": _context,
+    "@type": _type,
+    "@id": _id,
+    name: _name,
+    headline: _headline,
+    description: _description,
+    url: _url,
+    inLanguage: _inLanguage,
+    isPartOf: _isPartOf,
+    publisher: _publisher,
+    breadcrumb: _breadcrumb,
+    mainEntity: _mainEntity,
+    ...pageProperties
+  } = jsonLd;
+
+  return {
+    pageType: declaredType as PageSchemaType,
+    pageProperties,
+    mainEntity: undefined,
+  };
+}
+
 /**
  * Shared layout for static SEO landing pages.
- * Each page passes its own metadata + JSON-LD via SEOHead props.
+ * Each page receives a consistent Organization, WebSite, SoftwareApplication,
+ * WebPage and breadcrumb graph while preserving its page-specific schema.
  */
 export function SEOPage({
   h1,
@@ -25,9 +76,20 @@ export function SEOPage({
   finalCta,
   ...seo
 }: SEOPageProps) {
+  const { pageType, pageProperties, mainEntity } = splitPageSchema(seo.jsonLd);
+  const structuredData = buildPublicPageStructuredData({
+    path: seo.path,
+    title: seo.title,
+    description: seo.description,
+    name: h1,
+    pageType,
+    pageProperties,
+    mainEntity,
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead {...seo} />
+      <SEOHead {...seo} jsonLd={structuredData} />
       <PublicNav />
       <PublicBackBar />
 
