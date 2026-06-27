@@ -3,8 +3,8 @@
  * © 2025 APE Education. Todos os direitos reservados.
  */
 
+import "./lib/bootWatchdog";
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
 import "./styles/store-package-avatar.css";
 import "./lib/versionManager";
@@ -81,6 +81,13 @@ function tryDismiss() {
 function finishAndHide() {
   if (dismissed) return;
   dismissed = true;
+  (window as any).__apeBootComplete = true;
+
+  const watchdog = (window as any).__apeBootWatchdog;
+  if (watchdog) {
+    clearTimeout(watchdog);
+    (window as any).__apeBootWatchdog = null;
+  }
 
   const statusTimer = (window as any).__apeBootStatusTimer;
   if (statusTimer) {
@@ -97,6 +104,43 @@ function finishAndHide() {
   window.setTimeout(() => loader.remove(), 320);
 }
 
+function renderBootstrapFailure(error: unknown) {
+  console.error("[Bootstrap]", error);
+  const root = document.getElementById("root");
+  if (!root) return;
+
+  const container = document.createElement("main");
+  container.style.cssText =
+    "min-height:100vh;display:grid;place-items:center;padding:24px;background:#09001f;color:#fff;font-family:Nunito,system-ui,sans-serif";
+
+  const card = document.createElement("section");
+  card.style.cssText =
+    "width:min(460px,100%);border:1px solid rgba(181,91,255,.45);border-radius:18px;background:#100526;padding:24px;text-align:center";
+
+  const title = document.createElement("h1");
+  title.textContent = "Não foi possível iniciar o App Piteco";
+  title.style.cssText = "font-size:20px;margin:0 0 10px";
+
+  const detail = document.createElement("p");
+  detail.textContent = error instanceof Error ? error.message : "Falha de inicialização desconhecida.";
+  detail.style.cssText = "font-size:14px;line-height:1.5;color:#c9bed8;margin:0 0 18px;word-break:break-word";
+
+  const reload = document.createElement("button");
+  reload.type = "button";
+  reload.textContent = "Tentar novamente";
+  reload.style.cssText =
+    "border:0;border-radius:12px;padding:12px 18px;background:#7c3aed;color:#fff;font-weight:700;cursor:pointer";
+  reload.addEventListener("click", () => window.location.reload());
+
+  card.append(title, detail, reload);
+  container.append(card);
+  root.replaceChildren(container);
+
+  appReady = true;
+  minTimePassed = true;
+  finishAndHide();
+}
+
 const elapsedAtBoot = Date.now() - startedAt;
 const remainingMin = Math.max(0, SPLASH_MIN_MS - elapsedAtBoot);
 window.setTimeout(() => {
@@ -108,22 +152,34 @@ window.setTimeout(() => {
 window.setTimeout(() => {
   if (dismissed) return;
   splashLog("max timeout reached");
+  appReady = true;
+  minTimePassed = true;
   finishAndHide();
 }, SPLASH_MAX_MS);
 
-reportBoot(70, "Inicializando interface…");
-createRoot(document.getElementById("root")!).render(
-  <SafeMode>
-    <HelmetProvider>
-      <App />
-    </HelmetProvider>
-  </SafeMode>
-);
+async function mountApplication() {
+  try {
+    reportBoot(70, "Inicializando interface…");
+    const { default: App } = await import("./App.tsx");
 
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    appReady = true;
-    splashLog("app ready");
-    tryDismiss();
-  });
-});
+    createRoot(document.getElementById("root")!).render(
+      <SafeMode>
+        <HelmetProvider>
+          <App />
+        </HelmetProvider>
+      </SafeMode>,
+    );
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        appReady = true;
+        splashLog("app ready");
+        tryDismiss();
+      });
+    });
+  } catch (error) {
+    renderBootstrapFailure(error);
+  }
+}
+
+void mountApplication();

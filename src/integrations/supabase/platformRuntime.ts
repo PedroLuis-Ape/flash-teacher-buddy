@@ -4,9 +4,6 @@ export type PlatformRuntime = {
   publicValue: string;
 };
 
-export const OFFICIAL_SUPABASE_PROJECT_ID = "";
-export const OFFICIAL_SUPABASE_URL = "";
-
 export function readPlatformRuntime(): PlatformRuntime {
   const testMode = import.meta.env.MODE === "test";
   const url = import.meta.env.VITE_SUPABASE_URL || (testMode ? "https://example.supabase.co" : "");
