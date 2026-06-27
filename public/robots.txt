@@ -1,19 +1,9 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# APE public discovery policy
+# Public pages are crawlable; authenticated and account-specific areas are not.
 
 User-agent: *
 Allow: /
 Disallow: /auth
-Disallow: /auth/
 Disallow: /dashboard
 Disallow: /profile
 Disallow: /folders
@@ -22,24 +12,24 @@ Disallow: /list/
 Disallow: /collection/
 Disallow: /admin/
 Disallow: /notes
-Disallow: /notes/
 Disallow: /goals
-Disallow: /goals/
 Disallow: /trash
 Disallow: /settings/
 Disallow: /audit
 Disallow: /painel-professor
 Disallow: /professor/
 Disallow: /turmas
-Disallow: /turmas/
 Disallow: /search
 Disallow: /store
 Disallow: /reinos
 Disallow: /reino
-Disallow: /reino/
 Disallow: /gifts
 Disallow: /import
 Disallow: /my-teachers
 Disallow: /professores/
+Disallow: /glossary
+Disallow: /special-cards
+Disallow: /system-status
+Disallow: /reportar-problema
 
 Sitemap: https://www.apeeducation.org/sitemap.xml
