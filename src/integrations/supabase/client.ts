@@ -9,13 +9,10 @@ type RuntimeConfig = {
   publishableKey: string;
 };
 
-declare global {
-  interface Window {
-    __APE_SUPABASE_CONFIG__?: RuntimeConfig;
-  }
-}
-
-const runtime = typeof window !== "undefined" ? window.__APE_SUPABASE_CONFIG__ : undefined;
+const runtimeWindow = typeof window !== "undefined"
+  ? (window as typeof window & { __APE_SUPABASE_CONFIG__?: RuntimeConfig })
+  : undefined;
+const runtime = runtimeWindow?.__APE_SUPABASE_CONFIG__;
 const configuredProjectId = runtime?.projectId ?? import.meta.env.VITE_SUPABASE_PROJECT_ID;
 const configuredUrl = runtime?.url ?? import.meta.env.VITE_SUPABASE_URL;
 const configuredPublicValue = runtime?.publishableKey ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
