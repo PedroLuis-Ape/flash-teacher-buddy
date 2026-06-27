@@ -1,36 +1,60 @@
 import { describe, expect, it } from "vitest";
 import { resolvePlatformRuntime } from "./platformRuntime";
 
-describe("platform runtime", () => {
-  it("uses a complete Lovable-injected configuration when available", () => {
-    expect(
-      resolvePlatformRuntime({
-        projectId: "abcdefghijklmnopqrst",
-        url: "https://abcdefghijklmnopqrst.supabase.co",
-        publicValue: "injected-public-value",
-      }),
-    ).toEqual({
-      projectId: "abcdefghijklmnopqrst",
-      url: "https://abcdefghijklmnopqrst.supabase.co",
-      publicValue: "injected-public-value",
-    });
-  });
+const productionUrl = "https://ymahldldyxvwjeruaxpr.supabase.co";
 
-  it("atomically replaces a missing configuration with the production runtime", () => {
-    const runtime = resolvePlatformRuntime({});
+describe("platform runtime", () => {
+  it("locks production to the backend that contains the real App Piteco data", () => {
+    const runtime = resolvePlatformRuntime({
+      projectId: "xrnfhhoxmmstagmelvyi",
+      url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
+      publicValue: "wrong-project-public-value",
+    });
 
     expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
-    expect(runtime.url).toBe("https://ymahldldyxvwjeruaxpr.supabase.co");
+    expect(runtime.url).toBe(productionUrl);
     expect(runtime.publicValue).toMatch(/^eyJ/);
   });
 
-  it("does not mix a partial injected backend with the production backend", () => {
+  it("accepts the official injected Lovable production runtime", () => {
     const runtime = resolvePlatformRuntime({
-      url: "https://abcdefghijklmnopqrst.supabase.co",
+      projectId: "ymahldldyxvwjeruaxpr",
+      url: productionUrl,
+      publicValue: "official-injected-public-value",
     });
 
-    expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
-    expect(runtime.url).toBe("https://ymahldldyxvwjeruaxpr.supabase.co");
+    expect(runtime).toEqual({
+      projectId: "ymahldldyxvwjeruaxpr",
+      url: productionUrl,
+      publicValue: "official-injected-public-value",
+    });
+  });
+
+  it("allows an explicit non-production override only during development", () => {
+    expect(
+      resolvePlatformRuntime(
+        {
+          projectId: "abcdefghijklmnopqrst",
+          url: "https://abcdefghijklmnopqrst.supabase.co",
+          publicValue: "development-public-value",
+        },
+        false,
+        true,
+      ),
+    ).toEqual({
+      projectId: "abcdefghijklmnopqrst",
+      url: "https://abcdefghijklmnopqrst.supabase.co",
+      publicValue: "development-public-value",
+    });
+  });
+
+  it("uses the production runtime when build configuration is absent or partial", () => {
+    for (const input of [{}, { url: "https://other.supabase.co" }]) {
+      const runtime = resolvePlatformRuntime(input);
+      expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
+      expect(runtime.url).toBe(productionUrl);
+      expect(runtime.publicValue).toMatch(/^eyJ/);
+    }
   });
 
   it("keeps tests isolated from production", () => {
