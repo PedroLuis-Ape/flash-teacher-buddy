@@ -2,6 +2,7 @@ import { useState } from "react";
 import { analyzeGlobalImportText } from "./analysisService";
 import { parseGlobalImportCsv } from "./csvPackage";
 import { flattenSuperImportLayers } from "./flattenSuperImportLayers";
+import { decodeImportFile } from "./importSourceDecoder";
 import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSchema";
 import { repairSmartImportJsonText } from "./smartJsonRepair";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
@@ -92,8 +93,9 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
     const result = analyzeGlobalImportText(repair.text);
     const normalized = withoutAutomaticLayers(result.validation);
     const checkedValidation = normalized.validation;
-    const nextNotes: string[] = [...repair.notes];
-    if (result.parsed.extracted) nextNotes.push("Uma única cerca Markdown externa foi removida.");
+    const nextNotes: string[] = [...repair.notes, ...result.compatibilityWarnings];
+    if (result.parsed.extracted) nextNotes.push("O JSON foi extraído do conteúdo recebido.");
+    if (result.parsed.repaired) nextNotes.push("Vírgulas finais inválidas foram reparadas fora de strings.");
     if (checkedValidation.sourceFormat === "smart") nextNotes.push("Contrato app-piteco-super-import 2.0 validado.");
     if (checkedValidation.sourceFormat === "official") nextNotes.push("Contrato oficial app-piteco-super-import 1.0 validado.");
     if (checkedValidation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
@@ -105,7 +107,7 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
         ? repair.text
         : value);
     setValidation(checkedValidation);
-    setNotes(nextNotes);
+    setNotes(Array.from(new Set(nextNotes)));
     return checkedValidation;
   };
 
@@ -118,9 +120,13 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
     if (file.size > maxFileBytes) {
       throw new Error(`O arquivo excede ${Math.round(maxFileBytes / 1024 / 1024)} MB.`);
     }
-    const text = await file.text();
-    reset(text);
-    return { text, validation: analyze(text) };
+    const decoded = await decodeImportFile(file);
+    reset(decoded.text);
+    const checked = analyze(decoded.text);
+    if (decoded.warnings.length > 0) {
+      setNotes((current) => Array.from(new Set([...decoded.warnings, ...current])));
+    }
+    return { text: decoded.text, validation: checked };
   };
 
   return { raw, validation, notes, reset, analyze, readFile };

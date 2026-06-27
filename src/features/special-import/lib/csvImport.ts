@@ -1,11 +1,11 @@
 import { readCsvRows } from "@/features/global-import/csvReader";
 import {
-  parseSpecialImportText,
   type InvalidSpecialImportItem,
   type NormalizedSpecialImportItem,
   type ParsedSpecialImport,
   type SpecialImportExample,
 } from "./parser";
+import { parseSpecialJsonInput } from "./sharedJsonInput";
 import {
   SPECIAL_CARDS_FORMAT,
   SPECIAL_EXPLANATIONS_FORMAT,
@@ -146,7 +146,7 @@ export function parseSpecialCsvText(input: string): ParsedSpecialImport {
 
 export function parseSpecialImportInput(input: string): ParsedSpecialImport {
   if (looksLikeSpecialCsv(input)) return parseSpecialCsvText(input);
-  return parseSpecialImportText(input);
+  return parseSpecialJsonInput(input);
 }
 
 export function isSpecialCardsExport(input: string): boolean {

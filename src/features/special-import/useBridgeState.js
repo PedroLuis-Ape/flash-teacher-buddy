@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { decodeImportFile } from "@/features/global-import/importSourceDecoder";
 import { toast } from "sonner";
 import { reconcileSpecialImport } from "./lib/parser";
 import { isSpecialCardsExport, parseSpecialImportInput } from "./lib/csvImport";
@@ -44,9 +45,11 @@ export function useBridgeState(userId) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return toast.error("O arquivo excede 5 MB.");
     try {
-      setRaw(await file.text());
+      const decoded = await decodeImportFile(file);
+      setRaw(decoded.text);
       setFileName(file.name);
       setRows(null);
+      setWarnings(decoded.warnings);
       setReport("");
       toast.success(`${file.name} carregado.`);
     } catch {
@@ -82,7 +85,7 @@ export function useBridgeState(userId) {
         };
       }));
       setMissing(reconciled.missing_expected_ids);
-      setWarnings(reconciled.warnings);
+      setWarnings((current) => Array.from(new Set([...current, ...reconciled.warnings])));
       setExportId(parsed.export_id);
     } catch (error) {
       toast.error(error?.message || "Resposta inválida.");
