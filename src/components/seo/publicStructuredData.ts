@@ -4,15 +4,17 @@ const WEBSITE_ID = `${SITE_URL}/#website`;
 const APP_ID = `${SITE_URL}/#app`;
 
 type JsonLdNode = Record<string, unknown>;
+type PublicPageType = "WebPage" | "CollectionPage" | "AboutPage";
 
 interface PublicPageStructuredDataOptions {
   path: string;
   title: string;
   description: string;
   name: string;
-  pageType?: "WebPage" | "CollectionPage" | "AboutPage";
+  pageType?: PublicPageType;
+  pageProperties?: JsonLdNode;
   mainEntity?: JsonLdNode | JsonLdNode[];
-  includeApplication?: boolean;
+  applicationAsMainEntity?: boolean;
 }
 
 function normalizePath(path: string) {
@@ -103,12 +105,17 @@ export function buildPublicPageStructuredData({
   description,
   name,
   pageType = "WebPage",
+  pageProperties = {},
   mainEntity,
-  includeApplication = false,
+  applicationAsMainEntity = false,
 }: PublicPageStructuredDataOptions): JsonLdNode {
   const canonical = absoluteUrl(path);
   const pageId = `${canonical}#webpage`;
-  const graph: JsonLdNode[] = [buildOrganization(), buildWebsite()];
+  const graph: JsonLdNode[] = [
+    buildOrganization(),
+    buildWebsite(),
+    buildApplication(description),
+  ];
 
   const rawEntities = mainEntity
     ? Array.isArray(mainEntity)
@@ -123,14 +130,16 @@ export function buildPublicPageStructuredData({
     mainEntityOfPage: entity.mainEntityOfPage ?? { "@id": pageId },
   }));
 
-  if (includeApplication) {
-    entities.unshift(buildApplication(description));
-  }
+  const mainEntityReferences = [
+    ...(applicationAsMainEntity ? [{ "@id": APP_ID }] : []),
+    ...entities.map((entity) => ({ "@id": entity["@id"] })),
+  ];
 
   const breadcrumb = buildBreadcrumb(path, name);
   if (breadcrumb) graph.push(breadcrumb);
 
   graph.push({
+    ...pageProperties,
     "@type": pageType,
     "@id": pageId,
     url: canonical,
@@ -142,7 +151,7 @@ export function buildPublicPageStructuredData({
     about: { "@id": APP_ID },
     publisher: { "@id": ORGANIZATION_ID },
     ...(breadcrumb ? { breadcrumb: { "@id": breadcrumb["@id"] } } : {}),
-    ...(entities.length > 0 ? { mainEntity: entities.map((entity) => ({ "@id": entity["@id"] })) } : {}),
+    ...(mainEntityReferences.length > 0 ? { mainEntity: mainEntityReferences } : {}),
   });
 
   graph.push(...entities);
