@@ -1,5 +1,5 @@
 const WATCHDOG_MS = 9000;
-const RECOVERY_VERSION = "2026-06-27-never-stuck-1";
+const RECOVERY_VERSION = "2026-06-27-installed-pwa-reset-2";
 const RECOVERY_KEY = "ape_boot_recovery_version";
 
 type BootWindow = Window & {
