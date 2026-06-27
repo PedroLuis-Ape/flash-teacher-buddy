@@ -1,15 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
-import {
-  OFFICIAL_SUPABASE_PROJECT_ID,
-  readPlatformRuntime as getPlatformBackend,
-} from "./platformRuntime";
+import { readPlatformRuntime } from "./platformRuntime";
 
-const { url, publicValue } = getPlatformBackend();
-
-if (!url.includes(OFFICIAL_SUPABASE_PROJECT_ID)) {
-  throw new Error("The Supabase client is not connected to the official App Piteco project.");
-}
+const { url, publicValue } = readPlatformRuntime();
 
 export const supabase = createClient<Database>(url, publicValue, {
   auth: {
