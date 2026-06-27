@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildFolderGlossaryAiPrompt } from "./lib/folderGlossaryPrompt";
+import { buildCompleteAccountGlossaryContract } from "./lib/glossaryPromptContracts";
 
 const decode = (value: string) => new TextDecoder().decode(
   Uint8Array.from(atob(value), (character) => character.charCodeAt(0)),
 );
 
-describe("folder glossary AI prompt", () => {
-  it("describes the canonical JSON contract and the current folder sides", () => {
+describe("glossary AI contracts", () => {
+  it("describes the canonical folder contract and the current sides", () => {
     const prompt = buildFolderGlossaryAiPrompt({
       folderTitle: "Verbo To Be",
       labelA: "Inglês",
@@ -37,5 +38,19 @@ describe("folder glossary AI prompt", () => {
       "TGFkbyBBOiAiTGFkbyBBIg==",
       "TGFkbyBCOiAiTGFkbyBCIg==",
     ].forEach((expected) => expect(prompt).toContain(decode(expected)));
+  });
+
+  it("decodes the complete account contract in every direction", () => {
+    for (const side of ["A", "B", "both"] as const) {
+      const prompt = buildCompleteAccountGlossaryContract(side);
+      expect(prompt.length).toBeGreaterThan(1000);
+      [
+        "InNjaGVtYSI6ICJhcHAtcGl0ZWNvLWdsb3NzYXJ5Ig==",
+        "InZlcnNpb24iOiAy",
+        "b3JpZ2luYWxfdGV4dA==",
+        "dHJhbnNsYXRlZF90ZXh0",
+        "aXNfYWN0aXZl",
+      ].forEach((expected) => expect(prompt).toContain(decode(expected)));
+    }
   });
 });
