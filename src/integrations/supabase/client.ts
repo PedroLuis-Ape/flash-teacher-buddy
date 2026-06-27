@@ -1,11 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
-import { readPlatformRuntime } from "./platformRuntime";
+import { readPlatformRuntime as getPlatformBackend } from "./platformRuntime";
 
-const PLATFORM_PROJECT_REFERENCE = "ymahldldyxvwjeruaxpr";
-void PLATFORM_PROJECT_REFERENCE;
-
-const { url, publicValue } = readPlatformRuntime();
+const { url, publicValue } = getPlatformBackend();
 
 export const supabase = createClient<Database>(url, publicValue, {
   auth: {
