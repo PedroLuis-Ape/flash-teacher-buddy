@@ -5,7 +5,7 @@
   "captured_at": null,
   "captured_by": null,
   "published_app_url": "https://www.apeeducation.org",
-  "documented_project_ref": "ymahldldyxvwjeruaxpr",
+  "documented_project_ref": "xrnfhhoxmmstagmelvyi",
   "observed_project_ref": null,
   "browser": null,
   "session_type": null,
@@ -42,8 +42,8 @@
     }
   },
   "administrative_access": {
-    "available": false,
-    "project_ref": null,
+    "available": true,
+    "project_ref": "xrnfhhoxmmstagmelvyi",
     "schema_snapshot_saved": false,
     "policies_snapshot_saved": false,
     "grants_snapshot_saved": false,
@@ -51,5 +51,5 @@
     "migrations_snapshot_saved": false
   },
   "evidence_files": [],
-  "notes": "Do not include access tokens, authorization headers, cookies, passwords, service-role keys or personal data."
+  "notes": "Do not include access tokens, authorization headers, cookies, passwords, service-role values or personal data."
 }
