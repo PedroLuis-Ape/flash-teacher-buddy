@@ -1,17 +1,28 @@
 # APE — Apprentice Practice & Enhancement
 
-> Plataforma de flashcards e estudo ativo para alunos e professores. Permite criar coleções, organizar turmas e estudar com diversos modos interativos (Flip, Múltipla Escolha, Escrita, Pronúncia e mais).
+> Plataforma educacional brasileira de flashcards, estudo ativo e organização de conteúdo para alunos e professores.
 
-APE é uma plataforma voltada para o ensino de idiomas e outros conteúdos baseados em pares termo/definição, com gamificação, metas e acompanhamento de progresso.
+O APE, também chamado App Piteco, oferece recursos para criar e estudar materiais em pares de pergunta e resposta, com modos interativos, organização por pastas e listas, apoio a professores e acompanhamento de aprendizagem.
 
-## Pages
+## Páginas públicas canônicas
 
-- [Início](/): Visão geral do app, listas recentes e atalhos.
-- [Portal Público](/portal): Acesso público às coleções compartilhadas.
-- [Sobre](/about): Sobre o APE, autoria e termos de uso.
-- [Login / Cadastro](/auth): Entrada e criação de conta.
+- [Página inicial](https://www.apeeducation.org/): apresentação da plataforma e principais recursos.
+- [Portal público](https://www.apeeducation.org/portal): descoberta de materiais e perfis disponibilizados publicamente.
+- [Inglês para iniciantes](https://www.apeeducation.org/ingles-para-iniciantes): orientação para estudantes nos níveis iniciais.
+- [Atividades de inglês](https://www.apeeducation.org/atividades-de-ingles): recursos e propostas de prática de inglês.
+- [Flashcards de inglês](https://www.apeeducation.org/flashcards-de-ingles): explicação do uso de flashcards para aprendizagem.
+- [Para professores](https://www.apeeducation.org/para-professores): recursos da plataforma voltados ao trabalho docente.
+- [Sobre o APE](https://www.apeeducation.org/about): autoria, propósito educacional e informações institucionais.
 
-## Optional
+## Escopo de indexação
 
-- [Reinos](/reinos): Conteúdo gamificado por reinos temáticos.
-- [Loja](/store): Itens cosméticos e recompensas.
+Somente páginas e materiais explicitamente públicos devem ser usados para descoberta, resumo ou citação. Contas, turmas privadas, progresso individual, pastas pessoais, listas privadas, autenticação e configurações de usuário não fazem parte do conteúdo público.
+
+## Identidade
+
+- Produto: APE — Apprentice Practice & Enhancement
+- Nome alternativo: App Piteco
+- Organização: APE Education
+- Autor e fundador: Pedro Luis de Oliveira Silva
+- Idioma principal: português do Brasil
+- Site canônico: https://www.apeeducation.org/
