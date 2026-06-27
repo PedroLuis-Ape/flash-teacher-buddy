@@ -1,2 +1,8 @@
-/landing    /    301
-/*          /index.html    200
+/landing                    /                              301
+/portal                     /portal/index.html              200
+/ingles-para-iniciantes     /ingles-para-iniciantes/index.html 200
+/atividades-de-ingles       /atividades-de-ingles/index.html   200
+/flashcards-de-ingles       /flashcards-de-ingles/index.html   200
+/para-professores           /para-professores/index.html       200
+/about                      /about/index.html                 200
+/*                          /index.html                       200
