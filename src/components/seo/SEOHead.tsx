@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { buildPublicPageStructuredData } from "@/components/seo/publicStructuredData";
 
 /**
  * SEOHead — per-page metadata for public pages.
@@ -11,6 +12,16 @@ const SITE_URL = "https://www.apeeducation.org";
 const SOCIAL_IMAGE = `${SITE_URL}/branding/icon.png`;
 const DEFAULT_ROBOTS =
   "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
+const STRUCTURED_PUBLIC_PATHS = new Set([
+  "/",
+  "/portal",
+  "/ingles-para-iniciantes",
+  "/atividades-de-ingles",
+  "/flashcards-de-ingles",
+  "/para-professores",
+  "/about",
+]);
+const PAGE_SCHEMA_TYPES = new Set(["WebPage", "CollectionPage", "AboutPage"]);
 
 export interface SEOAlternate {
   hrefLang: string;
@@ -55,6 +66,73 @@ function serializeJsonLd(value: Record<string, unknown>) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
+function normalizePublicStructuredData({
+  path,
+  title,
+  description,
+  jsonLd,
+}: Pick<SEOHeadProps, "path" | "title" | "description" | "jsonLd">) {
+  const normalizedPath = normalizePath(path);
+  if (!jsonLd || !STRUCTURED_PUBLIC_PATHS.has(normalizedPath)) return jsonLd;
+
+  if (!Array.isArray(jsonLd) && Array.isArray(jsonLd["@graph"])) {
+    return jsonLd;
+  }
+
+  const nodes = Array.isArray(jsonLd) ? jsonLd : [jsonLd];
+  let pageType: "WebPage" | "CollectionPage" | "AboutPage" = "WebPage";
+  let pageName = title;
+  let pageProperties: Record<string, unknown> = {};
+  let applicationAsMainEntity = normalizedPath === "/";
+  const mainEntities: Record<string, unknown>[] = [];
+
+  for (const node of nodes) {
+    const declaredType = node["@type"];
+
+    if (typeof declaredType === "string" && PAGE_SCHEMA_TYPES.has(declaredType)) {
+      pageType = declaredType as typeof pageType;
+      if (typeof node.name === "string") pageName = node.name;
+
+      const {
+        "@context": _context,
+        "@type": _type,
+        "@id": _id,
+        name: _name,
+        headline: _headline,
+        description: _description,
+        url: _url,
+        inLanguage: _inLanguage,
+        isPartOf: _isPartOf,
+        publisher: _publisher,
+        breadcrumb: _breadcrumb,
+        mainEntity: _mainEntity,
+        ...rest
+      } = node;
+      pageProperties = { ...pageProperties, ...rest };
+      continue;
+    }
+
+    if (declaredType === "WebSite" || declaredType === "Organization") continue;
+    if (declaredType === "EducationalApplication" || declaredType === "SoftwareApplication") {
+      applicationAsMainEntity = true;
+      continue;
+    }
+
+    mainEntities.push(node);
+  }
+
+  return buildPublicPageStructuredData({
+    path: normalizedPath,
+    title,
+    description,
+    name: pageName,
+    pageType,
+    pageProperties,
+    mainEntity: mainEntities.length > 0 ? mainEntities : undefined,
+    applicationAsMainEntity,
+  });
+}
+
 export function SEOHead({
   title,
   description,
@@ -76,10 +154,16 @@ export function SEOHead({
   const pageUrl = absoluteUrl(path);
   const socialImage = absoluteUrl(image);
   const ogLocale = language.replace("-", "_");
-  const ldArray = jsonLd
-    ? Array.isArray(jsonLd)
-      ? jsonLd
-      : [jsonLd]
+  const normalizedJsonLd = normalizePublicStructuredData({
+    path,
+    title,
+    description,
+    jsonLd,
+  });
+  const ldArray = normalizedJsonLd
+    ? Array.isArray(normalizedJsonLd)
+      ? normalizedJsonLd
+      : [normalizedJsonLd]
     : [];
 
   return (
