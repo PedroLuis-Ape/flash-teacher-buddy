@@ -101,13 +101,17 @@ if (!configProjectId) {
 }
 
 const runtimeEndpointProjectId = mainSource.match(
-  /https:\/\/([a-z]{20})\.functions\.supabase\.co\/app-public-config/,
+  /https:\/\/([a-z]{20})\.supabase\.co\/functions\/v1\/app-public-config/,
 )?.[1];
 
 if (!runtimeEndpointProjectId) {
-  errors.push("src/main.tsx não declara o endpoint oficial app-public-config.");
+  errors.push("src/main.tsx não declara o endpoint canônico app-public-config.");
 } else if (configProjectId && runtimeEndpointProjectId !== configProjectId) {
   errors.push("O endpoint de configuração pública aponta para outro projeto.");
+}
+
+if (/\.functions\.supabase\.co\/app-public-config/.test(mainSource)) {
+  errors.push("src/main.tsx usa um formato inválido de URL para Edge Functions.");
 }
 
 for (const [path, source] of [
