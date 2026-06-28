@@ -1,8 +1,15 @@
-import { ArrowRight, BookOpenCheck, FileText, Folder, FolderOpen, Layers3, LibraryBig, Lightbulb } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, BookOpenCheck, FileText, Folder, FolderOpen, Layers3, LibraryBig, Lightbulb, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { legacyPackageToSmartImport } from "@/features/smart-import/adapters";
 import type { SmartImportList, SmartImportPackage } from "@/features/smart-import/schema";
 import type { GlobalImportDestinationPlan, ImportDestinationCatalog, ListDestination } from "../destination";
+import {
+  existingListTargetFromCatalog,
+  reconcileExistingListCards,
+} from "../existingListImportPlan";
+import { loadListCardCatalog } from "../listCardCatalog";
 import type { GlobalImportPackage } from "../schema";
 
 interface Props {
@@ -21,6 +28,11 @@ interface ListStats {
   detailedCards: number;
 }
 
+interface ConsolidatedDestination {
+  listId: string;
+  replace: boolean;
+}
+
 function statsOf(list?: SmartImportList): ListStats | null {
   if (!list) return null;
   let normalCards = 0;
@@ -28,9 +40,6 @@ function statsOf(list?: SmartImportList): ListStats | null {
   let layeredCards = 0;
   let wordHints = 0;
   let detailedCards = 0;
-
-  const inspect = (card: SmartImportList["cards"][number] extends infer T ? T : never) => card;
-  void inspect;
 
   list.cards.forEach((card) => {
     const playable = card.type === "normal" ? [card] : card.layers;
@@ -78,8 +87,61 @@ function listDestinationLabel(
   };
 }
 
+function consolidatedDestination(plan: GlobalImportDestinationPlan): ConsolidatedDestination | null {
+  const ids = new Set<string>();
+  let replace = false;
+  Object.values(plan.folders).forEach((folder) => {
+    Object.values(folder.lists).forEach((list) => {
+      if (list.mode === "existing" && list.consolidate) {
+        ids.add(list.listId);
+        if (list.strategy === "replace") replace = true;
+      }
+    });
+  });
+  return ids.size === 1 ? { listId: Array.from(ids)[0], replace } : null;
+}
+
 export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan }: Props) {
-  const smartLists = smartPackage?.package.folders.flatMap((folder) => folder.lists) ?? [];
+  const effectiveSmartPackage = useMemo(
+    () => smartPackage ?? legacyPackageToSmartImport(packageValue),
+    [packageValue, smartPackage],
+  );
+  const smartLists = effectiveSmartPackage.package.folders.flatMap((folder) => folder.lists);
+  const consolidated = useMemo(() => consolidatedDestination(plan), [plan]);
+  const target = useMemo(
+    () => consolidated ? existingListTargetFromCatalog(catalog, consolidated.listId) : null,
+    [catalog, consolidated],
+  );
+  const [existingCards, setExistingCards] = useState<Array<{ term: string; translation: string }>>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
+  const [cardsError, setCardsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!consolidated?.listId || consolidated.replace) {
+      setExistingCards([]);
+      setCardsError(null);
+      setCardsLoading(false);
+      return () => { active = false; };
+    }
+    setCardsLoading(true);
+    setCardsError(null);
+    loadListCardCatalog(consolidated.listId)
+      .then((cards) => { if (active) setExistingCards(cards); })
+      .catch((error) => { if (active) setCardsError(error instanceof Error ? error.message : "Não foi possível comparar duplicados."); })
+      .finally(() => { if (active) setCardsLoading(false); });
+    return () => { active = false; };
+  }, [consolidated]);
+
+  const reconciliation = useMemo(
+    () => target ? reconcileExistingListCards(effectiveSmartPackage, target, existingCards) : null,
+    [effectiveSmartPackage, existingCards, target],
+  );
+  const sourceLists = effectiveSmartPackage.package.folders.reduce((sum, folder) => sum + folder.lists.length, 0);
+  const glossaryEntries = effectiveSmartPackage.package.folders.reduce(
+    (folderSum, folder) => folderSum + folder.lists.reduce((listSum, list) => listSum + list.glossary.length, 0),
+    0,
+  );
   let smartListIndex = 0;
 
   return (
@@ -93,6 +155,36 @@ export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan
           Esta árvore mostra o destino final. Nada foi gravado no banco ainda.
         </p>
       </div>
+
+      {target && (
+        <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="font-semibold">Consolidação em {target.folderName} / {target.listName}</h4>
+              <p className="text-sm text-muted-foreground">{sourceLists} lista(s) de origem serão reunidas sem criar novas listas.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {consolidated?.replace && <Badge variant="destructive">Conteúdo atual será substituído</Badge>}
+              {glossaryEntries > 0 && <Badge variant="secondary">{glossaryEntries} entrada(s) de glossário recebidas</Badge>}
+            </div>
+          </div>
+          {cardsLoading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Comparando com os cards atuais...</p>}
+          {cardsError && <p className="text-sm text-destructive">{cardsError}</p>}
+          {!cardsLoading && !cardsError && reconciliation && (
+            <>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Metric value={reconciliation.cardsReceived} label="Recebidos" />
+                <Metric value={reconciliation.cardsValid} label="Válidos e únicos" />
+                <Metric value={reconciliation.cardsDuplicates} label="Duplicados" />
+                <Metric value={reconciliation.cardsBlocked} label="Bloqueados" />
+              </div>
+              <p className={`rounded-lg p-3 text-sm ${reconciliation.coherent ? "bg-primary/5" : "bg-destructive/10 text-destructive"}`}>
+                {reconciliation.cardsReceived} recebidos = {reconciliation.cardsValid} válidos + {reconciliation.cardsDuplicates} duplicados + {reconciliation.cardsBlocked} bloqueados.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         {packageValue.package.folders.map((folder, folderIndex) => {
@@ -169,5 +261,14 @@ export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan
         })}
       </div>
     </Card>
+  );
+}
+
+function Metric({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="rounded-lg bg-background p-3 text-center">
+      <div className="text-xl font-bold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
   );
 }

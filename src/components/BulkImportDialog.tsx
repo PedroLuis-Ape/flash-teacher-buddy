@@ -13,6 +13,7 @@ interface BulkImportDialogProps {
 
 export const BulkImportDialog = ({
   collectionId,
+  existingCards,
   onImported,
   labelA,
   labelB,
@@ -21,6 +22,7 @@ export const BulkImportDialog = ({
 }: BulkImportDialogProps) => (
   <ContentIngestDialog
     listId={collectionId}
+    existingCards={existingCards}
     onImported={onImported}
     labelA={labelA}
     labelB={labelB}

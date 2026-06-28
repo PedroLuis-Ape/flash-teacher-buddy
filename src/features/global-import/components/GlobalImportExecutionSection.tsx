@@ -40,11 +40,17 @@ export function GlobalImportExecutionSection(props: Props) {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="skip">Ignorar o duplicado</SelectItem>
+                <SelectItem value="replace">Atualizar o card existente</SelectItem>
                 <SelectItem value="copy">Criar outra cópia</SelectItem>
-                <SelectItem value="error">Cancelar toda a importação</SelectItem>
+                <SelectItem value="error">Bloquear o lote</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {props.cardConflict === "replace" && (
+            <p className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+              O conteúdo pedagógico do card existente será atualizado. O lote guarda uma cópia anterior para permitir desfazer.
+            </p>
+          )}
           {props.mode === "existing-folder" && props.listConflictPolicy === "replace" && (
             <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
               A opção substituir remove os cards atuais das listas conflitantes dentro da mesma transação. O botão de desfazer restaura o conteúdo anterior.
@@ -82,6 +88,7 @@ export function GlobalImportExecutionSection(props: Props) {
             <Metric value={props.report.lists_replaced ?? 0} label="Listas substituídas" />
             <Metric value={props.report.lists_skipped ?? 0} label="Listas ignoradas" />
             <Metric value={props.report.cards_created} label="Cards criados" />
+            <Metric value={props.report.cards_updated ?? 0} label="Cards atualizados" />
             <Metric value={props.report.cards_skipped} label="Cards duplicados ignorados" />
             <Metric value={props.report.glossary_created ?? 0} label="Glossário criado" />
           </div>

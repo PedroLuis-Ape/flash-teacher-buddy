@@ -12,16 +12,16 @@ interface Props {
 const OPTIONS = [
   {
     id: "structured" as const,
-    title: "Criar listas dentro de uma pasta",
-    description: "Escolha uma pasta existente ou crie uma nova. Cada lista presente no JSON continua como uma lista separada.",
-    badge: "Recomendado para pacotes com várias listas",
+    title: "Criar estrutura do pacote",
+    description: "Crie a estrutura recebida ou coloque suas listas dentro de uma pasta existente. Cada lista continua separada.",
+    badge: "Mantém pastas e listas",
     icon: FolderTree,
   },
   {
     id: "quick" as const,
-    title: "Adicionar cards a uma única lista",
-    description: "Escolha uma lista já existente. Este modo não cria pastas nem listas novas.",
-    badge: "Somente para uma lista pronta",
+    title: "Consolidar dentro de uma lista existente",
+    description: "Escolha uma lista pronta. Todos os cards de uma ou várias listas do pacote serão reunidos nela.",
+    badge: "Não cria pastas nem listas",
     icon: ListPlus,
   },
 ];
@@ -58,7 +58,7 @@ export function FlowChoicePanel({ value, onChange }: Props) {
     <div className="space-y-3">
       <div>
         <h2 className="text-xl font-semibold">O que você deseja fazer?</h2>
-        <p className="text-sm text-muted-foreground">Para importar duas ou mais listas, escolha a primeira opção.</p>
+        <p className="text-sm text-muted-foreground">Você pode preservar a estrutura do pacote ou reunir tudo em uma lista que já existe.</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {OPTIONS.map((option) => {

@@ -1,0 +1,57 @@
+name: Existing List Import Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/existing_list_import_smoke.sql"
+      - "supabase/tests/existing_list_replace_smoke.sql"
+      - ".github/workflows/existing-list-import-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/existing_list_import_smoke.sql"
+      - "supabase/tests/existing_list_replace_smoke.sql"
+      - ".github/workflows/existing-list-import-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  existing-list-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Rebuild local database
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase start 2>&1 | tee existing-list-smoke.log
+          supabase db reset --local --no-seed 2>&1 | tee -a existing-list-smoke.log
+      - name: Test duplicate replacement and undo
+        shell: bash
+        run: |
+          set -o pipefail
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/existing_list_import_smoke.sql 2>&1 | tee -a existing-list-smoke.log
+      - name: Test full-list replacement and undo
+        shell: bash
+        run: |
+          set -o pipefail
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/existing_list_replace_smoke.sql 2>&1 | tee -a existing-list-smoke.log
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: existing-list-import-smoke-log
+          path: existing-list-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
