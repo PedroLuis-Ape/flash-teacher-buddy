@@ -1,16 +1,16 @@
 import { naturalSort } from "@/lib/sorting";
 
-export interface MarkableList {
+export interface MarkableResource {
   id: string;
   title: string;
 }
 
-export function sortListsWithFavoritesFirst<T extends MarkableList>(
-  lists: readonly T[],
+export function sortResourcesWithFavoritesFirst<T extends MarkableResource>(
+  resources: readonly T[],
   favoriteIds: readonly string[],
 ): T[] {
   const favoriteSet = new Set(favoriteIds);
-  const alphabetical = naturalSort([...lists], (list) => list.title);
+  const alphabetical = naturalSort([...resources], (resource) => resource.title);
 
   return alphabetical.sort((left, right) => {
     const leftFavorite = favoriteSet.has(left.id);
@@ -19,3 +19,5 @@ export function sortListsWithFavoritesFirst<T extends MarkableList>(
     return leftFavorite ? -1 : 1;
   });
 }
+
+export const sortListsWithFavoritesFirst = sortResourcesWithFavoritesFirst;
