@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   buildExistingListImportPlan,
   existingListTargetFromCatalog,
+  reconcileExistingListCards,
   type ExistingListImportStrategy,
 } from "@/features/global-import/existingListImportPlan";
 import { loadExistingListDestinationCatalog } from "@/features/global-import/destinationCatalog";
@@ -22,7 +23,7 @@ import {
   type CardConflictPolicy,
   type GlobalImportExecutionReport,
 } from "@/features/global-import/mappedService";
-import { analyzeFlashcardDuplicates, parsePastedFlashcards } from "@/lib/bulkImport";
+import { parsePastedFlashcards } from "@/lib/bulkImport";
 import { buildSimpleFlashcardPrompt } from "./simplePrompt";
 import { parseAnySmartImportSource } from "./parseAnySource";
 import { ReviewPanel } from "./ReviewPanel";
@@ -110,6 +111,15 @@ export function ContentIngestDialog({
     return buildExistingListImportPlan(parsed.packageValue, target, strategy);
   }, [parsed, strategy, target]);
 
+  const reconciliation = useMemo(() => {
+    if (!parsed || !target) return null;
+    return reconcileExistingListCards(
+      parsed.packageValue,
+      target,
+      strategy === "replace" ? [] : existingCards,
+    );
+  }, [existingCards, parsed, strategy, target]);
+
   const reviewParsed = useMemo<SmartImportSourceResult | null>(() => {
     if (!parsed || !prepared) return null;
     return {
@@ -119,16 +129,7 @@ export function ContentIngestDialog({
     };
   }, [parsed, prepared]);
 
-  const simpleDuplicateCount = useMemo(() => {
-    if (mode !== "simple" || !prepared) return 0;
-    const list = prepared.smartPackage.package.folders[0]?.lists[0];
-    if (!list) return 0;
-    const pairs = list.cards.flatMap((card) => card.type === "normal"
-      ? [{ sideA: card.front, sideB: card.back }]
-      : card.layers.map((layer) => ({ sideA: layer.front, sideB: layer.back })));
-    return analyzeFlashcardDuplicates(pairs, existingCards)
-      .filter((item) => item.isDuplicateExisting || item.isDuplicateInBatch).length;
-  }, [existingCards, mode, prepared]);
+  const duplicatePolicyBlocked = policy === "error" && Boolean(reconciliation?.cardsDuplicates);
 
   const reset = () => {
     setStep(1);
@@ -213,7 +214,7 @@ export function ContentIngestDialog({
   };
 
   const save = async () => {
-    if (!prepared || !catalog || prepared.errors.length) return;
+    if (!prepared || !catalog || prepared.errors.length || duplicatePolicyBlocked) return;
     if (strategy === "replace" && !window.confirm("Os cards atuais desta lista serão substituídos. Deseja continuar?")) return;
     setBusy(true);
     setReport(null);
@@ -232,7 +233,7 @@ export function ContentIngestDialog({
       setProgress(100);
       setProgressLabel("Importação concluída");
       onImported();
-      toast.success(`${imported.cards_created} card(s) adicionados e ${imported.cards_skipped} ignorados.`);
+      toast.success(`${imported.cards_created} card(s) adicionados, ${imported.cards_updated ?? 0} atualizados e ${imported.cards_skipped} ignorados.`);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "A importação falhou e foi desfeita.");
     } finally {
@@ -320,31 +321,38 @@ export function ContentIngestDialog({
             </div>
           </div>}
 
-          {step === 2 && prepared && reviewParsed && <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              <Card className="p-3 text-center"><div className="text-xl font-bold">{prepared.summary.sourceLists}</div><div className="text-xs text-muted-foreground">Listas recebidas</div></Card>
-              <Card className="p-3 text-center"><div className="text-xl font-bold">{prepared.summary.cardsReceived}</div><div className="text-xs text-muted-foreground">Cards encontrados</div></Card>
-              <Card className="p-3 text-center"><div className="text-xl font-bold">{simpleDuplicateCount}</div><div className="text-xs text-muted-foreground">Duplicados detectados</div></Card>
-              <Card className="p-3 text-center"><div className="text-xl font-bold">{prepared.summary.glossaryToImport}</div><div className="text-xs text-muted-foreground">Glossário</div></Card>
+          {step === 2 && prepared && reviewParsed && reconciliation && <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              <Metric value={prepared.summary.sourceLists} label="Listas recebidas" />
+              <Metric value={reconciliation.cardsReceived} label="Cards recebidos" />
+              <Metric value={reconciliation.cardsValid} label="Válidos e únicos" />
+              <Metric value={reconciliation.cardsDuplicates} label="Duplicados" />
+              <Metric value={reconciliation.cardsBlocked} label="Bloqueados" />
+              <Metric value={prepared.summary.glossaryToImport} label="Glossário" />
               <Card className="p-3 text-center"><div className="truncate text-sm font-bold">{prepared.target.listName}</div><div className="text-xs text-muted-foreground">Destino</div></Card>
             </div>
+            <Card className={`p-4 text-sm ${reconciliation.coherent ? "bg-primary/5" : "border-destructive bg-destructive/5 text-destructive"}`}>
+              {reconciliation.cardsReceived} recebidos = {reconciliation.cardsValid} válidos + {reconciliation.cardsDuplicates} duplicados + {reconciliation.cardsBlocked} bloqueados.
+            </Card>
             {prepared.errors.map((error) => <Alert key={error} variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>)}
-            {prepared.sourceGroups.length > 1 && <Card className="p-4"><h3 className="mb-2 font-semibold">Grupos de origem</h3><div className="space-y-1 text-sm text-muted-foreground">{prepared.sourceGroups.map((group, index) => <div key={`${group.folderName}-${group.listName}-${index}`}>{group.folderName} / {group.listName} — {group.cards} card(s)</div>)}</div></Card>}
+            {prepared.sourceGroups.length > 1 && <Card className="p-4"><h3 className="mb-2 font-semibold">Grupos de origem</h3><div className="space-y-1 text-sm text-muted-foreground">{prepared.sourceGroups.map((group, index) => <div key={`${group.folderName}-${group.listName}-${index}`} className="flex flex-wrap items-center gap-2"><span>{group.folderName} / {group.listName} — {group.cards} card(s)</span>{group.blocked && <Badge variant="destructive">Lados incompatíveis</Badge>}</div>)}</div></Card>}
             <ReviewPanel parsed={reviewParsed} />
           </div>}
 
-          {step === 3 && prepared && <div className="mx-auto max-w-2xl space-y-4">
+          {step === 3 && prepared && reconciliation && <div className="mx-auto max-w-2xl space-y-4">
             <Card className="space-y-3 p-4">
               <div><Label>Estratégia da lista</Label><Select value={strategy} onValueChange={(value) => setStrategy(value as ExistingListImportStrategy)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="append">Adicionar aos cards atuais</SelectItem><SelectItem value="replace">Substituir conteúdo da lista</SelectItem></SelectContent></Select></div>
-              <div><Label>Política de duplicados</Label><Select value={policy} onValueChange={(value) => setPolicy(value as CardConflictPolicy)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="skip">Ignorar duplicados</SelectItem><SelectItem value="copy">Manter os dois</SelectItem><SelectItem value="error">Bloquear se houver duplicado</SelectItem></SelectContent></Select></div>
+              <div><Label>Política de duplicados</Label><Select value={policy} onValueChange={(value) => setPolicy(value as CardConflictPolicy)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="skip">Ignorar duplicados</SelectItem><SelectItem value="replace">Atualizar o card existente</SelectItem><SelectItem value="copy">Manter os dois</SelectItem><SelectItem value="error">Bloquear se houver duplicado</SelectItem></SelectContent></Select></div>
             </Card>
+            {duplicatePolicyBlocked && <Alert variant="destructive"><AlertDescription>Há {reconciliation.cardsDuplicates} card(s) duplicado(s). Escolha outra política ou remova os duplicados antes de importar.</AlertDescription></Alert>}
             <Card className="p-4 text-sm text-muted-foreground">
               <strong className="text-foreground">Destino:</strong> {prepared.target.folderName} / {prepared.target.listName}<br />
               <strong className="text-foreground">Direção preservada:</strong> {prepared.target.labelA} → {prepared.target.labelB}<br />
-              <strong className="text-foreground">Total:</strong> {prepared.summary.cardsReceived} cards e {prepared.summary.glossaryToImport} entradas de glossário.
+              <strong className="text-foreground">Reconciliação:</strong> {reconciliation.cardsReceived} = {reconciliation.cardsValid} + {reconciliation.cardsDuplicates} + {reconciliation.cardsBlocked}.<br />
+              <strong className="text-foreground">Glossário:</strong> {prepared.summary.glossaryToImport} entrada(s) consolidadas na pasta.
             </Card>
             {(busy || report) && <div><Progress value={progress} /><p className="mt-1 text-center text-xs text-muted-foreground">{progressLabel}</p></div>}
-            {report && <Alert><Check className="h-4 w-4" /><AlertDescription>Importação concluída: {report.cards_created} card(s), {report.cards_skipped} ignorado(s) e {report.glossary_created ?? 0} entrada(s) de glossário.</AlertDescription></Alert>}
+            {report && <Alert><Check className="h-4 w-4" /><AlertDescription>Importação concluída: {report.cards_created} criado(s), {report.cards_updated ?? 0} atualizado(s), {report.cards_skipped} ignorado(s) e {report.glossary_created ?? 0} entrada(s) de glossário.</AlertDescription></Alert>}
           </div>}
         </div>
 
@@ -355,7 +363,7 @@ export function ContentIngestDialog({
               {report && <Button variant="outline" disabled={undoing} onClick={undo}>{undoing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}Desfazer</Button>}
               {step === 1 && <Button disabled={!raw.trim() || loadingTarget} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
               {step === 2 && <Button disabled={Boolean(prepared?.errors.length)} onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
-              {step === 3 && !report && <Button disabled={busy || Boolean(prepared?.errors.length)} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Importar</Button>}
+              {step === 3 && !report && <Button disabled={busy || Boolean(prepared?.errors.length) || duplicatePolicyBlocked} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Importar</Button>}
               {report && <Button onClick={() => setOpen(false)}>Concluir</Button>}
             </div>
           </div>
@@ -364,4 +372,8 @@ export function ContentIngestDialog({
     </Dialog>
     <SmartPromptDialog open={promptOpen} onOpenChange={setPromptOpen} value={options} onChange={setOptions} />
   </>;
+}
+
+function Metric({ value, label }: { value: number; label: string }) {
+  return <Card className="p-3 text-center"><div className="text-xl font-bold">{value}</div><div className="text-xs text-muted-foreground">{label}</div></Card>;
 }
