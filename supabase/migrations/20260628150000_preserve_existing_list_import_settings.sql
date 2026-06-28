@@ -12,16 +12,26 @@ CREATE OR REPLACE FUNCTION public.import_smart_list_content_v2(
   _list_path text DEFAULT '$'
 ) RETURNS jsonb
 LANGUAGE plpgsql
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
+  v_auth_uid uuid := auth.uid();
   v_before public.lists%ROWTYPE;
   v_result jsonb;
 BEGIN
-  SELECT * INTO v_before FROM public.lists WHERE id = _list_id;
+  IF v_auth_uid IS NULL OR _uid IS DISTINCT FROM v_auth_uid THEN
+    RAISE EXCEPTION 'Usuário inválido para importar nesta lista.' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_before
+  FROM public.lists
+  WHERE id = _list_id
+    AND owner_id = v_auth_uid
+    AND deleted_at IS NULL;
+
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Lista inválida ou removida.' USING ERRCODE = '23503';
+    RAISE EXCEPTION 'Lista inválida ou removida.' USING ERRCODE = '42501';
   END IF;
 
   v_result := public.import_smart_list_content_v2_untrusted_settings(
@@ -40,13 +50,15 @@ BEGIN
       labels_a = v_before.labels_a,
       labels_b = v_before.labels_b,
       tts_enabled = v_before.tts_enabled
-  WHERE id = _list_id;
+  WHERE id = _list_id
+    AND owner_id = v_auth_uid;
 
   RETURN v_result;
 END;
 $$;
 
 REVOKE ALL ON FUNCTION public.import_smart_list_content_v2_untrusted_settings(uuid,uuid,jsonb,text,uuid,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.import_smart_list_content_v2_untrusted_settings(uuid,uuid,jsonb,text,uuid,text) FROM authenticated;
 REVOKE ALL ON FUNCTION public.import_smart_list_content_v2(uuid,uuid,jsonb,text,uuid,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.import_smart_list_content_v2(uuid,uuid,jsonb,text,uuid,text) TO authenticated;
 
