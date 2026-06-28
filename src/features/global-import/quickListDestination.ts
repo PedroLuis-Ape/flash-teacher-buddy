@@ -9,18 +9,11 @@ import type { GlobalImportPackage } from "./schema";
 
 export type QuickListStrategy = "append" | "replace";
 
-/**
- * Kept for backwards compatibility with older callers. Multiple folders and
- * lists are now valid because they are consolidated before execution.
- */
+/** Multiple folders and lists are valid: all source lists are consolidated. */
 export function quickImportStructureError(_packageValue: GlobalImportPackage | null): string | null {
   return null;
 }
 
-/**
- * Legacy single-list mapper. New code should use
- * buildQuickExistingListPreparation so no source list can be discarded.
- */
 export function buildQuickListDestinationPlan(
   packageValue: GlobalImportPackage,
   folderId: string,
@@ -28,19 +21,27 @@ export function buildQuickListDestinationPlan(
   strategy: QuickListStrategy,
 ): GlobalImportDestinationPlan | null {
   if (!packageValue || !folderId || !listId) return null;
-  const folders = packageValue.package.folders;
-  const lists = folders.reduce((total, folder) => total + folder.lists.length, 0);
-  if (folders.length !== 1 || lists !== 1) return null;
-  return {
-    folders: {
-      0: {
-        folder: { mode: "existing", folderId },
-        lists: {
-          0: { mode: "existing", listId, strategy },
-        },
-      },
-    },
-  };
+
+  let firstSourceList = true;
+  const folders: GlobalImportDestinationPlan["folders"] = {};
+  packageValue.package.folders.forEach((folder, folderIndex) => {
+    const lists: GlobalImportDestinationPlan["folders"][number]["lists"] = {};
+    folder.lists.forEach((_, listIndex) => {
+      lists[listIndex] = {
+        mode: "existing",
+        listId,
+        strategy: strategy === "replace" && firstSourceList ? "replace" : "append",
+        consolidate: true,
+      };
+      firstSourceList = false;
+    });
+    folders[folderIndex] = {
+      folder: { mode: "existing", folderId },
+      lists,
+    };
+  });
+
+  return { folders };
 }
 
 export function buildQuickExistingListPreparation(
