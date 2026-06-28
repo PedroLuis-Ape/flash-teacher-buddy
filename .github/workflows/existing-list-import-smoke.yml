@@ -5,12 +5,14 @@ on:
     paths:
       - "supabase/migrations/**"
       - "supabase/tests/existing_list_import_smoke.sql"
+      - "supabase/tests/existing_list_replace_smoke.sql"
       - ".github/workflows/existing-list-import-smoke.yml"
   push:
     branches: [main]
     paths:
       - "supabase/migrations/**"
       - "supabase/tests/existing_list_import_smoke.sql"
+      - "supabase/tests/existing_list_replace_smoke.sql"
       - ".github/workflows/existing-list-import-smoke.yml"
   workflow_dispatch:
 
@@ -30,8 +32,10 @@ jobs:
         run: |
           supabase start
           supabase db reset --local --no-seed
-      - name: Test consolidation replacement and undo
+      - name: Test duplicate replacement and undo
         run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/existing_list_import_smoke.sql
+      - name: Test full-list replacement and undo
+        run: psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/existing_list_replace_smoke.sql
       - name: Stop local Supabase
         if: always()
         run: supabase stop --no-backup
