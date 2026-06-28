@@ -6,6 +6,7 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/existing_list_import_smoke.sql"
       - "supabase/tests/existing_list_replace_smoke.sql"
+      - "supabase/tests/existing_list_import_security_smoke.sql"
       - ".github/workflows/existing-list-import-smoke.yml"
   push:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/existing_list_import_smoke.sql"
       - "supabase/tests/existing_list_replace_smoke.sql"
+      - "supabase/tests/existing_list_import_security_smoke.sql"
       - ".github/workflows/existing-list-import-smoke.yml"
   workflow_dispatch:
 
@@ -44,6 +46,11 @@ jobs:
         run: |
           set -o pipefail
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/existing_list_replace_smoke.sql 2>&1 | tee -a existing-list-smoke.log
+      - name: Test import RPC security boundaries
+        shell: bash
+        run: |
+          set -o pipefail
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f supabase/tests/existing_list_import_security_smoke.sql 2>&1 | tee -a existing-list-smoke.log
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
