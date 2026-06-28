@@ -11,7 +11,7 @@ export async function loadImportDestinationCatalog(
 
   let foldersQuery = db
     .from("folders")
-    .select("id, title")
+    .select("id, title, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled")
     .eq("owner_id", user.id)
     .is("deleted_at", null)
     .order("title", { ascending: true });
