@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SmartImportPackage } from "@/features/smart-import/schema";
-import { buildExistingListImportPlan } from "../existingListImportPlan";
+import {
+  buildExistingListImportPlan,
+  reconcileExistingListCards,
+} from "../existingListImportPlan";
 import { buildQuickListDestinationPlan } from "../quickListDestination";
 
 const source = {
@@ -43,8 +46,41 @@ describe("existing list import plans", () => {
     const result = buildExistingListImportPlan(source, target);
     expect(result.summary.sourceLists).toBe(2);
     expect(result.summary.cardsReceived).toBe(2);
+    expect(result.summary.cardsCompatible).toBe(2);
+    expect(result.summary.cardsBlocked).toBe(0);
     expect(result.summary.glossaryToImport).toBe(1);
     expect(result.packageValue.package.folders[0].lists[0].cards).toHaveLength(2);
+  });
+
+  it("reconciles received cards without making any card disappear", () => {
+    const reconciliation = reconcileExistingListCards(source, target, [
+      { term: "Hello", translation: "Ola" },
+    ]);
+    expect(reconciliation).toEqual({
+      cardsReceived: 2,
+      cardsValid: 1,
+      cardsDuplicates: 1,
+      cardsBlocked: 0,
+      coherent: true,
+    });
+  });
+
+  it("counts cards from an incompatible source list as blocked", () => {
+    const incompatible = structuredClone(source);
+    incompatible.package.folders[0].lists[1].front_language = "pt";
+    incompatible.package.folders[0].lists[1].back_language = "en";
+
+    const plan = buildExistingListImportPlan(incompatible, target);
+    const reconciliation = reconcileExistingListCards(incompatible, target, []);
+    expect(plan.errors).toHaveLength(1);
+    expect(plan.summary.cardsBlocked).toBe(1);
+    expect(reconciliation).toMatchObject({
+      cardsReceived: 2,
+      cardsValid: 1,
+      cardsDuplicates: 0,
+      cardsBlocked: 1,
+      coherent: true,
+    });
   });
 
   it("maps every incoming list to the same destination", () => {
