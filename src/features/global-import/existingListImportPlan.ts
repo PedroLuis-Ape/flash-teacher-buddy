@@ -35,15 +35,26 @@ export interface ExistingListSourceGroup {
   listName: string;
   cards: number;
   glossaryEntries: number;
+  blocked: boolean;
 }
 
 export interface ExistingListImportSummary {
   sourceFolders: number;
   sourceLists: number;
   cardsReceived: number;
+  cardsCompatible: number;
+  cardsBlocked: number;
   glossaryReceived: number;
   glossaryDuplicates: number;
   glossaryToImport: number;
+}
+
+export interface ExistingListCardReconciliation {
+  cardsReceived: number;
+  cardsValid: number;
+  cardsDuplicates: number;
+  cardsBlocked: number;
+  coherent: boolean;
 }
 
 export interface ExistingListImportPreparation {
@@ -90,6 +101,17 @@ function countPlayableCards(list: SmartImportList): number {
   );
 }
 
+function playableCards(list: SmartImportList): Array<{ front: string; back: string }> {
+  return list.cards.flatMap((card) => card.type === "normal"
+    ? [{ front: card.front, back: card.back }]
+    : card.layers.map((layer) => ({ front: layer.front, back: layer.back })));
+}
+
+function cardIdentity(front: string, back: string): string {
+  const clean = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return `${clean(front)}\u0000${clean(back)}`;
+}
+
 function glossaryIdentity(entry: SmartGlossaryEntry): string {
   const clean = (value: string) => value.trim().toLocaleLowerCase().replace(/\s+/g, " ");
   return `${entry.side}\u0000${clean(entry.term)}\u0000${clean(entry.translation)}`;
@@ -97,6 +119,11 @@ function glossaryIdentity(entry: SmartGlossaryEntry): string {
 
 function normalizeStudyType(value: string): SmartImportList["study_type"] {
   return value === "general" || value === "math" || value === "visual" ? value : "language";
+}
+
+function directionMatches(list: SmartImportList, target: ExistingListImportTarget): boolean {
+  return normalizeLanguage(list.front_language) === normalizeLanguage(target.frontLanguage)
+    && normalizeLanguage(list.back_language) === normalizeLanguage(target.backLanguage);
 }
 
 export function existingListTargetFromCatalog(
@@ -124,6 +151,45 @@ export function existingListTargetFromCatalog(
   };
 }
 
+export function reconcileExistingListCards(
+  source: SmartImportPackage,
+  target: ExistingListImportTarget,
+  existingCards: Array<{ term: string; translation: string }>,
+): ExistingListCardReconciliation {
+  const seen = new Set(existingCards.map((card) => cardIdentity(card.term, card.translation)));
+  let cardsReceived = 0;
+  let cardsValid = 0;
+  let cardsDuplicates = 0;
+  let cardsBlocked = 0;
+
+  for (const folder of source.package.folders) {
+    for (const list of folder.lists) {
+      const cards = playableCards(list);
+      cardsReceived += cards.length;
+      if (!directionMatches(list, target)) {
+        cardsBlocked += cards.length;
+        continue;
+      }
+      for (const card of cards) {
+        const key = cardIdentity(card.front, card.back);
+        if (seen.has(key)) cardsDuplicates += 1;
+        else {
+          seen.add(key);
+          cardsValid += 1;
+        }
+      }
+    }
+  }
+
+  return {
+    cardsReceived,
+    cardsValid,
+    cardsDuplicates,
+    cardsBlocked,
+    coherent: cardsReceived === cardsValid + cardsDuplicates + cardsBlocked,
+  };
+}
+
 export function buildExistingListImportPlan(
   source: SmartImportPackage,
   target: ExistingListImportTarget,
@@ -134,30 +200,26 @@ export function buildExistingListImportPlan(
   const sourceGroups: ExistingListSourceGroup[] = [];
   const errors: string[] = [];
   let cardsReceived = 0;
+  let cardsBlocked = 0;
   let glossaryReceived = 0;
   let glossaryDuplicates = 0;
-
-  const targetFront = normalizeLanguage(target.frontLanguage);
-  const targetBack = normalizeLanguage(target.backLanguage);
 
   for (const folder of source.package.folders) {
     for (const list of folder.lists) {
       const listCards = countPlayableCards(list);
+      const blocked = !directionMatches(list, target);
       cardsReceived += listCards;
+      if (blocked) cardsBlocked += listCards;
       glossaryReceived += list.glossary.length;
       sourceGroups.push({
         folderName: folder.name,
         listName: list.name,
         cards: listCards,
         glossaryEntries: list.glossary.length,
+        blocked,
       });
 
-      if (
-        normalizeLanguage(list.front_language) !== targetFront
-        || normalizeLanguage(list.back_language) !== targetBack
-      ) {
-        errors.push(DIRECTION_ERROR);
-      }
+      if (blocked) errors.push(DIRECTION_ERROR);
 
       cards.push(...list.cards);
       for (const entry of list.glossary) {
@@ -220,6 +282,8 @@ export function buildExistingListImportPlan(
       sourceFolders: source.package.folders.length,
       sourceLists: sourceGroups.length,
       cardsReceived,
+      cardsCompatible: cardsReceived - cardsBlocked,
+      cardsBlocked,
       glossaryReceived,
       glossaryDuplicates,
       glossaryToImport: glossary.size,
