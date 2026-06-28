@@ -18,7 +18,7 @@ export async function loadImportDestinationCatalog(
 
   let listsQuery = db
     .from("lists")
-    .select("id, title, folder_id")
+    .select("id, title, folder_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled")
     .eq("owner_id", user.id)
     .is("deleted_at", null)
     .order("title", { ascending: true });
