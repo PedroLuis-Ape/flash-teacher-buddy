@@ -28,6 +28,11 @@ interface ListStats {
   detailedCards: number;
 }
 
+interface ConsolidatedDestination {
+  listId: string;
+  replace: boolean;
+}
+
 function statsOf(list?: SmartImportList): ListStats | null {
   if (!list) return null;
   let normalCards = 0;
@@ -82,14 +87,18 @@ function listDestinationLabel(
   };
 }
 
-function consolidatedListId(plan: GlobalImportDestinationPlan): string | null {
+function consolidatedDestination(plan: GlobalImportDestinationPlan): ConsolidatedDestination | null {
   const ids = new Set<string>();
+  let replace = false;
   Object.values(plan.folders).forEach((folder) => {
     Object.values(folder.lists).forEach((list) => {
-      if (list.mode === "existing" && list.consolidate) ids.add(list.listId);
+      if (list.mode === "existing" && list.consolidate) {
+        ids.add(list.listId);
+        if (list.strategy === "replace") replace = true;
+      }
     });
   });
-  return ids.size === 1 ? Array.from(ids)[0] : null;
+  return ids.size === 1 ? { listId: Array.from(ids)[0], replace } : null;
 }
 
 export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan }: Props) {
@@ -98,10 +107,10 @@ export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan
     [packageValue, smartPackage],
   );
   const smartLists = effectiveSmartPackage.package.folders.flatMap((folder) => folder.lists);
-  const targetListId = useMemo(() => consolidatedListId(plan), [plan]);
+  const consolidated = useMemo(() => consolidatedDestination(plan), [plan]);
   const target = useMemo(
-    () => targetListId ? existingListTargetFromCatalog(catalog, targetListId) : null,
-    [catalog, targetListId],
+    () => consolidated ? existingListTargetFromCatalog(catalog, consolidated.listId) : null,
+    [catalog, consolidated],
   );
   const [existingCards, setExistingCards] = useState<Array<{ term: string; translation: string }>>([]);
   const [cardsLoading, setCardsLoading] = useState(false);
@@ -109,19 +118,20 @@ export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan
 
   useEffect(() => {
     let active = true;
-    if (!targetListId) {
+    if (!consolidated?.listId || consolidated.replace) {
       setExistingCards([]);
       setCardsError(null);
+      setCardsLoading(false);
       return () => { active = false; };
     }
     setCardsLoading(true);
     setCardsError(null);
-    loadListCardCatalog(targetListId)
+    loadListCardCatalog(consolidated.listId)
       .then((cards) => { if (active) setExistingCards(cards); })
       .catch((error) => { if (active) setCardsError(error instanceof Error ? error.message : "Não foi possível comparar duplicados."); })
       .finally(() => { if (active) setCardsLoading(false); });
     return () => { active = false; };
-  }, [targetListId]);
+  }, [consolidated]);
 
   const reconciliation = useMemo(
     () => target ? reconcileExistingListCards(effectiveSmartPackage, target, existingCards) : null,
@@ -153,7 +163,10 @@ export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan
               <h4 className="font-semibold">Consolidação em {target.folderName} / {target.listName}</h4>
               <p className="text-sm text-muted-foreground">{sourceLists} lista(s) de origem serão reunidas sem criar novas listas.</p>
             </div>
-            {glossaryEntries > 0 && <Badge variant="secondary">{glossaryEntries} entrada(s) de glossário recebidas</Badge>}
+            <div className="flex flex-wrap gap-2">
+              {consolidated?.replace && <Badge variant="destructive">Conteúdo atual será substituído</Badge>}
+              {glossaryEntries > 0 && <Badge variant="secondary">{glossaryEntries} entrada(s) de glossário recebidas</Badge>}
+            </div>
           </div>
           {cardsLoading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Comparando com os cards atuais...</p>}
           {cardsError && <p className="text-sm text-destructive">{cardsError}</p>}
