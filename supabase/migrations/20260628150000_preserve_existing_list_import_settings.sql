@@ -1,7 +1,21 @@
 BEGIN;
 
-ALTER FUNCTION public.import_smart_list_content_v2(uuid, uuid, jsonb, text, uuid, text)
-  RENAME TO import_smart_list_content_v2_untrusted_settings;
+DO $$
+BEGIN
+  IF to_regprocedure(
+    'public.import_smart_list_content_v2_untrusted_settings(uuid,uuid,jsonb,text,uuid,text)'
+  ) IS NULL THEN
+    IF to_regprocedure(
+      'public.import_smart_list_content_v2(uuid,uuid,jsonb,text,uuid,text)'
+    ) IS NULL THEN
+      RAISE EXCEPTION 'Função base import_smart_list_content_v2 não encontrada.';
+    END IF;
+
+    ALTER FUNCTION public.import_smart_list_content_v2(uuid, uuid, jsonb, text, uuid, text)
+      RENAME TO import_smart_list_content_v2_untrusted_settings;
+  END IF;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.import_smart_list_content_v2(
   _uid uuid,
