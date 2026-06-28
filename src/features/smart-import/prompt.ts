@@ -43,6 +43,7 @@ export function buildSmartImportPrompt(options: SmartImportPromptOptions): strin
       "Entregue CSV puro, com uma linha de cabeçalho e campos entre aspas quando necessário.",
       "Cabeçalho recomendado: record_type,folder_name,list_name,key,parent_key,front,back,term,translation,side,note,occurrence,start_index,end_index,group_title,hint,short_observation,detailed_explanation,usage_notes,common_mistakes,example,example_translation,context_tag,tags,front_language,back_language,primary_side,study_type,label_a,label_b,tts_enabled",
       "Use record_type card, glossary, word_hint, layer_group ou layer.",
+      "Use primary_side somente como a ou b minúsculos.",
     ].join("\n");
   }
 
@@ -62,8 +63,10 @@ export function buildSmartImportPrompt(options: SmartImportPromptOptions): strin
     ...rules,
     "Use schema app-piteco-super-import e version 2.0.",
     "Estrutura obrigatória: package.name, package.folders[].name, package.folders[].lists[].name, front_language, back_language, primary_side, study_type, glossary e cards.",
+    "primary_side aceita exclusivamente \"a\" ou \"b\" em minúsculas. Nunca use \"A\" ou \"B\" nesse campo.",
     "Card normal: { type: 'normal', front, back }.",
-    "Card layered: { type: 'layered', group_title, layers: [{ front, back }, ...] }.",
+    "Card layered: { type: 'layered', group_title, layers: [{ front, back, detailed_explanation?, usage_notes?, common_mistakes?, word_hints? }, ...] }.",
+    "Em cards layered, detailed_explanation, usage_notes, common_mistakes, hint, example, tags e word_hints pertencem a cada item de layers. Não coloque esses campos na raiz do grupo layered.",
     "Glossário: { term, translation, side, note, active }.",
     "Glossário contextual: word_hints com side, text, translation, note, occurrence, start_index e end_index.",
     "Preserve identidades independentes como because, of e because of; não una termos sobrepostos.",
