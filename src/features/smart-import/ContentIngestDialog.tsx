@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Brain, Check, Clipboard, Eye, Loader2, RotateCcw, Upload, Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Brain, Check, Clipboard, Eye, FileJson2, Loader2, RotateCcw, Upload, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -24,17 +24,18 @@ import {
   type GlobalImportExecutionReport,
 } from "@/features/global-import/mappedService";
 import { parsePastedFlashcards } from "@/lib/bulkImport";
-import { buildSimpleFlashcardPrompt } from "./simplePrompt";
+import { COMPLETE_IMPORT_FILE_ACCEPT, readCompleteImportFile } from "./importFile";
 import { parseAnySmartImportSource } from "./parseAnySource";
+import type { SmartImportPromptOptions } from "./prompt";
 import { ReviewPanel } from "./ReviewPanel";
 import {
   smartImportPackageSchema,
   withSmartDeclaredTotals,
   type SmartImportPackage,
 } from "./schema";
-import type { SmartImportPromptOptions } from "./prompt";
-import type { SmartImportSourceResult } from "./sourceParser";
+import { buildSimpleFlashcardPrompt } from "./simplePrompt";
 import { SmartPromptDialog } from "./SmartPromptDialog";
+import type { SmartImportContext, SmartImportSourceResult } from "./sourceParser";
 
 interface Props {
   listId: string;
@@ -58,10 +59,12 @@ export function ContentIngestDialog({
   langA = "en",
   langB = "pt-BR",
 }: Props) {
+  const completeFileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>(1);
   const [mode, setMode] = useState<ImportMode>("simple");
   const [raw, setRaw] = useState("");
+  const [selectedFileName, setSelectedFileName] = useState("");
   const [parsed, setParsed] = useState<SmartImportSourceResult | null>(null);
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadExistingListDestinationCatalog>> | null>(null);
   const [loadingTarget, setLoadingTarget] = useState(false);
@@ -135,6 +138,7 @@ export function ContentIngestDialog({
     setStep(1);
     setMode("simple");
     setRaw("");
+    setSelectedFileName("");
     setParsed(null);
     setShowSimplePrompt(false);
     setStrategy("append");
@@ -142,7 +146,26 @@ export function ContentIngestDialog({
     setProgress(0);
     setProgressLabel("");
     setReport(null);
+    if (completeFileRef.current) completeFileRef.current.value = "";
   };
+
+  const completeContext = (): SmartImportContext => {
+    if (!target) throw new Error("A lista de destino ainda não foi carregada.");
+    return {
+      packageName: `Importação para ${target.listName}`,
+      folderName: target.folderName,
+      listName: target.listName,
+      frontLanguage: target.frontLanguage,
+      backLanguage: target.backLanguage,
+      labelA: target.labelA,
+      labelB: target.labelB,
+      primarySide: target.primarySide,
+      studyType: target.studyType,
+      ttsEnabled: target.ttsEnabled,
+    };
+  };
+
+  const parseComplete = (value: string) => parseAnySmartImportSource(value, completeContext());
 
   const buildSimplePackage = (): SmartImportSourceResult => {
     if (!target) throw new Error("A lista de destino ainda não foi carregada.");
@@ -190,26 +213,31 @@ export function ContentIngestDialog({
 
   const analyze = () => {
     try {
-      if (!raw.trim()) throw new Error("Cole ou digite o conteúdo antes de analisar.");
-      if (!target) throw new Error("A lista de destino ainda não foi carregada.");
-      const result = mode === "simple"
-        ? buildSimplePackage()
-        : parseAnySmartImportSource(raw, {
-            packageName: `Importação para ${target.listName}`,
-            folderName: target.folderName,
-            listName: target.listName,
-            frontLanguage: target.frontLanguage,
-            backLanguage: target.backLanguage,
-            labelA: target.labelA,
-            labelB: target.labelB,
-            primarySide: target.primarySide,
-            studyType: target.studyType,
-            ttsEnabled: target.ttsEnabled,
-          });
+      if (!raw.trim()) throw new Error("Cole, digite ou selecione um arquivo antes de analisar.");
+      const result = mode === "simple" ? buildSimplePackage() : parseComplete(raw);
       setParsed(result);
       setStep(2);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Não foi possível interpretar o conteúdo.");
+    }
+  };
+
+  const handleCompleteFile = async (file?: File) => {
+    try {
+      const text = await readCompleteImportFile(file);
+      if (!text || !file) return;
+      const result = parseComplete(text);
+      setMode("complete");
+      setRaw(text);
+      setSelectedFileName(file.name);
+      setParsed(result);
+      setReport(null);
+      setStep(2);
+      toast.success(`Arquivo “${file.name}” carregado e analisado.`);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível ler o arquivo JSON.");
+    } finally {
+      if (completeFileRef.current) completeFileRef.current.value = "";
     }
   };
 
@@ -266,6 +294,7 @@ export function ContentIngestDialog({
   const changeMode = (next: ImportMode) => {
     setMode(next);
     setRaw("");
+    setSelectedFileName("");
     setParsed(null);
     setStep(1);
     setReport(null);
@@ -278,8 +307,11 @@ export function ContentIngestDialog({
       </DialogTrigger>
       <DialogContent className="flex h-[92vh] max-w-5xl flex-col overflow-hidden p-0">
         <DialogHeader className="border-b px-5 py-4">
-          <div className="flex flex-wrap items-center gap-2"><DialogTitle>Importar para esta lista</DialogTitle><Badge variant="secondary">Seguro e reversível</Badge></div>
-          <DialogDescription>Escolha texto rápido ou o pacote completo do Super Importador.</DialogDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <DialogTitle>Importar para esta lista</DialogTitle>
+            <Badge variant="secondary">Seguro e reversível</Badge>
+          </div>
+          <DialogDescription>Escolha texto rápido ou envie um pacote completo do Super Importador.</DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -288,15 +320,22 @@ export function ContentIngestDialog({
           {!loadingTarget && step === 1 && target && <div className="space-y-5">
             <div className="grid gap-3 md:grid-cols-2">
               <button type="button" onClick={() => changeMode("simple")} className={`rounded-xl border p-4 text-left ${mode === "simple" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/40"}`}>
-                <Zap className="h-5 w-5 text-primary" /><div className="mt-2 font-semibold">⚡ Flashcards simples</div><p className="mt-1 text-sm text-muted-foreground">Texto Lado A / Lado B, prévia e importação rápida. Sem glossário.</p>
+                <Zap className="h-5 w-5 text-primary" />
+                <div className="mt-2 font-semibold">⚡ Flashcards simples</div>
+                <p className="mt-1 text-sm text-muted-foreground">Texto Lado A / Lado B, prévia e importação rápida. Sem glossário.</p>
               </button>
               <button type="button" onClick={() => changeMode("complete")} className={`rounded-xl border p-4 text-left ${mode === "complete" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/40"}`}>
-                <Brain className="h-5 w-5 text-primary" /><div className="mt-2 font-semibold">🧠 Pacote completo</div><p className="mt-1 text-sm text-muted-foreground">JSON 2.0, cards detalhados, várias listas consolidadas e glossário da pasta.</p>
+                <Brain className="h-5 w-5 text-primary" />
+                <div className="mt-2 font-semibold">🧠 Pacote completo</div>
+                <p className="mt-1 text-sm text-muted-foreground">Arquivo JSON 2.0, cards detalhados, várias listas consolidadas e glossário da pasta.</p>
               </button>
             </div>
 
             {mode === "simple" && <Card className="space-y-3 p-4">
-              <div><h3 className="font-semibold">✨ Criar flashcards com IA</h3><p className="text-sm text-muted-foreground">Lista: {target.listName} · {target.labelA} → {target.labelB}. Este modo importa somente flashcards.</p></div>
+              <div>
+                <h3 className="font-semibold">✨ Criar flashcards com IA</h3>
+                <p className="text-sm text-muted-foreground">Lista: {target.listName} · {target.labelA} → {target.labelB}. Este modo importa somente flashcards.</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={copySimplePrompt}><Clipboard className="mr-2 h-4 w-4" />Copiar prompt padrão</Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowSimplePrompt((value) => !value)}><Eye className="mr-2 h-4 w-4" />Visualizar prompt</Button>
@@ -305,23 +344,45 @@ export function ContentIngestDialog({
               {showSimplePrompt && <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border bg-background p-3 text-xs">{simplePrompt}</pre>}
             </Card>}
 
-            {mode === "complete" && <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div><h3 className="font-semibold">Prompt do Super Importador</h3><p className="text-sm text-muted-foreground">Reutiliza os perfis de lote simples, explicações e pacote completo com glossário.</p></div>
-              <Button type="button" variant="outline" onClick={() => setPromptOpen(true)}>Configurar prompt</Button>
+            {mode === "complete" && <Card className="space-y-4 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">Prompt e arquivo do Super Importador</h3>
+                  <p className="text-sm text-muted-foreground">Cole o JSON abaixo ou selecione diretamente o arquivo recebido da IA.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => setPromptOpen(true)}>Configurar prompt</Button>
+                  <input
+                    ref={completeFileRef}
+                    type="file"
+                    accept={COMPLETE_IMPORT_FILE_ACCEPT}
+                    className="hidden"
+                    onChange={(event) => void handleCompleteFile(event.target.files?.[0])}
+                  />
+                  <Button type="button" onClick={() => completeFileRef.current?.click()} disabled={busy}>
+                    <FileJson2 className="mr-2 h-4 w-4" />Selecionar arquivo JSON
+                  </Button>
+                </div>
+              </div>
+              <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">Aceita arquivo <strong>.json</strong> de até 50 MB. O arquivo é analisado antes de qualquer gravação.</p>
             </Card>}
 
             <div className="space-y-2">
-              <Label>{mode === "simple" ? "Flashcards" : "Pacote completo"}</Label>
+              <Label>{mode === "simple" ? "Flashcards" : "Pacote completo — colagem opcional"}</Label>
               <Textarea
                 value={raw}
-                onChange={(event) => setRaw(event.target.value)}
+                onChange={(event) => { setRaw(event.target.value); setSelectedFileName(""); }}
                 className="min-h-[320px] font-mono text-xs sm:text-sm"
-                placeholder={mode === "simple" ? "Hello / Olá\nGood morning / Bom dia" : "Cole o JSON app-piteco-super-import 2.0, CSV ou texto estruturado..."}
+                placeholder={mode === "simple"
+                  ? "Hello / Olá\nGood morning / Bom dia"
+                  : "Cole o JSON app-piteco-super-import 2.0 ou use o botão Selecionar arquivo JSON..."}
               />
             </div>
           </div>}
 
           {step === 2 && prepared && reviewParsed && reconciliation && <div className="space-y-4">
+            {selectedFileName && <Badge variant="outline" className="gap-1"><FileJson2 className="h-3.5 w-3.5" />{selectedFileName}</Badge>}
+            {reviewParsed.notes.length > 0 && <Alert><AlertDescription>{reviewParsed.notes.join(" ")}</AlertDescription></Alert>}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
               <Metric value={prepared.summary.sourceLists} label="Listas recebidas" />
               <Metric value={reconciliation.cardsReceived} label="Cards recebidos" />
@@ -335,14 +396,34 @@ export function ContentIngestDialog({
               {reconciliation.cardsReceived} recebidos = {reconciliation.cardsValid} válidos + {reconciliation.cardsDuplicates} duplicados + {reconciliation.cardsBlocked} bloqueados.
             </Card>
             {prepared.errors.map((error) => <Alert key={error} variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>)}
-            {prepared.sourceGroups.length > 1 && <Card className="p-4"><h3 className="mb-2 font-semibold">Grupos de origem</h3><div className="space-y-1 text-sm text-muted-foreground">{prepared.sourceGroups.map((group, index) => <div key={`${group.folderName}-${group.listName}-${index}`} className="flex flex-wrap items-center gap-2"><span>{group.folderName} / {group.listName} — {group.cards} card(s)</span>{group.blocked && <Badge variant="destructive">Lados incompatíveis</Badge>}</div>)}</div></Card>}
+            {prepared.sourceGroups.length > 1 && <Card className="p-4">
+              <h3 className="mb-2 font-semibold">Grupos de origem</h3>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                {prepared.sourceGroups.map((group, index) => <div key={`${group.folderName}-${group.listName}-${index}`} className="flex flex-wrap items-center gap-2">
+                  <span>{group.folderName} / {group.listName} — {group.cards} card(s)</span>
+                  {group.blocked && <Badge variant="destructive">Lados incompatíveis</Badge>}
+                </div>)}
+              </div>
+            </Card>}
             <ReviewPanel parsed={reviewParsed} />
           </div>}
 
           {step === 3 && prepared && reconciliation && <div className="mx-auto max-w-2xl space-y-4">
             <Card className="space-y-3 p-4">
-              <div><Label>Estratégia da lista</Label><Select value={strategy} onValueChange={(value) => setStrategy(value as ExistingListImportStrategy)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="append">Adicionar aos cards atuais</SelectItem><SelectItem value="replace">Substituir conteúdo da lista</SelectItem></SelectContent></Select></div>
-              <div><Label>Política de duplicados</Label><Select value={policy} onValueChange={(value) => setPolicy(value as CardConflictPolicy)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="skip">Ignorar duplicados</SelectItem><SelectItem value="replace">Atualizar o card existente</SelectItem><SelectItem value="copy">Manter os dois</SelectItem><SelectItem value="error">Bloquear se houver duplicado</SelectItem></SelectContent></Select></div>
+              <div>
+                <Label>Estratégia da lista</Label>
+                <Select value={strategy} onValueChange={(value) => setStrategy(value as ExistingListImportStrategy)}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="append">Adicionar aos cards atuais</SelectItem><SelectItem value="replace">Substituir conteúdo da lista</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Política de duplicados</Label>
+                <Select value={policy} onValueChange={(value) => setPolicy(value as CardConflictPolicy)}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="skip">Ignorar duplicados</SelectItem><SelectItem value="replace">Atualizar o card existente</SelectItem><SelectItem value="copy">Manter os dois</SelectItem><SelectItem value="error">Bloquear se houver duplicado</SelectItem></SelectContent>
+                </Select>
+              </div>
             </Card>
             {duplicatePolicyBlocked && <Alert variant="destructive"><AlertDescription>Há {reconciliation.cardsDuplicates} card(s) duplicado(s). Escolha outra política ou remova os duplicados antes de importar.</AlertDescription></Alert>}
             <Card className="p-4 text-sm text-muted-foreground">
@@ -358,7 +439,9 @@ export function ContentIngestDialog({
 
         <DialogFooter className="border-t p-4">
           <div className="flex w-full flex-wrap justify-between gap-2">
-            <Button variant="ghost" disabled={busy || undoing} onClick={() => step === 1 ? setOpen(false) : setStep((step - 1) as Step)}><ArrowLeft className="mr-2 h-4 w-4" />{step === 1 ? "Cancelar" : "Voltar"}</Button>
+            <Button variant="ghost" disabled={busy || undoing} onClick={() => step === 1 ? setOpen(false) : setStep((step - 1) as Step)}>
+              <ArrowLeft className="mr-2 h-4 w-4" />{step === 1 ? "Cancelar" : "Voltar"}
+            </Button>
             <div className="flex flex-wrap gap-2">
               {report && <Button variant="outline" disabled={undoing} onClick={undo}>{undoing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}Desfazer</Button>}
               {step === 1 && <Button disabled={!raw.trim() || loadingTarget} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}

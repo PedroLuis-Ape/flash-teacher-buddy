@@ -86,7 +86,7 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
       return normalized.validation;
     }
 
-    const repair = options.repairSmartJson
+    const repair = options.repairSmartJson !== false
       ? repairSmartImportJsonText(value)
       : { text: value, changed: false, notes: [] as string[] };
     const result = analyzeGlobalImportText(repair.text);
