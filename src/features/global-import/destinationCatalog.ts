@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ImportDestinationCatalog } from "./destination";
 
 const db = supabase as any;
+const FOLDER_FIELDS = "id, title, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
+const LIST_FIELDS = "id, title, folder_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
 
 export async function loadImportDestinationCatalog(
   turmaId?: string | null,
@@ -11,14 +13,14 @@ export async function loadImportDestinationCatalog(
 
   let foldersQuery = db
     .from("folders")
-    .select("id, title")
+    .select(FOLDER_FIELDS)
     .eq("owner_id", user.id)
     .is("deleted_at", null)
     .order("title", { ascending: true });
 
   let listsQuery = db
     .from("lists")
-    .select("id, title, folder_id")
+    .select(LIST_FIELDS)
     .eq("owner_id", user.id)
     .is("deleted_at", null)
     .order("title", { ascending: true });
@@ -54,4 +56,33 @@ export async function loadImportDestinationCatalog(
     folders: folders ?? [],
     lists: lists ?? [],
   };
+}
+
+export async function loadExistingListDestinationCatalog(
+  listId: string,
+): Promise<ImportDestinationCatalog> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Você precisa estar logado.");
+
+  const { data: list, error: listError } = await db
+    .from("lists")
+    .select(LIST_FIELDS)
+    .eq("id", listId)
+    .eq("owner_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (listError) throw listError;
+  if (!list) throw new Error("Lista inválida ou sem permissão para importar.");
+
+  const { data: folder, error: folderError } = await db
+    .from("folders")
+    .select(FOLDER_FIELDS)
+    .eq("id", list.folder_id)
+    .eq("owner_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (folderError) throw folderError;
+  if (!folder) throw new Error("A pasta da lista não foi encontrada.");
+
+  return { folders: [folder], lists: [list] };
 }

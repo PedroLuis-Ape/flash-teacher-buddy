@@ -22,13 +22,13 @@ export function QuickDestinationPanel(props: Props) {
       <div className="flex items-start gap-3">
         <ListPlus className="mt-0.5 h-5 w-5 text-primary" />
         <div>
-          <h3 className="font-semibold">Destino direto em uma lista existente</h3>
-          <p className="text-sm text-muted-foreground">Este fluxo aceita um pacote com exatamente uma pasta e uma lista e preserva cards normais ou em camadas.</p>
+          <h3 className="font-semibold">Consolidar dentro de uma lista existente</h3>
+          <p className="text-sm text-muted-foreground">O pacote pode conter uma ou várias pastas e listas. Todos os cards serão reunidos na lista escolhida, sem criar estrutura nova.</p>
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Pasta</Label>
+          <Label>Pasta do destino</Label>
           <Select value={props.folderId} onValueChange={props.onFolderChange}>
             <SelectTrigger><SelectValue placeholder="Escolha a pasta" /></SelectTrigger>
             <SelectContent>
@@ -37,7 +37,7 @@ export function QuickDestinationPanel(props: Props) {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Lista que receberá os cards</Label>
+          <Label>Lista que receberá todos os cards</Label>
           <Select value={props.listId} onValueChange={props.onListChange} disabled={!props.folderId}>
             <SelectTrigger><SelectValue placeholder={props.folderId ? "Escolha a lista" : "Escolha a pasta primeiro"} /></SelectTrigger>
             <SelectContent>
@@ -58,11 +58,11 @@ export function QuickDestinationPanel(props: Props) {
       </div>
       {props.strategy === "replace" && (
         <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
-          A substituição remove o conteúdo atual da lista dentro da transação. Uma confirmação adicional será exibida antes de importar.
+          A substituição limpa a lista uma única vez e depois consolida todos os grupos do pacote. Uma confirmação adicional será exibida.
         </p>
       )}
       <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
-        Nenhuma pasta ou lista nova será criada. Glossários presentes no contrato 2.0 continuam sendo enviados para a Caixa de Glossário central.
+        A lista escolhida continua sendo a autoridade sobre idiomas, rótulos, TTS e tipo de estudo. O glossário 2.0 será consolidado no folder_glossary da pasta de destino.
       </p>
     </Card>
   );

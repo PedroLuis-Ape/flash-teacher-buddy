@@ -13,7 +13,7 @@ import type { CanonicalGlobalImportPackage } from "./schema/globalImportSchema";
 import type { AppPitecoSuperImportPackage } from "./schema/appPitecoSuperImportSchema";
 import { updateGlobalImportManifestStatus } from "./manifest";
 
-export type CardConflictPolicy = "skip" | "copy" | "error";
+export type CardConflictPolicy = "skip" | "replace" | "copy" | "error";
 export type ImportTargetScope = "personal" | "classroom";
 
 export interface ExecuteMappedImportOptions {
@@ -41,6 +41,7 @@ export interface GlobalImportExecutionReport {
   lists_replaced?: number;
   lists_skipped?: number;
   cards_created: number;
+  cards_updated?: number;
   cards_skipped: number;
   layered_groups_created?: number;
   glossary_created?: number;
@@ -180,14 +181,29 @@ function importDatabaseError(error: unknown): Error {
   return error instanceof Error ? error : new Error(message || "A importação falhou no banco de dados.");
 }
 
+async function runUndoRpc(
+  batchId: string,
+  targetScope: ImportTargetScope,
+): Promise<{ error: unknown }> {
+  const currentName = targetScope === "classroom"
+    ? "undo_classroom_global_import_v2"
+    : "undo_global_import_v2";
+  const legacyName = targetScope === "classroom"
+    ? "undo_classroom_global_import_v1"
+    : "undo_global_import_v1";
+  const current = await (supabase.rpc as any)(currentName, { _batch_id: batchId });
+  if (current.error && isMissingRpcSchemaCacheError(current.error, currentName)) {
+    return (supabase.rpc as any)(legacyName, { _batch_id: batchId });
+  }
+  return current;
+}
+
 async function rollbackImportedBatch(
   batchId: string,
   targetScope: ImportTargetScope,
 ): Promise<void> {
-  const rpcName = targetScope === "classroom"
-    ? "undo_classroom_global_import_v1"
-    : "undo_global_import_v1";
-  await (supabase.rpc as any)(rpcName, { _batch_id: batchId });
+  const { error } = await runUndoRpc(batchId, targetScope);
+  if (error) throw importDatabaseError(error);
 }
 
 export async function executeMappedGlobalImport(
@@ -218,6 +234,9 @@ export async function executeMappedGlobalImport(
   );
 
   const rpcName = options.turmaId
+    ? "import_app_piteco_super_package_to_class_v2"
+    : "import_app_piteco_super_package_v3";
+  const legacyRpcName = options.turmaId
     ? "import_app_piteco_super_package_to_class_v1"
     : "import_app_piteco_super_package_v2";
   const rpcPayload = options.turmaId
@@ -241,10 +260,19 @@ export async function executeMappedGlobalImport(
 
   if (
     rpcResult.error
+    && options.cardConflict !== "replace"
+    && isMissingRpcSchemaCacheError(rpcResult.error, rpcName)
+  ) {
+    rpcResult = await (supabase.rpc as any)(legacyRpcName, rpcPayload);
+  }
+
+  if (
+    rpcResult.error
     && !options.turmaId
+    && options.cardConflict !== "replace"
     && options.officialPackage
     && options.officialPackage.version === "1.0"
-    && isMissingRpcSchemaCacheError(rpcResult.error, rpcName)
+    && isMissingRpcSchemaCacheError(rpcResult.error, legacyRpcName)
   ) {
     options.onProgress?.(
       0,
@@ -270,13 +298,18 @@ export async function executeMappedGlobalImport(
     ) {
       throw new Error(
         "O banco conectado ao aplicativo não publicou os motores do Super Importador. "
-        + "As funções v2 e v1 estão ausentes do cache de schema deste backend.",
+        + "As funções atuais e compatíveis estão ausentes do cache de schema deste backend.",
       );
     }
   }
 
   const { data, error } = rpcResult;
-  if (error) throw importDatabaseError(error);
+  if (error) {
+    if (options.cardConflict === "replace" && isMissingRpcSchemaCacheError(error, rpcName)) {
+      throw new Error("O banco ainda não recebeu a migration da política de substituir duplicados.");
+    }
+    throw importDatabaseError(error);
+  }
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("O banco não devolveu o relatório da importação.");
   }
@@ -353,11 +386,6 @@ export async function undoGlobalImport(
   );
   if (folderUndo.error) throw importDatabaseError(folderUndo.error);
 
-  const rpcName = targetScope === "classroom"
-    ? "undo_classroom_global_import_v1"
-    : "undo_global_import_v1";
-  const { error } = await (supabase.rpc as any)(rpcName, {
-    _batch_id: batchId,
-  });
+  const { error } = await runUndoRpc(batchId, targetScope);
   if (error) throw importDatabaseError(error);
 }

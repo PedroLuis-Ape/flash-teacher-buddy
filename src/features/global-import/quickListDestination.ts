@@ -1,15 +1,16 @@
-import type { GlobalImportDestinationPlan } from "./destination";
+import type { SmartImportPackage } from "@/features/smart-import/schema";
+import {
+  buildExistingListImportPlan,
+  existingListTargetFromCatalog,
+  type ExistingListImportPreparation,
+} from "./existingListImportPlan";
+import type { GlobalImportDestinationPlan, ImportDestinationCatalog } from "./destination";
 import type { GlobalImportPackage } from "./schema";
 
 export type QuickListStrategy = "append" | "replace";
 
-export function quickImportStructureError(packageValue: GlobalImportPackage | null): string | null {
-  if (!packageValue) return null;
-  const folders = packageValue.package.folders;
-  const lists = folders.reduce((total, folder) => total + folder.lists.length, 0);
-  if (folders.length !== 1 || lists !== 1) {
-    return `A importação rápida aceita exatamente uma pasta e uma lista. Este pacote possui ${folders.length} pasta(s) e ${lists} lista(s). Use a importação estruturada.`;
-  }
+/** Multiple folders and lists are valid: all source lists are consolidated. */
+export function quickImportStructureError(_packageValue: GlobalImportPackage | null): string | null {
   return null;
 }
 
@@ -19,15 +20,36 @@ export function buildQuickListDestinationPlan(
   listId: string,
   strategy: QuickListStrategy,
 ): GlobalImportDestinationPlan | null {
-  if (quickImportStructureError(packageValue) || !folderId || !listId) return null;
-  return {
-    folders: {
-      0: {
-        folder: { mode: "existing", folderId },
-        lists: {
-          0: { mode: "existing", listId, strategy },
-        },
-      },
-    },
-  };
+  if (!packageValue || !folderId || !listId) return null;
+
+  let firstSourceList = true;
+  const folders: GlobalImportDestinationPlan["folders"] = {};
+  packageValue.package.folders.forEach((folder, folderIndex) => {
+    const lists: GlobalImportDestinationPlan["folders"][number]["lists"] = {};
+    folder.lists.forEach((_, listIndex) => {
+      lists[listIndex] = {
+        mode: "existing",
+        listId,
+        strategy: strategy === "replace" && firstSourceList ? "replace" : "append",
+        consolidate: true,
+      };
+      firstSourceList = false;
+    });
+    folders[folderIndex] = {
+      folder: { mode: "existing", folderId },
+      lists,
+    };
+  });
+
+  return { folders };
+}
+
+export function buildQuickExistingListPreparation(
+  source: SmartImportPackage,
+  catalog: ImportDestinationCatalog,
+  listId: string,
+  strategy: QuickListStrategy,
+): ExistingListImportPreparation | null {
+  const target = existingListTargetFromCatalog(catalog, listId);
+  return target ? buildExistingListImportPlan(source, target, strategy) : null;
 }

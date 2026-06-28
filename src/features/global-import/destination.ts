@@ -1,14 +1,27 @@
-import type { GlobalImportPackage } from "./schema";
+import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
+import type { GlobalImportList, GlobalImportPackage } from "./schema";
 
 export interface ExistingImportFolder {
   id: string;
   title: string;
+  lang_a?: string | null;
+  lang_b?: string | null;
+  labels_a?: string | null;
+  labels_b?: string | null;
+  study_type?: string | null;
+  tts_enabled?: boolean | null;
 }
 
 export interface ExistingImportList {
   id: string;
   title: string;
   folder_id: string;
+  lang_a?: string | null;
+  lang_b?: string | null;
+  labels_a?: string | null;
+  labels_b?: string | null;
+  study_type?: string | null;
+  tts_enabled?: boolean | null;
 }
 
 export type FolderDestination =
@@ -17,7 +30,7 @@ export type FolderDestination =
 
 export type ListDestination =
   | { mode: "create"; name: string }
-  | { mode: "existing"; listId: string; strategy?: "append" | "replace" }
+  | { mode: "existing"; listId: string; strategy?: "append" | "replace"; consolidate?: boolean }
   | { mode: "skip" };
 
 export interface FolderDestinationPlan {
@@ -36,6 +49,39 @@ export interface ImportDestinationCatalog {
 
 function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeLanguage(value: string): string {
+  const normalized = value
+    .trim()
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, "-");
+  const aliases: Record<string, string> = {
+    english: "en", ingles: "en",
+    portuguese: "pt", portugues: "pt",
+    spanish: "es", espanhol: "es",
+    french: "fr", frances: "fr",
+    german: "de", alemao: "de",
+    italian: "it", italiano: "it",
+  };
+  return aliases[normalized] ?? normalized.split("-")[0];
+}
+
+function listDirection(
+  list: GlobalImportList,
+  packageValue: GlobalImportPackage,
+): { front: string; back: string } | null {
+  const metadata = list.cards[0]?.metadata;
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const front = metadata.front_language;
+    const back = metadata.back_language;
+    if (typeof front === "string" && typeof back === "string") return { front, back };
+  }
+  const front = packageValue.package.source_language;
+  const back = packageValue.package.target_language;
+  return front && back ? { front, back } : null;
 }
 
 export async function loadImportDestinationCatalog(
@@ -91,8 +137,9 @@ export function validateDestinationPlan(
 ): string[] {
   const errors: string[] = [];
   const folderIds = new Set(catalog.folders.map((folder) => folder.id));
+  const folderById = new Map(catalog.folders.map((folder) => [folder.id, folder]));
   const listById = new Map(catalog.lists.map((list) => [list.id, list]));
-  const targetedExistingLists = new Set<string>();
+  const targetedExistingLists = new Map<string, boolean>();
 
   packageValue.package.folders.forEach((folder, folderIndex) => {
     const folderPlan = plan.folders[folderIndex];
@@ -108,7 +155,7 @@ export function validateDestinationPlan(
       errors.push(`package.folders[${folderIndex}]: nome da nova pasta vazio.`);
     }
 
-    folder.lists.forEach((_, listIndex) => {
+    folder.lists.forEach((incomingList, listIndex) => {
       const listPlan = folderPlan.lists[listIndex];
       if (!listPlan) {
         errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: destino da lista não definido.`);
@@ -127,13 +174,28 @@ export function validateDestinationPlan(
         } else if (list.folder_id !== folderPlan.folder.folderId) {
           errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a lista não pertence à pasta selecionada.`);
         }
-        if (targetedExistingLists.has(listPlan.listId)) {
-          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a mesma lista existente não pode receber duas listas importadas na mesma operação.`);
+
+        const previousConsolidated = targetedExistingLists.get(listPlan.listId);
+        if (previousConsolidated !== undefined && !(previousConsolidated && listPlan.consolidate)) {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a mesma lista existente não pode receber duas listas importadas sem o modo de consolidação.`);
         }
-        targetedExistingLists.add(listPlan.listId);
+        targetedExistingLists.set(listPlan.listId, Boolean(listPlan.consolidate));
+
+        if (list && listPlan.consolidate) {
+          const direction = listDirection(incomingList, packageValue);
+          if (direction) {
+            const targetFolder = folderById.get(list.folder_id);
+            const effective = resolveEffectiveListSettings(list, targetFolder);
+            const incompatible = normalizeLanguage(direction.front) !== normalizeLanguage(effective.langA)
+              || normalizeLanguage(direction.back) !== normalizeLanguage(effective.langB);
+            if (incompatible) {
+              errors.push("Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.");
+            }
+          }
+        }
       }
     });
   });
 
-  return errors;
+  return Array.from(new Set(errors));
 }

@@ -36,8 +36,8 @@ const packageValue: GlobalImportPackage = {
 
 const catalog: ImportDestinationCatalog = {
   folders: [
-    { id: "folder-airport", title: "Inglês para Aeroporto" },
-    { id: "folder-existing", title: "Minha pasta antiga" },
+    { id: "folder-airport", title: "Inglês para Aeroporto", lang_a: "en", lang_b: "pt-BR" },
+    { id: "folder-existing", title: "Minha pasta antiga", lang_a: "en", lang_b: "pt-BR" },
   ],
   lists: [
     { id: "list-checkin", title: "Check-in", folder_id: "folder-airport" },
@@ -74,6 +74,54 @@ describe("global import destination mapping", () => {
 
     expect(validateDestinationPlan(packageValue, catalog, plan)[0]).toContain(
       "a lista não pertence à pasta selecionada",
+    );
+  });
+
+  it("checks the language direction of each list during consolidation", () => {
+    const mixed: GlobalImportPackage = {
+      schema: "appteco-global-import",
+      version: 1,
+      package: {
+        name: "Pacote misto",
+        source_language: "en",
+        target_language: "pt-BR",
+        folders: [{
+          name: "Origem",
+          lists: [
+            {
+              name: "Compatível",
+              cards: [{
+                front: "Hello",
+                back: "Olá",
+                metadata: { front_language: "en-US", back_language: "pt" },
+              }],
+            },
+            {
+              name: "Invertida",
+              cards: [{
+                front: "Olá",
+                back: "Hello",
+                metadata: { front_language: "pt-BR", back_language: "en" },
+              }],
+            },
+          ],
+        }],
+      },
+    };
+    const plan = {
+      folders: {
+        0: {
+          folder: { mode: "existing" as const, folderId: "folder-existing" },
+          lists: {
+            0: { mode: "existing" as const, listId: "list-old", consolidate: true },
+            1: { mode: "existing" as const, listId: "list-old", consolidate: true },
+          },
+        },
+      },
+    };
+
+    expect(validateDestinationPlan(mixed, catalog, plan)).toContain(
+      "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.",
     );
   });
 });
