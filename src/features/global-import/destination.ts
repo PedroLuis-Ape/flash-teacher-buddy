@@ -1,3 +1,4 @@
+import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import type { GlobalImportPackage } from "./schema";
 
 export interface ExistingImportFolder {
@@ -29,7 +30,7 @@ export type FolderDestination =
 
 export type ListDestination =
   | { mode: "create"; name: string }
-  | { mode: "existing"; listId: string; strategy?: "append" | "replace" }
+  | { mode: "existing"; listId: string; strategy?: "append" | "replace"; consolidate?: boolean }
   | { mode: "skip" };
 
 export interface FolderDestinationPlan {
@@ -48,6 +49,24 @@ export interface ImportDestinationCatalog {
 
 function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeLanguage(value: string): string {
+  const normalized = value
+    .trim()
+    .toLocaleLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, "-");
+  const aliases: Record<string, string> = {
+    english: "en", ingles: "en",
+    portuguese: "pt", portugues: "pt",
+    spanish: "es", espanhol: "es",
+    french: "fr", frances: "fr",
+    german: "de", alemao: "de",
+    italian: "it", italiano: "it",
+  };
+  return aliases[normalized] ?? normalized.split("-")[0];
 }
 
 export async function loadImportDestinationCatalog(
@@ -103,8 +122,9 @@ export function validateDestinationPlan(
 ): string[] {
   const errors: string[] = [];
   const folderIds = new Set(catalog.folders.map((folder) => folder.id));
+  const folderById = new Map(catalog.folders.map((folder) => [folder.id, folder]));
   const listById = new Map(catalog.lists.map((list) => [list.id, list]));
-  const targetedExistingLists = new Set<string>();
+  const targetedExistingLists = new Map<string, boolean>();
 
   packageValue.package.folders.forEach((folder, folderIndex) => {
     const folderPlan = plan.folders[folderIndex];
@@ -139,13 +159,25 @@ export function validateDestinationPlan(
         } else if (list.folder_id !== folderPlan.folder.folderId) {
           errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a lista não pertence à pasta selecionada.`);
         }
-        if (targetedExistingLists.has(listPlan.listId)) {
-          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a mesma lista existente não pode receber duas listas importadas na mesma operação.`);
+
+        const previousConsolidated = targetedExistingLists.get(listPlan.listId);
+        if (previousConsolidated !== undefined && !(previousConsolidated && listPlan.consolidate)) {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: a mesma lista existente não pode receber duas listas importadas sem o modo de consolidação.`);
         }
-        targetedExistingLists.add(listPlan.listId);
+        targetedExistingLists.set(listPlan.listId, Boolean(listPlan.consolidate));
+
+        if (list && listPlan.consolidate && packageValue.package.source_language && packageValue.package.target_language) {
+          const targetFolder = folderById.get(list.folder_id);
+          const effective = resolveEffectiveListSettings(list, targetFolder);
+          const incompatible = normalizeLanguage(packageValue.package.source_language) !== normalizeLanguage(effective.langA)
+            || normalizeLanguage(packageValue.package.target_language) !== normalizeLanguage(effective.langB);
+          if (incompatible) {
+            errors.push("Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.");
+          }
+        }
       }
     });
   });
 
-  return errors;
+  return Array.from(new Set(errors));
 }
