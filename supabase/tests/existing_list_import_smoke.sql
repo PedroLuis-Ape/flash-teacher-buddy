@@ -1,13 +1,13 @@
 DO $$
 DECLARE
   smoke_user uuid := '91111111-1111-4111-8111-111111111111';
-  folder_id uuid;
-  list_id uuid;
-  existing_card_id uuid;
-  report jsonb;
-  batch_id uuid;
-  payload jsonb;
-  destination_plan jsonb;
+  v_folder_id uuid;
+  v_list_id uuid;
+  v_existing_card_id uuid;
+  v_report jsonb;
+  v_batch_id uuid;
+  v_payload jsonb;
+  v_destination_plan jsonb;
 BEGIN
   INSERT INTO auth.users (
     instance_id, id, aud, role, email, encrypted_password,
@@ -36,23 +36,23 @@ BEGIN
   ) VALUES (
     smoke_user, 'Existing Destination Folder', 'private', 'language',
     'en', 'pt-BR', 'Original A', 'Original B', false
-  ) RETURNING id INTO folder_id;
+  ) RETURNING id INTO v_folder_id;
 
   INSERT INTO public.lists(
     folder_id, owner_id, title, visibility, study_type,
     lang, lang_a, lang_b, labels_a, labels_b, tts_enabled
   ) VALUES (
-    folder_id, smoke_user, 'Existing Destination List', 'private', 'language',
+    v_folder_id, smoke_user, 'Existing Destination List', 'private', 'language',
     'en', 'en', 'pt-BR', 'Original A', 'Original B', false
-  ) RETURNING id INTO list_id;
+  ) RETURNING id INTO v_list_id;
 
   INSERT INTO public.flashcards(
     list_id, user_id, term, translation, detailed_explanation
   ) VALUES (
-    list_id, smoke_user, 'Hello', 'Olá', 'old explanation'
-  ) RETURNING id INTO existing_card_id;
+    v_list_id, smoke_user, 'Hello', 'Olá', 'old explanation'
+  ) RETURNING id INTO v_existing_card_id;
 
-  payload := jsonb_build_object(
+  v_payload := jsonb_build_object(
     'schema', 'app-piteco-super-import',
     'version', '2.0',
     'package', jsonb_build_object(
@@ -111,22 +111,22 @@ BEGIN
     )
   );
 
-  destination_plan := jsonb_build_object(
+  v_destination_plan := jsonb_build_object(
     'folders', jsonb_build_object(
       '0', jsonb_build_object(
-        'folder', jsonb_build_object('mode', 'existing', 'folderId', folder_id),
+        'folder', jsonb_build_object('mode', 'existing', 'folderId', v_folder_id),
         'lists', jsonb_build_object(
           '0', jsonb_build_object(
-            'mode', 'existing', 'listId', list_id,
+            'mode', 'existing', 'listId', v_list_id,
             'strategy', 'append', 'consolidate', true
           )
         )
       ),
       '1', jsonb_build_object(
-        'folder', jsonb_build_object('mode', 'existing', 'folderId', folder_id),
+        'folder', jsonb_build_object('mode', 'existing', 'folderId', v_folder_id),
         'lists', jsonb_build_object(
           '0', jsonb_build_object(
-            'mode', 'existing', 'listId', list_id,
+            'mode', 'existing', 'listId', v_list_id,
             'strategy', 'append', 'consolidate', true
           )
         )
@@ -136,65 +136,65 @@ BEGIN
 
   SELECT public.import_app_piteco_super_package_v3(
     '92222222-2222-4222-8222-222222222222',
-    payload,
-    destination_plan,
+    v_payload,
+    v_destination_plan,
     'replace',
     NULL
-  ) INTO report;
+  ) INTO v_report;
 
-  batch_id := (report->>'batch_id')::uuid;
+  v_batch_id := (v_report->>'batch_id')::uuid;
 
-  IF COALESCE((report->>'cards_created')::integer, 0) <> 1
-     OR COALESCE((report->>'cards_updated')::integer, 0) <> 1
-     OR COALESCE((report->>'cards_skipped')::integer, 0) <> 0 THEN
-    RAISE EXCEPTION 'Unexpected replace report: %', report;
+  IF COALESCE((v_report->>'cards_created')::integer, 0) <> 1
+     OR COALESCE((v_report->>'cards_updated')::integer, 0) <> 1
+     OR COALESCE((v_report->>'cards_skipped')::integer, 0) <> 0 THEN
+    RAISE EXCEPTION 'Unexpected replace report: %', v_report;
   END IF;
 
-  IF (SELECT detailed_explanation FROM public.flashcards WHERE id = existing_card_id) <> 'new explanation' THEN
+  IF (SELECT f.detailed_explanation FROM public.flashcards f WHERE f.id = v_existing_card_id) <> 'new explanation' THEN
     RAISE EXCEPTION 'The duplicate card was not updated.';
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM public.flashcards
-    WHERE list_id = list_id
-      AND user_id = smoke_user
-      AND term = 'Receipt'
-      AND translation = 'Recibo'
-      AND deleted_at IS NULL
+    SELECT 1 FROM public.flashcards f
+    WHERE f.list_id = v_list_id
+      AND f.user_id = smoke_user
+      AND f.term = 'Receipt'
+      AND f.translation = 'Recibo'
+      AND f.deleted_at IS NULL
   ) THEN
     RAISE EXCEPTION 'The second source list was not consolidated.';
   END IF;
 
   IF EXISTS (
-    SELECT 1 FROM public.lists
-    WHERE id = list_id
+    SELECT 1 FROM public.lists l
+    WHERE l.id = v_list_id
       AND (
-        folder_id IS DISTINCT FROM folder_id
-        OR owner_id IS DISTINCT FROM smoke_user
-        OR study_type IS DISTINCT FROM 'language'
-        OR lang_a IS DISTINCT FROM 'en'
-        OR lang_b IS DISTINCT FROM 'pt-BR'
-        OR labels_a IS DISTINCT FROM 'Original A'
-        OR labels_b IS DISTINCT FROM 'Original B'
-        OR tts_enabled IS DISTINCT FROM false
+        l.folder_id IS DISTINCT FROM v_folder_id
+        OR l.owner_id IS DISTINCT FROM smoke_user
+        OR l.study_type IS DISTINCT FROM 'language'
+        OR l.lang_a IS DISTINCT FROM 'en'
+        OR l.lang_b IS DISTINCT FROM 'pt-BR'
+        OR l.labels_a IS DISTINCT FROM 'Original A'
+        OR l.labels_b IS DISTINCT FROM 'Original B'
+        OR l.tts_enabled IS DISTINCT FROM false
       )
   ) THEN
     RAISE EXCEPTION 'The package changed authoritative destination settings.';
   END IF;
 
-  PERFORM public.undo_global_import_v2(batch_id);
+  PERFORM public.undo_global_import_v2(v_batch_id);
 
-  IF (SELECT detailed_explanation FROM public.flashcards WHERE id = existing_card_id) <> 'old explanation' THEN
+  IF (SELECT f.detailed_explanation FROM public.flashcards f WHERE f.id = v_existing_card_id) <> 'old explanation' THEN
     RAISE EXCEPTION 'Undo did not restore the previous duplicate content.';
   END IF;
 
   IF EXISTS (
-    SELECT 1 FROM public.flashcards
-    WHERE list_id = list_id
-      AND user_id = smoke_user
-      AND term = 'Receipt'
-      AND translation = 'Recibo'
-      AND deleted_at IS NULL
+    SELECT 1 FROM public.flashcards f
+    WHERE f.list_id = v_list_id
+      AND f.user_id = smoke_user
+      AND f.term = 'Receipt'
+      AND f.translation = 'Recibo'
+      AND f.deleted_at IS NULL
   ) THEN
     RAISE EXCEPTION 'Undo did not remove the newly consolidated card.';
   END IF;
