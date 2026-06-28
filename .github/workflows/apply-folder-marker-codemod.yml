@@ -23,60 +23,51 @@ jobs:
 
           path = Path('src/pages/Folders.tsx')
           text = path.read_text()
-          if 'useToggleResourceAttention' in text:
+          if 'toggleFolderAttention' in text:
               print('Folder markers already applied')
               raise SystemExit(0)
 
-          replacements = [
-            (
+          def replace_once(old: str, new: str, label: str):
+              global text
+              if old not in text:
+                  raise SystemExit(f'Missing {label}: {old[:120]!r}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
               'import { FolderPlus, Trash2, Star, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";',
-              'import { FolderPlus, Trash2, Star, CircleAlert, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";'
-            ),
-            (
-              'import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";\nimport { SkeletonGrid } from "@/components/ui/skeleton-card";',
-              'import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";\nimport { useResourceAttention, useToggleResourceAttention } from "@/hooks/useResourceAttention";\nimport { sortResourcesWithFavoritesFirst } from "@/features/study/lib/listMarkers";\nimport { SkeletonGrid } from "@/components/ui/skeleton-card";'
-            ),
-            (
-              "  const toggleFavorite = useToggleFavorite();\n",
-              "  const toggleFavorite = useToggleFavorite();\n  const { data: folderAttention = [] } = useResourceAttention(userId, 'folder');\n  const toggleFolderAttention = useToggleResourceAttention();\n"
-            ),
-            (
+              'import { FolderPlus, Trash2, Star, CircleAlert, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";',
+              'lucide import',
+          )
+          replace_once(
+              'import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";',
+              'import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";\nimport { useResourceAttention, useToggleResourceAttention } from "@/hooks/useResourceAttention";\nimport { sortResourcesWithFavoritesFirst } from "@/features/study/lib/listMarkers";',
+              'marker imports',
+          )
+          replace_once(
+              '  const toggleFavorite = useToggleFavorite();',
+              "  const toggleFavorite = useToggleFavorite();\n  const { data: folderAttention = [] } = useResourceAttention(userId, 'folder');\n  const toggleFolderAttention = useToggleResourceAttention();",
+              'marker hooks',
+          )
+          replace_once(
               '  const filteredFolders = folders.filter((f) =>\n    f.title.toLowerCase().includes(folderSearch.toLowerCase())\n  );',
-              '  const filteredFolders = sortResourcesWithFavoritesFirst(\n    folders.filter((f) => f.title.toLowerCase().includes(folderSearch.toLowerCase())),\n    folderFavorites,\n  );'
-            ),
-            (
+              '  const filteredFolders = sortResourcesWithFavoritesFirst(\n    folders.filter((f) => f.title.toLowerCase().includes(folderSearch.toLowerCase())),\n    folderFavorites,\n  );',
+              'favorite-first sort',
+          )
+          replace_once(
               '            const isFav = folderFavorites.includes(folder.id);\n            const isSelected = selectedFolders.has(folder.id);',
-              '            const isFav = folderFavorites.includes(folder.id);\n            const isAttention = folderAttention.includes(folder.id);\n            const isSelected = selectedFolders.has(folder.id);'
-            ),
-            (
+              '            const isFav = folderFavorites.includes(folder.id);\n            const isAttention = folderAttention.includes(folder.id);\n            const isSelected = selectedFolders.has(folder.id);',
+              'folder marker state',
+          )
+          replace_once(
               '                    cardCount={folder.card_count}\n                    onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}',
-              '                    cardCount={folder.card_count}\n                    className={isAttention ? "border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15" : undefined}\n                    onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}'
-            ),
-            (
-              '''                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });
-                      }}
-                    >
-                      <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
-                    </Button>
-                    <Button''',
-              '''                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });
-                      }}
-                      aria-label={isFav ? 'Remover pasta dos favoritos' : 'Marcar pasta como favorita'}
-                    >
-                      <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
-                    </Button>
+              '                    cardCount={folder.card_count}\n                    className={isAttention ? "border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15" : undefined}\n                    onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}',
+              'red folder theme',
+          )
+
+          favorite_call = "toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });"
+          call_pos = text.index(favorite_call)
+          button_end = text.index('</Button>', call_pos) + len('</Button>')
+          attention_button = '''
                     <Button
                       variant="ghost"
                       size="icon"
@@ -94,16 +85,8 @@ jobs:
                       aria-label={isAttention ? 'Remover marca de atenção da pasta' : 'Marcar pasta para prestar atenção'}
                     >
                       <CircleAlert className={`h-4 w-4 ${isAttention ? 'fill-red-500/15' : ''}`} />
-                    </Button>
-                    <Button'''
-            ),
-          ]
-
-          for old, new in replacements:
-            if old not in text:
-              raise SystemExit(f'Expected pattern not found:\n{old[:160]}')
-            text = text.replace(old, new, 1)
-
+                    </Button>'''
+          text = text[:button_end] + attention_button + text[button_end:]
           path.write_text(text)
           PY
       - name: Commit patched page
