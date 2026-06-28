@@ -16,10 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FolderPlus, Trash2, Star, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";
+import { FolderPlus, Trash2, Star, CircleAlert, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
+import { useResourceAttention, useToggleResourceAttention } from "@/hooks/useResourceAttention";
+import { sortResourcesWithFavoritesFirst } from "@/features/study/lib/listMarkers";
 import { SkeletonGrid } from "@/components/ui/skeleton-card";
 
 interface FolderType {
@@ -88,6 +90,8 @@ const Folders = () => {
   const { data: folderFavorites = [] } = useFavorites(userId, 'folder');
   const { data: listFavorites = [] } = useFavorites(userId, 'list');
   const toggleFavorite = useToggleFavorite();
+  const { data: folderAttention = [] } = useResourceAttention(userId, 'folder');
+  const toggleFolderAttention = useToggleResourceAttention();
 
   // Re-load when the SELECTED HUB ID changes — not the object reference.
  // The context can emit a new object with the same id (e.g. after SIGNED_IN
@@ -466,8 +470,9 @@ const Folders = () => {
   const [folderSearch, setFolderSearch] = useState("");
 
   // Tab: Folders (Pastas)
-  const filteredFolders = folders.filter((f) =>
-    f.title.toLowerCase().includes(folderSearch.toLowerCase())
+  const filteredFolders = sortResourcesWithFavoritesFirst(
+    folders.filter((f) => f.title.toLowerCase().includes(folderSearch.toLowerCase())),
+    folderFavorites,
   );
 
   const foldersTab = (
@@ -577,6 +582,7 @@ const Folders = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 auto-rows-fr">
           {filteredFolders.map((folder) => {
             const isFav = folderFavorites.includes(folder.id);
+            const isAttention = folderAttention.includes(folder.id);
             const isSelected = selectedFolders.has(folder.id);
             return (
               <div key={folder.id} className="flex items-center gap-2">
@@ -608,6 +614,7 @@ const Folders = () => {
                     title={folder.title}
                     listCount={folder.list_count}
                     cardCount={folder.card_count}
+                    className={isAttention ? "border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15" : undefined}
                     onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}
                   />
                 </div>
@@ -636,6 +643,24 @@ const Folders = () => {
                     >
                       <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
                     </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-11 w-11 shrink-0 rounded-xl ${isAttention ? 'bg-red-500/15 text-red-500' : 'text-muted-foreground hover:bg-red-500/10 hover:text-red-500'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!userId) return;
+              toggleFolderAttention.mutate({
+                userId,
+                resourceType: 'folder',
+                resourceId: folder.id,
+                isAttention,
+              });
+            }}
+            aria-label={isAttention ? 'Remover marca de atenção da pasta' : 'Marcar pasta para prestar atenção'}
+          >
+            <CircleAlert className={`h-4 w-4 ${isAttention ? 'fill-red-500/15' : ''}`} />
+          </Button>
                     <Button
                       variant="ghost"
                       size="icon"
