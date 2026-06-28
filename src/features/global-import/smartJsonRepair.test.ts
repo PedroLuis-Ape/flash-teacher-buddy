@@ -68,6 +68,49 @@ describe("repairSmartImportJsonText", () => {
     expect(layers[1].common_mistakes).toBe("Não confunda com passado.");
   });
 
+  it("normalizes uppercase primary_side and moves shared layered metadata", () => {
+    const input = JSON.stringify({
+      schema: "app-piteco-super-import",
+      version: "2.0",
+      package: {
+        name: "Teste",
+        folders: [{
+          name: "Pasta",
+          lists: [{
+            name: "Lista",
+            primary_side: "A",
+            cards: [{
+              type: "layered",
+              group_title: "Atender um cliente",
+              detailed_explanation: "Explicação compartilhada.",
+              usage_notes: "Nota compartilhada.",
+              common_mistakes: "Erro compartilhado.",
+              layers: [
+                { front: "I am helping a customer.", back: "Estou atendendo um cliente." },
+                { front: "I am assisting a client.", back: "Estou atendendo um cliente." },
+              ],
+            }],
+          }],
+        }],
+      },
+    });
+
+    const repaired = repairSmartImportJsonText(input);
+    const list = JSON.parse(repaired.text).package.folders[0].lists[0];
+    const group = list.cards[0];
+
+    expect(list.primary_side).toBe("a");
+    expect(group.detailed_explanation).toBeUndefined();
+    expect(group.layers[0]).toMatchObject({
+      detailed_explanation: "Explicação compartilhada.",
+      usage_notes: "Nota compartilhada.",
+      common_mistakes: "Erro compartilhado.",
+    });
+    expect(group.layers[1].detailed_explanation).toBe("Explicação compartilhada.");
+    expect(repaired.notes.join(" ")).toContain("primary_side");
+    expect(repaired.notes.join(" ")).toContain("layered");
+  });
+
   it("does not alter unrelated or already valid JSON", () => {
     const input = JSON.stringify({
       schema: "app-piteco-super-import",
