@@ -1,90 +1,365 @@
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Loader2, Upload } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Brain, Check, Clipboard, Eye, Loader2, RotateCcw, Upload, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { firstSmartList } from "./adapters";
-import { importSmartListIntoExistingList, type SmartDuplicatePolicy } from "./localService";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  buildExistingListImportPlan,
+  existingListTargetFromCatalog,
+  type ExistingListImportStrategy,
+} from "@/features/global-import/existingListImportPlan";
+import { loadExistingListDestinationCatalog } from "@/features/global-import/destinationCatalog";
+import {
+  executeMappedGlobalImport,
+  undoGlobalImport,
+  type CardConflictPolicy,
+  type GlobalImportExecutionReport,
+} from "@/features/global-import/mappedService";
+import { analyzeFlashcardDuplicates, parsePastedFlashcards } from "@/lib/bulkImport";
+import { buildSimpleFlashcardPrompt } from "./simplePrompt";
 import { parseAnySmartImportSource } from "./parseAnySource";
+import { ReviewPanel } from "./ReviewPanel";
+import {
+  smartImportPackageSchema,
+  withSmartDeclaredTotals,
+  type SmartImportPackage,
+} from "./schema";
 import type { SmartImportPromptOptions } from "./prompt";
-import { ConfirmPanel, ReviewPanel } from "./ReviewPanel";
 import type { SmartImportSourceResult } from "./sourceParser";
-import { SmartImportSourceStep } from "./SmartImportSourceStep";
 import { SmartPromptDialog } from "./SmartPromptDialog";
 
 interface Props {
   listId: string;
   onImported: () => void;
+  existingCards?: { term: string; translation: string }[];
   labelA?: string;
   labelB?: string;
   langA?: string;
   langB?: string;
 }
 
-export function ContentIngestDialog({ listId, onImported, labelA = "Lado A", labelB = "Lado B", langA = "en", langB = "pt-BR" }: Props) {
+type ImportMode = "simple" | "complete";
+type Step = 1 | 2 | 3;
+
+export function ContentIngestDialog({
+  listId,
+  onImported,
+  existingCards = [],
+  labelA = "Lado A",
+  labelB = "Lado B",
+  langA = "en",
+  langB = "pt-BR",
+}: Props) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<Step>(1);
+  const [mode, setMode] = useState<ImportMode>("simple");
   const [raw, setRaw] = useState("");
   const [parsed, setParsed] = useState<SmartImportSourceResult | null>(null);
+  const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadExistingListDestinationCatalog>> | null>(null);
+  const [loadingTarget, setLoadingTarget] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
-  const [policy, setPolicy] = useState<SmartDuplicatePolicy>("skip");
-  const [invert, setInvert] = useState(false);
+  const [showSimplePrompt, setShowSimplePrompt] = useState(false);
+  const [strategy, setStrategy] = useState<ExistingListImportStrategy>("append");
+  const [policy, setPolicy] = useState<CardConflictPolicy>("skip");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
-  const [options, setOptions] = useState<SmartImportPromptOptions>({ languageA: langA, languageB: langB, outputFormat: "json" });
+  const [report, setReport] = useState<GlobalImportExecutionReport | null>(null);
+  const [undoing, setUndoing] = useState(false);
+  const [options, setOptions] = useState<SmartImportPromptOptions>({
+    languageA: langA,
+    languageB: langB,
+    outputFormat: "json",
+    includeGlobalGlossary: true,
+    includeContextGlossary: true,
+    includeDetailedExplanations: true,
+    includeUsageNotes: true,
+    includeCommonMistakes: true,
+    includeLayeredCards: true,
+  });
 
-  const reset = () => { setStep(1); setRaw(""); setParsed(null); setProgress(0); setProgressLabel(""); };
+  useEffect(() => {
+    if (!open) return;
+    setLoadingTarget(true);
+    loadExistingListDestinationCatalog(listId)
+      .then(setCatalog)
+      .catch((error) => toast.error(error instanceof Error ? error.message : "Não foi possível carregar a lista."))
+      .finally(() => setLoadingTarget(false));
+  }, [listId, open]);
+
+  const target = useMemo(
+    () => catalog ? existingListTargetFromCatalog(catalog, listId) : null,
+    [catalog, listId],
+  );
+
+  const simplePrompt = buildSimpleFlashcardPrompt({
+    listName: target?.listName ?? "Lista atual",
+    sideALabel: target?.labelA ?? labelA,
+    sideBLabel: target?.labelB ?? labelB,
+  });
+
+  const prepared = useMemo(() => {
+    if (!parsed || !target) return null;
+    return buildExistingListImportPlan(parsed.packageValue, target, strategy);
+  }, [parsed, strategy, target]);
+
+  const reviewParsed = useMemo<SmartImportSourceResult | null>(() => {
+    if (!parsed || !prepared) return null;
+    return {
+      ...parsed,
+      packageValue: prepared.smartPackage,
+      warnings: [...parsed.warnings, ...prepared.warnings],
+    };
+  }, [parsed, prepared]);
+
+  const simpleDuplicateCount = useMemo(() => {
+    if (mode !== "simple" || !prepared) return 0;
+    const list = prepared.smartPackage.package.folders[0]?.lists[0];
+    if (!list) return 0;
+    const pairs = list.cards.flatMap((card) => card.type === "normal"
+      ? [{ sideA: card.front, sideB: card.back }]
+      : card.layers.map((layer) => ({ sideA: layer.front, sideB: layer.back })));
+    return analyzeFlashcardDuplicates(pairs, existingCards)
+      .filter((item) => item.isDuplicateExisting || item.isDuplicateInBatch).length;
+  }, [existingCards, mode, prepared]);
+
+  const reset = () => {
+    setStep(1);
+    setMode("simple");
+    setRaw("");
+    setParsed(null);
+    setShowSimplePrompt(false);
+    setStrategy("append");
+    setPolicy("skip");
+    setProgress(0);
+    setProgressLabel("");
+    setReport(null);
+  };
+
+  const buildSimplePackage = (): SmartImportSourceResult => {
+    if (!target) throw new Error("A lista de destino ainda não foi carregada.");
+    const pairs = parsePastedFlashcards(raw);
+    const invalid = pairs.filter((pair) => !(pair.sideA || pair.en)?.trim() || !(pair.sideB || pair.pt)?.trim());
+    if (!pairs.length || invalid.length) {
+      throw new Error(invalid.length
+        ? `${invalid.length} linha(s) não possuem os dois lados. Use Lado A / Lado B.`
+        : "Nenhum flashcard válido encontrado. Use Lado A / Lado B.");
+    }
+
+    const packageValue: SmartImportPackage = smartImportPackageSchema.parse(withSmartDeclaredTotals({
+      schema: "app-piteco-super-import",
+      version: "2.0",
+      package: {
+        name: `Flashcards simples — ${target.listName}`,
+        source_language: target.frontLanguage,
+        target_language: target.backLanguage,
+        folders: [{
+          name: target.folderName,
+          lists: [{
+            name: target.listName,
+            front_language: target.frontLanguage,
+            back_language: target.backLanguage,
+            primary_side: target.primarySide,
+            study_type: target.studyType,
+            label_a: target.labelA,
+            label_b: target.labelB,
+            tts_enabled: target.ttsEnabled,
+            glossary: [],
+            cards: pairs.map((pair) => ({
+              type: "normal" as const,
+              front: (pair.sideA || pair.en || "").trim(),
+              back: (pair.sideB || pair.pt || "").trim(),
+              short_observation: pair.shortObservation ?? null,
+              detailed_explanation: pair.detailedHint ?? null,
+            })),
+          }],
+        }],
+      },
+    }));
+
+    return { packageValue, format: "text", notes: [], warnings: [] };
+  };
+
   const analyze = () => {
     try {
-      setParsed(parseAnySmartImportSource(raw, { frontLanguage: langA, backLanguage: langB, labelA, labelB }));
+      if (!raw.trim()) throw new Error("Cole ou digite o conteúdo antes de analisar.");
+      if (!target) throw new Error("A lista de destino ainda não foi carregada.");
+      const result = mode === "simple"
+        ? buildSimplePackage()
+        : parseAnySmartImportSource(raw, {
+            packageName: `Importação para ${target.listName}`,
+            folderName: target.folderName,
+            listName: target.listName,
+            frontLanguage: target.frontLanguage,
+            backLanguage: target.backLanguage,
+            labelA: target.labelA,
+            labelB: target.labelB,
+            primarySide: target.primarySide,
+            studyType: target.studyType,
+            ttsEnabled: target.ttsEnabled,
+          });
+      setParsed(result);
       setStep(2);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Não foi possível interpretar o conteúdo.");
     }
   };
+
   const save = async () => {
-    const list = parsed ? firstSmartList(parsed.packageValue) : null;
-    if (!list) return;
+    if (!prepared || !catalog || prepared.errors.length) return;
+    if (strategy === "replace" && !window.confirm("Os cards atuais desta lista serão substituídos. Deseja continuar?")) return;
     setBusy(true);
+    setReport(null);
     try {
-      const report = await importSmartListIntoExistingList({
-        listId,
-        list,
-        duplicatePolicy: policy,
-        invertSides: invert,
-        onProgress: (done, total, label) => {
+      const imported = await executeMappedGlobalImport(prepared.packageValue, {
+        smartPackage: prepared.smartPackage,
+        destinationPlan: prepared.plan,
+        catalog,
+        cardConflict: policy,
+        onProgress: (done, total, currentLabel) => {
           setProgress(total ? (done / total) * 100 : 0);
-          setProgressLabel(`${label} — ${done}/${total}`);
+          setProgressLabel(`${currentLabel} — ${done}/${total}`);
         },
       });
-      toast.success(`${report.cardsCreated} card(s), ${report.glossaryCreated} termo(s) e ${report.layeredGroupsCreated} grupo(s) adicionados.`);
+      setReport(imported);
+      setProgress(100);
+      setProgressLabel("Importação concluída");
       onImported();
-      setOpen(false);
-      reset();
+      toast.success(`${imported.cards_created} card(s) adicionados e ${imported.cards_skipped} ignorados.`);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "A importação falhou.");
+      toast.error(error instanceof Error ? error.message : "A importação falhou e foi desfeita.");
     } finally {
       setBusy(false);
     }
   };
 
+  const undo = async () => {
+    if (!report?.batch_id) return;
+    setUndoing(true);
+    try {
+      await undoGlobalImport(report.batch_id);
+      setReport(null);
+      setProgress(0);
+      setProgressLabel("");
+      onImported();
+      toast.success("A importação foi desfeita.");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível desfazer a importação.");
+    } finally {
+      setUndoing(false);
+    }
+  };
+
+  const copySimplePrompt = async () => {
+    await navigator.clipboard.writeText(simplePrompt);
+    toast.success("Prompt padrão copiado.");
+  };
+
+  const changeMode = (next: ImportMode) => {
+    setMode(next);
+    setRaw("");
+    setParsed(null);
+    setStep(1);
+    setReport(null);
+  };
+
   return <>
     <Dialog open={open} onOpenChange={(next) => { if (!next && !busy) reset(); setOpen(next); }}>
-      <DialogTrigger asChild><Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" />Importar</Button></DialogTrigger>
-      <DialogContent className="flex h-[90vh] max-w-5xl flex-col overflow-hidden p-0">
-        <DialogHeader className="border-b px-5 py-4"><div className="flex items-center gap-2"><DialogTitle>Importação inteligente</DialogTitle><Badge variant="secondary">2.0</Badge></div><DialogDescription>Texto, CSV ou JSON com revisão antes de salvar.</DialogDescription></DialogHeader>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" />Importar para esta lista</Button>
+      </DialogTrigger>
+      <DialogContent className="flex h-[92vh] max-w-5xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b px-5 py-4">
+          <div className="flex flex-wrap items-center gap-2"><DialogTitle>Importar para esta lista</DialogTitle><Badge variant="secondary">Seguro e reversível</Badge></div>
+          <DialogDescription>Escolha texto rápido ou o pacote completo do Super Importador.</DialogDescription>
+        </DialogHeader>
+
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
-          {step === 1 && <SmartImportSourceStep value={raw} onChange={setRaw} onConfigure={() => setPromptOpen(true)} />}
-          {step === 2 && parsed && <ReviewPanel parsed={parsed} />}
-          {step === 3 && parsed && <div className="mx-auto max-w-2xl space-y-4"><ConfirmPanel value={parsed.packageValue} /><div className="space-y-3 rounded-xl border p-4"><Label>Cards repetidos</Label><Select value={policy} onValueChange={(value) => setPolicy(value as SmartDuplicatePolicy)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="skip">Ignorar</SelectItem><SelectItem value="copy">Criar cópia</SelectItem><SelectItem value="error">Bloquear</SelectItem></SelectContent></Select><div className="flex items-center justify-between"><Label>Inverter A ↔ B</Label><Switch checked={invert} onCheckedChange={setInvert} /></div></div>{busy && <div><Progress value={progress} /><p className="mt-1 text-center text-xs text-muted-foreground">{progressLabel}</p></div>}</div>}
+          {loadingTarget && <div className="flex min-h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+
+          {!loadingTarget && step === 1 && target && <div className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-2">
+              <button type="button" onClick={() => changeMode("simple")} className={`rounded-xl border p-4 text-left ${mode === "simple" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/40"}`}>
+                <Zap className="h-5 w-5 text-primary" /><div className="mt-2 font-semibold">⚡ Flashcards simples</div><p className="mt-1 text-sm text-muted-foreground">Texto Lado A / Lado B, prévia e importação rápida. Sem glossário.</p>
+              </button>
+              <button type="button" onClick={() => changeMode("complete")} className={`rounded-xl border p-4 text-left ${mode === "complete" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/40"}`}>
+                <Brain className="h-5 w-5 text-primary" /><div className="mt-2 font-semibold">🧠 Pacote completo</div><p className="mt-1 text-sm text-muted-foreground">JSON 2.0, cards detalhados, várias listas consolidadas e glossário da pasta.</p>
+              </button>
+            </div>
+
+            {mode === "simple" && <Card className="space-y-3 p-4">
+              <div><h3 className="font-semibold">✨ Criar flashcards com IA</h3><p className="text-sm text-muted-foreground">Lista: {target.listName} · {target.labelA} → {target.labelB}. Este modo importa somente flashcards.</p></div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={copySimplePrompt}><Clipboard className="mr-2 h-4 w-4" />Copiar prompt padrão</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowSimplePrompt((value) => !value)}><Eye className="mr-2 h-4 w-4" />Visualizar prompt</Button>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-3 font-mono text-xs">Hello / Olá<br />Could / Poderia (verbo modal) [Explicação opcional]</div>
+              {showSimplePrompt && <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border bg-background p-3 text-xs">{simplePrompt}</pre>}
+            </Card>}
+
+            {mode === "complete" && <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div><h3 className="font-semibold">Prompt do Super Importador</h3><p className="text-sm text-muted-foreground">Reutiliza os perfis de lote simples, explicações e pacote completo com glossário.</p></div>
+              <Button type="button" variant="outline" onClick={() => setPromptOpen(true)}>Configurar prompt</Button>
+            </Card>}
+
+            <div className="space-y-2">
+              <Label>{mode === "simple" ? "Flashcards" : "Pacote completo"}</Label>
+              <Textarea
+                value={raw}
+                onChange={(event) => setRaw(event.target.value)}
+                className="min-h-[320px] font-mono text-xs sm:text-sm"
+                placeholder={mode === "simple" ? "Hello / Olá\nGood morning / Bom dia" : "Cole o JSON app-piteco-super-import 2.0, CSV ou texto estruturado..."}
+              />
+            </div>
+          </div>}
+
+          {step === 2 && prepared && reviewParsed && <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <Card className="p-3 text-center"><div className="text-xl font-bold">{prepared.summary.sourceLists}</div><div className="text-xs text-muted-foreground">Listas recebidas</div></Card>
+              <Card className="p-3 text-center"><div className="text-xl font-bold">{prepared.summary.cardsReceived}</div><div className="text-xs text-muted-foreground">Cards encontrados</div></Card>
+              <Card className="p-3 text-center"><div className="text-xl font-bold">{simpleDuplicateCount}</div><div className="text-xs text-muted-foreground">Duplicados detectados</div></Card>
+              <Card className="p-3 text-center"><div className="text-xl font-bold">{prepared.summary.glossaryToImport}</div><div className="text-xs text-muted-foreground">Glossário</div></Card>
+              <Card className="p-3 text-center"><div className="truncate text-sm font-bold">{prepared.target.listName}</div><div className="text-xs text-muted-foreground">Destino</div></Card>
+            </div>
+            {prepared.errors.map((error) => <Alert key={error} variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>)}
+            {prepared.sourceGroups.length > 1 && <Card className="p-4"><h3 className="mb-2 font-semibold">Grupos de origem</h3><div className="space-y-1 text-sm text-muted-foreground">{prepared.sourceGroups.map((group, index) => <div key={`${group.folderName}-${group.listName}-${index}`}>{group.folderName} / {group.listName} — {group.cards} card(s)</div>)}</div></Card>}
+            <ReviewPanel parsed={reviewParsed} />
+          </div>}
+
+          {step === 3 && prepared && <div className="mx-auto max-w-2xl space-y-4">
+            <Card className="space-y-3 p-4">
+              <div><Label>Estratégia da lista</Label><Select value={strategy} onValueChange={(value) => setStrategy(value as ExistingListImportStrategy)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="append">Adicionar aos cards atuais</SelectItem><SelectItem value="replace">Substituir conteúdo da lista</SelectItem></SelectContent></Select></div>
+              <div><Label>Política de duplicados</Label><Select value={policy} onValueChange={(value) => setPolicy(value as CardConflictPolicy)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="skip">Ignorar duplicados</SelectItem><SelectItem value="copy">Manter os dois</SelectItem><SelectItem value="error">Bloquear se houver duplicado</SelectItem></SelectContent></Select></div>
+            </Card>
+            <Card className="p-4 text-sm text-muted-foreground">
+              <strong className="text-foreground">Destino:</strong> {prepared.target.folderName} / {prepared.target.listName}<br />
+              <strong className="text-foreground">Direção preservada:</strong> {prepared.target.labelA} → {prepared.target.labelB}<br />
+              <strong className="text-foreground">Total:</strong> {prepared.summary.cardsReceived} cards e {prepared.summary.glossaryToImport} entradas de glossário.
+            </Card>
+            {(busy || report) && <div><Progress value={progress} /><p className="mt-1 text-center text-xs text-muted-foreground">{progressLabel}</p></div>}
+            {report && <Alert><Check className="h-4 w-4" /><AlertDescription>Importação concluída: {report.cards_created} card(s), {report.cards_skipped} ignorado(s) e {report.glossary_created ?? 0} entrada(s) de glossário.</AlertDescription></Alert>}
+          </div>}
         </div>
-        <DialogFooter className="border-t p-4"><div className="flex w-full justify-between"><Button variant="ghost" disabled={busy} onClick={() => step === 1 ? setOpen(false) : setStep((step - 1) as 1 | 2)}><ArrowLeft className="mr-2 h-4 w-4" />{step === 1 ? "Cancelar" : "Voltar"}</Button>{step === 1 && <Button disabled={!raw.trim()} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}{step === 2 && <Button onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}{step === 3 && <Button disabled={busy} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Salvar</Button>}</div></DialogFooter>
+
+        <DialogFooter className="border-t p-4">
+          <div className="flex w-full flex-wrap justify-between gap-2">
+            <Button variant="ghost" disabled={busy || undoing} onClick={() => step === 1 ? setOpen(false) : setStep((step - 1) as Step)}><ArrowLeft className="mr-2 h-4 w-4" />{step === 1 ? "Cancelar" : "Voltar"}</Button>
+            <div className="flex flex-wrap gap-2">
+              {report && <Button variant="outline" disabled={undoing} onClick={undo}>{undoing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}Desfazer</Button>}
+              {step === 1 && <Button disabled={!raw.trim() || loadingTarget} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+              {step === 2 && <Button disabled={Boolean(prepared?.errors.length)} onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+              {step === 3 && !report && <Button disabled={busy || Boolean(prepared?.errors.length)} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Importar</Button>}
+              {report && <Button onClick={() => setOpen(false)}>Concluir</Button>}
+            </div>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
     <SmartPromptDialog open={promptOpen} onOpenChange={setPromptOpen} value={options} onChange={setOptions} />
