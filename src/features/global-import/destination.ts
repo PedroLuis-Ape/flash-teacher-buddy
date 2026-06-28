@@ -1,5 +1,5 @@
 import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
-import type { GlobalImportPackage } from "./schema";
+import type { GlobalImportList, GlobalImportPackage } from "./schema";
 
 export interface ExistingImportFolder {
   id: string;
@@ -67,6 +67,21 @@ function normalizeLanguage(value: string): string {
     italian: "it", italiano: "it",
   };
   return aliases[normalized] ?? normalized.split("-")[0];
+}
+
+function listDirection(
+  list: GlobalImportList,
+  packageValue: GlobalImportPackage,
+): { front: string; back: string } | null {
+  const metadata = list.cards[0]?.metadata;
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    const front = metadata.front_language;
+    const back = metadata.back_language;
+    if (typeof front === "string" && typeof back === "string") return { front, back };
+  }
+  const front = packageValue.package.source_language;
+  const back = packageValue.package.target_language;
+  return front && back ? { front, back } : null;
 }
 
 export async function loadImportDestinationCatalog(
@@ -140,7 +155,7 @@ export function validateDestinationPlan(
       errors.push(`package.folders[${folderIndex}]: nome da nova pasta vazio.`);
     }
 
-    folder.lists.forEach((_, listIndex) => {
+    folder.lists.forEach((incomingList, listIndex) => {
       const listPlan = folderPlan.lists[listIndex];
       if (!listPlan) {
         errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: destino da lista não definido.`);
@@ -166,13 +181,16 @@ export function validateDestinationPlan(
         }
         targetedExistingLists.set(listPlan.listId, Boolean(listPlan.consolidate));
 
-        if (list && listPlan.consolidate && packageValue.package.source_language && packageValue.package.target_language) {
-          const targetFolder = folderById.get(list.folder_id);
-          const effective = resolveEffectiveListSettings(list, targetFolder);
-          const incompatible = normalizeLanguage(packageValue.package.source_language) !== normalizeLanguage(effective.langA)
-            || normalizeLanguage(packageValue.package.target_language) !== normalizeLanguage(effective.langB);
-          if (incompatible) {
-            errors.push("Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.");
+        if (list && listPlan.consolidate) {
+          const direction = listDirection(incomingList, packageValue);
+          if (direction) {
+            const targetFolder = folderById.get(list.folder_id);
+            const effective = resolveEffectiveListSettings(list, targetFolder);
+            const incompatible = normalizeLanguage(direction.front) !== normalizeLanguage(effective.langA)
+              || normalizeLanguage(direction.back) !== normalizeLanguage(effective.langB);
+            if (incompatible) {
+              errors.push("Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.");
+            }
           }
         }
       }
