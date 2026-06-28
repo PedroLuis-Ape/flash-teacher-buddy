@@ -3,6 +3,12 @@ import type { GlobalImportPackage } from "./schema";
 export interface ExistingImportFolder {
   id: string;
   title: string;
+  lang_a?: string | null;
+  lang_b?: string | null;
+  labels_a?: string | null;
+  labels_b?: string | null;
+  study_type?: string | null;
+  tts_enabled?: boolean | null;
 }
 
 export interface ExistingImportList {
