@@ -34,6 +34,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Focused tests
-        run: npm run test -- src/features/smart-import/simplePrompt.test.ts src/features/global-import/__tests__/existingListImportPlan.test.ts src/features/global-import/destination.test.ts
+        run: >-
+          npm run test --
+          src/features/smart-import/simplePrompt.test.ts
+          src/features/smart-import/importFile.test.ts
+          src/features/smart-import/jsonNormalizer.integration.test.ts
+          src/features/global-import/smartJsonRepair.test.ts
+          src/features/global-import/__tests__/existingListImportPlan.test.ts
+          src/features/global-import/destination.test.ts
       - name: Production build
         run: npm run build
