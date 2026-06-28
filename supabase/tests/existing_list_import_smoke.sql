@@ -10,7 +10,7 @@ DECLARE
   v_destination_plan jsonb;
 BEGIN
   INSERT INTO auth.users (
-    instance_id, id, aud, role, email, encrypted_password,
+    instance_id, id, aud, role, email,
     email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
     created_at, updated_at
   ) VALUES (
@@ -19,7 +19,6 @@ BEGIN
     'authenticated',
     'authenticated',
     'existing-list-smoke@app-piteco.local',
-    crypt('smoke-password', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"first_name":"Existing List Smoke","requested_account_type":"teacher","requested_public_slug":"existing_list_smoke"}'::jsonb,
