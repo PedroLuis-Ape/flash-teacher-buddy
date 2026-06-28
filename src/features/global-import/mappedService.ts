@@ -202,7 +202,8 @@ async function rollbackImportedBatch(
   batchId: string,
   targetScope: ImportTargetScope,
 ): Promise<void> {
-  await runUndoRpc(batchId, targetScope);
+  const { error } = await runUndoRpc(batchId, targetScope);
+  if (error) throw importDatabaseError(error);
 }
 
 export async function executeMappedGlobalImport(
