@@ -1,0 +1,113 @@
+name: Apply folder marker codemod
+
+on:
+  push:
+    branches:
+      - fix-folder-list-markers
+    paths:
+      - .github/workflows/apply-folder-marker-codemod.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-folder-list-markers
+      - name: Patch Folders page
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/pages/Folders.tsx')
+          text = path.read_text()
+
+          replacements = [
+            (
+              'import { FolderPlus, Trash2, Star, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";',
+              'import { FolderPlus, Trash2, Star, CircleAlert, CheckSquare, Square, X, FolderInput, Search } from "lucide-react";'
+            ),
+            (
+              'import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";\nimport { SkeletonGrid } from "@/components/ui/skeleton-card";',
+              'import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";\nimport { useResourceAttention, useToggleResourceAttention } from "@/hooks/useResourceAttention";\nimport { sortResourcesWithFavoritesFirst } from "@/features/study/lib/listMarkers";\nimport { SkeletonGrid } from "@/components/ui/skeleton-card";'
+            ),
+            (
+              "  const toggleFavorite = useToggleFavorite();\n",
+              "  const toggleFavorite = useToggleFavorite();\n  const { data: folderAttention = [] } = useResourceAttention(userId, 'folder');\n  const toggleFolderAttention = useToggleResourceAttention();\n"
+            ),
+            (
+              '  const filteredFolders = folders.filter((f) =>\n    f.title.toLowerCase().includes(folderSearch.toLowerCase())\n  );',
+              '  const filteredFolders = sortResourcesWithFavoritesFirst(\n    folders.filter((f) => f.title.toLowerCase().includes(folderSearch.toLowerCase())),\n    folderFavorites,\n  );'
+            ),
+            (
+              '            const isFav = folderFavorites.includes(folder.id);\n            const isSelected = selectedFolders.has(folder.id);',
+              '            const isFav = folderFavorites.includes(folder.id);\n            const isAttention = folderAttention.includes(folder.id);\n            const isSelected = selectedFolders.has(folder.id);'
+            ),
+            (
+              '                    cardCount={folder.card_count}\n                    onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}',
+              '                    cardCount={folder.card_count}\n                    className={isAttention ? "border-red-500/60 bg-red-500/10 md:hover:border-red-500/70 md:hover:bg-red-500/15" : undefined}\n                    onClick={selectMode ? undefined : () => navigate(`/folder/${folder.id}`)}'
+            ),
+            (
+              '''                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });
+                      }}
+                    >
+                      <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
+                    </Button>
+                    <Button''',
+              '''                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-11 w-11 shrink-0 rounded-xl ${isFav ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite.mutate({ resourceId: folder.id, resourceType: 'folder', isFavorite: isFav });
+                      }}
+                      aria-label={isFav ? 'Remover pasta dos favoritos' : 'Marcar pasta como favorita'}
+                    >
+                      <Star className={`h-4 w-4 ${isFav ? 'fill-current' : ''}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-11 w-11 shrink-0 rounded-xl ${isAttention ? 'bg-red-500/15 text-red-500' : 'text-muted-foreground hover:bg-red-500/10 hover:text-red-500'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!userId) return;
+                        toggleFolderAttention.mutate({
+                          userId,
+                          resourceType: 'folder',
+                          resourceId: folder.id,
+                          isAttention,
+                        });
+                      }}
+                      aria-label={isAttention ? 'Remover marca de atenção da pasta' : 'Marcar pasta para prestar atenção'}
+                    >
+                      <CircleAlert className={`h-4 w-4 ${isAttention ? 'fill-red-500/15' : ''}`} />
+                    </Button>
+                    <Button'''
+            ),
+          ]
+
+          for old, new in replacements:
+            if old not in text:
+              raise SystemExit(f'Expected pattern not found:\n{old[:160]}')
+            text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Commit patched page
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Folders.tsx
+          git commit -m "fix: make folder favorite and attention markers functional"
+          git push origin HEAD:fix-folder-list-markers
