@@ -1,32 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useResourceAttention } from "@/hooks/useResourceAttention";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { toast } from "sonner";
 
-async function fetchAttentionListIds(userId: string): Promise<string[]> {
-  const rows = await fetchAllSupabaseRows<{ list_id: string }>((from, to) =>
-    (supabase as any)
-      .from("user_list_attention")
-      .select("list_id")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .range(from, to),
-  );
-
-  return rows.map((row) => row.list_id);
-}
-
 export function useListAttention(userId: string | undefined) {
-  return useQuery({
-    queryKey: ["list-attention", userId],
-    queryFn: async () => {
-      if (!userId) return [];
-      return fetchAttentionListIds(userId);
-    },
-    enabled: Boolean(userId),
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
-  });
+  return useResourceAttention(userId, "list");
 }
 
 export function useToggleListAttention() {
@@ -35,38 +13,41 @@ export function useToggleListAttention() {
   return useMutation({
     mutationKey: ["list-attention-toggle"],
     mutationFn: async ({ listId, isAttention }: { listId: string; isAttention: boolean }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user.id;
+      if (!userId) throw new Error("Não autenticado");
 
-      if (isAttention) {
-        const { error } = await (supabase as any)
-          .from("user_list_attention")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("list_id", listId);
-        if (error) throw error;
-      } else {
-        const { error } = await (supabase as any)
-          .from("user_list_attention")
-          .insert({ user_id: user.id, list_id: listId });
-        if (error && error.code !== "23505") throw error;
+      const key = `piteco:attention:${userId}:list`;
+      const current = JSON.parse(window.localStorage.getItem(key) ?? "[]") as string[];
+      const next = isAttention
+        ? current.filter((id) => id !== listId)
+        : Array.from(new Set([...current, listId]));
+      window.localStorage.setItem(key, JSON.stringify(next));
+
+      const { error } = isAttention
+        ? await (supabase as any).from("user_list_attention").delete().eq("user_id", userId).eq("list_id", listId)
+        : await (supabase as any).from("user_list_attention").insert({ user_id: userId, list_id: listId });
+
+      const cloudPersisted = !error || error.code === "23505";
+      if (error && error.code !== "23505") {
+        console.warn("[list-attention] using device fallback", error);
       }
 
-      return { listId, isAttention: !isAttention, userId: user.id };
+      return { listId, isAttention: !isAttention, userId, cloudPersisted };
     },
     onMutate: async ({ listId, isAttention }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user.id;
+      if (!userId) return;
 
-      const queryKey = ["list-attention", user.id] as const;
+      const queryKey = ["resource-attention", userId, "list"] as const;
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<string[]>(queryKey) ?? [];
-
-      queryClient.setQueryData<string[]>(queryKey, (current = []) => {
-        if (isAttention) return current.filter((id) => id !== listId);
-        return current.includes(listId) ? current : [...current, listId];
-      });
-
+      queryClient.setQueryData<string[]>(queryKey, (current = []) =>
+        isAttention
+          ? current.filter((id) => id !== listId)
+          : current.includes(listId) ? current : [...current, listId],
+      );
       return { previous, queryKey };
     },
     onError: (error, _variables, context) => {
@@ -74,8 +55,12 @@ export function useToggleListAttention() {
       console.error("Error toggling list attention marker:", error);
       toast.error("Erro ao alterar a marca de atenção");
     },
-    onSuccess: ({ isAttention }) => {
-      toast.success(isAttention ? "🔴 Lista marcada para prestar atenção" : "Marca de atenção removida");
+    onSuccess: ({ isAttention, cloudPersisted }) => {
+      toast.success(
+        isAttention
+          ? cloudPersisted ? "🔴 Lista marcada para prestar atenção" : "🔴 Lista marcada neste dispositivo"
+          : "Marca de atenção removida",
+      );
     },
     onSettled: (_data, _error, _variables, context) => {
       if (context?.queryKey) queryClient.invalidateQueries({ queryKey: context.queryKey });
