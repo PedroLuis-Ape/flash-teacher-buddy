@@ -10,26 +10,29 @@ type PlatformRuntimeInput = {
   publicValue?: string;
 };
 
-const FALLBACK_RUNTIME: PlatformRuntime = Object.freeze({
-  projectId: "ymahldldyxvwjeruaxpr",
-  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
-  publicValue:
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30.idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
-});
+declare global {
+  interface Window {
+    __APE_PLATFORM_RUNTIME__?: PlatformRuntime;
+  }
+}
 
 function normalize(value: string | undefined): string | undefined {
   const result = value?.trim();
   return result || undefined;
 }
 
+function completeRuntime(input: PlatformRuntimeInput | undefined): PlatformRuntime | null {
+  const url = normalize(input?.url);
+  const publicValue = normalize(input?.publicValue);
+  const projectId = normalize(input?.projectId);
+  return url && publicValue ? { projectId, url, publicValue } : null;
+}
+
 export function resolvePlatformRuntime(
   input: PlatformRuntimeInput,
   testMode = false,
+  installed?: PlatformRuntimeInput,
 ): PlatformRuntime {
-  const url = normalize(input.url);
-  const publicValue = normalize(input.publicValue);
-  const projectId = normalize(input.projectId);
-
   if (testMode) {
     return {
       projectId: "test-project",
@@ -38,19 +41,16 @@ export function resolvePlatformRuntime(
     };
   }
 
-  // Lovable's complete injected configuration is the source of truth because
-  // it carries the current project URL and current public key as one coherent
-  // set. This also avoids using a stale legacy key after rotations.
-  if (url && publicValue) {
-    return { projectId, url, publicValue };
-  }
+  const runtime = completeRuntime(installed) ?? completeRuntime(input);
+  if (runtime) return runtime;
 
-  // Installed/PWA builds created without VITE variables still need a coherent
-  // public browser fallback. Never combine a partial injected set with it.
-  console.warn(
-    "[PlatformRuntime] Complete Lovable configuration was not injected; using the bundled browser fallback.",
+  throw new Error(
+    "A configuração oficial do Supabase não foi carregada antes da inicialização do aplicativo.",
   );
-  return { ...FALLBACK_RUNTIME };
+}
+
+export function installPlatformRuntime(runtime: PlatformRuntime): void {
+  if (typeof window !== "undefined") window.__APE_PLATFORM_RUNTIME__ = runtime;
 }
 
 export function readPlatformRuntime(): PlatformRuntime {
@@ -61,5 +61,6 @@ export function readPlatformRuntime(): PlatformRuntime {
       publicValue: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
     },
     import.meta.env.MODE === "test",
+    typeof window !== "undefined" ? window.__APE_PLATFORM_RUNTIME__ : undefined,
   );
 }
