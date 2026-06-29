@@ -63,9 +63,16 @@ export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
   };
 
   if (injected.projectId && injected.url && injected.publicValue) {
-    const runtime = validateOfficialRuntime(injected);
-    cacheRuntime(runtime);
-    return runtime;
+    try {
+      const runtime = validateOfficialRuntime(injected);
+      cacheRuntime(runtime);
+      return runtime;
+    } catch (error) {
+      console.warn(
+        "[PlatformRuntime] A configuração injetada aponta para outro projeto; buscando a configuração oficial.",
+        error,
+      );
+    }
   }
 
   const controller = new AbortController();
