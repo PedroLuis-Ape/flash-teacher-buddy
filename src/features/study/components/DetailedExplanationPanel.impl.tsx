@@ -1,6 +1,7 @@
 import { useLayoutEffect } from "react";
 import { setCurrentDetailedExplanation } from "@/features/study/lib/currentDetailedExplanation";
 import { DesktopExplanationPlaceholder } from "./DesktopExplanationPlaceholder";
+import "./desktop-explanation.css";
 
 interface DetailedExplanationPanelProps {
   explanation?: string | null;
