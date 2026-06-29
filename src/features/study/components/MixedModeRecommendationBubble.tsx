@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,6 @@ import { cn } from "@/lib/utils";
 const DISPLAY_DURATION_MS = 10_000;
 
 function buildMixedTarget(pathname: string, search: string): string {
-  if (pathname === "/" || pathname === "/landing") return "/portal";
-
   const params = new URLSearchParams(search);
   params.delete("mode");
   params.delete("order");
@@ -19,24 +17,18 @@ function buildMixedTarget(pathname: string, search: string): string {
     return `${pathname.replace(/\/games$/, "/mixed-study")}${query ? `?${query}` : ""}`;
   }
 
-  if (pathname.endsWith("/study")) {
-    return `${pathname.replace(/\/study$/, "/mixed-study")}${query ? `?${query}` : ""}`;
-  }
-
   return "/portal";
 }
 
 function shouldShow(pathname: string): boolean {
-  if (pathname.includes("/mixed-study")) return false;
-  if (pathname === "/" || pathname === "/landing") return true;
-  if (pathname.endsWith("/games") || pathname.endsWith("/study")) return true;
-  return false;
+  return pathname.endsWith("/games");
 }
 
 export function MixedModeRecommendationBubble() {
   const location = useLocation();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
+  const activeHubPathRef = useRef<string | null>(null);
   const eligible = shouldShow(location.pathname);
   const target = useMemo(
     () => buildMixedTarget(location.pathname, location.search),
@@ -44,20 +36,25 @@ export function MixedModeRecommendationBubble() {
   );
 
   useEffect(() => {
-    setDismissed(false);
+    if (!eligible) {
+      // Leaving the hub ends the current visit. Entering it again starts a new one.
+      activeHubPathRef.current = null;
+      return undefined;
+    }
 
-    if (!eligible) return undefined;
+    if (activeHubPathRef.current !== location.pathname) {
+      activeHubPathRef.current = location.pathname;
+      setDismissed(false);
+    }
 
     const timer = window.setTimeout(() => {
       setDismissed(true);
     }, DISPLAY_DURATION_MS);
 
     return () => window.clearTimeout(timer);
-  }, [eligible, location.pathname, location.search]);
+  }, [eligible, location.pathname]);
 
   if (!eligible || dismissed) return null;
-
-  const isLanding = location.pathname === "/" || location.pathname === "/landing";
 
   const handleAction = () => {
     setDismissed(true);
@@ -104,7 +101,7 @@ export function MixedModeRecommendationBubble() {
             className="mt-2 h-8 w-full rounded-lg px-3 text-xs sm:mt-3 sm:h-9"
             onClick={handleAction}
           >
-            {isLanding ? "Experimentar" : "Começar Prática Mista"}
+            Começar Prática Mista
           </Button>
         </div>
       </div>
