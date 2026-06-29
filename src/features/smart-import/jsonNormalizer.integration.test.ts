@@ -58,8 +58,11 @@ describe("AI JSON compatibility", () => {
       includeLayeredCards: true,
     });
 
-    expect(prompt).toContain('primary_side aceita exclusivamente "a" ou "b" em minúsculas');
-    expect(prompt).toContain("Não coloque esses campos na raiz do grupo layered");
-    expect(prompt).toContain("layers: [{ front, back, detailed_explanation?");
+    expect(prompt).toContain('primary_side aceita exclusivamente "a" ou "b" minúsculos');
+    expect(prompt).toContain('side do glossary e dos word_hints aceita exclusivamente "A" ou "B" maiúsculos');
+    expect(prompt).toContain("Nunca coloque esses campos pedagógicos na raiz do grupo layered");
+    expect(prompt).toContain('"type": "layered"');
+    expect(prompt).not.toContain("{ type: 'normal'");
+    expect(prompt).not.toContain("detailed_explanation?");
   });
 });
