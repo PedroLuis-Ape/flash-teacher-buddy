@@ -1,0 +1,1 @@
+-- Desktop study explanation preferences.
