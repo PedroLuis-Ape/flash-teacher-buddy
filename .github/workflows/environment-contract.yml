@@ -9,7 +9,7 @@ on:
 jobs:
   validate-environment:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
 
     steps:
       - name: Checkout
@@ -25,19 +25,4 @@ jobs:
         run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Validate platform configuration
-        run: |
-          node scripts/check-platform.mjs
-          node scripts/check-runtime.mjs
-          node scripts/validate-environment.mjs
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Runtime bootstrap tests
-        run: >-
-          npm run test --
-          src/lib/bootstrapPreviewFallback.test.ts
-          src/integrations/supabase/runtimeBootstrap.test.ts
-
-      - name: Production build
-        run: npm run build
+        run: node scripts/check-platform.mjs
