@@ -16,6 +16,35 @@ import { updateGlobalImportManifestStatus } from "./manifest";
 export type CardConflictPolicy = "skip" | "replace" | "copy" | "error";
 export type ImportTargetScope = "personal" | "classroom";
 
+export const PERSONAL_IMPORT_RPC = "import_app_piteco_super_package_current" as const;
+export const CLASSROOM_IMPORT_RPC = "import_app_piteco_super_package_to_class_current" as const;
+
+export function getStableImportRpcName(turmaId?: string | null) {
+  return turmaId ? CLASSROOM_IMPORT_RPC : PERSONAL_IMPORT_RPC;
+}
+
+interface StableImportRpcPayloadOptions {
+  requestId: string;
+  payload: SmartImportPackage;
+  destinationPlan: GlobalImportDestinationPlan;
+  cardConflict: CardConflictPolicy;
+  institutionId?: string | null;
+  turmaId?: string | null;
+}
+
+export function buildStableImportRpcPayload(options: StableImportRpcPayloadOptions) {
+  const common = {
+    _request_id: options.requestId,
+    _payload: options.payload,
+    _destination_plan: options.destinationPlan,
+    _card_conflict: options.cardConflict,
+  };
+
+  return options.turmaId
+    ? { ...common, _turma_id: options.turmaId }
+    : { ...common, _institution_id: options.institutionId ?? null };
+}
+
 export interface ExecuteMappedImportOptions {
   requestId?: string;
   officialPackage?: AppPitecoSuperImportPackage | null;
@@ -233,80 +262,22 @@ export async function executeMappedGlobalImport(
       : "Enviando pacote enriquecido para uma transação segura",
   );
 
-  const rpcName = options.turmaId
-    ? "import_app_piteco_super_package_to_class_v2"
-    : "import_app_piteco_super_package_v3";
-  const legacyRpcName = options.turmaId
-    ? "import_app_piteco_super_package_to_class_v1"
-    : "import_app_piteco_super_package_v2";
-  const rpcPayload = options.turmaId
-    ? {
-        _request_id: request.requestId,
-        _payload: cardPackage,
-        _destination_plan: options.destinationPlan,
-        _turma_id: options.turmaId,
-        _card_conflict: options.cardConflict,
-      }
-    : {
-        _request_id: request.requestId,
-        _payload: cardPackage,
-        _destination_plan: options.destinationPlan,
-        _card_conflict: options.cardConflict,
-        _institution_id: options.institutionId ?? null,
-      };
+  const rpcName = getStableImportRpcName(options.turmaId);
+  const rpcPayload = buildStableImportRpcPayload({
+    requestId: request.requestId,
+    payload: cardPackage,
+    destinationPlan: options.destinationPlan,
+    cardConflict: options.cardConflict,
+    institutionId: options.institutionId,
+    turmaId: options.turmaId,
+  });
+  const { data, error } = await (supabase.rpc as any)(rpcName, rpcPayload);
 
-  let rpcResult = await (supabase.rpc as any)(rpcName, rpcPayload);
-  let usedLegacyOfficialFallback = false;
-
-  if (
-    rpcResult.error
-    && options.cardConflict !== "replace"
-    && isMissingRpcSchemaCacheError(rpcResult.error, rpcName)
-  ) {
-    rpcResult = await (supabase.rpc as any)(legacyRpcName, rpcPayload);
-  }
-
-  if (
-    rpcResult.error
-    && !options.turmaId
-    && options.cardConflict !== "replace"
-    && options.officialPackage
-    && options.officialPackage.version === "1.0"
-    && isMissingRpcSchemaCacheError(rpcResult.error, legacyRpcName)
-  ) {
-    options.onProgress?.(
-      0,
-      totalCards,
-      "O motor 2.0 não está disponível neste banco; usando o importador oficial compatível",
-    );
-
-    rpcResult = await (supabase.rpc as any)(
-      "import_app_piteco_super_package_v1",
-      {
-        _request_id: request.requestId,
-        _payload: options.officialPackage,
-        _destination_plan: options.destinationPlan,
-        _card_conflict: options.cardConflict,
-        _institution_id: options.institutionId ?? null,
-      },
-    );
-    usedLegacyOfficialFallback = !rpcResult.error;
-
-    if (
-      rpcResult.error
-      && isMissingRpcSchemaCacheError(rpcResult.error, "import_app_piteco_super_package_v1")
-    ) {
-      throw new Error(
-        "O banco conectado ao aplicativo não publicou os motores do Super Importador. "
-        + "As funções atuais e compatíveis estão ausentes do cache de schema deste backend.",
-      );
-    }
-  }
-
-  const { data, error } = rpcResult;
   if (error) {
-    if (options.cardConflict === "replace" && isMissingRpcSchemaCacheError(error, rpcName)) {
-      throw new Error("O banco ainda não recebeu a migration da política de substituir duplicados.");
+    if (isMissingRpcSchemaCacheError(error, rpcName)) {
+      throw new Error(
+        `O gateway estável ${rpcName} não está publicado no cache de schema do banco conectado.`,
+      );
     }
     throw importDatabaseError(error);
   }
@@ -315,23 +286,6 @@ export async function executeMappedGlobalImport(
   }
 
   const baseReport = data as GlobalImportExecutionReport;
-
-  if (usedLegacyOfficialFallback) {
-    const finalReport: GlobalImportExecutionReport = {
-      ...baseReport,
-      target_scope: "personal",
-      glossary_scope: "folder",
-      glossary_created: 0,
-      glossary_updated: 0,
-      glossary_skipped: 0,
-    };
-    if (options.canonicalPackage) {
-      updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");
-    }
-    clearRequestId(request.storageKey);
-    options.onProgress?.(totalCards, totalCards, "Importação concluída pelo motor compatível");
-    return finalReport;
-  }
 
   options.onProgress?.(
     totalCards,

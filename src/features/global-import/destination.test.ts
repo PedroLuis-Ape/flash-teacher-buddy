@@ -4,6 +4,12 @@ import {
   validateDestinationPlan,
   type ImportDestinationCatalog,
 } from "./destination";
+import {
+  buildStableImportRpcPayload,
+  CLASSROOM_IMPORT_RPC,
+  getStableImportRpcName,
+  PERSONAL_IMPORT_RPC,
+} from "./mappedService";
 import type { GlobalImportPackage } from "./schema";
 
 const packageValue: GlobalImportPackage = {
@@ -123,5 +129,56 @@ describe("global import destination mapping", () => {
     expect(validateDestinationPlan(mixed, catalog, plan)).toContain(
       "Os lados do pacote não correspondem aos lados da lista escolhida. Revise o mapeamento antes de importar.",
     );
+  });
+});
+
+describe("stable Super Import gateway contract", () => {
+  const destinationPlan = { folders: {} } as never;
+  const payload = { schema: "app-piteco-super-import", version: "2.0" } as never;
+
+  it("uses only the stable personal gateway", () => {
+    expect(getStableImportRpcName()).toBe(PERSONAL_IMPORT_RPC);
+    expect(getStableImportRpcName(null)).toBe("import_app_piteco_super_package_current");
+  });
+
+  it("uses only the stable classroom gateway", () => {
+    expect(getStableImportRpcName("turma-123")).toBe(CLASSROOM_IMPORT_RPC);
+    expect(CLASSROOM_IMPORT_RPC).toBe("import_app_piteco_super_package_to_class_current");
+  });
+
+  it("builds the exact personal gateway parameters", () => {
+    expect(buildStableImportRpcPayload({
+      requestId: "request-123",
+      payload,
+      destinationPlan,
+      cardConflict: "skip",
+      institutionId: "institution-123",
+    })).toEqual({
+      _request_id: "request-123",
+      _payload: payload,
+      _destination_plan: destinationPlan,
+      _card_conflict: "skip",
+      _institution_id: "institution-123",
+    });
+  });
+
+  it("uses _turma_id rather than _institution_id for classroom imports", () => {
+    const rpcPayload = buildStableImportRpcPayload({
+      requestId: "request-123",
+      payload,
+      destinationPlan,
+      cardConflict: "replace",
+      institutionId: "must-not-be-sent",
+      turmaId: "turma-123",
+    });
+
+    expect(rpcPayload).toEqual({
+      _request_id: "request-123",
+      _payload: payload,
+      _destination_plan: destinationPlan,
+      _card_conflict: "replace",
+      _turma_id: "turma-123",
+    });
+    expect(rpcPayload).not.toHaveProperty("_institution_id");
   });
 });
