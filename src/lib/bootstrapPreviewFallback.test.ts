@@ -7,25 +7,20 @@ const runtimeSource = readFileSync(
   join(process.cwd(), "src", "integrations", "supabase", "platformRuntime.ts"),
   "utf8",
 );
-const bootstrapSource = readFileSync(
-  join(process.cwd(), "src", "integrations", "supabase", "runtimeBootstrap.ts"),
-  "utf8",
-);
 
 describe("Lovable Cloud bootstrap", () => {
-  it("loads the official Supabase runtime before importing App", () => {
+  it("loads App inside a guarded dynamic import", () => {
     const mountFunction = mainSource.indexOf("async function mountApplication");
-    const loadRuntime = mainSource.indexOf("await loadOfficialPlatformRuntime()", mountFunction);
-    const installRuntime = mainSource.indexOf("installPlatformRuntime(runtime)", loadRuntime);
-    const guardedImport = mainSource.indexOf('await import("./App.tsx")', installRuntime);
+    const guardedImport = mainSource.indexOf('await import("./App.tsx")', mountFunction);
     const errorHandler = mainSource.indexOf("renderBootstrapFailure(error)", guardedImport);
 
     expect(mainSource).not.toContain('import App from "./App.tsx"');
     expect(mountFunction).toBeGreaterThanOrEqual(0);
-    expect(loadRuntime).toBeGreaterThan(mountFunction);
-    expect(installRuntime).toBeGreaterThan(loadRuntime);
-    expect(guardedImport).toBeGreaterThan(installRuntime);
+    expect(guardedImport).toBeGreaterThan(mountFunction);
     expect(errorHandler).toBeGreaterThan(guardedImport);
+    expect(mainSource).not.toContain("resolveRuntimeConfig");
+    expect(mainSource).not.toContain("installPlatformRuntime");
+    expect(mainSource).not.toContain("app-public-config");
   });
 
   it("forces the splash to finish after the maximum startup time", () => {
@@ -41,11 +36,10 @@ describe("Lovable Cloud bootstrap", () => {
     expect(mainSource).toContain("__apeBootComplete");
   });
 
-  it("never falls back silently to the retired Supabase project", () => {
-    expect(bootstrapSource).toContain('OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi"');
-    expect(bootstrapSource).toContain("/functions/v1/app-public-config");
-    expect(runtimeSource).toContain("__APE_PLATFORM_RUNTIME__");
-    expect(runtimeSource).not.toContain("ymahldldyxvwjeruaxpr");
-    expect(mainSource).not.toContain("ymahldldyxvwjeruaxpr");
+  it("uses statically analyzable Vite variables supplied by Lovable", () => {
+    expect(runtimeSource).toContain("import.meta.env.VITE_SUPABASE_URL");
+    expect(runtimeSource).toContain("import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY");
+    expect(runtimeSource).not.toContain('const prefix = ["VITE", "SUPABASE"]');
+    expect(runtimeSource).not.toContain("xrnfhhoxmmstagmelvyi");
   });
 });
