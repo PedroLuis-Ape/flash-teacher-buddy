@@ -3,6 +3,11 @@ import { createPortal } from "react-dom";
 import { AlertTriangle, BookOpen, Info, LockKeyhole, Tags, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  loadRemoteExplanationPreference,
+  saveRemoteExplanationCard,
+  saveRemoteExplanationMode,
+} from "./StudyToolsMenuWithExplanation";
 
 export type ExplanationDisplayMode = "off" | "on_demand" | "always";
 
@@ -27,18 +32,38 @@ function getScope(pathname: string): string {
   if (listIndex >= 0) return `list:${parts[listIndex + 1] ?? "unknown"}`;
   const collectionIndex = parts.indexOf("collection");
   if (collectionIndex >= 0) return `collection:${parts[collectionIndex + 1] ?? "unknown"}`;
-  return "unknown";
+  return "unknown:unknown";
+}
+
+function compactKey(value: string): string {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) + hash) ^ value.charCodeAt(index);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function normalizeMode(value: unknown): ExplanationDisplayMode {
+  return value === "off" || value === "always" || value === "on_demand" ? value : "on_demand";
 }
 
 function readSaved(key: string): SavedState {
   try {
     const parsed = JSON.parse(localStorage.getItem(key) || "null") as Partial<SavedState> | null;
     return {
-      mode: parsed?.mode === "off" || parsed?.mode === "always" ? parsed.mode : "on_demand",
+      mode: normalizeMode(parsed?.mode),
       cards: parsed?.cards && typeof parsed.cards === "object" ? parsed.cards as Record<string, boolean> : {},
     };
   } catch {
     return { mode: "on_demand", cards: {} };
+  }
+}
+
+function writeSaved(key: string, value: SavedState): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // The database remains authoritative for signed-in users.
   }
 }
 
@@ -73,6 +98,7 @@ export function DesktopExplanationPlaceholder({
   const [panelHost, setPanelHost] = useState<HTMLElement | null>(null);
   const [buttonHost, setButtonHost] = useState<HTMLElement | null>(null);
   const scope = useMemo(() => getScope(location.pathname), [location.pathname]);
+  const [scopeType, scopeId] = scope.split(":") as ["list" | "collection", string];
   const storageKey = `studyExplanation:${scope}`;
   const initial = useMemo(() => readSaved(storageKey), [storageKey]);
   const [mode, setMode] = useState<ExplanationDisplayMode>(initial.mode);
@@ -100,7 +126,7 @@ export function DesktopExplanationPlaceholder({
       const slot = layout.querySelector<HTMLElement>("[data-study-tools-slot='true']");
       if (!slot) return;
       const button = document.createElement("div");
-      button.className = "hidden xl:block";
+      button.className = "study-explanation-button-host hidden xl:block";
       slot.appendChild(button);
       setButtonHost(button);
     });
@@ -126,7 +152,8 @@ export function DesktopExplanationPlaceholder({
           root.querySelector<HTMLElement>(".flip-card-front p.text-xl, h2, p.font-bold, p.font-semibold")?.textContent
             || root.textContent,
         ).slice(0, 500);
-        setCardKey([scope, prompt, normalize(explanation), normalize(usageNotes), normalize(commonMistakes)].join("|").slice(0, 1500));
+        const signature = [scope, prompt, explanation, usageNotes, commonMistakes].map(normalize).join("|");
+        setCardKey(compactKey(signature));
 
         const foundTerms = new Map<string, string>();
         root.querySelectorAll<HTMLButtonElement>('button[aria-label*=": abrir "]').forEach((button) => {
@@ -154,10 +181,24 @@ export function DesktopExplanationPlaceholder({
   }, [scope, explanation, usageNotes, commonMistakes, location.search]);
 
   useEffect(() => {
-    const saved = readSaved(storageKey);
-    setMode(saved.mode);
-    setCards(saved.cards);
-  }, [storageKey]);
+    const local = readSaved(storageKey);
+    setMode(local.mode);
+    setCards(local.cards);
+
+    if (scopeId === "unknown") return;
+    let active = true;
+    void loadRemoteExplanationPreference(scopeType, scopeId).then((remote) => {
+      if (!active || !remote) return;
+      const next = {
+        mode: remote.mode ? normalizeMode(remote.mode) : local.mode,
+        cards: { ...local.cards, ...remote.cards },
+      };
+      setMode(next.mode);
+      setCards(next.cards);
+      writeSaved(storageKey, next);
+    });
+    return () => { active = false; };
+  }, [scopeId, scopeType, storageKey]);
 
   useEffect(() => {
     if (!cardKey || !hasContent || mode === "off") {
@@ -168,8 +209,10 @@ export function DesktopExplanationPlaceholder({
     setOpen(mode === "always" ? selected !== false : selected === true);
   }, [cardKey, cards, hasContent, mode]);
 
-  const save = (nextMode: ExplanationDisplayMode, nextCards: Record<string, boolean>) => {
-    localStorage.setItem(storageKey, JSON.stringify({ mode: nextMode, cards: nextCards }));
+  const persistMode = (nextMode: ExplanationDisplayMode, nextCards = cards) => {
+    setMode(nextMode);
+    writeSaved(storageKey, { mode: nextMode, cards: nextCards });
+    if (scopeId !== "unknown") void saveRemoteExplanationMode(scopeType, scopeId, nextMode);
   };
 
   const setCardOpen = (nextOpen: boolean, nextMode = mode) => {
@@ -177,13 +220,14 @@ export function DesktopExplanationPlaceholder({
     const nextCards = { ...cards, [cardKey]: nextOpen };
     setCards(nextCards);
     setOpen(nextOpen);
-    save(nextMode, nextCards);
+    writeSaved(storageKey, { mode: nextMode, cards: nextCards });
+    if (scopeId !== "unknown") void saveRemoteExplanationCard(scopeType, scopeId, cardKey, nextOpen);
   };
 
   const toggle = () => {
     if (!hasContent || !cardKey) return;
     const nextMode = mode === "off" ? "on_demand" : mode;
-    if (nextMode !== mode) setMode(nextMode);
+    if (nextMode !== mode) persistMode(nextMode);
     setCardOpen(!open, nextMode);
   };
 
@@ -207,7 +251,7 @@ export function DesktopExplanationPlaceholder({
   const button = hasContent ? (
     <Button type="button" variant={open ? "secondary" : "outline"} size="sm"
       className="study-tools-inline-button h-9 min-w-9 gap-1.5 px-2.5"
-      onClick={(event) => { event.stopPropagation(); toggle(); }}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggle(); }}
       aria-label="Abrir ou fechar explicação detalhada" title="Explicação detalhada">
       <BookOpen className="h-4 w-4" />
       <span className="hidden 2xl:inline text-xs">Explicação</span>
@@ -225,8 +269,7 @@ export function DesktopExplanationPlaceholder({
         <label className="flex items-center justify-between gap-3 text-xs text-muted-foreground">Exibição nesta lista
           <select value={mode} onChange={(event) => {
             const next = event.target.value as ExplanationDisplayMode;
-            setMode(next);
-            save(next, cards);
+            persistMode(next);
             if (next === "off") setOpen(false);
             if (next === "always") setCardOpen(true, next);
           }} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground">
