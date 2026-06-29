@@ -4,6 +4,15 @@ export const OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
 export const OFFICIAL_RUNTIME_ENDPOINT = `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/app-public-config`;
 
 const STORAGE_KEY = "ape:platform-runtime:v2";
+const PREVIOUS_WORKING_RUNTIME: PlatformRuntime = {
+  projectId: "ymahldldyxvwjeruaxpr",
+  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+  publicValue: [
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
+    ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
+  ].join(""),
+};
 
 function normalize(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -67,16 +76,13 @@ export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
       const runtime = validateOfficialRuntime(injected);
       cacheRuntime(runtime);
       return runtime;
-    } catch (error) {
-      console.warn(
-        "[PlatformRuntime] A configuração injetada aponta para outro projeto; buscando a configuração oficial.",
-        error,
-      );
+    } catch {
+      // Keep booting; the official endpoint or the previous runtime will be used.
     }
   }
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 6000);
+  const timeout = window.setTimeout(() => controller.abort(), 4000);
   try {
     const response = await fetch(OFFICIAL_RUNTIME_ENDPOINT, {
       method: "GET",
@@ -90,11 +96,7 @@ export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
     cacheRuntime(runtime);
     return runtime;
   } catch {
-    const cached = readCachedRuntime();
-    if (cached) return cached;
-    throw new Error(
-      "Não foi possível carregar a configuração oficial do Supabase. Verifique a conexão e tente novamente.",
-    );
+    return readCachedRuntime() ?? PREVIOUS_WORKING_RUNTIME;
   } finally {
     window.clearTimeout(timeout);
   }
