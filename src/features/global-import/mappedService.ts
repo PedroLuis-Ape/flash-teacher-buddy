@@ -11,6 +11,7 @@ import type {
 } from "./destination";
 import type { CanonicalGlobalImportPackage } from "./schema/globalImportSchema";
 import type { AppPitecoSuperImportPackage } from "./schema/appPitecoSuperImportSchema";
+import { smartImportToOfficialV1Package } from "./liveBackendCompatibility";
 import { updateGlobalImportManifestStatus } from "./manifest";
 
 export type CardConflictPolicy = "skip" | "replace" | "copy" | "error";
@@ -18,6 +19,8 @@ export type ImportTargetScope = "personal" | "classroom";
 
 export const PERSONAL_IMPORT_RPC = "import_app_piteco_super_package_current" as const;
 export const CLASSROOM_IMPORT_RPC = "import_app_piteco_super_package_to_class_current" as const;
+const LIVE_PERSONAL_COMPAT_RPC = "import_app_piteco_super_package_v1" as const;
+const FOLDER_GLOSSARY_RPC = "sync_folder_glossaries_from_super_import_v1" as const;
 
 export function getStableImportRpcName(turmaId?: string | null) {
   return turmaId ? CLASSROOM_IMPORT_RPC : PERSONAL_IMPORT_RPC;
@@ -92,6 +95,16 @@ function countCards(packageValue: GlobalImportPackage): number {
   return packageValue.package.folders.reduce(
     (folderTotal, folder) => folderTotal + folder.lists.reduce(
       (listTotal, list) => listTotal + list.cards.length,
+      0,
+    ),
+    0,
+  );
+}
+
+function countGlossaryEntries(packageValue: SmartImportPackage): number {
+  return packageValue.package.folders.reduce(
+    (folderTotal, folder) => folderTotal + folder.lists.reduce(
+      (listTotal, list) => listTotal + list.glossary.length,
       0,
     ),
     0,
@@ -271,12 +284,45 @@ export async function executeMappedGlobalImport(
     institutionId: options.institutionId,
     turmaId: options.turmaId,
   });
-  const { data, error } = await (supabase.rpc as any)(rpcName, rpcPayload);
+  let rpcResult = await (supabase.rpc as any)(rpcName, rpcPayload);
+  let usedLiveV1Compatibility = false;
 
-  if (error) {
-    if (isMissingRpcSchemaCacheError(error, rpcName)) {
+  if (
+    rpcResult.error
+    && !options.turmaId
+    && isMissingRpcSchemaCacheError(rpcResult.error, rpcName)
+  ) {
+    if (options.cardConflict === "replace") {
       throw new Error(
-        `O gateway estável ${rpcName} não está publicado no cache de schema do banco conectado.`,
+        "O banco conectado ainda não suporta atualizar um card duplicado. "
+        + "Escolha Ignorar duplicados, Manter os dois ou Bloquear e tente novamente.",
+      );
+    }
+
+    options.onProgress?.(
+      0,
+      totalCards,
+      "Usando o motor compatível disponível no banco conectado",
+    );
+
+    rpcResult = await (supabase.rpc as any)(LIVE_PERSONAL_COMPAT_RPC, {
+      _request_id: request.requestId,
+      _payload: smartImportToOfficialV1Package(cardPackage),
+      _destination_plan: options.destinationPlan,
+      _card_conflict: options.cardConflict,
+      _institution_id: options.institutionId ?? null,
+    });
+    usedLiveV1Compatibility = !rpcResult.error;
+  }
+
+  const { data, error } = rpcResult;
+  if (error) {
+    if (
+      isMissingRpcSchemaCacheError(error, rpcName)
+      || isMissingRpcSchemaCacheError(error, LIVE_PERSONAL_COMPAT_RPC)
+    ) {
+      throw new Error(
+        "O banco conectado não publicou nem o gateway atual nem o importador compatível 1.0.",
       );
     }
     throw importDatabaseError(error);
@@ -294,7 +340,7 @@ export async function executeMappedGlobalImport(
   );
 
   const { data: glossaryData, error: glossaryError } = await (supabase.rpc as any)(
-    "sync_folder_glossaries_from_super_import_v1",
+    FOLDER_GLOSSARY_RPC,
     {
       _batch_id: baseReport.batch_id,
       _payload: smartPackage,
@@ -302,6 +348,23 @@ export async function executeMappedGlobalImport(
   );
 
   if (glossaryError) {
+    if (usedLiveV1Compatibility && isMissingRpcSchemaCacheError(glossaryError, FOLDER_GLOSSARY_RPC)) {
+      const compatibilityReport: GlobalImportExecutionReport = {
+        ...baseReport,
+        target_scope: "personal",
+        glossary_scope: "folder",
+        glossary_created: 0,
+        glossary_updated: 0,
+        glossary_skipped: countGlossaryEntries(smartPackage),
+      };
+      if (options.canonicalPackage) {
+        updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");
+      }
+      clearRequestId(request.storageKey);
+      options.onProgress?.(totalCards, totalCards, "Cards importados pelo motor compatível");
+      return compatibilityReport;
+    }
+
     await rollbackImportedBatch(
       baseReport.batch_id,
       options.turmaId ? "classroom" : "personal",
@@ -338,7 +401,12 @@ export async function undoGlobalImport(
     "undo_folder_glossary_batch_v1",
     { _batch_id: batchId },
   );
-  if (folderUndo.error) throw importDatabaseError(folderUndo.error);
+  if (
+    folderUndo.error
+    && !isMissingRpcSchemaCacheError(folderUndo.error, "undo_folder_glossary_batch_v1")
+  ) {
+    throw importDatabaseError(folderUndo.error);
+  }
 
   const { error } = await runUndoRpc(batchId, targetScope);
   if (error) throw importDatabaseError(error);
