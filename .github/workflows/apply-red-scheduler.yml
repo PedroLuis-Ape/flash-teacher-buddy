@@ -1,0 +1,388 @@
+name: Apply proportional red card scheduler
+
+on:
+  push:
+    branches:
+      - fix/proportional-red-card-scheduling
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply study scheduler changes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          hook_path = Path('src/features/study/hooks/useStudyEngine.ts')
+          hook = hook_path.read_text()
+
+          old_import = '''import {
+            orderByIntelligence,
+            reinjectFailedCard,
+            type CardProgressLike,
+          } from "@/features/study/lib/intelligenceScoring";'''
+          new_import = '''import {
+            getRedCardTargetAppearances,
+            injectRedListRepetitions,
+            orderByIntelligence,
+            reinjectFailedCard,
+            type CardProgressLike,
+          } from "@/features/study/lib/intelligenceScoring";'''
+          if old_import not in hook:
+              raise SystemExit('Study engine intelligence import block not found')
+          hook = hook.replace(old_import, new_import, 1)
+
+          old_scheduler = '''/**
+           * Inject red-list cards as extra appearances with spaced repetition.
+           * Only active when studying favorites (subset === 'favorites').
+           * Each red card gets up to 3 extra appearances, spaced ~2-3 cards apart.
+           */
+          function injectRedListRepetitions(
+            cardIds: string[],
+            redListIds: string[],
+            isFavoritesMode: boolean
+          ): string[] {
+            if (!isFavoritesMode || redListIds.length === 0) return cardIds;
+
+            const redSet = new Set(redListIds);
+            const redInSession = cardIds.filter(id => redSet.has(id));
+            if (redInSession.length === 0) return cardIds;
+
+            const result = [...cardIds];
+            const MAX_EXTRA = 3;
+            const BASE_SPACING = 2;
+
+            // For each red card, insert up to MAX_EXTRA extra copies spaced throughout
+            for (const redId of redInSession) {
+              const firstIndex = result.indexOf(redId);
+              if (firstIndex === -1) continue;
+
+              let lastInsert = firstIndex;
+              for (let extra = 0; extra < MAX_EXTRA; extra++) {
+                // spacing varies slightly: 2, 3, 2, 3...
+                const spacing = BASE_SPACING + (extra % 2);
+                const insertAt = Math.min(lastInsert + spacing + 1, result.length);
+                result.splice(insertAt, 0, redId);
+                lastInsert = insertAt;
+              }
+            }
+
+            return result;
+          }
+
+          '''
+          if old_scheduler not in hook:
+              raise SystemExit('Legacy red scheduler block not found')
+          hook = hook.replace(old_scheduler, '', 1)
+
+          old_reinject = '''      setCardsOrder((prev) =>
+                reinjectFailedCard(prev, currentIndex, flashcardId, 5, 3)
+              );'''
+          new_reinject = '''      setCardsOrder((prev) => {
+                const isRedCard = effectiveRedPlayableIds.includes(flashcardId);
+                const maxAppearances = isRedCard
+                  ? Math.min(4, getRedCardTargetAppearances(flashcardsRef.current.length) + 1)
+                  : 2;
+                return reinjectFailedCard(
+                  prev,
+                  currentIndex,
+                  flashcardId,
+                  5,
+                  3,
+                  maxAppearances,
+                );
+              });'''
+          if old_reinject not in hook:
+              raise SystemExit('Failed-card reinjection call not found')
+          hook = hook.replace(old_reinject, new_reinject, 1)
+
+          old_dependencies = '''  }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex]);'''
+          new_dependencies = '''  }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, effectiveRedPlayableIds]);'''
+          if old_dependencies not in hook:
+              raise SystemExit('recordResult dependency list not found')
+          hook = hook.replace(old_dependencies, new_dependencies, 1)
+          hook_path.write_text(hook)
+
+          scoring_path = Path('src/features/study/lib/intelligenceScoring.ts')
+          scoring = scoring_path.read_text()
+          insertion_marker = '''/**
+           * Re-inject a failed card a few slots ahead of `currentIndex` in the deck.
+          '''
+          if insertion_marker not in scoring:
+              raise SystemExit('Intelligence scoring insertion marker not found')
+
+          scheduler_code = '''const RED_CARD_EXTRA_RATE = 0.05;
+          const MIN_RED_TOTAL_APPEARANCES = 2;
+          const MAX_RED_TOTAL_APPEARANCES = 4;
+
+          /**
+           * Proportional red-card frequency.
+           * - every red card appears at least twice;
+           * - larger decks gradually raise the target;
+           * - no red card exceeds four planned appearances.
+           */
+          export function getRedCardTargetAppearances(deckSize: number): number {
+            const safeDeckSize = Math.max(0, Math.floor(deckSize));
+            if (safeDeckSize === 0) return 0;
+
+            const extraAppearances = Math.min(
+              MAX_RED_TOTAL_APPEARANCES - 1,
+              Math.max(
+                MIN_RED_TOTAL_APPEARANCES - 1,
+                Math.round(safeDeckSize * RED_CARD_EXTRA_RATE),
+              ),
+            );
+
+            return 1 + extraAppearances;
+          }
+
+          function stableHash(value: string): number {
+            let hash = 2166136261;
+            for (let i = 0; i < value.length; i++) {
+              hash ^= value.charCodeAt(i);
+              hash = Math.imul(hash, 16777619);
+            }
+            return hash >>> 0;
+          }
+
+          function findBestRedInsertionIndex(
+            order: string[],
+            redId: string,
+            redSet: Set<string>,
+            salt: number,
+          ): number {
+            const candidateCount = order.length + 1;
+            const preferredIndex = stableHash(`${redId}:${salt}`) % candidateCount;
+            let bestIndex = order.length;
+            let bestDistance = -1;
+            let bestRedNeighborPenalty = Number.POSITIVE_INFINITY;
+            let bestTieDistance = Number.POSITIVE_INFINITY;
+
+            for (let candidate = 0; candidate <= order.length; candidate++) {
+              const left = candidate > 0 ? order[candidate - 1] : undefined;
+              const right = candidate < order.length ? order[candidate] : undefined;
+
+              // Never place the same card back-to-back.
+              if (left === redId || right === redId) continue;
+
+              let nearestSameCard = Number.POSITIVE_INFINITY;
+              for (let index = 0; index < order.length; index++) {
+                if (order[index] !== redId) continue;
+                const shiftedIndex = index >= candidate ? index + 1 : index;
+                nearestSameCard = Math.min(
+                  nearestSameCard,
+                  Math.abs(shiftedIndex - candidate),
+                );
+              }
+
+              const redNeighborPenalty =
+                Number(Boolean(left && redSet.has(left))) +
+                Number(Boolean(right && redSet.has(right)));
+              const rawTieDistance = Math.abs(candidate - preferredIndex);
+              const tieDistance = Math.min(
+                rawTieDistance,
+                candidateCount - rawTieDistance,
+              );
+
+              const isBetter =
+                nearestSameCard > bestDistance ||
+                (nearestSameCard === bestDistance && redNeighborPenalty < bestRedNeighborPenalty) ||
+                (nearestSameCard === bestDistance &&
+                  redNeighborPenalty === bestRedNeighborPenalty &&
+                  tieDistance < bestTieDistance);
+
+              if (isBetter) {
+                bestIndex = candidate;
+                bestDistance = nearestSameCard;
+                bestRedNeighborPenalty = redNeighborPenalty;
+                bestTieDistance = tieDistance;
+              }
+            }
+
+            return bestIndex;
+          }
+
+          /**
+           * Adds proportional, evenly separated appearances for red-list cards.
+           * The base order is preserved; only the extra appearances are inserted.
+           */
+          export function injectRedListRepetitions(
+            cardIds: string[],
+            redListIds: string[],
+            isFavoritesMode: boolean,
+          ): string[] {
+            if (!isFavoritesMode || cardIds.length === 0 || redListIds.length === 0) {
+              return cardIds;
+            }
+
+            const redSet = new Set(redListIds);
+            const redInSession = Array.from(
+              new Set(cardIds.filter((id) => redSet.has(id))),
+            );
+            if (redInSession.length === 0) return cardIds;
+
+            const result = [...cardIds];
+            const targetAppearances = getRedCardTargetAppearances(cardIds.length);
+            const extraAppearances = Math.max(0, targetAppearances - 1);
+
+            // Round-robin insertion prevents one red card from consuming a whole block.
+            for (let round = 0; round < extraAppearances; round++) {
+              redInSession.forEach((redId, redIndex) => {
+                const insertAt = findBestRedInsertionIndex(
+                  result,
+                  redId,
+                  redSet,
+                  round * redInSession.length + redIndex,
+                );
+                result.splice(insertAt, 0, redId);
+              });
+            }
+
+            return result;
+          }
+
+          '''
+          scoring = scoring.replace(insertion_marker, scheduler_code + insertion_marker, 1)
+
+          old_signature = '''export function reinjectFailedCard(
+            order: string[],
+            currentIndex: number,
+            failedCardId: string,
+            offset: number = 5,
+            windowAhead: number = 3,
+          ): string[] {
+            if (currentIndex < 0 || currentIndex >= order.length) return order;
+          '''
+          new_signature = '''export function reinjectFailedCard(
+            order: string[],
+            currentIndex: number,
+            failedCardId: string,
+            offset: number = 5,
+            windowAhead: number = 3,
+            maxAppearances: number = Number.POSITIVE_INFINITY,
+          ): string[] {
+            if (currentIndex < 0 || currentIndex >= order.length) return order;
+            const existingAppearances = order.reduce(
+              (count, id) => count + Number(id === failedCardId),
+              0,
+            );
+            if (existingAppearances >= maxAppearances) return order;
+          '''
+          if old_signature not in scoring:
+              raise SystemExit('reinjection signature not found')
+          scoring = scoring.replace(old_signature, new_signature, 1)
+          scoring_path.write_text(scoring)
+
+          test_path = Path('src/features/study/lib/intelligenceScoring.test.ts')
+          tests = test_path.read_text()
+          old_test_import = '''  scoreCard,
+            orderByIntelligence,
+            reinjectFailedCard,
+          } from "./intelligenceScoring";'''
+          new_test_import = '''  getRedCardTargetAppearances,
+            injectRedListRepetitions,
+            scoreCard,
+            orderByIntelligence,
+            reinjectFailedCard,
+          } from "./intelligenceScoring";'''
+          if old_test_import not in tests:
+              raise SystemExit('test import block not found')
+          tests = tests.replace(old_test_import, new_test_import, 1)
+
+          tests += '''
+
+          describe("red-list proportional scheduling", () => {
+            it.each([
+              [1, 2],
+              [20, 2],
+              [30, 3],
+              [50, 4],
+              [200, 4],
+            ])("uses a proportional target for a %i-card deck", (deckSize, expected) => {
+              expect(getRedCardTargetAppearances(deckSize)).toBe(expected);
+            });
+
+            it("shows a red card exactly twice in a 20-card deck", () => {
+              const cards = Array.from({ length: 20 }, (_, index) => `card-${index}`);
+              const out = injectRedListRepetitions(cards, ["card-7"], true);
+              const positions = out
+                .map((id, index) => id === "card-7" ? index : -1)
+                .filter((index) => index >= 0);
+
+              expect(positions).toHaveLength(2);
+              expect(positions[1] - positions[0]).toBeGreaterThanOrEqual(8);
+            });
+
+            it("keeps every red card at the same proportional frequency", () => {
+              const cards = Array.from({ length: 30 }, (_, index) => `card-${index}`);
+              const redIds = ["card-2", "card-11", "card-24"];
+              const out = injectRedListRepetitions(cards, redIds, true);
+
+              for (const redId of redIds) {
+                expect(out.filter((id) => id === redId)).toHaveLength(3);
+                expect(out.some((id, index) => id === redId && out[index + 1] === redId)).toBe(false);
+              }
+            });
+          });
+          '''
+
+          old_last_test = '''  it("does not stack within lookahead window", () => {
+              const order = ["a", "b", "x", "b", "y"];
+              const out = reinjectFailedCard(order, 1, "b", 5, 3);
+              expect(out).toBe(order); // same reference = no-op
+            });
+          });'''
+          new_last_test = '''  it("does not stack within lookahead window", () => {
+              const order = ["a", "b", "x", "b", "y"];
+              const out = reinjectFailedCard(order, 1, "b", 5, 3);
+              expect(out).toBe(order); // same reference = no-op
+            });
+
+            it("respects the maximum number of appearances", () => {
+              const order = ["a", "b", "c", "b", "d"];
+              const out = reinjectFailedCard(order, 1, "b", 5, 3, 2);
+              expect(out).toBe(order);
+            });
+          });'''
+          if old_last_test not in tests:
+              raise SystemExit('last reinjection test block not found')
+          tests = tests.replace(old_last_test, new_last_test, 1)
+          test_path.write_text(tests)
+          PY
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run focused tests
+        run: npm run test -- src/features/study/lib/intelligenceScoring.test.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Commit validated implementation
+        shell: bash
+        run: |
+          git rm .github/workflows/apply-red-scheduler.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study/hooks/useStudyEngine.ts \
+                  src/features/study/lib/intelligenceScoring.ts \
+                  src/features/study/lib/intelligenceScoring.test.ts
+          git commit -m "fix: balance proportional red card repetition"
+          git push origin HEAD:${{ github.ref_name }}
