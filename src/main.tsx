@@ -14,16 +14,8 @@ import { SafeMode } from "./components/SafeMode";
 import { HelmetProvider } from "react-helmet-async";
 import { bootPalette } from "./lib/palettes";
 import { isPreviewContext, runBootStability } from "./lib/bootStability";
-
-function legacyBootstrapContractForRegressionTests() {
-  const envProjectId = "";
-  const envUrl = "";
-  const envPublicValue = "";
-  if (envProjectId && envUrl && envPublicValue) {
-    console.debug("Ignoring incompatible injected");
-  }
-  void "await fetchRuntimeConfig()";
-}
+import { installPlatformRuntime } from "./integrations/supabase/platformRuntime";
+import { loadOfficialPlatformRuntime } from "./integrations/supabase/runtimeBootstrap";
 
 async function attemptAutomaticRecovery() {
   if (isPreviewContext()) return false;
@@ -33,7 +25,6 @@ async function attemptAutomaticRecovery() {
   return false;
 }
 
-void legacyBootstrapContractForRegressionTests;
 void attemptAutomaticRecovery;
 
 try { bootPalette(); } catch { /* noop */ }
@@ -159,6 +150,10 @@ window.setTimeout(() => {
 
 async function mountApplication() {
   try {
+    reportBoot(62, "Conectando ao banco oficial…");
+    const runtime = await loadOfficialPlatformRuntime();
+    installPlatformRuntime(runtime);
+
     reportBoot(70, "Inicializando interface…");
     const { default: App } = await import("./App.tsx");
 
