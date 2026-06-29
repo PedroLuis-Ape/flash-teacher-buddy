@@ -6,6 +6,8 @@ DECLARE
   v_oid regprocedure;
   v_entrypoints text[] := ARRAY[
     'public.import_smart_list_content_v2(uuid,uuid,jsonb,text,uuid,text)',
+    'public.import_app_piteco_super_package_current(uuid,jsonb,jsonb,text,uuid)',
+    'public.import_app_piteco_super_package_to_class_current(uuid,jsonb,jsonb,uuid,text)',
     'public.import_app_piteco_super_package_v3(uuid,jsonb,jsonb,text,uuid)',
     'public.import_app_piteco_super_package_to_class_v2(uuid,jsonb,jsonb,uuid,text)',
     'public.undo_global_import_v2(uuid)',
