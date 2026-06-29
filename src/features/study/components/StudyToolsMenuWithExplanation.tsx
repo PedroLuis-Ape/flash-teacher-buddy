@@ -2,6 +2,7 @@ import { useLayoutEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getCurrentDetailedExplanation,
   subscribeCurrentDetailedExplanation,
@@ -25,6 +26,82 @@ interface StudyToolsMenuWithExplanationProps {
   onRestartRound?: () => void;
   onRestartJourney?: () => void;
   className?: string;
+}
+
+export interface RemoteExplanationPreference {
+  mode?: "off" | "on_demand" | "always";
+  cards: Record<string, boolean>;
+}
+
+async function currentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+}
+
+export async function loadRemoteExplanationPreference(
+  scopeType: "list" | "collection",
+  scopeId: string,
+): Promise<RemoteExplanationPreference | null> {
+  const userId = await currentUserId();
+  if (!userId) return null;
+  const client = supabase as any;
+  const [preferenceResult, cardsResult] = await Promise.all([
+    client
+      .from("user_study_explanation_preferences")
+      .select("display_mode")
+      .eq("user_id", userId)
+      .eq("scope_type", scopeType)
+      .eq("scope_id", scopeId)
+      .maybeSingle(),
+    client
+      .from("user_study_explanation_cards")
+      .select("card_key, is_open")
+      .eq("user_id", userId)
+      .eq("scope_type", scopeType)
+      .eq("scope_id", scopeId),
+  ]);
+
+  if (preferenceResult.error || cardsResult.error) return null;
+  return {
+    mode: preferenceResult.data?.display_mode,
+    cards: Object.fromEntries(
+      (cardsResult.data ?? []).map((row: { card_key: string; is_open: boolean }) => [row.card_key, row.is_open]),
+    ),
+  };
+}
+
+export async function saveRemoteExplanationMode(
+  scopeType: "list" | "collection",
+  scopeId: string,
+  displayMode: "off" | "on_demand" | "always",
+): Promise<void> {
+  const userId = await currentUserId();
+  if (!userId) return;
+  await (supabase as any).from("user_study_explanation_preferences").upsert({
+    user_id: userId,
+    scope_type: scopeType,
+    scope_id: scopeId,
+    display_mode: displayMode,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id,scope_type,scope_id" });
+}
+
+export async function saveRemoteExplanationCard(
+  scopeType: "list" | "collection",
+  scopeId: string,
+  cardKey: string,
+  isOpen: boolean,
+): Promise<void> {
+  const userId = await currentUserId();
+  if (!userId) return;
+  await (supabase as any).from("user_study_explanation_cards").upsert({
+    user_id: userId,
+    scope_type: scopeType,
+    scope_id: scopeId,
+    card_key: cardKey,
+    is_open: isOpen,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id,scope_type,scope_id,card_key" });
 }
 
 export function StudyToolsMenuWithExplanation({
