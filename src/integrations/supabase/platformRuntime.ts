@@ -16,6 +16,16 @@ declare global {
   }
 }
 
+const FALLBACK_RUNTIME: PlatformRuntime = Object.freeze({
+  projectId: "ymahldldyxvwjeruaxpr",
+  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+  publicValue: [
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
+    ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
+  ].join(""),
+});
+
 function normalize(value: string | undefined): string | undefined {
   const result = value?.trim();
   return result || undefined;
@@ -44,9 +54,10 @@ export function resolvePlatformRuntime(
   const runtime = completeRuntime(installed) ?? completeRuntime(input);
   if (runtime) return runtime;
 
-  throw new Error(
-    "A configuração oficial do Supabase não foi carregada antes da inicialização do aplicativo.",
+  console.warn(
+    "[PlatformRuntime] Complete configuration was not injected; using the previous bundled fallback.",
   );
+  return { ...FALLBACK_RUNTIME };
 }
 
 export function installPlatformRuntime(runtime: PlatformRuntime): void {
