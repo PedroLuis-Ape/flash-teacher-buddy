@@ -1,0 +1,41 @@
+.study-explanation-panel-host {
+  display: none;
+}
+
+.study-explanation-panel {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border) / 0.8);
+  border-radius: 1rem;
+  background: hsl(var(--card) / 0.94);
+  box-shadow: 0 12px 30px hsl(0 0% 0% / 0.1);
+  backdrop-filter: blur(12px);
+  animation: study-explanation-in 200ms ease-out;
+}
+
+@keyframes study-explanation-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (min-width: 1280px) {
+  .study-explanation-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+    align-items: start;
+    gap: 1.25rem;
+  }
+
+  .study-explanation-layout > .max-w-2xl {
+    width: 100%;
+    max-width: 42rem;
+    margin-inline: auto;
+  }
+
+  .study-explanation-panel-host {
+    display: block;
+    position: sticky;
+    top: 1rem;
+    min-width: 0;
+  }
+}
