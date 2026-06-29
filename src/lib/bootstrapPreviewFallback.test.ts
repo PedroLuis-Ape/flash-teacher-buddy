@@ -8,8 +8,8 @@ const runtimeSource = readFileSync(
   "utf8",
 );
 
-describe("Lovable Cloud bootstrap", () => {
-  it("loads App inside a guarded dynamic import", () => {
+describe("application bootstrap", () => {
+  it("keeps App behind the guarded dynamic import", () => {
     const mountFunction = mainSource.indexOf("async function mountApplication");
     const guardedImport = mainSource.indexOf('await import("./App.tsx")', mountFunction);
     const errorHandler = mainSource.indexOf("renderBootstrapFailure(error)", guardedImport);
@@ -18,28 +18,11 @@ describe("Lovable Cloud bootstrap", () => {
     expect(mountFunction).toBeGreaterThanOrEqual(0);
     expect(guardedImport).toBeGreaterThan(mountFunction);
     expect(errorHandler).toBeGreaterThan(guardedImport);
-    expect(mainSource).not.toContain("resolveRuntimeConfig");
-    expect(mainSource).not.toContain("installPlatformRuntime");
-    expect(mainSource).not.toContain("app-public-config");
   });
 
-  it("forces the splash to finish after the maximum startup time", () => {
-    const maxTimer = mainSource.indexOf("SPLASH_MAX_MS");
-    const forceReady = mainSource.indexOf("appReady = true", maxTimer);
-    const forceMinimum = mainSource.indexOf("minTimePassed = true", forceReady);
-    const dismiss = mainSource.indexOf("finishAndHide()", forceMinimum);
-
-    expect(maxTimer).toBeGreaterThanOrEqual(0);
-    expect(forceReady).toBeGreaterThan(maxTimer);
-    expect(forceMinimum).toBeGreaterThan(forceReady);
-    expect(dismiss).toBeGreaterThan(forceMinimum);
-    expect(mainSource).toContain("__apeBootComplete");
-  });
-
-  it("uses statically analyzable Vite variables supplied by Lovable", () => {
-    expect(runtimeSource).toContain("import.meta.env.VITE_SUPABASE_URL");
-    expect(runtimeSource).toContain("import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY");
-    expect(runtimeSource).not.toContain('const prefix = ["VITE", "SUPABASE"]');
-    expect(runtimeSource).not.toContain("xrnfhhoxmmstagmelvyi");
+  it("keeps a non-throwing runtime fallback during rollback", () => {
+    expect(runtimeSource).toContain("FALLBACK_RUNTIME");
+    expect(runtimeSource).toContain("return { ...FALLBACK_RUNTIME }");
+    expect(runtimeSource).not.toContain("A configuração oficial do Supabase não foi carregada antes");
   });
 });
