@@ -7,11 +7,6 @@ interface DetailedExplanationPanelProps {
   commonMistakes?: string | null;
 }
 
-/**
- * Keeps the current card's enriched explanation available to the existing hint
- * tool. The old standalone panel was removed because it duplicated the hint
- * experience and broke the mobile layout.
- */
 export function DetailedExplanationPanel({
   explanation,
   usageNotes,
