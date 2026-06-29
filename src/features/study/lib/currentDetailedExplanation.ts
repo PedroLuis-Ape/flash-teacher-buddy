@@ -5,11 +5,11 @@ export type CurrentDetailedExplanation = {
 };
 
 let currentValue: CurrentDetailedExplanation = {};
-const events = new EventTarget();
+const subscribers = new Set<() => void>();
 
 export function setCurrentDetailedExplanation(value: CurrentDetailedExplanation): void {
   currentValue = value;
-  events.dispatchEvent(new Event("change"));
+  subscribers.forEach((callback) => callback());
 }
 
 export function getCurrentDetailedExplanation(): CurrentDetailedExplanation {
@@ -17,6 +17,8 @@ export function getCurrentDetailedExplanation(): CurrentDetailedExplanation {
 }
 
 export function subscribeCurrentDetailedExplanation(callback: () => void): () => void {
-  events.addEventListener("change", callback);
-  return () => events.removeEventListener("change", callback);
+  subscribers.add(callback);
+  return function cleanup() {
+    subscribers.delete(callback);
+  };
 }
