@@ -82,12 +82,11 @@ export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
     const runtime = validateOfficialRuntime(await response.json());
     cacheRuntime(runtime);
     return runtime;
-  } catch (error) {
+  } catch {
     const cached = readCachedRuntime();
     if (cached) return cached;
     throw new Error(
       "Não foi possível carregar a configuração oficial do Supabase. Verifique a conexão e tente novamente.",
-      { cause: error },
     );
   } finally {
     window.clearTimeout(timeout);
