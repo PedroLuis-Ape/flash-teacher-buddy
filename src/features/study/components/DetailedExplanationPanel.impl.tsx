@@ -1,5 +1,6 @@
 import { useLayoutEffect } from "react";
 import { setCurrentDetailedExplanation } from "@/features/study/lib/currentDetailedExplanation";
+import { DesktopDetailedExplanationPanel } from "./DesktopDetailedExplanationPanel";
 
 interface DetailedExplanationPanelProps {
   explanation?: string | null;
@@ -8,9 +9,8 @@ interface DetailedExplanationPanelProps {
 }
 
 /**
- * Keeps the current card's enriched explanation available to the existing hint
- * tool. The old standalone panel was removed because it duplicated the hint
- * experience and broke the mobile layout.
+ * Keeps the enriched explanation available to the existing hint tool and adds
+ * the optional desktop side panel without changing the mobile study flow.
  */
 export function DetailedExplanationPanel({
   explanation,
@@ -21,5 +21,11 @@ export function DetailedExplanationPanel({
     setCurrentDetailedExplanation({ explanation, usageNotes, commonMistakes });
   }, [explanation, usageNotes, commonMistakes]);
 
-  return null;
+  return (
+    <DesktopDetailedExplanationPanel
+      explanation={explanation}
+      usageNotes={usageNotes}
+      commonMistakes={commonMistakes}
+    />
+  );
 }
