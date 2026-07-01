@@ -16,15 +16,8 @@ declare global {
   }
 }
 
-const FALLBACK_RUNTIME: PlatformRuntime = Object.freeze({
-  projectId: "ymahldldyxvwjeruaxpr",
-  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
-  publicValue: [
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-    ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
-    ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
-  ].join(""),
-});
+export const OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
+export const OFFICIAL_SUPABASE_URL = `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`;
 
 function normalize(value: string | undefined): string | undefined {
   const result = value?.trim();
@@ -36,6 +29,19 @@ function completeRuntime(input: PlatformRuntimeInput | undefined): PlatformRunti
   const publicValue = normalize(input?.publicValue);
   const projectId = normalize(input?.projectId);
   return url && publicValue ? { projectId, url, publicValue } : null;
+}
+
+function assertOfficialRuntime(runtime: PlatformRuntime): PlatformRuntime {
+  const parsed = new URL(runtime.url);
+  const projectId = runtime.projectId ?? parsed.hostname.split(".")[0];
+  if (
+    projectId !== OFFICIAL_SUPABASE_PROJECT_ID
+    || parsed.protocol !== "https:"
+    || parsed.hostname !== `${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`
+  ) {
+    throw new Error("O aplicativo tentou conectar a um projeto Supabase diferente do projeto oficial.");
+  }
+  return { ...runtime, projectId };
 }
 
 export function resolvePlatformRuntime(
@@ -52,16 +58,15 @@ export function resolvePlatformRuntime(
   }
 
   const runtime = completeRuntime(installed) ?? completeRuntime(input);
-  if (runtime) return runtime;
-
-  console.warn(
-    "[PlatformRuntime] Complete configuration was not injected; using the previous bundled fallback.",
-  );
-  return { ...FALLBACK_RUNTIME };
+  if (!runtime) {
+    throw new Error("A configuração oficial do App Piteco não está disponível.");
+  }
+  return assertOfficialRuntime(runtime);
 }
 
 export function installPlatformRuntime(runtime: PlatformRuntime): void {
-  if (typeof window !== "undefined") window.__APE_PLATFORM_RUNTIME__ = runtime;
+  const official = assertOfficialRuntime(runtime);
+  if (typeof window !== "undefined") window.__APE_PLATFORM_RUNTIME__ = official;
 }
 
 export function readPlatformRuntime(): PlatformRuntime {
