@@ -70,7 +70,6 @@ function validateProjectUrl(value, projectId, label) {
 const envSource = readText(".env");
 const envFile = envSource ? parseEnv(envSource) : {};
 const configSource = readText("supabase/config.toml") ?? "";
-const mainSource = readText("src/main.tsx") ?? "";
 const clientSource = readText("src/integrations/supabase/client.ts") ?? "";
 const platformRuntimeSource = readText("src/integrations/supabase/platformRuntime.ts") ?? "";
 const runtimeBootstrapSource = readText("src/integrations/supabase/runtimeBootstrap.ts") ?? "";
@@ -80,38 +79,32 @@ const configProjectId = configSource.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
 if (!configProjectId) errors.push("supabase/config.toml não declara project_id.");
 else if (!/^[a-z]{20}$/.test(configProjectId)) errors.push("project_id não possui o formato esperado de project ref.");
 
-const bootstrapProjectId = runtimeBootstrapSource.match(
-  /OFFICIAL_SUPABASE_PROJECT_ID\s*=\s*"([a-z]{20})"/,
-)?.[1];
-if (!bootstrapProjectId) {
-  errors.push("runtimeBootstrap.ts não declara o projeto Supabase oficial.");
-} else if (configProjectId && bootstrapProjectId !== configProjectId) {
-  errors.push("O bootstrap público aponta para outro projeto Supabase.");
+const runtimeProjectId = platformRuntimeSource.match(/OFFICIAL_SUPABASE_PROJECT_ID\s*=\s*"([a-z]{20})"/)?.[1];
+if (!runtimeProjectId) {
+  errors.push("platformRuntime.ts não declara o projeto Supabase oficial.");
+} else if (configProjectId && runtimeProjectId !== configProjectId) {
+  errors.push("O runtime aponta para outro projeto Supabase.");
 }
 
 if (!runtimeBootstrapSource.includes("/functions/v1/app-public-config")) {
-  errors.push("runtimeBootstrap.ts não usa o endpoint público app-public-config.");
-}
-if (!mainSource.includes("await loadOfficialPlatformRuntime()")) {
-  errors.push("src/main.tsx não carrega a configuração oficial antes do App.");
-}
-if (
-  mainSource.indexOf("await loadOfficialPlatformRuntime()")
-  > mainSource.indexOf('await import("./App.tsx")')
-) {
-  errors.push("A configuração do Supabase precisa ser carregada antes do import dinâmico do App.");
+  errors.push("runtimeBootstrap.ts não declara o endpoint público app-public-config.");
 }
 if (!clientSource.includes("readPlatformRuntime")) {
   errors.push("O cliente Supabase não usa o runtime validado.");
 }
 if (!platformRuntimeSource.includes("__APE_PLATFORM_RUNTIME__")) {
-  errors.push("platformRuntime.ts não aceita a configuração instalada pelo bootstrap.");
+  errors.push("platformRuntime.ts não aceita configuração instalada.");
+}
+if (!platformRuntimeSource.includes("assertOfficialRuntime")) {
+  errors.push("platformRuntime.ts não valida a identidade do projeto oficial.");
+}
+if (!platformRuntimeSource.includes("configuração oficial")) {
+  errors.push("platformRuntime.ts não falha fechado quando a configuração está ausente.");
 }
 
 const retiredProjectIds = ["ymahldldyxvwjeruaxpr"];
 for (const retiredId of retiredProjectIds) {
   for (const [path, source] of [
-    ["src/main.tsx", mainSource],
     ["src/integrations/supabase/client.ts", clientSource],
     ["src/integrations/supabase/platformRuntime.ts", platformRuntimeSource],
     ["src/integrations/supabase/runtimeBootstrap.ts", runtimeBootstrapSource],
@@ -148,8 +141,8 @@ if (suppliedCount === 3 && configProjectId) {
   validatePublicValue(suppliedEnv.publicValue, configProjectId, "VITE_SUPABASE_PUBLISHABLE_KEY");
 }
 
-if (envSource) warnings.push("A .env versionada ainda existe. Prefira o endpoint público de runtime ou variáveis seguras da plataforma.");
-else warnings.push("A configuração pública é obtida em runtime por app-public-config; nenhuma credencial privada fica versionada.");
+if (envSource) warnings.push("A .env versionada ainda existe. Prefira variáveis públicas da plataforma.");
+else warnings.push("Nenhuma credencial privada fica versionada; o runtime aceita somente o projeto oficial.");
 
 for (const warning of warnings) console.warn(`AVISO: ${warning}`);
 for (const error of errors) console.error(`ERRO: ${error}`);
