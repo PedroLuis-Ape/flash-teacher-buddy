@@ -1,1 +1,0 @@
-SEO release note.
