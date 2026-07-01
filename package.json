@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/prerender-public-pages.mjs && node scripts/validate-prerender.mjs && npm run check:bundle",
+    "build": "vite build && node scripts/prerender-public-pages.mjs && node scripts/prerender-international-pages.mjs && node scripts/validate-prerender.mjs && node scripts/validate-international-prerender.mjs && npm run check:bundle",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
