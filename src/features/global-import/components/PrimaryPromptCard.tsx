@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clipboard, Eye, FileText, Layers3 } from "lucide-react";
+import { Clipboard, Eye, FileText, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -56,7 +56,7 @@ export function PrimaryPromptCard({ prompt, layeredPrompt }: PrimaryPromptCardPr
               aria-pressed={mode === "layered"}
               onClick={() => setMode("layered")}
             >
-              <Layers3 className="mr-2 h-4 w-4 shrink-0" />
+              <Layers className="mr-2 h-4 w-4 shrink-0" />
               Com camadas
             </Button>
           </div>
