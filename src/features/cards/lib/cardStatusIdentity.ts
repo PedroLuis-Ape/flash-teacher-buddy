@@ -107,6 +107,11 @@ export function buildCanonicalToPlayableMap(
 /**
  * Translate a list of canonical ids into the engine's playable ids,
  * dropping canonicals that have no matching entry in the current deck.
+ *
+ * When every playable card in the current deck is already red-listed, the
+ * user is studying the dedicated red-only deck. In that scope red cards are
+ * ordinary cards: returning an empty priority list prevents the study engine
+ * from injecting three extra copies of every card or applying red weighting.
  */
 export function mapCanonicalIdsToPlayable(
   canonicalIds: ReadonlyArray<string>,
@@ -121,5 +126,11 @@ export function mapCanonicalIdsToPlayable(
       out.push(playable);
     }
   }
-  return out;
+
+  const playableDeck = new Set(canonicalToPlayable.values());
+  const isAllRedDeck = playableDeck.size > 0
+    && playableDeck.size === seen.size
+    && Array.from(playableDeck).every((id) => seen.has(id));
+
+  return isAllRedDeck ? [] : out;
 }

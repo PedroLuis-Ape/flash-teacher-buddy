@@ -44,6 +44,34 @@ describe("study snapshots", () => {
     expect(snapshot?.results[0]?.attempts).toBe(2);
   });
 
+  it("collapses a legacy all-red order to one occurrence per card", () => {
+    const snapshot = sanitizeStudySnapshot({
+      version: 2,
+      sessionId: "red-session",
+      currentIndex: 4,
+      cardsOrder: ["red-1", "red-2", "red-1", "red-2", "red-1", "red-2"],
+      results: [],
+      timestamp: 123,
+    }, new Set(["red-1", "red-2"]));
+
+    expect(snapshot?.cardsOrder).toEqual(["red-1", "red-2"]);
+    expect(snapshot?.currentIndex).toBe(1);
+  });
+
+  it("preserves partial red repetitions in a mixed favorites deck", () => {
+    const snapshot = sanitizeStudySnapshot({
+      version: 2,
+      sessionId: "favorites-session",
+      currentIndex: 3,
+      cardsOrder: ["red-1", "normal-1", "red-1", "red-1"],
+      results: [],
+      timestamp: 123,
+    }, new Set(["red-1", "normal-1"]));
+
+    expect(snapshot?.cardsOrder).toEqual(["red-1", "normal-1", "red-1", "red-1"]);
+    expect(snapshot?.currentIndex).toBe(3);
+  });
+
   it("rejects a snapshot from a different deck", () => {
     expect(sanitizeStudySnapshot({
       version: 2,
