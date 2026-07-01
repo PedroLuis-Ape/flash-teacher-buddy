@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { analyzeGlobalImportText } from "./analysisService";
 import { parseGlobalImportCsv } from "./csvPackage";
-import { flattenSuperImportLayers } from "./flattenSuperImportLayers";
 import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSchema";
 import { repairSmartImportJsonText } from "./smartJsonRepair";
 import { validateGlobalImportInput, type GlobalImportV2ValidationResult } from "./validation";
 import { looksLikeAdvancedSmartCsv, parseSmartImportSource } from "@/features/smart-import/sourceParser";
-import { SMART_IMPORT_LIMITS, type SmartImportPackage } from "@/features/smart-import/schema";
+import { SMART_IMPORT_LIMITS } from "@/features/smart-import/schema";
 
 interface UseGlobalImportSourceOptions {
   repairSmartJson?: boolean;
@@ -21,25 +20,6 @@ function looksLikeLegacyCsv(value: string): boolean {
 function looksLikeJson(value: string): boolean {
   const normalized = value.trim().replace(/^```(?:json)?\s*/i, "");
   return normalized.startsWith("{") || normalized.startsWith("[");
-}
-
-function withoutAutomaticLayers(
-  validation: GlobalImportV2ValidationResult,
-): {
-  validation: GlobalImportV2ValidationResult;
-  note?: string;
-  normalizedPackage?: SmartImportPackage;
-} {
-  if (!validation.smartPackage) return { validation };
-
-  const flattened = flattenSuperImportLayers(validation.smartPackage);
-  if (flattened.groupsFlattened === 0) return { validation };
-
-  return {
-    validation: validateGlobalImportInput(flattened.packageValue, null),
-    normalizedPackage: flattened.packageValue,
-    note: `${flattened.groupsFlattened} grupo(s) em camadas foram convertidos em ${flattened.cardsCreated} cards normais. Você pode mesclá-los manualmente depois na tela da lista.`,
-  };
 }
 
 export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}) {
@@ -62,48 +42,46 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
         frontLanguage: "en",
         backLanguage: "pt-BR",
       });
-      const normalized = withoutAutomaticLayers(validateGlobalImportInput(smart.packageValue, null));
+      const checkedValidation = validateGlobalImportInput(smart.packageValue, null);
       setRaw(value);
-      setValidation(normalized.validation);
+      setValidation(checkedValidation);
       setNotes([
         ...smart.notes,
         ...smart.warnings,
-        ...(normalized.note ? [normalized.note] : []),
+        ...(checkedValidation.smartPackage && checkedValidation.smartPackage.declared_totals?.layered_groups
+          ? ["Grupos em camadas reconhecidos e preservados para importação automática."]
+          : []),
       ]);
-      return normalized.validation;
+      return checkedValidation;
     }
 
     if (looksLikeLegacyCsv(value)) {
       const csv = parseGlobalImportCsv(value);
-      const normalized = withoutAutomaticLayers(validateGlobalImportInput(csv.packageValue, null));
+      const checkedValidation = validateGlobalImportInput(csv.packageValue, null);
       setRaw(value);
-      setValidation(normalized.validation);
+      setValidation(checkedValidation);
       setNotes([
         `CSV ${csv.schema} reconhecido com ${csv.rows} flashcard(s).`,
         ...csv.notes,
-        ...(normalized.note ? [normalized.note] : []),
       ]);
-      return normalized.validation;
+      return checkedValidation;
     }
 
     const repair = options.repairSmartJson !== false
       ? repairSmartImportJsonText(value)
       : { text: value, changed: false, notes: [] as string[] };
     const result = analyzeGlobalImportText(repair.text);
-    const normalized = withoutAutomaticLayers(result.validation);
-    const checkedValidation = normalized.validation;
+    const checkedValidation = result.validation;
     const nextNotes: string[] = [...repair.notes];
     if (result.parsed.extracted) nextNotes.push("Uma única cerca Markdown externa foi removida.");
     if (checkedValidation.sourceFormat === "smart") nextNotes.push("Contrato app-piteco-super-import 2.0 validado.");
     if (checkedValidation.sourceFormat === "official") nextNotes.push("Contrato oficial app-piteco-super-import 1.0 validado.");
     if (checkedValidation.sourceFormat === "canonical") nextNotes.push("Formato ape-global-import aceito por compatibilidade.");
     if (checkedValidation.sourceFormat === "legacy") nextNotes.push("Formato legado aceito por compatibilidade.");
-    if (normalized.note) nextNotes.push(normalized.note);
-    setRaw(normalized.normalizedPackage
-      ? JSON.stringify(normalized.normalizedPackage, null, 2)
-      : repair.changed
-        ? repair.text
-        : value);
+    if (checkedValidation.smartPackage?.declared_totals?.layered_groups) {
+      nextNotes.push("Grupos em camadas reconhecidos e preservados para importação automática.");
+    }
+    setRaw(repair.changed ? repair.text : value);
     setValidation(checkedValidation);
     setNotes(nextNotes);
     return checkedValidation;
