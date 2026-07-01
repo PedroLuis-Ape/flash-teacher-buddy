@@ -1,0 +1,38 @@
+name: Landing Page Preservation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  preserve-landing:
+    if: github.head_ref == 'draft-international-seo-i18n-audit'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block visual landing-page changes in SEO draft
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF" --depth=1
+          changed_files="$(git diff --name-only "origin/$BASE_REF"...HEAD)"
+          echo "$changed_files"
+
+          protected_changes="$(printf '%s\n' "$changed_files" | grep -E '^(src/pages/LandingPage\.tsx|src/components/landing/|src/styles/landing|public/landing/)' || true)"
+
+          if [ -n "$protected_changes" ]; then
+            echo "O rascunho de SEO não pode redesenhar a landing page."
+            echo "$protected_changes"
+            exit 1
+          fi
+
+          echo "Landing page preservada: nenhuma alteração visual detectada."
