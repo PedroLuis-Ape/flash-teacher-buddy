@@ -90,13 +90,18 @@ describe('buildCanonicalToPlayableMap', () => {
 });
 
 describe('mapCanonicalIdsToPlayable', () => {
-  it('translates canonical red-list ids into playable ids and drops missing', () => {
-    const m = new Map([['P', 'L1'], ['N1', 'N1']]);
+  it('translates a partial red-list selection into playable ids and drops missing', () => {
+    const m = new Map([['P', 'L1'], ['N1', 'N1'], ['N2', 'N2']]);
     expect(mapCanonicalIdsToPlayable(['P', 'N1', 'ghost'], m)).toEqual(['L1', 'N1']);
   });
 
-  it('deduplicates', () => {
-    const m = new Map([['P', 'L1'], ['P2', 'L1']]);
+  it('deduplicates partial red-list mappings', () => {
+    const m = new Map([['P', 'L1'], ['P2', 'L1'], ['N1', 'N1']]);
     expect(mapCanonicalIdsToPlayable(['P', 'P2'], m)).toEqual(['L1']);
+  });
+
+  it('returns no priority ids when the whole deck is red-only', () => {
+    const m = new Map([['P', 'L1'], ['N1', 'N1']]);
+    expect(mapCanonicalIdsToPlayable(['P', 'N1'], m)).toEqual([]);
   });
 });
