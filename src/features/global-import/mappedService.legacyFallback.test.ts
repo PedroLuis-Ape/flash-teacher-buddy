@@ -4,18 +4,17 @@ import { describe, expect, it } from "vitest";
 
 const source = readFileSync(join(process.cwd(), "src/features/global-import/mappedService.ts"), "utf8");
 
-describe("Super Importer legacy RPC fallback", () => {
-  it("falls back to the official v1 RPC when v2 is absent from the schema cache", () => {
-    expect(source).toContain('"import_app_piteco_super_package_v1"');
-    expect(source).toContain("isMissingRpcSchemaCacheError");
-    expect(source).toContain("options.officialPackage");
-    expect(source).toContain('options.officialPackage.version === "1.0"');
+describe("mapped import service", () => {
+  it("uses stable personal and classroom gateways", () => {
+    expect(source).toContain("PERSONAL_IMPORT_RPC");
+    expect(source).toContain("CLASSROOM_IMPORT_RPC");
+    expect(source).toContain("getStableImportRpcName");
   });
 
-  it("does not require folder-glossary RPCs after the legacy v1 transaction", () => {
-    expect(source).toContain("usedLegacyOfficialFallback");
-    expect(source).toContain("glossary_created: 0");
-    expect(source).toContain("glossary_updated: 0");
-    expect(source).toContain("glossary_skipped: 0");
+  it("keeps compatibility and glossary transaction handling", () => {
+    expect(source).toContain("LIVE_PERSONAL_COMPAT_RPC");
+    expect(source).toContain("usedLiveV1Compatibility");
+    expect(source).toContain("rollbackImportedBatch");
+    expect(source).toContain("FOLDER_GLOSSARY_RPC");
   });
 });
