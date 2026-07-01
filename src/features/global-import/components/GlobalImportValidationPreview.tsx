@@ -67,10 +67,11 @@ export function GlobalImportValidationPreview(props: Props) {
   const testRollout = isSuperImportTestRolloutEnabled();
   const errors = props.validation.issues.filter((issue) => issue.severity === "error");
   const warnings = props.validation.issues.filter((issue) => issue.severity === "warning");
-  const smart = props.validation.smartPackage ? summarizeSmartImport(props.validation.smartPackage) : null;
+  const smartPackage = props.validation.smartPackage;
+  const smart = smartPackage ? summarizeSmartImport(smartPackage) : null;
   const groupedIssues = testRollout ? groupIssues(props.validation.issues) : [];
   const repairNotes = testRollout
-    ? props.notes.filter((note) => note.toLowerCase().includes("correç") || note.includes("convertido"))
+    ? props.notes.filter((note) => note.toLowerCase().includes("correç"))
     : [];
 
   return (
@@ -107,7 +108,7 @@ export function GlobalImportValidationPreview(props: Props) {
         </div>
         {smart && smart.layeredGroups > 0 && (
           <p className="mt-3 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
-            A contagem principal representa unidades jogáveis: cards normais valem 1 e cada camada dentro de um grupo vale 1. Os grupos não serão achatados.
+            Os grupos serão criados automaticamente. O card principal organiza o grupo e somente as camadas entram na contagem jogável.
           </p>
         )}
         {[...props.notes.filter((note) => !repairNotes.includes(note)), ...props.destinationWarnings].map((note) => (
@@ -156,7 +157,65 @@ export function GlobalImportValidationPreview(props: Props) {
         </Card>
       )}
 
-      {props.packageValue && (
+      {smartPackage ? (
+        <Card className="space-y-4 p-5">
+          <h2 className="flex items-center gap-2 font-semibold">
+            <FolderTree className="h-4 w-4" />Prévia recebida: {smartPackage.package.name}
+          </h2>
+          <div className="space-y-3">
+            {smartPackage.package.folders.map((folder, folderIndex) => {
+              const folderPlayable = folder.lists.reduce(
+                (total, list) => total + list.cards.reduce(
+                  (listTotal, card) => listTotal + (card.type === "normal" ? 1 : card.layers.length),
+                  0,
+                ),
+                0,
+              );
+              return (
+                <details key={`${folder.name}-${folderIndex}`} open className="rounded-lg border p-3">
+                  <summary className="cursor-pointer font-semibold">
+                    {folder.name} — {folderPlayable} unidades jogáveis
+                  </summary>
+                  <div className="mt-3 space-y-2 pl-3">
+                    {folder.lists.map((list, listIndex) => {
+                      const playable = list.cards.reduce(
+                        (total, card) => total + (card.type === "normal" ? 1 : card.layers.length),
+                        0,
+                      );
+                      return (
+                        <details key={`${list.name}-${listIndex}`} className="rounded-md bg-muted/40 p-3">
+                          <summary className="cursor-pointer">
+                            {list.name}: {playable} unidades · {list.front_language} → {list.back_language}
+                          </summary>
+                          <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                            {list.cards.slice(0, 10).map((card, cardIndex) => card.type === "normal" ? (
+                              <div key={`${card.front}-${cardIndex}`}>📝 {card.front} → {card.back}</div>
+                            ) : (
+                              <details key={`${card.group_title}-${cardIndex}`} className="rounded border bg-background/60 p-2">
+                                <summary className="cursor-pointer font-medium text-foreground">
+                                  🗂️ {card.group_title} — {card.layers.length} camadas
+                                </summary>
+                                <div className="mt-2 space-y-1 pl-4">
+                                  {card.layers.map((layer, layerIndex) => (
+                                    <div key={`${layer.front}-${layer.back}-${layerIndex}`}>
+                                      {layerIndex + 1}. {layer.front} → {layer.back}
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            ))}
+                            {list.cards.length > 10 && <div>… mais {list.cards.length - 10} item(ns) estrutural(is)</div>}
+                          </div>
+                        </details>
+                      );
+                    })}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        </Card>
+      ) : props.packageValue ? (
         <Card className="space-y-4 p-5">
           <h2 className="flex items-center gap-2 font-semibold">
             <FolderTree className="h-4 w-4" />Prévia recebida: {props.packageValue.package.name}
@@ -189,7 +248,7 @@ export function GlobalImportValidationPreview(props: Props) {
             ))}
           </div>
         </Card>
-      )}
+      ) : null}
     </>
   );
 }
