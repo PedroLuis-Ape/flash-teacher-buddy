@@ -8,5 +8,9 @@
     "audit-ab-consistency",
     "repair-ab",
     "announcements-create"
-  ]
+  ],
+  "gatewayJwtExceptions": {
+    "turmas-mine": "Gateway JWT legacy check disabled after key rotation; the handler validates the bearer token with auth.getUser and database access remains protected by RLS.",
+    "turmas-as-aluno": "Gateway JWT legacy check disabled after key rotation; the handler validates the bearer token with auth.getUser and database access remains protected by RLS."
+  }
 }
