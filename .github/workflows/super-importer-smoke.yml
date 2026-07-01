@@ -46,7 +46,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
-      - name: Execute official and CSV importer transactions
+      - name: Execute official, layered and CSV importer transactions
         shell: bash
         run: |
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 <<'SQL'
@@ -54,6 +54,9 @@ jobs:
           DECLARE
             smoke_user uuid := '11111111-1111-4111-8111-111111111111';
             report jsonb;
+            layered_list_id uuid;
+            layered_parent_id uuid;
+            layered_children integer;
           BEGIN
             INSERT INTO auth.users (
               instance_id, id, aud, role, email, encrypted_password,
@@ -125,6 +128,79 @@ jobs:
                OR COALESCE((report->>'lists_created')::integer, 0) <> 1
                OR COALESCE((report->>'cards_created')::integer, 0) <> 1 THEN
               RAISE EXCEPTION 'Unexpected official importer report: %', report;
+            END IF;
+
+            SELECT public.import_app_piteco_super_package_current(
+              '44444444-4444-4444-8444-444444444444',
+              '{
+                "schema":"app-piteco-super-import",
+                "version":"2.0",
+                "declared_totals":{"folders":1,"lists":1,"cards":2,"glossary_entries":0,"layered_groups":1},
+                "package":{
+                  "name":"Layered Smoke Package",
+                  "folders":[{
+                    "name":"Layered Smoke Folder",
+                    "lists":[{
+                      "name":"Layered Smoke List",
+                      "front_language":"en",
+                      "back_language":"pt-BR",
+                      "primary_side":"a",
+                      "study_type":"language",
+                      "tts_enabled":true,
+                      "glossary":[],
+                      "cards":[{
+                        "type":"layered",
+                        "key":"look-up",
+                        "group_title":"look up",
+                        "layers":[
+                          {"key":"look-up-search","front":"I looked up the word.","back":"Eu pesquisei a palavra."},
+                          {"key":"look-up-improve","front":"Things are looking up.","back":"As coisas estão melhorando."}
+                        ]
+                      }]
+                    }]
+                  }]
+                }
+              }'::jsonb,
+              '{
+                "folders":{
+                  "0":{
+                    "folder":{"mode":"create","name":"Layered Smoke Folder"},
+                    "lists":{"0":{"mode":"create","name":"Layered Smoke List"}}
+                  }
+                }
+              }'::jsonb,
+              'skip',
+              NULL
+            ) INTO report;
+
+            IF COALESCE((report->>'cards_created')::integer, 0) <> 2
+               OR COALESCE((report->>'layered_groups_created')::integer, 0) <> 1 THEN
+              RAISE EXCEPTION 'Unexpected layered importer report: %', report;
+            END IF;
+
+            SELECT l.id INTO layered_list_id
+            FROM public.lists l
+            JOIN public.folders f ON f.id = l.folder_id
+            WHERE l.owner_id = smoke_user
+              AND l.title = 'Layered Smoke List'
+              AND f.title = 'Layered Smoke Folder';
+
+            SELECT id INTO layered_parent_id
+            FROM public.flashcards
+            WHERE list_id = layered_list_id
+              AND user_id = smoke_user
+              AND parent_card_id IS NULL
+              AND is_layer_group = true
+              AND smart_key = 'look-up';
+
+            SELECT count(*) INTO layered_children
+            FROM public.flashcards
+            WHERE parent_card_id = layered_parent_id
+              AND layer_index IN (0, 1)
+              AND deleted_at IS NULL;
+
+            IF layered_parent_id IS NULL OR layered_children <> 2 THEN
+              RAISE EXCEPTION 'Layered group was not persisted correctly.';
             END IF;
 
             SELECT public.import_global_package_v1(
