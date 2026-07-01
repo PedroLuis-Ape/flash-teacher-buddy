@@ -1,2 +1,3 @@
 -- Superseded by the focused layered-import migrations that follow.
--- Kept as a no-op to preserve migration ordering on this branch.
+-- Kept intentionally as a no-op so timestamp ordering remains stable.
+-- The active integrity rules begin in 20260701183500_layered_card_integrity.sql.
