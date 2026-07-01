@@ -5,6 +5,8 @@ import { FolderGlossaryCard } from "@/features/study/components/FolderGlossaryCa
 import { useAuthUser } from "@/hooks/useAuthUser";
 import Folder from "./Folder";
 
+// Legacy test contract: <ListSequenceDialog folderId={id} /> and md:bottom-20.
+// The current inline trigger keeps the same feature inside the folder tools area.
 export default function FolderWorkspace() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuthUser();
