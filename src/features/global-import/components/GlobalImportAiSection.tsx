@@ -1,4 +1,5 @@
 import type { GlobalImportDestinationMode } from "../destinationModes";
+import { buildLayeredUniversalGlobalImportPrompt } from "../layeredUniversalPrompt";
 import { buildUniversalGlobalImportPrompt } from "../universalPrompt";
 import { AdvancedPromptBuilder } from "./AdvancedPromptBuilder";
 import { PrimaryPromptCard } from "./PrimaryPromptCard";
@@ -11,7 +12,10 @@ interface Props {
 export function GlobalImportAiSection({ mode, destinationFolderName }: Props) {
   return (
     <div className="space-y-4">
-      <PrimaryPromptCard prompt={buildUniversalGlobalImportPrompt()} />
+      <PrimaryPromptCard
+        prompt={buildUniversalGlobalImportPrompt()}
+        layeredPrompt={buildLayeredUniversalGlobalImportPrompt()}
+      />
       <details className="rounded-xl border bg-card">
         <summary className="cursor-pointer select-none p-4 font-medium">Modo avançado opcional</summary>
         <div className="border-t p-3">
