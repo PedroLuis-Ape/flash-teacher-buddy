@@ -15,8 +15,10 @@ describe("classroom super importer integration", () => {
     expect(actions).toContain("/import/super");
   });
 
-  it("keeps classroom import and undo transactional", () => {
-    expect(service).toContain("import_app_piteco_super_package_to_class_v1");
+  it("uses the stable classroom gateway and undo fallback", () => {
+    expect(service).toContain("CLASSROOM_IMPORT_RPC");
+    expect(service).toContain("import_app_piteco_super_package_to_class_current");
+    expect(service).toContain("undo_classroom_global_import_v2");
     expect(service).toContain("undo_classroom_global_import_v1");
   });
 });
