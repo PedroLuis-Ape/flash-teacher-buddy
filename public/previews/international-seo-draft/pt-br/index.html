@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>APE em português — Rascunho internacional</title>
+  <meta name="description" content="Demonstração em português da futura arquitetura internacional do App Piteco." />
+  <link rel="canonical" href="/previews/international-seo-draft/pt-br/" />
+  <link rel="alternate" hreflang="pt-BR" href="/previews/international-seo-draft/pt-br/" />
+  <link rel="alternate" hreflang="en" href="/previews/international-seo-draft/en/" />
+  <link rel="alternate" hreflang="x-default" href="/previews/international-seo-draft/" />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="icon" href="/favicon.png" />
+</head>
+<body>
+  <div class="draft-ribbon">Rascunho navegável — não publicado na versão oficial</div>
+  <header class="shell topbar">
+    <a class="brand" href="../"><img src="/branding/icon.png" alt="APE" /><span>APE — App Piteco<small>Prévia internacional</small></span></a>
+    <nav class="language-switcher" aria-label="Selecionar idioma"><a href="../pt-br/" aria-current="page">Português</a><a href="../en/" lang="en">English</a></nav>
+  </header>
+  <main>
+    <section class="shell hero">
+      <div>
+        <span class="eyebrow">🌍 Idioma da interface ≠ idioma estudado</span>
+        <h1>Aprenda inglês com <span>flashcards, áudio e prática real</span></h1>
+        <p>Página pública em português com URL localizada, conteúdo próprio, metadados consistentes e áudio baseado no idioma do conteúdo.</p>
+        <div class="actions"><a class="button primary" href="#demo">Testar áudio</a><a class="button" href="#seo">Ver SEO</a></div>
+      </div>
+      <aside class="hero-card"><div class="flashcard"><span class="label">Inglês · en-US</span><strong>Keep going!</strong><div class="translation">Continue! · explicação em português</div></div></aside>
+    </section>
+    <section class="shell section">
+      <div class="section-heading"><h2>Responsabilidades separadas</h2><p>A interface, a explicação, o conteúdo e a voz podem usar idiomas diferentes sem conflito.</p></div>
+      <div class="feature-grid">
+        <article class="feature"><div class="icon">🧭</div><h3>Interface localizada</h3><p>Menus e mensagens em português, mesmo quando o aluno estuda inglês.</p></article>
+        <article class="feature"><div class="icon">🔊</div><h3>Voz do conteúdo</h3><p>Frases inglesas usam en-US ou en-GB; explicações brasileiras usam pt-BR.</p></article>
+        <article class="feature"><div class="icon">🔎</div><h3>Página encontrável</h3><p>Cada idioma recebe URL, canonical, hreflang e HTML inicial próprios.</p></article>
+      </div>
+    </section>
+    <section class="shell section" id="demo">
+      <div class="section-heading"><h2>Demonstração de TTS localizado</h2><p>Altere frase, locale e modo de pronúncia.</p></div>
+      <div class="demo-grid">
+        <article class="tts-card">
+          <h3>Ouvir conteúdo</h3>
+          <div class="field"><label for="tts-text">Frase</label><input id="tts-text" data-tts-text value="I am building a better study routine." /></div>
+          <div class="inline-fields">
+            <div class="field"><label for="tts-locale">Locale</label><select id="tts-locale" data-tts-locale><option value="en-US">English — en-US</option><option value="en-GB">English — en-GB</option><option value="pt-BR">Português — pt-BR</option></select></div>
+            <div class="field"><label for="tts-mode">Modo</label><select id="tts-mode" data-tts-mode><option value="natural">Natural</option><option value="word-by-word">Palavra por palavra</option></select></div>
+          </div>
+          <div class="tts-actions"><button class="button primary" type="button" data-tts-speak>▶ Reproduzir</button><button class="button" type="button" data-tts-stop>■ Parar</button></div>
+          <div class="status" role="status" aria-live="polite" data-tts-status>Pronto para reproduzir.</div>
+        </article>
+        <aside class="panel" id="seo">
+          <h3>Leitura técnica</h3><p>Valores lidos da página atual.</p>
+          <div class="tech-list">
+            <div class="tech-item"><span>Rota</span><code data-current-path></code></div>
+            <div class="tech-item"><span>HTML lang</span><code data-current-lang></code></div>
+            <div class="tech-item"><span>Canonical</span><code data-current-canonical></code></div>
+            <div class="tech-item"><span>Hreflang</span><code data-current-alternates></code></div>
+            <div class="tech-item"><span>Destino proposto</span><code>https://www.apeeducation.org/pt-br/</code></div>
+          </div>
+          <div class="safe-note"><strong>Rascunho protegido:</strong> esta página está marcada como noindex.</div>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <footer class="shell footer"><div class="footer-inner"><span>APE — Apprentice Practice & Enhancement</span><a href="../">Voltar ao seletor</a></div></footer>
+  <script src="../app.js"></script>
+</body>
+</html>
