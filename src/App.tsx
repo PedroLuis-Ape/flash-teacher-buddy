@@ -28,6 +28,7 @@ const InglesParaIniciantes = lazy(() => import("./pages/seo/InglesParaIniciantes
 const AtividadesDeIngles = lazy(() => import("./pages/seo/AtividadesDeIngles"));
 const FlashcardsDeIngles = lazy(() => import("./pages/seo/FlashcardsDeIngles"));
 const ParaProfessores = lazy(() => import("./pages/seo/ParaProfessores"));
+const InternationalSEOPage = lazy(() => import("./pages/seo/InternationalSEOPage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
 const Folder = lazy(() => import("./pages/Folder"));
@@ -138,6 +139,16 @@ const App = () => {
                           <Route path="/atividades-de-ingles" element={<AtividadesDeIngles />} />
                           <Route path="/flashcards-de-ingles" element={<FlashcardsDeIngles />} />
                           <Route path="/para-professores" element={<ParaProfessores />} />
+                          <Route path="/pt-br" element={<InternationalSEOPage />} />
+                          <Route path="/pt-br/recursos" element={<InternationalSEOPage />} />
+                          <Route path="/pt-br/flashcards" element={<InternationalSEOPage />} />
+                          <Route path="/pt-br/para-professores" element={<InternationalSEOPage />} />
+                          <Route path="/pt-br/sobre" element={<InternationalSEOPage />} />
+                          <Route path="/en" element={<InternationalSEOPage />} />
+                          <Route path="/en/features" element={<InternationalSEOPage />} />
+                          <Route path="/en/flashcards" element={<InternationalSEOPage />} />
+                          <Route path="/en/for-teachers" element={<InternationalSEOPage />} />
+                          <Route path="/en/about" element={<InternationalSEOPage />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/auth/callback" element={<AuthCallback />} />
                           <Route path="/profile" element={<Profile />} />
