@@ -1,0 +1,224 @@
+[
+  {
+    "path": "/pt-br",
+    "language": "pt-BR",
+    "title": "APE em Português — Flashcards, Áudio e Prática Ativa",
+    "description": "Conheça o APE em português: flashcards, áudio, jogos e organização de materiais para alunos e professores.",
+    "h1": "Inglês com flashcards, áudio e prática ativa",
+    "intro": "O APE transforma palavras e frases em atividades reutilizáveis para estudar, ensinar e revisar em sessões curtas.",
+    "sections": [
+      { "heading": "Prática que usa o mesmo conteúdo de vários jeitos", "paragraphs": ["Uma lista pode alimentar flashcards, escrita, múltipla escolha, organização de frases e revisão direcionada.", "O aluno muda a atividade sem perder o contexto do material criado pelo professor."] },
+      { "heading": "Para alunos e professores", "items": ["Materiais organizados em pastas e listas.", "Áudio baseado no idioma estudado.", "Turmas, compartilhamento e portal público.", "Importação estruturada de conteúdo."] }
+    ],
+    "links": [
+      { "href": "/pt-br/recursos", "label": "Conhecer os recursos" },
+      { "href": "/pt-br/flashcards", "label": "Flashcards com áudio" },
+      { "href": "/pt-br/para-professores", "label": "Recursos para professores" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br" },
+      { "hrefLang": "en", "href": "/en" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/pt-br/recursos",
+    "language": "pt-BR",
+    "title": "Recursos do APE para Estudo Ativo",
+    "description": "Veja os recursos do APE para criar flashcards, praticar escrita, ouvir conteúdo e organizar materiais de estudo.",
+    "h1": "Recursos para transformar conteúdo em prática",
+    "intro": "Crie uma base de conteúdo e reutilize-a em atividades diferentes, com áudio, contexto e acompanhamento.",
+    "sections": [
+      { "heading": "Criação e organização", "items": ["Pastas e listas.", "Importação estruturada.", "Cards normais e em camadas.", "Glossário centralizado."] },
+      { "heading": "Modos de estudo", "items": ["Flashcards.", "Escrita.", "Múltipla escolha.", "Organização de frases.", "Revisão do conteúdo difícil."] }
+    ],
+    "links": [
+      { "href": "/pt-br", "label": "Página inicial" },
+      { "href": "/pt-br/flashcards", "label": "Como funcionam os flashcards" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/recursos" },
+      { "hrefLang": "en", "href": "/en/features" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/pt-br/flashcards",
+    "language": "pt-BR",
+    "title": "Flashcards de Inglês com Áudio e Contexto | APE",
+    "description": "Use flashcards de inglês com tradução, áudio, exemplos, camadas de significado e prática ativa.",
+    "h1": "Flashcards que vão além de virar cartões",
+    "intro": "Cada card pode reunir tradução, áudio, exemplo, explicação e diferentes sentidos relacionados.",
+    "sections": [
+      { "heading": "Recuperação ativa", "paragraphs": ["Tente lembrar antes de revelar a resposta e alterne reconhecimento com produção escrita."] },
+      { "heading": "Camadas de significado", "paragraphs": ["Um mesmo termo pode agrupar sentidos relacionados sem virar uma sequência de cards soltos."] }
+    ],
+    "links": [
+      { "href": "/pt-br/recursos", "label": "Ver todos os recursos" },
+      { "href": "/pt-br/para-professores", "label": "Uso por professores" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/flashcards" },
+      { "hrefLang": "en", "href": "/en/flashcards" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "LearningResource"
+  },
+  {
+    "path": "/pt-br/para-professores",
+    "language": "pt-BR",
+    "title": "APE para Professores — Materiais, Turmas e Flashcards",
+    "description": "Organize materiais, importe listas, acompanhe turmas e publique conteúdos com o APE.",
+    "h1": "Ferramentas para professores organizarem prática ativa",
+    "intro": "O mesmo material pode ser usado em aula, tarefa, revisão e estudo autônomo.",
+    "sections": [
+      { "heading": "Fluxo de conteúdo", "items": ["Criar ou importar.", "Organizar por pasta e lista.", "Aplicar em atividades.", "Compartilhar com turma ou portal público."] },
+      { "heading": "Privacidade por padrão", "paragraphs": ["Materiais privados, progresso individual e dados de alunos permanecem fora das páginas públicas."] }
+    ],
+    "links": [
+      { "href": "/pt-br/recursos", "label": "Conhecer os recursos" },
+      { "href": "/pt-br/sobre", "label": "Sobre o projeto" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/para-professores" },
+      { "hrefLang": "en", "href": "/en/for-teachers" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/pt-br/sobre",
+    "language": "pt-BR",
+    "title": "Sobre o APE — Apprentice Practice & Enhancement",
+    "description": "Conheça o propósito, a autoria e a metodologia do APE, também conhecido como App Piteco.",
+    "h1": "Sobre o APE — App Piteco",
+    "intro": "APE significa Apprentice Practice & Enhancement, uma plataforma criada para aproximar organização de conteúdo e prática real.",
+    "sections": [
+      { "heading": "Propósito", "paragraphs": ["O projeto foi criado por Pedro Luis de Oliveira Silva para reunir criação de materiais, estudo ativo e organização pedagógica."] },
+      { "heading": "Metodologia", "paragraphs": ["O foco é reutilizar o mesmo conteúdo em tarefas diferentes para desenvolver reconhecimento, recuperação e produção."] }
+    ],
+    "links": [
+      { "href": "/pt-br", "label": "Página inicial" },
+      { "href": "/pt-br/para-professores", "label": "Recursos para professores" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/sobre" },
+      { "hrefLang": "en", "href": "/en/about" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "AboutPage"
+  },
+  {
+    "path": "/en",
+    "language": "en",
+    "title": "APE in English — Flashcards, Audio and Active Practice",
+    "description": "Discover APE in English: flashcards, audio, games and study-material organization for students and teachers.",
+    "h1": "Active language practice with flashcards and audio",
+    "intro": "APE turns words and sentences into reusable activities for learning, teaching and reviewing in short sessions.",
+    "sections": [
+      { "heading": "One content base, multiple activities", "paragraphs": ["A single list can power flashcards, writing, multiple choice, sentence ordering and targeted review.", "Learners can change the activity without losing the context prepared by the teacher."] },
+      { "heading": "For learners and teachers", "items": ["Folders and study lists.", "Audio based on the learning language.", "Classes, sharing and a public portal.", "Structured content import."] }
+    ],
+    "links": [
+      { "href": "/en/features", "label": "Explore features" },
+      { "href": "/en/flashcards", "label": "Flashcards with audio" },
+      { "href": "/en/for-teachers", "label": "Tools for teachers" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br" },
+      { "hrefLang": "en", "href": "/en" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/en/features",
+    "language": "en",
+    "title": "APE Features for Active Learning",
+    "description": "Explore APE features for creating flashcards, practising writing, listening to content and organizing study materials.",
+    "h1": "Features that turn content into practice",
+    "intro": "Build a content base and reuse it across different activities with audio, context and progress tracking.",
+    "sections": [
+      { "heading": "Creation and organization", "items": ["Folders and lists.", "Structured import.", "Normal and layered cards.", "Centralized glossary."] },
+      { "heading": "Study modes", "items": ["Flashcards.", "Writing.", "Multiple choice.", "Sentence ordering.", "Difficult-content review."] }
+    ],
+    "links": [
+      { "href": "/en", "label": "Home" },
+      { "href": "/en/flashcards", "label": "How flashcards work" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/recursos" },
+      { "hrefLang": "en", "href": "/en/features" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/en/flashcards",
+    "language": "en",
+    "title": "Language Flashcards with Audio and Context | APE",
+    "description": "Use language flashcards with translations, audio, examples, meaning layers and active practice.",
+    "h1": "Flashcards that do more than flip",
+    "intro": "Each card can combine a translation, audio, examples, explanations and related meanings.",
+    "sections": [
+      { "heading": "Active recall", "paragraphs": ["Try to retrieve the answer before revealing it, then alternate recognition with written production."] },
+      { "heading": "Meaning layers", "paragraphs": ["One term can group related meanings without becoming a disconnected sequence of cards."] }
+    ],
+    "links": [
+      { "href": "/en/features", "label": "Explore all features" },
+      { "href": "/en/for-teachers", "label": "For teachers" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/flashcards" },
+      { "hrefLang": "en", "href": "/en/flashcards" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "LearningResource"
+  },
+  {
+    "path": "/en/for-teachers",
+    "language": "en",
+    "title": "APE for Teachers — Materials, Classes and Flashcards",
+    "description": "Organize materials, import lists, manage classes and publish learning content with APE.",
+    "h1": "Tools for teachers to organize active practice",
+    "intro": "The same material can support lessons, homework, review and independent practice.",
+    "sections": [
+      { "heading": "Content workflow", "items": ["Create or import.", "Organize by folder and list.", "Use content in activities.", "Share with a class or the public portal."] },
+      { "heading": "Private by default", "paragraphs": ["Private materials, individual progress and student data remain outside public pages."] }
+    ],
+    "links": [
+      { "href": "/en/features", "label": "Explore features" },
+      { "href": "/en/about", "label": "About the project" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/para-professores" },
+      { "hrefLang": "en", "href": "/en/for-teachers" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "WebPage"
+  },
+  {
+    "path": "/en/about",
+    "language": "en",
+    "title": "About APE — Apprentice Practice & Enhancement",
+    "description": "Learn about the purpose, authorship and learning approach behind APE, also known as App Piteco.",
+    "h1": "About APE — App Piteco",
+    "intro": "APE stands for Apprentice Practice & Enhancement, a platform built to connect content organization with real practice.",
+    "sections": [
+      { "heading": "Purpose", "paragraphs": ["The project was created by Pedro Luis de Oliveira Silva to combine material creation, active learning and pedagogical organization."] },
+      { "heading": "Learning approach", "paragraphs": ["The same content is reused across different tasks to develop recognition, retrieval and production."] }
+    ],
+    "links": [
+      { "href": "/en", "label": "Home" },
+      { "href": "/en/for-teachers", "label": "Tools for teachers" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/sobre" },
+      { "hrefLang": "en", "href": "/en/about" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "AboutPage"
+  }
+]
