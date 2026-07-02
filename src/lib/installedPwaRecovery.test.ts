@@ -42,11 +42,12 @@ describe("installed PWA recovery", () => {
     expect(headers).toMatch(/\/service-worker\.js\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
   });
 
-  it("runs a cleanup cycle and permits only the official runtime", () => {
+  it("runs a cleanup cycle while keeping the backend that contains existing accounts", () => {
     expect(watchdog).toContain("2026-06-27-installed-pwa-reset-2");
-    expect(runtime).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
+    expect(runtime).toContain("MANAGED_SUPABASE_PROJECT_ID");
     expect(runtime).toContain("xrnfhhoxmmstagmelvyi");
-    expect(runtime).not.toContain("ymahldldyxvwjeruaxpr");
-    expect(runtime).toContain("configuração oficial");
+    expect(runtime).toContain("PRODUCTION_DATA_PROJECT_ID");
+    expect(runtime).toContain("ymahldldyxvwjeruaxpr");
+    expect(runtime).toContain("PRODUCTION_DATA_RUNTIME");
   });
 });
