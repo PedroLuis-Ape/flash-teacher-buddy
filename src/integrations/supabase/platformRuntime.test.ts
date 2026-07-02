@@ -1,41 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { resolvePlatformRuntime } from "./platformRuntime";
+import { OFFICIAL_SUPABASE_PROJECT_ID, OFFICIAL_SUPABASE_URL, resolvePlatformRuntime } from "./platformRuntime";
+
+const official = {
+  projectId: OFFICIAL_SUPABASE_PROJECT_ID,
+  url: OFFICIAL_SUPABASE_URL,
+  publicValue: "test-value",
+};
 
 describe("platform runtime", () => {
-  it("uses the complete Lovable-injected configuration as the source of truth", () => {
-    expect(
-      resolvePlatformRuntime({
-        projectId: "abcdefghijklmnopqrst",
-        url: "https://abcdefghijklmnopqrst.supabase.co",
-        publicValue: "current-publishable-value",
-      }),
-    ).toEqual({
-      projectId: "abcdefghijklmnopqrst",
-      url: "https://abcdefghijklmnopqrst.supabase.co",
-      publicValue: "current-publishable-value",
-    });
+  it("uses the official injected configuration", () => {
+    expect(resolvePlatformRuntime(official)).toEqual(official);
   });
 
-  it("does not replace a current injected key with a bundled legacy key", () => {
-    const runtime = resolvePlatformRuntime({
-      projectId: "ymahldldyxvwjeruaxpr",
-      url: "https://ymahldldyxvwjeruaxpr.supabase.co",
-      publicValue: "fresh-current-key",
-    });
-
-    expect(runtime.publicValue).toBe("fresh-current-key");
+  it("prefers an installed official runtime", () => {
+    expect(resolvePlatformRuntime(official, false, { ...official, publicValue: "installed-value" }).publicValue).toBe("installed-value");
   });
 
-  it("uses one coherent fallback when the injected configuration is absent or partial", () => {
-    for (const input of [{}, { url: "https://other.supabase.co" }]) {
-      const runtime = resolvePlatformRuntime(input);
-      expect(runtime.projectId).toBe("ymahldldyxvwjeruaxpr");
-      expect(runtime.url).toBe("https://ymahldldyxvwjeruaxpr.supabase.co");
-      expect(runtime.publicValue).toMatch(/^eyJ/);
-    }
+  it("rejects a different project", () => {
+    expect(() => resolvePlatformRuntime({
+      projectId: "another-project",
+      url: "https://another-project.supabase.co",
+      publicValue: "test-value",
+    })).toThrow("projeto Supabase diferente");
   });
 
-  it("keeps tests isolated from production", () => {
+  it("fails closed when configuration is absent", () => {
+    expect(() => resolvePlatformRuntime({})).toThrow("configuração oficial");
+  });
+
+  it("keeps tests isolated", () => {
     expect(resolvePlatformRuntime({}, true)).toEqual({
       projectId: "test-project",
       url: "https://example.supabase.co",

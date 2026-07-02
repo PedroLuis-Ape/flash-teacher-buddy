@@ -17,11 +17,14 @@ if (!existsSync(policyPath)) errors.push("Política de funções ausente.");
 const configSource = existsSync(configPath) ? readFileSync(configPath, "utf8") : "";
 const policy = existsSync(policyPath)
   ? JSON.parse(readFileSync(policyPath, "utf8"))
-  : { publicFunctions: {}, elevatedFunctions: [] };
+  : { publicFunctions: {}, elevatedFunctions: [], gatewayJwtExceptions: {} };
 
 const publicFunctions = new Set(Object.keys(policy.publicFunctions ?? {}));
 const manuallyElevatedFunctions = new Set(
   policy.elevatedFunctions ?? policy.serviceRoleFunctions ?? [],
+);
+const gatewayJwtExceptions = new Map(
+  Object.entries(policy.gatewayJwtExceptions ?? {}),
 );
 const directories = existsSync(functionsRoot)
   ? readdirSync(functionsRoot).filter((name) => {
@@ -75,6 +78,8 @@ const inventory = directories.map((name) => {
   const usesAdministrativeClient = source.includes(administrativeKeyName);
   const isElevated = manuallyElevatedFunctions.has(name) || usesAdministrativeClient;
   const validatesAuthenticatedUser = hasExplicitAuthenticatedUserGuard(source);
+  const gatewayJwtExceptionReason = gatewayJwtExceptions.get(name) ?? null;
+  const hasGatewayJwtException = typeof gatewayJwtExceptionReason === "string" && gatewayJwtExceptionReason.trim().length >= 20;
 
   if (!existsSync(indexPath)) errors.push(`${name}: index.ts ausente.`);
 
@@ -86,7 +91,11 @@ const inventory = directories.map((name) => {
       errors.push(`${name}: função pública deve declarar verify_jwt = false.`);
     }
     if (!isPublic && verifyJwt !== "true") {
-      errors.push(`${name}: função gerenciada privada deve declarar verify_jwt = true.`);
+      if (!hasGatewayJwtException) {
+        errors.push(`${name}: função gerenciada privada deve declarar verify_jwt = true ou possuir exceção de gateway documentada.`);
+      } else if (!validatesAuthenticatedUser) {
+        errors.push(`${name}: exceção de gateway JWT exige guarda explícita com auth.getUser().`);
+      }
     }
     if (usesAdministrativeClient && !validatesAuthenticatedUser) {
       errors.push(`${name}: acesso administrativo sem guarda explícita de erro e usuário autenticado.`);
@@ -96,6 +105,9 @@ const inventory = directories.map((name) => {
   if (isPublic && isElevated) {
     errors.push(`${name}: uma função pública não pode estar na lista elevada.`);
   }
+  if (isPublic && hasGatewayJwtException) {
+    errors.push(`${name}: função pública não pode usar exceção de gateway JWT.`);
+  }
 
   return {
     name,
@@ -104,6 +116,8 @@ const inventory = directories.map((name) => {
     public: isPublic,
     elevated: isElevated,
     elevatedReason: usesAdministrativeClient ? "administrative-client" : manuallyElevatedFunctions.has(name) ? "manual-policy" : null,
+    gatewayJwtException: hasGatewayJwtException,
+    gatewayJwtExceptionReason: hasGatewayJwtException ? gatewayJwtExceptionReason : null,
     hasExplicitAuthenticatedUserGuard: validatesAuthenticatedUser,
     hasEntryPoint: existsSync(indexPath),
   };
@@ -120,9 +134,16 @@ for (const name of manuallyElevatedFunctions) {
   if (!directories.includes(name)) errors.push(`${name}: função elevada inexistente.`);
   if (!configuredNames.includes(name)) errors.push(`${name}: função elevada sem configuração explícita.`);
 }
+for (const [name, reason] of gatewayJwtExceptions) {
+  if (!directories.includes(name)) errors.push(`${name}: exceção de gateway aponta para função inexistente.`);
+  if (!configuredNames.includes(name)) errors.push(`${name}: exceção de gateway exige configuração explícita.`);
+  if (typeof reason !== "string" || reason.trim().length < 20) {
+    errors.push(`${name}: exceção de gateway exige justificativa descritiva.`);
+  }
+}
 
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedAt: new Date().toISOString(),
   status: errors.length === 0 ? "passed" : "failed",
   summary: {
@@ -131,6 +152,7 @@ const report = {
     unmanagedFunctions: inventory.filter((item) => !item.managed).length,
     publicFunctions: inventory.filter((item) => item.public).length,
     elevatedFunctions: inventory.filter((item) => item.elevated).length,
+    gatewayJwtExceptions: inventory.filter((item) => item.gatewayJwtException).length,
     errors: errors.length,
     warnings: warnings.length,
   },

@@ -2,21 +2,41 @@
 
 > Plataforma educacional brasileira de flashcards, estudo ativo e organização de conteúdo para alunos e professores.
 
-O APE, também chamado App Piteco, oferece recursos para criar e estudar materiais em pares de pergunta e resposta, com modos interativos, organização por pastas e listas, apoio a professores e acompanhamento de aprendizagem.
+O APE, também chamado App Piteco, oferece recursos para criar e estudar materiais em pares de pergunta e resposta, com modos interativos, organização por pastas e listas, áudio localizado, apoio a professores e acompanhamento de aprendizagem.
 
-## Páginas públicas canônicas
+## Páginas públicas canônicas em português
 
-- [Página inicial](https://www.apeeducation.org/): apresentação da plataforma e principais recursos.
+- [APE em português](https://www.apeeducation.org/pt-br): visão geral localizada da plataforma.
+- [Recursos do APE](https://www.apeeducation.org/pt-br/recursos): criação, organização e modos de estudo.
+- [Flashcards com áudio e contexto](https://www.apeeducation.org/pt-br/flashcards): flashcards, recuperação ativa e camadas de significado.
+- [APE para professores](https://www.apeeducation.org/pt-br/para-professores): materiais, turmas, compartilhamento e publicação.
+- [Sobre o APE](https://www.apeeducation.org/pt-br/sobre): autoria, propósito e metodologia.
+
+## Canonical public pages in English
+
+- [APE in English](https://www.apeeducation.org/en): localized overview of the platform.
+- [APE features](https://www.apeeducation.org/en/features): content creation, organization and study modes.
+- [Flashcards with audio and context](https://www.apeeducation.org/en/flashcards): active recall and meaning layers.
+- [APE for teachers](https://www.apeeducation.org/en/for-teachers): materials, classes, sharing and publishing.
+- [About APE](https://www.apeeducation.org/en/about): authorship, purpose and learning approach.
+
+## Diretório e páginas públicas existentes
+
+- [Página inicial](https://www.apeeducation.org/): entrada geral e versão `x-default` durante a transição internacional.
 - [Portal público](https://www.apeeducation.org/portal): descoberta de materiais e perfis disponibilizados publicamente.
 - [Inglês para iniciantes](https://www.apeeducation.org/ingles-para-iniciantes): orientação para estudantes nos níveis iniciais.
 - [Atividades de inglês](https://www.apeeducation.org/atividades-de-ingles): recursos e propostas de prática de inglês.
-- [Flashcards de inglês](https://www.apeeducation.org/flashcards-de-ingles): explicação do uso de flashcards para aprendizagem.
-- [Para professores](https://www.apeeducation.org/para-professores): recursos da plataforma voltados ao trabalho docente.
-- [Sobre o APE](https://www.apeeducation.org/about): autoria, propósito educacional e informações institucionais.
+- [Flashcards de inglês](https://www.apeeducation.org/flashcards-de-ingles): página editorial anterior sobre flashcards.
+- [Para professores](https://www.apeeducation.org/para-professores): página editorial anterior para docentes.
+- [Sobre o APE](https://www.apeeducation.org/about): página institucional anterior.
 
-## Escopo de indexação
+## Escopo de descoberta e citação
 
-Somente páginas e materiais explicitamente públicos devem ser usados para descoberta, resumo ou citação. Contas, turmas privadas, progresso individual, pastas pessoais, listas privadas, autenticação e configurações de usuário não fazem parte do conteúdo público.
+Somente páginas e materiais explicitamente públicos devem ser usados para descoberta, resumo ou citação. Contas, turmas privadas, progresso individual, pastas pessoais, listas privadas, autenticação, importadores e configurações de usuário não fazem parte do conteúdo público.
+
+Páginas de estudo, jogos e ferramentas interativas podem ser acessíveis sem serem fontes canônicas. Para citação, prefira páginas editoriais, perfis públicos válidos e materiais publicados com autoria identificada.
+
+Informações estruturadas devem corresponder ao conteúdo visível da página. Conteúdo removido, privado, arquivado ou sem autorização pública não deve ser tratado como fonte.
 
 ## Identidade
 
@@ -24,5 +44,5 @@ Somente páginas e materiais explicitamente públicos devem ser usados para desc
 - Nome alternativo: App Piteco
 - Organização: APE Education
 - Autor e fundador: Pedro Luis de Oliveira Silva
-- Idioma principal: português do Brasil
+- Idiomas públicos desta fase: português do Brasil e inglês
 - Site canônico: https://www.apeeducation.org/

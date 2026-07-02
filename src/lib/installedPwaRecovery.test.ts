@@ -42,10 +42,11 @@ describe("installed PWA recovery", () => {
     expect(headers).toMatch(/\/service-worker\.js\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
   });
 
-  it("runs a new cleanup cycle and preserves a production runtime fallback", () => {
+  it("runs a cleanup cycle and permits only the official runtime", () => {
     expect(watchdog).toContain("2026-06-27-installed-pwa-reset-2");
-    expect(runtime).toContain("PRODUCTION_RUNTIME");
-    expect(runtime).toContain("ymahldldyxvwjeruaxpr");
-    expect(runtime).not.toContain("Lovable Cloud configuration is unavailable.");
+    expect(runtime).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
+    expect(runtime).toContain("xrnfhhoxmmstagmelvyi");
+    expect(runtime).not.toContain("ymahldldyxvwjeruaxpr");
+    expect(runtime).toContain("configuração oficial");
   });
 });

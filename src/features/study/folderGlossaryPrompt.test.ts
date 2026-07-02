@@ -15,7 +15,7 @@ describe("folder glossary AI prompt", () => {
     expect(prompt).toContain('Lado A: "Inglês"');
     expect(prompt).toContain('Lado B: "Português"');
     expect(prompt).toContain("JSON puro e válido");
-    expect(prompt).toContain("Não repita o mesmo term");
+    expect(prompt).toContain("não crie duas entradas iguais no mesmo lado");
     expect(prompt).toContain("entries");
   });
 
