@@ -33,7 +33,7 @@ const source = {
       ],
     }],
   },
-} as SmartImportPackage;
+} as unknown as SmartImportPackage;
 
 const target = {
   listId: "target-list", folderId: "target-folder", listName: "Target", folderName: "Folder",

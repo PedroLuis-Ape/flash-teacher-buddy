@@ -1,7 +1,7 @@
 import { BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-export function BulkGlossaryImportPanel() {
+export function BulkGlossaryImportPanel(_props: { catalog?: unknown } = {}) {
   return (
     <Card className="flex items-start gap-3 border-primary/20 bg-primary/5 p-4">
       <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-primary" />

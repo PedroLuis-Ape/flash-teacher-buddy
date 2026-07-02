@@ -73,7 +73,7 @@ export default function MixedStudy() {
 
   useEffect(() => {
     if (!resolvedId) return;
-    if (authStatus === "loading") return;
+    if (authStatus === "initializing") return;
 
     let cancelled = false;
     const load = async () => {

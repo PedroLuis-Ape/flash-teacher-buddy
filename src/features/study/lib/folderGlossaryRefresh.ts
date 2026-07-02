@@ -91,7 +91,12 @@ async function countFolderRows(
     .eq("folder_id", folderId);
 
   if (table === "lists") query = query.is("deleted_at", null);
-  if (table === "folder_glossary" && activeOnly) query = query.eq("is_active", true);
+  if (table === "folder_glossary" && activeOnly) {
+    query = (query as unknown as { eq: (c: string, v: unknown) => typeof query }).eq(
+      "is_active",
+      true,
+    );
+  }
 
   const { count, error } = await query;
   if (error) throw error;
