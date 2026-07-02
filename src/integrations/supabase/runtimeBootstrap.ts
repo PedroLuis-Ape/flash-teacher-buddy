@@ -1,4 +1,5 @@
 import {
+  OFFICIAL_RUNTIME,
   OFFICIAL_SUPABASE_PROJECT_ID,
   OFFICIAL_SUPABASE_URL,
   type PlatformRuntime,
@@ -44,9 +45,10 @@ export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
     publicValue: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   };
 
-  if (!injected.projectId || !injected.url || !injected.publicValue) {
-    throw new Error("A configuração oficial do App Piteco não está disponível.");
+  try {
+    return validateOfficialRuntime(injected);
+  } catch (error) {
+    console.warn("[RuntimeBootstrap] Ambiente injetado inválido; usando configuração oficial.", error);
+    return { ...OFFICIAL_RUNTIME };
   }
-
-  return validateOfficialRuntime(injected);
 }
