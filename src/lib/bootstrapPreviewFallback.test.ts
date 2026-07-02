@@ -16,11 +16,11 @@ describe("application bootstrap", () => {
     expect(errorHandler).toBeGreaterThan(guardedImport);
   });
 
-  it("keeps the official runtime available when preview env is stale", () => {
-    expect(runtimeSource).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
-    expect(runtimeSource).toContain("OFFICIAL_SUPABASE_PUBLIC_VALUE");
-    expect(runtimeSource).toContain("OFFICIAL_RUNTIME");
-    expect(runtimeSource).toContain("Configuração externa ignorada");
-    expect(runtimeSource).not.toContain("ymahldldyxvwjeruaxpr");
+  it("keeps the production data backend available when preview env points elsewhere", () => {
+    expect(runtimeSource).toContain("MANAGED_SUPABASE_PROJECT_ID");
+    expect(runtimeSource).toContain("PRODUCTION_DATA_PROJECT_ID");
+    expect(runtimeSource).toContain("PRODUCTION_DATA_PUBLIC_VALUE");
+    expect(runtimeSource).toContain("PRODUCTION_DATA_RUNTIME");
+    expect(runtimeSource).toContain("backend com os dados existentes");
   });
 });
