@@ -18,6 +18,7 @@ const PUBLIC_EXACT = new Set<string>([
   "/landing",
   "/auth",
   "/auth/callback",
+  "/about",
   "/ingles-para-iniciantes",
   "/atividades-de-ingles",
   "/flashcards-de-ingles",
@@ -30,8 +31,16 @@ function isClassSharePath(pathname: string): boolean {
   return parts[1] !== "professor" && parts[1] !== "aluno";
 }
 
+function isInternationalPublicPath(pathname: string): boolean {
+  return pathname === "/pt-br"
+    || pathname.startsWith("/pt-br/")
+    || pathname === "/en"
+    || pathname.startsWith("/en/");
+}
+
 function isPublicRoute(pathname: string, isGuest: boolean): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
+  if (isInternationalPublicPath(pathname)) return true;
   if (pathname === "/portal" || pathname.startsWith("/portal/")) return true;
   if (isGuest && isClassSharePath(pathname)) return true;
   return false;
