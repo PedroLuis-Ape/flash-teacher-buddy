@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { OFFICIAL_SUPABASE_PROJECT_ID, OFFICIAL_SUPABASE_URL, resolvePlatformRuntime } from "./platformRuntime";
+import {
+  OFFICIAL_RUNTIME,
+  OFFICIAL_SUPABASE_PROJECT_ID,
+  OFFICIAL_SUPABASE_URL,
+  resolvePlatformRuntime,
+} from "./platformRuntime";
 
 const official = {
   projectId: OFFICIAL_SUPABASE_PROJECT_ID,
@@ -16,16 +21,16 @@ describe("platform runtime", () => {
     expect(resolvePlatformRuntime(official, false, { ...official, publicValue: "installed-value" }).publicValue).toBe("installed-value");
   });
 
-  it("rejects a different project", () => {
-    expect(() => resolvePlatformRuntime({
+  it("ignores a stale project and falls back to the bundled official runtime", () => {
+    expect(resolvePlatformRuntime({
       projectId: "another-project",
       url: "https://another-project.supabase.co",
-      publicValue: "test-value",
-    })).toThrow("projeto Supabase diferente");
+      publicValue: "stale-value",
+    })).toEqual(OFFICIAL_RUNTIME);
   });
 
-  it("fails closed when configuration is absent", () => {
-    expect(() => resolvePlatformRuntime({})).toThrow("configuração oficial");
+  it("uses the official runtime when configuration is absent", () => {
+    expect(resolvePlatformRuntime({})).toEqual(OFFICIAL_RUNTIME);
   });
 
   it("keeps tests isolated", () => {
