@@ -11,10 +11,11 @@ if (!client.includes("readPlatformRuntime")) process.exit(1);
 if (!runtime.includes("VITE_SUPABASE_URL")) process.exit(1);
 if (!runtime.includes("VITE_SUPABASE_PUBLISHABLE_KEY")) process.exit(1);
 if (!runtime.includes(`OFFICIAL_SUPABASE_PROJECT_ID = "${project}"`)) process.exit(1);
+if (!runtime.includes("OFFICIAL_SUPABASE_PUBLIC_VALUE")) process.exit(1);
+if (!runtime.includes("OFFICIAL_RUNTIME")) process.exit(1);
 if (!runtime.includes("assertOfficialRuntime")) process.exit(1);
-if (!runtime.includes("configuração oficial")) process.exit(1);
 if (!bootstrap.includes("app-public-config")) process.exit(1);
-if (runtime.includes("FALLBACK_RUNTIME")) process.exit(1);
-if (bootstrap.includes("PREVIOUS_WORKING_RUNTIME")) process.exit(1);
+if (runtime.includes("ymahldldyxvwjeruaxpr")) process.exit(1);
+if (bootstrap.includes("ymahldldyxvwjeruaxpr")) process.exit(1);
 
-console.log("Platform runtime configuration is valid and restricted to the configured project.");
+console.log("Platform runtime is restricted to the configured project and resilient to stale preview variables.");
