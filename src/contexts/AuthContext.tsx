@@ -14,6 +14,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PRODUCTION_DATA_URL } from "@/integrations/supabase/platformRuntime";
 
 export type AuthStatus =
   | "initializing"
