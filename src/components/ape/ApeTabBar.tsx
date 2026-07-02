@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 import { usePerformance } from "@/contexts/PerformanceContext";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 const tabs = [
   { id: "home", label: "Início", icon: Home, path: "/dashboard" },
@@ -62,10 +63,14 @@ export function ApeTabBar() {
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = isActive(tab.path);
+          const warmRoute = () => prefetchRoute(tab.path);
 
           return (
             <button
               key={tab.id}
+              onMouseEnter={warmRoute}
+              onFocus={warmRoute}
+              onTouchStart={warmRoute}
               onClick={() => navigate(tab.path)}
               className={cn(
                 "space-ui-tab relative flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[76px] h-[3.55rem] rounded-2xl px-2",
