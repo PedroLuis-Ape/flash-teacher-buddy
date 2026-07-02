@@ -41,8 +41,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
  */
 function readPersistedSession(): Session | null {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!supabaseUrl) return null;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || PRODUCTION_DATA_URL;
     const ref = new URL(supabaseUrl).hostname.split(".")[0];
     const raw = localStorage.getItem(`sb-${ref}-auth-token`);
     if (!raw) return null;
