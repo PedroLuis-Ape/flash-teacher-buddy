@@ -16,10 +16,11 @@ describe("application bootstrap", () => {
     expect(errorHandler).toBeGreaterThan(guardedImport);
   });
 
-  it("restricts runtime configuration to the official project", () => {
+  it("keeps the official runtime available when preview env is stale", () => {
     expect(runtimeSource).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
-    expect(runtimeSource).toContain("assertOfficialRuntime");
-    expect(runtimeSource).toContain("configuração oficial");
-    expect(runtimeSource).not.toContain("FALLBACK_RUNTIME");
+    expect(runtimeSource).toContain("OFFICIAL_SUPABASE_PUBLIC_VALUE");
+    expect(runtimeSource).toContain("OFFICIAL_RUNTIME");
+    expect(runtimeSource).toContain("Configuração externa ignorada");
+    expect(runtimeSource).not.toContain("ymahldldyxvwjeruaxpr");
   });
 });
