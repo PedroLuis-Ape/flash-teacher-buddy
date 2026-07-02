@@ -4,10 +4,9 @@
  * Safe: only triggers dynamic import(), no state or hook involvement.
  */
 
-import { getPerfSettings } from "@/lib/performanceSettings";
-import { isSafeModeEnabled } from "@/lib/safeMode";
-
 const prefetched = new Set<string>();
+
+import { isSafeModeEnabled } from "@/lib/safeMode";
 
 function isWeakDevice(): boolean {
   try {
@@ -24,7 +23,6 @@ function isWeakDevice(): boolean {
 
 const routeImportMap: Record<string, () => Promise<unknown>> = {
   '/': () => import('@/pages/Index'),
-  '/dashboard': () => import('@/pages/Index'),
   '/folders': () => import('@/pages/Folders'),
   '/goals': () => import('@/pages/Goals'),
   '/store': () => import('@/pages/Store'),
@@ -33,16 +31,13 @@ const routeImportMap: Record<string, () => Promise<unknown>> = {
   '/search': () => import('@/pages/Search'),
   '/turmas': () => import('@/pages/Turmas'),
   '/trash': () => import('@/pages/Trash'),
-  '/import/super': () => import('@/pages/SuperGlobalImport'),
-  '/reportar-problema': () => import('@/pages/BugReport'),
 };
 
 /**
  * Prefetch a route's JS chunk in the background.
- * No-ops if disabled, already prefetched or route not in map.
+ * No-ops if already prefetched or route not in map.
  */
 export function prefetchRoute(path: string) {
-  if (!getPerfSettings().prefetching) return;
   if (isSafeModeEnabled()) return;
   if (isWeakDevice()) return;
   if (prefetched.has(path)) return;
