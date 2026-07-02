@@ -4,6 +4,7 @@ import { normalizeGlobalImportValue, type GlobalImportSourceFormat } from "./nor
 import type { CanonicalGlobalImportPackage } from "./schema/globalImportSchema";
 import type { AppPitecoSuperImportPackage } from "./schema/appPitecoSuperImportSchema";
 import type { GlobalImportIssue, GlobalImportSummary } from "./checks";
+export type { GlobalImportIssue, GlobalImportSummary } from "./checks";
 import type { GlobalImportPackage } from "./schema";
 import { smartImportToLegacyPackage } from "@/features/smart-import/adapters";
 import { smartImportPackageSchema, type SmartImportPackage } from "@/features/smart-import/schema";

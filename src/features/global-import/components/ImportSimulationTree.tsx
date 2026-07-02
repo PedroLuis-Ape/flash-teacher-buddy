@@ -189,9 +189,16 @@ export function ImportSimulationTree({ packageValue, smartPackage, catalog, plan
       <div className="space-y-4">
         {packageValue.package.folders.map((folder, folderIndex) => {
           const folderPlan = plan.folders[folderIndex];
-          const destinationFolder = folderPlan?.folder.mode === "existing"
-            ? catalog.folders.find((item) => item.id === folderPlan.folder.folderId)?.title ?? "Pasta existente"
-            : folderPlan?.folder.name ?? folder.name;
+          const destinationFolder =
+            folderPlan?.folder.mode === "existing"
+              ? catalog.folders.find(
+                  (item) =>
+                    item.id ===
+                    (folderPlan.folder as { mode: "existing"; folderId: string }).folderId,
+                )?.title ?? "Pasta existente"
+              : folderPlan?.folder.mode === "create"
+                ? folderPlan.folder.name
+                : folder.name;
           const existingFolder = folderPlan?.folder.mode === "existing";
 
           return (

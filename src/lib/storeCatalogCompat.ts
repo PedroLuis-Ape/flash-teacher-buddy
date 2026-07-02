@@ -41,7 +41,7 @@ export async function getProductionStoreCatalog(): Promise<SkinItem[]> {
     .order('price_pitecoin', { ascending: true })
     .order('name', { ascending: true });
 
-  const strictItems = (strictResult.data || []).filter(hasCompleteAssets);
+  const strictItems = ((strictResult.data || []).filter(hasCompleteAssets) as unknown) as SkinItem[];
   if (!strictResult.error && strictItems.length > 0) {
     return strictItems;
   }
@@ -67,5 +67,5 @@ export async function getProductionStoreCatalog(): Promise<SkinItem[]> {
     throw legacyResult.error;
   }
 
-  return (legacyResult.data || []).filter(hasCompleteAssets);
+  return ((legacyResult.data || []).filter(hasCompleteAssets) as unknown) as SkinItem[];
 }
