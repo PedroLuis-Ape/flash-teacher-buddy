@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Download, FileSpreadsheet, Gem, ListPlus, Sparkles, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, FileSpreadsheet, Gem, Sparkles, Upload } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { useSpecialFlashcardsDetailsScalable } from "@/hooks/useSpecialFlashcardsDetailsScalable";
+import { useSpecialFlashcardsDetails } from "@/hooks/useSpecialFlashcards";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,10 +13,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import ImportExplanationsDialog from "@/components/ImportExplanationsDialog";
 import SpecialExportDialog from "./components/SpecialExportDialog";
-import AddListToSpecialsDialog from "./components/AddListToSpecialsDialog";
-import { BULK_LIST_SPECIALS_ENABLED } from "./flags";
-
-const VISIBLE_STEP = 100;
 
 export default function GemQueue() {
   const navigate = useNavigate();
@@ -24,12 +20,9 @@ export default function GemQueue() {
   const [selected, setSelected] = useState(new Set());
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [addListOpen, setAddListOpen] = useState(false);
   const [exportCards, setExportCards] = useState([]);
-  const [visibleLimit, setVisibleLimit] = useState(VISIBLE_STEP);
-  const query = useSpecialFlashcardsDetailsScalable(userId);
+  const query = useSpecialFlashcardsDetails(userId);
   const cards = query.data || [];
-  const visibleCards = useMemo(() => cards.slice(0, visibleLimit), [cards, visibleLimit]);
 
   useEffect(() => {
     if (!authLoading && !userId) navigate("/auth", { replace: true });
@@ -38,7 +31,6 @@ export default function GemQueue() {
   useEffect(() => {
     const valid = new Set(cards.map((card) => card.flashcard_id));
     setSelected((previous) => new Set([...previous].filter((id) => valid.has(id))));
-    setVisibleLimit(VISIBLE_STEP);
   }, [cards]);
 
   const chosen = useMemo(() => cards.filter((card) => selected.has(card.flashcard_id)), [cards, selected]);
@@ -68,7 +60,6 @@ export default function GemQueue() {
         <p className="text-sm text-muted-foreground">Crie explicações detalhadas com IA</p>
       </div>
       <Badge variant="secondary" className="ml-auto">{cards.length} na fila</Badge>
-      {BULK_LIST_SPECIALS_ENABLED && <Button variant="outline" onClick={() => setAddListOpen(true)}><ListPlus className="mr-1.5 h-4 w-4" />Adicionar lista</Button>}
       <Button onClick={() => setImportOpen(true)}><Upload className="mr-1.5 h-4 w-4" />Importar resposta</Button>
     </div>
 
@@ -84,8 +75,7 @@ export default function GemQueue() {
     {authLoading || query.isLoading ? <LoadingSpinner message="Carregando especiais..." /> : !cards.length ? <Card className="p-10 text-center">
       <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
       <div className="font-semibold">A fila está vazia</div>
-      <p className="mt-1 text-sm text-muted-foreground">Marque um flashcard como especial ou adicione uma lista inteira.</p>
-      {BULK_LIST_SPECIALS_ENABLED && <Button className="mt-4" variant="outline" onClick={() => setAddListOpen(true)}><ListPlus className="mr-2 h-4 w-4" />Adicionar lista inteira</Button>}
+      <p className="mt-1 text-sm text-muted-foreground">Marque um flashcard como especial para ele aparecer aqui.</p>
     </Card> : <>
       <div className="sticky top-2 z-10 mb-4 flex flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-3 shadow-sm backdrop-blur">
         <Checkbox
@@ -99,7 +89,7 @@ export default function GemQueue() {
         <Button size="sm" onClick={() => exportTarget(cards)}><Download className="mr-1 h-4 w-4" />Todos</Button>
       </div>
 
-      <ScrollArea className="max-h-[68vh] pr-2"><div className="space-y-3">{visibleCards.map((card) => <Card key={card.id} className={`p-4 transition ${selected.has(card.flashcard_id) ? "border-primary/50 bg-primary/5" : "hover:border-primary/30"}`}>
+      <ScrollArea className="max-h-[68vh] pr-2"><div className="space-y-3">{cards.map((card) => <Card key={card.id} className={`p-4 transition ${selected.has(card.flashcard_id) ? "border-primary/50 bg-primary/5" : "hover:border-primary/30"}`}>
         <div className="flex items-start gap-3">
           <Checkbox checked={selected.has(card.flashcard_id)} onCheckedChange={() => toggle(card.flashcard_id)} className="mt-1" />
           <button type="button" onClick={() => toggle(card.flashcard_id)} className="min-w-0 flex-1 text-left">
@@ -113,15 +103,9 @@ export default function GemQueue() {
           </button>
         </div>
       </Card>)}</div></ScrollArea>
-
-      {visibleCards.length < cards.length && <div className="mt-4 flex flex-col items-center gap-2">
-        <p className="text-xs text-muted-foreground">Exibindo {visibleCards.length} de {cards.length} cards</p>
-        <Button variant="outline" size="sm" onClick={() => setVisibleLimit((value) => value + VISIBLE_STEP)}>Carregar mais</Button>
-      </div>}
     </>}
 
     <SpecialExportDialog open={exportOpen} onOpenChange={setExportOpen} cards={exportCards} />
     <ImportExplanationsDialog open={importOpen} onOpenChange={setImportOpen} userId={userId} />
-    {BULK_LIST_SPECIALS_ENABLED && <AddListToSpecialsDialog open={addListOpen} onOpenChange={setAddListOpen} userId={userId} />}
   </div>;
 }
