@@ -1,36 +1,36 @@
 import { describe, expect, it } from "vitest";
 import {
-  OFFICIAL_RUNTIME,
-  OFFICIAL_SUPABASE_PROJECT_ID,
-  OFFICIAL_SUPABASE_URL,
+  PRODUCTION_DATA_PROJECT_ID,
+  PRODUCTION_DATA_RUNTIME,
+  PRODUCTION_DATA_URL,
   resolvePlatformRuntime,
 } from "./platformRuntime";
 
-const official = {
-  projectId: OFFICIAL_SUPABASE_PROJECT_ID,
-  url: OFFICIAL_SUPABASE_URL,
+const production = {
+  projectId: PRODUCTION_DATA_PROJECT_ID,
+  url: PRODUCTION_DATA_URL,
   publicValue: "test-value",
 };
 
 describe("platform runtime", () => {
-  it("uses the official injected configuration", () => {
-    expect(resolvePlatformRuntime(official)).toEqual(official);
+  it("uses an injected production data configuration", () => {
+    expect(resolvePlatformRuntime(production)).toEqual(production);
   });
 
-  it("prefers an installed official runtime", () => {
-    expect(resolvePlatformRuntime(official, false, { ...official, publicValue: "installed-value" }).publicValue).toBe("installed-value");
+  it("prefers an installed production data runtime", () => {
+    expect(resolvePlatformRuntime(production, false, { ...production, publicValue: "installed-value" }).publicValue).toBe("installed-value");
   });
 
-  it("ignores a stale project and falls back to the bundled official runtime", () => {
+  it("ignores the empty managed project and keeps the production data backend", () => {
     expect(resolvePlatformRuntime({
-      projectId: "another-project",
-      url: "https://another-project.supabase.co",
-      publicValue: "stale-value",
-    })).toEqual(OFFICIAL_RUNTIME);
+      projectId: "xrnfhhoxmmstagmelvyi",
+      url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
+      publicValue: "managed-project-value",
+    })).toEqual(PRODUCTION_DATA_RUNTIME);
   });
 
-  it("uses the official runtime when configuration is absent", () => {
-    expect(resolvePlatformRuntime({})).toEqual(OFFICIAL_RUNTIME);
+  it("uses the production data runtime when configuration is absent", () => {
+    expect(resolvePlatformRuntime({})).toEqual(PRODUCTION_DATA_RUNTIME);
   });
 
   it("keeps tests isolated", () => {
