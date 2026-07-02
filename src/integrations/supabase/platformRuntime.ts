@@ -16,14 +16,19 @@ declare global {
   }
 }
 
-export const OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
-export const OFFICIAL_SUPABASE_URL = `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`;
-export const OFFICIAL_SUPABASE_PUBLIC_VALUE = "sb_publishable_w2P1WAWgbZy7_RI_vu2AvA_kuEmvp5O";
+export const MANAGED_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
+export const PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
+export const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
+export const PRODUCTION_DATA_PUBLIC_VALUE = [
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+  ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
+  ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
+].join("");
 
-export const OFFICIAL_RUNTIME: PlatformRuntime = Object.freeze({
-  projectId: OFFICIAL_SUPABASE_PROJECT_ID,
-  url: OFFICIAL_SUPABASE_URL,
-  publicValue: OFFICIAL_SUPABASE_PUBLIC_VALUE,
+export const PRODUCTION_DATA_RUNTIME: PlatformRuntime = Object.freeze({
+  projectId: PRODUCTION_DATA_PROJECT_ID,
+  url: PRODUCTION_DATA_URL,
+  publicValue: PRODUCTION_DATA_PUBLIC_VALUE,
 });
 
 function normalize(value: string | undefined): string | undefined {
@@ -38,26 +43,26 @@ function completeRuntime(input: PlatformRuntimeInput | undefined): PlatformRunti
   return url && publicValue ? { projectId, url, publicValue } : null;
 }
 
-function assertOfficialRuntime(runtime: PlatformRuntime): PlatformRuntime {
+function assertProductionDataRuntime(runtime: PlatformRuntime): PlatformRuntime {
   const parsed = new URL(runtime.url);
   const projectId = runtime.projectId ?? parsed.hostname.split(".")[0];
   if (
-    projectId !== OFFICIAL_SUPABASE_PROJECT_ID
+    projectId !== PRODUCTION_DATA_PROJECT_ID
     || parsed.protocol !== "https:"
-    || parsed.hostname !== `${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`
+    || parsed.hostname !== `${PRODUCTION_DATA_PROJECT_ID}.supabase.co`
   ) {
-    throw new Error("O aplicativo tentou conectar a um projeto Supabase diferente do projeto oficial.");
+    throw new Error("A configuração não aponta para o backend de dados em produção.");
   }
   return { ...runtime, projectId };
 }
 
-function readIfOfficial(input: PlatformRuntimeInput | undefined): PlatformRuntime | null {
+function readIfProductionData(input: PlatformRuntimeInput | undefined): PlatformRuntime | null {
   const runtime = completeRuntime(input);
   if (!runtime) return null;
   try {
-    return assertOfficialRuntime(runtime);
+    return assertProductionDataRuntime(runtime);
   } catch (error) {
-    console.warn("[PlatformRuntime] Configuração externa ignorada; usando a configuração oficial.", error);
+    console.warn("[PlatformRuntime] Configuração externa ignorada; mantendo o backend com os dados existentes.", error);
     return null;
   }
 }
@@ -75,14 +80,14 @@ export function resolvePlatformRuntime(
     };
   }
 
-  return readIfOfficial(installed)
-    ?? readIfOfficial(input)
-    ?? { ...OFFICIAL_RUNTIME };
+  return readIfProductionData(installed)
+    ?? readIfProductionData(input)
+    ?? { ...PRODUCTION_DATA_RUNTIME };
 }
 
 export function installPlatformRuntime(runtime: PlatformRuntime): void {
-  const official = assertOfficialRuntime(runtime);
-  if (typeof window !== "undefined") window.__APE_PLATFORM_RUNTIME__ = official;
+  const production = assertProductionDataRuntime(runtime);
+  if (typeof window !== "undefined") window.__APE_PLATFORM_RUNTIME__ = production;
 }
 
 export function readPlatformRuntime(): PlatformRuntime {

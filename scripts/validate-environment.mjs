@@ -60,7 +60,7 @@ function validateProjectUrl(value, projectId, label) {
     const parsedUrl = new URL(value);
     const expectedHost = `${projectId}.supabase.co`;
     if (parsedUrl.protocol !== "https:") errors.push(`${label} deve usar HTTPS.`);
-    if (parsedUrl.hostname !== expectedHost) errors.push(`${label} não corresponde ao project ref oficial.`);
+    if (parsedUrl.hostname !== expectedHost) errors.push(`${label} não corresponde ao project ref informado.`);
     if (parsedUrl.pathname !== "/" && parsedUrl.pathname !== "") errors.push(`${label} deve apontar para a raiz do projeto.`);
   } catch {
     errors.push(`${label} não é uma URL válida.`);
@@ -75,42 +75,33 @@ const platformRuntimeSource = readText("src/integrations/supabase/platformRuntim
 const runtimeBootstrapSource = readText("src/integrations/supabase/runtimeBootstrap.ts") ?? "";
 const runtimeFunctionSource = readText("supabase/functions/app-public-config/index.ts") ?? "";
 
-const configProjectId = configSource.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
-if (!configProjectId) errors.push("supabase/config.toml não declara project_id.");
-else if (!/^[a-z]{20}$/.test(configProjectId)) errors.push("project_id não possui o formato esperado de project ref.");
+const managedProjectId = configSource.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1];
+if (!managedProjectId) errors.push("supabase/config.toml não declara project_id.");
+else if (!/^[a-z]{20}$/.test(managedProjectId)) errors.push("project_id não possui o formato esperado de project ref.");
 
-const runtimeProjectId = platformRuntimeSource.match(/OFFICIAL_SUPABASE_PROJECT_ID\s*=\s*"([a-z]{20})"/)?.[1];
-if (!runtimeProjectId) {
-  errors.push("platformRuntime.ts não declara o projeto Supabase oficial.");
-} else if (configProjectId && runtimeProjectId !== configProjectId) {
-  errors.push("O runtime aponta para outro projeto Supabase.");
-}
+const runtimeManagedProjectId = platformRuntimeSource.match(/MANAGED_SUPABASE_PROJECT_ID\s*=\s*"([a-z]{20})"/)?.[1];
+const productionDataProjectId = platformRuntimeSource.match(/PRODUCTION_DATA_PROJECT_ID\s*=\s*"([a-z]{20})"/)?.[1];
+
+if (!runtimeManagedProjectId) errors.push("platformRuntime.ts não declara o projeto administrado.");
+else if (managedProjectId && runtimeManagedProjectId !== managedProjectId) errors.push("O projeto administrado do runtime diverge de supabase/config.toml.");
+
+if (!productionDataProjectId) errors.push("platformRuntime.ts não declara o backend de dados em produção.");
+else if (productionDataProjectId === managedProjectId) errors.push("A separação temporária de projetos não foi representada corretamente.");
 
 if (!runtimeBootstrapSource.includes("/functions/v1/app-public-config")) {
   errors.push("runtimeBootstrap.ts não declara o endpoint público app-public-config.");
 }
 if (!clientSource.includes("readPlatformRuntime")) {
-  errors.push("O cliente Supabase não usa o runtime validado.");
+  errors.push("O cliente Supabase não usa o runtime selecionado.");
 }
 if (!platformRuntimeSource.includes("__APE_PLATFORM_RUNTIME__")) {
   errors.push("platformRuntime.ts não aceita configuração instalada.");
 }
-if (!platformRuntimeSource.includes("assertOfficialRuntime")) {
-  errors.push("platformRuntime.ts não valida a identidade do projeto oficial.");
+if (!platformRuntimeSource.includes("assertProductionDataRuntime")) {
+  errors.push("platformRuntime.ts não valida o backend de dados em produção.");
 }
-if (!platformRuntimeSource.includes("configuração oficial")) {
-  errors.push("platformRuntime.ts não falha fechado quando a configuração está ausente.");
-}
-
-const retiredProjectIds = ["ymahldldyxvwjeruaxpr"];
-for (const retiredId of retiredProjectIds) {
-  for (const [path, source] of [
-    ["src/integrations/supabase/client.ts", clientSource],
-    ["src/integrations/supabase/platformRuntime.ts", platformRuntimeSource],
-    ["src/integrations/supabase/runtimeBootstrap.ts", runtimeBootstrapSource],
-  ]) {
-    if (source.includes(retiredId)) errors.push(`${path} ainda referencia o projeto Supabase aposentado.`);
-  }
+if (!platformRuntimeSource.includes("PRODUCTION_DATA_RUNTIME")) {
+  errors.push("platformRuntime.ts não possui fallback para os dados existentes.");
 }
 
 const runtimeSection = configSource.match(/\[functions\.app-public-config\]([\s\S]*?)(?=\n\[|$)/)?.[1];
@@ -135,16 +126,22 @@ const suppliedEnv = {
 };
 const suppliedCount = Object.values(suppliedEnv).filter(Boolean).length;
 if (suppliedCount > 0 && suppliedCount < 3) errors.push("As variáveis VITE_SUPABASE_* devem ser fornecidas como um conjunto completo.");
-if (suppliedCount === 3 && configProjectId) {
-  if (suppliedEnv.projectId !== configProjectId) errors.push("VITE_SUPABASE_PROJECT_ID não corresponde ao projeto oficial.");
-  validateProjectUrl(suppliedEnv.url, configProjectId, "VITE_SUPABASE_URL");
-  validatePublicValue(suppliedEnv.publicValue, configProjectId, "VITE_SUPABASE_PUBLISHABLE_KEY");
+if (suppliedCount === 3) {
+  const allowedProjects = new Set([managedProjectId, productionDataProjectId].filter(Boolean));
+  if (!allowedProjects.has(suppliedEnv.projectId)) {
+    errors.push("VITE_SUPABASE_PROJECT_ID não corresponde a nenhum projeto conhecido do App Piteco.");
+  }
+  validateProjectUrl(suppliedEnv.url, suppliedEnv.projectId, "VITE_SUPABASE_URL");
+  validatePublicValue(suppliedEnv.publicValue, suppliedEnv.projectId, "VITE_SUPABASE_PUBLISHABLE_KEY");
+  if (suppliedEnv.projectId === managedProjectId) {
+    warnings.push("O ambiente injeta o projeto administrado vazio; o frontend usará o backend de dados em produção.");
+  }
 }
 
 if (envSource) warnings.push("A .env versionada ainda existe. Prefira variáveis públicas da plataforma.");
-else warnings.push("Nenhuma credencial privada fica versionada; o runtime aceita somente o projeto oficial.");
+warnings.push(`Transição ativa: projeto administrado ${managedProjectId}; dados de produção ${productionDataProjectId}.`);
 
 for (const warning of warnings) console.warn(`AVISO: ${warning}`);
 for (const error of errors) console.error(`ERRO: ${error}`);
 if (errors.length > 0) process.exit(1);
-console.log(`Contrato de ambiente válido para o projeto ${configProjectId}.`);
+console.log(`Contrato de ambiente válido: gestão ${managedProjectId}, dados ${productionDataProjectId}.`);
