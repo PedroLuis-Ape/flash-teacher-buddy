@@ -1,12 +1,13 @@
 import {
-  OFFICIAL_RUNTIME,
-  OFFICIAL_SUPABASE_PROJECT_ID,
-  OFFICIAL_SUPABASE_URL,
+  MANAGED_SUPABASE_PROJECT_ID,
+  PRODUCTION_DATA_PROJECT_ID,
+  PRODUCTION_DATA_RUNTIME,
+  PRODUCTION_DATA_URL,
   type PlatformRuntime,
 } from "./platformRuntime";
 
-export { OFFICIAL_SUPABASE_PROJECT_ID } from "./platformRuntime";
-export const OFFICIAL_RUNTIME_ENDPOINT = `${OFFICIAL_SUPABASE_URL}/functions/v1/app-public-config`;
+export { MANAGED_SUPABASE_PROJECT_ID, PRODUCTION_DATA_PROJECT_ID } from "./platformRuntime";
+export const OFFICIAL_RUNTIME_ENDPOINT = `https://${MANAGED_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/app-public-config`;
 
 function normalize(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -28,11 +29,11 @@ export function validateOfficialRuntime(value: unknown): PlatformRuntime {
 
   const parsedUrl = new URL(url);
   if (
-    projectId !== OFFICIAL_SUPABASE_PROJECT_ID
+    projectId !== PRODUCTION_DATA_PROJECT_ID
     || parsedUrl.protocol !== "https:"
-    || parsedUrl.hostname !== `${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`
+    || parsedUrl.hostname !== `${PRODUCTION_DATA_PROJECT_ID}.supabase.co`
   ) {
-    throw new Error("O aplicativo tentou conectar a um projeto Supabase diferente do projeto oficial.");
+    throw new Error("A configuração não aponta para o backend de dados em produção.");
   }
 
   return { projectId, url, publicValue };
@@ -48,7 +49,10 @@ export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
   try {
     return validateOfficialRuntime(injected);
   } catch (error) {
-    console.warn("[RuntimeBootstrap] Ambiente injetado inválido; usando configuração oficial.", error);
-    return { ...OFFICIAL_RUNTIME };
+    console.warn("[RuntimeBootstrap] Ambiente injetado não contém os dados atuais; usando o backend de produção.", error);
+    return {
+      ...PRODUCTION_DATA_RUNTIME,
+      url: PRODUCTION_DATA_URL,
+    };
   }
 }
