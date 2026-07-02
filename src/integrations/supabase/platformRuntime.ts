@@ -18,6 +18,13 @@ declare global {
 
 export const OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
 export const OFFICIAL_SUPABASE_URL = `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`;
+export const OFFICIAL_SUPABASE_PUBLIC_VALUE = "sb_publishable_w2P1WAWgbZy7_RI_vu2AvA_kuEmvp5O";
+
+export const OFFICIAL_RUNTIME: PlatformRuntime = Object.freeze({
+  projectId: OFFICIAL_SUPABASE_PROJECT_ID,
+  url: OFFICIAL_SUPABASE_URL,
+  publicValue: OFFICIAL_SUPABASE_PUBLIC_VALUE,
+});
 
 function normalize(value: string | undefined): string | undefined {
   const result = value?.trim();
@@ -44,6 +51,17 @@ function assertOfficialRuntime(runtime: PlatformRuntime): PlatformRuntime {
   return { ...runtime, projectId };
 }
 
+function readIfOfficial(input: PlatformRuntimeInput | undefined): PlatformRuntime | null {
+  const runtime = completeRuntime(input);
+  if (!runtime) return null;
+  try {
+    return assertOfficialRuntime(runtime);
+  } catch (error) {
+    console.warn("[PlatformRuntime] Configuração externa ignorada; usando o projeto oficial.", error);
+    return null;
+  }
+}
+
 export function resolvePlatformRuntime(
   input: PlatformRuntimeInput,
   testMode = false,
@@ -57,11 +75,9 @@ export function resolvePlatformRuntime(
     };
   }
 
-  const runtime = completeRuntime(installed) ?? completeRuntime(input);
-  if (!runtime) {
-    throw new Error("A configuração oficial do App Piteco não está disponível.");
-  }
-  return assertOfficialRuntime(runtime);
+  return readIfOfficial(installed)
+    ?? readIfOfficial(input)
+    ?? { ...OFFICIAL_RUNTIME };
 }
 
 export function installPlatformRuntime(runtime: PlatformRuntime): void {
