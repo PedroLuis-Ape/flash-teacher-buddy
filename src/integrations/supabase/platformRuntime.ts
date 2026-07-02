@@ -57,7 +57,7 @@ function readIfOfficial(input: PlatformRuntimeInput | undefined): PlatformRuntim
   try {
     return assertOfficialRuntime(runtime);
   } catch (error) {
-    console.warn("[PlatformRuntime] Configuração externa ignorada; usando o projeto oficial.", error);
+    console.warn("[PlatformRuntime] Configuração externa ignorada; usando a configuração oficial.", error);
     return null;
   }
 }
