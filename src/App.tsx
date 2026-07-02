@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -93,6 +93,11 @@ function PublicListGamesRoute() {
       <GamesHub />
     </ListDirectionGate>
   );
+}
+
+function LegacyTeacherFoldersRoute() {
+  const { teacherId } = useParams<{ teacherId: string }>();
+  return <Navigate to={teacherId ? `/professores/${teacherId}` : "/my-teachers"} replace />;
 }
 
 const queryClient = new QueryClient({
@@ -192,6 +197,7 @@ const App = () => {
                           <Route path="/professor/alunos" element={<MeusAlunos />} />
                           <Route path="/professor/alunos/:alunoId" element={<AlunoProfile />} />
                           <Route path="/professores/:professorId" element={<ProfessorProfile />} />
+                          <Route path="/teacher/:teacherId/folders" element={<LegacyTeacherFoldersRoute />} />
                           <Route path="/my-teachers" element={<MyTeachers />} />
                           <Route path="/painel-professor" element={<PainelProfessor />} />
                           <Route path="/settings/public-profile" element={<PublicProfileSettings />} />
