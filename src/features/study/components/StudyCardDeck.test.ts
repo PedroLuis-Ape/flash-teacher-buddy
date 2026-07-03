@@ -1,5 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { resolveDeckSwipe, resolveFlightRenderMode } from "./StudyCardDeck";
+import {
+  resolveDeckSwipe,
+  resolveFlightRenderMode,
+  shouldTrackDeckTouch,
+} from "./StudyCardDeck";
+
+describe("shouldTrackDeckTouch", () => {
+  it("tracks only one non-interactive touch when card navigation is available", () => {
+    expect(shouldTrackDeckTouch({
+      hasNavigation: true,
+      touchCount: 1,
+      interactive: false,
+    })).toBe(true);
+
+    expect(shouldTrackDeckTouch({
+      hasNavigation: false,
+      touchCount: 1,
+      interactive: false,
+    })).toBe(false);
+
+    expect(shouldTrackDeckTouch({
+      hasNavigation: true,
+      touchCount: 2,
+      interactive: false,
+    })).toBe(false);
+
+    expect(shouldTrackDeckTouch({
+      hasNavigation: true,
+      touchCount: 1,
+      interactive: true,
+    })).toBe(false);
+  });
+});
 
 describe("resolveDeckSwipe", () => {
   it("moves left to the next card when allowed", () => {
@@ -32,6 +64,16 @@ describe("resolveDeckSwipe", () => {
         dx: -30,
         dy: 110,
         elapsedMs: 180,
+        canGoNext: true,
+        canGoPrevious: true,
+      }),
+    ).toBeNull();
+
+    expect(
+      resolveDeckSwipe({
+        dx: -20,
+        dy: 2,
+        elapsedMs: 150,
         canGoNext: true,
         canGoPrevious: true,
       }),
