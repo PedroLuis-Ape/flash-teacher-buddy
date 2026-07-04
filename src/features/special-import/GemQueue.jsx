@@ -90,7 +90,7 @@ export default function GemQueue() {
         <p className="text-xs text-muted-foreground sm:text-sm">Crie explicações detalhadas com IA</p>
       </div>
       <Badge variant="secondary" className="hidden sm:inline-flex">{cards.length} na fila</Badge>
-      <Button onClick={() => setImportOpen(true)} size="sm" className="shrink-0 sm:size-default"><Upload className="mr-1.5 h-4 w-4" />Importar</Button>
+      <Button onClick={() => setImportOpen(true)} size="sm" className="shrink-0"><Upload className="mr-1.5 h-4 w-4" />Importar</Button>
     </div>
 
     <Card className="mb-4 border-sky-200 bg-gradient-to-br from-sky-50 via-background to-violet-50 p-3 dark:border-sky-900 dark:from-sky-950/20 dark:to-violet-950/20 sm:mb-6 sm:p-5">
@@ -119,7 +119,7 @@ export default function GemQueue() {
         />
         <span className="mr-auto text-sm font-medium">{selected.size} de {cards.length}</span>
         <Button variant="outline" size="sm" onClick={() => exportTarget(chosen)} disabled={!chosen.length}>
-          <FileSpreadsheet className="mr-1 h-4 w-4" /><span className="hidden xs:inline">Selecionados</span><span className="xs:hidden">Sel.</span>
+          <FileSpreadsheet className="mr-1 h-4 w-4" />Selecionados
         </Button>
         <Button size="sm" onClick={() => exportTarget(cards)}><Download className="mr-1 h-4 w-4" />Todos</Button>
       </div>
