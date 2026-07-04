@@ -20,10 +20,11 @@ import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 const AUTO_PLAY_DELAY_MS = 7000;
 
 function oppositeAutoPlaySide(side: FlipAutoPlaySide): FlipAutoPlaySide {
-  return side === "first" ? "second" : "first";
+  return side === "a" ? "b" : "a";
 }
 
 type ResolvedSide = { text: string; lang: string; label: string };
+type RenderedSide = "first" | "second";
 
 interface SidePanelProps {
   side: ResolvedSide;
@@ -189,6 +190,11 @@ export const FlipStudyView = ({
   const firstSideLang = toBCP47(firstSide.lang);
   const secondSideLang = toBCP47(secondSide.lang);
 
+  const fixedSideToRenderedSide = useCallback((side: FlipAutoPlaySide): RenderedSide => {
+    if (side === "a") return isAFirst ? "first" : "second";
+    return isAFirst ? "second" : "first";
+  }, [isAFirst]);
+
   const clearAutoPlayTimeout = useCallback(() => {
     if (!autoPlayTimeoutRef.current) return;
     clearTimeout(autoPlayTimeoutRef.current);
@@ -197,15 +203,14 @@ export const FlipStudyView = ({
 
   const speakSide = useCallback((side: FlipAutoPlaySide) => {
     const rate = getSpeechRate();
-    const text = side === "first" ? firstSide.text : secondSide.text;
-    const lang = side === "first" ? firstSideLang : secondSideLang;
-    if (!fastMode) setIsFlipped(side === "second");
-    if (ttsEnabled) speak(text, { langOverride: lang, rate });
+    const fixedSide = side === "a" ? sideA : sideB;
+    if (!fastMode) setIsFlipped(fixedSideToRenderedSide(side) === "second");
+    if (ttsEnabled) speak(fixedSide.text, { langOverride: toBCP47(fixedSide.lang), rate });
     else stop();
-  }, [fastMode, firstSide.text, firstSideLang, secondSide.text, secondSideLang, speak, stop, ttsEnabled]);
+  }, [fastMode, fixedSideToRenderedSide, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
 
-  const handlePlayTop = () => speakSide("first");
-  const handlePlayBottom = () => speakSide("second");
+  const handlePlayTop = () => speakSide(isAFirst ? "a" : "b");
+  const handlePlayBottom = () => speakSide(isAFirst ? "b" : "a");
 
   const handleFlip = () => {
     if (fastMode) return;
@@ -236,7 +241,7 @@ export const FlipStudyView = ({
     writeFlipAutoPlayState(next, autoPlaySide);
     if (next) {
       setAutoPlayCurrentSide(autoPlaySide);
-      if (!fastMode) setIsFlipped(autoPlaySide === "second");
+      if (!fastMode) setIsFlipped(fixedSideToRenderedSide(autoPlaySide) === "second");
     } else {
       clearAutoPlayTimeout();
       stop();
@@ -247,7 +252,7 @@ export const FlipStudyView = ({
     setAutoPlaySide(side);
     setAutoPlayCurrentSide(side);
     writeFlipAutoPlayState(isAutoPlaying, side);
-    if (!fastMode) setIsFlipped(side === "second");
+    if (!fastMode) setIsFlipped(fixedSideToRenderedSide(side) === "second");
   };
 
   const onCardTouchStart = (e: React.TouchEvent) => {
@@ -275,8 +280,8 @@ export const FlipStudyView = ({
 
   useEffect(() => {
     setAutoPlayCurrentSide(autoPlaySide);
-    setIsFlipped(isAutoPlaying && autoPlaySide === "second");
-  }, [front, back, isAutoPlaying, autoPlaySide]);
+    setIsFlipped(isAutoPlaying && fixedSideToRenderedSide(autoPlaySide) === "second");
+  }, [front, back, isAutoPlaying, autoPlaySide, fixedSideToRenderedSide]);
 
   useEffect(() => {
     writeFlipAutoPlayState(isAutoPlaying, autoPlaySide);
@@ -380,26 +385,26 @@ export const FlipStudyView = ({
         <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[260px]">
           <Button
             type="button"
-            variant={autoPlaySide === "first" ? "default" : "outline"}
+            variant={autoPlaySide === "a" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleAutoPlaySideChange("first")}
+            onClick={() => handleAutoPlaySideChange("a")}
             className="h-10 min-w-0 px-2 text-xs sm:text-sm"
           >
-            <span className="truncate">Começar em {firstSide.label}</span>
+            <span className="truncate">Começar em {sideA.label}</span>
           </Button>
           <Button
             type="button"
-            variant={autoPlaySide === "second" ? "default" : "outline"}
+            variant={autoPlaySide === "b" ? "default" : "outline"}
             size="sm"
-            onClick={() => handleAutoPlaySideChange("second")}
+            onClick={() => handleAutoPlaySideChange("b")}
             className="h-10 min-w-0 px-2 text-xs sm:text-sm"
           >
-            <span className="truncate">Começar em {secondSide.label}</span>
+            <span className="truncate">Começar em {sideB.label}</span>
           </Button>
         </div>
       </div>
       <p className="mt-2 text-center text-[11px] leading-snug text-muted-foreground">
-        A cada 7s: lado escolhido → resposta → próximo card {ttsEnabled ? "• áudio automático" : "• TTS desligado nesta lista"}
+        A cada 7s: lado escolhido → outro lado → próximo card {ttsEnabled ? "• áudio automático" : "• TTS desligado nesta lista"}
       </p>
     </div>
   );
