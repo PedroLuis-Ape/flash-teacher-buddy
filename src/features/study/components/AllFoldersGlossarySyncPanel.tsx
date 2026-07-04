@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderSync, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,13 @@ export function AllFoldersGlossarySyncPanel() {
   const queryClient = useQueryClient();
   const [includeCards, setIncludeCards] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [statusRevision, setStatusRevision] = useState(0);
+
+  useEffect(() => {
+    const bump = () => setStatusRevision((value) => value + 1);
+    window.addEventListener("focus", bump);
+    return () => window.removeEventListener("focus", bump);
+  }, []);
 
   const foldersQuery = useQuery({
     queryKey: ["glossary-sync-personal-folders"],
@@ -54,6 +61,7 @@ export function AllFoldersGlossarySyncPanel() {
     }
     await queryClient.invalidateQueries({ queryKey: ACCOUNT_GLOSSARY_QUERY_KEY });
     setBusy(false);
+    setStatusRevision((value) => value + 1);
     if (failed > 0) toast.error(`${failed} pasta(s) falharam; ${inserted} entrada(s) foram adicionadas nas demais.`);
     else toast.success(`Todas as pastas foram sincronizadas: ${inserted} nova(s), ${skipped} já existente(s).`);
   };
@@ -88,6 +96,8 @@ export function AllFoldersGlossarySyncPanel() {
 
           <div className="space-y-2">
             {(foldersQuery.data ?? []).map((folder) => {
+              // statusRevision forces a re-read after syncs complete.
+              void statusRevision;
               const status = readFolderGlossarySyncStatus(folder.id);
               return (
                 <div key={folder.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/40 p-2">
