@@ -78,6 +78,7 @@ const SpecialCards = lazy(() => import("./pages/SpecialCards"));
 const SystemStatus = lazy(() => import("./pages/SystemStatus"));
 const Glossary = lazy(() => import("./pages/Glossary"));
 const BugReport = lazy(() => import("./pages/BugReport"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 function PublicListGamesRoute() {
   const [searchParams] = useSearchParams();
@@ -151,6 +152,7 @@ const App = () => {
                           <Route path="/en/about" element={<InternationalSEOPage />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/auth/callback" element={<AuthCallback />} />
+                          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/folders" element={<Folders />} />
                           <Route path="/glossary" element={<Glossary />} />
