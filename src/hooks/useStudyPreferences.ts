@@ -43,6 +43,20 @@ function storageKey(userId: string | undefined): string {
   return userId ? `studyPreferences:${userId}` : "studyPreferences:anon";
 }
 
+function notifyDirectionUrlChange(direction: Direction): void {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set("dir", direction);
+    url.searchParams.delete("direction");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+    window.dispatchEvent(new Event("popstate"));
+  } catch {
+    // URL sync is only a stability helper.
+  }
+}
+
 /**
  * Load preferences from localStorage, but let current URL params win
  * for mode/direction/order/favorites so links like ?mode=write always work.
@@ -160,6 +174,9 @@ export function useStudyPreferences(userId: string | undefined) {
   }, [prefs]);
 
   const updatePrefs = useCallback((partial: Partial<StudyPreferences>) => {
+    if (partial.direction && ["a-b", "b-a", "any"].includes(partial.direction)) {
+      notifyDirectionUrlChange(partial.direction);
+    }
     setPrefsState(prev => ({ ...prev, ...partial }));
   }, []);
 
