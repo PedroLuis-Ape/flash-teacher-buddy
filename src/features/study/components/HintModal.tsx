@@ -23,6 +23,14 @@ function shouldUseDesktopSidePanel(): boolean {
   return window.matchMedia(DESKTOP_PANEL_QUERY).matches;
 }
 
+function hasDetailedContentMarker(hint?: string | null): boolean {
+  return Boolean(
+    hint?.includes("**Explicação detalhada**")
+      || hint?.includes("**Quando usar**")
+      || hint?.includes("**Erros comuns**"),
+  );
+}
+
 /**
  * Lightweight markdown renderer for hint text.
  * Supports:
@@ -78,22 +86,18 @@ const renderHintBody = (raw: string): React.ReactNode => {
 };
 
 export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
-  const useDesktopSidePanel = isOpen && shouldUseDesktopSidePanel();
+  const hasDetailedExplanation = hasDetailedContentMarker(hint);
+  const useDesktopSidePanel = isOpen && hasDetailedExplanation && shouldUseDesktopSidePanel();
 
   React.useEffect(() => {
-    if (!isOpen || !shouldUseDesktopSidePanel()) return;
+    if (!isOpen || !hasDetailedExplanation || !shouldUseDesktopSidePanel()) return;
     requestDetailedExplanationPanelToggle();
     onClose();
-  }, [isOpen, onClose]);
+  }, [hasDetailedExplanation, isOpen, onClose]);
 
   if (!isOpen || useDesktopSidePanel) return null;
 
   const hasHint = Boolean(hint && hint.trim().length > 0);
-  const hasDetailedExplanation = Boolean(
-    hint?.includes("**Explicação detalhada**")
-      || hint?.includes("**Quando usar**")
-      || hint?.includes("**Erros comuns**"),
-  );
   const title = hasHint
     ? hasDetailedExplanation ? "Dica e explicação" : "Dica"
     : "Sem dica";
