@@ -1,4 +1,4 @@
-export type FlipAutoPlaySide = "first" | "second";
+export type FlipAutoPlaySide = "a" | "b";
 
 const RESTORE_TTL_MS = 3000;
 
@@ -9,7 +9,7 @@ let memoryState: {
   updatedAt: number;
 } = {
   enabled: false,
-  side: "first",
+  side: "a",
   path: "",
   updatedAt: 0,
 };
