@@ -7,11 +7,18 @@
 }
 
 .study-explanation-panel {
+  --study-panel-width: clamp(340px, 22vw, 430px);
+
   pointer-events: auto;
   position: fixed;
   top: 5rem;
-  left: max(1rem, calc((100vw - 1180px) / 2));
-  width: min(420px, calc(100vw - 2rem));
+  /*
+   * Keep the panel in the desktop side gutter instead of floating over the
+   * study card. The study content is usually centered; this formula anchors
+   * the explanation panel to the free space to the left of that center column.
+   */
+  left: max(6.5rem, calc(50vw - 54rem));
+  width: var(--study-panel-width);
   max-height: calc(100dvh - 7rem);
   overflow: hidden;
   border: 1px solid hsl(var(--border) / 0.8);
@@ -39,10 +46,25 @@
   }
 }
 
-@media (min-width: 1280px) and (max-width: 1535px) {
+@media (min-width: 1280px) and (max-width: 1439px) {
   .study-explanation-panel {
-    width: min(360px, calc(100vw - 2rem));
+    --study-panel-width: 320px;
+    top: 4.5rem;
     left: 1rem;
+    max-height: calc(100dvh - 6rem);
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1799px) {
+  .study-explanation-panel {
+    --study-panel-width: 360px;
+    left: max(5.75rem, calc(50vw - 44rem));
+  }
+}
+
+@media (min-width: 1800px) {
+  .study-explanation-panel {
+    left: max(7rem, calc(50vw - 50rem));
   }
 }
 
