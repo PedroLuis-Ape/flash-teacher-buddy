@@ -28,7 +28,6 @@ export const SPECIAL_CSV_HEADERS = [
   "term",
   "translation",
   "focus_text",
-  "focus_side",
   "focus_tag",
   "focus_note",
   "detailed_explanation",
