@@ -16,8 +16,9 @@ import { ImageCard } from "./ImageCard";
 import { InteractiveText } from "./InteractiveText";
 import { getRedListCardClass } from "./RedListIndicator";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import "./flipStudyMobileCompact.css";
 
-const AUTO_PLAY_DELAY_MS = 7000;
+const AUTO_PLAY_DELAY_MS = 5000;
 
 function oppositeAutoPlaySide(side: FlipAutoPlaySide): FlipAutoPlaySide {
   return side === "a" ? "b" : "a";
@@ -54,12 +55,12 @@ function SidePanel({
   return (
     <div
       className={cn(
-        "flex h-full flex-col items-center justify-center overflow-auto p-4 sm:p-6",
+        "flex h-full flex-col items-center justify-center overflow-auto p-3 sm:p-6",
         accent ? "bg-gradient-to-br from-primary/10 to-accent/10" : "bg-gradient-to-br from-card to-muted/20",
       )}
     >
-      <div className="mb-2 flex items-center gap-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground sm:text-sm">{side.label}</p>
+      <div className="mb-1 flex items-center gap-2 sm:mb-2">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground sm:text-sm">{side.label}</p>
         {ttsEnabled && (
           <Button
             variant="ghost"
@@ -84,7 +85,7 @@ function SidePanel({
         <p
           className={cn(
             "px-2 text-center font-semibold leading-relaxed sm:px-4",
-            compact ? "text-xl sm:text-2xl" : "text-xl sm:text-3xl",
+            compact ? "text-xl sm:text-2xl" : "text-lg sm:text-3xl",
             accent && "text-primary",
           )}
           style={{ wordBreak: "normal", overflowWrap: "normal" }}
@@ -99,7 +100,7 @@ function SidePanel({
         </p>
       </ScrollArea>
 
-      {showRevealHint && <p className="mt-4 text-xs text-muted-foreground/70">Clique para revelar</p>}
+      {showRevealHint && <p className="mt-3 text-[10px] text-muted-foreground/70 sm:mt-4 sm:text-xs">Clique para revelar</p>}
     </div>
   );
 }
@@ -369,26 +370,26 @@ export const FlipStudyView = ({
   }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
 
   const autoPlayControls = (
-    <div className="w-full rounded-2xl border bg-card/80 p-2.5 shadow-sm sm:p-3" data-no-card-swipe="true">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flip-autoplay-controls w-full rounded-xl border bg-card/80 p-2 shadow-sm sm:rounded-2xl sm:p-3" data-no-card-swipe="true">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
         <Button
           type="button"
           variant={isAutoPlaying ? "secondary" : "default"}
           size="sm"
           onClick={handleToggleAutoPlay}
-          className="h-11 w-full font-semibold sm:w-auto sm:min-w-[132px]"
+          className="h-10 w-full font-semibold sm:h-11 sm:w-auto sm:min-w-[132px]"
           aria-pressed={isAutoPlaying}
         >
           {isAutoPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
           {isAutoPlaying ? "Pausar" : "Play"}
         </Button>
-        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[260px]">
+        <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:min-w-[260px] sm:gap-2" data-autoplay-side-options="true">
           <Button
             type="button"
             variant={autoPlaySide === "a" ? "default" : "outline"}
             size="sm"
             onClick={() => handleAutoPlaySideChange("a")}
-            className="h-10 min-w-0 px-2 text-xs sm:text-sm"
+            className="h-9 min-w-0 px-2 text-[11px] sm:h-10 sm:text-sm"
           >
             <span className="truncate">Começar em {sideA.label}</span>
           </Button>
@@ -397,15 +398,12 @@ export const FlipStudyView = ({
             variant={autoPlaySide === "b" ? "default" : "outline"}
             size="sm"
             onClick={() => handleAutoPlaySideChange("b")}
-            className="h-10 min-w-0 px-2 text-xs sm:text-sm"
+            className="h-9 min-w-0 px-2 text-[11px] sm:h-10 sm:text-sm"
           >
             <span className="truncate">Começar em {sideB.label}</span>
           </Button>
         </div>
       </div>
-      <p className="mt-2 text-center text-[11px] leading-snug text-muted-foreground">
-        A cada 7s: lado escolhido → outro lado → próximo card {ttsEnabled ? "• áudio automático" : "• TTS desligado nesta lista"}
-      </p>
     </div>
   );
 
@@ -422,12 +420,12 @@ export const FlipStudyView = ({
   );
 
   const actionButtons = (
-    <div className="flex w-full flex-row flex-wrap justify-center gap-3">
-      <Button variant="destructive" size="lg" onClick={handleDidntKnow} className="min-w-[140px] flex-1">
+    <div className="flip-action-buttons flex w-full flex-row flex-wrap justify-center gap-2 sm:gap-3">
+      <Button variant="destructive" size="lg" onClick={handleDidntKnow} className="min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base">
         <RotateCcw className="mr-2 h-5 w-5" />
         Não Sabia
       </Button>
-      <Button variant="default" size="lg" onClick={handleKnew} className="min-w-[140px] flex-1">
+      <Button variant="default" size="lg" onClick={handleKnew} className="min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base">
         <Check className="mr-2 h-5 w-5" />
         Sabia
       </Button>
@@ -435,19 +433,19 @@ export const FlipStudyView = ({
   );
 
   const navigationButtons = (
-    <div className="flex items-center justify-center gap-8">
-      <Button variant="ghost" size="icon" onClick={onPrevious} disabled={!canGoPrevious} className="h-12 w-12" title="Card anterior (←)">
-        <ChevronLeft className="h-6 w-6" />
+    <div className="flip-navigation-buttons flex items-center justify-center gap-5 sm:gap-8">
+      <Button variant="ghost" size="icon" onClick={onPrevious} disabled={!canGoPrevious} className="h-10 w-10 sm:h-12 sm:w-12" title="Card anterior (←)">
+        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-12 w-12" title="Próximo card (→)">
-        <ChevronRight className="h-6 w-6" />
+      <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-10 w-10 sm:h-12 sm:w-12" title="Próximo card (→)">
+        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
     </div>
   );
 
   if (fastMode) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4">
+      <div className="flip-study-mobile-compact mx-auto flex w-full max-w-2xl flex-col items-center gap-3 sm:gap-4">
         {autoPlayControls}
         <Card className={cn("relative w-full overflow-hidden", getRedListCardClass(isRedListed))}>
           <div className="absolute right-2 top-2 z-10">{toolsButton}</div>
@@ -458,16 +456,16 @@ export const FlipStudyView = ({
         </Card>
         {navigationButtons}
         {actionButtons}
-        <p className="text-center text-xs text-muted-foreground">← → navegar • Espaço avançar • Enter ouvir áudio</p>
+        <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço avançar • Enter ouvir áudio</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 sm:gap-6">
+    <div className="flip-study-mobile-compact mx-auto flex w-full max-w-2xl flex-col items-center gap-3 sm:gap-6">
       {autoPlayControls}
       <div
-        className={cn("flip-card relative h-64 w-full cursor-pointer sm:h-80", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
+        className={cn("flip-card relative h-60 w-full cursor-pointer sm:h-80", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
         onClick={handleCardClick}
         onTouchStart={onCardTouchStart}
         onTouchEnd={onCardTouchEnd}
@@ -489,7 +487,7 @@ export const FlipStudyView = ({
       </div>
       {navigationButtons}
       {isFlipped && <div className="w-full animate-fade-in">{actionButtons}</div>}
-      <p className="text-center text-xs text-muted-foreground">← → navegar • Espaço virar/confirmar • Enter ouvir áudio</p>
+      <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço virar/confirmar • Enter ouvir áudio</p>
     </div>
   );
 };
