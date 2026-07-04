@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { takePendingSpecialFocusDraft } from '@/features/study/lib/specialFocusDraft';
 import type { SpecialFocusContext } from './useSpecialFlashcards';
 
 function emptyToNull(value: string | null | undefined): string | null {
@@ -26,7 +27,9 @@ function normalizeFocusContext(focus?: SpecialFocusContext | null) {
  * touch layer 1 or 3. The hook operates exclusively on `visibleLayerId`.
  *
  * When `focus` is provided, the same mutation also stores the pedagogical
- * context that will later guide the IA export.
+ * context that will later guide the IA export. If the caller is still using
+ * the old no-argument signature, a pending modal draft may be consumed from
+ * sessionStorage without changing the existing Study.tsx contract.
  */
 export function useSetSpecialLayer() {
   const qc = useQueryClient();
@@ -45,7 +48,10 @@ export function useSetSpecialLayer() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
-      if (!enable) {
+      const pendingFocus = focus ?? takePendingSpecialFocusDraft();
+      const shouldEnable = enable || Boolean(pendingFocus);
+
+      if (!shouldEnable) {
         const { error } = await supabase
           .from('user_special_flashcards' as any)
           .delete()
@@ -55,7 +61,7 @@ export function useSetSpecialLayer() {
         return { enabled: false, userId: user.id, hadFocus: false };
       }
 
-      const focusPayload = normalizeFocusContext(focus);
+      const focusPayload = normalizeFocusContext(pendingFocus);
       const { error } = await supabase
         .from('user_special_flashcards' as any)
         .upsert({
