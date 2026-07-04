@@ -18,7 +18,7 @@ import { getRedListCardClass } from "./RedListIndicator";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import "./flipStudyMobileCompact.css";
 
-const AUTO_PLAY_DELAY_MS = 5000;
+const AUTO_PLAY_DELAY_MS = 7000;
 
 function oppositeAutoPlaySide(side: FlipAutoPlaySide): FlipAutoPlaySide {
   return side === "a" ? "b" : "a";
@@ -202,6 +202,14 @@ export const FlipStudyView = ({
     autoPlayTimeoutRef.current = null;
   }, []);
 
+  const pauseAutoPlay = useCallback(() => {
+    if (!isAutoPlaying) return;
+    setIsAutoPlaying(false);
+    writeFlipAutoPlayState(false, autoPlaySide);
+    clearAutoPlayTimeout();
+    stop();
+  }, [autoPlaySide, clearAutoPlayTimeout, isAutoPlaying, stop]);
+
   const speakSide = useCallback((side: FlipAutoPlaySide) => {
     const rate = getSpeechRate();
     const fixedSide = side === "a" ? sideA : sideB;
@@ -210,10 +218,18 @@ export const FlipStudyView = ({
     else stop();
   }, [fastMode, fixedSideToRenderedSide, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
 
-  const handlePlayTop = () => speakSide(isAFirst ? "a" : "b");
-  const handlePlayBottom = () => speakSide(isAFirst ? "b" : "a");
+  const handlePlayTop = () => {
+    pauseAutoPlay();
+    speakSide(isAFirst ? "a" : "b");
+  };
+
+  const handlePlayBottom = () => {
+    pauseAutoPlay();
+    speakSide(isAFirst ? "b" : "a");
+  };
 
   const handleFlip = () => {
+    pauseAutoPlay();
     if (fastMode) return;
     setIsFlipped((value) => !value);
   };
@@ -227,11 +243,13 @@ export const FlipStudyView = ({
   };
 
   const handleKnew = () => {
+    pauseAutoPlay();
     playCorrect();
     onKnew();
   };
 
   const handleDidntKnow = () => {
+    pauseAutoPlay();
     playWrong();
     onDidntKnow();
   };
@@ -250,10 +268,26 @@ export const FlipStudyView = ({
   };
 
   const handleAutoPlaySideChange = (side: FlipAutoPlaySide) => {
+    pauseAutoPlay();
     setAutoPlaySide(side);
     setAutoPlayCurrentSide(side);
-    writeFlipAutoPlayState(isAutoPlaying, side);
+    writeFlipAutoPlayState(false, side);
     if (!fastMode) setIsFlipped(fixedSideToRenderedSide(side) === "second");
+  };
+
+  const handleNextCard = () => {
+    pauseAutoPlay();
+    if (onNext && canGoNext) onNext();
+  };
+
+  const handlePreviousCard = () => {
+    pauseAutoPlay();
+    if (onPrevious && canGoPrevious) onPrevious();
+  };
+
+  const handleToolInteraction = (action?: () => void) => {
+    pauseAutoPlay();
+    action?.();
   };
 
   const onCardTouchStart = (e: React.TouchEvent) => {
@@ -272,6 +306,7 @@ export const FlipStudyView = ({
     const elapsed = Date.now() - start.t;
     if (Math.abs(dx) < 60 || Math.abs(dy) > 80 || elapsed > 800) return;
     swipeConsumedRef.current = true;
+    pauseAutoPlay();
     if (dx < 0) {
       if (onNext && canGoNext) onNext();
     } else if (onPrevious && canGoPrevious) {
@@ -355,12 +390,12 @@ export const FlipStudyView = ({
       }
       if (k === nextKey && onNext && canGoNext) {
         e.preventDefault();
-        onNext();
+        handleNextCard();
         return;
       }
       if (k === prevKey && onPrevious && canGoPrevious) {
         e.preventDefault();
-        onPrevious();
+        handlePreviousCard();
       }
     };
 
@@ -411,11 +446,11 @@ export const FlipStudyView = ({
     <StudyToolsMenu
       hint={hint}
       isFavorite={isFavorite}
-      onToggleFavorite={onToggleFavorite}
+      onToggleFavorite={onToggleFavorite ? () => handleToolInteraction(onToggleFavorite) : undefined}
       isRedListed={isRedListed}
-      onToggleRedList={onToggleRedList}
+      onToggleRedList={onToggleRedList ? () => handleToolInteraction(onToggleRedList) : undefined}
       isSpecial={isSpecial}
-      onToggleSpecial={onToggleSpecial}
+      onToggleSpecial={onToggleSpecial ? () => handleToolInteraction(onToggleSpecial) : undefined}
     />
   );
 
@@ -434,10 +469,10 @@ export const FlipStudyView = ({
 
   const navigationButtons = (
     <div className="flip-navigation-buttons flex items-center justify-center gap-5 sm:gap-8">
-      <Button variant="ghost" size="icon" onClick={onPrevious} disabled={!canGoPrevious} className="h-10 w-10 sm:h-12 sm:w-12" title="Card anterior (←)">
+      <Button variant="ghost" size="icon" onClick={handlePreviousCard} disabled={!canGoPrevious} className="h-10 w-10 sm:h-12 sm:w-12" title="Card anterior (←)">
         <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={onNext} disabled={!canGoNext} className="h-10 w-10 sm:h-12 sm:w-12" title="Próximo card (→)">
+      <Button variant="ghost" size="icon" onClick={handleNextCard} disabled={!canGoNext} className="h-10 w-10 sm:h-12 sm:w-12" title="Próximo card (→)">
         <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
       </Button>
     </div>
