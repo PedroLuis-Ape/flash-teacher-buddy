@@ -8,11 +8,19 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { requestDetailedExplanationPanelToggle } from "@/features/study/lib/currentDetailedExplanation";
 
 interface HintModalProps {
   hint?: string | null;
   isOpen: boolean;
   onClose: () => void;
+}
+
+const DESKTOP_PANEL_QUERY = "(min-width: 1280px)";
+
+function shouldUseDesktopSidePanel(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia(DESKTOP_PANEL_QUERY).matches;
 }
 
 /**
@@ -70,7 +78,15 @@ const renderHintBody = (raw: string): React.ReactNode => {
 };
 
 export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
-  if (!isOpen) return null;
+  const useDesktopSidePanel = isOpen && shouldUseDesktopSidePanel();
+
+  React.useEffect(() => {
+    if (!isOpen || !shouldUseDesktopSidePanel()) return;
+    requestDetailedExplanationPanelToggle();
+    onClose();
+  }, [isOpen, onClose]);
+
+  if (!isOpen || useDesktopSidePanel) return null;
 
   const hasHint = Boolean(hint && hint.trim().length > 0);
   const hasDetailedExplanation = Boolean(
