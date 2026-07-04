@@ -20,6 +20,10 @@ export interface SpecialExportCard {
   is_layer: boolean;
   layer_number: number | null;
   list_title: string | null;
+  focus_text: string | null;
+  focus_side: string | null;
+  focus_tag: string | null;
+  focus_note: string | null;
 }
 
 export interface SpecialExportPackage {
@@ -60,6 +64,10 @@ function toExportCard(card: SpecialFlashcardDetail, index: number): SpecialExpor
     is_layer: card.parent_card_id != null || card.layer_index != null,
     layer_number: card.layer_index == null ? null : card.layer_index + 1,
     list_title: card.list_title,
+    focus_text: card.focus_text,
+    focus_side: card.focus_side,
+    focus_tag: card.focus_tag,
+    focus_note: card.focus_note || card.notes || null,
   };
 }
 
@@ -116,11 +124,13 @@ TAREFA
 Crie uma explicação didática para CADA card do objeto ENTRADA abaixo.
 
 REGRA DE FOCO PEDAGÓGICO
-- Se term for uma frase completa, identifique dentro dela a palavra, collocation, phrasal verb ou expressão mais específica e útil para o aluno compreender.
+- Cada card pode conter focus_text, focus_side, focus_tag e focus_note.
+- Se focus_text estiver preenchido, explique obrigatoriamente esse trecho como foco principal. Não escolha outro foco principal.
+- Se focus_tag estiver preenchido, use essa categoria para guiar a explicação: gramática, vocabulário, expressão, phrasal verb, pronúncia, tradução, uso natural ou outro.
+- Se focus_note estiver preenchido, responda diretamente à dificuldade descrita pelo professor/aluno.
+- Comece detailed_explanation exatamente com: Expressão-chave: <trecho exato do foco>
+- Se focus_text estiver vazio e term for uma frase completa, aí sim identifique dentro dela a palavra, collocation, phrasal verb ou expressão mais específica e útil para o aluno compreender.
 - Não explique a frase inteira palavra por palavra quando existir uma peça-chave mais relevante.
-- Comece detailed_explanation exatamente com: Expressão-chave: <trecho exato do card>
-- Depois explique principalmente essa peça-chave: significado, nuance, formação, contexto e diferenças de expressões parecidas.
-- Exemplo: em "The city announces sweeping new curbs", um foco provável é "sweeping new curbs".
 - Se o card já for uma palavra ou expressão curta, use o próprio term como expressão-chave.
 - Se is_layer for true, respeite somente o sentido daquela camada.
 
@@ -147,7 +157,7 @@ FORMATO DA RESPOSTA
     {
       "card_ref": "copiar exatamente da entrada",
       "flashcard_id": "copiar exatamente da entrada",
-      "detailed_explanation": "Expressão-chave: trecho exato do card\\n\\nExplicação completa",
+      "detailed_explanation": "Expressão-chave: trecho exato do foco\n\nExplicação completa",
       "usage_notes": "observações de uso ou null",
       "common_mistakes": "erros comuns ou null",
       "examples": [
