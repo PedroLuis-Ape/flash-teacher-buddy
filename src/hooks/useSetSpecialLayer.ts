@@ -48,7 +48,10 @@ export function useSetSpecialLayer() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
-      if (!enable) {
+      const pendingFocus = focus ?? takePendingSpecialFocusDraft();
+      const shouldEnable = enable || Boolean(pendingFocus);
+
+      if (!shouldEnable) {
         const { error } = await supabase
           .from('user_special_flashcards' as any)
           .delete()
@@ -58,7 +61,7 @@ export function useSetSpecialLayer() {
         return { enabled: false, userId: user.id, hadFocus: false };
       }
 
-      const focusPayload = normalizeFocusContext(focus ?? takePendingSpecialFocusDraft());
+      const focusPayload = normalizeFocusContext(pendingFocus);
       const { error } = await supabase
         .from('user_special_flashcards' as any)
         .upsert({
