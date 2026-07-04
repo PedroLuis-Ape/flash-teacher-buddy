@@ -2,8 +2,42 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export type SpecialFocusSide = 'a' | 'b' | 'both';
+export type SpecialFocusTag =
+  | 'grammar'
+  | 'vocabulary'
+  | 'expression'
+  | 'phrasal_verb'
+  | 'pronunciation'
+  | 'translation'
+  | 'natural_usage'
+  | 'other';
+
+export interface SpecialFocusContext {
+  focus_text?: string | null;
+  focus_side?: SpecialFocusSide | null;
+  focus_tag?: SpecialFocusTag | null;
+  focus_note?: string | null;
+}
+
 export interface SpecialFlashcardScope {
   listId?: string;
+}
+
+function emptyToNull(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return value ?? null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeFocusContext(context?: SpecialFocusContext | null) {
+  if (!context) return {};
+  return {
+    focus_text: emptyToNull(context.focus_text),
+    focus_side: context.focus_side ?? null,
+    focus_tag: context.focus_tag ?? null,
+    focus_note: emptyToNull(context.focus_note),
+  };
 }
 
 /**
@@ -55,10 +89,12 @@ export function useToggleSpecialFlashcard() {
       flashcardId,
       listId,
       isSpecial,
+      focus,
     }: {
       flashcardId: string;
       listId?: string | null;
       isSpecial: boolean;
+      focus?: SpecialFocusContext | null;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
@@ -73,13 +109,13 @@ export function useToggleSpecialFlashcard() {
       } else {
         const { error } = await supabase
           .from('user_special_flashcards' as any)
-          .insert({
+          .upsert({
             user_id: user.id,
             flashcard_id: flashcardId,
             list_id: listId ?? null,
-          } as any);
-        // Tolerate unique-violation races (rapid clicks / concurrent tabs).
-        if (error && (error as any).code !== '23505') throw error;
+            ...normalizeFocusContext(focus),
+          } as any, { onConflict: 'user_id,flashcard_id' });
+        if (error) throw error;
       }
       return { flashcardId, isSpecial: !isSpecial, userId: user.id };
     },
@@ -151,6 +187,7 @@ export interface SpecialFlashcardDetail {
   id: string;
   flashcard_id: string;
   created_at: string;
+  updated_at: string | null;
   term: string;
   translation: string;
   hint: string | null;
@@ -161,6 +198,11 @@ export interface SpecialFlashcardDetail {
   parent_card_id: string | null;
   list_id: string | null;
   list_title: string | null;
+  focus_text: string | null;
+  focus_side: SpecialFocusSide | null;
+  focus_tag: SpecialFocusTag | null;
+  focus_note: string | null;
+  notes: string | null;
 }
 
 /**
@@ -174,7 +216,7 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
       if (!userId) return [];
       const { data, error } = await supabase
         .from('user_special_flashcards' as any)
-        .select('id, flashcard_id, created_at, list_id')
+        .select('id, flashcard_id, created_at, updated_at, list_id, focus_text, focus_side, focus_tag, focus_note, notes')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -213,6 +255,7 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
             id: r.id,
             flashcard_id: r.flashcard_id,
             created_at: r.created_at,
+            updated_at: r.updated_at ?? null,
             term: c.term,
             translation: c.translation,
             hint: c.hint ?? null,
@@ -223,6 +266,11 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
             parent_card_id: c.parent_card_id ?? null,
             list_id: c.list_id ?? r.list_id ?? null,
             list_title: c.list_id ? listTitles.get(c.list_id) ?? null : null,
+            focus_text: r.focus_text ?? null,
+            focus_side: r.focus_side ?? null,
+            focus_tag: r.focus_tag ?? null,
+            focus_note: r.focus_note ?? null,
+            notes: r.notes ?? null,
           } as SpecialFlashcardDetail;
         })
         .filter((v): v is SpecialFlashcardDetail => !!v);
