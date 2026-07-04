@@ -19,6 +19,10 @@ import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 
 const AUTO_PLAY_DELAY_MS = 7000;
 
+function oppositeAutoPlaySide(side: FlipAutoPlaySide): FlipAutoPlaySide {
+  return side === "first" ? "second" : "first";
+}
+
 type ResolvedSide = { text: string; lang: string; label: string };
 
 interface SidePanelProps {
@@ -166,6 +170,7 @@ export const FlipStudyView = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [isAutoPlaying, setIsAutoPlaying] = useState(restoredAutoPlay.current.enabled);
   const [autoPlaySide, setAutoPlaySide] = useState<FlipAutoPlaySide>(restoredAutoPlay.current.side);
+  const [autoPlayCurrentSide, setAutoPlayCurrentSide] = useState<FlipAutoPlaySide>(restoredAutoPlay.current.side);
   const autoPlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const swipeConsumedRef = useRef(false);
@@ -229,7 +234,10 @@ export const FlipStudyView = ({
     const next = !isAutoPlaying;
     setIsAutoPlaying(next);
     writeFlipAutoPlayState(next, autoPlaySide);
-    if (!next) {
+    if (next) {
+      setAutoPlayCurrentSide(autoPlaySide);
+      if (!fastMode) setIsFlipped(autoPlaySide === "second");
+    } else {
       clearAutoPlayTimeout();
       stop();
     }
@@ -237,6 +245,7 @@ export const FlipStudyView = ({
 
   const handleAutoPlaySideChange = (side: FlipAutoPlaySide) => {
     setAutoPlaySide(side);
+    setAutoPlayCurrentSide(side);
     writeFlipAutoPlayState(isAutoPlaying, side);
     if (!fastMode) setIsFlipped(side === "second");
   };
@@ -265,6 +274,7 @@ export const FlipStudyView = ({
   };
 
   useEffect(() => {
+    setAutoPlayCurrentSide(autoPlaySide);
     setIsFlipped(isAutoPlaying && autoPlaySide === "second");
   }, [front, back, isAutoPlaying, autoPlaySide]);
 
@@ -279,9 +289,14 @@ export const FlipStudyView = ({
     }
 
     clearAutoPlayTimeout();
-    speakSide(autoPlaySide);
+    speakSide(autoPlayCurrentSide);
 
     autoPlayTimeoutRef.current = setTimeout(() => {
+      if (autoPlayCurrentSide === autoPlaySide) {
+        setAutoPlayCurrentSide(oppositeAutoPlaySide(autoPlaySide));
+        return;
+      }
+
       writeFlipAutoPlayState(true, autoPlaySide);
       if (onNext && canGoNext) {
         onNext();
@@ -293,7 +308,7 @@ export const FlipStudyView = ({
     }, AUTO_PLAY_DELAY_MS);
 
     return clearAutoPlayTimeout;
-  }, [autoPlaySide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, speakSide, stop]);
+  }, [autoPlayCurrentSide, autoPlaySide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, speakSide, stop]);
 
   useEffect(() => () => clearAutoPlayTimeout(), [clearAutoPlayTimeout]);
 
@@ -370,7 +385,7 @@ export const FlipStudyView = ({
             onClick={() => handleAutoPlaySideChange("first")}
             className="h-10 min-w-0 px-2 text-xs sm:text-sm"
           >
-            <span className="truncate">Só {firstSide.label}</span>
+            <span className="truncate">Começar em {firstSide.label}</span>
           </Button>
           <Button
             type="button"
@@ -379,12 +394,12 @@ export const FlipStudyView = ({
             onClick={() => handleAutoPlaySideChange("second")}
             className="h-10 min-w-0 px-2 text-xs sm:text-sm"
           >
-            <span className="truncate">Só {secondSide.label}</span>
+            <span className="truncate">Começar em {secondSide.label}</span>
           </Button>
         </div>
       </div>
       <p className="mt-2 text-center text-[11px] leading-snug text-muted-foreground">
-        Troca automática a cada 7s {ttsEnabled ? "• áudio automático" : "• TTS desligado nesta lista"}
+        A cada 7s: lado escolhido → resposta → próximo card {ttsEnabled ? "• áudio automático" : "• TTS desligado nesta lista"}
       </p>
     </div>
   );
