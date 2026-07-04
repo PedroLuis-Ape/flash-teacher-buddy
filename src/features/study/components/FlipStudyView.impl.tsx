@@ -20,8 +20,16 @@ import "./flipStudyMobileCompact.css";
 
 const AUTO_PLAY_DELAY_MS = 7000;
 
+type ManualFlipAnswer = "knew" | "didntKnow" | null;
+
 function oppositeAutoPlaySide(side: FlipAutoPlaySide): FlipAutoPlaySide {
   return side === "a" ? "b" : "a";
+}
+
+function isPureFlipSession(): boolean {
+  if (typeof window === "undefined") return true;
+  const mode = new URLSearchParams(window.location.search).get("mode");
+  return mode !== "mixed";
 }
 
 type ResolvedSide = { text: string; lang: string; label: string };
@@ -170,6 +178,7 @@ export const FlipStudyView = ({
 }: FlipStudyViewProps) => {
   const restoredAutoPlay = useRef(readFlipAutoPlayState());
   const [isFlipped, setIsFlipped] = useState(false);
+  const [manualAnswer, setManualAnswer] = useState<ManualFlipAnswer>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(restoredAutoPlay.current.enabled);
   const [autoPlaySide, setAutoPlaySide] = useState<FlipAutoPlaySide>(restoredAutoPlay.current.side);
   const [autoPlayCurrentSide, setAutoPlayCurrentSide] = useState<FlipAutoPlaySide>(restoredAutoPlay.current.side);
@@ -177,6 +186,7 @@ export const FlipStudyView = ({
   const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const swipeConsumedRef = useRef(false);
   const { speak, stop } = useTTS();
+  const pureFlipSession = isPureFlipSession();
 
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
@@ -245,12 +255,20 @@ export const FlipStudyView = ({
   const handleKnew = () => {
     pauseAutoPlay();
     playCorrect();
+    if (pureFlipSession) {
+      setManualAnswer("knew");
+      return;
+    }
     onKnew();
   };
 
   const handleDidntKnow = () => {
     pauseAutoPlay();
     playWrong();
+    if (pureFlipSession) {
+      setManualAnswer("didntKnow");
+      return;
+    }
     onDidntKnow();
   };
 
@@ -317,7 +335,8 @@ export const FlipStudyView = ({
   useEffect(() => {
     setAutoPlayCurrentSide(autoPlaySide);
     setIsFlipped(isAutoPlaying && fixedSideToRenderedSide(autoPlaySide) === "second");
-  }, [front, back, isAutoPlaying, autoPlaySide, fixedSideToRenderedSide]);
+    setManualAnswer(null);
+  }, [front, back, flashcardId, isAutoPlaying, autoPlaySide, fixedSideToRenderedSide]);
 
   useEffect(() => {
     writeFlipAutoPlayState(isAutoPlaying, autoPlaySide);
@@ -402,7 +421,7 @@ export const FlipStudyView = ({
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
+  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled, pureFlipSession]);
 
   const autoPlayControls = (
     <div className="flip-autoplay-controls w-full rounded-xl border bg-card/80 p-2 shadow-sm sm:rounded-2xl sm:p-3" data-no-card-swipe="true">
@@ -456,11 +475,29 @@ export const FlipStudyView = ({
 
   const actionButtons = (
     <div className="flip-action-buttons flex w-full flex-row flex-wrap justify-center gap-2 sm:gap-3">
-      <Button variant="destructive" size="lg" onClick={handleDidntKnow} className="min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base">
+      <Button
+        variant="destructive"
+        size="lg"
+        onClick={handleDidntKnow}
+        className={cn(
+          "min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base",
+          manualAnswer === "didntKnow" && "ring-2 ring-destructive/70 ring-offset-2 ring-offset-background",
+        )}
+        aria-pressed={manualAnswer === "didntKnow"}
+      >
         <RotateCcw className="mr-2 h-5 w-5" />
         Não Sabia
       </Button>
-      <Button variant="default" size="lg" onClick={handleKnew} className="min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base">
+      <Button
+        variant="default"
+        size="lg"
+        onClick={handleKnew}
+        className={cn(
+          "min-w-[120px] flex-1 text-sm sm:min-w-[140px] sm:text-base",
+          manualAnswer === "knew" && "ring-2 ring-primary/70 ring-offset-2 ring-offset-background",
+        )}
+        aria-pressed={manualAnswer === "knew"}
+      >
         <Check className="mr-2 h-5 w-5" />
         Sabia
       </Button>
@@ -491,7 +528,7 @@ export const FlipStudyView = ({
         </Card>
         {navigationButtons}
         {actionButtons}
-        <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço avançar • Enter ouvir áudio</p>
+        <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço marcar como sabia • Enter ouvir áudio</p>
       </div>
     );
   }
@@ -521,8 +558,8 @@ export const FlipStudyView = ({
         </div>
       </div>
       {navigationButtons}
-      {isFlipped && <div className="w-full animate-fade-in">{actionButtons}</div>}
-      <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço virar/confirmar • Enter ouvir áudio</p>
+      <div className="w-full animate-fade-in">{actionButtons}</div>
+      <p className="hidden text-center text-xs text-muted-foreground sm:block">← → navegar • Espaço virar/marcar • Enter ouvir áudio</p>
     </div>
   );
 };
