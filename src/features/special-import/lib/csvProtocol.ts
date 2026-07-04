@@ -17,7 +17,6 @@ export function buildSpecialCsvExport(batch: SpecialExportPackage): string {
     term: card.term,
     translation: card.translation,
     focus_text: card.focus_text ?? "",
-    focus_side: card.focus_side ?? "",
     focus_tag: card.focus_tag ?? "",
     focus_note: card.focus_note ?? "",
     detailed_explanation: "",
@@ -35,7 +34,7 @@ export function buildSpecialCsvExport(batch: SpecialExportPackage): string {
 export function buildSpecialCsvPrompt(batch: SpecialExportPackage): string {
   const rules = [
     "Preserve exatamente o cabeçalho, a ordem das colunas e a ordem das linhas.",
-    "Preserve sem nenhuma alteração format, schema_version, export_id, card_ref, flashcard_id, term, translation, focus_text, focus_side, focus_tag e focus_note.",
+    "Preserve sem nenhuma alteração format, schema_version, export_id, card_ref, flashcard_id, term, translation, focus_text, focus_tag e focus_note.",
     "Quando focus_text estiver preenchido, explique obrigatoriamente esse trecho como foco principal. Não escolha outro foco principal.",
     "Quando focus_tag estiver preenchido, use essa categoria para guiar a explicação: grammar, vocabulary, expression, phrasal_verb, pronunciation, translation, natural_usage ou other.",
     "Quando focus_note estiver preenchido, responda diretamente à dificuldade descrita pelo professor/aluno.",
@@ -56,7 +55,7 @@ export function buildSpecialCsvPrompt(batch: SpecialExportPackage): string {
   return [
     "Você recebeu um arquivo CSV de Cards Especiais exportado pelo App Piteco.",
     "Sua tarefa é preencher a explicação didática e devolver o mesmo CSV preenchido.",
-    "O CSV pode trazer foco pedagógico explícito em focus_text, focus_side, focus_tag e focus_note. Use esses campos para não adivinhar o que explicar.",
+    "O CSV pode trazer foco pedagógico explícito em focus_text, focus_tag e focus_note. Use esses campos para não adivinhar o que explicar.",
     "Só escolha/inferia a peça-chave quando focus_text estiver vazio.",
     "",
     `Lote esperado: ${batch.export_id}`,
