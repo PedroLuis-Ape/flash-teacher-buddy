@@ -40,6 +40,28 @@ function normalizeFocusContext(context?: SpecialFocusContext | null) {
   };
 }
 
+function isMissingSpecialFocusColumns(error: unknown): boolean {
+  const err = error as { message?: string; details?: string; hint?: string; code?: string } | null | undefined;
+  const text = `${err?.message ?? ''} ${err?.details ?? ''} ${err?.hint ?? ''} ${err?.code ?? ''}`.toLowerCase();
+  return ['focus_text', 'focus_side', 'focus_tag', 'focus_note', 'updated_at']
+    .some((column) => text.includes(column));
+}
+
+async function upsertSpecialWithFocusFallback(payload: Record<string, unknown>) {
+  const { error } = await supabase
+    .from('user_special_flashcards' as any)
+    .upsert(payload as any, { onConflict: 'user_id,flashcard_id' });
+
+  if (!error) return;
+  if (!isMissingSpecialFocusColumns(error)) throw error;
+
+  const { user_id, flashcard_id, list_id } = payload;
+  const { error: legacyError } = await supabase
+    .from('user_special_flashcards' as any)
+    .upsert({ user_id, flashcard_id, list_id: list_id ?? null } as any, { onConflict: 'user_id,flashcard_id' });
+  if (legacyError) throw legacyError;
+}
+
 /**
  * Returns the list of flashcard ids the user has saved as "special"
  * (the temporary queue for IA export). Independent from favorites and red-list.
@@ -107,15 +129,12 @@ export function useToggleSpecialFlashcard() {
           .eq('flashcard_id', flashcardId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('user_special_flashcards' as any)
-          .upsert({
-            user_id: user.id,
-            flashcard_id: flashcardId,
-            list_id: listId ?? null,
-            ...normalizeFocusContext(focus),
-          } as any, { onConflict: 'user_id,flashcard_id' });
-        if (error) throw error;
+        await upsertSpecialWithFocusFallback({
+          user_id: user.id,
+          flashcard_id: flashcardId,
+          list_id: listId ?? null,
+          ...normalizeFocusContext(focus),
+        });
       }
       return { flashcardId, isSpecial: !isSpecial, userId: user.id };
     },
@@ -214,13 +233,26 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
     queryKey: ['special-flashcards-details', userId],
     queryFn: async (): Promise<SpecialFlashcardDetail[]> => {
       if (!userId) return [];
-      const { data, error } = await supabase
+      let rows: any[] = [];
+      const enhanced = await supabase
         .from('user_special_flashcards' as any)
         .select('id, flashcard_id, created_at, updated_at, list_id, focus_text, focus_side, focus_tag, focus_note, notes')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      const rows = (data as any[]) ?? [];
+
+      if (enhanced.error) {
+        if (!isMissingSpecialFocusColumns(enhanced.error)) throw enhanced.error;
+        const legacy = await supabase
+          .from('user_special_flashcards' as any)
+          .select('id, flashcard_id, created_at, list_id, notes')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (legacy.error) throw legacy.error;
+        rows = (legacy.data as any[]) ?? [];
+      } else {
+        rows = (enhanced.data as any[]) ?? [];
+      }
+
       if (rows.length === 0) return [];
 
       const flashcardIds = rows.map((r) => r.flashcard_id);
