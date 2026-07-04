@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import ImportExplanationsDialog from "@/components/ImportExplanationsDialog";
 import SpecialExportDialog from "./components/SpecialExportDialog";
@@ -69,7 +68,7 @@ export default function GemQueue() {
     setExportOpen(true);
   };
 
-  return <div className="container mx-auto max-w-5xl px-3 py-5 sm:px-4 sm:py-8">
+  return <div className="container mx-auto max-w-5xl px-3 py-5 pb-24 sm:px-4 sm:py-8 sm:pb-12">
     <Helmet><title>Cards Especiais | App Piteco</title></Helmet>
 
     <div className="mb-4 flex items-center gap-3 sm:mb-6 sm:flex-wrap">
@@ -114,58 +113,56 @@ export default function GemQueue() {
         <Button size="sm" onClick={() => exportTarget(cards)}><Download className="mr-1 h-4 w-4" />Todos</Button>
       </div>
 
-      <ScrollArea className="max-h-[68vh] pr-1 sm:pr-2">
-        <div className="space-y-3">
-          {cards.map((card) => {
-            const hasFocus = hasFocusContext(card);
-            return <Card key={card.id} className={`p-3 transition sm:p-4 ${selected.has(card.flashcard_id) ? "border-primary/50 bg-primary/5" : "hover:border-primary/30"}`}>
-              <div className="flex items-start gap-3">
-                <Checkbox checked={selected.has(card.flashcard_id)} onCheckedChange={() => toggle(card.flashcard_id)} className="mt-1" />
-                <button type="button" onClick={() => toggle(card.flashcard_id)} className="min-w-0 flex-1 text-left">
-                  <div className="space-y-1">
-                    <div className="break-words text-sm font-semibold sm:text-base">{card.term}</div>
-                    <div className="break-words text-sm text-muted-foreground">→ {card.translation}</div>
-                  </div>
+      <div className="space-y-3">
+        {cards.map((card) => {
+          const hasFocus = hasFocusContext(card);
+          return <Card key={card.id} className={`p-3 transition sm:p-4 ${selected.has(card.flashcard_id) ? "border-primary/50 bg-primary/5" : "hover:border-primary/30"}`}>
+            <div className="flex items-start gap-3">
+              <Checkbox checked={selected.has(card.flashcard_id)} onCheckedChange={() => toggle(card.flashcard_id)} className="mt-1" />
+              <button type="button" onClick={() => toggle(card.flashcard_id)} className="min-w-0 flex-1 text-left">
+                <div className="space-y-1">
+                  <div className="break-words text-sm font-semibold sm:text-base">{card.term}</div>
+                  <div className="break-words text-sm text-muted-foreground">→ {card.translation}</div>
+                </div>
 
-                  <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
-                    {card.list_title && <Badge variant="secondary" className="max-w-full truncate">{card.list_title}</Badge>}
-                    {card.context_tag && <Badge variant="outline" className="max-w-full truncate">{card.context_tag}</Badge>}
-                    {card.layer_index != null && <Badge variant="outline">Camada {card.layer_index + 1}</Badge>}
-                  </div>
+                <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
+                  {card.list_title && <Badge variant="secondary" className="max-w-full truncate">{card.list_title}</Badge>}
+                  {card.context_tag && <Badge variant="outline" className="max-w-full truncate">{card.context_tag}</Badge>}
+                  {card.layer_index != null && <Badge variant="outline">Camada {card.layer_index + 1}</Badge>}
+                </div>
 
-                  {hasFocus && (
-                    <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs sm:p-3">
-                      <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                        <span className="font-semibold text-primary">Foco da explicação</span>
-                        {card.focus_tag && <Badge variant="secondary" className="text-[11px]">{focusTagLabel(card.focus_tag)}</Badge>}
+                {hasFocus && (
+                  <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs sm:p-3">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <span className="font-semibold text-primary">Foco da explicação</span>
+                      {card.focus_tag && <Badge variant="secondary" className="text-[11px]">{focusTagLabel(card.focus_tag)}</Badge>}
+                    </div>
+                    {card.focus_text && (
+                      <div className="break-words">
+                        <span className="font-medium text-muted-foreground">Trecho: </span>
+                        <span className="font-semibold text-foreground">{card.focus_text}</span>
                       </div>
-                      {card.focus_text && (
-                        <div className="break-words">
-                          <span className="font-medium text-muted-foreground">Trecho: </span>
-                          <span className="font-semibold text-foreground">{card.focus_text}</span>
-                        </div>
-                      )}
-                      {(card.focus_note || card.notes) && (
-                        <div className="mt-1 break-words text-muted-foreground">
-                          <span className="font-medium">Obs: </span>{card.focus_note || card.notes}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                    {(card.focus_note || card.notes) && (
+                      <div className="mt-1 break-words text-muted-foreground">
+                        <span className="font-medium">Obs: </span>{card.focus_note || card.notes}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  {!hasFocus && (
-                    <div className="mt-3 rounded-lg border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground">
-                      Sem foco específico. A IA ainda poderá inferir o que explicar.
-                    </div>
-                  )}
+                {!hasFocus && (
+                  <div className="mt-3 rounded-lg border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground">
+                    Sem foco específico. A IA ainda poderá inferir o que explicar.
+                  </div>
+                )}
 
-                  {card.hint && <p className="mt-2 break-words text-xs text-muted-foreground">Dica: {card.hint}</p>}
-                </button>
-              </div>
-            </Card>;
-          })}
-        </div>
-      </ScrollArea>
+                {card.hint && <p className="mt-2 break-words text-xs text-muted-foreground">Dica: {card.hint}</p>}
+              </button>
+            </div>
+          </Card>;
+        })}
+      </div>
     </>}
 
     <SpecialExportDialog open={exportOpen} onOpenChange={setExportOpen} cards={exportCards} />
