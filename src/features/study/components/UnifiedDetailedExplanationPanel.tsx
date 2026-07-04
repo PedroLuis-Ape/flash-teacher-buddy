@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, BookOpen, Info, LockKeyhole, X } from "lucide-react";
+import { AlertTriangle, BookOpen, Info, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuthUser } from "@/hooks/useAuthUser";
@@ -42,20 +42,6 @@ function saveEnabled(key: string, enabled: boolean): void {
   }
 }
 
-function inspectAnswerRevealed(root: HTMLElement, search: string): boolean {
-  const mode = new URLSearchParams(search).get("mode");
-  if (mode === "pronunciation") return true;
-
-  const flipInner = root.querySelector<HTMLElement>(".flip-card-inner");
-  if (flipInner) return flipInner.classList.contains("flipped");
-
-  const labels = Array.from(root.querySelectorAll("button"))
-    .map((button) => button.textContent?.trim().replace(/\s+/g, " ") ?? "");
-  if (labels.includes("Sabia") && labels.includes("Não Sabia")) return true;
-
-  return Boolean(root.querySelector('[role="status"]'));
-}
-
 function Section({
   title,
   icon,
@@ -85,13 +71,10 @@ export function UnifiedDetailedExplanationPanel({
 }: UnifiedDetailedExplanationPanelProps) {
   const location = useLocation();
   const { userId } = useAuthUser();
-  const markerRef = useRef<HTMLSpanElement>(null);
-  const layoutRef = useRef<HTMLElement | null>(null);
   const [panelHost, setPanelHost] = useState<HTMLElement | null>(null);
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" && window.matchMedia(DESKTOP_QUERY).matches);
   const key = useMemo(() => storageKey(location.pathname, userId), [location.pathname, userId]);
   const [enabled, setEnabled] = useState(() => readEnabled(key));
-  const [answerRevealed, setAnswerRevealed] = useState(false);
 
   const hasContent = Boolean(cleanText(explanation) || cleanText(usageNotes) || cleanText(commonMistakes));
   const isOpen = isDesktop && enabled && hasContent;
@@ -108,55 +91,19 @@ export function UnifiedDetailedExplanationPanel({
     setEnabled(readEnabled(key));
   }, [key]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!isDesktop) return;
-    const layout = markerRef.current?.previousElementSibling as HTMLElement | null;
-    if (!layout) return;
-
-    layoutRef.current = layout;
-    layout.classList.add("study-explanation-layout");
-
     const host = document.createElement("div");
     host.className = "study-explanation-panel-host";
     host.setAttribute("data-study-explanation-panel-host", "true");
-    layout.appendChild(host);
+    document.body.appendChild(host);
     setPanelHost(host);
 
     return () => {
-      layout.classList.remove("study-explanation-layout");
       host.remove();
-      layoutRef.current = null;
       setPanelHost(null);
     };
   }, [isDesktop]);
-
-  useEffect(() => {
-    if (!isDesktop) return;
-    const root = layoutRef.current?.querySelector<HTMLElement>(".max-w-2xl");
-    if (!root) return;
-
-    let frame = 0;
-    const refresh = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        setAnswerRevealed(inspectAnswerRevealed(root, location.search));
-      });
-    };
-
-    refresh();
-    const observer = new MutationObserver(refresh);
-    observer.observe(root, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["class", "disabled", "aria-expanded", "role"],
-    });
-
-    return () => {
-      observer.disconnect();
-      window.cancelAnimationFrame(frame);
-    };
-  }, [isDesktop, location.search, explanation, usageNotes, commonMistakes]);
 
   const setPersistentEnabled = (next: boolean) => {
     setEnabled(next);
@@ -213,41 +160,24 @@ export function UnifiedDetailedExplanationPanel({
       </header>
 
       <div className="max-h-[76vh] space-y-3 overflow-y-auto overscroll-contain p-4">
-        {!answerRevealed ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-8 text-center">
-            <LockKeyhole className="mb-3 h-7 w-7 text-primary" />
-            <p className="text-sm font-semibold">Responda primeiro</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Revele ou confira a resposta para liberar a explicação deste card.
-            </p>
-          </div>
-        ) : (
-          <>
-            {cleanText(explanation) && (
-              <Section icon={<BookOpen className="h-4 w-4" />} title="Explicação detalhada">
-                {explanation}
-              </Section>
-            )}
-            {cleanText(usageNotes) && (
-              <Section icon={<Info className="h-4 w-4" />} title="Como usar">
-                {usageNotes}
-              </Section>
-            )}
-            {cleanText(commonMistakes) && (
-              <Section icon={<AlertTriangle className="h-4 w-4" />} title="Erros comuns" warning>
-                {commonMistakes}
-              </Section>
-            )}
-          </>
+        {cleanText(explanation) && (
+          <Section icon={<BookOpen className="h-4 w-4" />} title="Explicação detalhada">
+            {explanation}
+          </Section>
+        )}
+        {cleanText(usageNotes) && (
+          <Section icon={<Info className="h-4 w-4" />} title="Como usar">
+            {usageNotes}
+          </Section>
+        )}
+        {cleanText(commonMistakes) && (
+          <Section icon={<AlertTriangle className="h-4 w-4" />} title="Erros comuns" warning>
+            {commonMistakes}
+          </Section>
         )}
       </div>
     </aside>
   ) : null;
 
-  return (
-    <>
-      <span ref={markerRef} className="hidden" aria-hidden="true" />
-      {panelHost && panel ? createPortal(panel, panelHost) : null}
-    </>
-  );
+  return panelHost && panel ? createPortal(panel, panelHost) : null;
 }
