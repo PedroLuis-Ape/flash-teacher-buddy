@@ -1,34 +1,35 @@
 @media (max-width: 640px) {
   .flip-study-mobile-compact {
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .flip-study-mobile-compact .flip-card {
-    height: 15rem;
+    height: 14rem;
   }
 
   .flip-study-mobile-compact .flip-autoplay-controls {
     border-radius: 0.75rem;
-    padding: 0.5rem;
+    padding: 0.45rem;
   }
 
   .flip-study-mobile-compact .flip-autoplay-controls button {
-    min-height: 2.25rem;
+    min-height: 2.15rem;
   }
 
   .flip-study-mobile-compact .flip-autoplay-controls [data-autoplay-side-options] {
-    gap: 0.375rem;
+    gap: 0.3rem;
   }
 
   .flip-study-mobile-compact .flip-navigation-buttons {
-    gap: 1.25rem;
+    gap: 1rem;
+    margin-top: -0.1rem;
   }
 
   .flip-study-mobile-compact .flip-navigation-buttons button {
-    height: 2.5rem;
-    min-height: 2.5rem;
-    min-width: 2.5rem;
-    width: 2.5rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    min-width: 2.25rem;
+    width: 2.25rem;
   }
 
   .flip-study-mobile-compact .flip-action-buttons {
@@ -36,37 +37,80 @@
   }
 
   .flip-study-mobile-compact .flip-action-buttons button {
-    min-height: 2.5rem;
+    min-height: 2.35rem;
     padding-inline: 0.75rem;
   }
 
-  /* Compacta o aviso de camadas que fica acima do card no mobile. */
-  .mb-3.flex.flex-wrap.items-center.justify-center.gap-2.rounded-lg.border.border-primary\/30.bg-primary\/5.px-3.py-2.text-sm {
-    margin-bottom: 0.5rem;
-    gap: 0.375rem;
-    padding: 0.375rem 0.5rem;
-    font-size: 0.75rem;
-    line-height: 1.1rem;
+  /* Topo da tela de estudo: menos respiro vertical no mobile. */
+  .container.mx-auto.max-w-6xl > .mb-4.space-y-3,
+  .container.mx-auto.max-w-6xl > .sm\:mb-6.space-y-3 {
+    margin-bottom: 0.5rem !important;
+    gap: 0.45rem !important;
   }
 
-  .mb-3.flex.flex-wrap.items-center.justify-center.gap-2.rounded-lg.border.border-primary\/30.bg-primary\/5.px-3.py-2.text-sm > svg {
-    height: 0.875rem;
-    width: 0.875rem;
+  .container.mx-auto.max-w-6xl .space-y-2 {
+    gap: 0.25rem !important;
   }
 
-  .mb-3.flex.flex-wrap.items-center.justify-center.gap-2.rounded-lg.border.border-primary\/30.bg-primary\/5.px-3.py-2.text-sm button {
-    height: 2rem;
-    min-height: 2rem;
-    min-width: 2rem;
-    padding: 0;
-    width: 2rem;
-    font-size: 0;
-    gap: 0;
+  .container.mx-auto.max-w-6xl .flex.sm\:hidden.justify-center.gap-6.text-sm.py-2 {
+    padding-block: 0.25rem !important;
   }
 
-  .mb-3.flex.flex-wrap.items-center.justify-center.gap-2.rounded-lg.border.border-primary\/30.bg-primary\/5.px-3.py-2.text-sm button svg {
-    height: 1rem;
+  /* Compacta de forma robusta o aviso de camadas acima do card. */
+  div[class*="border-primary/30"][class*="bg-primary/5"][class*="rounded-lg"] {
+    align-items: center !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 0.35rem !important;
+    justify-content: flex-start !important;
+    margin-bottom: 0.45rem !important;
+    overflow: hidden !important;
+    padding: 0.3rem 0.45rem !important;
+    width: 100% !important;
+  }
+
+  div[class*="border-primary/30"][class*="bg-primary/5"][class*="rounded-lg"] > svg {
+    height: 0.85rem !important;
+    min-width: 0.85rem !important;
+    width: 0.85rem !important;
+  }
+
+  div[class*="border-primary/30"][class*="bg-primary/5"][class*="rounded-lg"] > span {
+    flex: 1 1 auto !important;
+    font-size: 0.72rem !important;
+    line-height: 1rem !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  div[class*="border-primary/30"][class*="bg-primary/5"][class*="rounded-lg"] > div {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    gap: 0.15rem !important;
+    margin-left: 0 !important;
+  }
+
+  div[class*="border-primary/30"][class*="bg-primary/5"][class*="rounded-lg"] button {
+    border-radius: 999px !important;
+    font-size: 0 !important;
+    gap: 0 !important;
+    height: 1.85rem !important;
+    min-height: 1.85rem !important;
+    min-width: 1.85rem !important;
+    padding: 0 !important;
+    width: 1.85rem !important;
+  }
+
+  div[class*="border-primary/30"][class*="bg-primary/5"][class*="rounded-lg"] button svg {
+    height: 0.95rem !important;
     margin: 0 !important;
-    width: 1rem;
+    width: 0.95rem !important;
+  }
+
+  /* Se houver textos auxiliares do modo estudo, eles somem no mobile. */
+  .flip-study-mobile-compact > p.text-center.text-xs.text-muted-foreground {
+    display: none !important;
   }
 }
