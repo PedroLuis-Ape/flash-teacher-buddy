@@ -185,7 +185,7 @@ export async function syncFolderGlossary(
     ? await importEntries(folderId, entries)
     : { inserted: 0, updated: 0, skipped: 0 };
 
-  return {
+  const report: FolderGlossarySyncReport = {
     folderId,
     listsScanned: listIds.length,
     cardsScanned: cards.length,
@@ -198,4 +198,46 @@ export async function syncFolderGlossary(
     syncedAt: new Date().toISOString(),
     dryRun: false,
   };
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(folderGlossarySyncStorageKey(folderId), JSON.stringify(report));
+    }
+  } catch { /* best effort */ }
+  return report;
+}
+
+export const folderGlossarySyncStorageKey = (folderId: string) =>
+  `app-piteco:folder-glossary-sync:${folderId}`;
+
+export interface FolderGlossarySyncStatus {
+  lastSyncedAt: string | null;
+  includeNormalCards: boolean;
+  entriesFound: number;
+  inserted: number;
+  cardsScanned: number;
+}
+
+export function readFolderGlossarySyncStatus(folderId: string): FolderGlossarySyncStatus {
+  const empty: FolderGlossarySyncStatus = {
+    lastSyncedAt: null,
+    includeNormalCards: false,
+    entriesFound: 0,
+    inserted: 0,
+    cardsScanned: 0,
+  };
+  try {
+    if (typeof localStorage === "undefined") return empty;
+    const raw = localStorage.getItem(folderGlossarySyncStorageKey(folderId));
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<FolderGlossarySyncReport>;
+    return {
+      lastSyncedAt: (typeof parsed.syncedAt === "string" && parsed.syncedAt) || null,
+      includeNormalCards: Boolean(parsed.includeNormalCards),
+      entriesFound: Number(parsed.entriesFound ?? 0),
+      inserted: Number(parsed.inserted ?? 0),
+      cardsScanned: Number(parsed.cardsScanned ?? 0),
+    };
+  } catch {
+    return empty;
+  }
 }

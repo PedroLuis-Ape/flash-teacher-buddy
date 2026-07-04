@@ -8,7 +8,12 @@ import type {
   FolderGlossaryQueryResult,
 } from "./folderGlossaryTypes";
 
-export { syncFolderGlossary } from "./folderGlossarySyncApi";
+export {
+  syncFolderGlossary,
+  readFolderGlossarySyncStatus,
+  folderGlossarySyncStorageKey,
+} from "./folderGlossarySyncApi";
+export type { FolderGlossarySyncStatus } from "./folderGlossarySyncApi";
 
 const DEFAULT_IMPORT_CHUNK_SIZE = 180;
 const MIN_IMPORT_CHUNK_SIZE = 20;
