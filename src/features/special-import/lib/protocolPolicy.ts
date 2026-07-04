@@ -21,7 +21,6 @@ export interface SpecialExportCard {
   layer_number: number | null;
   list_title: string | null;
   focus_text: string | null;
-  focus_side: string | null;
   focus_tag: string | null;
   focus_note: string | null;
 }
@@ -65,7 +64,6 @@ function toExportCard(card: SpecialFlashcardDetail, index: number): SpecialExpor
     layer_number: card.layer_index == null ? null : card.layer_index + 1,
     list_title: card.list_title,
     focus_text: card.focus_text,
-    focus_side: card.focus_side,
     focus_tag: card.focus_tag,
     focus_note: card.focus_note || card.notes || null,
   };
@@ -124,7 +122,7 @@ TAREFA
 Crie uma explicação didática para CADA card do objeto ENTRADA abaixo.
 
 REGRA DE FOCO PEDAGÓGICO
-- Cada card pode conter focus_text, focus_side, focus_tag e focus_note.
+- Cada card pode conter focus_text, focus_tag e focus_note.
 - Se focus_text estiver preenchido, explique obrigatoriamente esse trecho como foco principal. Não escolha outro foco principal.
 - Se focus_tag estiver preenchido, use essa categoria para guiar a explicação: gramática, vocabulário, expressão, phrasal verb, pronúncia, tradução, uso natural ou outro.
 - Se focus_note estiver preenchido, responda diretamente à dificuldade descrita pelo professor/aluno.
