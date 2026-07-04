@@ -7,11 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { FolderGlossarySyncDialog } from "./FolderGlossarySyncDialog";
-import { syncFolderGlossary } from "@/features/study/lib/folderGlossaryApi";
-
-function readFolderGlossarySyncStatus(_folderId: string): { lastSyncedAt: string | null } {
-  return { lastSyncedAt: null };
-}
+import { syncFolderGlossary, readFolderGlossarySyncStatus } from "@/features/study/lib/folderGlossaryApi";
 import { ACCOUNT_GLOSSARY_QUERY_KEY } from "@/hooks/useAccountGlossary";
 import { supabase } from "@/integrations/supabase/client";
 
