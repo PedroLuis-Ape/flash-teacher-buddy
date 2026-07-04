@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Flame, Gauge, Gem, Lightbulb, Loader2, RotateCcw, Settings2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import type { SpecialFocusSide, SpecialFocusTag } from "@/hooks/useSpecialFlashcards";
+import type { SpecialFocusTag } from "@/hooks/useSpecialFlashcards";
 import { buildStudyHintContent } from "@/features/study/lib/buildStudyHintContent";
 import {
   getCurrentDetailedExplanation,
@@ -42,12 +42,6 @@ const FOCUS_TAGS: Array<{ value: SpecialFocusTag; label: string }> = [
   { value: "translation", label: "Tradução" },
   { value: "natural_usage", label: "Uso natural" },
   { value: "other", label: "Outro" },
-];
-
-const FOCUS_SIDES: Array<{ value: SpecialFocusSide; label: string }> = [
-  { value: "a", label: "Lado A" },
-  { value: "b", label: "Lado B" },
-  { value: "both", label: "Ambos" },
 ];
 
 function readRate(): number {
@@ -157,7 +151,6 @@ export function StudyToolsMenu({
   const [rate, setRate] = useState<number>(() => readRate());
   const [specialFocusOpen, setSpecialFocusOpen] = useState(false);
   const [focusText, setFocusText] = useState("");
-  const [focusSide, setFocusSide] = useState<SpecialFocusSide>("a");
   const [focusTag, setFocusTag] = useState<SpecialFocusTag | null>(null);
   const [focusNote, setFocusNote] = useState("");
   const savingSpecialFocusRef = useRef(false);
@@ -219,7 +212,6 @@ export function StudyToolsMenu({
     if (specialPending) return;
     clearPendingSpecialFocusDraft();
     setFocusText(readSelectedText());
-    setFocusSide("a");
     setFocusTag(null);
     setFocusNote("");
     setSpecialFocusOpen(true);
@@ -236,7 +228,6 @@ export function StudyToolsMenu({
     savingSpecialFocusRef.current = true;
     savePendingSpecialFocusDraft({
       focus_text: focusText,
-      focus_side: focusSide,
       focus_tag: focusTag,
       focus_note: focusNote,
     });
@@ -318,24 +309,6 @@ export function StudyToolsMenu({
               className="h-10 text-sm"
             />
             <p className="text-[11px] text-muted-foreground">Selecionar texto antes de abrir já preenche este campo.</p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="text-xs font-semibold text-muted-foreground">Lado do foco</div>
-            <div className="grid grid-cols-3 gap-2">
-              {FOCUS_SIDES.map((side) => (
-                <Button
-                  key={side.value}
-                  type="button"
-                  variant={focusSide === side.value ? "default" : "outline"}
-                  size="sm"
-                  className="h-9 px-2 text-xs"
-                  onClick={() => setFocusSide(side.value)}
-                >
-                  {side.label}
-                </Button>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-2">

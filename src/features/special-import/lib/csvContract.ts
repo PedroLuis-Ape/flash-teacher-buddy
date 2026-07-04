@@ -1,5 +1,23 @@
 export const SPECIAL_CSV_FORMAT = "ape-special-explanations-csv" as const;
-export const SPECIAL_CSV_SCHEMA_VERSION = 1 as const;
+export const SPECIAL_CSV_SCHEMA_VERSION = 2 as const;
+export const SPECIAL_CSV_SCHEMA_VERSION_V1 = 1 as const;
+
+export const SPECIAL_CSV_HEADERS_V1 = [
+  "format",
+  "schema_version",
+  "export_id",
+  "card_ref",
+  "flashcard_id",
+  "term",
+  "translation",
+  "detailed_explanation",
+  "usage_notes",
+  "common_mistakes",
+  "example_1_en",
+  "example_1_pt",
+  "example_2_en",
+  "example_2_pt",
+] as const;
 
 export const SPECIAL_CSV_HEADERS = [
   "format",
@@ -9,6 +27,9 @@ export const SPECIAL_CSV_HEADERS = [
   "flashcard_id",
   "term",
   "translation",
+  "focus_text",
+  "focus_tag",
+  "focus_note",
   "detailed_explanation",
   "usage_notes",
   "common_mistakes",
@@ -27,6 +48,10 @@ export function escapeSpecialCsvField(value: unknown): string {
 }
 
 export const SPECIAL_CSV_HEADER_LINE = SPECIAL_CSV_HEADERS
+  .map(escapeSpecialCsvField)
+  .join(",");
+
+export const SPECIAL_CSV_HEADER_LINE_V1 = SPECIAL_CSV_HEADERS_V1
   .map(escapeSpecialCsvField)
   .join(",");
 

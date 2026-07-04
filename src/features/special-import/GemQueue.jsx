@@ -25,22 +25,12 @@ const FOCUS_TAG_LABELS = {
   other: "Outro",
 };
 
-const FOCUS_SIDE_LABELS = {
-  a: "Lado A",
-  b: "Lado B",
-  both: "Ambos",
-};
-
 function hasFocusContext(card) {
   return Boolean(card.focus_text || card.focus_tag || card.focus_note || card.notes);
 }
 
 function focusTagLabel(tag) {
   return FOCUS_TAG_LABELS[tag] || tag;
-}
-
-function focusSideLabel(side) {
-  return FOCUS_SIDE_LABELS[side] || side;
 }
 
 export default function GemQueue() {
@@ -148,7 +138,6 @@ export default function GemQueue() {
                       <div className="mb-2 flex flex-wrap items-center gap-1.5">
                         <span className="font-semibold text-primary">Foco da explicação</span>
                         {card.focus_tag && <Badge variant="secondary" className="text-[11px]">{focusTagLabel(card.focus_tag)}</Badge>}
-                        {card.focus_side && <Badge variant="outline" className="text-[11px]">{focusSideLabel(card.focus_side)}</Badge>}
                       </div>
                       {card.focus_text && (
                         <div className="break-words">

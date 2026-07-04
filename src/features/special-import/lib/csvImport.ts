@@ -14,8 +14,11 @@ import {
 import {
   SPECIAL_CSV_FORMAT,
   SPECIAL_CSV_HEADER_LINE,
+  SPECIAL_CSV_HEADER_LINE_V1,
   SPECIAL_CSV_HEADERS,
+  SPECIAL_CSV_HEADERS_V1,
   SPECIAL_CSV_SCHEMA_VERSION,
+  SPECIAL_CSV_SCHEMA_VERSION_V1,
   type SpecialCsvRecord,
 } from "./csvContract";
 
@@ -24,10 +27,13 @@ function extractCsvCandidate(input: string): string {
   const fenced = trimmed.match(/```(?:csv)?\s*([\s\S]*?)```/i);
   if (fenced?.[1]) return fenced[1].trim();
 
-  const plainHeader = SPECIAL_CSV_HEADERS.join(",");
-  const quotedIndex = trimmed.indexOf(SPECIAL_CSV_HEADER_LINE);
-  const plainIndex = trimmed.indexOf(plainHeader);
-  const indexes = [quotedIndex, plainIndex].filter((index) => index >= 0);
+  const headerLines = [
+    SPECIAL_CSV_HEADER_LINE,
+    SPECIAL_CSV_HEADER_LINE_V1,
+    SPECIAL_CSV_HEADERS.join(","),
+    SPECIAL_CSV_HEADERS_V1.join(","),
+  ];
+  const indexes = headerLines.map((header) => trimmed.indexOf(header)).filter((index) => index >= 0);
   if (indexes.length === 0) return trimmed;
   return trimmed.slice(Math.min(...indexes));
 }
@@ -40,13 +46,24 @@ export function looksLikeSpecialCsv(input: string): boolean {
     && sample.includes("export_id");
 }
 
-function toRecord(values: string[]): SpecialCsvRecord {
-  return Object.fromEntries(
-    SPECIAL_CSV_HEADERS.map((header, index) => [header, values[index]?.trim() ?? ""]),
-  ) as SpecialCsvRecord;
+type ParsedCsvHeader = typeof SPECIAL_CSV_HEADERS | typeof SPECIAL_CSV_HEADERS_V1;
+type ParsedCsvRecord = Partial<SpecialCsvRecord> & Record<string, string>;
+
+function headersMatch(headers: string[], expected: readonly string[]): boolean {
+  return headers.length === expected.length && expected.every((header, index) => headers[index] === header);
 }
 
-function examplesFromRecord(record: SpecialCsvRecord): SpecialImportExample[] | undefined {
+function resolveCsvHeaders(headers: string[]): { headers: ParsedCsvHeader; schemaVersion: number } | null {
+  if (headersMatch(headers, SPECIAL_CSV_HEADERS)) return { headers: SPECIAL_CSV_HEADERS, schemaVersion: SPECIAL_CSV_SCHEMA_VERSION };
+  if (headersMatch(headers, SPECIAL_CSV_HEADERS_V1)) return { headers: SPECIAL_CSV_HEADERS_V1, schemaVersion: SPECIAL_CSV_SCHEMA_VERSION_V1 };
+  return null;
+}
+
+function toRecord(values: string[], headers: ParsedCsvHeader): ParsedCsvRecord {
+  return Object.fromEntries(headers.map((header, index) => [header, values[index]?.trim() ?? ""])) as ParsedCsvRecord;
+}
+
+function examplesFromRecord(record: ParsedCsvRecord): SpecialImportExample[] | undefined {
   const examples = [
     { en: record.example_1_en || undefined, pt: record.example_1_pt || undefined },
     { en: record.example_2_en || undefined, pt: record.example_2_pt || undefined },
@@ -65,31 +82,28 @@ export function parseSpecialCsvText(input: string): ParsedSpecialImport {
   const headers = rows[0].values.map((value, index) => (
     index === 0 ? value.replace(/^\uFEFF/, "").trim() : value.trim()
   ));
-  const exactHeader = headers.length === SPECIAL_CSV_HEADERS.length
-    && SPECIAL_CSV_HEADERS.every((header, index) => headers[index] === header);
-  if (!exactHeader) {
-    throw new Error(`Cabeçalho CSV inválido. Use exatamente: ${SPECIAL_CSV_HEADERS.join(", ")}`);
-  }
+  const resolved = resolveCsvHeaders(headers);
+  if (!resolved) throw new Error(`Cabeçalho CSV inválido. Use exatamente: ${SPECIAL_CSV_HEADERS.join(", ")}`);
 
   const items: NormalizedSpecialImportItem[] = [];
   const invalidItems: InvalidSpecialImportItem[] = [];
   let exportId: string | undefined;
 
   rows.slice(1).forEach((row, sourceIndex) => {
-    if (row.values.length !== SPECIAL_CSV_HEADERS.length) {
-      invalidItems.push(invalid(row.values, sourceIndex, `Linha ${row.line} possui ${row.values.length} campos; eram esperados ${SPECIAL_CSV_HEADERS.length}.`));
+    if (row.values.length !== resolved.headers.length) {
+      invalidItems.push(invalid(row.values, sourceIndex, `Linha ${row.line} possui ${row.values.length} campos; eram esperados ${resolved.headers.length}.`));
       return;
     }
 
-    const record = toRecord(row.values);
+    const record = toRecord(row.values, resolved.headers);
     exportId ??= record.export_id || undefined;
 
     if (record.format !== SPECIAL_CSV_FORMAT) {
       invalidItems.push(invalid(record, sourceIndex, `Linha ${row.line}: format deve ser ${SPECIAL_CSV_FORMAT}.`));
       return;
     }
-    if (record.schema_version !== String(SPECIAL_CSV_SCHEMA_VERSION)) {
-      invalidItems.push(invalid(record, sourceIndex, `Linha ${row.line}: schema_version deve ser ${SPECIAL_CSV_SCHEMA_VERSION}.`));
+    if (record.schema_version !== String(resolved.schemaVersion)) {
+      invalidItems.push(invalid(record, sourceIndex, `Linha ${row.line}: schema_version deve ser ${resolved.schemaVersion}.`));
       return;
     }
     if (!record.export_id || record.export_id !== exportId) {
@@ -137,9 +151,7 @@ export function parseSpecialCsvText(input: string): ParsedSpecialImport {
     source: "v2",
     items,
     invalid: invalidItems,
-    warnings: [
-      `CSV oficial de Especiais detectado (${items.length + invalidItems.length} linha(s)).`,
-    ],
+    warnings: [`CSV oficial de Especiais detectado (${items.length + invalidItems.length} linha(s), contrato CSV v${resolved.schemaVersion}).`],
     repaired: false,
   };
 }

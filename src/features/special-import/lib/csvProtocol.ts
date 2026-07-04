@@ -16,6 +16,9 @@ export function buildSpecialCsvExport(batch: SpecialExportPackage): string {
     flashcard_id: card.flashcard_id,
     term: card.term,
     translation: card.translation,
+    focus_text: card.focus_text ?? "",
+    focus_tag: card.focus_tag ?? "",
+    focus_note: card.focus_note ?? "",
     detailed_explanation: "",
     usage_notes: "",
     common_mistakes: "",
@@ -31,9 +34,12 @@ export function buildSpecialCsvExport(batch: SpecialExportPackage): string {
 export function buildSpecialCsvPrompt(batch: SpecialExportPackage): string {
   const rules = [
     "Preserve exatamente o cabeçalho, a ordem das colunas e a ordem das linhas.",
-    "Preserve sem nenhuma alteração format, schema_version, export_id, card_ref, flashcard_id, term e translation.",
-    "Quando term for uma frase completa, identifique dentro dela a palavra, collocation, phrasal verb ou expressão mais específica e pedagogicamente útil; não explique a frase inteira palavra por palavra quando existir uma peça-chave mais relevante.",
-    "Comece detailed_explanation exatamente com 'Expressão-chave: <trecho exato do card>' e concentre a explicação nessa peça-chave. Exemplo: em 'The city announces sweeping new curbs', um foco provável é 'sweeping new curbs'.",
+    "Preserve sem nenhuma alteração format, schema_version, export_id, card_ref, flashcard_id, term, translation, focus_text, focus_tag e focus_note.",
+    "Quando focus_text estiver preenchido, explique obrigatoriamente esse trecho como foco principal. Não escolha outro foco principal.",
+    "Quando focus_tag estiver preenchido, use essa categoria para guiar a explicação: grammar, vocabulary, expression, phrasal_verb, pronunciation, translation, natural_usage ou other.",
+    "Quando focus_note estiver preenchido, responda diretamente à dificuldade descrita pelo professor/aluno.",
+    "Comece detailed_explanation exatamente com 'Expressão-chave: <trecho exato do foco>'. Se focus_text estiver vazio, use a peça-chave inferida.",
+    "Quando focus_text estiver vazio e term for uma frase completa, identifique dentro dela a palavra, collocation, phrasal verb ou expressão mais específica e pedagogicamente útil; não explique a frase inteira palavra por palavra quando existir uma peça-chave mais relevante.",
     "Quando o card já for uma palavra ou expressão curta, use o próprio term como expressão-chave. Quando representar uma camada ou sentido específico, explique somente esse sentido.",
     "Preencha detailed_explanation em todas as linhas; explique significado, contexto de uso, nuance, diferenças de termos parecidos e a construção gramatical relevante.",
     "Quando o card for um phrasal verb, explique a lógica da construção.",
@@ -48,7 +54,9 @@ export function buildSpecialCsvPrompt(batch: SpecialExportPackage): string {
   ];
   return [
     "Você recebeu um arquivo CSV de Cards Especiais exportado pelo App Piteco.",
-    "Sua tarefa é identificar a peça-chave de cada card, preencher a explicação didática e devolver o mesmo CSV preenchido.",
+    "Sua tarefa é preencher a explicação didática e devolver o mesmo CSV preenchido.",
+    "O CSV pode trazer foco pedagógico explícito em focus_text, focus_tag e focus_note. Use esses campos para não adivinhar o que explicar.",
+    "Só escolha/inferia a peça-chave quando focus_text estiver vazio.",
     "",
     `Lote esperado: ${batch.export_id}`,
     `Linhas de dados esperadas: ${batch.card_count}`,
