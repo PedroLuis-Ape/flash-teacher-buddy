@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, BookOpen, Info, LockKeyhole, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
@@ -63,8 +63,8 @@ function Section({
   warning = false,
 }: {
   title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
+  icon: ReactNode;
+  children: ReactNode;
   warning?: boolean;
 }) {
   return (
