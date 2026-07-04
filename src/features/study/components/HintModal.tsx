@@ -8,11 +8,27 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { requestDetailedExplanationPanelToggle } from "@/features/study/lib/currentDetailedExplanation";
 
 interface HintModalProps {
   hint?: string | null;
   isOpen: boolean;
   onClose: () => void;
+}
+
+const DESKTOP_PANEL_QUERY = "(min-width: 1280px)";
+
+function shouldUseDesktopSidePanel(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia(DESKTOP_PANEL_QUERY).matches;
+}
+
+function hasDetailedContentMarker(hint?: string | null): boolean {
+  return Boolean(
+    hint?.includes("**Explicação detalhada**")
+      || hint?.includes("**Quando usar**")
+      || hint?.includes("**Erros comuns**"),
+  );
 }
 
 /**
@@ -70,14 +86,18 @@ const renderHintBody = (raw: string): React.ReactNode => {
 };
 
 export const HintModal = ({ hint, isOpen, onClose }: HintModalProps) => {
-  if (!isOpen) return null;
+  const hasDetailedExplanation = hasDetailedContentMarker(hint);
+  const useDesktopSidePanel = isOpen && hasDetailedExplanation && shouldUseDesktopSidePanel();
+
+  React.useEffect(() => {
+    if (!isOpen || !hasDetailedExplanation || !shouldUseDesktopSidePanel()) return;
+    requestDetailedExplanationPanelToggle();
+    onClose();
+  }, [hasDetailedExplanation, isOpen, onClose]);
+
+  if (!isOpen || useDesktopSidePanel) return null;
 
   const hasHint = Boolean(hint && hint.trim().length > 0);
-  const hasDetailedExplanation = Boolean(
-    hint?.includes("**Explicação detalhada**")
-      || hint?.includes("**Quando usar**")
-      || hint?.includes("**Erros comuns**"),
-  );
   const title = hasHint
     ? hasDetailedExplanation ? "Dica e explicação" : "Dica"
     : "Sem dica";
