@@ -19,6 +19,7 @@ import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import "./flipStudyMobileCompact.css";
 
 const AUTO_PLAY_DELAY_MS = 7000;
+const MOUSE_DRAG_THRESHOLD_PX = 6;
 
 type ManualFlipAnswer = "knew" | "didntKnow" | null;
 
@@ -30,6 +31,11 @@ function isPureFlipSession(): boolean {
   if (typeof window === "undefined") return true;
   const mode = new URLSearchParams(window.location.search).get("mode");
   return mode !== "mixed";
+}
+
+function hasActiveTextSelection(): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.getSelection()?.toString().trim());
 }
 
 type ResolvedSide = { text: string; lang: string; label: string };
@@ -185,6 +191,8 @@ export const FlipStudyView = ({
   const autoPlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const swipeConsumedRef = useRef(false);
+  const mouseDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressNextCardClickRef = useRef(false);
   const { speak, stop } = useTTS();
   const pureFlipSession = isPureFlipSession();
 
@@ -244,11 +252,42 @@ export const FlipStudyView = ({
     setIsFlipped((value) => !value);
   };
 
-  const handleCardClick = () => {
+  const handleCardMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    mouseDragStartRef.current = { x: event.clientX, y: event.clientY };
+    suppressNextCardClickRef.current = false;
+  };
+
+  const handleCardMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
+    const start = mouseDragStartRef.current;
+    mouseDragStartRef.current = null;
+    if (!start) return;
+
+    const dx = Math.abs(event.clientX - start.x);
+    const dy = Math.abs(event.clientY - start.y);
+    if (dx > MOUSE_DRAG_THRESHOLD_PX || dy > MOUSE_DRAG_THRESHOLD_PX || hasActiveTextSelection()) {
+      suppressNextCardClickRef.current = true;
+    }
+  };
+
+  const handleCardMouseLeave = () => {
+    if (mouseDragStartRef.current) suppressNextCardClickRef.current = true;
+    mouseDragStartRef.current = null;
+  };
+
+  const handleCardClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement | null)?.closest("button, a, input, textarea, select, [role='button'], [contenteditable='true']")) return;
+
     if (swipeConsumedRef.current) {
       swipeConsumedRef.current = false;
       return;
     }
+
+    if (suppressNextCardClickRef.current || hasActiveTextSelection()) {
+      suppressNextCardClickRef.current = false;
+      return;
+    }
+
     handleFlip();
   };
 
@@ -539,6 +578,9 @@ export const FlipStudyView = ({
       <div
         className={cn("flip-card relative h-60 w-full cursor-pointer sm:h-80", getRedListCardClass(isRedListed) && "rounded-xl " + getRedListCardClass(isRedListed))}
         onClick={handleCardClick}
+        onMouseDown={handleCardMouseDown}
+        onMouseUp={handleCardMouseUp}
+        onMouseLeave={handleCardMouseLeave}
         onTouchStart={onCardTouchStart}
         onTouchEnd={onCardTouchEnd}
         style={{ touchAction: "pan-y" }}
