@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, FileSearch, Loader2, Search, Upload, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileSearch, Loader2, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -231,7 +231,7 @@ function ResultSection({
   useJsonCount = false,
 }: {
   title: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   items: ExtractedTerm[];
   countLabel: string;
   emptyText?: string;
