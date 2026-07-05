@@ -4,6 +4,13 @@ import type { GlossarySourceCard } from "./glossaryAiExport";
 const LIST_CHUNK_SIZE = 100;
 const PAGE_SIZE = 1000;
 
+export interface GlossarySourceCardsPage {
+  rows: GlossarySourceCard[];
+  total: number;
+  offset: number;
+  nextOffset: number;
+}
+
 function chunks<T>(values: readonly T[], size: number): T[][] {
   const result: T[][] = [];
   for (let index = 0; index < values.length; index += size) {
@@ -14,6 +21,14 @@ function chunks<T>(values: readonly T[], size: number): T[][] {
 
 function yieldToBrowser() {
   return new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+}
+
+function isMissingRpc(error: unknown): boolean {
+  const err = error as { message?: string; details?: string; hint?: string; code?: string } | null | undefined;
+  const text = `${err?.message ?? ""} ${err?.details ?? ""} ${err?.hint ?? ""} ${err?.code ?? ""}`.toLowerCase();
+  return text.includes("get_glossary_source_cards_page")
+    || text.includes("could not find the function")
+    || text.includes("pgrst202");
 }
 
 export async function streamGlossarySourceCards(
@@ -59,6 +74,71 @@ export async function streamGlossarySourceCards(
   }
 
   return loadedCards;
+}
+
+async function loadGlossarySourceCardsPageFallback(
+  listIds: readonly string[],
+  offset: number,
+  limit: number,
+): Promise<GlossarySourceCardsPage> {
+  // Compatibility path used only until the Supabase migration/RPC is live.
+  // It still limits browser work to one page, but the total can only be known
+  // accurately after the RPC is available.
+  const uniqueListIds = Array.from(new Set(listIds.filter(Boolean)));
+  if (uniqueListIds.length === 0) return { rows: [], total: 0, offset, nextOffset: offset };
+
+  const firstChunk = uniqueListIds.slice(0, LIST_CHUNK_SIZE);
+  const { data, error, count } = await supabase
+    .from("flashcards")
+    .select("id, list_id, term, translation", { count: "exact" })
+    .in("list_id", firstChunk)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  const rows = ((data ?? []) as GlossarySourceCard[])
+    .filter((row) => row.term?.trim() || row.translation?.trim());
+
+  return {
+    rows,
+    total: count ?? offset + rows.length,
+    offset,
+    nextOffset: offset + rows.length,
+  };
+}
+
+export async function loadGlossarySourceCardsPage(
+  listIds: readonly string[],
+  offset = 0,
+  limit = 250,
+): Promise<GlossarySourceCardsPage> {
+  const uniqueListIds = Array.from(new Set(listIds.filter(Boolean)));
+  if (uniqueListIds.length === 0) return { rows: [], total: 0, offset, nextOffset: offset };
+
+  const safeLimit = Math.max(1, Math.min(limit, 1000));
+  const safeOffset = Math.max(0, offset);
+  const { data, error } = await (supabase as any).rpc("get_glossary_source_cards_page", {
+    p_list_ids: uniqueListIds,
+    p_limit: safeLimit,
+    p_offset: safeOffset,
+  });
+
+  if (error) {
+    if (isMissingRpc(error)) return loadGlossarySourceCardsPageFallback(uniqueListIds, safeOffset, safeLimit);
+    throw error;
+  }
+
+  const rowsWithTotal = (data ?? []) as Array<GlossarySourceCard & { total_count?: number | string | null }>;
+  const rows = rowsWithTotal.map(({ total_count: _totalCount, ...row }) => row);
+  const total = Number(rowsWithTotal[0]?.total_count ?? safeOffset + rows.length);
+
+  return {
+    rows,
+    total,
+    offset: safeOffset,
+    nextOffset: safeOffset + rows.length,
+  };
 }
 
 export async function loadGlossarySourceCards(
