@@ -4,7 +4,7 @@ language sql
 immutable
 set search_path = public
 as $$
-  select lower(regexp_replace(btrim(coalesce(value, '')), '\s+', ' ', 'g'));
+  select lower(regexp_replace(btrim(coalesce(value, '')), '[[:space:]]+', ' ', 'g'));
 $$;
 
 create index if not exists idx_flashcards_user_normalized_term_active
