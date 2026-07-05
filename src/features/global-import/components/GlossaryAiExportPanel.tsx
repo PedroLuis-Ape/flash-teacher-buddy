@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Copy, Download, FileDown, Loader2, Search, Sparkles } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, Copy, Download, FileDown, Loader2, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,8 @@ import {
 import { loadGlossarySourceCards, streamGlossarySourceCards } from "../glossaryAiExportService";
 
 interface Props { catalog: ImportDestinationCatalog | null; folderIds: string[]; }
-const DISPLAY_LIMIT = 300;
+const INITIAL_DISPLAY_LIMIT = 80;
+const DISPLAY_STEP = 80;
 const CLIPBOARD_CARD_LIMIT = 5000;
 
 export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
@@ -32,10 +33,13 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [side, setSide] = useState<GlossarySourceSide>("both");
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_DISPLAY_LIMIT);
   const [loading, setLoading] = useState(false);
   const [exportingAll, setExportingAll] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
   const [lastExportCount, setLastExportCount] = useState(0);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const folderKey = useMemo(() => [...folderIds].sort().join("|"), [folderIds]);
   const folderSet = useMemo(() => new Set(folderIds), [folderIds]);
   const lists = useMemo(() => (catalog?.lists ?? []).filter((list) => folderSet.has(list.folder_id)), [catalog, folderSet]);
@@ -46,15 +50,23 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
     setCards([]);
     setSelected(new Set());
     setSearch("");
+    setVisibleCount(INITIAL_DISPLAY_LIMIT);
     setLoadedCount(0);
     setLastExportCount(0);
   }, [folderKey]);
 
-  const filtered = useMemo(() => filterGlossarySourceCards(cards, search), [cards, search]);
+  const filtered = useMemo(() => filterGlossarySourceCards(cards, deferredSearch), [cards, deferredSearch]);
+  const visibleCards = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const hasMoreVisible = visibleCount < filtered.length;
   const allFiltered = useMemo(
     () => filtered.length > 0 && filtered.every((card) => selected.has(card.id)),
     [filtered, selected],
   );
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_DISPLAY_LIMIT);
+    listRef.current?.scrollTo({ top: 0 });
+  }, [deferredSearch, cards.length]);
 
   const enrich = (rows: GlossarySourceCard[]) => rows.map((card) => {
     const list = listMap.get(card.list_id);
@@ -132,6 +144,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
       const enriched = enrich(rows);
       setCards(enriched);
       setSelected(new Set(enriched.map((card) => card.id)));
+      setVisibleCount(INITIAL_DISPLAY_LIMIT);
       toast.success(`${enriched.length.toLocaleString("pt-BR")} card(s) carregado(s) para seleção manual.`);
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível carregar os termos.");
@@ -202,19 +215,40 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
 
     {cards.length > 0 && <>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Cards carregados" value={cards.length} /><Metric label="Selecionados" value={selected.size} /><Metric label="Pastas" value={folderIds.length} /><Metric label="Listas" value={lists.length} /></div>
-      <div className="space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-          <div className="relative flex-1 sm:max-w-md"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar termo, tradução, lista ou pasta..." className="pl-9" /></div>
-          <div className="flex gap-2"><Button size="sm" variant="outline" onClick={toggleFiltered}>{allFiltered ? "Desmarcar resultados" : "Selecionar resultados"}</Button><Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Limpar</Button></div>
+      <div className="space-y-3 rounded-xl border bg-background/60 p-3">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative flex-1 lg:max-w-lg"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar termo, tradução, lista ou pasta..." className="pl-9" aria-label="Buscar termos do glossário" /></div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={toggleFiltered}>{allFiltered ? "Desmarcar resultados" : "Selecionar resultados"}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Limpar</Button>
+          </div>
         </div>
-        <div className="max-h-[320px] space-y-2 overflow-y-auto rounded-lg border p-2">
-          {filtered.slice(0, DISPLAY_LIMIT).map((card) => <label key={card.id} className="flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-muted/50">
-            <Checkbox checked={selected.has(card.id)} onCheckedChange={() => toggle(card.id)} className="mt-1" />
-            <div className="min-w-0 flex-1"><div className="break-words text-sm font-medium">{card.term || "—"}</div><div className="mt-0.5 break-words text-sm text-primary">{card.translation || "—"}</div><div className="mt-1 flex flex-wrap gap-1">{card.folder_title && <Badge variant="outline" className="text-[10px]">{card.folder_title}</Badge>}{card.list_title && <Badge variant="secondary" className="text-[10px]">{card.list_title}</Badge>}</div></div>
-          </label>)}
-          {filtered.length === 0 && <div className="p-5 text-center text-sm text-muted-foreground">Nenhum termo encontrado.</div>}
+
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <span>
+            Mostrando {Math.min(visibleCards.length, filtered.length).toLocaleString("pt-BR")} de {filtered.length.toLocaleString("pt-BR")} resultado(s).
+          </span>
+          {search !== deferredSearch && <span>Atualizando busca...</span>}
         </div>
-        {filtered.length > DISPLAY_LIMIT && <p className="text-xs text-muted-foreground">Mostrando somente {DISPLAY_LIMIT} de {filtered.length.toLocaleString("pt-BR")} resultados na tela. A exportação continua incluindo todos os selecionados.</p>}
+
+        <div ref={listRef} className="max-h-[min(58dvh,560px)] overflow-y-auto overscroll-contain rounded-lg border" role="list" aria-label="Termos carregados do glossário">
+          <div className="space-y-2 p-2">
+            {visibleCards.map((card) => <label key={card.id} className="flex cursor-pointer items-start gap-3 rounded-md border bg-card/60 p-3 hover:bg-muted/50" role="listitem">
+              <Checkbox checked={selected.has(card.id)} onCheckedChange={() => toggle(card.id)} className="mt-1" aria-label={`Selecionar ${card.term || card.translation || "card"}`} />
+              <div className="min-w-0 flex-1"><div className="break-words text-sm font-medium">{card.term || "—"}</div><div className="mt-0.5 break-words text-sm text-primary">{card.translation || "—"}</div><div className="mt-1 flex flex-wrap gap-1">{card.folder_title && <Badge variant="outline" className="text-[10px]">{card.folder_title}</Badge>}{card.list_title && <Badge variant="secondary" className="text-[10px]">{card.list_title}</Badge>}</div></div>
+            </label>)}
+            {filtered.length === 0 && <div className="p-5 text-center text-sm text-muted-foreground">Nenhum termo encontrado.</div>}
+          </div>
+        </div>
+
+        {hasMoreVisible && <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">A lista carrega em blocos para não travar o navegador.</p>
+          <Button size="sm" variant="outline" onClick={() => setVisibleCount((value) => Math.min(value + DISPLAY_STEP, filtered.length))}>Carregar mais {Math.min(DISPLAY_STEP, filtered.length - visibleCount).toLocaleString("pt-BR")}</Button>
+        </div>}
+
+        {visibleCount > INITIAL_DISPLAY_LIMIT && <div className="flex justify-end">
+          <Button size="sm" variant="ghost" onClick={() => listRef.current?.scrollTo({ top: 0, behavior: "smooth" })}><ArrowUp className="mr-2 h-4 w-4" />Voltar ao topo</Button>
+        </div>}
       </div>
       <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">Palavras individuais e chunks são camadas cumulativas. O prompt completo é montado somente ao copiar ou baixar.</div>
       <div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void copy()} disabled={selected.size === 0}><Copy className="mr-2 h-4 w-4" />Copiar seleção</Button><Button onClick={download} disabled={selected.size === 0}><Download className="mr-2 h-4 w-4" />Baixar seleção</Button></div>
