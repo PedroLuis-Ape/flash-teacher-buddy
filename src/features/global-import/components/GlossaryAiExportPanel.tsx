@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Copy, Download, FileDown, Loader2, Search, Sparkles } from "lucide-react";
+import { ArrowUp, Copy, Database, Download, FileDown, Loader2, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,12 @@ import {
   type GlossarySourceSide,
   type GlossaryWordInventoryItem,
 } from "../glossaryAiExport";
-import { loadGlossarySourceCards, streamGlossarySourceCards } from "../glossaryAiExportService";
+import { loadGlossarySourceCardsPage, streamGlossarySourceCards } from "../glossaryAiExportService";
 
 interface Props { catalog: ImportDestinationCatalog | null; folderIds: string[]; }
 const INITIAL_DISPLAY_LIMIT = 80;
 const DISPLAY_STEP = 80;
+const SERVER_PAGE_SIZE = 250;
 const CLIPBOARD_CARD_LIMIT = 5000;
 
 export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
@@ -36,9 +37,12 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
   const deferredSearch = useDeferredValue(search);
   const [visibleCount, setVisibleCount] = useState(INITIAL_DISPLAY_LIMIT);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [exportingAll, setExportingAll] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
   const [lastExportCount, setLastExportCount] = useState(0);
+  const [serverOffset, setServerOffset] = useState(0);
+  const [totalAvailable, setTotalAvailable] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const folderKey = useMemo(() => [...folderIds].sort().join("|"), [folderIds]);
   const folderSet = useMemo(() => new Set(folderIds), [folderIds]);
@@ -53,11 +57,14 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
     setVisibleCount(INITIAL_DISPLAY_LIMIT);
     setLoadedCount(0);
     setLastExportCount(0);
+    setServerOffset(0);
+    setTotalAvailable(null);
   }, [folderKey]);
 
   const filtered = useMemo(() => filterGlossarySourceCards(cards, deferredSearch), [cards, deferredSearch]);
   const visibleCards = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
   const hasMoreVisible = visibleCount < filtered.length;
+  const hasMoreInDatabase = totalAvailable != null && serverOffset < totalAvailable;
   const allFiltered = useMemo(
     () => filtered.length > 0 && filtered.every((card) => selected.has(card.id)),
     [filtered, selected],
@@ -135,23 +142,59 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
     }
   };
 
-  const load = async () => {
+  const loadPage = async (reset: boolean) => {
     if (!validateFolders()) return;
-    setLoading(true);
-    setLoadedCount(0);
-    try {
-      const rows = await loadGlossarySourceCards(lists.map((list) => list.id), setLoadedCount);
-      const enriched = enrich(rows);
-      setCards(enriched);
-      setSelected(new Set(enriched.map((card) => card.id)));
+    const listIds = lists.map((list) => list.id);
+    const nextOffset = reset ? 0 : serverOffset;
+
+    if (reset) {
+      setLoading(true);
+      setCards([]);
+      setSelected(new Set());
+      setSearch("");
       setVisibleCount(INITIAL_DISPLAY_LIMIT);
-      toast.success(`${enriched.length.toLocaleString("pt-BR")} card(s) carregado(s) para seleção manual.`);
+      setServerOffset(0);
+      setTotalAvailable(null);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      const page = await loadGlossarySourceCardsPage(listIds, nextOffset, SERVER_PAGE_SIZE);
+      const enriched = enrich(page.rows);
+
+      setCards((current) => {
+        if (reset) return enriched;
+        const seen = new Set(current.map((card) => card.id));
+        const fresh = enriched.filter((card) => !seen.has(card.id));
+        return [...current, ...fresh];
+      });
+      setSelected((current) => {
+        const next = reset ? new Set<string>() : new Set(current);
+        enriched.forEach((card) => next.add(card.id));
+        return next;
+      });
+      setServerOffset(page.nextOffset);
+      setTotalAvailable(page.total);
+      setLoadedCount(page.nextOffset);
+      setVisibleCount((current) => reset ? INITIAL_DISPLAY_LIMIT : Math.min(current + DISPLAY_STEP, cards.length + enriched.length));
+
+      if (page.rows.length === 0) {
+        toast.error("Nenhum termo foi encontrado para carregar.");
+      } else if (reset) {
+        toast.success(`${enriched.length.toLocaleString("pt-BR")} de ${page.total.toLocaleString("pt-BR")} termo(s) carregado(s).`);
+      } else {
+        toast.success(`Mais ${enriched.length.toLocaleString("pt-BR")} termo(s) carregado(s).`);
+      }
     } catch (error: any) {
       toast.error(error?.message || "Não foi possível carregar os termos.");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
+
+  const load = () => loadPage(true);
 
   const toggle = (id: string) => setSelected((current) => {
     const next = new Set(current);
@@ -204,20 +247,21 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
           </Select>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => void load()} disabled={loading || exportingAll || folderIds.length === 0}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}Carregar para escolher</Button>
-          <Button onClick={() => void exportAll()} disabled={loading || exportingAll || folderIds.length === 0}>{exportingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}Exportar tudo para IA</Button>
+          <Button variant="outline" onClick={() => void load()} disabled={loading || loadingMore || exportingAll || folderIds.length === 0}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}Carregar primeiros {SERVER_PAGE_SIZE}</Button>
+          <Button onClick={() => void exportAll()} disabled={loading || loadingMore || exportingAll || folderIds.length === 0}>{exportingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}Exportar tudo para IA</Button>
         </div>
       </div>
-      {(loading || exportingAll) && <p className="text-sm text-muted-foreground">Processando por lotes: {loadedCount.toLocaleString("pt-BR")} card(s)...</p>}
+      {(loading || loadingMore || exportingAll) && <p className="text-sm text-muted-foreground">Processando por lotes: {loadedCount.toLocaleString("pt-BR")} card(s)...</p>}
       {lastExportCount > 0 && !exportingAll && <p className="text-sm font-medium text-emerald-600">Última exportação concluída: {lastExportCount.toLocaleString("pt-BR")} cards.</p>}
-      <p className="text-xs leading-relaxed text-muted-foreground">Para volumes muito grandes, use “Exportar tudo para IA”. O arquivo inclui um inventário obrigatório para impedir que a IA omita palavras comuns como the, at, of ou is.</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">Para volumes muito grandes, use “Exportar tudo para IA”. Para seleção manual, carregue os termos em páginas para evitar travar o navegador.</p>
     </div>
 
     {cards.length > 0 && <>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Cards carregados" value={cards.length} /><Metric label="Selecionados" value={selected.size} /><Metric label="Pastas" value={folderIds.length} /><Metric label="Listas" value={lists.length} /></div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Carregados" value={cards.length} /><Metric label="Selecionados" value={selected.size} /><Metric label="Pastas" value={folderIds.length} /><Metric label="Listas" value={lists.length} /></div>
+      {totalAvailable != null && <p className="text-xs text-muted-foreground">Carregados do banco: {cards.length.toLocaleString("pt-BR")} de {totalAvailable.toLocaleString("pt-BR")} termo(s). A exportação “tudo” não depende desta lista manual.</p>}
       <div className="space-y-3 rounded-xl border bg-background/60 p-3">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative flex-1 lg:max-w-lg"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar termo, tradução, lista ou pasta..." className="pl-9" aria-label="Buscar termos do glossário" /></div>
+          <div className="relative flex-1 lg:max-w-lg"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nos termos já carregados..." className="pl-9" aria-label="Buscar termos do glossário" /></div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={toggleFiltered}>{allFiltered ? "Desmarcar resultados" : "Selecionar resultados"}</Button>
             <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Limpar</Button>
@@ -226,7 +270,7 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
 
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           <span>
-            Mostrando {Math.min(visibleCards.length, filtered.length).toLocaleString("pt-BR")} de {filtered.length.toLocaleString("pt-BR")} resultado(s).
+            Mostrando {Math.min(visibleCards.length, filtered.length).toLocaleString("pt-BR")} de {filtered.length.toLocaleString("pt-BR")} resultado(s) carregado(s).
           </span>
           {search !== deferredSearch && <span>Atualizando busca...</span>}
         </div>
@@ -237,14 +281,19 @@ export function GlossaryAiExportPanel({ catalog, folderIds }: Props) {
               <Checkbox checked={selected.has(card.id)} onCheckedChange={() => toggle(card.id)} className="mt-1" aria-label={`Selecionar ${card.term || card.translation || "card"}`} />
               <div className="min-w-0 flex-1"><div className="break-words text-sm font-medium">{card.term || "—"}</div><div className="mt-0.5 break-words text-sm text-primary">{card.translation || "—"}</div><div className="mt-1 flex flex-wrap gap-1">{card.folder_title && <Badge variant="outline" className="text-[10px]">{card.folder_title}</Badge>}{card.list_title && <Badge variant="secondary" className="text-[10px]">{card.list_title}</Badge>}</div></div>
             </label>)}
-            {filtered.length === 0 && <div className="p-5 text-center text-sm text-muted-foreground">Nenhum termo encontrado.</div>}
+            {filtered.length === 0 && <div className="p-5 text-center text-sm text-muted-foreground">Nenhum termo encontrado entre os carregados.</div>}
           </div>
         </div>
 
-        {hasMoreVisible && <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted-foreground">A lista carrega em blocos para não travar o navegador.</p>
-          <Button size="sm" variant="outline" onClick={() => setVisibleCount((value) => Math.min(value + DISPLAY_STEP, filtered.length))}>Carregar mais {Math.min(DISPLAY_STEP, filtered.length - visibleCount).toLocaleString("pt-BR")}</Button>
-        </div>}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-muted-foreground">
+            {hasMoreInDatabase ? "Ainda existem termos no banco para carregar." : "Todos os termos disponíveis já foram carregados para seleção manual."}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            {hasMoreVisible && <Button size="sm" variant="outline" onClick={() => setVisibleCount((value) => Math.min(value + DISPLAY_STEP, filtered.length))}>Mostrar mais na tela</Button>}
+            {hasMoreInDatabase && <Button size="sm" variant="secondary" onClick={() => void loadPage(false)} disabled={loadingMore || loading || exportingAll}>{loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}Carregar mais do banco</Button>}
+          </div>
+        </div>
 
         {visibleCount > INITIAL_DISPLAY_LIMIT && <div className="flex justify-end">
           <Button size="sm" variant="ghost" onClick={() => listRef.current?.scrollTo({ top: 0, behavior: "smooth" })}><ArrowUp className="mr-2 h-4 w-4" />Voltar ao topo</Button>
