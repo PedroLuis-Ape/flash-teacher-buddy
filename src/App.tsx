@@ -77,6 +77,7 @@ const KeyboardShortcutsPage = lazy(() => import("./pages/KeyboardShortcuts"));
 const SpecialCards = lazy(() => import("./pages/SpecialCards"));
 const SystemStatus = lazy(() => import("./pages/SystemStatus"));
 const Glossary = lazy(() => import("./pages/Glossary"));
+const TermChecker = lazy(() => import("./pages/TermChecker"));
 const BugReport = lazy(() => import("./pages/BugReport"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
@@ -156,6 +157,7 @@ const App = () => {
                           <Route path="/profile" element={<Profile />} />
                           <Route path="/folders" element={<Folders />} />
                           <Route path="/glossary" element={<Glossary />} />
+                          <Route path="/term-checker" element={<TermChecker />} />
                           <Route path="/search" element={<Search />} />
                           <Route path="/folder/:id" element={<FolderWithExport />} />
                           <Route path="/list/:id" element={<ListDetail />} />
