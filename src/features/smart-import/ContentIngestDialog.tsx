@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import {
   buildExistingListImportPlan,
   existingListTargetFromCatalog,
@@ -50,6 +51,58 @@ interface Props {
 type ImportMode = "simple" | "complete";
 type Step = 1 | 2 | 3;
 
+const TERM_DUPLICATE_CHUNK_SIZE = 500;
+
+function normalizeTermForAccountCheck(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
+
+function extractTermsForAccountDuplicateCheck(packageValue: SmartImportPackage): string[] {
+  const terms: string[] = [];
+  const folders = (packageValue as any)?.package?.folders ?? [];
+
+  for (const folder of folders) {
+    for (const list of folder?.lists ?? []) {
+      for (const card of list?.cards ?? []) {
+        if (card?.type === "normal" && typeof card.front === "string") {
+          terms.push(card.front);
+        }
+        if (card?.type === "layered" && Array.isArray(card.layers)) {
+          for (const layer of card.layers) {
+            if (typeof layer?.front === "string") terms.push(layer.front);
+          }
+        }
+      }
+    }
+  }
+
+  return terms;
+}
+
+async function loadAccountTermDuplicateCounts(terms: string[]): Promise<Record<string, number>> {
+  const uniqueByNormalized = new Map<string, string>();
+
+  for (const term of terms) {
+    const normalized = normalizeTermForAccountCheck(term);
+    if (normalized && !uniqueByNormalized.has(normalized)) uniqueByNormalized.set(normalized, term);
+  }
+
+  const uniqueTerms = Array.from(uniqueByNormalized.values());
+  const counts: Record<string, number> = {};
+
+  for (let i = 0; i < uniqueTerms.length; i += TERM_DUPLICATE_CHUNK_SIZE) {
+    const chunk = uniqueTerms.slice(i, i + TERM_DUPLICATE_CHUNK_SIZE);
+    const { data, error } = await (supabase as any).rpc("get_term_duplicate_counts", { p_terms: chunk });
+    if (error) throw error;
+
+    for (const row of (data ?? []) as Array<{ normalized_term: string; existing_count: number | string }>) {
+      counts[row.normalized_term] = Number(row.existing_count ?? 0);
+    }
+  }
+
+  return counts;
+}
+
 export function ContentIngestDialog({
   listId,
   onImported,
@@ -77,6 +130,9 @@ export function ContentIngestDialog({
   const [progressLabel, setProgressLabel] = useState("");
   const [report, setReport] = useState<GlobalImportExecutionReport | null>(null);
   const [undoing, setUndoing] = useState(false);
+  const [accountTermCounts, setAccountTermCounts] = useState<Record<string, number>>({});
+  const [checkingAccountDuplicates, setCheckingAccountDuplicates] = useState(false);
+  const [accountDuplicateError, setAccountDuplicateError] = useState("");
   const [options, setOptions] = useState<SmartImportPromptOptions>({
     languageA: langA,
     languageB: langB,
@@ -132,6 +188,49 @@ export function ContentIngestDialog({
     };
   }, [parsed, prepared]);
 
+  useEffect(() => {
+    if (!reviewParsed?.packageValue || step !== 2) {
+      setAccountTermCounts({});
+      setAccountDuplicateError("");
+      setCheckingAccountDuplicates(false);
+      return;
+    }
+
+    const terms = extractTermsForAccountDuplicateCheck(reviewParsed.packageValue);
+    if (!terms.length) {
+      setAccountTermCounts({});
+      setAccountDuplicateError("");
+      setCheckingAccountDuplicates(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCheckingAccountDuplicates(true);
+    setAccountDuplicateError("");
+
+    loadAccountTermDuplicateCounts(terms)
+      .then((counts) => {
+        if (!cancelled) setAccountTermCounts(counts);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("Account duplicate check failed:", error);
+          setAccountTermCounts({});
+          setAccountDuplicateError(error instanceof Error ? error.message : "Não foi possível checar duplicados na conta.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingAccountDuplicates(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [reviewParsed?.packageValue, step]);
+
+  const accountDuplicateTerms = useMemo(
+    () => Object.values(accountTermCounts).filter((count) => count > 0).length,
+    [accountTermCounts],
+  );
+
   const duplicatePolicyBlocked = policy === "error" && Boolean(reconciliation?.cardsDuplicates);
 
   const reset = () => {
@@ -146,6 +245,9 @@ export function ContentIngestDialog({
     setProgress(0);
     setProgressLabel("");
     setReport(null);
+    setAccountTermCounts({});
+    setAccountDuplicateError("");
+    setCheckingAccountDuplicates(false);
     if (completeFileRef.current) completeFileRef.current.value = "";
   };
 
@@ -216,6 +318,8 @@ export function ContentIngestDialog({
       if (!raw.trim()) throw new Error("Cole, digite ou selecione um arquivo antes de analisar.");
       const result = mode === "simple" ? buildSimplePackage() : parseComplete(raw);
       setParsed(result);
+      setAccountTermCounts({});
+      setAccountDuplicateError("");
       setStep(2);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Não foi possível interpretar o conteúdo.");
@@ -232,6 +336,8 @@ export function ContentIngestDialog({
       setSelectedFileName(file.name);
       setParsed(result);
       setReport(null);
+      setAccountTermCounts({});
+      setAccountDuplicateError("");
       setStep(2);
       toast.success(`Arquivo “${file.name}” carregado e analisado.`);
     } catch (error: unknown) {
@@ -298,6 +404,9 @@ export function ContentIngestDialog({
     setParsed(null);
     setStep(1);
     setReport(null);
+    setAccountTermCounts({});
+    setAccountDuplicateError("");
+    setCheckingAccountDuplicates(false);
   };
 
   return <>
@@ -395,6 +504,11 @@ export function ContentIngestDialog({
             <Card className={`p-4 text-sm ${reconciliation.coherent ? "bg-primary/5" : "border-destructive bg-destructive/5 text-destructive"}`}>
               {reconciliation.cardsReceived} recebidos = {reconciliation.cardsValid} válidos + {reconciliation.cardsDuplicates} duplicados + {reconciliation.cardsBlocked} bloqueados.
             </Card>
+            {checkingAccountDuplicates && <Card className="flex items-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checando termos em todas as listas e espaços do seu perfil...</Card>}
+            {!checkingAccountDuplicates && accountDuplicateError && <Alert><AlertDescription>Checagem geral indisponível: {accountDuplicateError}</AlertDescription></Alert>}
+            {!checkingAccountDuplicates && !accountDuplicateError && accountDuplicateTerms > 0 && <Card className="border-destructive/40 bg-destructive/5 p-4 text-sm">
+              <strong>{accountDuplicateTerms.toLocaleString("pt-BR")} termo(s)</strong> já aparecem em alguma lista ou espaço do seu perfil. Eles ficam marcados em vermelho abaixo.
+            </Card>}
             {prepared.errors.map((error) => <Alert key={error} variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>)}
             {prepared.sourceGroups.length > 1 && <Card className="p-4">
               <h3 className="mb-2 font-semibold">Grupos de origem</h3>
@@ -405,7 +519,12 @@ export function ContentIngestDialog({
                 </div>)}
               </div>
             </Card>}
-            <ReviewPanel parsed={reviewParsed} />
+            <ReviewPanel
+              parsed={reviewParsed}
+              accountTermCounts={accountTermCounts}
+              loadingAccountDuplicates={checkingAccountDuplicates}
+              accountDuplicateError={accountDuplicateError}
+            />
           </div>}
 
           {step === 3 && prepared && reconciliation && <div className="mx-auto max-w-2xl space-y-4">
