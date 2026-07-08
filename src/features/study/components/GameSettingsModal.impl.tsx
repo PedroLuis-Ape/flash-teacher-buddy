@@ -56,7 +56,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const handleModeChange = (checked: boolean) => {
     onSettingsChange({
       ...settings,
-      mode: checked ? 'random' : 'sequential'
+      mode: checked ? 'random' : 'sequential',
     });
   };
 
@@ -71,6 +71,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const handleRedFocusChange = (checked: boolean) => {
     onSettingsChange({
       ...settings,
+      subset: checked ? 'favorites' : settings.subset,
+      mode: checked ? 'sequential' : settings.mode,
       redFocus: checked,
     });
   };
@@ -79,7 +81,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     localStorage.setItem(FAST_MODE_STORAGE_KEY, String(checked));
     onSettingsChange({
       ...settings,
-      fastMode: checked
+      fastMode: checked,
     });
   };
 
@@ -93,6 +95,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const favoritesActive = settings.subset === 'favorites';
+  const redFocusActive = !!settings.redFocus && favoritesActive;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -114,12 +117,15 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="random-mode" className="font-medium">Ordem Aleatória</Label>
-              <p className="text-sm text-muted-foreground">Embaralha os cards a cada reinício</p>
+              <p className="text-sm text-muted-foreground">
+                {redFocusActive ? "Desativada no Foco Vermelho" : "Embaralha os cards a cada reinício"}
+              </p>
             </div>
             <Switch
               id="random-mode"
-              checked={settings.mode === 'random'}
+              checked={settings.mode === 'random' && !redFocusActive}
               onCheckedChange={handleModeChange}
+              disabled={redFocusActive}
             />
           </div>
           <div className="flex items-center justify-between">
@@ -131,26 +137,24 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               id="favorites-only"
               checked={favoritesActive}
               onCheckedChange={handleSubsetChange}
+              disabled={redFocusActive}
             />
           </div>
 
-          <div className={`flex items-center justify-between transition-opacity ${favoritesActive ? '' : 'opacity-50'}`}>
+          <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <Flame className="h-4 w-4 text-red-500" />
-                <Label htmlFor="red-focus" className="font-medium">Foco Vermelho 🔴</Label>
+                <Label htmlFor="red-focus" className="font-medium">Foco Vermelho</Label>
               </div>
               <p className="text-sm text-muted-foreground">
-                {favoritesActive
-                  ? "Estuda apenas favoritos que estão na Lista Vermelha"
-                  : "Disponível com 'Apenas Favoritos' ativo"}
+                Estuda só a Lista Vermelha, em fila única, sem repetir.
               </p>
             </div>
             <Switch
               id="red-focus"
-              checked={!!settings.redFocus && favoritesActive}
+              checked={redFocusActive}
               onCheckedChange={handleRedFocusChange}
-              disabled={!favoritesActive}
             />
           </div>
 
