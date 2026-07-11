@@ -52,6 +52,7 @@ import { useSetFavoriteGroup } from "@/hooks/useSetFavoriteGroup";
 import { useSetRedListGroup } from "@/hooks/useSetRedListGroup";
 import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
 import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
+import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { ArrowLeft, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
@@ -247,52 +248,34 @@ const Study = () => {
   // Load list glossary for merged hints (skip fetch when feature disabled)
   const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);
 
-  // Derive effective flashcards filtered by favorites when enabled.
-  // FALLBACK SEGURO: se favoritesOnly estiver ativo mas a lista não tem nenhum favorito,
-  // automaticamente retornamos todos os cards. Isso impede que a sessão fique vazia/bloqueada
-  // por um estado herdado de outra lista. Um aviso leve é exibido via efeito mais abaixo.
-  // Only treat the filter as "fell back" when we have a CONFIRMED empty
-  // result for the signed-in user. During auth race / fetching / placeholder
-  // we must not interpret an empty array as evidence of zero favorites.
+  // The visible deck follows a local session scope immediately. Preferences
+  // remain persistence only; they are not used as a delayed live filter.
+  const [deckSubset, setDeckSubset] = useState<"all" | "favorites">(initialGameSettings.subset);
+  const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState(false);
+
   const favoritesFilterFellBack =
-    urlFavoritesOnly && favoritesConfirmedZero && flashcards.length > 0;
-  // redFocus is session-scoped (NOT persisted in prefs). It lives on the
-  // engine's gameSettings; we use a small local state mirror so we can derive
-  // `effectiveFlashcards` without a circular dependency on the engine's output.
-  // handleSettingsChange below keeps both in sync (mirror is updated first,
-  // then restartSession is called).
-  const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState<boolean>(false);
+    !redFocusActiveForDeck &&
+    deckSubset === "favorites" &&
+    favoritesConfirmedZero &&
+    flashcards.length > 0;
+
   const effectiveFlashcards = useMemo(() => {
-    if (!urlFavoritesOnly) return flashcards;
-    if (favorites.length === 0) return flashcards; // fallback: estuda todos
-    const favSet = new Set(favorites);
-    // Layered cards: a deck entry should match if ANY of its inner layers
-    // is favorited (or the parent/principal id, when known). Otherwise the
-    // group would disappear from the Favorites mode just because the user
-    // starred layer 2 instead of layer 1.
-    const cardMatchesFav = (c: Flashcard) => {
-      if (favSet.has(c.id)) return true;
-      const layers = (c as any).__layers as Flashcard[] | undefined;
-      if (layers && layers.some(L => favSet.has(L.id) || (L.parent_card_id && favSet.has(L.parent_card_id)))) return true;
-      if (c.parent_card_id && favSet.has(c.parent_card_id)) return true;
-      const pgid = (c as any).__parentCardId as string | undefined;
-      if (pgid && favSet.has(pgid)) return true;
-      return false;
-    };
-    const favOnly = flashcards.filter(cardMatchesFav);
-    if (!redFocusActiveForDeck) return favOnly;
-    const redSet = new Set(redListIds);
-    const cardMatchesRed = (c: Flashcard) => {
-      if (redSet.has(c.id)) return true;
-      if (c.parent_card_id && redSet.has(c.parent_card_id)) return true;
-      const pgid = (c as any).__parentCardId as string | undefined;
-      if (pgid && redSet.has(pgid)) return true;
-      const layers = (c as any).__layers as Flashcard[] | undefined;
-      if (layers && layers.some(L => redSet.has(L.id) || (L.parent_card_id && redSet.has(L.parent_card_id)))) return true;
-      return false;
-    };
-    return favOnly.filter(cardMatchesRed);
-  }, [flashcards, urlFavoritesOnly, favorites, redFocusActiveForDeck, redListIds]);
+    const scoped = filterCardsForStudyScope({
+      cards: flashcards,
+      favoriteIds: favorites,
+      redListIds,
+      settings: { subset: deckSubset, redFocus: redFocusActiveForDeck },
+    });
+
+    // Favorites keeps the historical safe fallback. Red focus intentionally
+    // stays empty when the user has no red cards; mixing normal cards would
+    // violate the selected scope.
+    if (!redFocusActiveForDeck && deckSubset === "favorites" && favorites.length === 0) {
+      return flashcards;
+    }
+
+    return scoped;
+  }, [flashcards, favorites, redListIds, deckSubset, redFocusActiveForDeck]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
@@ -342,7 +325,7 @@ const Study = () => {
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
-  const redFocusActive = !!gameSettings.redFocus && favoritesOnly;
+  const redFocusActive = !!gameSettings.redFocus;
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
 
@@ -365,7 +348,10 @@ const Study = () => {
       mode: prefs.order === "sequential" ? "sequential" : "random",
       subset: prefs.favoritesOnly ? "favorites" : "all",
       fastMode: prefs.fastMode,
+      redFocus: false,
     });
+    setDeckSubset(prefs.favoritesOnly ? "favorites" : "all");
+    setRedFocusActiveForDeck(false);
     if (import.meta.env.DEV) {
       console.debug("[Study] Initial gameSettings sync", {
         mode: normalizedMode,
@@ -692,38 +678,27 @@ const Study = () => {
   };
 
   const handleSettingsChange = (newSettings: GameSettings) => {
-    // RULE: redFocus only makes sense when subset === 'favorites'. Force off otherwise.
     const coerced: GameSettings = {
       ...newSettings,
-      redFocus: newSettings.subset === 'favorites' ? !!newSettings.redFocus : false,
+      mode: newSettings.redFocus ? "sequential" : newSettings.mode,
+      redFocus: !!newSettings.redFocus,
     };
 
     const subsetChanged = coerced.subset !== gameSettings.subset;
     const redFocusChanged = !!coerced.redFocus !== !!gameSettings.redFocus;
 
-    // Persistência por escopo: ao trocar de all↔favorites (ou redFocus), o
-    // engine vai REINICIALIZAR carregando a study_session do novo escopo
-    // (não é reset). Antes de trocar, gravamos imediatamente o índice atual
-    // para que o trail anterior preserve onde o usuário parou.
     if (subsetChanged || redFocusChanged) {
       void saveProgressNow();
     }
 
+    setDeckSubset(coerced.subset);
+    setRedFocusActiveForDeck(!!coerced.redFocus);
     setGameSettings(coerced);
-    // Keep the deck-filter mirror in sync so effectiveFlashcards recomputes.
-    setRedFocusActiveForDeck(!!coerced.redFocus && coerced.subset === 'favorites');
-    // Persist changes back to study preferences (redFocus is session-scoped only)
     updatePrefs({
-      order: coerced.mode === 'sequential' ? 'sequential' : 'random',
-      favoritesOnly: coerced.subset === 'favorites',
+      order: coerced.mode === "sequential" ? "sequential" : "random",
+      favoritesOnly: coerced.subset === "favorites",
       fastMode: coerced.fastMode ?? false,
     });
-
-    // NOTA: NÃO chamar restartSession aqui. O engine detecta a mudança de
-    // escopo (subset/redFocus/order) via sessionScopeKey + cardsSignature e
-    // re-inicializa carregando a sessão persistida daquele escopo (ou cria
-    // uma nova se for a primeira vez). Reset só acontece quando o usuário
-    // pede explicitamente em "Reiniciar Jogo".
   };
 
   const handleRestartWithSettings = async () => {

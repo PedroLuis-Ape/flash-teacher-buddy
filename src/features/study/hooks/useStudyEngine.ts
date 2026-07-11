@@ -17,6 +17,7 @@ import {
   buildCanonicalToPlayableMap,
   mapCanonicalIdsToPlayable,
 } from "@/features/cards/lib/cardStatusIdentity";
+import { shouldInjectRedPriority } from "@/features/study/lib/studyScopePolicy";
 import {
   buildStudySnapshotKey,
   clearStudySnapshot,
@@ -44,10 +45,8 @@ export interface GameSettings {
   mode: 'sequential' | 'random';
   subset: 'all' | 'favorites';
   fastMode?: boolean;
-  /** When true (and subset === 'favorites'), the parent restricts the deck
-   *  to favorites that are also red-listed. The engine itself does not
-   *  re-filter — it trusts the deck it receives. We carry the flag here
-   *  so it survives restartSession() round-trips. */
+  /** Independent red-only study scope. The parent supplies the filtered
+   *  deck; the engine preserves it as a sequential, non-repeating run. */
   redFocus?: boolean;
 }
 
@@ -332,7 +331,7 @@ export function useStudyEngine(
         // Standard modes respect the order chosen in the hub. Mixed mode
         // owns its adaptive order and therefore remains randomized.
         const baseIds = flashcards.map(f => f.id);
-        const orderedIds = mode === "mixed" || gameSettings.mode === "random"
+        const orderedIds = !gameSettings.redFocus && (mode === "mixed" || gameSettings.mode === "random")
           ? [...baseIds].sort(() => Math.random() - 0.5)
           : baseIds;
 
@@ -348,7 +347,7 @@ export function useStudyEngine(
         // No listId (e.g. collection or portal route) — standard modes
         // respect the order already prepared by Study.tsx.
         const baseIds = flashcards.map(f => f.id);
-        const cardIds = mode === "mixed" || gameSettings.mode === "random"
+        const cardIds = !gameSettings.redFocus && (mode === "mixed" || gameSettings.mode === "random")
           ? [...baseIds].sort(() => Math.random() - 0.5)
           : baseIds;
         setCardsOrder(cardIds);
@@ -518,7 +517,7 @@ export function useStudyEngine(
 
       // Create new session with ALL flashcards (straight-through, no batching)
       let orderedCards = localSnapshot?.cardsOrder
-        ?? (mode === "mixed"
+        ?? (mode === "mixed" && !gameSettings.redFocus
           ? await getPrioritizedFlashcards(user.id, listId, flashcards, true)
           : gameSettings.mode === "sequential"
             ? flashcards.map(card => card.id)
@@ -528,7 +527,7 @@ export function useStudyEngine(
         orderedCards = injectRedListRepetitions(
           orderedCards,
           effectiveRedPlayableIds,
-          gameSettings.subset === 'favorites',
+          shouldInjectRedPriority(gameSettings),
         );
       }
       
@@ -557,7 +556,7 @@ export function useStudyEngine(
     } catch (error) {
       console.error('Erro ao inicializar sessão:', error);
       const baseIds = flashcards.map(f => f.id);
-      const fallbackIds = mode === "mixed" || gameSettings.mode === "random"
+      const fallbackIds = !gameSettings.redFocus && (mode === "mixed" || gameSettings.mode === "random")
         ? [...baseIds].sort(() => Math.random() - 0.5)
         : baseIds;
       
@@ -799,6 +798,7 @@ export function useStudyEngine(
     if (
       FEATURE_FLAGS.intelligent_study_engine &&
       mode === "mixed" &&
+      !gameSettings.redFocus &&
       !skipped &&
       !correct
     ) {
@@ -840,7 +840,7 @@ export function useStudyEngine(
       totalCards: cardsOrder.length,
       currentIndex
     });
-  }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex]);
+  }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
     if (currentIndex < cardsOrder.length - 1) {
@@ -1025,11 +1025,11 @@ export function useStudyEngine(
     }
 
     let cardIds = flashcards.map(f => f.id);
-    if (settings.mode === 'random') cardIds = cardIds.sort(() => Math.random() - 0.5);
+    if (!settings.redFocus && settings.mode === 'random') cardIds = cardIds.sort(() => Math.random() - 0.5);
     cardIds = injectRedListRepetitions(
       cardIds,
       effectiveRedPlayableIds,
-      settings.subset === 'favorites',
+      shouldInjectRedPriority(settings),
     );
 
     const previousSessionId = sessionId;

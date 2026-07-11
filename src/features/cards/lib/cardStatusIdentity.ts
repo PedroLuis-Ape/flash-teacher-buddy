@@ -105,18 +105,31 @@ export function buildCanonicalToPlayableMap(
 }
 
 /**
- * Translate canonical ids into playable ids for systems that need a red-list
- * priority list.
+ * Translate canonical status ids into playable entry ids.
  *
- * Foco Vermelho must be a raw linear queue: every red card appears once, with
- * no injected copies, no extra weighting and no spaced-repetition behavior.
- * Returning an empty priority list disables the old red-card reinjection path
- * while preserving the actual red filtering in Study.tsx, which uses the
- * canonical redListIds directly.
+ * A partial red selection is returned as a deduplicated priority list. When
+ * every playable entry in the current deck is already selected, returning an
+ * empty list disables pointless priority/reinjection work for a red-only deck.
  */
 export function mapCanonicalIdsToPlayable(
-  _canonicalIds: ReadonlyArray<string>,
-  _canonicalToPlayable: ReadonlyMap<string, string>,
+  canonicalIds: ReadonlyArray<string>,
+  canonicalToPlayable: ReadonlyMap<string, string>,
 ): string[] {
-  return [];
+  const seenPlayable = new Set<string>();
+  const mapped: string[] = [];
+
+  for (const canonicalId of canonicalIds) {
+    const playableId = canonicalToPlayable.get(canonicalId);
+    if (!playableId || seenPlayable.has(playableId)) continue;
+    seenPlayable.add(playableId);
+    mapped.push(playableId);
+  }
+
+  const allPlayableIds = new Set(canonicalToPlayable.values());
+  const coversWholeDeck =
+    allPlayableIds.size > 0 &&
+    seenPlayable.size === allPlayableIds.size &&
+    Array.from(allPlayableIds).every((id) => seenPlayable.has(id));
+
+  return coversWholeDeck ? [] : mapped;
 }

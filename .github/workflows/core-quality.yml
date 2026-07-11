@@ -1,0 +1,56 @@
+name: Core Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci --legacy-peer-deps --no-audit --no-fund 2>&1 | tee install-report.log
+
+      - name: Upload install report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-install-report
+          path: install-report.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm run test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
