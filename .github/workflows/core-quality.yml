@@ -7,44 +7,13 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: core-quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  patch-restored-red-focus:
-    if: github.event_name == 'pull_request' && github.head_ref == 'fix-red-focus-restored-duplicates'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: fix-red-focus-restored-duplicates
-
-      - name: Apply patch when needed
-        shell: bash
-        run: |
-          if grep -q "sanitizePersistedStudyOrder" src/features/study/hooks/useStudyEngine.ts; then
-            echo "Patch already applied."
-            exit 0
-          fi
-          node scripts/patch-red-focus-restored-session.mjs
-
-      - name: Commit patched source
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/features/study/hooks/useStudyEngine.ts
-          git commit -m "fix: repair restored red-focus queues"
-          git push
-
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
