@@ -44,6 +44,12 @@ interface FlightRenderMetrics {
   animationsDisabled: boolean;
 }
 
+interface DeckTouchStartMetrics {
+  hasNavigation: boolean;
+  touchCount: number;
+  interactive: boolean;
+}
+
 const SURFACE_SELECTOR = [
   "[data-study-deck-surface]",
   ".flip-card",
@@ -51,6 +57,7 @@ const SURFACE_SELECTOR = [
 ].join(", ");
 
 const LIGHTWEIGHT_FLIGHT_MAX_WIDTH = 768;
+const SWIPE_CLICK_GUARD_MS = 500;
 
 let pendingEnterDirection: DeckDirection | null = null;
 let pendingEnterExpiresAt = 0;
@@ -120,6 +127,14 @@ export function resolveDeckSwipe({
   if (dx < 0 && canGoNext) return "next";
   if (dx > 0 && canGoPrevious) return "previous";
   return null;
+}
+
+export function shouldTrackDeckTouch({
+  hasNavigation,
+  touchCount,
+  interactive,
+}: DeckTouchStartMetrics): boolean {
+  return hasNavigation && touchCount === 1 && !interactive;
 }
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
@@ -216,6 +231,7 @@ export function StudyCardDeck({
   const startRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const consumedRef = useRef(false);
   const timerRef = useRef<number | null>(null);
+  const clickGuardTimerRef = useRef<number | null>(null);
   const enterTimerRef = useRef<number | null>(null);
 
   const prepareTransition = useCallback((direction: DeckDirection) => {
@@ -224,6 +240,14 @@ export function StudyCardDeck({
 
     activeFlightRef.current?.remove();
     activeFlightRef.current = launchFlyingCard(surface, direction, getFlightRenderMode());
+  }, []);
+
+  const clearConsumedClickGuard = useCallback(() => {
+    consumedRef.current = false;
+    if (clickGuardTimerRef.current !== null) {
+      window.clearTimeout(clickGuardTimerRef.current);
+      clickGuardTimerRef.current = null;
+    }
   }, []);
 
   useLayoutEffect(() => {
@@ -338,13 +362,22 @@ export function StudyCardDeck({
     return () => {
       activeFlightRef.current?.remove();
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      if (clickGuardTimerRef.current !== null) window.clearTimeout(clickGuardTimerRef.current);
       if (enterTimerRef.current !== null) window.clearTimeout(enterTimerRef.current);
     };
   }, []);
 
   const handleTouchStartCapture = (event: TouchEvent<HTMLDivElement>) => {
-    if (event.touches.length !== 1 || isInteractiveTarget(event.target)) {
+    const interactive = isInteractiveTarget(event.target);
+    const shouldTrack = shouldTrackDeckTouch({
+      hasNavigation: Boolean(swipeNavigation),
+      touchCount: event.touches.length,
+      interactive,
+    });
+
+    if (!shouldTrack) {
       startRef.current = null;
+      clearConsumedClickGuard();
       return;
     }
 
@@ -354,34 +387,43 @@ export function StudyCardDeck({
       y: touch.clientY,
       time: Date.now(),
     };
-    consumedRef.current = false;
+    clearConsumedClickGuard();
   };
 
   const handleTouchEndCapture = (event: TouchEvent<HTMLDivElement>) => {
     const start = startRef.current;
     startRef.current = null;
-    if (!start) return;
+    if (!start || !swipeNavigation) return;
 
     const touch = event.changedTouches[0];
     const action = resolveDeckSwipe({
       dx: touch.clientX - start.x,
       dy: touch.clientY - start.y,
       elapsedMs: Date.now() - start.time,
-      canGoNext: swipeNavigation?.canGoNext !== false,
-      canGoPrevious: swipeNavigation?.canGoPrevious !== false,
+      canGoNext: swipeNavigation.canGoNext !== false,
+      canGoPrevious: swipeNavigation.canGoPrevious !== false,
     });
 
     if (!action) return;
     prepareTransition(action);
 
-    if (!swipeNavigation) return;
-
     consumedRef.current = true;
+    if (clickGuardTimerRef.current !== null) window.clearTimeout(clickGuardTimerRef.current);
+    clickGuardTimerRef.current = window.setTimeout(() => {
+      consumedRef.current = false;
+      clickGuardTimerRef.current = null;
+    }, SWIPE_CLICK_GUARD_MS);
+
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
       if (action === "next") swipeNavigation.onNext?.();
       else swipeNavigation.onPrevious?.();
-    }, 32);
+    }, 24);
+  };
+
+  const handleTouchCancelCapture = () => {
+    startRef.current = null;
+    clearConsumedClickGuard();
   };
 
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -389,7 +431,7 @@ export function StudyCardDeck({
     if (direction) prepareTransition(direction);
 
     if (!consumedRef.current) return;
-    consumedRef.current = false;
+    clearConsumedClickGuard();
     event.preventDefault();
     event.stopPropagation();
   };
@@ -406,6 +448,7 @@ export function StudyCardDeck({
       )}
       onTouchStartCapture={handleTouchStartCapture}
       onTouchEndCapture={handleTouchEndCapture}
+      onTouchCancelCapture={handleTouchCancelCapture}
       onClickCapture={handleClickCapture}
       style={{ touchAction: swipeNavigation ? "pan-y" : undefined }}
     >

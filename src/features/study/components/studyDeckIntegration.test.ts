@@ -60,7 +60,8 @@ describe("study deck integration", () => {
     expect(css).toContain("deck-card-flight-next");
     expect(css).toContain("translate3d(-118px, -22px, 0)");
     expect(css).toContain("deck-card-flight-next-mobile");
-    expect(css).toContain("translate3d(-52px, -9px, 0)");
+    expect(css).toContain("translate3d(-42px, -7px, 0)");
+    expect(css).toContain("animation-duration: 210ms");
     expect(css).toContain("deck-card-enter-previous-mobile");
   });
 

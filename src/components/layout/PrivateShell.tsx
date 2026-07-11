@@ -143,7 +143,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
       )}
 
       <div className="space-ui-app-frame flex min-w-0 flex-1 items-start">
-        {user && <ApeTabBar />}
+        {user && !isFullScreenPage && <ApeTabBar />}
 
         <div className="space-ui-content flex min-h-0 min-w-0 flex-1 flex-col">
           <main className="space-ui-main min-w-0 flex-1">
