@@ -64,14 +64,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     onSettingsChange({
       ...settings,
       subset: checked ? 'favorites' : 'all',
-      redFocus: checked ? settings.redFocus : false,
     });
   };
 
   const handleRedFocusChange = (checked: boolean) => {
     onSettingsChange({
       ...settings,
-      subset: checked ? 'favorites' : settings.subset,
       mode: checked ? 'sequential' : settings.mode,
       redFocus: checked,
     });
@@ -95,7 +93,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const favoritesActive = settings.subset === 'favorites';
-  const redFocusActive = !!settings.redFocus && favoritesActive;
+  const redFocusActive = !!settings.redFocus;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
