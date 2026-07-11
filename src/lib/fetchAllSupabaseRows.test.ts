@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fetchAllSupabaseRows } from "./fetchAllSupabaseRows";
 
 describe("fetchAllSupabaseRows", () => {
@@ -18,6 +18,7 @@ describe("fetchAllSupabaseRows", () => {
       [0, 999],
       [1_000, 1_999],
       [2_000, 2_999],
+      [3_000, 3_999],
     ]);
   });
 
@@ -40,6 +41,33 @@ describe("fetchAllSupabaseRows", () => {
 
     expect(rows).toEqual([]);
     expect(calls).toBe(1);
+  });
+
+  it("loads later ranges in bounded parallel windows and preserves order", async () => {
+    const pages = new Map<number, number[]>([
+      [0, [0, 1]],
+      [2, [2, 3]],
+      [4, [4, 5]],
+      [6, [6]],
+    ]);
+    const fetchPage = vi.fn(async (from: number) => ({
+      data: pages.get(from) ?? [],
+      error: null,
+    }));
+
+    await expect(fetchAllSupabaseRows(fetchPage, { pageSize: 2, concurrency: 3 }))
+      .resolves.toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(fetchPage.mock.calls.map(([from]) => from)).toEqual([0, 2, 4, 6]);
+  });
+
+  it("stops appending after the first short page in a window", async () => {
+    const fetchPage = vi.fn(async (from: number) => ({
+      data: from === 0 ? [0, 1] : from === 2 ? [2] : [999],
+      error: null,
+    }));
+
+    await expect(fetchAllSupabaseRows(fetchPage, { pageSize: 2, concurrency: 3 }))
+      .resolves.toEqual([0, 1, 2]);
   });
 
   it("propagates query errors", async () => {
