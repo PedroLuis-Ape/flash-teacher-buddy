@@ -12,8 +12,7 @@ function headerEntries(headers: Headers): string {
     .join("|");
 }
 
-function buildRequestKey(input: RequestInfo | URL, init?: RequestInit): string | null {
-  const request = input instanceof Request ? input : new Request(input, init);
+function buildRequestKey(request: Request): string | null {
   const method = request.method.toUpperCase();
   if (method !== "GET" && method !== "HEAD") return null;
   if (request.cache === "no-store") return null;
@@ -27,9 +26,20 @@ export function createDedupingFetch(
 ): typeof fetch {
   const inflight = new Map<string, Promise<Response>>();
   const cache = new Map<string, CachedResponse>();
+  let mutationGeneration = 0;
 
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const key = buildRequestKey(input, init);
+    const request = new Request(input, init);
+    const method = request.method.toUpperCase();
+
+    if (method !== "GET" && method !== "HEAD") {
+      mutationGeneration += 1;
+      cache.clear();
+      inflight.clear();
+      return baseFetch(input, init);
+    }
+
+    const key = buildRequestKey(request);
     if (!key) return baseFetch(input, init);
 
     const cached = cache.get(key);
@@ -39,15 +49,21 @@ export function createDedupingFetch(
     const pending = inflight.get(key);
     if (pending) return (await pending).clone();
 
-    const requestPromise = baseFetch(input, init)
+    const requestGeneration = mutationGeneration;
+    let requestPromise: Promise<Response>;
+    requestPromise = baseFetch(input, init)
       .then((response) => {
-        if (response.ok && ttlMs > 0) {
+        if (
+          response.ok
+          && ttlMs > 0
+          && requestGeneration === mutationGeneration
+        ) {
           cache.set(key, { expiresAt: now() + ttlMs, response: response.clone() });
         }
         return response;
       })
       .finally(() => {
-        inflight.delete(key);
+        if (inflight.get(key) === requestPromise) inflight.delete(key);
       });
 
     inflight.set(key, requestPromise);
