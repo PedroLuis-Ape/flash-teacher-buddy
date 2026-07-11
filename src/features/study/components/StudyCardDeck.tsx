@@ -42,6 +42,9 @@ interface FlightRenderMetrics {
   coarsePointer: boolean;
   reducedMotion: boolean;
   animationsDisabled: boolean;
+  surfaceArea?: number;
+  hardwareConcurrency?: number;
+  deviceMemory?: number;
 }
 
 const SURFACE_SELECTOR = [
@@ -50,7 +53,10 @@ const SURFACE_SELECTOR = [
   ".rounded-lg.border.bg-card",
 ].join(", ");
 
-const LIGHTWEIGHT_FLIGHT_MAX_WIDTH = 768;
+const LIGHTWEIGHT_FLIGHT_MAX_WIDTH = 1_024;
+const FULL_FLIGHT_MAX_SURFACE_AREA = 420_000;
+const LOW_END_CORE_COUNT = 4;
+const LOW_END_MEMORY_GB = 4;
 
 let pendingEnterDirection: DeckDirection | null = null;
 let pendingEnterExpiresAt = 0;
@@ -78,24 +84,33 @@ export function resolveFlightRenderMode({
   coarsePointer,
   reducedMotion,
   animationsDisabled,
+  surfaceArea,
+  hardwareConcurrency,
+  deviceMemory,
 }: FlightRenderMetrics): FlightRenderMode {
   if (reducedMotion || animationsDisabled) return "disabled";
-  if (coarsePointer || viewportWidth <= LIGHTWEIGHT_FLIGHT_MAX_WIDTH) {
-    return "lightweight";
-  }
+  if (coarsePointer || viewportWidth <= LIGHTWEIGHT_FLIGHT_MAX_WIDTH) return "lightweight";
+  if (surfaceArea !== undefined && surfaceArea > FULL_FLIGHT_MAX_SURFACE_AREA) return "lightweight";
+  if (hardwareConcurrency !== undefined && hardwareConcurrency <= LOW_END_CORE_COUNT) return "lightweight";
+  if (deviceMemory !== undefined && deviceMemory <= LOW_END_MEMORY_GB) return "lightweight";
   return "full";
 }
 
-function getFlightRenderMode(): FlightRenderMode {
+function getFlightRenderMode(surface: HTMLElement): FlightRenderMode {
   const animationsDisabled =
     document.documentElement.hasAttribute("data-perf-no-anim") ||
     document.body?.hasAttribute("data-perf-no-anim") === true;
+  const rect = surface.getBoundingClientRect();
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
 
   return resolveFlightRenderMode({
     viewportWidth: window.innerWidth,
     coarsePointer: window.matchMedia("(pointer: coarse)").matches,
     reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     animationsDisabled,
+    surfaceArea: rect.width * rect.height,
+    hardwareConcurrency: navigator.hardwareConcurrency || undefined,
+    deviceMemory: memory,
   });
 }
 
@@ -157,6 +172,7 @@ function removeDuplicateIds(root: HTMLElement) {
     node.setAttribute("tabindex", "-1");
     node.setAttribute("aria-hidden", "true");
   });
+  root.querySelectorAll("video, audio, iframe, canvas").forEach((node) => node.remove());
 }
 
 function launchFlyingCard(
@@ -193,12 +209,7 @@ function launchFlyingCard(
 
   document.body.appendChild(flight);
   markPendingEnter(direction);
-
-  window.requestAnimationFrame(() => {
-    flight.classList.add("study-card-flight--active");
-  });
-
-  window.setTimeout(() => flight.remove(), 420);
+  window.requestAnimationFrame(() => flight.classList.add("study-card-flight--active"));
   return flight;
 }
 
@@ -217,14 +228,31 @@ export function StudyCardDeck({
   const consumedRef = useRef(false);
   const timerRef = useRef<number | null>(null);
   const enterTimerRef = useRef<number | null>(null);
+  const flightTimerRef = useRef<number | null>(null);
+
+  const clearActiveFlight = useCallback(() => {
+    if (flightTimerRef.current !== null) {
+      window.clearTimeout(flightTimerRef.current);
+      flightTimerRef.current = null;
+    }
+    activeFlightRef.current?.remove();
+    activeFlightRef.current = null;
+  }, []);
 
   const prepareTransition = useCallback((direction: DeckDirection) => {
     const surface = surfaceRef.current;
     if (!surface) return;
 
-    activeFlightRef.current?.remove();
-    activeFlightRef.current = launchFlyingCard(surface, direction, getFlightRenderMode());
-  }, []);
+    clearActiveFlight();
+    const flight = launchFlyingCard(surface, direction, getFlightRenderMode(surface));
+    activeFlightRef.current = flight;
+    if (flight) {
+      flightTimerRef.current = window.setTimeout(() => {
+        if (activeFlightRef.current === flight) clearActiveFlight();
+        else flight.remove();
+      }, 420);
+    }
+  }, [clearActiveFlight]);
 
   useLayoutEffect(() => {
     const deck = deckRef.current;
@@ -259,9 +287,11 @@ export function StudyCardDeck({
         enterApplied = true;
         const direction = consumePendingEnter();
         if (direction) {
+          if (enterTimerRef.current !== null) window.clearTimeout(enterTimerRef.current);
           deck.dataset.deckEnter = direction;
           enterTimerRef.current = window.setTimeout(() => {
             delete deck.dataset.deckEnter;
+            enterTimerRef.current = null;
           }, 340);
         }
       }
@@ -307,10 +337,7 @@ export function StudyCardDeck({
 
     resizeObserver.observe(deck);
     window.addEventListener("resize", scheduleMeasure);
-
-    if (!connectSurface()) {
-      retryFrame = window.requestAnimationFrame(connectSurface);
-    }
+    if (!connectSurface()) retryFrame = window.requestAnimationFrame(connectSurface);
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -334,13 +361,11 @@ export function StudyCardDeck({
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [prepareTransition]);
 
-  useEffect(() => {
-    return () => {
-      activeFlightRef.current?.remove();
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-      if (enterTimerRef.current !== null) window.clearTimeout(enterTimerRef.current);
-    };
-  }, []);
+  useEffect(() => () => {
+    clearActiveFlight();
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    if (enterTimerRef.current !== null) window.clearTimeout(enterTimerRef.current);
+  }, [clearActiveFlight]);
 
   const handleTouchStartCapture = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length !== 1 || isInteractiveTarget(event.target)) {
@@ -349,11 +374,7 @@ export function StudyCardDeck({
     }
 
     const touch = event.touches[0];
-    startRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: Date.now(),
-    };
+    startRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
     consumedRef.current = false;
   };
 
@@ -373,7 +394,6 @@ export function StudyCardDeck({
 
     if (!action) return;
     prepareTransition(action);
-
     if (!swipeNavigation) return;
 
     consumedRef.current = true;
@@ -397,7 +417,6 @@ export function StudyCardDeck({
   return (
     <div
       ref={deckRef}
-      key={cardKey}
       className={cn(
         "study-card-deck",
         `study-card-deck--${density}`,
