@@ -1,5 +1,6 @@
 import fs from "node:fs";
 
+// One-time branch patch: the workflow removes this helper before merge.
 const path = "src/features/study/hooks/useStudyEngine.ts";
 let source = fs.readFileSync(path, "utf8");
 
