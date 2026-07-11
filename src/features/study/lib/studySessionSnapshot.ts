@@ -14,6 +14,16 @@ export interface StudySessionSnapshot {
   timestamp: number;
 }
 
+export interface SanitizedPersistedStudyOrder {
+  cardsOrder: string[];
+  currentIndex: number;
+  repaired: boolean;
+}
+
+export interface StudySnapshotSanitizeOptions {
+  enforceUniqueOrder?: boolean;
+}
+
 function safeScope(value: string | null | undefined): string {
   return (value || "anon").replace(/[^a-zA-Z0-9:_-]/g, "_");
 }
@@ -53,14 +63,100 @@ function isResult(value: unknown): value is PersistedStudyResult {
     && Number.isFinite(Number(row.attempts));
 }
 
+/**
+ * Validates a persisted queue against the current effective deck.
+ *
+ * Red focus is a strict straight-through scope: the current deck order is the
+ * source of truth and every playable card appears exactly once. Old sessions
+ * may still contain injected copies (or a randomized order), so those queues
+ * are repaired and restarted at index zero. Clean red-focus sessions keep
+ * their current index. Other scopes preserve legitimate repetitions.
+ */
+export function sanitizePersistedStudyOrder({
+  sessionOrder,
+  currentIndex,
+  availableCardIds,
+  enforceUniqueOrder,
+}: {
+  sessionOrder: unknown;
+  currentIndex: unknown;
+  availableCardIds: ReadonlySet<string>;
+  enforceUniqueOrder: boolean;
+}): SanitizedPersistedStudyOrder | null {
+  if (!Array.isArray(sessionOrder)) return null;
+
+  const filteredOrder = sessionOrder
+    .filter((id): id is string => typeof id === "string")
+    .filter((id) => availableCardIds.has(id));
+  if (filteredOrder.length === 0) return null;
+
+  const savedUnique = new Set(filteredOrder);
+  if (savedUnique.size !== availableCardIds.size) return null;
+  for (const id of availableCardIds) {
+    if (!savedUnique.has(id)) return null;
+  }
+
+  const rawIndex = Math.min(
+    Math.max(Number(currentIndex) || 0, 0),
+    filteredOrder.length - 1,
+  );
+
+  if (!enforceUniqueOrder) {
+    return {
+      cardsOrder: filteredOrder,
+      currentIndex: rawIndex,
+      repaired: false,
+    };
+  }
+
+  const canonicalOrder = Array.from(availableCardIds);
+  const isCanonicalOrder =
+    filteredOrder.length === canonicalOrder.length
+    && filteredOrder.every((id, index) => id === canonicalOrder[index]);
+
+  return {
+    cardsOrder: canonicalOrder,
+    currentIndex: isCanonicalOrder
+      ? Math.min(rawIndex, canonicalOrder.length - 1)
+      : 0,
+    repaired: !isCanonicalOrder,
+  };
+}
+
 export function sanitizeStudySnapshot(
   value: unknown,
   availableCardIds: Set<string>,
+  options: StudySnapshotSanitizeOptions = {},
 ): StudySessionSnapshot | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Partial<StudySessionSnapshot>;
   if (row.version !== 2 || !Array.isArray(row.cardsOrder) || row.cardsOrder.length === 0) {
     return null;
+  }
+
+  if (options.enforceUniqueOrder) {
+    const restored = sanitizePersistedStudyOrder({
+      sessionOrder: row.cardsOrder,
+      currentIndex: row.currentIndex,
+      availableCardIds,
+      enforceUniqueOrder: true,
+    });
+    if (!restored) return null;
+
+    const results = restored.repaired
+      ? []
+      : Array.isArray(row.results)
+        ? row.results.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId))
+        : [];
+
+    return {
+      version: 2,
+      sessionId: typeof row.sessionId === "string" ? row.sessionId : null,
+      currentIndex: restored.currentIndex,
+      cardsOrder: restored.cardsOrder,
+      results,
+      timestamp: Number.isFinite(Number(row.timestamp)) ? Number(row.timestamp) : 0,
+    };
   }
 
   const rawCardsOrder = row.cardsOrder
@@ -113,11 +209,12 @@ export function sanitizeStudySnapshot(
 export function readStudySnapshot(
   key: string,
   availableCardIds: Set<string>,
+  options: StudySnapshotSanitizeOptions = {},
 ): StudySessionSnapshot | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? sanitizeStudySnapshot(JSON.parse(raw), availableCardIds) : null;
+    return raw ? sanitizeStudySnapshot(JSON.parse(raw), availableCardIds, options) : null;
   } catch {
     return null;
   }

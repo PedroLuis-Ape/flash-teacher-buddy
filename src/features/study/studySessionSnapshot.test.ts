@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildStudyReturnRoute } from "./lib/studyCompletionNavigation";
 import { buildStudySnapshotKey, sanitizeStudySnapshot } from "./lib/studySessionSnapshot";
+import * as studySessionSnapshotModule from "./lib/studySessionSnapshot";
 
 describe("study return routes", () => {
   it("returns to a private list directly", () => {
@@ -70,6 +71,70 @@ describe("study snapshots", () => {
 
     expect(snapshot?.cardsOrder).toEqual(["red-1", "normal-1", "red-1", "red-1"]);
     expect(snapshot?.currentIndex).toBe(3);
+  });
+
+  it("repairs a restored red-focus database queue to one sequential occurrence per card", () => {
+    type Sanitizer = (input: {
+      sessionOrder: unknown;
+      currentIndex: unknown;
+      availableCardIds: ReadonlySet<string>;
+      enforceUniqueOrder: boolean;
+    }) => {
+      cardsOrder: string[];
+      currentIndex: number;
+      repaired: boolean;
+    } | null;
+
+    const sanitizePersistedStudyOrder = (
+      studySessionSnapshotModule as unknown as { sanitizePersistedStudyOrder?: Sanitizer }
+    ).sanitizePersistedStudyOrder;
+
+    expect(sanitizePersistedStudyOrder).toBeTypeOf("function");
+
+    const restored = sanitizePersistedStudyOrder?.({
+      sessionOrder: ["red-2", "red-1", "red-3", "red-2", "red-1", "red-3"],
+      currentIndex: 5,
+      availableCardIds: new Set(["red-1", "red-2", "red-3"]),
+      enforceUniqueOrder: true,
+    });
+
+    expect(restored).toEqual({
+      cardsOrder: ["red-1", "red-2", "red-3"],
+      currentIndex: 0,
+      repaired: true,
+    });
+  });
+
+  it("preserves repeated cards outside red focus", () => {
+    type Sanitizer = (input: {
+      sessionOrder: unknown;
+      currentIndex: unknown;
+      availableCardIds: ReadonlySet<string>;
+      enforceUniqueOrder: boolean;
+    }) => {
+      cardsOrder: string[];
+      currentIndex: number;
+      repaired: boolean;
+    } | null;
+
+    const sanitizePersistedStudyOrder = (
+      studySessionSnapshotModule as unknown as { sanitizePersistedStudyOrder?: Sanitizer }
+    ).sanitizePersistedStudyOrder;
+
+    expect(sanitizePersistedStudyOrder).toBeTypeOf("function");
+
+    const restored = sanitizePersistedStudyOrder?.({
+      sessionOrder: ["red-1", "normal-1", "red-1"],
+      currentIndex: 2,
+      availableCardIds: new Set(["red-1", "normal-1"]),
+      enforceUniqueOrder: false,
+    });
+
+    expect(restored).toEqual({
+      cardsOrder: ["red-1", "normal-1", "red-1"],
+      currentIndex: 2,
+      repaired: false,
+    });
   });
 
   it("rejects a snapshot from a different deck", () => {
