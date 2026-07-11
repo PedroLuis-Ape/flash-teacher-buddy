@@ -1,0 +1,47 @@
+name: Patch Red Focus Restart Once
+
+on:
+  push:
+    branches:
+      - study-core-stabilization
+
+permissions:
+  contents: write
+
+concurrency:
+  group: patch-red-focus-restart
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: study-core-stabilization
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Patch engine restart
+        run: node scripts/patch-red-focus-restart.mjs
+
+      - name: Commit patched engine
+        shell: bash
+        run: |
+          if git diff --quiet -- src/features/study/hooks/useStudyEngine.ts; then
+            echo "Patch already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study/hooks/useStudyEngine.ts
+          git commit -m "fix: impede repetição ao reiniciar foco vermelho"
+          git push origin HEAD:study-core-stabilization
