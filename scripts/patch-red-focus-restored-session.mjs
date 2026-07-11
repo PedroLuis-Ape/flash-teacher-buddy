@@ -4,59 +4,30 @@ import fs from "node:fs";
 const path = "src/features/study/hooks/useStudyEngine.ts";
 let source = fs.readFileSync(path, "utf8");
 
-function replaceExact(oldText, newText, expectedCount, label) {
-  const count = source.split(oldText).length - 1;
-  if (count !== expectedCount) {
-    throw new Error(`${label}: expected ${expectedCount} occurrence(s), found ${count}`);
+function replaceOnce(label, pattern, replacement) {
+  const next = source.replace(pattern, replacement);
+  if (next === source) {
+    throw new Error(`Transformation not applied: ${label}`);
   }
-  source = source.split(oldText).join(newText);
+  source = next;
 }
 
-replaceExact(
-`  readStudySnapshot,
-  writeStudySnapshot,`,
-`  readStudySnapshot,
-  sanitizePersistedStudyOrder,
-  writeStudySnapshot,`,
-1,
-"snapshot helper import",
+replaceOnce(
+  "snapshot helper import",
+  /  readStudySnapshot,\n  writeStudySnapshot,/,
+  `  readStudySnapshot,\n  sanitizePersistedStudyOrder,\n  writeStudySnapshot,`,
 );
 
-replaceExact(
-`      const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds);`,
-`      const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds, {
-        enforceUniqueOrder: !!gameSettings.redFocus,
-      });`,
-1,
-"local snapshot red-focus sanitation",
+replaceOnce(
+  "local snapshot red-focus sanitation",
+  /      const localSnapshot = readStudySnapshot\(studySnapshotKey, snapshotCardIds\);/,
+  `      const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds, {\n        enforceUniqueOrder: !!gameSettings.redFocus,\n      });`,
 );
 
-replaceExact(
-`      const availableCardIds = new Set(flashcards.map((card) => card.id));
-      const sanitizeSessionOrder = (sessionOrder: unknown): string[] => {
-        if (!Array.isArray(sessionOrder)) return [];
-        return sessionOrder
-          .filter((id): id is string => typeof id === 'string')
-          .filter((id) => availableCardIds.has(id));
-      };
-
-      // Returns true when the saved session's card-set matches the current
-      // effective deck closely enough to be considered the SAME scope.
-      // We use set equality of unique IDs (ignoring red-list repetitions which
-      // duplicate IDs). If the saved session is a strict superset (e.g. "all"
-      // vs "favorites"), it does NOT match — we want a separate session row.
-      const sessionMatchesCurrentScope = (sessionOrder: unknown): boolean => {
-        if (!Array.isArray(sessionOrder)) return false;
-        const savedUnique = new Set(
-          sessionOrder.filter((id): id is string => typeof id === 'string')
-        );
-        if (savedUnique.size !== availableCardIds.size) return false;
-        for (const id of savedUnique) {
-          if (!availableCardIds.has(id)) return false;
-        }
-        return true;
-      };`,
-`      const availableCardIds = new Set(flashcards.map((card) => card.id));
+replaceOnce(
+  "persisted session sanitizer",
+  /      const availableCardIds = new Set\(flashcards\.map\(\(card\) => card\.id\)\);[\s\S]*?      const sessionMatchesCurrentScope = \(sessionOrder: unknown\): boolean => \{[\s\S]*?      \};/,
+  `      const availableCardIds = new Set(flashcards.map((card) => card.id));
       const sanitizeSessionOrder = (sessionOrder: unknown, currentIndex: unknown) =>
         sanitizePersistedStudyOrder({
           sessionOrder,
@@ -70,32 +41,9 @@ replaceExact(
       // repairs legacy duplicated/random queues to the canonical deck order.
       const sessionMatchesCurrentScope = (sessionOrder: unknown): boolean =>
         sanitizeSessionOrder(sessionOrder, 0) !== null;`,
-1,
-"persisted session sanitizer",
 );
 
-const oldRestoreBlock = `        if (matchingSession) {
-          const scopedOrder = sanitizeSessionOrder(matchingSession.cards_order);
-
-          if (scopedOrder.length > 0) {
-            const safeIndex = Math.min(
-              Math.max(matchingSession.current_index ?? 0, 0),
-              scopedOrder.length - 1
-            );
-
-            setSessionId(matchingSession.id);
-            setCurrentIndex(safeIndex);
-            setCardsOrder(scopedOrder);
-            if (localSnapshot?.sessionId === matchingSession.id) {
-              setResults(localSnapshot.results);
-            }
-            toast.success("Continuando de onde você parou!");
-            setIsLoading(false);
-            return;
-          }
-        }`;
-
-const newRestoreBlock = `        if (matchingSession) {
+const repairedRestoreBlock = `        if (matchingSession) {
           const restoredSession = sanitizeSessionOrder(
             matchingSession.cards_order,
             matchingSession.current_index,
@@ -132,6 +80,16 @@ const newRestoreBlock = `        if (matchingSession) {
           }
         }`;
 
-replaceExact(oldRestoreBlock, newRestoreBlock, 2, "database session restore blocks");
+replaceOnce(
+  "flip database restore",
+  /        if \(matchingSession\) \{\n          const scopedOrder = sanitizeSessionOrder\(matchingSession\.cards_order\);[\s\S]*?        \}\n\n        \/\/ Fallback to localStorage/,
+  `${repairedRestoreBlock}\n\n        // Fallback to localStorage`,
+);
+
+replaceOnce(
+  "quiz database restore",
+  /      if \(matchingSession\) \{\n        const scopedOrder = sanitizeSessionOrder\(matchingSession\.cards_order\);[\s\S]*?      \}\n\n      \/\/ Create new session with ALL flashcards/,
+  `${repairedRestoreBlock.replace(/^ {8}/gm, "      ")}\n\n      // Create new session with ALL flashcards`,
+);
 
 fs.writeFileSync(path, source);
