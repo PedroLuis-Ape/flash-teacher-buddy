@@ -61,18 +61,16 @@ export function buildGlossaryIndex(glossary: GlossaryItem[]): GlossaryIndex {
   for (const entry of glossary) {
     if (!entry.is_active) continue;
 
-    const translations = splitAlternatives(entry.translated_text);
+    addMatch(index, seen, entry.side, {
+      matchText: entry.original_text,
+      translationText: entry.translated_text,
+      note: entry.note,
+    });
+
     const reverseSide = entry.side === "A" ? "B" : "A";
-
-    for (const translation of translations) {
-      addMatch(index, seen, entry.side, {
-        matchText: entry.original_text,
-        translationText: translation,
-        note: entry.note,
-      });
-
+    for (const alternative of splitAlternatives(entry.translated_text)) {
       addMatch(index, seen, reverseSide, {
-        matchText: translation,
+        matchText: alternative,
         translationText: entry.original_text,
         note: entry.note,
       });
