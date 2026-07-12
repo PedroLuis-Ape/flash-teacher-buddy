@@ -83,9 +83,32 @@ export function stripTransientRedFocusOrder(
   partial: Partial<StudyPreferences>,
   redFocusTransition: boolean,
 ): Partial<StudyPreferences> {
-  if (!redFocusTransition || partial.order === undefined) return partial;
-  const { order: _forcedOrder, ...persistentFields } = partial;
-  return persistentFields;
+  return redFocusTransition ? {} : partial;
+}
+
+export function selectChangedLegacyPreferences(
+  partial: Partial<StudyPreferences>,
+  current: StudyPreferences,
+): Partial<StudyPreferences> {
+  const changed: Partial<StudyPreferences> = {};
+
+  if (partial.mode !== undefined && normalizeStudyMode(partial.mode) !== normalizeStudyMode(current.mode)) {
+    changed.mode = partial.mode;
+  }
+  if (partial.direction !== undefined && partial.direction !== current.direction) {
+    changed.direction = partial.direction;
+  }
+  if (partial.order !== undefined && partial.order !== current.order) {
+    changed.order = partial.order;
+  }
+  if (partial.favoritesOnly !== undefined && partial.favoritesOnly !== current.favoritesOnly) {
+    changed.favoritesOnly = partial.favoritesOnly;
+  }
+  if (partial.fastMode !== undefined && partial.fastMode !== current.fastMode) {
+    changed.fastMode = partial.fastMode;
+  }
+
+  return changed;
 }
 
 function notifyDirectionUrlChange(direction: Direction): void {
@@ -474,11 +497,12 @@ export function useStudyPreferences(
   const prefs = useMemo(() => presetToLegacy(effectivePreset), [effectivePreset]);
 
   const updatePrefs = useCallback((partial: Partial<StudyPreferences>) => {
-    const persistentPartial = stripTransientRedFocusOrder(partial, redFocusTransitionRef.current);
+    const changedPartial = selectChangedLegacyPreferences(partial, prefs);
+    const persistentPartial = stripTransientRedFocusOrder(changedPartial, redFocusTransitionRef.current);
     redFocusTransitionRef.current = false;
     if (persistentPartial.direction) notifyDirectionUrlChange(persistentPartial.direction);
     updateForCurrentScope(legacyPatchToPreset(persistentPartial));
-  }, [updateForCurrentScope]);
+  }, [prefs, updateForCurrentScope]);
 
   const applyUrlOverrides = useCallback((params: URLSearchParams) => {
     setSessionOverrides(parseStudySessionOverrides(params));
