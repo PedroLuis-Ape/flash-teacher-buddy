@@ -33,7 +33,7 @@ Object.defineProperty(globalThis, "localStorage", {
 describe("studyPreferenceCache", () => {
   beforeEach(() => localStorage.clear());
 
-  it("migrates legacy v2 favoritesOnly into scope", () => {
+  it("migrates legacy v2 favoritesOnly into scope and preserves Play defaults", () => {
     localStorage.setItem("studyPreferences:user-1", JSON.stringify({
       version: 2,
       mode: "mixed",
@@ -43,20 +43,18 @@ describe("studyPreferenceCache", () => {
       fastMode: true,
     }));
 
-    expect(migrateLegacyStudyPreferences("user-1")).toEqual({
-      mode: "mixed",
-      direction: "a-b",
-      order: "sequential",
-      scope: "favorites",
+    const expected = {
+      mode: "mixed" as const,
+      direction: "a-b" as const,
+      order: "sequential" as const,
+      scope: "favorites" as const,
       fastMode: true,
-    });
-    expect(readGlobalCache("user-1")).toEqual({
-      mode: "mixed",
-      direction: "a-b",
-      order: "sequential",
-      scope: "favorites",
-      fastMode: true,
-    });
+      playMode: "both" as const,
+      playSide: "a" as const,
+    };
+
+    expect(migrateLegacyStudyPreferences("user-1")).toEqual(expected);
+    expect(readGlobalCache("user-1")).toEqual(expected);
   });
 
   it("isolates global and list caches by user", () => {

@@ -16,12 +16,16 @@ describe("studyPreferenceRepository", () => {
       card_order: "sequential",
       scope: "all",
       fast_mode: true,
+      play_mode: "single",
+      play_side: "b",
     })).toEqual({
       mode: "mixed",
       direction: "a-b",
       order: "sequential",
       scope: "all",
       fastMode: true,
+      playMode: "single",
+      playSide: "b",
     });
   });
 
@@ -32,7 +36,14 @@ describe("studyPreferenceRepository", () => {
       card_order: null,
       scope: "favorites",
       fast_mode: null,
-    })).toEqual({ mode: "write", scope: "favorites" });
+      play_mode: "single",
+      play_side: "a",
+    })).toEqual({
+      mode: "write",
+      scope: "favorites",
+      playMode: "single",
+      playSide: "a",
+    });
   });
 
   it("serializes global and list values", () => {
@@ -40,12 +51,20 @@ describe("studyPreferenceRepository", () => {
       user_id: "user-1",
       card_order: "random",
       fast_mode: false,
+      play_mode: "both",
+      play_side: "a",
     });
-    expect(toListPreferenceRow("user-1", "list-1", { mode: "write" })).toMatchObject({
+    expect(toListPreferenceRow("user-1", "list-1", {
+      mode: "write",
+      playMode: "single",
+      playSide: "b",
+    })).toMatchObject({
       user_id: "user-1",
       list_id: "list-1",
       mode: "write",
       direction: null,
+      play_mode: "single",
+      play_side: "b",
     });
   });
 

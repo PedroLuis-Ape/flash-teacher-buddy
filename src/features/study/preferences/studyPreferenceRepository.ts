@@ -12,6 +12,8 @@ type GlobalPreferenceRow = {
   card_order?: unknown;
   scope?: unknown;
   fast_mode?: unknown;
+  play_mode?: unknown;
+  play_side?: unknown;
 };
 
 type ListPreferenceRow = GlobalPreferenceRow;
@@ -28,6 +30,8 @@ export function mapGlobalPreferenceRow(row: GlobalPreferenceRow | null | undefin
     order: row.card_order,
     scope: row.scope,
     fastMode: row.fast_mode,
+    playMode: row.play_mode,
+    playSide: row.play_side,
   });
 }
 
@@ -41,6 +45,8 @@ export function mapListPreferenceRow(
     order: row.card_order,
     scope: row.scope,
     fastMode: row.fast_mode,
+    playMode: row.play_mode,
+    playSide: row.play_side,
   });
   return Object.keys(override).length > 0 ? override : null;
 }
@@ -54,6 +60,8 @@ export function toGlobalPreferenceRow(userId: string, preset: StudyPreset) {
     card_order: normalized.order,
     scope: normalized.scope,
     fast_mode: normalized.fastMode,
+    play_mode: normalized.playMode,
+    play_side: normalized.playSide,
   };
 }
 
@@ -71,6 +79,8 @@ export function toListPreferenceRow(
     card_order: normalized.order ?? null,
     scope: normalized.scope ?? null,
     fast_mode: normalized.fastMode ?? null,
+    play_mode: normalized.playMode ?? null,
+    play_side: normalized.playSide ?? null,
   };
 }
 
@@ -79,9 +89,11 @@ export function isMissingStudyPreferenceSchemaError(error: unknown): boolean {
   const input = error as { code?: unknown; message?: unknown };
   const code = typeof input.code === "string" ? input.code : "";
   const message = typeof input.message === "string" ? input.message.toLowerCase() : "";
-  return ["42P01", "PGRST204", "PGRST205"].includes(code)
+  return ["42P01", "42703", "PGRST204", "PGRST205"].includes(code)
     || message.includes("user_study_preferences") && message.includes("not found")
-    || message.includes("user_list_study_preferences") && message.includes("not found");
+    || message.includes("user_list_study_preferences") && message.includes("not found")
+    || message.includes("play_mode") && message.includes("column")
+    || message.includes("play_side") && message.includes("column");
 }
 
 export function isRetryableStudyPreferenceError(error: unknown): boolean {
@@ -104,7 +116,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
     async readGlobal(userId: string): Promise<StudyPreset | null> {
       const { data, error } = await client
         .from("user_study_preferences")
-        .select("mode,direction,card_order,scope,fast_mode")
+        .select("mode,direction,card_order,scope,fast_mode,play_mode,play_side")
         .eq("user_id", userId)
         .maybeSingle();
       if (error) throw error;
@@ -121,7 +133,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
     async readListOverride(userId: string, listId: string): Promise<StudyPresetOverride | null> {
       const { data, error } = await client
         .from("user_list_study_preferences")
-        .select("mode,direction,card_order,scope,fast_mode")
+        .select("mode,direction,card_order,scope,fast_mode,play_mode,play_side")
         .eq("user_id", userId)
         .eq("list_id", listId)
         .maybeSingle();
