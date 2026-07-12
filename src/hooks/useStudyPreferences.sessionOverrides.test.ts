@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   derivePrivateListId,
   parseStudySessionOverrides,
+  selectChangedLegacyPreferences,
   shouldPersistStudyPreferences,
   stripTransientRedFocusOrder,
 } from "./useStudyPreferences";
@@ -44,15 +45,26 @@ describe("study session URL overrides", () => {
     expect(shouldPersistStudyPreferences("/list/list-1/study", false)).toBe(false);
   });
 
-  it("does not persist the sequential order forced by red focus", () => {
+  it("does not persist any setting forced through a red focus transition", () => {
     expect(stripTransientRedFocusOrder({
       order: "sequential",
       favoritesOnly: true,
       fastMode: false,
-    }, true)).toEqual({
+    }, true)).toEqual({});
+    expect(stripTransientRedFocusOrder({ order: "random" }, false)).toEqual({ order: "random" });
+  });
+
+  it("persists only fields that actually changed in a legacy snapshot", () => {
+    expect(selectChangedLegacyPreferences({
+      order: "sequential",
       favoritesOnly: true,
       fastMode: false,
-    });
-    expect(stripTransientRedFocusOrder({ order: "random" }, false)).toEqual({ order: "random" });
+    }, {
+      mode: "flip",
+      direction: "a-b",
+      order: "random",
+      favoritesOnly: true,
+      fastMode: false,
+    })).toEqual({ order: "sequential" });
   });
 });
