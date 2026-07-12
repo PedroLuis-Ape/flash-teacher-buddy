@@ -9,7 +9,13 @@ import { playCorrect, playWrong } from "@/lib/sfx";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
-import { readFlipAutoPlayState, writeFlipAutoPlayState, type FlipAutoPlaySide } from "@/features/study/lib/flipAutoPlayState";
+import {
+  getNextFlipAutoPlayStep,
+  readFlipAutoPlayState,
+  writeFlipAutoPlayState,
+  type FlipAutoPlaySide,
+} from "@/features/study/lib/flipAutoPlayState";
+import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { ImageCard } from "./ImageCard";
@@ -22,10 +28,6 @@ const AUTO_PLAY_DELAY_MS = 7000;
 const MOUSE_DRAG_THRESHOLD_PX = 6;
 
 type ManualFlipAnswer = "knew" | "didntKnow" | null;
-
-function oppositeAutoPlaySide(side: FlipAutoPlaySide): FlipAutoPlaySide {
-  return side === "a" ? "b" : "a";
-}
 
 function isPureFlipSession(): boolean {
   if (typeof window === "undefined") return true;
@@ -183,10 +185,10 @@ export const FlipStudyView = ({
   onToggleSpecial,
 }: FlipStudyViewProps) => {
   const restoredAutoPlay = useRef(readFlipAutoPlayState());
+  const playPreset = usePlayPresetRuntime();
   const [isFlipped, setIsFlipped] = useState(false);
   const [manualAnswer, setManualAnswer] = useState<ManualFlipAnswer>(null);
   const [isAutoPlaying, setIsAutoPlaying] = useState(restoredAutoPlay.current.enabled);
-  const [autoPlaySide, setAutoPlaySide] = useState<FlipAutoPlaySide>(restoredAutoPlay.current.side);
   const [autoPlayCurrentSide, setAutoPlayCurrentSide] = useState<FlipAutoPlaySide>(restoredAutoPlay.current.side);
   const autoPlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
@@ -223,18 +225,20 @@ export const FlipStudyView = ({
   const pauseAutoPlay = useCallback(() => {
     if (!isAutoPlaying) return;
     setIsAutoPlaying(false);
-    writeFlipAutoPlayState(false, autoPlaySide);
+    writeFlipAutoPlayState(false, playPreset.playSide);
     clearAutoPlayTimeout();
     stop();
-  }, [autoPlaySide, clearAutoPlayTimeout, isAutoPlaying, stop]);
+  }, [clearAutoPlayTimeout, isAutoPlaying, playPreset.playSide, stop]);
 
   const speakSide = useCallback((side: FlipAutoPlaySide) => {
     const rate = getSpeechRate();
     const fixedSide = side === "a" ? sideA : sideB;
-    if (!fastMode) setIsFlipped(fixedSideToRenderedSide(side) === "second");
+    if (!fastMode || (isAutoPlaying && playPreset.playMode === "single")) {
+      setIsFlipped(fixedSideToRenderedSide(side) === "second");
+    }
     if (ttsEnabled) speak(fixedSide.text, { langOverride: toBCP47(fixedSide.lang), rate });
     else stop();
-  }, [fastMode, fixedSideToRenderedSide, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
+  }, [fastMode, fixedSideToRenderedSide, isAutoPlaying, playPreset.playMode, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
 
   const handlePlayTop = () => {
     pauseAutoPlay();
@@ -314,22 +318,14 @@ export const FlipStudyView = ({
   const handleToggleAutoPlay = () => {
     const next = !isAutoPlaying;
     setIsAutoPlaying(next);
-    writeFlipAutoPlayState(next, autoPlaySide);
+    writeFlipAutoPlayState(next, playPreset.playSide);
     if (next) {
-      setAutoPlayCurrentSide(autoPlaySide);
-      if (!fastMode) setIsFlipped(fixedSideToRenderedSide(autoPlaySide) === "second");
+      setAutoPlayCurrentSide(playPreset.playSide);
+      setIsFlipped(fixedSideToRenderedSide(playPreset.playSide) === "second");
     } else {
       clearAutoPlayTimeout();
       stop();
     }
-  };
-
-  const handleAutoPlaySideChange = (side: FlipAutoPlaySide) => {
-    pauseAutoPlay();
-    setAutoPlaySide(side);
-    setAutoPlayCurrentSide(side);
-    writeFlipAutoPlayState(false, side);
-    if (!fastMode) setIsFlipped(fixedSideToRenderedSide(side) === "second");
   };
 
   const handleNextCard = () => {
@@ -372,14 +368,18 @@ export const FlipStudyView = ({
   };
 
   useEffect(() => {
-    setAutoPlayCurrentSide(autoPlaySide);
-    setIsFlipped(isAutoPlaying && fixedSideToRenderedSide(autoPlaySide) === "second");
-    setManualAnswer(null);
-  }, [front, back, flashcardId, isAutoPlaying, autoPlaySide, fixedSideToRenderedSide]);
+    setPlayPresetRuntime({ labelA: sideA.label, labelB: sideB.label });
+  }, [sideA.label, sideB.label]);
 
   useEffect(() => {
-    writeFlipAutoPlayState(isAutoPlaying, autoPlaySide);
-  }, [isAutoPlaying, autoPlaySide]);
+    setAutoPlayCurrentSide(playPreset.playSide);
+    setIsFlipped(isAutoPlaying && fixedSideToRenderedSide(playPreset.playSide) === "second");
+    setManualAnswer(null);
+  }, [front, back, flashcardId, isAutoPlaying, playPreset.playMode, playPreset.playSide, fixedSideToRenderedSide]);
+
+  useEffect(() => {
+    writeFlipAutoPlayState(isAutoPlaying, playPreset.playSide);
+  }, [isAutoPlaying, playPreset.playSide]);
 
   useEffect(() => {
     if (!isAutoPlaying) {
@@ -391,23 +391,29 @@ export const FlipStudyView = ({
     speakSide(autoPlayCurrentSide);
 
     autoPlayTimeoutRef.current = setTimeout(() => {
-      if (autoPlayCurrentSide === autoPlaySide) {
-        setAutoPlayCurrentSide(oppositeAutoPlaySide(autoPlaySide));
+      const step = getNextFlipAutoPlayStep({
+        mode: playPreset.playMode,
+        configuredSide: playPreset.playSide,
+        currentSide: autoPlayCurrentSide,
+      });
+
+      if (step.action === "switch") {
+        setAutoPlayCurrentSide(step.side);
         return;
       }
 
-      writeFlipAutoPlayState(true, autoPlaySide);
+      writeFlipAutoPlayState(true, playPreset.playSide);
       if (onNext && canGoNext) {
         onNext();
         return;
       }
       setIsAutoPlaying(false);
-      writeFlipAutoPlayState(false, autoPlaySide);
+      writeFlipAutoPlayState(false, playPreset.playSide);
       stop();
     }, AUTO_PLAY_DELAY_MS);
 
     return clearAutoPlayTimeout;
-  }, [autoPlayCurrentSide, autoPlaySide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, speakSide, stop]);
+  }, [autoPlayCurrentSide, canGoNext, clearAutoPlayTimeout, flashcardId, front, back, isAutoPlaying, onNext, playPreset.playMode, playPreset.playSide, speakSide, stop]);
 
   useEffect(() => () => clearAutoPlayTimeout(), [clearAutoPlayTimeout]);
 
@@ -464,39 +470,17 @@ export const FlipStudyView = ({
 
   const autoPlayControls = (
     <div className="flip-autoplay-controls w-full rounded-xl border bg-card/80 p-2 shadow-sm sm:rounded-2xl sm:p-3" data-no-card-swipe="true">
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-        <Button
-          type="button"
-          variant={isAutoPlaying ? "secondary" : "default"}
-          size="sm"
-          onClick={handleToggleAutoPlay}
-          className="h-10 w-full font-semibold sm:h-11 sm:w-auto sm:min-w-[132px]"
-          aria-pressed={isAutoPlaying}
-        >
-          {isAutoPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-          {isAutoPlaying ? "Pausar" : "Play"}
-        </Button>
-        <div className="grid w-full grid-cols-2 gap-1.5 sm:w-auto sm:min-w-[260px] sm:gap-2" data-autoplay-side-options="true">
-          <Button
-            type="button"
-            variant={autoPlaySide === "a" ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleAutoPlaySideChange("a")}
-            className="h-9 min-w-0 px-2 text-[11px] sm:h-10 sm:text-sm"
-          >
-            <span className="truncate">Começar em {sideA.label}</span>
-          </Button>
-          <Button
-            type="button"
-            variant={autoPlaySide === "b" ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleAutoPlaySideChange("b")}
-            className="h-9 min-w-0 px-2 text-[11px] sm:h-10 sm:text-sm"
-          >
-            <span className="truncate">Começar em {sideB.label}</span>
-          </Button>
-        </div>
-      </div>
+      <Button
+        type="button"
+        variant={isAutoPlaying ? "secondary" : "default"}
+        size="sm"
+        onClick={handleToggleAutoPlay}
+        className="h-10 w-full font-semibold sm:h-11 sm:w-auto sm:min-w-[132px]"
+        aria-pressed={isAutoPlaying}
+      >
+        {isAutoPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+        {isAutoPlaying ? "Pausar" : "Play"}
+      </Button>
     </div>
   );
 
@@ -555,15 +539,37 @@ export const FlipStudyView = ({
   );
 
   if (fastMode) {
+    const singleSidePlay = isAutoPlaying && playPreset.playMode === "single";
+    const selectedSide = playPreset.playSide === "a" ? sideA : sideB;
+    const selectedImage = playPreset.playSide === "a" ? imageUrlA : imageUrlB;
+    const selectedHints = playPreset.playSide === "a" ? wordHintsA : wordHintsB;
+    const selectedMergedHints = playPreset.playSide === "a" ? mergedHintsA : mergedHintsB;
+    const selectedLang = toBCP47(selectedSide.lang);
+
     return (
       <div className="flip-study-mobile-compact mx-auto flex w-full max-w-2xl flex-col items-center gap-3 sm:gap-4">
         {autoPlayControls}
         <Card className={cn("relative w-full overflow-hidden", getRedListCardClass(isRedListed))}>
           <div className="absolute right-2 top-2 z-10">{toolsButton}</div>
-          <div className="border-b border-border">
-            <SidePanel side={firstSide} imageUrl={firstSideImage} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakLang={firstSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayTop} compact />
-          </div>
-          <SidePanel side={secondSide} imageUrl={secondSideImage} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakLang={secondSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayBottom} compact accent />
+          {singleSidePlay ? (
+            <SidePanel
+              side={selectedSide}
+              imageUrl={selectedImage}
+              wordHints={selectedHints}
+              mergedHints={selectedMergedHints}
+              speakLang={selectedLang}
+              ttsEnabled={ttsEnabled}
+              onPlay={() => speakSide(playPreset.playSide)}
+              compact
+            />
+          ) : (
+            <>
+              <div className="border-b border-border">
+                <SidePanel side={firstSide} imageUrl={firstSideImage} wordHints={firstSideHints} mergedHints={firstSideMergedHints} speakLang={firstSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayTop} compact />
+              </div>
+              <SidePanel side={secondSide} imageUrl={secondSideImage} wordHints={secondSideHints} mergedHints={secondSideMergedHints} speakLang={secondSideLang} ttsEnabled={ttsEnabled} onPlay={handlePlayBottom} compact accent />
+            </>
+          )}
         </Card>
         {navigationButtons}
         {actionButtons}
