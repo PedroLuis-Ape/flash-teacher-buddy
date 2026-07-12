@@ -77,3 +77,286 @@ html[data-palette="galaxy"][data-galaxy-quality="high"] .space-ui-shell::after {
     filter: none;
   }
 }
+
+/*
+ * Galaxy fine redesign.
+ * This section intentionally overrides the older decorative composition while
+ * preserving the existing lazy-loaded chunk, performance tiers and assets.
+ */
+html[data-palette="galaxy"] .space-galaxy-effects {
+  background:
+    radial-gradient(ellipse 72% 54% at 46% 46%, hsl(275 92% 32% / .10), transparent 64%),
+    radial-gradient(ellipse 42% 38% at 84% 18%, hsl(220 92% 42% / .10), transparent 72%),
+    radial-gradient(ellipse 36% 30% at 12% 82%, hsl(298 84% 40% / .08), transparent 74%);
+}
+
+/* Former background planets become distant star fields, reducing solar-system clutter. */
+.space-galaxy-effects--balanced::before,
+.space-galaxy-effects--full::before,
+.space-galaxy-effects--full::after {
+  inset: -8%;
+  width: auto;
+  aspect-ratio: auto;
+  opacity: .36;
+  filter: none;
+  transform: rotate(-7deg) scale(1.04);
+  background-repeat: repeat;
+  background-image:
+    radial-gradient(circle, hsl(0 0% 100% / .72) 0 1px, transparent 1.8px),
+    radial-gradient(circle, hsl(220 100% 91% / .48) 0 1px, transparent 1.8px),
+    radial-gradient(circle, hsl(286 100% 90% / .42) 0 1px, transparent 1.8px);
+  background-size: 173px 173px, 257px 257px, 347px 347px;
+  background-position: 17px 33px, 91px 129px, 203px 71px;
+  mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+.space-galaxy-effects--balanced::before {
+  opacity: .22;
+  transform: rotate(-5deg) scale(1.02);
+}
+
+.space-galaxy-effects--full::after {
+  opacity: .16;
+  transform: rotate(9deg) scale(1.12);
+  background-size: 431px 431px, 509px 509px, 617px 617px;
+  background-position: 61px 149px, 237px 41px, 319px 263px;
+}
+
+.space-galaxy-effects--full .space-galaxy-arm,
+.space-galaxy-effects--balanced .space-galaxy-arm {
+  left: -18%;
+  top: 24%;
+  width: 144%;
+  height: clamp(28rem, 45vw, 58rem);
+  opacity: .31;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+  background:
+    radial-gradient(ellipse 20% 18% at 46% 48%, hsl(0 0% 100% / .44), transparent 66%),
+    radial-gradient(ellipse 34% 28% at 45% 49%, hsl(282 96% 76% / .30), transparent 68%),
+    radial-gradient(ellipse 45% 34% at 42% 54%, hsl(222 96% 70% / .22), transparent 72%),
+    radial-gradient(ellipse 30% 24% at 67% 40%, hsl(300 88% 66% / .14), transparent 70%),
+    linear-gradient(90deg, transparent 3%, hsl(224 92% 72% / .08) 18%, hsl(278 94% 76% / .20) 43%, hsl(219 94% 76% / .18) 61%, hsl(296 88% 70% / .10) 78%, transparent 96%);
+  mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 91%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 91%, transparent 100%);
+}
+
+.space-galaxy-effects--balanced .space-galaxy-arm {
+  left: -24%;
+  top: 29%;
+  width: 154%;
+  height: clamp(22rem, 50vw, 40rem);
+  opacity: .24;
+}
+
+.space-galaxy-arm::before {
+  inset: 29% 34% 31% 31%;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 50% 50%, hsl(0 0% 100% / .56) 0%, hsl(264 100% 91% / .34) 13%, hsl(286 96% 72% / .20) 31%, hsl(225 94% 64% / .10) 52%, transparent 74%);
+  box-shadow:
+    0 0 72px 18px hsl(280 100% 72% / .09),
+    0 0 130px 32px hsl(221 100% 65% / .05);
+}
+
+.space-galaxy-arm::after {
+  inset: 20% 8%;
+  border: 0;
+  box-shadow: none;
+  background:
+    radial-gradient(circle at 15% 59%, hsl(0 0% 100% / .72) 0 1px, transparent 1.9px),
+    radial-gradient(circle at 29% 46%, hsl(222 100% 91% / .66) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 43% 52%, hsl(0 0% 100% / .78) 0 1.2px, transparent 2.1px),
+    radial-gradient(circle at 52% 43%, hsl(285 100% 92% / .76) 0 1px, transparent 2px),
+    radial-gradient(circle at 64% 48%, hsl(213 100% 91% / .64) 0 1px, transparent 1.9px),
+    radial-gradient(circle at 79% 39%, hsl(0 0% 100% / .68) 0 1px, transparent 1.9px),
+    linear-gradient(90deg, transparent 4%, hsl(286 100% 84% / .10) 34%, hsl(224 100% 84% / .12) 58%, transparent 94%);
+  background-size: 137px 83px, 173px 109px, 211px 131px, 239px 157px, 283px 179px, 317px 197px, 100% 100%;
+  opacity: .64;
+}
+
+.space-galaxy-spiral-main {
+  left: 7vw;
+  top: 18vh;
+  width: clamp(280px, 30vw, 500px);
+  opacity: .20;
+  mix-blend-mode: screen;
+  filter: saturate(.86) brightness(.9);
+}
+
+.space-galaxy-spiral-distant {
+  right: 7vw;
+  bottom: 8vh;
+  width: clamp(120px, 12vw, 205px);
+  opacity: .10;
+  mix-blend-mode: screen;
+  filter: saturate(.72) brightness(.78);
+}
+
+.space-galaxy-planet-main {
+  right: -10vw;
+  top: -11vh;
+  width: clamp(260px, 29vw, 500px);
+  opacity: .22;
+  filter: saturate(.76) brightness(.72);
+}
+
+.space-galaxy-moon-small {
+  opacity: .38;
+  filter: saturate(.72) brightness(.78);
+}
+
+.space-galaxy-nebula {
+  left: -17vw;
+  top: 10vh;
+  width: 132vw;
+  opacity: .34;
+  filter: saturate(.86) brightness(.86);
+  mask-image: radial-gradient(ellipse 80% 66% at 49% 48%, black 0%, black 46%, transparent 84%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 66% at 49% 48%, black 0%, black 46%, transparent 84%);
+}
+
+.space-galaxy-nebula-dust {
+  left: -8vw;
+  top: 15vh;
+  width: 116vw;
+  opacity: .19;
+  filter: saturate(.78) brightness(.8);
+  mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
+}
+
+.space-galaxy-effects--balanced .space-galaxy-nebula {
+  left: -20vw;
+  top: 17vh;
+  width: 140vw;
+  opacity: .25;
+}
+
+.space-galaxy-effects--quality-high .space-galaxy-arm {
+  opacity: .42;
+  filter: saturate(1.1) brightness(1.04);
+}
+
+.space-galaxy-effects--quality-high .space-galaxy-nebula {
+  opacity: .44;
+  filter: saturate(1.02) brightness(.98);
+}
+
+.space-galaxy-effects--quality-high .space-galaxy-nebula-dust {
+  opacity: .27;
+  filter: saturate(.94) brightness(.9);
+}
+
+.space-galaxy-effects .space-twinkle-star {
+  z-index: 7;
+}
+
+.space-galaxy-effects--full .space-shooting-star,
+.space-galaxy-effects--balanced .space-shooting-star {
+  width: 12rem;
+  height: 1.4px;
+  box-shadow:
+    0 0 7px hsl(268 100% 86% / .22),
+    0 0 14px hsl(221 100% 82% / .10);
+}
+
+.space-galaxy-effects--balanced .space-shooting-star {
+  width: 8.5rem;
+  height: 1px;
+}
+
+.space-shooting-star::after {
+  width: 4px;
+  height: 4px;
+  box-shadow:
+    0 0 6px 1px hsl(0 0% 100% / .42),
+    0 0 10px 3px hsl(221 100% 82% / .14);
+}
+
+/* Cards become darker and calmer, allowing the galaxy to remain behind them. */
+html[data-palette="galaxy"] .space-ui .bg-card,
+html[data-palette="galaxy"] .space-ui main .rounded-lg.border,
+html[data-palette="galaxy"] .space-ui main .rounded-xl.border,
+html[data-palette="galaxy"] .space-ui main .rounded-2xl.border,
+html[data-palette="galaxy"] .space-ui .stat-tile,
+html[data-palette="galaxy"] .space-ui .card-premium,
+html[data-palette="galaxy"] .space-ui .glass-panel,
+html[data-palette="galaxy"] .space-ui .space-ui-list-card,
+html[data-palette="galaxy"] .space-ui .space-ui-folder-card,
+html[data-palette="galaxy"] .space-ui .space-ui-class-card,
+html[data-palette="galaxy"] .space-ui .space-ui-class-row {
+  background:
+    linear-gradient(180deg, hsl(0 0% 100% / .025), transparent 28%),
+    linear-gradient(145deg, hsl(251 48% 12% / .84), hsl(247 54% 7% / .78)) !important;
+  border-color: hsl(var(--primary) / .24) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(270 100% 94% / .05),
+    0 18px 44px -34px hsl(266 94% 56% / .30),
+    0 24px 58px -46px hsl(0 0% 0% / .78);
+  backdrop-filter: blur(10px) saturate(112%);
+  -webkit-backdrop-filter: blur(10px) saturate(112%);
+}
+
+html[data-palette="galaxy"] .space-ui [data-state="active"],
+html[data-palette="galaxy"] .space-ui [aria-current="page"] {
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / .08),
+    0 0 0 1px hsl(var(--primary) / .22),
+    0 12px 34px -24px hsl(var(--primary) / .54);
+}
+
+@media (min-aspect-ratio: 2/1) and (min-width: 1200px) {
+  .space-galaxy-effects--full .space-galaxy-arm {
+    left: -12%;
+    top: 14%;
+    width: 132%;
+    height: min(70vh, 58rem);
+  }
+
+  .space-galaxy-nebula,
+  .space-galaxy-nebula-dust {
+    left: -5vw;
+    width: 110vw;
+    transform: rotate(-4deg) scaleY(1.08);
+  }
+}
+
+@media (max-width: 1199px) {
+  .space-galaxy-effects--balanced::before {
+    inset: -12%;
+  }
+
+  .space-galaxy-effects--balanced .space-galaxy-arm {
+    top: 31%;
+    opacity: .22;
+  }
+
+  .space-galaxy-effects--balanced .space-galaxy-spiral-main {
+    left: -4vw;
+    top: 13vh;
+    opacity: .15;
+  }
+
+  .space-galaxy-effects--balanced .space-galaxy-planet-main {
+    opacity: .16;
+  }
+}
+
+@media (max-width: 767px), (update: slow), (prefers-reduced-motion: reduce) {
+  html[data-palette="galaxy"] .space-galaxy-effects {
+    background:
+      radial-gradient(ellipse 76% 42% at 52% 42%, hsl(278 90% 40% / .12), transparent 72%),
+      radial-gradient(ellipse 44% 34% at 84% 18%, hsl(220 90% 42% / .08), transparent 76%);
+  }
+
+  html[data-palette="galaxy"] .space-ui .bg-card,
+  html[data-palette="galaxy"] .space-ui main .rounded-lg.border,
+  html[data-palette="galaxy"] .space-ui main .rounded-xl.border,
+  html[data-palette="galaxy"] .space-ui main .rounded-2xl.border {
+    background: linear-gradient(145deg, hsl(251 46% 12% / .96), hsl(247 52% 7% / .94)) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
