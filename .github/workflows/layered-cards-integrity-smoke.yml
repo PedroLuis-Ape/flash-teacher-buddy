@@ -1,0 +1,202 @@
+name: Layered Cards Integrity Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "src/features/cards/**"
+      - ".github/workflows/layered-cards-integrity-smoke.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "supabase/migrations/**"
+      - "src/features/cards/**"
+      - ".github/workflows/layered-cards-integrity-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase start 2>&1 | tee supabase-reset.log
+          supabase db reset --local --no-seed 2>&1 | tee -a supabase-reset.log
+
+      - name: Verify atomic arbitrary layers
+        shell: bash
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            smoke_user uuid := '71111111-1111-4111-8111-111111111111';
+            folder_id uuid;
+            list_id uuid;
+            principal_id uuid;
+            first_layer_id uuid;
+            second_layer_id uuid;
+            report jsonb;
+            before_invalid integer;
+            rejected boolean := false;
+          BEGIN
+            INSERT INTO auth.users (
+              instance_id, id, aud, role, email, encrypted_password,
+              email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+              created_at, updated_at
+            ) VALUES (
+              '00000000-0000-0000-0000-000000000000',
+              smoke_user,
+              'authenticated',
+              'authenticated',
+              'layered-integrity@app-piteco.local',
+              crypt('smoke-password', gen_salt('bf')),
+              now(),
+              '{"provider":"email","providers":["email"]}'::jsonb,
+              '{"first_name":"Layered Integrity","requested_account_type":"teacher","requested_public_slug":"layered_integrity"}'::jsonb,
+              now(),
+              now()
+            ) ON CONFLICT (id) DO NOTHING;
+
+            PERFORM set_config('request.jwt.claim.sub', smoke_user::text, true);
+            PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
+
+            INSERT INTO public.folders(owner_id, title, visibility)
+            VALUES (smoke_user, 'Layered Smoke Folder', 'private')
+            RETURNING id INTO folder_id;
+
+            INSERT INTO public.lists(folder_id, owner_id, title, visibility, lang_a, lang_b)
+            VALUES (folder_id, smoke_user, 'Layered Smoke List', 'private', 'en', 'pt-BR')
+            RETURNING id INTO list_id;
+
+            report := public.save_layered_card_group_v2(
+              NULL,
+              list_id,
+              'Work',
+              '[
+                {"front":"I work every day.","back":"Eu trabalho todos os dias."},
+                {"front":"I worked yesterday.","back":"Eu trabalhei ontem."}
+              ]'::jsonb
+            );
+
+            principal_id := (report->>'principal_id')::uuid;
+            first_layer_id := (report->'layer_ids'->>0)::uuid;
+            second_layer_id := (report->'layer_ids'->>1)::uuid;
+
+            IF principal_id IS NULL OR jsonb_array_length(report->'layer_ids') <> 2 THEN
+              RAISE EXCEPTION 'Initial layered save returned an invalid report: %', report;
+            END IF;
+
+            IF NOT EXISTS (
+              SELECT 1
+              FROM public.flashcards
+              WHERE parent_card_id = principal_id
+                AND layer_index = 0
+                AND term = 'I work every day.'
+                AND translation = 'Eu trabalho todos os dias.'
+                AND deleted_at IS NULL
+            ) OR NOT EXISTS (
+              SELECT 1
+              FROM public.flashcards
+              WHERE parent_card_id = principal_id
+                AND layer_index = 1
+                AND term = 'I worked yesterday.'
+                AND translation = 'Eu trabalhei ontem.'
+                AND deleted_at IS NULL
+            ) THEN
+              RAISE EXCEPTION 'Initial arbitrary layers were not persisted correctly.';
+            END IF;
+
+            report := public.save_layered_card_group_v2(
+              principal_id,
+              list_id,
+              'Work',
+              jsonb_build_array(
+                jsonb_build_object(
+                  'id', second_layer_id,
+                  'front', 'I worked yesterday.',
+                  'back', 'Eu trabalhei ontem.'
+                ),
+                jsonb_build_object(
+                  'front', 'I will work tomorrow.',
+                  'back', 'Eu trabalharei amanhã.'
+                ),
+                jsonb_build_object(
+                  'id', first_layer_id,
+                  'front', 'I work every day.',
+                  'back', 'Eu trabalho todos os dias.'
+                )
+              )
+            );
+
+            IF (SELECT count(*) FROM public.flashcards WHERE parent_card_id = principal_id AND deleted_at IS NULL) <> 3 THEN
+              RAISE EXCEPTION 'Atomic update did not keep exactly three active layers: %', report;
+            END IF;
+
+            IF EXISTS (
+              SELECT layer_index
+              FROM public.flashcards
+              WHERE parent_card_id = principal_id AND deleted_at IS NULL
+              GROUP BY layer_index
+              HAVING count(*) > 1
+            ) OR (
+              SELECT array_agg(layer_index ORDER BY layer_index)
+              FROM public.flashcards
+              WHERE parent_card_id = principal_id AND deleted_at IS NULL
+            ) IS DISTINCT FROM ARRAY[0,1,2] THEN
+              RAISE EXCEPTION 'Layer order is not contiguous and unique.';
+            END IF;
+
+            SELECT count(*) INTO before_invalid
+            FROM public.flashcards
+            WHERE parent_card_id = principal_id AND deleted_at IS NULL;
+
+            BEGIN
+              PERFORM public.save_layered_card_group_v2(
+                principal_id,
+                list_id,
+                'Work',
+                '[{"front":"Only one","back":"Apenas uma"}]'::jsonb
+              );
+            EXCEPTION WHEN OTHERS THEN
+              rejected := true;
+            END;
+
+            IF NOT rejected THEN
+              RAISE EXCEPTION 'One-layer group was not rejected.';
+            END IF;
+
+            IF (SELECT count(*) FROM public.flashcards WHERE parent_card_id = principal_id AND deleted_at IS NULL) <> before_invalid THEN
+              RAISE EXCEPTION 'Failed save changed the previous group.';
+            END IF;
+          END;
+          $$;
+          SQL
+
+      - name: Upload database reset log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layered-cards-supabase-reset-log
+          path: supabase-reset.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup

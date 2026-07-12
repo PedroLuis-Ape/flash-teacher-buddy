@@ -13,6 +13,7 @@ import type { CanonicalGlobalImportPackage } from "./schema/globalImportSchema";
 import type { AppPitecoSuperImportPackage } from "./schema/appPitecoSuperImportSchema";
 import { smartImportToOfficialV1Package } from "./liveBackendCompatibility";
 import { updateGlobalImportManifestStatus } from "./manifest";
+import { richImportRequirements } from "./richImportRequirements";
 
 export type CardConflictPolicy = "skip" | "replace" | "copy" | "error";
 export type ImportTargetScope = "personal" | "classroom";
@@ -292,6 +293,14 @@ export async function executeMappedGlobalImport(
     && !options.turmaId
     && isMissingRpcSchemaCacheError(rpcResult.error, rpcName)
   ) {
+    const richRequirements = richImportRequirements(smartPackage);
+    if (richRequirements.length > 0) {
+      throw new Error(
+        "O banco conectado não possui o motor 2.0 necessário para preservar "
+        + `${richRequirements.join(", ")}. A importação foi bloqueada para evitar perda de dados.`,
+      );
+    }
+
     if (options.cardConflict === "replace") {
       throw new Error(
         "O banco conectado ainda não suporta atualizar um card duplicado. "
