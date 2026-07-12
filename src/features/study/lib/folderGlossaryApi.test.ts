@@ -92,6 +92,29 @@ describe("large folder glossary imports", () => {
     expect(result).toMatchObject({ inserted: 220, removed: 7, mode: "replace" });
   });
 
+  it("keeps adaptive retries for a medium import below the default chunk size", async () => {
+    mocks.rpc.mockImplementation(async (_name: string, args: Record<string, unknown>) => {
+      const chunk = args._entries as FolderGlossaryInput[];
+      if (chunk.length > 100) {
+        return {
+          data: null,
+          error: { code: "57014", message: "canceling statement due to statement timeout" },
+        };
+      }
+      return { data: resultFor(args), error: null };
+    });
+
+    const result = await importFolderGlossary(
+      "folder-1",
+      entries(400),
+      "merge",
+    );
+
+    expect(mocks.rpc.mock.calls.map(([, args]) => ((args as Record<string, unknown>)._entries as unknown[]).length))
+      .toEqual([400, 200, 100, 100, 200, 100, 100]);
+    expect(result).toMatchObject({ inserted: 400, updated: 0, mode: "merge" });
+  });
+
   it("returns a clear error when even the minimum batch times out", async () => {
     mocks.rpc.mockResolvedValue({
       data: null,
