@@ -57,20 +57,17 @@ describe('galaxy animation budgets', () => {
     expect(getGalaxyCometPlan('static', 'high').count).toBe(0);
   });
 
-  it('uses one comet in balanced standard mode', () => {
+  it('uses one occasional comet in both balanced quality modes', () => {
     const balanced = getGalaxyCometPlan('balanced');
-    expect(balanced.count).toBe(1);
-    expect(balanced.staggerDelays).toEqual([0]);
-  });
-
-  it('uses an adaptive four-comet shower on notebooks in high mode', () => {
     const balancedHigh = getGalaxyCometPlan('balanced', 'high');
-    expect(balancedHigh.count).toBe(4);
-    expect(balancedHigh.staggerDelays).toHaveLength(4);
-    expect(balancedHigh.repeatDelayMin).toBeLessThan(30_000);
+
+    expect(balanced.count).toBe(1);
+    expect(balancedHigh.count).toBe(1);
+    expect(balanced.staggerDelays).toEqual([0]);
+    expect(balancedHigh.staggerDelays).toEqual([0]);
   });
 
-  it('uses a four-comet staggered group in full mode', () => {
+  it('uses a four-comet staggered group only in full mode', () => {
     const full = getGalaxyCometPlan('full');
     expect(full.count).toBe(4);
     expect(full.staggerDelays).toHaveLength(4);
@@ -85,8 +82,15 @@ describe('galaxy animation budgets', () => {
     expect(full.duration).toBeLessThanOrEqual(8_000);
   });
 
-  it('keeps the standard animated tiers on a thirty-second repeat', () => {
-    expect(getGalaxyCometPlan('balanced').repeatDelayMin).toBe(30_000);
-    expect(getGalaxyCometPlan('full').repeatDelayMin).toBe(30_000);
+  it('keeps balanced comet events between fifty-five and ninety seconds', () => {
+    const balanced = getGalaxyCometPlan('balanced');
+    expect(balanced.repeatDelayMin).toBe(55_000);
+    expect(balanced.repeatDelayMin + balanced.repeatDelayVariation).toBe(90_000);
+  });
+
+  it('keeps full comet events between forty and seventy seconds', () => {
+    const full = getGalaxyCometPlan('full');
+    expect(full.repeatDelayMin).toBe(40_000);
+    expect(full.repeatDelayMin + full.repeatDelayVariation).toBe(70_000);
   });
 });

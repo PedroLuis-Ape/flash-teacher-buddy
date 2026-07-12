@@ -34,7 +34,10 @@ export interface GalaxyScenePlan {
 
 const STATIC_MAX_WIDTH = 767;
 const BALANCED_MAX_WIDTH = 1199;
-const COMET_REPEAT_INTERVAL = 30_000;
+const BALANCED_COMET_REPEAT_MIN = 55_000;
+const BALANCED_COMET_REPEAT_VARIATION = 35_000;
+const FULL_COMET_REPEAT_MIN = 40_000;
+const FULL_COMET_REPEAT_VARIATION = 30_000;
 
 export function chooseGalaxyMotionTier(snapshot: GalaxyCapabilitySnapshot): GalaxyMotionTier {
   const lowMemory = snapshot.deviceMemory !== undefined && snapshot.deviceMemory <= 4;
@@ -127,36 +130,24 @@ export function getGalaxyCometPlan(
     };
   }
 
-  if (tier === 'balanced' && quality === 'standard') {
-    return {
-      count: 1,
-      firstDelayMin: 8_000,
-      firstDelayVariation: 4_000,
-      repeatDelayMin: COMET_REPEAT_INTERVAL,
-      repeatDelayVariation: 0,
-      duration: 6_000,
-      staggerDelays: [0],
-    };
-  }
-
   if (tier === 'balanced') {
     return {
-      count: 4,
-      firstDelayMin: 6_000,
-      firstDelayVariation: 3_000,
-      repeatDelayMin: 24_000,
-      repeatDelayVariation: 4_000,
-      duration: 6_400,
-      staggerDelays: [0, 900, 1_900, 3_000],
+      count: 1,
+      firstDelayMin: quality === 'high' ? 10_000 : 12_000,
+      firstDelayVariation: quality === 'high' ? 6_000 : 8_000,
+      repeatDelayMin: BALANCED_COMET_REPEAT_MIN,
+      repeatDelayVariation: BALANCED_COMET_REPEAT_VARIATION,
+      duration: quality === 'high' ? 6_400 : 6_000,
+      staggerDelays: [0],
     };
   }
 
   return {
     count: 4,
-    firstDelayMin: quality === 'high' ? 5_000 : 7_000,
-    firstDelayVariation: quality === 'high' ? 3_000 : 5_000,
-    repeatDelayMin: quality === 'high' ? 24_000 : COMET_REPEAT_INTERVAL,
-    repeatDelayVariation: quality === 'high' ? 4_000 : 0,
+    firstDelayMin: quality === 'high' ? 6_000 : 8_000,
+    firstDelayVariation: quality === 'high' ? 4_000 : 6_000,
+    repeatDelayMin: FULL_COMET_REPEAT_MIN,
+    repeatDelayVariation: FULL_COMET_REPEAT_VARIATION,
     duration: quality === 'high' ? 6_800 : 7_200,
     staggerDelays: quality === 'high' ? [0, 850, 1_850, 3_100] : [0, 1_250, 2_650, 4_200],
   };
