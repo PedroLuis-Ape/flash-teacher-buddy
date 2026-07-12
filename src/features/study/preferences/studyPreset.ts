@@ -10,11 +10,15 @@ export const STUDY_PRESET_MODES = [
 export const STUDY_PRESET_DIRECTIONS = ["a-b", "b-a", "any"] as const;
 export const STUDY_PRESET_ORDERS = ["random", "sequential"] as const;
 export const STUDY_PRESET_SCOPES = ["all", "favorites"] as const;
+export const STUDY_PRESET_PLAY_MODES = ["both", "single"] as const;
+export const STUDY_PRESET_PLAY_SIDES = ["a", "b"] as const;
 
 export type StudyModePreset = (typeof STUDY_PRESET_MODES)[number];
 export type StudyDirectionPreset = (typeof STUDY_PRESET_DIRECTIONS)[number];
 export type StudyOrderPreset = (typeof STUDY_PRESET_ORDERS)[number];
 export type StudyScopePreset = (typeof STUDY_PRESET_SCOPES)[number];
+export type StudyPlayModePreset = (typeof STUDY_PRESET_PLAY_MODES)[number];
+export type StudyPlaySidePreset = (typeof STUDY_PRESET_PLAY_SIDES)[number];
 
 export type StudyPreset = {
   mode: StudyModePreset;
@@ -22,6 +26,8 @@ export type StudyPreset = {
   order: StudyOrderPreset;
   scope: StudyScopePreset;
   fastMode: boolean;
+  playMode: StudyPlayModePreset;
+  playSide: StudyPlaySidePreset;
 };
 
 export type StudyPresetOverride = Partial<StudyPreset>;
@@ -33,6 +39,8 @@ export const DEFAULT_STUDY_PRESET: StudyPreset = Object.freeze({
   order: "random",
   scope: "all",
   fastMode: false,
+  playMode: "both",
+  playSide: "a",
 });
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -53,6 +61,12 @@ export function normalizeStudyPreset(value: unknown): StudyPreset {
     order: isOneOf(input.order, STUDY_PRESET_ORDERS) ? input.order : DEFAULT_STUDY_PRESET.order,
     scope: isOneOf(input.scope, STUDY_PRESET_SCOPES) ? input.scope : DEFAULT_STUDY_PRESET.scope,
     fastMode: typeof input.fastMode === "boolean" ? input.fastMode : DEFAULT_STUDY_PRESET.fastMode,
+    playMode: isOneOf(input.playMode, STUDY_PRESET_PLAY_MODES)
+      ? input.playMode
+      : DEFAULT_STUDY_PRESET.playMode,
+    playSide: isOneOf(input.playSide, STUDY_PRESET_PLAY_SIDES)
+      ? input.playSide
+      : DEFAULT_STUDY_PRESET.playSide,
   };
 }
 
@@ -65,6 +79,8 @@ export function normalizeStudyPresetOverride(value: unknown): StudyPresetOverrid
   if (isOneOf(value.order, STUDY_PRESET_ORDERS)) result.order = value.order;
   if (isOneOf(value.scope, STUDY_PRESET_SCOPES)) result.scope = value.scope;
   if (typeof value.fastMode === "boolean") result.fastMode = value.fastMode;
+  if (isOneOf(value.playMode, STUDY_PRESET_PLAY_MODES)) result.playMode = value.playMode;
+  if (isOneOf(value.playSide, STUDY_PRESET_PLAY_SIDES)) result.playSide = value.playSide;
 
   return result;
 }
