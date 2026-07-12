@@ -1,4 +1,4 @@
-import { useFolderGlossary } from "@/hooks/useFolderGlossary";
+import { useFolderGlossarySummary } from "@/hooks/useFolderGlossary";
 import { FolderGlossaryAiPromptCard } from "./FolderGlossaryAiPromptCard";
 import { FolderGlossaryCoverageCard } from "./FolderGlossaryCoverageCard";
 import { FolderGlossaryForceSyncCard } from "./FolderGlossaryForceSyncCard";
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function FolderGlossaryManager(props: Props) {
-  const { canEdit } = useFolderGlossary(props.folderId);
+  const { canEdit } = useFolderGlossarySummary(props.folderId);
 
   return (
     <div className="space-y-4">
