@@ -1,11 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import type { AccountGlossaryEntry } from "./accountGlossaryTypes";
+import {
+  cleanFolderGlossaryText,
+  compactFolderGlossaryEntries,
+  folderGlossaryIdentity,
+} from "./folderGlossaryCompact";
 import type {
   FolderGlossaryEntry,
   FolderGlossaryImportResult,
   FolderGlossaryInput,
+  FolderGlossaryPageParams,
+  FolderGlossaryPageResult,
   FolderGlossaryQueryResult,
+  FolderGlossarySummary,
 } from "./folderGlossaryTypes";
 
 export {
@@ -15,8 +23,10 @@ export {
 } from "./folderGlossarySyncApi";
 export type { FolderGlossarySyncStatus } from "./folderGlossarySyncApi";
 
-const DEFAULT_IMPORT_CHUNK_SIZE = 180;
-const MIN_IMPORT_CHUNK_SIZE = 20;
+const DEFAULT_IMPORT_CHUNK_SIZE = 1_000;
+const MIN_IMPORT_CHUNK_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 60;
+const MAX_PAGE_SIZE = 200;
 
 export interface FolderGlossaryImportProgress {
   processed: number;
@@ -28,14 +38,24 @@ export interface FolderGlossaryImportOptions {
   onProgress?: (progress: FolderGlossaryImportProgress) => void;
 }
 
-function isStatementTimeout(error: unknown): boolean {
-  const message = error instanceof Error
+function errorMessage(error: unknown): string {
+  return error instanceof Error
     ? error.message
     : typeof error === "object" && error !== null && "message" in error
       ? String((error as { message?: unknown }).message ?? "")
       : String(error ?? "");
+}
 
-  return /statement timeout|canceling statement due to statement timeout|57014/iu.test(message);
+function isStatementTimeout(error: unknown): boolean {
+  return /statement timeout|canceling statement due to statement timeout|57014/iu.test(
+    errorMessage(error),
+  );
+}
+
+function isMissingRpc(error: unknown, functionName: string): boolean {
+  const message = errorMessage(error);
+  return /PGRST202|could not find the function|schema cache/iu.test(message)
+    && message.toLocaleLowerCase().includes(functionName.toLocaleLowerCase());
 }
 
 function emptyImportResult(
@@ -51,6 +71,8 @@ function emptyImportResult(
     updated: 0,
     skipped: 0,
     removed: 0,
+    received: 0,
+    compacted: 0,
   };
 }
 
@@ -62,6 +84,8 @@ function addImportResult(
   target.updated += Number(source.updated ?? 0);
   target.skipped += Number(source.skipped ?? 0);
   target.removed += Number(source.removed ?? 0);
+  target.received = Number(target.received ?? 0) + Number(source.received ?? 0);
+  target.compacted = Number(target.compacted ?? 0) + Number(source.compacted ?? 0);
 }
 
 async function importFolderGlossaryChunk(
@@ -70,18 +94,20 @@ async function importFolderGlossaryChunk(
   mode: "merge" | "replace",
   dryRun: boolean,
 ): Promise<FolderGlossaryImportResult> {
-  const { data, error } = await (supabase as any).rpc(
-    "import_folder_glossary_v1",
-    {
-      _folder_id: folderId,
-      _entries: entries,
-      _mode: mode,
-      _dry_run: dryRun,
-    },
-  );
+  const parameters = {
+    _folder_id: folderId,
+    _entries: entries,
+    _mode: mode,
+    _dry_run: dryRun,
+  };
+  const v2 = await (supabase as any).rpc("import_folder_glossary_v2", parameters);
 
-  if (error) throw error;
-  return data as FolderGlossaryImportResult;
+  if (!v2.error) return v2.data as FolderGlossaryImportResult;
+  if (!isMissingRpc(v2.error, "import_folder_glossary_v2")) throw v2.error;
+
+  const v1 = await (supabase as any).rpc("import_folder_glossary_v1", parameters);
+  if (v1.error) throw v1.error;
+  return v1.data as FolderGlossaryImportResult;
 }
 
 async function loadFolderGlossaryRows(folderId: string): Promise<FolderGlossaryEntry[]> {
@@ -112,7 +138,104 @@ export async function loadFolderGlossary(folderId: string): Promise<FolderGlossa
   };
 }
 
+export async function loadFolderGlossarySummary(folderId: string): Promise<FolderGlossarySummary> {
+  const response = await (supabase as any).rpc("get_folder_glossary_summary_v2", {
+    _folder_id: folderId,
+  });
+
+  if (!response.error) {
+    const row = Array.isArray(response.data) ? response.data[0] : response.data;
+    return {
+      total: Number(row?.total_count ?? 0),
+      active: Number(row?.active_count ?? 0),
+      canEdit: row?.can_edit === true,
+    };
+  }
+
+  if (!isMissingRpc(response.error, "get_folder_glossary_summary_v2")) throw response.error;
+  const fallback = await loadFolderGlossary(folderId);
+  return {
+    total: fallback.entries.length,
+    active: fallback.entries.filter((entry) => entry.is_active).length,
+    canEdit: fallback.canEdit,
+  };
+}
+
+export async function loadFolderGlossaryPage(
+  folderId: string,
+  params: FolderGlossaryPageParams = {},
+): Promise<FolderGlossaryPageResult> {
+  const page = Math.max(0, Math.floor(params.page ?? 0));
+  const pageSize = Math.min(
+    MAX_PAGE_SIZE,
+    Math.max(1, Math.floor(params.pageSize ?? DEFAULT_PAGE_SIZE)),
+  );
+  const search = cleanFolderGlossaryText(params.search) || null;
+  const side = params.side === "A" || params.side === "B" ? params.side : null;
+  const offset = page * pageSize;
+
+  const response = await (supabase as any).rpc("search_folder_glossary_page_v2", {
+    _folder_id: folderId,
+    _search: search,
+    _side: side,
+    _limit: pageSize,
+    _offset: offset,
+  });
+
+  if (!response.error) {
+    const payload = response.data as {
+      entries?: FolderGlossaryEntry[];
+      total?: number;
+      can_edit?: boolean;
+      limit?: number;
+      offset?: number;
+    } | null;
+    return {
+      entries: Array.isArray(payload?.entries) ? payload.entries : [],
+      total: Number(payload?.total ?? 0),
+      page,
+      pageSize: Number(payload?.limit ?? pageSize),
+      canEdit: payload?.can_edit === true,
+    };
+  }
+
+  if (!isMissingRpc(response.error, "search_folder_glossary_page_v2")) throw response.error;
+
+  const fallback = await loadFolderGlossary(folderId);
+  const searchIdentity = folderGlossaryIdentity(search);
+  const filtered = fallback.entries.filter((entry) => {
+    if (side && entry.side !== side) return false;
+    if (!searchIdentity) return true;
+    return [
+      entry.original_text,
+      entry.primary_translation,
+      ...entry.alternative_translations,
+      entry.note ?? "",
+    ].some((value) => folderGlossaryIdentity(value).includes(searchIdentity));
+  });
+
+  return {
+    entries: filtered.slice(offset, offset + pageSize),
+    total: filtered.length,
+    page,
+    pageSize,
+    canEdit: fallback.canEdit,
+  };
+}
+
 export async function loadFolderGlossaryForList(listId: string): Promise<AccountGlossaryEntry[]> {
+  const v2 = await (supabase as any).rpc("get_folder_glossary_for_list_v2", {
+    _list_id: listId,
+  });
+  if (!v2.error) return (v2.data ?? []) as AccountGlossaryEntry[];
+  if (!isMissingRpc(v2.error, "get_folder_glossary_for_list_v2")) throw v2.error;
+
+  const v1 = await (supabase as any).rpc("get_folder_glossary_for_list_v1", {
+    _list_id: listId,
+  });
+  if (!v1.error) return (v1.data ?? []) as AccountGlossaryEntry[];
+  if (!isMissingRpc(v1.error, "get_folder_glossary_for_list_v1")) throw v1.error;
+
   const { data: list, error: listError } = await supabase
     .from("lists")
     .select("folder_id")
@@ -124,24 +247,19 @@ export async function loadFolderGlossaryForList(listId: string): Promise<Account
   const rows = (await loadFolderGlossaryRows(list.folder_id as string))
     .filter((entry) => entry.is_active);
 
-  return rows.flatMap<AccountGlossaryEntry>((entry) => {
-    const translations = [
-      entry.primary_translation,
-      ...(entry.alternative_translations ?? []),
-    ].filter((value, index, values) => value && values.indexOf(value) === index);
-
-    return translations.map((translatedText) => ({
-      id: entry.id,
-      owner_id: entry.owner_id,
-      original_text: entry.original_text,
-      translated_text: translatedText,
-      note: entry.note,
-      side: entry.side,
-      is_active: entry.is_active,
-      created_at: entry.created_at,
-      updated_at: entry.updated_at,
-    }));
-  });
+  return rows.map<AccountGlossaryEntry>((entry) => ({
+    id: entry.id,
+    owner_id: entry.owner_id,
+    original_text: entry.original_text,
+    translated_text: [entry.primary_translation, ...(entry.alternative_translations ?? [])]
+      .filter(Boolean)
+      .join(", "),
+    note: entry.note,
+    side: entry.side,
+    is_active: entry.is_active,
+    created_at: entry.created_at,
+    updated_at: entry.updated_at,
+  }));
 }
 
 export async function importFolderGlossary(
@@ -151,14 +269,29 @@ export async function importFolderGlossary(
   dryRun = false,
   options: FolderGlossaryImportOptions = {},
 ): Promise<FolderGlossaryImportResult> {
-  const total = entries.length;
+  const received = entries.length;
+  const compactedEntries = compactFolderGlossaryEntries(entries);
+  const preSkipped = Math.max(0, received - compactedEntries.length);
+  const total = compactedEntries.length;
   const requestedChunkSize = Math.floor(options.chunkSize ?? DEFAULT_IMPORT_CHUNK_SIZE);
   const chunkSize = Math.max(MIN_IMPORT_CHUNK_SIZE, requestedChunkSize);
 
-  // Dry-run must remain a single transaction so replace-mode counts stay accurate.
+  if (total === 0) {
+    const empty = emptyImportResult(folderId, mode, dryRun);
+    empty.skipped = received;
+    empty.received = received;
+    empty.compacted = 0;
+    options.onProgress?.({ processed: received, total: received });
+    return empty;
+  }
+
+  // Dry-run permanece em uma única transação para manter contagens corretas no modo replace.
   if (dryRun || total <= chunkSize) {
-    const result = await importFolderGlossaryChunk(folderId, entries, mode, dryRun);
-    options.onProgress?.({ processed: total, total });
+    const result = await importFolderGlossaryChunk(folderId, compactedEntries, mode, dryRun);
+    result.skipped = Number(result.skipped ?? 0) + preSkipped;
+    result.received = received;
+    result.compacted = total;
+    options.onProgress?.({ processed: received, total: received });
     return result;
   }
 
@@ -174,7 +307,10 @@ export async function importFolderGlossary(
       const result = await importFolderGlossaryChunk(folderId, chunk, chunkMode, false);
       addImportResult(aggregate, result);
       processed += chunk.length;
-      options.onProgress?.({ processed, total });
+      options.onProgress?.({
+        processed: Math.min(received, processed + preSkipped),
+        total: received,
+      });
       return;
     } catch (error) {
       if (!isStatementTimeout(error) || chunk.length <= MIN_IMPORT_CHUNK_SIZE) {
@@ -197,12 +333,15 @@ export async function importFolderGlossary(
   };
 
   for (let offset = 0; offset < total; offset += chunkSize) {
-    const chunk = entries.slice(offset, offset + chunkSize);
+    const chunk = compactedEntries.slice(offset, offset + chunkSize);
     const chunkMode: "merge" | "replace" = replaceStillPending ? "replace" : "merge";
     await runAdaptiveChunk(chunk, chunkMode);
     replaceStillPending = false;
   }
 
+  aggregate.skipped += preSkipped;
+  aggregate.received = received;
+  aggregate.compacted = total;
   return aggregate;
 }
 
@@ -210,16 +349,19 @@ export async function addFolderGlossaryEntry(
   folderId: string,
   entry: FolderGlossaryInput,
 ): Promise<void> {
+  const compacted = compactFolderGlossaryEntries([entry])[0];
+  if (!compacted) throw new Error("Informe um termo e uma tradução válidos.");
+
   const { error } = await (supabase as any).from("folder_glossary").insert({
     folder_id: folderId,
-    original_text: entry.term,
-    primary_translation: entry.translation,
-    alternative_translations: entry.alternatives ?? [],
-    note: entry.note ?? null,
-    side: entry.side ?? "A",
-    source_language: entry.source_language ?? null,
-    target_language: entry.target_language ?? null,
-    is_active: entry.active ?? true,
+    original_text: compacted.term,
+    primary_translation: compacted.translation,
+    alternative_translations: compacted.alternatives ?? [],
+    note: compacted.note ?? null,
+    side: compacted.side ?? "A",
+    source_language: compacted.source_language ?? null,
+    target_language: compacted.target_language ?? null,
+    is_active: compacted.active ?? true,
   });
   if (error) throw error;
 }
