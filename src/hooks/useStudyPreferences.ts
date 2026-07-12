@@ -50,6 +50,7 @@ export type UseStudyPreferencesOptions = {
 
 export const STUDY_PREFERENCES_VERSION = 3;
 export const STUDY_DIRECTION_MANUAL_EVENT = "piteco:study-direction-manual";
+export const STUDY_RED_FOCUS_TRANSITION_EVENT = "piteco:study-red-focus-transition";
 
 const repository = createStudyPreferenceRepository();
 const WRITE_DEBOUNCE_MS = 300;
@@ -76,6 +77,15 @@ export function shouldPersistStudyPreferences(
   if (typeof explicit === "boolean") return explicit;
   const path = pathname ?? (typeof window !== "undefined" ? window.location.pathname : "");
   return !path.startsWith("/portal/");
+}
+
+export function stripTransientRedFocusOrder(
+  partial: Partial<StudyPreferences>,
+  redFocusTransition: boolean,
+): Partial<StudyPreferences> {
+  if (!redFocusTransition || partial.order === undefined) return partial;
+  const { order: _forcedOrder, ...persistentFields } = partial;
+  return persistentFields;
 }
 
 function notifyDirectionUrlChange(direction: Direction): void {
@@ -211,6 +221,7 @@ export function useStudyPreferences(
   const [hasPersistedGlobal, setHasPersistedGlobal] = useState(Boolean(readGlobalCache(scope)));
   const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const manualRevisionRef = useRef(0);
+  const redFocusTransitionRef = useRef(false);
 
   const effectivePreset = useMemo(() => resolveStudyPreset({
     globalPreset,
@@ -451,11 +462,22 @@ export function useStudyPreferences(
     return () => window.removeEventListener(STUDY_DIRECTION_MANUAL_EVENT, handleManualDirection);
   }, [updateForCurrentScope]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleRedFocusTransition = () => {
+      redFocusTransitionRef.current = true;
+    };
+    window.addEventListener(STUDY_RED_FOCUS_TRANSITION_EVENT, handleRedFocusTransition);
+    return () => window.removeEventListener(STUDY_RED_FOCUS_TRANSITION_EVENT, handleRedFocusTransition);
+  }, []);
+
   const prefs = useMemo(() => presetToLegacy(effectivePreset), [effectivePreset]);
 
   const updatePrefs = useCallback((partial: Partial<StudyPreferences>) => {
-    if (partial.direction) notifyDirectionUrlChange(partial.direction);
-    updateForCurrentScope(legacyPatchToPreset(partial));
+    const persistentPartial = stripTransientRedFocusOrder(partial, redFocusTransitionRef.current);
+    redFocusTransitionRef.current = false;
+    if (persistentPartial.direction) notifyDirectionUrlChange(persistentPartial.direction);
+    updateForCurrentScope(legacyPatchToPreset(persistentPartial));
   }, [updateForCurrentScope]);
 
   const applyUrlOverrides = useCallback((params: URLSearchParams) => {
