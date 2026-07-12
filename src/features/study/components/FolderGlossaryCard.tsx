@@ -2,7 +2,7 @@ import { BookOpen, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { useFolderGlossary } from "@/hooks/useFolderGlossary";
+import { useFolderGlossarySummary } from "@/hooks/useFolderGlossary";
 import { cn } from "@/lib/utils";
 
 interface FolderGlossaryCardProps {
@@ -12,7 +12,7 @@ interface FolderGlossaryCardProps {
 
 export function FolderGlossaryCard({ folderId, className }: FolderGlossaryCardProps) {
   const navigate = useNavigate();
-  const { entries, canEdit, isLoading } = useFolderGlossary(folderId);
+  const { total, canEdit, isLoading } = useFolderGlossarySummary(folderId);
 
   return (
     <button
@@ -29,7 +29,7 @@ export function FolderGlossaryCard({ folderId, className }: FolderGlossaryCardPr
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-semibold">Glossário da pasta</p>
               <Badge variant="secondary">
-                {isLoading ? "…" : `${entries.length} termo${entries.length === 1 ? "" : "s"}`}
+                {isLoading ? "…" : `${total.toLocaleString("pt-BR")} termo${total === 1 ? "" : "s"}`}
               </Badge>
               {!canEdit && <Badge variant="outline">Somente leitura</Badge>}
             </div>
