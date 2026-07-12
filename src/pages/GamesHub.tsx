@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate, useParams, useLocation, useMatch } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useMatch, useNavigate, useParams } from "react-router-dom";
+import { useIsMutating, useQuery } from "@tanstack/react-query";
+import { ArrowLeft, RotateCcw, Save, Star, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
-import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+import { normalizeDirection } from "@/features/study/lib/gameCore";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,14 +16,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Star } from "lucide-react";
 import { toast } from "sonner";
-import { isPortalPath, buildBasePath, cn } from "@/lib/utils";
+import { buildBasePath, cn, isPortalPath } from "@/lib/utils";
 import { useFavorites } from "@/hooks/useFavorites";
-import { useIsMutating } from "@tanstack/react-query";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { useAuth } from "@/contexts/AuthContext";
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
 import {
   GAME_MODE_VISUALS,
@@ -69,19 +67,22 @@ const GamesHub = () => {
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
 
   const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
+  const isPrivateList = isListRoute && !isPortalPath(location.pathname);
 
   const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
-  const { status: authStatus } = useAuth();
-
-  const { prefs, updatePrefs } = useStudyPreferences(userId);
-  const prefsRef = useRef(prefs);
-  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
-
-  const [selectedDirection, setSelectedDirection] = useState<Direction>(prefs.direction);
-  const [selectedOrder, setSelectedOrder] = useState<typeof prefs.order>(prefs.order);
-  useEffect(() => { setSelectedDirection(prefs.direction); }, [prefs.direction]);
-  useEffect(() => { setSelectedOrder(prefs.order); }, [prefs.order]);
+  const {
+    effectivePreset,
+    source,
+    isHydrating,
+    updateForCurrentScope,
+    saveAsGlobal,
+    resetListOverride,
+  } = useStudyPreferences(userId, {
+    listId: isPrivateList ? id : undefined,
+    persistScope: isPrivateList ? "list" : "global",
+    canPersistList: isPrivateList,
+  });
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["gameshub-list", id],
@@ -136,12 +137,8 @@ const GamesHub = () => {
   }, [list, folderRow]);
 
   useEffect(() => {
-    if (isListRoute && !listLoading && !list && id) {
-      toast.error("Lista não encontrada");
-    }
-    if (!isListRoute && !collectionLoading && !collection && id) {
-      toast.error("Coleção não encontrada");
-    }
+    if (isListRoute && !listLoading && !list && id) toast.error("Lista não encontrada");
+    if (!isListRoute && !collectionLoading && !collection && id) toast.error("Coleção não encontrada");
   }, [isListRoute, listLoading, list, collectionLoading, collection, id]);
 
   const loading = isListRoute ? listLoading : collectionLoading;
@@ -154,10 +151,9 @@ const GamesHub = () => {
   const favoritesQuery = useFavorites(userId, "flashcard", favoritesScope);
   const favorites = favoritesQuery.data ?? [];
   const favoritesCount = favorites.length;
-  const favoritesSyncing =
-    favoritesQuery.isLoading ||
-    favoritesQuery.isFetching ||
-    favoritesQuery.isPlaceholderData;
+  const favoritesSyncing = favoritesQuery.isLoading
+    || favoritesQuery.isFetching
+    || favoritesQuery.isPlaceholderData;
   const favoritesMutating = useIsMutating({
     predicate: (mutation) => {
       const keyParts = mutation.options.mutationKey as unknown[] | undefined;
@@ -165,67 +161,52 @@ const GamesHub = () => {
       return key.startsWith("favorite") || key.startsWith("red");
     },
   }) > 0;
-
-  void favoritesSyncing;
-  void favoritesMutating;
-  void authStatus;
+  const favoritesBusy = favoritesSyncing || favoritesMutating;
 
   const startGame = (rawMode: StudyMode | "multiple") => {
+    if (!id) return;
     const mode = normalizeStudyMode(rawMode);
-    updatePrefs({ mode });
-
-    const liveDirection = selectedDirection;
-    const liveOrder = selectedOrder;
-    const liveFavoritesOnly = prefsRef.current.favoritesOnly;
+    const launchPreset = { ...effectivePreset, mode };
+    updateForCurrentScope({ mode });
 
     const kind = isListRoute ? "list" : "collection";
-    const basePath = buildBasePath(location.pathname, kind, id!);
-    const useFavoritesOnly = liveFavoritesOnly && favoritesCount > 0;
+    const basePath = buildBasePath(location.pathname, kind, id);
+    const useFavoritesOnly = launchPreset.scope === "favorites" && favoritesCount > 0;
+    const params = new URLSearchParams({
+      mode: studyModeToUrlParam(mode),
+      dir: launchPreset.direction,
+      order: launchPreset.order,
+      fastMode: String(launchPreset.fastMode),
+    });
+    if (useFavoritesOnly) params.set("favorites", "true");
 
-    if (mode === "mixed") {
-      const params = new URLSearchParams({ dir: liveDirection });
-      if (useFavoritesOnly) params.set("favorites", "true");
-      navigate(`${basePath}/mixed-study?${params.toString()}`);
-      return;
-    }
-
-    const favoriteParam = useFavoritesOnly ? "&favorites=true" : "";
-
-    if (import.meta.env.DEV) {
-      console.debug("[GamesHub] startGame", {
-        rawMode,
-        mode,
-        kind,
-        basePath,
-        direction: liveDirection,
-        order: liveOrder,
-        favoritesOnly: liveFavoritesOnly,
-        favoritesCount,
-        useFavorites: useFavoritesOnly,
-      });
-    }
-
-    navigate(`${basePath}/study?mode=${studyModeToUrlParam(mode)}&dir=${liveDirection}&order=${liveOrder}${favoriteParam}`);
+    const route = mode === "mixed" ? "mixed-study" : "study";
+    navigate(`${basePath}/${route}?${params.toString()}`);
   };
 
   const handleBack = () => {
     const onPortal = isPortalPath(location.pathname);
-
     if (window.history.state?.idx > 0) {
       navigate(-1);
     } else if (collection) {
       navigate(`/collection/${collection.id}`);
     } else if (list) {
-      if (onPortal && list.folder_id) {
-        navigate(`/portal/folder/${list.folder_id}`);
-      } else if (list.folder_id) {
-        navigate(`/folder/${list.folder_id}`);
-      } else {
-        navigate(onPortal ? "/portal" : "/folders");
-      }
+      if (onPortal && list.folder_id) navigate(`/portal/folder/${list.folder_id}`);
+      else if (list.folder_id) navigate(`/folder/${list.folder_id}`);
+      else navigate(onPortal ? "/portal" : "/folders");
     } else {
       navigate(onPortal ? "/portal" : "/folders");
     }
+  };
+
+  const handleResetListPreset = async () => {
+    await resetListOverride();
+    toast.success("Esta lista voltou a usar o padrão global.");
+  };
+
+  const handleSaveAsGlobal = async () => {
+    await saveAsGlobal(effectivePreset);
+    toast.success("Estas configurações agora são o seu padrão global.");
   };
 
   return (
@@ -248,41 +229,80 @@ const GamesHub = () => {
         </div>
 
         <div className="mx-auto max-w-6xl space-y-4">
-          <div className="grid grid-cols-2 gap-3 rounded-xl border bg-card/95 p-3 shadow-sm">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium">Direção</label>
-              <Select
-                value={selectedDirection}
-                onValueChange={(value) => {
-                  const direction = normalizeDirection(value);
-                  setSelectedDirection(direction);
-                  updatePrefs({ direction });
-                }}
-              >
-                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="a-b">{listLabels.labelsA} → {listLabels.labelsB}</SelectItem>
-                  <SelectItem value="b-a">{listLabels.labelsB} → {listLabels.labelsA}</SelectItem>
-                  <SelectItem value="any">Alternar lados (padrão)</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="rounded-xl border bg-card/95 p-3 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold">
+                  {isPrivateList && source === "list" ? "Personalizado nesta lista" : "Padrão global"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isHydrating ? "Sincronizando com sua conta..." : "Suas escolhas serão lembradas automaticamente."}
+                </p>
+              </div>
+              {isPrivateList && userId && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetListPreset}
+                    disabled={source !== "list"}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Restaurar padrão global
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleSaveAsGlobal}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Usar como padrão global
+                  </Button>
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-medium">Ordem dos cards</label>
-              <Select
-                value={selectedOrder}
-                onValueChange={(value: typeof prefs.order) => {
-                  setSelectedOrder(value);
-                  updatePrefs({ order: value });
-                }}
-              >
-                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="random">Aleatória</SelectItem>
-                  <SelectItem value="sequential">Sequencial</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium">Direção</label>
+                <Select
+                  value={effectivePreset.direction}
+                  onValueChange={(value) => updateForCurrentScope({ direction: normalizeDirection(value) })}
+                >
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="a-b">{listLabels.labelsA} → {listLabels.labelsB}</SelectItem>
+                    <SelectItem value="b-a">{listLabels.labelsB} → {listLabels.labelsA}</SelectItem>
+                    <SelectItem value="any">Alternar lados</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium">Ordem dos cards</label>
+                <Select
+                  value={effectivePreset.order}
+                  onValueChange={(value: "random" | "sequential") => updateForCurrentScope({ order: value })}
+                >
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="random">Aleatória</SelectItem>
+                    <SelectItem value="sequential">Sequencial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-yellow-500" />
+                  <div>
+                    <Label htmlFor="hub-fast-mode" className="cursor-pointer font-medium">Fast Mode</Label>
+                    <p className="text-xs text-muted-foreground">Mostra os dois lados no Flip</p>
+                  </div>
+                </div>
+                <Switch
+                  id="hub-fast-mode"
+                  checked={effectivePreset.fastMode}
+                  onCheckedChange={(fastMode) => updateForCurrentScope({ fastMode })}
+                />
+              </div>
             </div>
           </div>
 
@@ -297,15 +317,15 @@ const GamesHub = () => {
                       ? "Atualizando favoritos..."
                       : favoritesCount > 0
                         ? `${favoritesCount} cards marcados como favorito`
-                        : "Nenhum favorito nesta lista"}
+                        : "Nenhum favorito nesta lista; o jogo usará todos sem apagar sua preferência."}
                   </p>
                 </Label>
               </div>
               <Switch
                 id="favorites-only"
-                disabled={favoritesSyncing || favoritesCount === 0}
-                checked={prefs.favoritesOnly && favoritesCount > 0}
-                onCheckedChange={(value) => updatePrefs({ favoritesOnly: value })}
+                disabled={favoritesBusy || favoritesCount === 0}
+                checked={effectivePreset.scope === "favorites" && favoritesCount > 0}
+                onCheckedChange={(value) => updateForCurrentScope({ scope: value ? "favorites" : "all" })}
               />
             </div>
           )}
@@ -313,6 +333,8 @@ const GamesHub = () => {
           <div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3 lg:grid-cols-6">
             {gameOptions.map(({ mode, visualKey, title, beta, recommended }) => {
               const visual = GAME_MODE_VISUALS[visualKey];
+              const normalizedMode = normalizeStudyMode(mode);
+              const isRemembered = effectivePreset.mode === normalizedMode;
               return (
                 <button
                   key={mode}
@@ -322,6 +344,7 @@ const GamesHub = () => {
                     "relative flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-xl border p-3 text-center shadow-sm transition-all",
                     "hover:-translate-y-0.5 hover:shadow-md",
                     recommended && "border-primary/60 ring-2 ring-primary/15",
+                    isRemembered && "outline outline-2 outline-primary/50",
                     visual.cardClass,
                   )}
                 >
