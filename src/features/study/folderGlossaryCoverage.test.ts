@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 
 import {
+  analyzeFolderGlossaryCoverageOffThread,
   analyzeFolderGlossaryCoverageRows,
   serializeMissingCoverageTerms,
 } from "./lib/folderGlossaryCoverage";
@@ -39,7 +40,7 @@ const glossary = [
   makeEntry("you", "you", "você", { side: "B" }),
 ];
 
-const report = analyzeFolderGlossaryCoverageRows({
+const analysisInput = {
   folderId: "folder-1",
   lists: [{ id: "list-1", title: "Filosofia" }],
   cards: [{
@@ -49,7 +50,9 @@ const report = analyzeFolderGlossaryCoverageRows({
     translation: "",
   }],
   glossary,
-});
+};
+
+const report = analyzeFolderGlossaryCoverageRows(analysisInput);
 
 describe("folder glossary coverage audit", () => {
   it("separates exact, expression, inactive, wrong-side and missing terms", () => {
@@ -68,6 +71,34 @@ describe("folder glossary coverage audit", () => {
       wrongSideTerms: 1,
       missingTerms: 2,
     });
+  });
+
+  it("falls back to the same analyzer when workers are unavailable", async () => {
+    const originalWorker = globalThis.Worker;
+    vi.stubGlobal("Worker", undefined);
+
+    try {
+      const fallbackReport = await analyzeFolderGlossaryCoverageOffThread(analysisInput);
+      expect({ ...fallbackReport, generatedAt: "dynamic" })
+        .toEqual({ ...report, generatedAt: "dynamic" });
+    } finally {
+      if (originalWorker) vi.stubGlobal("Worker", originalWorker);
+      else vi.unstubAllGlobals();
+    }
+  });
+
+  it("bundles a dedicated worker for browser audits", () => {
+    const coverageModule = readFileSync(
+      "src/features/study/lib/folderGlossaryCoverage.ts",
+      "utf8",
+    );
+    const workerModule = readFileSync(
+      "src/features/study/lib/folderGlossaryCoverage.worker.ts",
+      "utf8",
+    );
+    expect(coverageModule).toContain("new Worker(");
+    expect(coverageModule).toContain("folder-glossary-coverage");
+    expect(workerModule).toContain("analyzeFolderGlossaryCoverageRows");
   });
 
   it("exports only unresolved terms for AI completion", () => {
