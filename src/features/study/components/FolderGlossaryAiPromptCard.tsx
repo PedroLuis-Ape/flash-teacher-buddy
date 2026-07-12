@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useFolderGlossary } from "@/hooks/useFolderGlossary";
+import { useFolderGlossarySummary } from "@/hooks/useFolderGlossary";
 import { buildFolderGlossaryAiPrompt } from "@/features/study/lib/folderGlossaryPrompt";
 
 interface Props {
@@ -28,7 +28,7 @@ export function FolderGlossaryAiPromptCard({
   labelB,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const { canEdit, isLoading } = useFolderGlossary(folderId);
+  const { canEdit, isLoading } = useFolderGlossarySummary(folderId);
   const prompt = useMemo(
     () => buildFolderGlossaryAiPrompt({ folderTitle, labelA, labelB }),
     [folderTitle, labelA, labelB],
