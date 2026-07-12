@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync(
-  new URL("../../../supabase/migrations/20260712193000_folder_glossary_scale_v2.sql", import.meta.url),
+  new URL("../../../supabase/migrations/20260712194500_folder_glossary_scale_v2.sql", import.meta.url),
   "utf8",
 );
 const api = readFileSync(new URL("./lib/folderGlossaryApi.ts", import.meta.url), "utf8");
