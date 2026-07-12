@@ -1,5 +1,34 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Direction } from "@/features/study/lib/gameCore";
+import { normalizeStudyMode } from "@/features/study/lib/studyMode";
+import {
+  DEFAULT_STUDY_PRESET,
+  diffStudyPreset,
+  isEmptyStudyPresetOverride,
+  normalizeStudyPreset,
+  normalizeStudyPresetOverride,
+  resolveStudyPreset,
+  type StudyPreset,
+  type StudyPresetOverride,
+  type StudySessionOverrides,
+} from "@/features/study/preferences/studyPreset";
+import {
+  enqueuePendingPreferenceWrite,
+  migrateLegacyStudyPreferences,
+  readGlobalCache,
+  readListOverrideCache,
+  readPendingPreferenceWrites,
+  removeListOverrideCache,
+  replacePendingPreferenceWrites,
+  writeGlobalCache,
+  writeListOverrideCache,
+  type PendingPreferenceWrite,
+} from "@/features/study/preferences/studyPreferenceCache";
+import {
+  createStudyPreferenceRepository,
+  isMissingStudyPreferenceSchemaError,
+  isRetryableStudyPreferenceError,
+} from "@/features/study/preferences/studyPreferenceRepository";
 
 export interface StudyPreferences {
   favoritesOnly: boolean;
@@ -9,184 +38,379 @@ export interface StudyPreferences {
   fastMode: boolean;
 }
 
-const DEFAULTS: StudyPreferences = {
-  favoritesOnly: false,
-  order: "random",
-  direction: "any",
-  mode: "flip",
-  fastMode: false,
+export type StudyPreferenceSource = "defaults" | "global" | "list";
+
+export type UseStudyPreferencesOptions = {
+  listId?: string;
+  persistScope?: "global" | "list";
+  canPersistList?: boolean;
+  sessionOverrides?: StudySessionOverrides;
 };
 
-export const STUDY_PREFERENCES_VERSION = 2;
+export const STUDY_PREFERENCES_VERSION = 3;
+const repository = createStudyPreferenceRepository();
+const WRITE_DEBOUNCE_MS = 300;
 
-export function normalizeStoredStudyPreferences(value: unknown): StudyPreferences {
-  const parsed = value && typeof value === "object"
-    ? value as Record<string, unknown>
-    : {};
-  const currentVersion = Number(parsed.version) >= STUDY_PREFERENCES_VERSION;
-  const parsedDirection = typeof parsed.direction === "string" ? parsed.direction : "";
+function userScope(userId: string | undefined): string {
+  return userId || "anon";
+}
 
+function presetToLegacy(preset: StudyPreset): StudyPreferences {
   return {
-    favoritesOnly: typeof parsed.favoritesOnly === "boolean" ? parsed.favoritesOnly : DEFAULTS.favoritesOnly,
-    order: parsed.order === "sequential" ? "sequential" : DEFAULTS.order,
-    // Preferences saved before v2 often inherited a list's primary side without
-    // an explicit student choice. Reset that legacy value to the global default.
-    direction: currentVersion && ["a-b", "b-a", "any"].includes(parsedDirection)
-      ? parsedDirection as Direction
-      : DEFAULTS.direction,
-    mode: typeof parsed.mode === "string" ? parsed.mode : DEFAULTS.mode,
-    fastMode: typeof parsed.fastMode === "boolean" ? parsed.fastMode : DEFAULTS.fastMode,
+    favoritesOnly: preset.scope === "favorites",
+    order: preset.order,
+    direction: preset.direction,
+    mode: preset.mode,
+    fastMode: preset.fastMode,
   };
 }
 
-function storageKey(userId: string | undefined): string {
-  return userId ? `studyPreferences:${userId}` : "studyPreferences:anon";
+function legacyPatchToPreset(partial: Partial<StudyPreferences>): StudyPresetOverride {
+  const result: StudyPresetOverride = {};
+  if (partial.mode !== undefined) result.mode = normalizeStudyMode(partial.mode);
+  if (partial.direction !== undefined && ["a-b", "b-a", "any"].includes(partial.direction)) {
+    result.direction = partial.direction;
+  }
+  if (partial.order !== undefined) result.order = partial.order;
+  if (partial.favoritesOnly !== undefined) result.scope = partial.favoritesOnly ? "favorites" : "all";
+  if (partial.fastMode !== undefined) result.fastMode = partial.fastMode;
+  return normalizeStudyPresetOverride(result);
 }
 
-function notifyDirectionUrlChange(direction: Direction): void {
-  if (typeof window === "undefined") return;
+export function normalizeStoredStudyPreferences(value: unknown): StudyPreferences {
+  const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const currentVersion = Number(input.version) >= STUDY_PREFERENCES_VERSION;
+  const direction = currentVersion && ["a-b", "b-a", "any"].includes(String(input.direction ?? ""))
+    ? input.direction
+    : "any";
+  const preset = normalizeStudyPreset({
+    mode: input.mode,
+    direction,
+    order: input.order,
+    scope: input.scope ?? (input.favoritesOnly === true ? "favorites" : "all"),
+    fastMode: input.fastMode,
+  });
+  return presetToLegacy(preset);
+}
+
+export function parseStudySessionOverrides(params: URLSearchParams): StudySessionOverrides {
+  const result: StudySessionOverrides = {};
+  const mode = params.get("mode");
+  if (mode) result.mode = normalizeStudyMode(mode);
+
+  const direction = params.get("dir") || params.get("direction");
+  if (direction && ["a-b", "b-a", "any"].includes(direction)) {
+    result.direction = direction as StudyPreset["direction"];
+  }
+
+  const order = params.get("order");
+  if (order === "random" || order === "sequential") result.order = order;
+
+  const favorites = params.get("favorites");
+  if (favorites === "true" || favorites === "false") {
+    result.scope = favorites === "true" ? "favorites" : "all";
+  }
+
+  const fastMode = params.get("fastMode") || params.get("fast");
+  if (fastMode === "true" || fastMode === "false") result.fastMode = fastMode === "true";
+
+  return normalizeStudyPresetOverride(result);
+}
+
+function readWindowSessionOverrides(): StudySessionOverrides {
+  if (typeof window === "undefined") return {};
   try {
-    const url = new URL(window.location.href);
-    url.searchParams.set("dir", direction);
-    url.searchParams.delete("direction");
-    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-    window.history.replaceState(window.history.state, "", nextUrl);
-    window.dispatchEvent(new Event("popstate"));
+    return parseStudySessionOverrides(new URLSearchParams(window.location.search));
   } catch {
-    // URL sync is only a stability helper.
+    return {};
   }
 }
 
-/**
- * Load preferences from localStorage, but let current URL params win
- * for mode/direction/order/favorites so links like ?mode=write always work.
- */
-function load(userId: string | undefined): StudyPreferences {
-  let base: StudyPreferences;
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    base = raw ? normalizeStoredStudyPreferences(JSON.parse(raw)) : { ...DEFAULTS };
-  } catch {
-    base = { ...DEFAULTS };
-  }
-
-  // URL params override localStorage at load time so deep-links always work
-  try {
-    const params = new URLSearchParams(window.location.search);
-
-    const urlMode = params.get("mode");
-    if (urlMode) base.mode = urlMode;
-
-    const urlDir = params.get("dir") || params.get("direction");
-    if (urlDir && ["a-b", "b-a", "any"].includes(urlDir)) {
-      base.direction = urlDir as Direction;
-    }
-
-    const urlOrder = params.get("order");
-    if (urlOrder === "sequential" || urlOrder === "random") {
-      base.order = urlOrder;
-    }
-
-    const urlFav = params.get("favorites");
-    if (urlFav === "true" || urlFav === "false") {
-      base.favoritesOnly = urlFav === "true";
-    }
-  } catch {
-    // URL parsing failed — use base as-is
-  }
-
-  return base;
+function pendingWriteKey(write: PendingPreferenceWrite): string {
+  return write.kind === "global-upsert" ? "global" : `list:${write.listId}`;
 }
 
-function save(userId: string | undefined, prefs: StudyPreferences) {
-  try {
-    localStorage.setItem(storageKey(userId), JSON.stringify({ version: STUDY_PREFERENCES_VERSION, ...prefs }));
-  } catch {
-    // storage full or unavailable — fail silently
-  }
+function removeMatchingPendingWrite(scope: string, completed: PendingPreferenceWrite): void {
+  const key = pendingWriteKey(completed);
+  replacePendingPreferenceWrites(
+    scope,
+    readPendingPreferenceWrites(scope).filter((item) => pendingWriteKey(item) !== key),
+  );
 }
 
-/**
- * Centralized, localStorage-backed study preferences.
- *
- * - Auto-loads on mount from `studyPreferences:<userId>`
- * - URL params override localStorage at load time (mode, dir, order, favorites)
- * - Auto-saves on every change
- */
-export function useStudyPreferences(userId: string | undefined) {
-  const [prefs, setPrefsState] = useState<StudyPreferences>(() => load(userId));
-  const userIdRef = useRef(userId);
+async function executePendingWrite(userId: string, write: PendingPreferenceWrite): Promise<void> {
+  if (write.kind === "global-upsert") {
+    await repository.upsertGlobal(userId, write.preset);
+    return;
+  }
+  if (write.kind === "list-upsert") {
+    await repository.upsertListOverride(userId, write.listId, write.override);
+    return;
+  }
+  await repository.deleteListOverride(userId, write.listId);
+}
 
-  // Reload when userId changes (e.g. auth loads after mount).
-  // MERGE strategy: when transitioning anon → user, prefer the user's stored
-  // settings if they exist, but if there are NONE, carry forward the anonymous
-  // session's prefs so the user doesn't lose their just-made choices on login.
-  //
-  // CRITICAL: regardless of which source wins, the URL params (mode/dir/order/
-  // favorites) ALWAYS override afterwards. This prevents stale user prefs
-  // from a previous session from silently overriding the direction the user
-  // just selected in GamesHub.
-  useEffect(() => {
-    if (userId !== userIdRef.current) {
-      const previousAnonPrefs = userIdRef.current === undefined ? prefs : null;
-      userIdRef.current = userId;
-      const userHasStored = (() => {
-        try { return localStorage.getItem(storageKey(userId)) !== null; }
-        catch { return false; }
-      })();
-      // load(userId) already applies URL overrides. If we keep the anon
-      // snapshot instead, re-apply URL overrides on top of it so the URL
-      // remains the SSOT for this session.
-      let next: StudyPreferences;
-      if (userHasStored || !previousAnonPrefs) {
-        next = load(userId);
+export function useStudyPreferences(
+  userId: string | undefined,
+  options: UseStudyPreferencesOptions = {},
+) {
+  const scope = userScope(userId);
+  const listId = options.listId;
+  const canPersistList = options.canPersistList !== false;
+  const persistenceScope = options.persistScope
+    ?? (listId && canPersistList ? "list" : "global");
+
+  const initialGlobal = readGlobalCache(scope)
+    ?? migrateLegacyStudyPreferences(scope)
+    ?? { ...DEFAULT_STUDY_PRESET };
+  const initialListOverride = listId ? readListOverrideCache(scope, listId) : null;
+  const initialSessionOverrides = normalizeStudyPresetOverride({
+    ...readWindowSessionOverrides(),
+    ...options.sessionOverrides,
+  });
+
+  const [globalPreset, setGlobalPreset] = useState<StudyPreset>(initialGlobal);
+  const [listOverride, setListOverride] = useState<StudyPresetOverride | null>(initialListOverride);
+  const [sessionOverrides, setSessionOverridesState] = useState<StudySessionOverrides>(initialSessionOverrides);
+  const [isHydrating, setIsHydrating] = useState(Boolean(userId));
+  const [hasPersistedGlobal, setHasPersistedGlobal] = useState(Boolean(readGlobalCache(scope)));
+  const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const manualRevisionRef = useRef(0);
+
+  const effectivePreset = useMemo(() => resolveStudyPreset({
+    globalPreset,
+    listOverride,
+    sessionOverrides,
+  }), [globalPreset, listOverride, sessionOverrides]);
+
+  const source: StudyPreferenceSource = listOverride && !isEmptyStudyPresetOverride(listOverride)
+    ? "list"
+    : hasPersistedGlobal
+      ? "global"
+      : "defaults";
+
+  const runWrite = useCallback(async (write: PendingPreferenceWrite) => {
+    if (!userId) return;
+    try {
+      await executePendingWrite(userId, write);
+      removeMatchingPendingWrite(scope, write);
+    } catch (error) {
+      if (isRetryableStudyPreferenceError(error) || isMissingStudyPreferenceSchemaError(error)) {
+        enqueuePendingPreferenceWrite(scope, write);
       } else {
-        next = { ...previousAnonPrefs };
-        try {
-          const params = new URLSearchParams(window.location.search);
-          const urlMode = params.get("mode");
-          if (urlMode) next.mode = urlMode;
-          const urlDir = params.get("dir") || params.get("direction");
-          if (urlDir && ["a-b", "b-a", "any"].includes(urlDir)) {
-            next.direction = urlDir as Direction;
-          }
-          const urlOrder = params.get("order");
-          if (urlOrder === "sequential" || urlOrder === "random") next.order = urlOrder;
-          const urlFav = params.get("favorites");
-          if (urlFav === "true" || urlFav === "false") next.favoritesOnly = urlFav === "true";
-        } catch {
-          // URL parsing failed — keep previous anon prefs
+        console.warn("[StudyPreferences] Falha ao salvar preferência", error);
+      }
+    }
+  }, [scope, userId]);
+
+  const scheduleWrite = useCallback((write: PendingPreferenceWrite) => {
+    if (!userId) return;
+    const key = pendingWriteKey(write);
+    const current = timersRef.current.get(key);
+    if (current) clearTimeout(current);
+    timersRef.current.set(key, setTimeout(() => {
+      timersRef.current.delete(key);
+      void runWrite(write);
+    }, WRITE_DEBOUNCE_MS));
+  }, [runWrite, userId]);
+
+  const flushPending = useCallback(async () => {
+    if (!userId) return;
+    const pending = readPendingPreferenceWrites(scope);
+    const remaining: PendingPreferenceWrite[] = [];
+    for (const write of pending) {
+      try {
+        await executePendingWrite(userId, write);
+      } catch (error) {
+        if (isRetryableStudyPreferenceError(error) || isMissingStudyPreferenceSchemaError(error)) {
+          remaining.push(write);
+        } else {
+          console.warn("[StudyPreferences] Preferência pendente rejeitada", error);
         }
       }
-      setPrefsState(next);
-      if (import.meta.env.DEV) {
-        console.debug("[StudyPreferences] userId changed", {
-          userId, userHasStored, mergedFromAnon: !userHasStored && !!previousAnonPrefs,
-          finalDirection: next.direction, finalMode: next.mode,
-        });
-      }
     }
-  }, [userId, prefs]);
+    replacePendingPreferenceWrites(scope, remaining);
+  }, [scope, userId]);
 
-  // Persist whenever prefs change
   useEffect(() => {
-    save(userIdRef.current, prefs);
-  }, [prefs]);
+    const nextScope = userScope(userId);
+    const cachedGlobal = readGlobalCache(nextScope)
+      ?? migrateLegacyStudyPreferences(nextScope)
+      ?? { ...DEFAULT_STUDY_PRESET };
+    const cachedList = listId ? readListOverrideCache(nextScope, listId) : null;
+    const nextSession = normalizeStudyPresetOverride({
+      ...readWindowSessionOverrides(),
+      ...options.sessionOverrides,
+    });
+
+    setGlobalPreset(cachedGlobal);
+    setListOverride(cachedList);
+    setSessionOverridesState(nextSession);
+    setHasPersistedGlobal(Boolean(readGlobalCache(nextScope)));
+
+    if (!userId) {
+      setIsHydrating(false);
+      return;
+    }
+
+    let cancelled = false;
+    const revisionAtStart = manualRevisionRef.current;
+    setIsHydrating(true);
+
+    void (async () => {
+      try {
+        const [serverGlobalResult, serverListResult] = await Promise.allSettled([
+          repository.readGlobal(userId),
+          listId ? repository.readListOverride(userId, listId) : Promise.resolve(null),
+        ]);
+        if (cancelled || revisionAtStart !== manualRevisionRef.current) return;
+
+        if (serverGlobalResult.status === "fulfilled") {
+          if (serverGlobalResult.value) {
+            setGlobalPreset(serverGlobalResult.value);
+            writeGlobalCache(nextScope, serverGlobalResult.value);
+            setHasPersistedGlobal(true);
+          } else {
+            writeGlobalCache(nextScope, cachedGlobal);
+            setHasPersistedGlobal(true);
+            await runWrite({ kind: "global-upsert", preset: cachedGlobal, updatedAt: Date.now() });
+          }
+        } else if (!isMissingStudyPreferenceSchemaError(serverGlobalResult.reason)) {
+          console.warn("[StudyPreferences] Falha ao hidratar preset global", serverGlobalResult.reason);
+        }
+
+        if (listId && serverListResult.status === "fulfilled") {
+          const serverOverride = serverListResult.value;
+          setListOverride(serverOverride);
+          if (serverOverride) writeListOverrideCache(nextScope, listId, serverOverride);
+          else removeListOverrideCache(nextScope, listId);
+        } else if (serverListResult.status === "rejected"
+          && !isMissingStudyPreferenceSchemaError(serverListResult.reason)) {
+          console.warn("[StudyPreferences] Falha ao hidratar preset da lista", serverListResult.reason);
+        }
+
+        await flushPending();
+      } finally {
+        if (!cancelled) setIsHydrating(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, listId]);
+
+  useEffect(() => {
+    setSessionOverridesState(normalizeStudyPresetOverride({
+      ...readWindowSessionOverrides(),
+      ...options.sessionOverrides,
+    }));
+  }, [options.sessionOverrides]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !userId) return;
+    const handleOnline = () => void flushPending();
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [flushPending, userId]);
+
+  useEffect(() => () => {
+    timersRef.current.forEach((timer) => clearTimeout(timer));
+    timersRef.current.clear();
+  }, []);
+
+  const clearSessionKeys = useCallback((partial: StudyPresetOverride) => {
+    setSessionOverridesState((current) => {
+      const next = { ...current };
+      (Object.keys(partial) as Array<keyof StudyPreset>).forEach((key) => delete next[key]);
+      return next;
+    });
+  }, []);
+
+  const updateForCurrentScope = useCallback((partial: Partial<StudyPreset>) => {
+    const normalizedPartial = normalizeStudyPresetOverride(partial);
+    if (isEmptyStudyPresetOverride(normalizedPartial)) return;
+    manualRevisionRef.current += 1;
+    clearSessionKeys(normalizedPartial);
+
+    if (persistenceScope === "list" && listId) {
+      const persistedEffective = resolveStudyPreset({ globalPreset, listOverride });
+      const nextEffective = normalizeStudyPreset({ ...persistedEffective, ...normalizedPartial });
+      const nextOverride = diffStudyPreset(nextEffective, globalPreset);
+      if (isEmptyStudyPresetOverride(nextOverride)) {
+        setListOverride(null);
+        removeListOverrideCache(scope, listId);
+        scheduleWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
+      } else {
+        setListOverride(nextOverride);
+        writeListOverrideCache(scope, listId, nextOverride);
+        scheduleWrite({ kind: "list-upsert", listId, override: nextOverride, updatedAt: Date.now() });
+      }
+      return;
+    }
+
+    const nextGlobal = normalizeStudyPreset({ ...globalPreset, ...normalizedPartial });
+    setGlobalPreset(nextGlobal);
+    setHasPersistedGlobal(true);
+    writeGlobalCache(scope, nextGlobal);
+    scheduleWrite({ kind: "global-upsert", preset: nextGlobal, updatedAt: Date.now() });
+  }, [clearSessionKeys, globalPreset, listId, listOverride, persistenceScope, scheduleWrite, scope]);
+
+  const saveAsGlobal = useCallback(async (preset: StudyPreset = effectivePreset) => {
+    const normalized = normalizeStudyPreset(preset);
+    manualRevisionRef.current += 1;
+    setGlobalPreset(normalized);
+    setHasPersistedGlobal(true);
+    writeGlobalCache(scope, normalized);
+
+    if (listId) {
+      setListOverride(null);
+      removeListOverrideCache(scope, listId);
+    }
+
+    if (userId) {
+      await runWrite({ kind: "global-upsert", preset: normalized, updatedAt: Date.now() });
+      if (listId) await runWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
+    }
+  }, [effectivePreset, listId, runWrite, scope, userId]);
+
+  const resetListOverride = useCallback(async () => {
+    if (!listId) return;
+    manualRevisionRef.current += 1;
+    setListOverride(null);
+    removeListOverrideCache(scope, listId);
+    if (userId) await runWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
+  }, [listId, runWrite, scope, userId]);
+
+  const setSessionOverrides = useCallback((overrides: StudySessionOverrides) => {
+    setSessionOverridesState(normalizeStudyPresetOverride(overrides));
+  }, []);
+
+  const prefs = useMemo(() => presetToLegacy(effectivePreset), [effectivePreset]);
 
   const updatePrefs = useCallback((partial: Partial<StudyPreferences>) => {
-    if (partial.direction && ["a-b", "b-a", "any"].includes(partial.direction)) {
-      notifyDirectionUrlChange(partial.direction);
-    }
-    setPrefsState(prev => ({ ...prev, ...partial }));
-  }, []);
+    updateForCurrentScope(legacyPatchToPreset(partial));
+  }, [updateForCurrentScope]);
 
-  /**
-   * @deprecated URL overrides are now applied inside load().
-   * Kept for backward compatibility — calling it is a no-op.
-   */
-  const applyUrlOverrides = useCallback((_params: URLSearchParams) => {
-    // no-op: URL overrides happen at load time now
-  }, []);
+  const applyUrlOverrides = useCallback((params: URLSearchParams) => {
+    setSessionOverrides(parseStudySessionOverrides(params));
+  }, [setSessionOverrides]);
 
-  return { prefs, updatePrefs, applyUrlOverrides };
+  return {
+    effectivePreset,
+    globalPreset,
+    listOverride,
+    sessionOverrides,
+    source,
+    isHydrating,
+    updateForCurrentScope,
+    saveAsGlobal,
+    resetListOverride,
+    setSessionOverrides,
+    flushPending,
+    // Compatibility layer for existing call sites while GamesHub/Study migrate.
+    prefs,
+    updatePrefs,
+    applyUrlOverrides,
+  };
 }
