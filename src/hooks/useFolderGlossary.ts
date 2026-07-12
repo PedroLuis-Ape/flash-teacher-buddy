@@ -11,7 +11,6 @@ import {
   addFolderGlossaryEntry,
   deleteFolderGlossaryEntries,
   importFolderGlossary,
-  loadFolderGlossary,
   loadFolderGlossaryPage,
   loadFolderGlossarySummary,
   updateFolderGlossaryEntry,
@@ -221,27 +220,25 @@ export function useFolderGlossaryPage(
 }
 
 /**
- * Carregamento completo mantido para auditoria e exportação explícitas.
- * A interface comum deve preferir useFolderGlossarySummary/useFolderGlossaryPage.
+ * Compatibilidade para componentes antigos que só precisam de permissão e ações.
+ * O carregamento completo agora é explícito via loadFolderGlossary, usado apenas
+ * por auditoria e exportação para não baixar dezenas de milhares de linhas ao montar.
  */
 export function useFolderGlossary(folderId?: string) {
-  const queryKey = useMemo(() => fullQueryKey(folderId), [folderId]);
+  const queryKey = useMemo(() => summaryQueryKey(folderId), [folderId]);
   const query = useQuery({
     queryKey,
-    queryFn: () => loadFolderGlossary(folderId as string),
+    queryFn: () => loadFolderGlossarySummary(folderId as string),
     enabled: Boolean(folderId),
     staleTime: 60_000,
   });
-  const entries = query.data?.entries ?? EMPTY_ENTRIES;
-  const activeEntries = useMemo(
-    () => entries.filter((entry) => entry.is_active),
-    [entries],
-  );
   const actions = useFolderGlossaryActions(folderId);
 
   return {
-    entries,
-    activeEntries,
+    entries: EMPTY_ENTRIES,
+    activeEntries: EMPTY_ENTRIES,
+    total: query.data?.total ?? 0,
+    active: query.data?.active ?? 0,
     canEdit: query.data?.canEdit ?? false,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
