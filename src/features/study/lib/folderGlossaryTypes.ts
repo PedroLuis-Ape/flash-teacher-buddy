@@ -40,6 +40,11 @@ export interface FolderGlossaryImportResult {
   compacted?: number;
 }
 
+export interface FolderGlossaryImportProgress {
+  processed: number;
+  total: number;
+}
+
 export interface FolderGlossaryQueryResult {
   entries: FolderGlossaryEntry[];
   canEdit: boolean;
