@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,8 @@ export interface GlossaryImportResult {
 export const FOLDER_GLOSSARY_QUERY_KEY = ["folder-glossary"] as const;
 export const ACCOUNT_GLOSSARY_QUERY_KEY = FOLDER_GLOSSARY_QUERY_KEY;
 
+const EMPTY_GLOSSARY: GlossaryEntry[] = [];
+
 async function loadListGlossaryContext(listId: string) {
   const [{ data: list, error: listError }, glossary] = await Promise.all([
     supabase.from("lists").select("folder_id").eq("id", listId).maybeSingle(),
@@ -47,27 +49,36 @@ async function loadListGlossaryContext(listId: string) {
 
 export function useListGlossary(listId?: string) {
   const queryClient = useQueryClient();
-  const queryKey = [...FOLDER_GLOSSARY_QUERY_KEY, "list", listId ?? "none"];
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: FOLDER_GLOSSARY_QUERY_KEY });
+  const queryKey = useMemo(
+    () => [...FOLDER_GLOSSARY_QUERY_KEY, "list", listId ?? "none"] as const,
+    [listId],
+  );
+  const invalidate = () => queryClient.invalidateQueries({ queryKey, exact: true });
 
   const query = useQuery({
     queryKey,
     queryFn: () => loadListGlossaryContext(listId as string),
     enabled: Boolean(listId),
     staleTime: 60_000,
-    refetchOnMount: "always",
   });
 
   const folderId = query.data?.folderId;
-  const glossary = query.data?.glossary ?? [];
+  const glossary = query.data?.glossary ?? EMPTY_GLOSSARY;
+  const activeGlossary = useMemo(
+    () => glossary.every((entry) => entry.is_active)
+      ? glossary
+      : glossary.filter((entry) => entry.is_active),
+    [glossary],
+  );
 
   useEffect(() => subscribeFolderGlossaryRefresh((report) => {
     if (!folderId || report.folderId !== folderId) return;
     void queryClient.invalidateQueries({
-      queryKey: FOLDER_GLOSSARY_QUERY_KEY,
+      queryKey,
+      exact: true,
       refetchType: "active",
     });
-  }), [folderId, queryClient]);
+  }), [folderId, queryClient, queryKey]);
 
   const requireFolder = () => {
     if (!folderId) throw new Error("Abra uma lista vinculada a uma pasta para editar o glossário.");
@@ -151,7 +162,8 @@ export function useListGlossary(listId?: string) {
 
   const bulkSwapTerms = useMutation({
     mutationFn: async (ids: string[]) => {
-      for (const entry of glossary.filter((item) => ids.includes(item.id))) {
+      const selectedIds = new Set(ids);
+      for (const entry of glossary.filter((item) => selectedIds.has(item.id))) {
         await updateFolderGlossaryEntry(entry.id, {
           original_text: entry.translated_text,
           primary_translation: entry.original_text,
@@ -203,7 +215,7 @@ export function useListGlossary(listId?: string) {
 
   return {
     glossary,
-    activeGlossary: glossary.filter((entry) => entry.is_active),
+    activeGlossary,
     isLoading: query.isLoading,
     error: query.error,
     addEntry,
