@@ -286,8 +286,8 @@ export async function importFolderGlossary(
   }
 
   // Dry-run permanece em uma única transação para manter contagens corretas no modo replace.
-  if (dryRun || total <= chunkSize) {
-    const result = await importFolderGlossaryChunk(folderId, compactedEntries, mode, dryRun);
+  if (dryRun) {
+    const result = await importFolderGlossaryChunk(folderId, compactedEntries, mode, true);
     result.skipped = Number(result.skipped ?? 0) + preSkipped;
     result.received = received;
     result.compacted = total;
@@ -295,7 +295,7 @@ export async function importFolderGlossary(
     return result;
   }
 
-  const aggregate = emptyImportResult(folderId, mode, dryRun);
+  const aggregate = emptyImportResult(folderId, mode, false);
   let processed = 0;
   let replaceStillPending = mode === "replace";
 
