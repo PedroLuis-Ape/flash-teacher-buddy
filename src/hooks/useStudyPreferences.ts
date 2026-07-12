@@ -335,6 +335,7 @@ export function useStudyPreferences(
 
     void (async () => {
       try {
+        await flushPending();
         const [serverGlobalResult, serverListResult] = await Promise.allSettled([
           repository.readGlobal(userId),
           listId ? repository.readListOverride(userId, listId) : Promise.resolve(null),
@@ -364,8 +365,6 @@ export function useStudyPreferences(
           && !isMissingStudyPreferenceSchemaError(serverListResult.reason)) {
           console.warn("[StudyPreferences] Falha ao hidratar preset da lista", serverListResult.reason);
         }
-
-        await flushPending();
       } finally {
         if (!cancelled) setIsHydrating(false);
       }
