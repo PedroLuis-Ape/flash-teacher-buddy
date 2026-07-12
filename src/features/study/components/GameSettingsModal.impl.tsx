@@ -26,6 +26,8 @@ interface GameSettingsModalProps {
   onDirectionChange?: (direction: Direction) => void;
 }
 
+const MANUAL_DIRECTION_EVENT = "piteco:study-direction-manual";
+
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   settings,
   onSettingsChange,
@@ -49,17 +51,11 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const handleModeChange = (checked: boolean) => {
-    onSettingsChange({
-      ...settings,
-      mode: checked ? "random" : "sequential",
-    });
+    onSettingsChange({ ...settings, mode: checked ? "random" : "sequential" });
   };
 
   const handleSubsetChange = (checked: boolean) => {
-    onSettingsChange({
-      ...settings,
-      subset: checked ? "favorites" : "all",
-    });
+    onSettingsChange({ ...settings, subset: checked ? "favorites" : "all" });
   };
 
   const handleRedFocusChange = (checked: boolean) => {
@@ -71,10 +67,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const handleFastModeChange = (checked: boolean) => {
-    onSettingsChange({
-      ...settings,
-      fastMode: checked,
-    });
+    onSettingsChange({ ...settings, fastMode: checked });
   };
 
   const handleInvertDirection = () => {
@@ -90,6 +83,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
       params.delete("direction");
       params.set("dir", next);
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(MANUAL_DIRECTION_EVENT, { detail: { direction: next } }));
+      }
     }
     setOpen(false);
   };
