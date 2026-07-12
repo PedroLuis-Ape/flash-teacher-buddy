@@ -1,8 +1,16 @@
-import { lazy, Suspense, useMemo, type ComponentProps } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { Volume2, VolumeX } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { listIdFromPath, isPublicListPath } from "@/lib/listRoute";
 import { useListPrimarySide } from "@/lib/useListPrimarySide";
 import { primarySideToDirection } from "@/lib/primarySideDirection";
 import { getMixedFlipSlotMode, isMixedStudySession } from "@/features/study/lib/runtimeStudySchedule";
+import { readFlipAutoPlayState } from "@/features/study/lib/flipAutoPlayState";
+import {
+  FLIP_ENTRY_AUDIO_DELAY_MS,
+  readFlipEntryAudioPreference,
+  writeFlipEntryAudioPreference,
+} from "@/features/study/lib/flipEntryAudioPreference";
 import { StudyCardDeck } from "./StudyCardDeck";
 import { MixedSlotActivity } from "./MixedSlotActivity";
 
@@ -26,6 +34,35 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
   const { side } = useListPrimarySide(listId, publicRoute);
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
   const mixedSlotMode = isMixedStudySession() ? getMixedFlipSlotMode(cardKey) : null;
+  const [autoSpeakOnCardChange, setAutoSpeakOnCardChange] = useState(readFlipEntryAudioPreference);
+  const scheduledCardRef = useRef<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scheduledCardRef.current === cardKey) return;
+    scheduledCardRef.current = cardKey;
+
+    if (!autoSpeakOnCardChange || props.ttsEnabled === false || mixedSlotMode) return;
+
+    const timer = window.setTimeout(() => {
+      if (readFlipAutoPlayState().enabled) return;
+      if (window.speechSynthesis?.speaking || window.speechSynthesis?.pending) return;
+
+      const audioButton = Array.from(
+        rootRef.current?.querySelectorAll<HTMLButtonElement>('button[title="Ouvir áudio"]') ?? [],
+      ).find((button) => !button.disabled);
+
+      audioButton?.click();
+    }, FLIP_ENTRY_AUDIO_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [autoSpeakOnCardChange, cardKey, mixedSlotMode, props.ttsEnabled]);
+
+  const toggleAutoSpeak = () => {
+    const next = !autoSpeakOnCardChange;
+    setAutoSpeakOnCardChange(next);
+    writeFlipEntryAudioPreference(next);
+  };
 
   if (mixedSlotMode) {
     return (
@@ -76,23 +113,42 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
     </StudyCardDeck>
   );
 
-  if (!listId) return deck;
-
   const primaryLabel = side === "b" ? props.labelB : props.labelA;
   const sessionLabel = props.direction === "b-a" ? props.labelB : props.direction === "a-b" ? props.labelA : "Misto";
   const followsPrimary = props.direction === primarySideToDirection(side);
+  const audioAvailable = props.ttsEnabled !== false;
 
   return (
-    <div className="w-full space-y-2">
+    <div ref={rootRef} className="w-full space-y-2">
       <div className="flex flex-wrap justify-center gap-2 text-[11px]">
-        <span className="rounded-full bg-primary/10 px-2 py-1 font-semibold text-primary">
-          Principal: {primaryLabel}
-        </span>
-        {!followsPrimary && (
-          <span className="rounded-full bg-amber-500/10 px-2 py-1 font-medium text-amber-700 dark:text-amber-300">
-            Primeiro nesta sessão: {sessionLabel}
-          </span>
+        {listId && (
+          <>
+            <span className="rounded-full bg-primary/10 px-2 py-1 font-semibold text-primary">
+              Principal: {primaryLabel}
+            </span>
+            {!followsPrimary && (
+              <span className="rounded-full bg-amber-500/10 px-2 py-1 font-medium text-amber-700 dark:text-amber-300">
+                Primeiro nesta sessão: {sessionLabel}
+              </span>
+            )}
+          </>
         )}
+        <Button
+          type="button"
+          variant={autoSpeakOnCardChange && audioAvailable ? "secondary" : "outline"}
+          size="sm"
+          className="h-7 gap-1.5 rounded-full px-2.5 text-[11px]"
+          onClick={toggleAutoSpeak}
+          disabled={!audioAvailable}
+          aria-pressed={autoSpeakOnCardChange && audioAvailable}
+          title={audioAvailable ? "Reproduzir o lado visível um segundo após trocar de card" : "Áudio desativado nesta lista"}
+        >
+          {autoSpeakOnCardChange && audioAvailable
+            ? <Volume2 className="h-3.5 w-3.5" />
+            : <VolumeX className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline">Áudio ao trocar:</span>
+          <span>{autoSpeakOnCardChange && audioAvailable ? "ligado" : "desligado"}</span>
+        </Button>
       </div>
       {deck}
     </div>
