@@ -20,6 +20,7 @@ import {
   readPendingPreferenceWrites,
   removeListOverrideCache,
   replacePendingPreferenceWrites,
+  stagePendingPreferenceWrites,
   writeGlobalCache,
   writeListOverrideCache,
   type PendingPreferenceWrite,
@@ -54,6 +55,11 @@ export const STUDY_RED_FOCUS_TRANSITION_EVENT = "piteco:study-red-focus-transiti
 
 const repository = createStudyPreferenceRepository();
 const WRITE_DEBOUNCE_MS = 300;
+
+type ScheduledPreferenceWrite = {
+  timer: ReturnType<typeof setTimeout>;
+  write: PendingPreferenceWrite;
+};
 
 function userScope(userId: string | undefined): string {
   return userId || "anon";
@@ -242,7 +248,7 @@ export function useStudyPreferences(
   const [sessionOverrides, setSessionOverridesState] = useState<StudySessionOverrides>(initialSessionOverrides);
   const [isHydrating, setIsHydrating] = useState(Boolean(userId));
   const [hasPersistedGlobal, setHasPersistedGlobal] = useState(Boolean(readGlobalCache(scope)));
-  const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const timersRef = useRef(new Map<string, ScheduledPreferenceWrite>());
   const manualRevisionRef = useRef(0);
   const redFocusTransitionRef = useRef(false);
 
@@ -276,11 +282,13 @@ export function useStudyPreferences(
     if (!userId || !persistenceEnabled) return;
     const key = pendingWriteKey(write);
     const current = timersRef.current.get(key);
-    if (current) clearTimeout(current);
-    timersRef.current.set(key, setTimeout(() => {
+    if (current) clearTimeout(current.timer);
+
+    const timer = setTimeout(() => {
       timersRef.current.delete(key);
       void runWrite(write);
-    }, WRITE_DEBOUNCE_MS));
+    }, WRITE_DEBOUNCE_MS);
+    timersRef.current.set(key, { timer, write });
   }, [persistenceEnabled, runWrite, userId]);
 
   const flushPending = useCallback(async () => {
@@ -383,9 +391,13 @@ export function useStudyPreferences(
   }, [flushPending, persistenceEnabled, userId]);
 
   useEffect(() => () => {
-    timersRef.current.forEach((timer) => clearTimeout(timer));
+    const scheduled = Array.from(timersRef.current.values());
+    scheduled.forEach(({ timer }) => clearTimeout(timer));
+    if (persistenceEnabled && scheduled.length > 0) {
+      stagePendingPreferenceWrites(scope, scheduled.map(({ write }) => write));
+    }
     timersRef.current.clear();
-  }, []);
+  }, [persistenceEnabled, scope]);
 
   const clearSessionKeys = useCallback((partial: StudyPresetOverride) => {
     setSessionOverridesState((current) => {
