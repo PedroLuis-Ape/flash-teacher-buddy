@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight } from "lucide-react";
+import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight, Play } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Direction } from "@/features/study/lib/gameCore";
+import type { StudyPlayModePreset, StudyPlaySidePreset } from "@/features/study/preferences/studyPreset";
+import { useAuth } from "@/contexts/AuthContext";
+import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
 
 export interface GameSettings {
   mode: "sequential" | "random";
@@ -43,8 +47,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { userId } = useAuth();
+  const { effectivePreset, updateForCurrentScope } = useStudyPreferences(userId);
+  const playRuntime = usePlayPresetRuntime();
   const listSession = location.pathname.includes("/list/")
     && (location.pathname.endsWith("/study") || location.pathname.endsWith("/mixed-study"));
+
+  useEffect(() => {
+    setPlayPresetRuntime({
+      playMode: effectivePreset.playMode,
+      playSide: effectivePreset.playSide,
+    });
+  }, [effectivePreset.playMode, effectivePreset.playSide]);
 
   const handleRestart = () => {
     onRestart();
@@ -76,6 +90,16 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     onSettingsChange({ ...settings, fastMode: checked });
   };
 
+  const handlePlayModeChange = (playMode: StudyPlayModePreset) => {
+    setPlayPresetRuntime({ playMode });
+    updateForCurrentScope({ playMode });
+  };
+
+  const handlePlaySideChange = (playSide: StudyPlaySidePreset) => {
+    setPlayPresetRuntime({ playSide });
+    updateForCurrentScope({ playSide });
+  };
+
   const handleInvertDirection = () => {
     const current = direction
       ?? (new URLSearchParams(location.search).get("dir") as Direction | null)
@@ -98,6 +122,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
 
   const favoritesActive = settings.subset === "favorites";
   const redFocusActive = !!settings.redFocus;
+  const sideActionPrefix = playRuntime.playMode === "single" ? "Somente" : "Começar em";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -162,20 +187,78 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
           </div>
 
           {showFastMode && (
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-500" />
-                  <Label htmlFor="fast-mode" className="font-medium">Fast Mode</Label>
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-yellow-500" />
+                    <Label htmlFor="fast-mode" className="font-medium">Fast Mode</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Mostra os dois lados ao mesmo tempo</p>
                 </div>
-                <p className="text-sm text-muted-foreground">Mostra os dois lados ao mesmo tempo</p>
+                <Switch
+                  id="fast-mode"
+                  checked={settings.fastMode ?? false}
+                  onCheckedChange={handleFastModeChange}
+                />
               </div>
-              <Switch
-                id="fast-mode"
-                checked={settings.fastMode ?? false}
-                onCheckedChange={handleFastModeChange}
-              />
-            </div>
+
+              <div className="space-y-3 rounded-xl border p-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Play className="h-4 w-4 text-primary" />
+                    <Label className="font-medium">Configurações do Play</Label>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    O botão Play inicia imediatamente usando estas opções.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={playRuntime.playMode === "both" ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={playRuntime.playMode === "both"}
+                    onClick={() => handlePlayModeChange("both")}
+                  >
+                    Dois lados
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={playRuntime.playMode === "single" ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={playRuntime.playMode === "single"}
+                    onClick={() => handlePlayModeChange("single")}
+                  >
+                    Somente um lado
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={playRuntime.playSide === "a" ? "secondary" : "outline"}
+                    size="sm"
+                    aria-pressed={playRuntime.playSide === "a"}
+                    onClick={() => handlePlaySideChange("a")}
+                    className="min-w-0"
+                  >
+                    <span className="truncate">{sideActionPrefix} {playRuntime.labelA}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={playRuntime.playSide === "b" ? "secondary" : "outline"}
+                    size="sm"
+                    aria-pressed={playRuntime.playSide === "b"}
+                    onClick={() => handlePlaySideChange("b")}
+                    className="min-w-0"
+                  >
+                    <span className="truncate">{sideActionPrefix} {playRuntime.labelB}</span>
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
 
           {listSession && (
