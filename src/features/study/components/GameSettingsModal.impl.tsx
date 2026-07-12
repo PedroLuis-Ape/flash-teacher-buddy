@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import type { Direction } from "@/features/study/lib/gameCore";
 
 export interface GameSettings {
-  mode: 'sequential' | 'random';
-  subset: 'all' | 'favorites';
+  mode: "sequential" | "random";
+  subset: "all" | "favorites";
   fastMode?: boolean;
   redFocus?: boolean;
 }
@@ -21,9 +22,12 @@ interface GameSettingsModalProps {
   showFastMode?: boolean;
   onEditCurrentCard?: () => void;
   canEditCurrentCard?: boolean;
+  direction?: Direction;
+  onDirectionChange?: (direction: Direction) => void;
 }
 
-const FAST_MODE_STORAGE_KEY = 'piteco_flip_fast_mode';
+const MANUAL_DIRECTION_EVENT = "piteco:study-direction-manual";
+const RED_FOCUS_TRANSITION_EVENT = "piteco:study-red-focus-transition";
 
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   settings,
@@ -33,20 +37,14 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   showFastMode = false,
   onEditCurrentCard,
   canEditCurrentCard = true,
+  direction,
+  onDirectionChange,
 }) => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const listSession = location.pathname.includes('/list/') && location.pathname.endsWith('/study');
-
-  useEffect(() => {
-    if (showFastMode) {
-      const stored = localStorage.getItem(FAST_MODE_STORAGE_KEY);
-      if (stored !== null && settings.fastMode === undefined) {
-        onSettingsChange({ ...settings, fastMode: stored === 'true' });
-      }
-    }
-  }, [showFastMode]);
+  const listSession = location.pathname.includes("/list/")
+    && (location.pathname.endsWith("/study") || location.pathname.endsWith("/mixed-study"));
 
   const handleRestart = () => {
     onRestart();
@@ -54,45 +52,51 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const handleModeChange = (checked: boolean) => {
-    onSettingsChange({
-      ...settings,
-      mode: checked ? 'random' : 'sequential',
-    });
+    onSettingsChange({ ...settings, mode: checked ? "random" : "sequential" });
   };
 
   const handleSubsetChange = (checked: boolean) => {
-    onSettingsChange({
-      ...settings,
-      subset: checked ? 'favorites' : 'all',
-    });
+    onSettingsChange({ ...settings, subset: checked ? "favorites" : "all" });
   };
 
   const handleRedFocusChange = (checked: boolean) => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(RED_FOCUS_TRANSITION_EVENT, {
+        detail: { enabled: checked },
+      }));
+    }
     onSettingsChange({
       ...settings,
-      mode: checked ? 'sequential' : settings.mode,
+      mode: checked ? "sequential" : settings.mode,
       redFocus: checked,
     });
   };
 
   const handleFastModeChange = (checked: boolean) => {
-    localStorage.setItem(FAST_MODE_STORAGE_KEY, String(checked));
-    onSettingsChange({
-      ...settings,
-      fastMode: checked,
-    });
+    onSettingsChange({ ...settings, fastMode: checked });
   };
 
   const handleInvertDirection = () => {
-    const params = new URLSearchParams(location.search);
-    const current = params.get('dir') || params.get('direction');
-    params.delete('direction');
-    params.set('dir', current === 'a-b' ? 'b-a' : 'a-b');
-    navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    const current = direction
+      ?? (new URLSearchParams(location.search).get("dir") as Direction | null)
+      ?? "any";
+    const next: Direction = current === "a-b" ? "b-a" : "a-b";
+
+    if (onDirectionChange) {
+      onDirectionChange(next);
+    } else {
+      const params = new URLSearchParams(location.search);
+      params.delete("direction");
+      params.set("dir", next);
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(MANUAL_DIRECTION_EVENT, { detail: { direction: next } }));
+      }
+    }
     setOpen(false);
   };
 
-  const favoritesActive = settings.subset === 'favorites';
+  const favoritesActive = settings.subset === "favorites";
   const redFocusActive = !!settings.redFocus;
 
   return (
@@ -104,7 +108,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
           className="bg-background/50 backdrop-blur-sm hover:bg-background/80"
           disabled={disabled}
         >
-          <Settings className="w-5 h-5 text-muted-foreground" />
+          <Settings className="h-5 w-5 text-muted-foreground" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -121,11 +125,12 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
             </div>
             <Switch
               id="random-mode"
-              checked={settings.mode === 'random' && !redFocusActive}
+              checked={settings.mode === "random" && !redFocusActive}
               onCheckedChange={handleModeChange}
               disabled={redFocusActive}
             />
           </div>
+
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="favorites-only" className="font-medium">Apenas Favoritos</Label>
@@ -176,7 +181,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
           {listSession && (
             <Button onClick={handleInvertDirection} className="w-full" variant="outline">
               <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Inverter lado nesta sessão
+              Inverter lado
             </Button>
           )}
 
