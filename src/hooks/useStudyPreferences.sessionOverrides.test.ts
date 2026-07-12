@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStudySessionOverrides } from "./useStudyPreferences";
+import { derivePrivateListId, parseStudySessionOverrides } from "./useStudyPreferences";
 
 describe("study session URL overrides", () => {
   it("parses supported temporary values", () => {
@@ -24,5 +24,11 @@ describe("study session URL overrides", () => {
       order: "invalid",
       favorites: "sometimes",
     }))).toEqual({});
+  });
+
+  it("derives only private list routes", () => {
+    expect(derivePrivateListId("/list/list-1/study")).toBe("list-1");
+    expect(derivePrivateListId("/portal/list/list-1/study")).toBeUndefined();
+    expect(derivePrivateListId("/collection/collection-1/study")).toBeUndefined();
   });
 });
