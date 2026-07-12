@@ -26,7 +26,7 @@ describe("atomic layered-card groups migration", () => {
   });
 
   it("reorders safely and soft-deletes omitted children", () => {
-    expect(migration).toContain("1000000 + layer_index");
+    expect(migration).toContain("1000000 + ordered.layer_index");
     expect(migration).toContain("deleted_at = now()");
     expect(migration).toContain("v_kept_ids");
   });
