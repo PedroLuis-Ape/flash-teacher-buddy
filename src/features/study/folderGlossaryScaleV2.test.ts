@@ -5,6 +5,10 @@ const migration = readFileSync(
   new URL("../../../supabase/migrations/20260712194500_folder_glossary_scale_v2.sql", import.meta.url),
   "utf8",
 );
+const compatibilityMigration = readFileSync(
+  new URL("../../../supabase/migrations/20260712200000_folder_glossary_v2_compatibility.sql", import.meta.url),
+  "utf8",
+);
 const api = readFileSync(new URL("./lib/folderGlossaryApi.ts", import.meta.url), "utf8");
 const manager = readFileSync(
   new URL("./components/FolderGlossaryManagerCore.tsx", import.meta.url),
@@ -12,13 +16,19 @@ const manager = readFileSync(
 );
 const hook = readFileSync(new URL("../../hooks/useFolderGlossary.ts", import.meta.url), "utf8");
 
-
 describe("large folder glossary architecture", () => {
   it("installs canonical identity and set-based import functions", () => {
     expect(migration).toContain("folder_glossary_identity_v2");
     expect(migration).toContain("identity_key");
     expect(migration).toContain("import_folder_glossary_v2");
     expect(migration).toContain("ON CONFLICT (folder_id, side, identity_key)");
+  });
+
+  it("keeps legacy import callers on the canonical v2 implementation", () => {
+    expect(compatibilityMigration).toContain(
+      "CREATE OR REPLACE FUNCTION public.import_folder_glossary_v1",
+    );
+    expect(compatibilityMigration).toContain("SELECT public.import_folder_glossary_v2");
   });
 
   it("exposes server-side summary, pagination and compact study rows", () => {
