@@ -52,7 +52,7 @@ export interface FolderGlossaryCoverageReport {
   terms: FolderGlossaryCoverageTerm[];
 }
 
-interface CoverageListRow {
+export interface CoverageListRow {
   id: string;
   title: string;
 }
@@ -62,6 +62,13 @@ export interface CoverageCardRow {
   list_id: string;
   term: string;
   translation: string;
+}
+
+export interface FolderGlossaryCoverageAnalysisInput {
+  folderId: string;
+  lists: CoverageListRow[];
+  cards: CoverageCardRow[];
+  glossary: FolderGlossaryEntry[];
 }
 
 interface MutableCoverageTerm {
@@ -80,6 +87,18 @@ interface ExpressionSpan {
   endIndex: number;
   entry: FolderGlossaryEntry;
 }
+
+interface CoverageWorkerSuccess {
+  ok: true;
+  report: FolderGlossaryCoverageReport;
+}
+
+interface CoverageWorkerFailure {
+  ok: false;
+  error: string;
+}
+
+type CoverageWorkerResponse = CoverageWorkerSuccess | CoverageWorkerFailure;
 
 function normalize(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -211,12 +230,9 @@ function classifyOccurrence(input: {
   return { status: "missing", matches: [] };
 }
 
-export function analyzeFolderGlossaryCoverageRows(input: {
-  folderId: string;
-  lists: CoverageListRow[];
-  cards: CoverageCardRow[];
-  glossary: FolderGlossaryEntry[];
-}): FolderGlossaryCoverageReport {
+export function analyzeFolderGlossaryCoverageRows(
+  input: FolderGlossaryCoverageAnalysisInput,
+): FolderGlossaryCoverageReport {
   const listTitles = new Map(input.lists.map((list) => [list.id, list.title]));
   const activeBySide = mapEntriesBySide(input.glossary, true);
   const inactiveBySide = mapEntriesBySide(input.glossary, false);
@@ -365,6 +381,46 @@ async function loadFolderCards(listIds: string[]): Promise<CoverageCardRow[]> {
   return result;
 }
 
+export function analyzeFolderGlossaryCoverageOffThread(
+  input: FolderGlossaryCoverageAnalysisInput,
+): Promise<FolderGlossaryCoverageReport> {
+  if (typeof Worker === "undefined") {
+    return Promise.resolve(analyzeFolderGlossaryCoverageRows(input));
+  }
+
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(
+      new URL("./folderGlossaryCoverage.worker.ts", import.meta.url),
+      { type: "module", name: "folder-glossary-coverage" },
+    );
+    let settled = false;
+
+    const close = () => {
+      worker.terminate();
+    };
+
+    worker.onmessage = (event: MessageEvent<CoverageWorkerResponse>) => {
+      if (settled) return;
+      settled = true;
+      close();
+      if (event.data.ok) {
+        resolve(event.data.report);
+      } else {
+        reject(new Error(event.data.error));
+      }
+    };
+
+    worker.onerror = (event) => {
+      if (settled) return;
+      settled = true;
+      close();
+      reject(new Error(event.message || "Não foi possível iniciar a auditoria em segundo plano."));
+    };
+
+    worker.postMessage(input);
+  });
+}
+
 export async function loadFolderGlossaryCoverage(
   folderId: string,
   glossary: FolderGlossaryEntry[],
@@ -373,7 +429,7 @@ export async function loadFolderGlossaryCoverage(
   const cards = lists.length > 0
     ? await loadFolderCards(lists.map((list) => list.id))
     : [];
-  return analyzeFolderGlossaryCoverageRows({ folderId, lists, cards, glossary });
+  return analyzeFolderGlossaryCoverageOffThread({ folderId, lists, cards, glossary });
 }
 
 export function serializeMissingCoverageTerms(input: {
