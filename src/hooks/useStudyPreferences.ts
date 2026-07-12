@@ -44,6 +44,7 @@ export type UseStudyPreferencesOptions = {
   listId?: string;
   persistScope?: "global" | "list";
   canPersistList?: boolean;
+  persistEnabled?: boolean;
   sessionOverrides?: StudySessionOverrides;
 };
 
@@ -66,6 +67,15 @@ export function derivePrivateListId(pathname?: string): string | undefined {
   } catch {
     return match[1];
   }
+}
+
+export function shouldPersistStudyPreferences(
+  pathname?: string,
+  explicit?: boolean,
+): boolean {
+  if (typeof explicit === "boolean") return explicit;
+  const path = pathname ?? (typeof window !== "undefined" ? window.location.pathname : "");
+  return !path.startsWith("/portal/");
 }
 
 function notifyDirectionUrlChange(direction: Direction): void {
@@ -181,6 +191,7 @@ export function useStudyPreferences(
   const inferredListId = derivePrivateListId();
   const listId = options.listId ?? inferredListId;
   const canPersistList = options.canPersistList ?? Boolean(listId);
+  const persistenceEnabled = shouldPersistStudyPreferences(undefined, options.persistEnabled);
   const persistenceScope = options.persistScope
     ?? (listId && canPersistList ? "list" : "global");
 
@@ -214,7 +225,7 @@ export function useStudyPreferences(
       : "defaults";
 
   const runWrite = useCallback(async (write: PendingPreferenceWrite) => {
-    if (!userId) return;
+    if (!userId || !persistenceEnabled) return;
     try {
       await executePendingWrite(userId, write);
       removeMatchingPendingWrite(scope, write);
@@ -225,10 +236,10 @@ export function useStudyPreferences(
         console.warn("[StudyPreferences] Falha ao salvar preferência", error);
       }
     }
-  }, [scope, userId]);
+  }, [persistenceEnabled, scope, userId]);
 
   const scheduleWrite = useCallback((write: PendingPreferenceWrite) => {
-    if (!userId) return;
+    if (!userId || !persistenceEnabled) return;
     const key = pendingWriteKey(write);
     const current = timersRef.current.get(key);
     if (current) clearTimeout(current);
@@ -236,10 +247,10 @@ export function useStudyPreferences(
       timersRef.current.delete(key);
       void runWrite(write);
     }, WRITE_DEBOUNCE_MS));
-  }, [runWrite, userId]);
+  }, [persistenceEnabled, runWrite, userId]);
 
   const flushPending = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !persistenceEnabled) return;
     const remaining: PendingPreferenceWrite[] = [];
     for (const write of readPendingPreferenceWrites(scope)) {
       try {
@@ -253,7 +264,7 @@ export function useStudyPreferences(
       }
     }
     replacePendingPreferenceWrites(scope, remaining);
-  }, [scope, userId]);
+  }, [persistenceEnabled, scope, userId]);
 
   useEffect(() => {
     const nextScope = userScope(userId);
@@ -293,7 +304,7 @@ export function useStudyPreferences(
             setGlobalPreset(serverGlobalResult.value);
             writeGlobalCache(nextScope, serverGlobalResult.value);
             setHasPersistedGlobal(true);
-          } else {
+          } else if (persistenceEnabled) {
             writeGlobalCache(nextScope, cachedGlobal);
             setHasPersistedGlobal(true);
             await runWrite({ kind: "global-upsert", preset: cachedGlobal, updatedAt: Date.now() });
@@ -321,7 +332,7 @@ export function useStudyPreferences(
     return () => {
       cancelled = true;
     };
-  }, [userId, listId]);
+  }, [flushPending, listId, options.sessionOverrides, persistenceEnabled, runWrite, userId]);
 
   useEffect(() => {
     setSessionOverridesState(normalizeStudyPresetOverride({
@@ -331,11 +342,11 @@ export function useStudyPreferences(
   }, [options.sessionOverrides]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !userId) return;
+    if (typeof window === "undefined" || !userId || !persistenceEnabled) return;
     const handleOnline = () => void flushPending();
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
-  }, [flushPending, userId]);
+  }, [flushPending, persistenceEnabled, userId]);
 
   useEffect(() => () => {
     timersRef.current.forEach((timer) => clearTimeout(timer));
@@ -354,6 +365,15 @@ export function useStudyPreferences(
     const normalizedPartial = normalizeStudyPresetOverride(partial);
     if (isEmptyStudyPresetOverride(normalizedPartial)) return;
     manualRevisionRef.current += 1;
+
+    if (!persistenceEnabled) {
+      setSessionOverridesState((current) => normalizeStudyPresetOverride({
+        ...current,
+        ...normalizedPartial,
+      }));
+      return;
+    }
+
     clearSessionKeys(normalizedPartial);
 
     if (persistenceScope === "list" && listId) {
@@ -377,9 +397,19 @@ export function useStudyPreferences(
     setHasPersistedGlobal(true);
     writeGlobalCache(scope, nextGlobal);
     scheduleWrite({ kind: "global-upsert", preset: nextGlobal, updatedAt: Date.now() });
-  }, [clearSessionKeys, globalPreset, listId, listOverride, persistenceScope, scheduleWrite, scope]);
+  }, [
+    clearSessionKeys,
+    globalPreset,
+    listId,
+    listOverride,
+    persistenceEnabled,
+    persistenceScope,
+    scheduleWrite,
+    scope,
+  ]);
 
   const saveAsGlobal = useCallback(async (preset: StudyPreset = effectivePreset) => {
+    if (!persistenceEnabled) return;
     const normalized = normalizeStudyPreset(preset);
     manualRevisionRef.current += 1;
     setGlobalPreset(normalized);
@@ -395,15 +425,15 @@ export function useStudyPreferences(
       await runWrite({ kind: "global-upsert", preset: normalized, updatedAt: Date.now() });
       if (listId) await runWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
     }
-  }, [effectivePreset, listId, runWrite, scope, userId]);
+  }, [effectivePreset, listId, persistenceEnabled, runWrite, scope, userId]);
 
   const resetListOverride = useCallback(async () => {
-    if (!listId) return;
+    if (!listId || !persistenceEnabled) return;
     manualRevisionRef.current += 1;
     setListOverride(null);
     removeListOverrideCache(scope, listId);
     if (userId) await runWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
-  }, [listId, runWrite, scope, userId]);
+  }, [listId, persistenceEnabled, runWrite, scope, userId]);
 
   const setSessionOverrides = useCallback((overrides: StudySessionOverrides) => {
     setSessionOverridesState(normalizeStudyPresetOverride(overrides));
