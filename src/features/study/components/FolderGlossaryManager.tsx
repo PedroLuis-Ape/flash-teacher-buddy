@@ -1,5 +1,6 @@
 import { useFolderGlossarySummary } from "@/hooks/useFolderGlossary";
 import { FolderGlossaryAiPromptCard } from "./FolderGlossaryAiPromptCard";
+import { FolderGlossaryBulkDeleteCard } from "./FolderGlossaryBulkDeleteCard";
 import { FolderGlossaryCoverageCard } from "./FolderGlossaryCoverageCard";
 import { FolderGlossaryForceSyncCard } from "./FolderGlossaryForceSyncCard";
 import { FolderGlossaryManager as FolderGlossaryManagerCore } from "./FolderGlossaryManagerCore";
@@ -12,7 +13,7 @@ interface Props {
 }
 
 export function FolderGlossaryManager(props: Props) {
-  const { canEdit } = useFolderGlossarySummary(props.folderId);
+  const { canEdit, total } = useFolderGlossarySummary(props.folderId);
 
   return (
     <div className="space-y-4">
@@ -36,6 +37,13 @@ export function FolderGlossaryManager(props: Props) {
           <FolderGlossaryForceSyncCard
             folderId={props.folderId}
             folderTitle={props.folderTitle}
+          />
+          <FolderGlossaryBulkDeleteCard
+            folderId={props.folderId}
+            folderTitle={props.folderTitle}
+            labelA={props.labelA}
+            labelB={props.labelB}
+            total={total}
           />
         </>
       )}
