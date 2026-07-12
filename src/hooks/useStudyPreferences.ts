@@ -48,11 +48,37 @@ export type UseStudyPreferencesOptions = {
 };
 
 export const STUDY_PREFERENCES_VERSION = 3;
+export const STUDY_DIRECTION_MANUAL_EVENT = "piteco:study-direction-manual";
+
 const repository = createStudyPreferenceRepository();
 const WRITE_DEBOUNCE_MS = 300;
 
 function userScope(userId: string | undefined): string {
   return userId || "anon";
+}
+
+export function derivePrivateListId(pathname?: string): string | undefined {
+  const path = pathname ?? (typeof window !== "undefined" ? window.location.pathname : "");
+  const match = path.match(/^\/list\/([^/]+)(?:\/|$)/);
+  if (!match?.[1]) return undefined;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+function notifyDirectionUrlChange(direction: Direction): void {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set("dir", direction);
+    url.searchParams.delete("direction");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    window.dispatchEvent(new Event("popstate"));
+  } catch {
+    // URL synchronization is a stability helper; persistence still succeeds.
+  }
 }
 
 function presetToLegacy(preset: StudyPreset): StudyPreferences {
@@ -83,14 +109,13 @@ export function normalizeStoredStudyPreferences(value: unknown): StudyPreference
   const direction = currentVersion && ["a-b", "b-a", "any"].includes(String(input.direction ?? ""))
     ? input.direction
     : "any";
-  const preset = normalizeStudyPreset({
+  return presetToLegacy(normalizeStudyPreset({
     mode: input.mode,
     direction,
     order: input.order,
     scope: input.scope ?? (input.favoritesOnly === true ? "favorites" : "all"),
     fastMode: input.fastMode,
-  });
-  return presetToLegacy(preset);
+  }));
 }
 
 export function parseStudySessionOverrides(params: URLSearchParams): StudySessionOverrides {
@@ -141,13 +166,11 @@ function removeMatchingPendingWrite(scope: string, completed: PendingPreferenceW
 async function executePendingWrite(userId: string, write: PendingPreferenceWrite): Promise<void> {
   if (write.kind === "global-upsert") {
     await repository.upsertGlobal(userId, write.preset);
-    return;
-  }
-  if (write.kind === "list-upsert") {
+  } else if (write.kind === "list-upsert") {
     await repository.upsertListOverride(userId, write.listId, write.override);
-    return;
+  } else {
+    await repository.deleteListOverride(userId, write.listId);
   }
-  await repository.deleteListOverride(userId, write.listId);
 }
 
 export function useStudyPreferences(
@@ -155,8 +178,9 @@ export function useStudyPreferences(
   options: UseStudyPreferencesOptions = {},
 ) {
   const scope = userScope(userId);
-  const listId = options.listId;
-  const canPersistList = options.canPersistList !== false;
+  const inferredListId = derivePrivateListId();
+  const listId = options.listId ?? inferredListId;
+  const canPersistList = options.canPersistList ?? Boolean(listId);
   const persistenceScope = options.persistScope
     ?? (listId && canPersistList ? "list" : "global");
 
@@ -216,9 +240,8 @@ export function useStudyPreferences(
 
   const flushPending = useCallback(async () => {
     if (!userId) return;
-    const pending = readPendingPreferenceWrites(scope);
     const remaining: PendingPreferenceWrite[] = [];
-    for (const write of pending) {
+    for (const write of readPendingPreferenceWrites(scope)) {
       try {
         await executePendingWrite(userId, write);
       } catch (error) {
@@ -386,9 +409,22 @@ export function useStudyPreferences(
     setSessionOverridesState(normalizeStudyPresetOverride(overrides));
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleManualDirection = (event: Event) => {
+      const direction = (event as CustomEvent<{ direction?: Direction }>).detail?.direction;
+      if (direction && ["a-b", "b-a", "any"].includes(direction)) {
+        updateForCurrentScope({ direction });
+      }
+    };
+    window.addEventListener(STUDY_DIRECTION_MANUAL_EVENT, handleManualDirection);
+    return () => window.removeEventListener(STUDY_DIRECTION_MANUAL_EVENT, handleManualDirection);
+  }, [updateForCurrentScope]);
+
   const prefs = useMemo(() => presetToLegacy(effectivePreset), [effectivePreset]);
 
   const updatePrefs = useCallback((partial: Partial<StudyPreferences>) => {
+    if (partial.direction) notifyDirectionUrlChange(partial.direction);
     updateForCurrentScope(legacyPatchToPreset(partial));
   }, [updateForCurrentScope]);
 
@@ -408,7 +444,6 @@ export function useStudyPreferences(
     resetListOverride,
     setSessionOverrides,
     flushPending,
-    // Compatibility layer for existing call sites while GamesHub/Study migrate.
     prefs,
     updatePrefs,
     applyUrlOverrides,
