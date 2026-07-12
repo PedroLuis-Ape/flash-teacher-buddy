@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -20,11 +20,15 @@ import type {
 } from "@/features/study/lib/folderGlossaryTypes";
 
 export const FOLDER_GLOSSARY_QUERY_KEY = ["folder-glossary"] as const;
+const EMPTY_ENTRIES: FolderGlossaryEntry[] = [];
 
 export function useFolderGlossary(folderId?: string) {
   const queryClient = useQueryClient();
-  const queryKey = [...FOLDER_GLOSSARY_QUERY_KEY, folderId ?? "none"];
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: FOLDER_GLOSSARY_QUERY_KEY });
+  const queryKey = useMemo(
+    () => [...FOLDER_GLOSSARY_QUERY_KEY, folderId ?? "none"] as const,
+    [folderId],
+  );
+  const invalidate = () => queryClient.invalidateQueries({ queryKey, exact: true });
   const announceRefresh = (source: FolderGlossaryRefreshSource) => {
     if (!folderId) return;
     publishFolderGlossaryRefresh({
@@ -37,18 +41,24 @@ export function useFolderGlossary(folderId?: string) {
   useEffect(() => subscribeFolderGlossaryRefresh((report) => {
     if (!folderId || report.folderId !== folderId) return;
     void queryClient.invalidateQueries({
-      queryKey: FOLDER_GLOSSARY_QUERY_KEY,
+      queryKey,
+      exact: true,
       refetchType: "active",
     });
-  }), [folderId, queryClient]);
+  }), [folderId, queryClient, queryKey]);
 
   const query = useQuery({
     queryKey,
     queryFn: () => loadFolderGlossary(folderId as string),
     enabled: Boolean(folderId),
     staleTime: 60_000,
-    refetchOnMount: "always",
   });
+
+  const entries = query.data?.entries ?? EMPTY_ENTRIES;
+  const activeEntries = useMemo(
+    () => entries.filter((entry) => entry.is_active),
+    [entries],
+  );
 
   const addEntry = useMutation({
     mutationFn: (entry: FolderGlossaryInput) => addFolderGlossaryEntry(folderId as string, entry),
@@ -83,14 +93,14 @@ export function useFolderGlossary(folderId?: string) {
 
   const importEntries = useMutation({
     mutationFn: ({
-      entries,
+      entries: importedEntries,
       mode,
       onProgress,
     }: {
       entries: FolderGlossaryInput[];
       mode: "merge" | "replace";
       onProgress?: (progress: FolderGlossaryImportProgress) => void;
-    }) => importFolderGlossary(folderId as string, entries, mode, false, { onProgress }),
+    }) => importFolderGlossary(folderId as string, importedEntries, mode, false, { onProgress }),
     onSuccess: (result) => {
       void invalidate();
       announceRefresh("import");
@@ -102,8 +112,8 @@ export function useFolderGlossary(folderId?: string) {
   });
 
   return {
-    entries: query.data?.entries ?? [],
-    activeEntries: (query.data?.entries ?? []).filter((entry) => entry.is_active),
+    entries,
+    activeEntries,
     canEdit: query.data?.canEdit ?? false,
     isLoading: query.isLoading,
     error: query.error,
