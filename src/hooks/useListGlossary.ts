@@ -60,6 +60,7 @@ export function useListGlossary(listId?: string) {
     queryFn: () => loadListGlossaryContext(listId as string),
     enabled: Boolean(listId),
     staleTime: 60_000,
+    refetchOnMount: "always",
   });
 
   const folderId = query.data?.folderId;
