@@ -20,11 +20,8 @@ describe("glossary index", () => {
       glossary,
     );
 
-    expect(new Set(matches.map((match) => match.matchText))).toEqual(
-      new Set(["the", "digital replica"]),
-    );
-    expect(matches.filter((match) => match.matchText === "the").map((match) => match.translationText))
-      .toEqual(["o", "a", "os", "as"]);
+    expect(matches.map((match) => match.matchText)).toEqual(["the", "digital replica"]);
+    expect(matches[0].translationText).toBe("o, a, os, as");
   });
 
   it("keeps reverse alternatives indexed", () => {
@@ -47,7 +44,7 @@ describe("glossary index", () => {
     const glossary = [
       entry("run", "Correr"),
       entry("run", " correr "),
-      entry("run", "correr, CORRER"),
+      entry("run", "CORRER"),
     ];
 
     const matches = findRelevantGlossaryMatches("run", "A", glossary);
@@ -63,8 +60,8 @@ describe("glossary index", () => {
     glossary.push(entry("replica", "réplica, cópia"));
 
     const matches = findRelevantGlossaryMatches("A digital replica.", "A", glossary);
-    expect(matches).toHaveLength(2);
-    expect(matches.map((match) => match.matchText)).toEqual(["replica", "replica"]);
-    expect(matches.map((match) => match.translationText)).toEqual(["réplica", "cópia"]);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].matchText).toBe("replica");
+    expect(matches[0].translationText).toBe("réplica, cópia");
   });
 });
