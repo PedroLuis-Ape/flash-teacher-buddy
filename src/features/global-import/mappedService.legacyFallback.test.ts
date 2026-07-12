@@ -17,4 +17,12 @@ describe("mapped import service", () => {
     expect(source).toContain("rollbackImportedBatch");
     expect(source).toContain("FOLDER_GLOSSARY_RPC");
   });
+
+  it("blocks the v1 fallback before converting a rich package", () => {
+    const guard = source.indexOf("richImportRequirements(smartPackage)");
+    const conversion = source.indexOf("smartImportToOfficialV1Package(cardPackage)");
+    expect(guard).toBeGreaterThan(-1);
+    expect(conversion).toBeGreaterThan(guard);
+    expect(source).toContain("A importação foi bloqueada para evitar perda de dados");
+  });
 });
