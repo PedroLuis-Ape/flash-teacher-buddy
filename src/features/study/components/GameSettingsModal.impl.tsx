@@ -27,6 +27,7 @@ interface GameSettingsModalProps {
 }
 
 const MANUAL_DIRECTION_EVENT = "piteco:study-direction-manual";
+const RED_FOCUS_TRANSITION_EVENT = "piteco:study-red-focus-transition";
 
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   settings,
@@ -59,6 +60,11 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const handleRedFocusChange = (checked: boolean) => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(RED_FOCUS_TRANSITION_EVENT, {
+        detail: { enabled: checked },
+      }));
+    }
     onSettingsChange({
       ...settings,
       mode: checked ? "sequential" : settings.mode,
