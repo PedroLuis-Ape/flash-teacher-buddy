@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findRelevantGlossaryMatches } from "./glossaryIndex";
+import { buildGlossaryIndex, findRelevantGlossaryMatches } from "./glossaryIndex";
 import type { GlossaryItem } from "./glossaryMerge";
 
 function entry(original_text: string, translated_text: string, side: "A" | "B" = "A"): GlossaryItem {
@@ -21,6 +21,7 @@ describe("glossary index", () => {
     );
 
     expect(matches.map((match) => match.matchText)).toEqual(["the", "digital replica"]);
+    expect(matches[0].translationText).toBe("o, a, os, as");
   });
 
   it("keeps reverse alternatives indexed", () => {
@@ -33,6 +34,25 @@ describe("glossary index", () => {
     expect(matches.map((match) => match.matchText)).toEqual(expect.arrayContaining(["sou", "estou"]));
   });
 
+  it("reuses the built index while the glossary reference is unchanged", () => {
+    const glossary = [entry("run", "correr")];
+
+    expect(buildGlossaryIndex(glossary)).toBe(buildGlossaryIndex(glossary));
+  });
+
+  it("deduplicates repeated normalized candidates", () => {
+    const glossary = [
+      entry("run", "Correr"),
+      entry("run", " correr "),
+      entry("run", "CORRER"),
+    ];
+
+    const matches = findRelevantGlossaryMatches("run", "A", glossary);
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toEqual(expect.objectContaining({ translationText: "Correr" }));
+  });
+
   it("handles a 34,000-entry glossary without returning unrelated rows", () => {
     const glossary = Array.from({ length: 34_000 }, (_, index) =>
       entry(`term${index}`, `tradução${index}`),
@@ -42,5 +62,6 @@ describe("glossary index", () => {
     const matches = findRelevantGlossaryMatches("A digital replica.", "A", glossary);
     expect(matches).toHaveLength(1);
     expect(matches[0].matchText).toBe("replica");
+    expect(matches[0].translationText).toBe("réplica, cópia");
   });
 });

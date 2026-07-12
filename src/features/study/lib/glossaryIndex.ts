@@ -27,9 +27,24 @@ function splitAlternatives(value: string) {
   return Array.from(unique.values());
 }
 
-function addMatch(index: GlossaryIndex, side: "A" | "B", match: IndexedGlossaryMatch) {
+function addMatch(
+  index: GlossaryIndex,
+  seen: Set<string>,
+  side: "A" | "B",
+  match: IndexedGlossaryMatch,
+) {
   const token = firstToken(match.matchText);
   if (!token) return;
+
+  const identity = [
+    side,
+    normalize(match.matchText),
+    normalize(match.translationText),
+    normalize(match.note ?? ""),
+  ].join("|");
+  if (seen.has(identity)) return;
+  seen.add(identity);
+
   const key = `${side}|${token}`;
   const bucket = index.get(key) ?? [];
   bucket.push(match);
@@ -41,10 +56,12 @@ export function buildGlossaryIndex(glossary: GlossaryItem[]): GlossaryIndex {
   if (cached) return cached;
 
   const index: GlossaryIndex = new Map();
+  const seen = new Set<string>();
+
   for (const entry of glossary) {
     if (!entry.is_active) continue;
 
-    addMatch(index, entry.side, {
+    addMatch(index, seen, entry.side, {
       matchText: entry.original_text,
       translationText: entry.translated_text,
       note: entry.note,
@@ -52,7 +69,7 @@ export function buildGlossaryIndex(glossary: GlossaryItem[]): GlossaryIndex {
 
     const reverseSide = entry.side === "A" ? "B" : "A";
     for (const alternative of splitAlternatives(entry.translated_text)) {
-      addMatch(index, reverseSide, {
+      addMatch(index, seen, reverseSide, {
         matchText: alternative,
         translationText: entry.original_text,
         note: entry.note,
