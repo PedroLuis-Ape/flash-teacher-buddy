@@ -24,7 +24,7 @@ export {
 export type { FolderGlossarySyncStatus } from "./folderGlossarySyncApi";
 
 const DEFAULT_IMPORT_CHUNK_SIZE = 1_000;
-const MIN_IMPORT_CHUNK_SIZE = 100;
+const MIN_IMPORT_CHUNK_SIZE = 20;
 const DEFAULT_PAGE_SIZE = 60;
 const MAX_PAGE_SIZE = 200;
 
