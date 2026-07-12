@@ -3,6 +3,7 @@ import {
   derivePrivateListId,
   parseStudySessionOverrides,
   shouldPersistStudyPreferences,
+  stripTransientRedFocusOrder,
 } from "./useStudyPreferences";
 
 describe("study session URL overrides", () => {
@@ -41,5 +42,17 @@ describe("study session URL overrides", () => {
     expect(shouldPersistStudyPreferences("/list/list-1/study")).toBe(true);
     expect(shouldPersistStudyPreferences("/portal/list/list-1/study", true)).toBe(true);
     expect(shouldPersistStudyPreferences("/list/list-1/study", false)).toBe(false);
+  });
+
+  it("does not persist the sequential order forced by red focus", () => {
+    expect(stripTransientRedFocusOrder({
+      order: "sequential",
+      favoritesOnly: true,
+      fastMode: false,
+    }, true)).toEqual({
+      favoritesOnly: true,
+      fastMode: false,
+    });
+    expect(stripTransientRedFocusOrder({ order: "random" }, false)).toEqual({ order: "random" });
   });
 });
