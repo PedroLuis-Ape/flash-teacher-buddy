@@ -36,9 +36,37 @@ export interface FolderGlossaryImportResult {
   updated: number;
   skipped: number;
   removed: number;
+  received?: number;
+  compacted?: number;
+}
+
+export interface FolderGlossaryImportProgress {
+  processed: number;
+  total: number;
 }
 
 export interface FolderGlossaryQueryResult {
   entries: FolderGlossaryEntry[];
+  canEdit: boolean;
+}
+
+export interface FolderGlossarySummary {
+  total: number;
+  active: number;
+  canEdit: boolean;
+}
+
+export interface FolderGlossaryPageParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  side?: "all" | GlossarySide;
+}
+
+export interface FolderGlossaryPageResult {
+  entries: FolderGlossaryEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
   canEdit: boolean;
 }

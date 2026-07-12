@@ -1,7 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Download,
   FileJson,
   FileUp,
@@ -28,13 +30,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useFolderGlossary } from "@/hooks/useFolderGlossary";
+import { useFolderGlossaryPage } from "@/hooks/useFolderGlossary";
+import { loadFolderGlossary } from "@/features/study/lib/folderGlossaryApi";
 import {
   parseFolderGlossaryJson,
   serializeFolderGlossary,
 } from "@/features/study/lib/folderGlossaryTransfer";
 import type {
   FolderGlossaryEntry,
+  FolderGlossaryImportProgress,
   FolderGlossaryInput,
   GlossarySide,
 } from "@/features/study/lib/folderGlossaryTypes";
@@ -57,6 +61,8 @@ interface Draft {
 }
 
 const MAX_IMPORT_FILE_SIZE = 25 * 1024 * 1024;
+const PAGE_SIZE = 60;
+const SEARCH_DELAY_MS = 300;
 
 const blankDraft = (): Draft => ({
   term: "",
@@ -67,44 +73,61 @@ const blankDraft = (): Draft => ({
   active: true,
 });
 
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timeout);
+  }, [delay, value]);
+
+  return debounced;
+}
+
 export function FolderGlossaryManager({
   folderId,
   folderTitle,
   labelA,
   labelB,
 }: Props) {
-  const {
-    entries,
-    canEdit,
-    isLoading,
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    importEntries,
-  } = useFolderGlossary(folderId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [sideFilter, setSideFilter] = useState<"all" | GlossarySide>("all");
+  const [page, setPage] = useState(0);
   const [draft, setDraft] = useState<Draft>(blankDraft());
   const [editorOpen, setEditorOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [importFileName, setImportFileName] = useState("");
   const [importMode, setImportMode] = useState<"merge" | "replace">("merge");
+  const [importProgress, setImportProgress] = useState<FolderGlossaryImportProgress | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DELAY_MS);
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    return entries.filter((entry) => {
-      if (sideFilter !== "all" && entry.side !== sideFilter) return false;
-      if (!query) return true;
-      return [
-        entry.original_text,
-        entry.primary_translation,
-        ...entry.alternative_translations,
-        entry.note ?? "",
-      ].some((value) => value.toLocaleLowerCase().includes(query));
-    });
-  }, [entries, search, sideFilter]);
+  const {
+    entries,
+    total,
+    canEdit,
+    isLoading,
+    isFetching,
+    addEntry,
+    updateEntry,
+    deleteEntry,
+    importEntries,
+  } = useFolderGlossaryPage(folderId, {
+    page,
+    pageSize: PAGE_SIZE,
+    search: debouncedSearch,
+    side: sideFilter,
+  });
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const firstVisible = total === 0 ? 0 : page * PAGE_SIZE + 1;
+  const lastVisible = Math.min(total, (page + 1) * PAGE_SIZE);
+
+  useEffect(() => {
+    if (page >= pageCount) setPage(pageCount - 1);
+  }, [page, pageCount]);
 
   const importPreview = useMemo<{
     entries: FolderGlossaryInput[];
@@ -170,6 +193,7 @@ export function FolderGlossaryManager({
   const resetImportSource = () => {
     setImportText("");
     setImportFileName("");
+    setImportProgress(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -210,30 +234,42 @@ export function FolderGlossaryManager({
     }
 
     try {
+      setImportProgress({ processed: 0, total: importPreview.entries.length });
       await importEntries.mutateAsync({
         entries: importPreview.entries,
         mode: importMode,
+        onProgress: setImportProgress,
       });
+      setPage(0);
       resetImportSource();
       setImportOpen(false);
     } catch {
-      return;
+      setImportProgress(null);
     }
   };
 
-  const download = () => {
-    const blob = new Blob(
-      [serializeFolderGlossary({ id: folderId, title: folderTitle }, entries)],
-      { type: "application/json;charset=utf-8" },
-    );
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `app-piteco-glossario-${folderTitle
-      .replace(/[^a-z0-9]+/gi, "-")
-      .toLowerCase()}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+  const download = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const completeGlossary = await loadFolderGlossary(folderId);
+      const blob = new Blob(
+        [serializeFolderGlossary({ id: folderId, title: folderTitle }, completeGlossary.entries)],
+        { type: "application/json;charset=utf-8" },
+      );
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `app-piteco-glossario-${folderTitle
+        .replace(/[^a-z0-9]+/gi, "-")
+        .toLowerCase()}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível exportar o glossário.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -244,13 +280,22 @@ export function FolderGlossaryManager({
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar termo, tradução ou nota..."
               className="pl-9"
             />
           </div>
 
-          <Select value={sideFilter} onValueChange={(value) => setSideFilter(value as "all" | GlossarySide)}>
+          <Select
+            value={sideFilter}
+            onValueChange={(value) => {
+              setSideFilter(value as "all" | GlossarySide);
+              setPage(0);
+            }}
+          >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os lados</SelectItem>
@@ -265,8 +310,11 @@ export function FolderGlossaryManager({
                 <FileUp className="mr-2 h-4 w-4" />Importar
               </Button>
             )}
-            <Button variant="outline" onClick={download} disabled={entries.length === 0}>
-              <Download className="mr-2 h-4 w-4" />Exportar
+            <Button variant="outline" onClick={() => void download()} disabled={total === 0 || exporting}>
+              {exporting
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <Download className="mr-2 h-4 w-4" />}
+              {exporting ? "Preparando..." : "Exportar"}
             </Button>
             {canEdit && (
               <Button onClick={() => openEditor()}>
@@ -277,25 +325,43 @@ export function FolderGlossaryManager({
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>{filtered.length.toLocaleString("pt-BR")} termo(s)</span>
-        {!canEdit && <Badge variant="outline">Somente leitura</Badge>}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+        <span>
+          {total === 0
+            ? "0 termo(s)"
+            : `Exibindo ${firstVisible.toLocaleString("pt-BR")}–${lastVisible.toLocaleString("pt-BR")} de ${total.toLocaleString("pt-BR")} termo(s)`}
+        </span>
+        <div className="flex items-center gap-2">
+          {isFetching && !isLoading && (
+            <span className="flex items-center gap-1 text-xs">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />Atualizando
+            </span>
+          )}
+          {!canEdit && <Badge variant="outline">Somente leitura</Badge>}
+        </div>
       </div>
 
       {isLoading ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">Carregando glossário...</Card>
-      ) : filtered.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin" />
+          Carregando página do glossário...
+        </Card>
+      ) : entries.length === 0 ? (
         <Card className="border-dashed p-10 text-center">
-          <CardTitle className="text-lg">Nenhum termo nesta pasta</CardTitle>
+          <CardTitle className="text-lg">
+            {search.trim() || sideFilter !== "all" ? "Nenhum resultado encontrado" : "Nenhum termo nesta pasta"}
+          </CardTitle>
           <p className="mt-2 text-sm text-muted-foreground">
-            {canEdit
-              ? "Importe um JSON ou adicione a primeira entrada."
-              : "O professor ainda não adicionou um glossário."}
+            {search.trim() || sideFilter !== "all"
+              ? "Tente remover parte da busca ou alterar o filtro de lado."
+              : canEdit
+                ? "Importe um JSON ou adicione a primeira entrada."
+                : "O professor ainda não adicionou um glossário."}
           </p>
         </Card>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {filtered.map((entry) => (
+          {entries.map((entry) => (
             <Card key={entry.id} className={entry.is_active ? "" : "opacity-60"}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-3">
@@ -346,6 +412,32 @@ export function FolderGlossaryManager({
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {total > PAGE_SIZE && (
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border bg-muted/20 p-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((value) => Math.max(0, value - 1))}
+            disabled={page === 0 || isFetching}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />Anterior
+          </Button>
+          <span className="min-w-28 text-center text-sm text-muted-foreground">
+            Página {(page + 1).toLocaleString("pt-BR")} de {pageCount.toLocaleString("pt-BR")}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}
+            disabled={page + 1 >= pageCount || isFetching}
+          >
+            Próxima<ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
         </div>
       )}
 
@@ -404,7 +496,7 @@ export function FolderGlossaryManager({
           <DialogHeader>
             <DialogTitle>Importar glossário para esta pasta</DialogTitle>
             <DialogDescription>
-              O conteúdo ficará disponível para todas as listas de “{folderTitle}”.
+              O conteúdo ficará disponível para todas as listas de “{folderTitle}”. Termos repetidos serão agrupados automaticamente.
             </DialogDescription>
           </DialogHeader>
 
@@ -472,6 +564,11 @@ export function FolderGlossaryManager({
                     </p>
                     {importPreview.error && (
                       <p className="mt-1 text-sm text-destructive">{importPreview.error}</p>
+                    )}
+                    {importEntries.isPending && importProgress && (
+                      <p className="mt-1 text-sm text-primary">
+                        Processadas {importProgress.processed.toLocaleString("pt-BR")} de {importProgress.total.toLocaleString("pt-BR")} entrada(s).
+                      </p>
                     )}
                   </div>
                 </div>
