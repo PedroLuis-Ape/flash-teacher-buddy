@@ -5,15 +5,12 @@ import { listIdFromPath, isPublicListPath } from "@/lib/listRoute";
 import { useListPrimarySide } from "@/lib/useListPrimarySide";
 import { primarySideToDirection } from "@/lib/primarySideDirection";
 import { getMixedFlipSlotMode, isMixedStudySession } from "@/features/study/lib/runtimeStudySchedule";
-import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
-import { useTTS } from "@/features/study/hooks/useTTS";
 import { readFlipAutoPlayState } from "@/features/study/lib/flipAutoPlayState";
 import {
   FLIP_ENTRY_AUDIO_DELAY_MS,
   readFlipEntryAudioPreference,
   writeFlipEntryAudioPreference,
 } from "@/features/study/lib/flipEntryAudioPreference";
-import { getSpeechRate } from "./SpeechRateControl";
 import { StudyCardDeck } from "./StudyCardDeck";
 import { MixedSlotActivity } from "./MixedSlotActivity";
 
@@ -39,25 +36,7 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
   const mixedSlotMode = isMixedStudySession() ? getMixedFlipSlotMode(cardKey) : null;
   const [autoSpeakOnCardChange, setAutoSpeakOnCardChange] = useState(readFlipEntryAudioPreference);
   const scheduledCardRef = useRef<string | null>(null);
-  const { speak, stop } = useTTS();
-
-  const entrySpeech = useMemo(() => {
-    const sideA = {
-      text: props.front,
-      lang: props.langA || "en",
-      label: props.labelA || "Termo",
-    };
-    const sideB = {
-      text: props.back,
-      lang: props.langB || "pt",
-      label: props.labelB || "Definição",
-    };
-    const { promptSide } = resolveStudySides(sideA, sideB, props.direction, cardKey);
-    return {
-      text: promptSide.text,
-      lang: toBCP47(promptSide.lang),
-    };
-  }, [cardKey, props.back, props.direction, props.front, props.labelA, props.labelB, props.langA, props.langB]);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scheduledCardRef.current === cardKey) return;
@@ -69,23 +48,20 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
       if (readFlipAutoPlayState().enabled) return;
       if (window.speechSynthesis?.speaking || window.speechSynthesis?.pending) return;
 
-      void speak(entrySpeech.text, {
-        langOverride: entrySpeech.lang,
-        rate: getSpeechRate(),
-      });
+      const audioButton = Array.from(
+        rootRef.current?.querySelectorAll<HTMLButtonElement>('button[title="Ouvir áudio"]') ?? [],
+      ).find((button) => !button.disabled);
+
+      audioButton?.click();
     }, FLIP_ENTRY_AUDIO_DELAY_MS);
 
-    return () => {
-      window.clearTimeout(timer);
-      stop();
-    };
-  }, [autoSpeakOnCardChange, cardKey, entrySpeech.lang, entrySpeech.text, mixedSlotMode, props.ttsEnabled, speak, stop]);
+    return () => window.clearTimeout(timer);
+  }, [autoSpeakOnCardChange, cardKey, mixedSlotMode, props.ttsEnabled]);
 
   const toggleAutoSpeak = () => {
     const next = !autoSpeakOnCardChange;
     setAutoSpeakOnCardChange(next);
     writeFlipEntryAudioPreference(next);
-    if (!next) stop();
   };
 
   if (mixedSlotMode) {
@@ -143,7 +119,7 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
   const audioAvailable = props.ttsEnabled !== false;
 
   return (
-    <div className="w-full space-y-2">
+    <div ref={rootRef} className="w-full space-y-2">
       <div className="flex flex-wrap justify-center gap-2 text-[11px]">
         {listId && (
           <>
