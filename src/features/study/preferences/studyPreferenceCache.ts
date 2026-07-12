@@ -137,6 +137,15 @@ export function enqueuePendingPreferenceWrite(
   replacePendingPreferenceWrites(userId, next.sort((left, right) => left.updatedAt - right.updatedAt));
 }
 
+export function stagePendingPreferenceWrites(
+  userId: string,
+  writes: PendingPreferenceWrite[],
+): void {
+  [...writes]
+    .sort((left, right) => left.updatedAt - right.updatedAt)
+    .forEach((write) => enqueuePendingPreferenceWrite(userId, write));
+}
+
 export function migrateLegacyStudyPreferences(userId: string): StudyPreset | null {
   const current = readGlobalCache(userId);
   if (current) return current;
