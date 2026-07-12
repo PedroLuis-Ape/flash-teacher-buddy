@@ -77,11 +77,14 @@ describe("folder glossary coverage audit", () => {
     const originalWorker = globalThis.Worker;
     vi.stubGlobal("Worker", undefined);
 
-    await expect(analyzeFolderGlossaryCoverageOffThread(analysisInput))
-      .resolves.toEqual(report);
-
-    if (originalWorker) vi.stubGlobal("Worker", originalWorker);
-    else vi.unstubAllGlobals();
+    try {
+      const fallbackReport = await analyzeFolderGlossaryCoverageOffThread(analysisInput);
+      expect({ ...fallbackReport, generatedAt: "dynamic" })
+        .toEqual({ ...report, generatedAt: "dynamic" });
+    } finally {
+      if (originalWorker) vi.stubGlobal("Worker", originalWorker);
+      else vi.unstubAllGlobals();
+    }
   });
 
   it("bundles a dedicated worker for browser audits", () => {
