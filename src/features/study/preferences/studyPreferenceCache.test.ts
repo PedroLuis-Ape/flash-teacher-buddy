@@ -8,6 +8,7 @@ import {
   readPendingPreferenceWrites,
   removeListOverrideCache,
   replacePendingPreferenceWrites,
+  stagePendingPreferenceWrites,
   writeGlobalCache,
   writeListOverrideCache,
 } from "./studyPreferenceCache";
@@ -92,5 +93,40 @@ describe("studyPreferenceCache", () => {
 
     replacePendingPreferenceWrites("user-1", []);
     expect(readPendingPreferenceWrites("user-1")).toEqual([]);
+  });
+
+  it("stages only the latest write for each target during navigation", () => {
+    stagePendingPreferenceWrites("user-1", [
+      {
+        kind: "global-upsert",
+        preset: DEFAULT_STUDY_PRESET,
+        updatedAt: 1,
+      },
+      {
+        kind: "global-upsert",
+        preset: { ...DEFAULT_STUDY_PRESET, mode: "mixed" },
+        updatedAt: 2,
+      },
+      {
+        kind: "list-upsert",
+        listId: "list-1",
+        override: { order: "sequential" },
+        updatedAt: 3,
+      },
+    ]);
+
+    expect(readPendingPreferenceWrites("user-1")).toEqual([
+      {
+        kind: "global-upsert",
+        preset: { ...DEFAULT_STUDY_PRESET, mode: "mixed" },
+        updatedAt: 2,
+      },
+      {
+        kind: "list-upsert",
+        listId: "list-1",
+        override: { order: "sequential" },
+        updatedAt: 3,
+      },
+    ]);
   });
 });
