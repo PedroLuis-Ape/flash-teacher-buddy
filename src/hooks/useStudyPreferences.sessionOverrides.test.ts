@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { derivePrivateListId, parseStudySessionOverrides } from "./useStudyPreferences";
+import {
+  derivePrivateListId,
+  parseStudySessionOverrides,
+  shouldPersistStudyPreferences,
+} from "./useStudyPreferences";
 
 describe("study session URL overrides", () => {
   it("parses supported temporary values", () => {
@@ -30,5 +34,12 @@ describe("study session URL overrides", () => {
     expect(derivePrivateListId("/list/list-1/study")).toBe("list-1");
     expect(derivePrivateListId("/portal/list/list-1/study")).toBeUndefined();
     expect(derivePrivateListId("/collection/collection-1/study")).toBeUndefined();
+  });
+
+  it("keeps portal changes temporary unless explicitly enabled", () => {
+    expect(shouldPersistStudyPreferences("/portal/list/list-1/study")).toBe(false);
+    expect(shouldPersistStudyPreferences("/list/list-1/study")).toBe(true);
+    expect(shouldPersistStudyPreferences("/portal/list/list-1/study", true)).toBe(true);
+    expect(shouldPersistStudyPreferences("/list/list-1/study", false)).toBe(false);
   });
 });
