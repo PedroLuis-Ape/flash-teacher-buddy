@@ -1,23 +1,79 @@
-/**
- * Persistence helpers for layered cards.
- *
- * A "layered card" is just a normal flashcard row whose `parent_card_id`
- * points to another flashcard (the "principal"). The principal aggregates
- * meaning-layers; each layer is a real `flashcards` row and therefore inherits
- * the existing RLS, progress tracking and study-engine behaviour.
- *
- * This module exposes three operations:
- *   - createLayeredCard:  insert principal + N layers (used by importer).
- *   - mergeIntoLayers:    promote N existing cards into layers under a new
- *                         principal (used by FlashcardList → "Mesclar").
- *   - unmergeLayers:      detach all layers from a principal (used by editor).
- *
- * All operations are additive — they do NOT touch flashcards outside the
- * provided IDs and never delete user data.
- */
-
 import { supabase } from "@/integrations/supabase/client";
 import type { LayeredGroup } from "./layeredImport";
+import {
+  normalizeLayeredCardDrafts,
+  validateLayeredCardDrafts,
+  type LayeredCardDraft,
+} from "./layeredCardDraft";
+
+export interface SaveLayeredCardGroupArgs {
+  principalId?: string | null;
+  listId: string;
+  title: string;
+  layers: LayeredCardDraft[];
+}
+
+export interface SaveLayeredCardGroupResult {
+  principalId: string;
+  layerIds: string[];
+}
+
+function layeredRpcError(error: unknown): Error {
+  const input = error as { code?: unknown; message?: unknown } | null;
+  const code = typeof input?.code === "string" ? input.code : "";
+  const message = typeof input?.message === "string" ? input.message : "";
+  if (code === "PGRST202" || message.toLowerCase().includes("save_layered_card_group_v2")) {
+    return new Error(
+      "O banco conectado ainda não recebeu a atualização atômica das camadas. "
+      + "Aplique a migration 20260712223000_atomic_layered_card_groups.sql.",
+    );
+  }
+  return error instanceof Error ? error : new Error(message || "Não foi possível salvar as camadas.");
+}
+
+export async function saveLayeredCardGroup({
+  principalId = null,
+  listId,
+  title,
+  layers,
+}: SaveLayeredCardGroupArgs): Promise<SaveLayeredCardGroupResult> {
+  const normalizedTitle = title.trim();
+  if (!normalizedTitle) throw new Error("Defina um título para o card em camadas.");
+
+  const normalizedLayers = normalizeLayeredCardDrafts(layers);
+  const errors = validateLayeredCardDrafts(normalizedLayers);
+  if (errors.length > 0) throw new Error(errors[0]);
+
+  const payload = normalizedLayers.map((layer) => ({
+    ...(layer.id ? { id: layer.id } : {}),
+    front: layer.front,
+    back: layer.back,
+    example: layer.example ?? null,
+    example_translation: layer.exampleTranslation ?? null,
+  }));
+
+  const { data, error } = await (supabase as any).rpc("save_layered_card_group_v2", {
+    _principal_id: principalId,
+    _list_id: listId,
+    _title: normalizedTitle,
+    _layers: payload,
+  });
+
+  if (error) throw layeredRpcError(error);
+  const result = data as {
+    success?: boolean;
+    principal_id?: string;
+    layer_ids?: string[];
+  } | null;
+  if (!result?.success || !result.principal_id) {
+    throw new Error("O banco não confirmou o salvamento das camadas.");
+  }
+
+  return {
+    principalId: result.principal_id,
+    layerIds: Array.isArray(result.layer_ids) ? result.layer_ids : [],
+  };
+}
 
 export interface CreateLayeredCardArgs {
   listId: string;
@@ -27,55 +83,27 @@ export interface CreateLayeredCardArgs {
 
 export async function createLayeredCard({
   listId,
-  userId,
+  userId: _userId,
   group,
 }: CreateLayeredCardArgs): Promise<{ principalId: string }> {
-  // 1) Create principal (aggregator). translation stays empty so it does not
-  // pretend to be a single-meaning answer in study modes — it acts purely as
-  // a label/folder for the layers.
-  const { data: principal, error: pErr } = await supabase
-    .from("flashcards")
-    .insert({
-      list_id: listId,
-      user_id: userId,
-      term: group.term,
-      translation: group.layers[0]?.translation ?? "", // safe default
-    })
-    .select("id")
-    .single();
-
-  if (pErr || !principal) throw pErr ?? new Error("Falha ao criar card principal");
-
-  // 2) Create one row per layer, linked to the principal.
-  const layerRows = group.layers.map((L, i) => ({
-    list_id: listId,
-    user_id: userId,
-    // Each layer may carry its own side-A text (new `[CAMADAS]` format where
-    // layers are full phrases under a shared group title). Falls back to the
-    // group term for legacy compatibility.
-    term: L.term ?? group.term,
-    translation: L.translation,
-    example_text: L.example ?? null,
-    example_translation: L.exampleTranslation ?? null,
-    context_tag: L.contextTag ?? null,
-    short_explanation: L.shortExplanation ?? null,
-    parent_card_id: principal.id,
-    layer_index: i,
-  }));
-
-  if (layerRows.length > 0) {
-    const { error: lErr } = await supabase.from("flashcards").insert(layerRows);
-    if (lErr) throw lErr;
-  }
-
-  return { principalId: principal.id };
+  void _userId;
+  const result = await saveLayeredCardGroup({
+    listId,
+    title: group.term,
+    layers: group.layers.map((layer) => ({
+      front: layer.term ?? group.term,
+      back: layer.translation,
+      example: layer.example ?? null,
+      exampleTranslation: layer.exampleTranslation ?? null,
+    })),
+  });
+  return { principalId: result.principalId };
 }
 
 export interface MergeIntoLayersArgs {
   listId: string;
   userId: string;
   cardIds: string[];
-  /** Title for the new principal card. */
   title: string;
 }
 
