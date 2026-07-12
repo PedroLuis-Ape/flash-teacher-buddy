@@ -115,6 +115,30 @@ describe("large folder glossary imports", () => {
     expect(result).toMatchObject({ inserted: 400, updated: 0, mode: "merge" });
   });
 
+  it("keeps a dry-run in one atomic RPC call", async () => {
+    mocks.rpc.mockImplementation(async (_name: string, args: Record<string, unknown>) => ({
+      data: resultFor(args),
+      error: null,
+    }));
+
+    const result = await importFolderGlossary(
+      "folder-1",
+      entries(400),
+      "replace",
+      true,
+      { chunkSize: 100 },
+    );
+
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc.mock.calls[0]?.[1]).toMatchObject({
+      _mode: "replace",
+      _dry_run: true,
+    });
+    expect(((mocks.rpc.mock.calls[0]?.[1] as Record<string, unknown>)._entries as unknown[]))
+      .toHaveLength(400);
+    expect(result).toMatchObject({ inserted: 400, dry_run: true, mode: "replace" });
+  });
+
   it("returns a clear error when even the minimum batch times out", async () => {
     mocks.rpc.mockResolvedValue({
       data: null,
