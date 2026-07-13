@@ -110,12 +110,34 @@ for (const generatedPath of report.generatedPaths) {
   assert.ok(deployedRedirects.includes(`${generatedPath}/index.html`), `${generatedPath}: redirect pré-renderizado ausente.`);
 }
 
-const migration = readFileSync(resolve(root, "supabase/migrations/20260713134000_public_learning_resource_discovery.sql"), "utf8");
-assert.ok(migration.includes("list_public_learning_resource_entries"));
-assert.ok(migration.includes("get_public_learning_resource_lists"));
-assert.ok(migration.includes("l.visibility = 'class'"));
-assert.ok(migration.includes("l.class_id IS NULL"));
-assert.ok(migration.includes("REVOKE ALL ON FUNCTION"));
-assert.ok(migration.includes("GRANT EXECUTE"));
+const discoveryMigration = readFileSync(
+  resolve(root, "supabase/migrations/20260713134000_public_learning_resource_discovery.sql"),
+  "utf8",
+);
+const compatibilityMigration = readFileSync(
+  resolve(root, "supabase/migrations/20260713134600_public_learning_resource_compatibility.sql"),
+  "utf8",
+);
+const canonicalCountsMigration = readFileSync(
+  resolve(root, "supabase/migrations/20260713134700_public_learning_resource_canonical_counts.sql"),
+  "utf8",
+);
+
+assert.ok(discoveryMigration.includes("list_public_learning_resource_entries"));
+assert.ok(discoveryMigration.includes("get_public_learning_resource_lists"));
+assert.ok(discoveryMigration.includes("l.visibility = 'class'"));
+assert.ok(discoveryMigration.includes("l.class_id IS NULL"));
+assert.ok(discoveryMigration.includes("REVOKE ALL ON FUNCTION"));
+assert.ok(discoveryMigration.includes("GRANT EXECUTE"));
+
+assert.ok(compatibilityMigration.includes("t.public = true"));
+assert.ok(compatibilityMigration.includes("t.ativo = true"));
+assert.ok(compatibilityMigration.includes("fc.parent_card_id IS NULL"));
+assert.ok(compatibilityMigration.includes("a.fonte_tipo::text = 'lista'"));
+assert.ok(compatibilityMigration.includes("a.fonte_tipo::text = 'pasta'"));
+
+assert.equal((canonicalCountsMigration.match(/fc\.parent_card_id IS NULL/g) ?? []).length, 3);
+assert.ok(canonicalCountsMigration.includes("list_public_learning_resource_entries"));
+assert.ok(canonicalCountsMigration.includes("get_public_learning_resource_lists"));
 
 console.log(`Materiais públicos validados: ${report.resourceCount} recursos reais e contrato sintético completo.`);
