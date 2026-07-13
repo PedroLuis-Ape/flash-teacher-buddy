@@ -48,19 +48,29 @@ describe("public learning-resource discovery", () => {
     expect(app).toContain('path="/portal/folder/:id" element={<PublicFolderRoute />}');
   });
 
-  it("requires each anonymous list and card to remain explicitly public", () => {
-    const migration = readFileSync(
+  it("keeps editorial materials strict without breaking active public classrooms", () => {
+    const discoveryMigration = readFileSync(
       "supabase/migrations/20260713134000_public_learning_resource_discovery.sql",
       "utf8",
     );
+    const compatibilityMigration = readFileSync(
+      "supabase/migrations/20260713134600_public_learning_resource_compatibility.sql",
+      "utf8",
+    );
 
-    expect(migration).toContain("list_public_learning_resource_entries");
-    expect(migration).toContain("get_public_learning_resource_lists");
-    expect(migration.match(/l\.visibility = 'class'/g)?.length).toBeGreaterThanOrEqual(6);
-    expect(migration.match(/l\.class_id IS NULL/g)?.length).toBeGreaterThanOrEqual(6);
-    expect(migration).toContain("fc.user_id = f.owner_id");
-    expect(migration).toContain("REVOKE ALL ON FUNCTION");
-    expect(migration).toContain("GRANT EXECUTE");
+    expect(discoveryMigration).toContain("list_public_learning_resource_entries");
+    expect(discoveryMigration).toContain("get_public_learning_resource_lists");
+    expect(discoveryMigration.match(/l\.visibility = 'class'/g)?.length).toBeGreaterThanOrEqual(6);
+    expect(discoveryMigration.match(/l\.class_id IS NULL/g)?.length).toBeGreaterThanOrEqual(6);
+    expect(discoveryMigration).toContain("fc.user_id = f.owner_id");
+
+    expect(compatibilityMigration).toContain("fc.parent_card_id IS NULL");
+    expect(compatibilityMigration).toContain("t.public = true");
+    expect(compatibilityMigration).toContain("t.ativo = true");
+    expect(compatibilityMigration).toContain("a.fonte_tipo::text = 'lista'");
+    expect(compatibilityMigration).toContain("a.fonte_tipo::text = 'pasta'");
+    expect(compatibilityMigration).toContain("REVOKE ALL ON FUNCTION");
+    expect(compatibilityMigration).toContain("GRANT EXECUTE");
   });
 
   it("integrates static resource generation and validation into production builds", () => {
