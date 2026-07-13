@@ -4,6 +4,7 @@ import { FolderGlossaryBulkDeleteCard } from "./FolderGlossaryBulkDeleteCard";
 import { FolderGlossaryCoverageCard } from "./FolderGlossaryCoverageCard";
 import { FolderGlossaryForceSyncCard } from "./FolderGlossaryForceSyncCard";
 import { FolderGlossaryManager as FolderGlossaryManagerCore } from "./FolderGlossaryManagerCore";
+import { FolderGlossarySemanticReviewCard } from "./FolderGlossarySemanticReviewCard";
 
 interface Props {
   folderId: string;
@@ -29,6 +30,12 @@ export function FolderGlossaryManager(props: Props) {
             labelB={props.labelB}
           />
           <FolderGlossaryCoverageCard
+            folderId={props.folderId}
+            folderTitle={props.folderTitle}
+            labelA={props.labelA}
+            labelB={props.labelB}
+          />
+          <FolderGlossarySemanticReviewCard
             folderId={props.folderId}
             folderTitle={props.folderTitle}
             labelA={props.labelA}
