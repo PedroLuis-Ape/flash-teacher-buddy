@@ -52,7 +52,18 @@ jobs:
         run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Validate browser and edge contract
-        run: node scripts/validate-core-web-vitals-rum.mjs
+        run: |
+          set -o pipefail
+          node scripts/validate-core-web-vitals-rum.mjs 2>&1 | tee rum-contract.log
+
+      - name: Upload RUM contract diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-web-vitals-rum-contract
+          path: rum-contract.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Run focused unit tests
         run: npx vitest run src/lib/coreWebVitalsRum.test.ts --passWithNoTests
