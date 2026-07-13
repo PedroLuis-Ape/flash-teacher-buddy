@@ -11,8 +11,15 @@ import {
 } from "@/components/ui/dialog";
 import { useFolderGlossary } from "@/hooks/useFolderGlossary";
 import { loadFolderGlossary } from "@/features/study/lib/folderGlossaryApi";
-import { loadFolderGlossaryCoverage, type FolderGlossaryCoverageReport } from "@/features/study/lib/folderGlossaryCoverage";
-import type { FolderGlossaryEntry, FolderGlossaryInput } from "@/features/study/lib/folderGlossaryTypes";
+import {
+  loadFolderGlossaryCoverage,
+  type FolderGlossaryCoverageReport,
+} from "@/features/study/lib/folderGlossaryCoverage";
+import { enrichSemanticCoverageReport } from "@/features/study/lib/folderGlossarySemanticContext";
+import type {
+  FolderGlossaryEntry,
+  FolderGlossaryInput,
+} from "@/features/study/lib/folderGlossaryTypes";
 import { FolderGlossarySemanticReview } from "./FolderGlossarySemanticReview";
 
 interface Props {
@@ -41,7 +48,8 @@ export function FolderGlossarySemanticReviewCard({
     setError(null);
     try {
       const latest = await loadFolderGlossary(folderId);
-      const nextReport = await loadFolderGlossaryCoverage(folderId, latest.entries);
+      const baseReport = await loadFolderGlossaryCoverage(folderId, latest.entries);
+      const nextReport = enrichSemanticCoverageReport(baseReport, latest.entries);
       setGlossary(latest.entries);
       setReport(nextReport);
     } catch (cause) {
