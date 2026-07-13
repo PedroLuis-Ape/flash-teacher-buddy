@@ -8,6 +8,7 @@ import {
   analyzeFolderGlossaryCoverageRows,
   serializeMissingCoverageTerms,
 } from "./lib/folderGlossaryCoverage";
+import { getFolderGlossaryCoveragePresentation } from "./lib/folderGlossaryCoveragePresentation";
 import type { FolderGlossaryEntry } from "./lib/folderGlossaryTypes";
 
 const makeEntry = (
@@ -73,6 +74,23 @@ describe("folder glossary coverage audit", () => {
     });
   });
 
+  it("never rounds an incomplete audit up to a complete 100 percent", () => {
+    const presentation = getFolderGlossaryCoveragePresentation(8_621, 8_656);
+    expect(presentation).toEqual({
+      percent: 99.6,
+      label: "99,6",
+      complete: false,
+    });
+  });
+
+  it("shows complete only when every occurrence is covered", () => {
+    expect(getFolderGlossaryCoveragePresentation(8_656, 8_656)).toEqual({
+      percent: 100,
+      label: "100",
+      complete: true,
+    });
+  });
+
   it("falls back to the same analyzer when workers are unavailable", async () => {
     const originalWorker = globalThis.Worker;
     vi.stubGlobal("Worker", undefined);
@@ -124,5 +142,7 @@ describe("folder glossary coverage audit", () => {
     expect(component).toContain("Exportar pendências JSON");
     expect(component).toContain("Exportar cobertas JSON");
     expect(component).toContain("Importar pendências preenchidas");
+    expect(component).toContain("coverage.complete");
+    expect(component).not.toContain("coveragePercent === 100");
   });
 });
