@@ -1,16 +1,18 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import type { GlossaryTransferEntry } from "@/features/study/lib/glossaryTransfer";
 import type { AccountGlossaryEntry } from "@/features/study/lib/accountGlossaryTypes";
 import {
   addFolderGlossaryEntry,
   deleteFolderGlossaryEntries,
   importFolderGlossary,
-  loadFolderGlossaryForList,
   updateFolderGlossaryEntry,
 } from "@/features/study/lib/folderGlossaryApi";
+import {
+  loadListGlossaryRuntime,
+  type ListGlossaryRuntimeSource,
+} from "@/features/study/lib/listGlossaryRuntime";
 import {
   publishFolderGlossaryRefresh,
   subscribeFolderGlossaryRefresh,
@@ -32,23 +34,20 @@ export interface GlossaryImportResult {
   skipped: number;
 }
 
+export type ListGlossaryStatus = "idle" | "loading" | "ready" | "empty" | "error";
+
 export const FOLDER_GLOSSARY_QUERY_KEY = ["folder-glossary"] as const;
 export const ACCOUNT_GLOSSARY_QUERY_KEY = FOLDER_GLOSSARY_QUERY_KEY;
 
 const EMPTY_GLOSSARY: GlossaryEntry[] = [];
 
 async function loadListGlossaryContext(listId: string) {
-  const [{ data: list, error: listError }, glossary] = await Promise.all([
-    supabase.from("lists").select("folder_id").eq("id", listId).maybeSingle(),
-    loadFolderGlossaryForList(listId),
-  ]);
-  if (listError) throw listError;
-  if (!list?.folder_id) throw new Error("A lista não pertence a uma pasta válida.");
-  return { folderId: list.folder_id as string, glossary: glossary as GlossaryEntry[] };
+  return loadListGlossaryRuntime(listId);
 }
 
 export function useListGlossary(listId?: string) {
   const queryClient = useQueryClient();
+  const lastReportedErrorRef = useRef<unknown>(null);
   const queryKey = useMemo(
     () => [...FOLDER_GLOSSARY_QUERY_KEY, "list", listId ?? "none"] as const,
     [listId],
@@ -64,13 +63,50 @@ export function useListGlossary(listId?: string) {
   });
 
   const folderId = query.data?.folderId;
-  const glossary = query.data?.glossary ?? EMPTY_GLOSSARY;
+  const source = query.data?.source as ListGlossaryRuntimeSource | undefined;
+  const recoveredFrom = query.data?.recoveredFrom ?? [];
+  const glossary = (query.data?.glossary ?? EMPTY_GLOSSARY) as GlossaryEntry[];
   const activeGlossary = useMemo(
     () => glossary.every((entry) => entry.is_active)
       ? glossary
       : glossary.filter((entry) => entry.is_active),
     [glossary],
   );
+  const status: ListGlossaryStatus = !listId
+    ? "idle"
+    : query.isLoading
+      ? "loading"
+      : query.isError
+        ? "error"
+        : activeGlossary.length > 0
+          ? "ready"
+          : "empty";
+
+  useEffect(() => {
+    if (!query.error) {
+      lastReportedErrorRef.current = null;
+      return;
+    }
+    if (lastReportedErrorRef.current === query.error) return;
+    lastReportedErrorRef.current = query.error;
+    const message = query.error instanceof Error
+      ? query.error.message
+      : "Não foi possível carregar o glossário desta lista.";
+    toast.error(message, {
+      description: "Os dados não foram apagados. Tente recarregar a lista.",
+    });
+  }, [query.error]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || recoveredFrom.length === 0) return;
+    console.warn("[GlossaryRuntime] leitura recuperada por fallback", {
+      listId,
+      folderId,
+      source,
+      recoveredFrom,
+      loadedEntries: activeGlossary.length,
+    });
+  }, [activeGlossary.length, folderId, listId, recoveredFrom, source]);
 
   useEffect(() => subscribeFolderGlossaryRefresh((report) => {
     if (!folderId || report.folderId !== folderId) return;
@@ -217,8 +253,14 @@ export function useListGlossary(listId?: string) {
   return {
     glossary,
     activeGlossary,
+    folderId,
+    status,
+    source,
+    recoveredFrom,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     error: query.error,
+    refetch: query.refetch,
     addEntry,
     updateEntry,
     deleteEntry,

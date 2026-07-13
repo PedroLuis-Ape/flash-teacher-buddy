@@ -5,6 +5,8 @@
  */
 
 const STORAGE_KEY = "ape-performance-settings";
+const STORAGE_VERSION_KEY = "ape-performance-settings-version";
+const STORAGE_VERSION = 2;
 
 export type PerformancePreset = "high" | "balanced" | "light";
 export type GalaxyVisualQuality = "standard" | "high";
@@ -67,7 +69,9 @@ export const PRESET_LIGHT: PerformanceSettings = {
   soundEffects: false,
   animations: false,
   hoverEffects: false,
-  wordTooltips: false,
+  // Glossary translations are learning content, not a decorative effect.
+  // Keep them available even in the light preset.
+  wordTooltips: true,
   decorativeEffects: false,
   visualFeedback: false,
   highQualityImages: false,
@@ -92,13 +96,36 @@ export function getRecommendedPerformanceSettings(): PerformanceSettings {
   return { ...(shouldPreferBalanced() ? PRESET_BALANCED : PRESET_HIGH) };
 }
 
+function migrateStoredSettings(
+  parsed: Partial<PerformanceSettings>,
+  version: number,
+): PerformanceSettings {
+  const next = { ...getRecommendedPerformanceSettings(), ...parsed };
+
+  // v2: older light presets silently disabled the entire glossary UI. Restore
+  // the core learning feature while preserving explicit custom configurations.
+  if (version < 2 && parsed.preset === "light" && parsed.wordTooltips === false) {
+    next.wordTooltips = true;
+  }
+
+  return next;
+}
+
 export function readPerformanceSettings(): PerformanceSettings {
   if (typeof window === "undefined") return { ...PRESET_BALANCED };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return getRecommendedPerformanceSettings();
     const parsed = JSON.parse(raw) as Partial<PerformanceSettings>;
-    return { ...getRecommendedPerformanceSettings(), ...parsed };
+    const version = Number(localStorage.getItem(STORAGE_VERSION_KEY) ?? 0);
+    const migrated = migrateStoredSettings(parsed, Number.isFinite(version) ? version : 0);
+
+    if (version < STORAGE_VERSION) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
+    }
+
+    return migrated;
   } catch {
     return getRecommendedPerformanceSettings();
   }
@@ -108,6 +135,7 @@ export function writePerformanceSettings(settings: PerformanceSettings): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
   } catch {
     // Best effort only.
   }
