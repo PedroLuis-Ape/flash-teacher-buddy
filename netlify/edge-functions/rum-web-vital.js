@@ -1,5 +1,5 @@
-const PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
-const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
+const OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
+const OFFICIAL_SUPABASE_URL = `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`;
 const CANONICAL_HOST = "www.apeeducation.org";
 const MAX_BODY_BYTES = 4096;
 const ALLOWED_KEYS = new Set([
@@ -43,14 +43,14 @@ function validateServiceCredential(value) {
   const parts = value.split(".");
   if (parts.length !== 3) return false;
   const payload = decodeBase64Url(parts[1]);
-  return payload?.ref === PRODUCTION_DATA_PROJECT_ID && payload?.role === "service_role";
+  return payload?.ref === OFFICIAL_SUPABASE_PROJECT_ID && payload?.role === "service_role";
 }
 
 export function resolveRumRuntime(overrides = {}) {
   const candidateUrl = overrides.url
     ?? readEdgeEnvironment("VITE_SUPABASE_URL")
     ?? readEdgeEnvironment("SUPABASE_URL")
-    ?? PRODUCTION_DATA_URL;
+    ?? OFFICIAL_SUPABASE_URL;
   const serviceKey = overrides.serviceKey
     ?? readEdgeEnvironment("SUPABASE_SERVICE_ROLE_KEY")
     ?? readEdgeEnvironment("SUPABASE_SECRET_KEY");
@@ -59,7 +59,7 @@ export function resolveRumRuntime(overrides = {}) {
     const parsed = new URL(candidateUrl);
     if (
       parsed.protocol === "https:"
-      && parsed.hostname === `${PRODUCTION_DATA_PROJECT_ID}.supabase.co`
+      && parsed.hostname === `${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`
       && validateServiceCredential(serviceKey)
     ) {
       return { url: parsed.origin, serviceKey };
