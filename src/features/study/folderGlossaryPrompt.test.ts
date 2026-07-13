@@ -80,7 +80,7 @@ describe("folder glossary AI prompt", () => {
     expect(prompt).toContain("Não use alternatives como depósito de significados aleatórios de dicionário");
     expect(prompt).toContain("note deve explicar claramente qual sentido foi escolhido como principal");
     expect(prompt).toContain("não esconda o conflito usando uma tradução genérica");
-    expect(prompt).toContain("não crie entradas duplicadas no mesmo lado para contornar a deduplicação do importador");
+    expect(prompt).toContain("Não crie entradas duplicadas no mesmo lado para contornar a deduplicação do importador");
     expect(prompt).toContain("term e translation idênticos indicam provável erro");
   });
 
