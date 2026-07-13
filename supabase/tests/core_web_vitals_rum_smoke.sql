@@ -130,6 +130,36 @@ BEGIN
   EXCEPTION WHEN SQLSTATE '22023' THEN
     NULL;
   END;
+
+  BEGIN
+    PERFORM public.record_web_vital_sample(
+      '71717171-7171-4171-8171-717171717171',
+      'LCP', 'NaN'::double precision, 'poor', '/rum-invalid', 'desktop', 'navigate', 0.1, NULL
+    );
+    RAISE EXCEPTION 'NaN metric value was accepted';
+  EXCEPTION WHEN SQLSTATE '22023' THEN
+    NULL;
+  END;
+
+  BEGIN
+    PERFORM public.record_web_vital_sample(
+      '72727272-7272-4272-8272-727272727272',
+      'INP', 'Infinity'::double precision, 'poor', '/rum-invalid', 'desktop', 'navigate', 0.1, NULL
+    );
+    RAISE EXCEPTION 'Infinite metric value was accepted';
+  EXCEPTION WHEN SQLSTATE '22023' THEN
+    NULL;
+  END;
+
+  BEGIN
+    PERFORM public.record_web_vital_sample(
+      '73737373-7373-4373-8373-737373737373',
+      'CLS', 0.05, 'good', '/rum-invalid', 'desktop', 'navigate', 'Infinity'::double precision, NULL
+    );
+    RAISE EXCEPTION 'Infinite sample rate was accepted';
+  EXCEPTION WHEN SQLSTATE '22023' THEN
+    NULL;
+  END;
 END;
 $$;
 
