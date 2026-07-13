@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PRESET_LIGHT,
   readPerformanceSettings,
@@ -22,6 +22,10 @@ beforeEach(() => {
   vi.stubGlobal("window", {
     matchMedia: vi.fn(() => ({ matches: false })),
   });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("performance settings glossary safety", () => {
