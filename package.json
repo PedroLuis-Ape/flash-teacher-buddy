@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/validate-international-seo.mjs && vite build && node scripts/prerender-public-teachers.mjs && node scripts/prerender-public-learning-resources.mjs && node scripts/prerender-international-pages.mjs && node scripts/prerender-public-pages.mjs && node scripts/validate-prerender.mjs && node scripts/validate-international-prerender.mjs && node scripts/validate-public-teacher-prerender.mjs && node scripts/validate-public-learning-resource-prerender.mjs && npm run check:bundle",
+    "build": "node scripts/validate-international-seo.mjs && node scripts/validate-public-entity-http-status.mjs && vite build && node scripts/prerender-public-teachers.mjs && node scripts/prerender-public-learning-resources.mjs && node scripts/prerender-international-pages.mjs && node scripts/prerender-public-pages.mjs && node scripts/validate-prerender.mjs && node scripts/validate-international-prerender.mjs && node scripts/validate-public-teacher-prerender.mjs && node scripts/validate-public-learning-resource-prerender.mjs && npm run check:bundle",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -89,7 +89,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
-    "lovable-tagger": "^1.1.10",
+    "lovable-tagger": "^1.10.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
