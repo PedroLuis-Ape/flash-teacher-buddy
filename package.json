@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/validate-international-seo.mjs && node scripts/validate-methodology-evidence-source.mjs && node scripts/validate-public-entity-http-status.mjs && vite build && node scripts/prerender-public-teachers.mjs && node scripts/prerender-public-learning-resources.mjs && node scripts/prerender-international-pages.mjs && node scripts/prerender-methodology-evidence.mjs && node scripts/prerender-public-pages.mjs && node scripts/validate-prerender.mjs && node scripts/validate-international-prerender.mjs && node scripts/validate-public-teacher-prerender.mjs && node scripts/validate-public-learning-resource-prerender.mjs && node scripts/validate-methodology-evidence-prerender.mjs && npm run check:bundle",
+    "build": "node scripts/validate-international-seo.mjs && node scripts/validate-methodology-evidence-source.mjs && node scripts/validate-public-entity-http-status.mjs && vite build && node scripts/prerender-public-teachers.mjs && node scripts/prerender-public-learning-resources.mjs && node scripts/prerender-public-learning-lists.mjs && node scripts/prerender-international-pages.mjs && node scripts/prerender-methodology-evidence.mjs && node scripts/prerender-public-pages.mjs && node scripts/validate-prerender.mjs && node scripts/validate-international-prerender.mjs && node scripts/validate-public-teacher-prerender.mjs && node scripts/validate-public-learning-resource-prerender.mjs && node scripts/validate-public-learning-list-prerender.mjs && node scripts/validate-methodology-evidence-prerender.mjs && npm run check:bundle",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -45,7 +45,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
     "@radix-ui/react-tabs": "^1.1.12",
-    "@radix-ui/react-toast": "^1.2.14",
+    "@radix-ui/react-toast": "^1.1.14",
     "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
