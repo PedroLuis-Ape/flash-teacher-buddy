@@ -1,35 +1,32 @@
 const PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
 const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
-const PRODUCTION_DATA_PUBLIC_VALUE = [
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-  ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
-  ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
-].join("");
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
 
 function readEdgeEnvironment(name) {
   try {
-    if (typeof Netlify !== "undefined" && Netlify?.env) {
-      return Netlify.env.get(name)?.trim() || undefined;
-    }
+    return globalThis.Netlify?.env?.get(name)?.trim() || undefined;
   } catch {
     // The validator runs in Node, where the Netlify global is intentionally absent.
+    return undefined;
   }
-  return undefined;
 }
 
-export function resolvePublicDataRuntime() {
-  const candidateUrl = readEdgeEnvironment("VITE_SUPABASE_URL")
-    ?? readEdgeEnvironment("SUPABASE_URL");
-  const candidateKey = readEdgeEnvironment("VITE_SUPABASE_PUBLISHABLE_KEY")
+export function resolvePublicDataRuntime(overrides = {}) {
+  const candidateUrl = overrides.url
+    ?? readEdgeEnvironment("VITE_SUPABASE_URL")
+    ?? readEdgeEnvironment("SUPABASE_URL")
+    ?? PRODUCTION_DATA_URL;
+  const candidateKey = overrides.publicValue
+    ?? readEdgeEnvironment("VITE_SUPABASE_PUBLISHABLE_KEY")
+    ?? readEdgeEnvironment("SUPABASE_PUBLISHABLE_KEY")
     ?? readEdgeEnvironment("SUPABASE_ANON_KEY");
 
   try {
-    const parsed = candidateUrl ? new URL(candidateUrl) : null;
+    const parsed = new URL(candidateUrl);
     if (
-      parsed?.protocol === "https:"
+      parsed.protocol === "https:"
       && parsed.hostname === `${PRODUCTION_DATA_PROJECT_ID}.supabase.co`
       && candidateKey
     ) {
@@ -39,10 +36,8 @@ export function resolvePublicDataRuntime() {
     // Invalid or non-production overrides are ignored deliberately.
   }
 
-  return {
-    url: PRODUCTION_DATA_URL,
-    publicValue: PRODUCTION_DATA_PUBLIC_VALUE,
-  };
+  // Missing function-scoped environment variables must not create false 404s.
+  return null;
 }
 
 function decodeSegment(value) {
@@ -97,6 +92,8 @@ export async function fetchPublicEntityHttpStatus(
   fetchImpl = fetch,
   runtime = resolvePublicDataRuntime(),
 ) {
+  if (!runtime) return null;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1800);
 
