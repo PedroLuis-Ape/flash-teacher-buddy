@@ -2,7 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
-const pages = JSON.parse(readFileSync(resolve(root, "config/public-seo-pages-international.json"), "utf8"));
+const pages = [
+  ...JSON.parse(readFileSync(resolve(root, "config/public-seo-pages-international.json"), "utf8")),
+  ...JSON.parse(readFileSync(resolve(root, "config/public-seo-official-sources.json"), "utf8")),
+];
 const errors = [];
 
 for (const page of pages) {
@@ -25,6 +28,16 @@ for (const page of pages) {
     if (!html.includes(`hreflang="${alternate.hrefLang}" href="${href}"`)) {
       errors.push(`${page.path}: alternate ${alternate.hrefLang} ausente`);
     }
+  }
+
+  if (page.officialSource) {
+    if (!html.includes(`"@type":["SoftwareApplication","EducationalApplication"]`)) {
+      errors.push(`${page.path}: entidade SoftwareApplication ausente`);
+    }
+    if (!html.includes(`"@type":"Person"`)) errors.push(`${page.path}: entidade Person ausente`);
+    if (!html.includes(`"@type":"FAQPage"`)) errors.push(`${page.path}: FAQPage ausente`);
+    if (!html.includes(page.citation.text)) errors.push(`${page.path}: descrição de citação ausente no HTML`);
+    if (!html.includes(`datetime="${page.dateModified}"`)) errors.push(`${page.path}: data editorial ausente`);
   }
 }
 
