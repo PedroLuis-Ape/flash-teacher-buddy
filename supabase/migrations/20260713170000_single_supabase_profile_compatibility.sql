@@ -13,6 +13,7 @@ END $$;
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS account_id uuid DEFAULT gen_random_uuid(),
   ADD COLUMN IF NOT EXISTS ape_id text,
+  ADD COLUMN IF NOT EXISTS display_name text,
   ADD COLUMN IF NOT EXISTS first_name text,
   ADD COLUMN IF NOT EXISTS google_connect_prompt_dont_show boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS google_connect_prompt_version_seen integer DEFAULT 0,
