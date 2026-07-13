@@ -339,6 +339,10 @@ export function startCoreWebVitalsRum() {
     storeSnapshot(snapshot);
   };
 
+  // A page with no layout shifts has a real CLS of zero. Recording the zero
+  // avoids biasing aggregates toward only the pages where a shift occurred.
+  update("CLS", 0);
+
   const observe = (type: string, callback: PerformanceObserverCallback, extra: Record<string, unknown> = {}) => {
     if (!PerformanceObserver.supportedEntryTypes?.includes(type)) return;
     try {
