@@ -32,8 +32,8 @@ const InternationalSEOPage = lazy(() => import("./pages/seo/InternationalSEOPage
 const OfficialSourcePage = lazy(() => import("./pages/seo/OfficialSourcePage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
-const Folder = lazy(() => import("./pages/Folder"));
 const FolderWithExport = lazy(() => import("./pages/FolderWithExport"));
+const PublicFolderRoute = lazy(() => import("./pages/PublicFolderRoute"));
 const ListDetail = lazy(() => import("./pages/ListDetail"));
 const Collection = lazy(() => import("./pages/Collection"));
 const PublicCollection = lazy(() => import("./pages/PublicCollection"));
@@ -173,7 +173,7 @@ const App = () => {
                           <Route path="/collection/:id/mixed-study" element={<MixedStudy />} />
                           <Route path="/portal" element={<PublicPortal />} />
                           <Route path="/portal/professor/:slug" element={<PublicTeacherProfile />} />
-                          <Route path="/portal/folder/:id" element={<Folder />} />
+                          <Route path="/portal/folder/:id" element={<PublicFolderRoute />} />
                           <Route path="/portal/list/:id/games" element={<PublicListGamesRoute />} />
                           <Route path="/portal/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
                           <Route path="/portal/list/:id/mixed-study" element={<ListDirectionGate><MixedStudy /></ListDirectionGate>} />
