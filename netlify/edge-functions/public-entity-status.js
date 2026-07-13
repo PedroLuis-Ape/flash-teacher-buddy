@@ -6,7 +6,7 @@ const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
 
 function readEdgeEnvironment(name) {
   try {
-    return globalThis.Netlify?.env?.get(name)?.trim() || undefined;
+    return Netlify.env.get(name)?.trim() || undefined;
   } catch {
     // The validator runs in Node, where the Netlify global is intentionally absent.
     return undefined;
@@ -201,23 +201,21 @@ export function createPublicEntityErrorResponse(statusCode, method = "GET") {
 }
 
 export default async function publicEntityStatusHandler(request) {
+  const method = request.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return;
+
   const route = classifyPublicEntityPath(request.url);
   if (!route) return;
   if (route.kind === "invalid") {
-    return createPublicEntityErrorResponse(404, request.method);
+    return createPublicEntityErrorResponse(404, method);
   }
 
   try {
     const status = await fetchPublicEntityHttpStatus(route);
     if (!status || status.statusCode === 200) return;
-    return createPublicEntityErrorResponse(status.statusCode, request.method);
+    return createPublicEntityErrorResponse(status.statusCode, method);
   } catch (error) {
     console.warn("[public-entity-status] status lookup bypassed", error);
     return;
   }
 }
-
-export const config = {
-  path: ["/portal/folder/*", "/portal/professor/*"],
-  method: ["GET", "HEAD"],
-};
