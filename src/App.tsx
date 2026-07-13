@@ -29,6 +29,7 @@ const AtividadesDeIngles = lazy(() => import("./pages/seo/AtividadesDeIngles"));
 const FlashcardsDeIngles = lazy(() => import("./pages/seo/FlashcardsDeIngles"));
 const ParaProfessores = lazy(() => import("./pages/seo/ParaProfessores"));
 const InternationalSEOPage = lazy(() => import("./pages/seo/InternationalSEOPage"));
+const OfficialSourcePage = lazy(() => import("./pages/seo/OfficialSourcePage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
 const Folder = lazy(() => import("./pages/Folder"));
@@ -146,11 +147,13 @@ const App = () => {
                           <Route path="/pt-br/flashcards" element={<InternationalSEOPage />} />
                           <Route path="/pt-br/para-professores" element={<InternationalSEOPage />} />
                           <Route path="/pt-br/sobre" element={<InternationalSEOPage />} />
+                          <Route path="/pt-br/fonte-oficial" element={<OfficialSourcePage />} />
                           <Route path="/en" element={<InternationalSEOPage />} />
                           <Route path="/en/features" element={<InternationalSEOPage />} />
                           <Route path="/en/flashcards" element={<InternationalSEOPage />} />
                           <Route path="/en/for-teachers" element={<InternationalSEOPage />} />
                           <Route path="/en/about" element={<InternationalSEOPage />} />
+                          <Route path="/en/official-source" element={<OfficialSourcePage />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/auth/callback" element={<AuthCallback />} />
                           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
