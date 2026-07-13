@@ -1,0 +1,538 @@
+[
+  {
+    "path": "/pt-br/metodologia",
+    "language": "pt-BR",
+    "title": "Metodologia do APE — Recuperação Ativa, Feedback e Revisão",
+    "description": "Entenda como o APE organiza recuperação ativa, feedback, revisão distribuída e variação de tarefas, além dos limites da metodologia.",
+    "h1": "Como a metodologia do APE transforma conteúdo em prática",
+    "intro": "A metodologia do APE não é um método fechado nem uma promessa de resultado. É uma arquitetura de prática que reutiliza o mesmo conteúdo em tarefas de reconhecimento, recuperação e produção, com feedback e revisão ao longo do tempo.",
+    "eyebrow": "Metodologia educacional documentada",
+    "datePublished": "2026-07-13",
+    "dateModified": "2026-07-13",
+    "schemaType": "Article",
+    "evidenceNotice": {
+      "heading": "O que esta página afirma — e o que não afirma",
+      "text": "A pesquisa citada sustenta princípios gerais de aprendizagem, como recuperação ativa e prática distribuída. Ela não constitui um ensaio controlado do APE como produto. O aplicativo implementa recursos coerentes com esses princípios, mas resultados dependem do conteúdo, da frequência, do feedback, do professor e do próprio estudante."
+    },
+    "sections": [
+      {
+        "heading": "1. Uma base de conteúdo, diferentes exigências cognitivas",
+        "paragraphs": [
+          "No APE, uma lista de palavras, frases ou conceitos pode alimentar flashcards, escrita, múltipla escolha, organização de frases e revisão do conteúdo difícil. A intenção é evitar que estudar se reduza a reconhecer passivamente uma resposta que acabou de ser vista.",
+          "Cada formato exige uma operação diferente. Reconhecer uma alternativa correta é diferente de produzir uma resposta sem pistas; ordenar uma frase é diferente de recuperar uma tradução; ouvir um item acrescenta uma representação auditiva. A alternância é usada para ampliar a prática, não para fingir que todas as tarefas medem a mesma habilidade."
+        ]
+      },
+      {
+        "heading": "2. Recuperar antes de revelar",
+        "paragraphs": [
+          "A recuperação ativa ocorre quando o estudante tenta reconstruir uma resposta antes de consultá-la. Estudos experimentais clássicos encontraram vantagens de retenção tardia para condições com testes de memória em comparação com releitura repetida, embora o desempenho imediato possa favorecer a releitura.",
+          "No aplicativo, esse princípio aparece quando a resposta fica oculta até a tentativa, quando o aluno escreve em vez de apenas olhar e quando itens difíceis voltam para novas tentativas. A tentativa precisa ser tratada como prática, não apenas como nota."
+        ]
+      },
+      {
+        "heading": "3. Feedback depois da tentativa",
+        "paragraphs": [
+          "Uma tentativa sem acesso posterior à resposta correta pode consolidar confusões. Por isso, o fluxo ideal combina esforço de recuperação com feedback claro, comparação com a resposta esperada e oportunidade de tentar novamente.",
+          "O professor continua responsável por qualidade, contexto e adequação. O APE pode organizar tradução, exemplos, glossário, dicas e áudio; ele não substitui a decisão pedagógica sobre o que conta como resposta correta ou útil."
+        ]
+      },
+      {
+        "heading": "4. Revisar em momentos diferentes",
+        "paragraphs": [
+          "Prática distribuída significa reencontrar o conteúdo depois de intervalos, em vez de concentrar toda a exposição numa única sessão. Revisões separadas no tempo costumam produzir retenção mais duradoura do que a mesma quantidade de prática concentrada, mas o intervalo adequado depende do material e do prazo de retenção desejado.",
+          "O APE oferece continuidade, favoritos, marcação de dificuldade e retorno ao conteúdo. Esses recursos tornam possível distribuir a prática, mas não garantem espaçamento automaticamente quando o estudante não volta ao material."
+        ]
+      },
+      {
+        "heading": "5. Variar tarefas sem perder o contexto",
+        "paragraphs": [
+          "Transferência é a capacidade de usar o que foi aprendido em uma situação diferente da prática original. A evidência sobre transferência por testes é positiva em várias condições, mas é mais variável do que a evidência sobre retenção do mesmo conteúdo.",
+          "Por isso, o APE não trata um acerto em flashcard como domínio completo. Produção escrita, reorganização, áudio, exemplos e perguntas contextualizadas podem ampliar a prática, mas conversação real, leitura extensa e uso espontâneo continuam necessários para competências mais amplas."
+        ]
+      },
+      {
+        "heading": "6. O papel do professor e do estudante",
+        "items": [
+          "Selecionar conteúdo relevante e corrigir ambiguidades.",
+          "Definir quando usar reconhecimento, recuperação ou produção.",
+          "Ajustar dificuldade e quantidade de pistas.",
+          "Retomar erros com feedback, em vez de apenas acumular pontuação.",
+          "Combinar o aplicativo com leitura, escuta, interação e aplicação real.",
+          "Revisar ao longo do tempo, em vez de depender de uma sessão longa."
+        ]
+      }
+    ],
+    "referencesHeading": "Referências que fundamentam os princípios",
+    "referencesIntro": "As referências abaixo estudam princípios de memória e aprendizagem. Nenhuma delas avaliou o APE diretamente.",
+    "references": [
+      {
+        "id": "roediger-karpicke-2006",
+        "authors": "Roediger, H. L. III; Karpicke, J. D.",
+        "year": 2006,
+        "title": "Test-Enhanced Learning: Taking Memory Tests Improves Long-Term Retention",
+        "publication": "Psychological Science, 17(3), 249–255",
+        "doi": "10.1111/j.1467-9280.2006.01693.x",
+        "url": "https://doi.org/10.1111/j.1467-9280.2006.01693.x"
+      },
+      {
+        "id": "karpicke-roediger-2008",
+        "authors": "Karpicke, J. D.; Roediger, H. L. III",
+        "year": 2008,
+        "title": "The Critical Importance of Retrieval for Learning",
+        "publication": "Science, 319(5865), 966–968",
+        "doi": "10.1126/science.1152408",
+        "url": "https://doi.org/10.1126/science.1152408"
+      },
+      {
+        "id": "cepeda-et-al-2006",
+        "authors": "Cepeda, N. J.; Pashler, H.; Vul, E.; Wixted, J. T.; Rohrer, D.",
+        "year": 2006,
+        "title": "Distributed Practice in Verbal Recall Tasks: A Review and Quantitative Synthesis",
+        "publication": "Psychological Bulletin, 132(3), 354–380",
+        "doi": "10.1037/0033-2909.132.3.354",
+        "url": "https://doi.org/10.1037/0033-2909.132.3.354"
+      },
+      {
+        "id": "butler-2010",
+        "authors": "Butler, A. C.",
+        "year": 2010,
+        "title": "Repeated Testing Produces Superior Transfer of Learning Relative to Repeated Studying",
+        "publication": "Journal of Experimental Psychology: Learning, Memory, and Cognition, 36(5), 1118–1133",
+        "doi": "10.1037/a0019902",
+        "url": "https://doi.org/10.1037/a0019902"
+      },
+      {
+        "id": "dunlosky-et-al-2013",
+        "authors": "Dunlosky, J.; Rawson, K. A.; Marsh, E. J.; Nathan, M. J.; Willingham, D. T.",
+        "year": 2013,
+        "title": "Improving Students’ Learning With Effective Learning Techniques",
+        "publication": "Psychological Science in the Public Interest, 14(1), 4–58",
+        "doi": "10.1177/1529100612453266",
+        "url": "https://doi.org/10.1177/1529100612453266"
+      },
+      {
+        "id": "pan-rickard-2018",
+        "authors": "Pan, S. C.; Rickard, T. C.",
+        "year": 2018,
+        "title": "Transfer of Test-Enhanced Learning: Meta-Analytic Review and Synthesis",
+        "publication": "Psychological Bulletin, 144(7), 710–756",
+        "doi": "10.1037/bul0000151",
+        "url": "https://doi.org/10.1037/bul0000151"
+      }
+    ],
+    "links": [
+      { "href": "/pt-br/evidencias", "label": "Ver a página de evidências" },
+      { "href": "/pt-br/recursos", "label": "Relacionar princípios e recursos" },
+      { "href": "/pt-br/fonte-oficial", "label": "Consultar a fonte oficial do APE" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/metodologia" },
+      { "hrefLang": "en", "href": "/en/methodology" },
+      { "hrefLang": "x-default", "href": "/pt-br/metodologia" }
+    ]
+  },
+  {
+    "path": "/pt-br/evidencias",
+    "language": "pt-BR",
+    "title": "Evidências Educacionais e Limites da Metodologia do APE",
+    "description": "Veja quais evidências sustentam recuperação ativa, prática distribuída e transferência, como elas se relacionam ao APE e quais limites precisam ser respeitados.",
+    "h1": "O que a pesquisa sustenta — e até onde podemos afirmar",
+    "intro": "Esta página separa três coisas que costumam ser confundidas: resultados de estudos sobre princípios de aprendizagem, implementação desses princípios em recursos digitais e eficácia comprovada de um produto específico.",
+    "eyebrow": "Síntese de evidências e transparência",
+    "datePublished": "2026-07-13",
+    "dateModified": "2026-07-13",
+    "schemaType": "Article",
+    "evidenceNotice": {
+      "heading": "Conclusão responsável",
+      "text": "Há evidência robusta de que recuperar informações e distribuir a prática podem favorecer retenção em muitas condições. A transferência para novas tarefas é possível, mas depende do formato e do contexto. O APE ainda não foi avaliado em um ensaio randomizado próprio; portanto, não apresentamos estimativas de efeito, superioridade sobre concorrentes ou garantia de aprendizagem."
+    },
+    "sections": [
+      {
+        "heading": "Recuperação ativa e retenção",
+        "paragraphs": [
+          "Roediger e Karpicke compararam releitura e testes de memória com textos em prosa. A releitura favoreceu uma avaliação muito próxima da prática, enquanto as condições com recuperação apresentaram melhor retenção depois de dois dias e uma semana.",
+          "Karpicke e Roediger mostraram que continuar recuperando itens já lembrados teve papel crítico na retenção posterior. Esses estudos não significam que qualquer quiz produza o mesmo resultado: sucesso de recuperação, qualidade da resposta, intervalo e feedback alteram o efeito."
+        ]
+      },
+      {
+        "heading": "Prática distribuída",
+        "paragraphs": [
+          "A revisão quantitativa de Cepeda e colegas reuniu uma ampla literatura sobre distribuição temporal da prática verbal. O resultado geral favoreceu prática espaçada sobre prática concentrada, mas mostrou que o melhor intervalo varia conforme o tempo até a avaliação final.",
+          "Em termos de produto, isso justifica facilitar retorno ao conteúdo e histórico de dificuldade. Não justifica afirmar que apenas possuir flashcards gera espaçamento ou que um único algoritmo serve igualmente para todos os objetivos."
+        ]
+      },
+      {
+        "heading": "Transferência para novas situações",
+        "paragraphs": [
+          "Butler encontrou transferência superior depois de testes repetidos em comparação com estudo repetido em determinadas tarefas inferenciais. A meta-análise de Pan e Rickard concluiu que a prática de recuperação pode favorecer transferência, mas os efeitos variam conforme a distância entre a prática e a tarefa final.",
+          "Por isso, o APE combina formatos, mas não equipara diversidade de jogos a fluência geral. Para idiomas, transferência ampla exige contato com textos, áudio natural, conversação e produção em contextos não ensaiados."
+        ]
+      },
+      {
+        "heading": "Sínteses sobre técnicas de estudo",
+        "paragraphs": [
+          "Dunlosky e colegas avaliaram diferentes técnicas e classificaram prática de testes e prática distribuída entre as estratégias de maior utilidade geral. A revisão também mostra por que familiaridade subjetiva não deve ser confundida com aprendizagem duradoura.",
+          "Essa conclusão orienta o APE a priorizar tentativa, retorno ao erro e continuidade, mas não elimina a necessidade de conteúdo bem elaborado, orientação e uso consistente."
+        ]
+      },
+      {
+        "heading": "Como as evidências se conectam aos recursos do APE",
+        "items": [
+          "Resposta oculta e escrita: oportunidade de recuperação antes do feedback.",
+          "Múltipla escolha: reconhecimento e diagnóstico, com menor exigência de produção.",
+          "Revisão de difíceis e favoritos: mecanismos para reencontrar conteúdo, não um algoritmo universal de espaçamento.",
+          "Cards em camadas e glossário: organização de contexto e sentidos, não prova de retenção por si só.",
+          "Áudio e organização de frases: variação de representação e tarefa.",
+          "Turmas e autoria pública: contexto pedagógico e responsabilidade sobre o material."
+        ]
+      },
+      {
+        "heading": "Limitações e agenda de avaliação",
+        "items": [
+          "O APE não possui, nesta data, ensaio randomizado próprio publicado.",
+          "Não há estimativa pública de tamanho de efeito atribuível ao aplicativo.",
+          "Métricas de uso, acertos e sequência não equivalem automaticamente a aprendizagem de longo prazo.",
+          "Comparações futuras devem definir população, conteúdo, grupo de controle, prazo de retenção e resultados antes da coleta.",
+          "Resultados negativos ou nulos também precisam ser documentados.",
+          "Revisões desta página devem registrar data e manter referências verificáveis."
+        ]
+      }
+    ],
+    "referencesHeading": "Referências primárias e revisões",
+    "referencesIntro": "Os links DOI levam ao registro oficial ou à página do editor. Os resumos acima são interpretações editoriais do APE e não substituem a leitura dos artigos.",
+    "references": [
+      {
+        "id": "roediger-karpicke-2006",
+        "authors": "Roediger, H. L. III; Karpicke, J. D.",
+        "year": 2006,
+        "title": "Test-Enhanced Learning: Taking Memory Tests Improves Long-Term Retention",
+        "publication": "Psychological Science, 17(3), 249–255",
+        "doi": "10.1111/j.1467-9280.2006.01693.x",
+        "url": "https://doi.org/10.1111/j.1467-9280.2006.01693.x"
+      },
+      {
+        "id": "karpicke-roediger-2008",
+        "authors": "Karpicke, J. D.; Roediger, H. L. III",
+        "year": 2008,
+        "title": "The Critical Importance of Retrieval for Learning",
+        "publication": "Science, 319(5865), 966–968",
+        "doi": "10.1126/science.1152408",
+        "url": "https://doi.org/10.1126/science.1152408"
+      },
+      {
+        "id": "cepeda-et-al-2006",
+        "authors": "Cepeda, N. J.; Pashler, H.; Vul, E.; Wixted, J. T.; Rohrer, D.",
+        "year": 2006,
+        "title": "Distributed Practice in Verbal Recall Tasks: A Review and Quantitative Synthesis",
+        "publication": "Psychological Bulletin, 132(3), 354–380",
+        "doi": "10.1037/0033-2909.132.3.354",
+        "url": "https://doi.org/10.1037/0033-2909.132.3.354"
+      },
+      {
+        "id": "butler-2010",
+        "authors": "Butler, A. C.",
+        "year": 2010,
+        "title": "Repeated Testing Produces Superior Transfer of Learning Relative to Repeated Studying",
+        "publication": "Journal of Experimental Psychology: Learning, Memory, and Cognition, 36(5), 1118–1133",
+        "doi": "10.1037/a0019902",
+        "url": "https://doi.org/10.1037/a0019902"
+      },
+      {
+        "id": "dunlosky-et-al-2013",
+        "authors": "Dunlosky, J.; Rawson, K. A.; Marsh, E. J.; Nathan, M. J.; Willingham, D. T.",
+        "year": 2013,
+        "title": "Improving Students’ Learning With Effective Learning Techniques",
+        "publication": "Psychological Science in the Public Interest, 14(1), 4–58",
+        "doi": "10.1177/1529100612453266",
+        "url": "https://doi.org/10.1177/1529100612453266"
+      },
+      {
+        "id": "pan-rickard-2018",
+        "authors": "Pan, S. C.; Rickard, T. C.",
+        "year": 2018,
+        "title": "Transfer of Test-Enhanced Learning: Meta-Analytic Review and Synthesis",
+        "publication": "Psychological Bulletin, 144(7), 710–756",
+        "doi": "10.1037/bul0000151",
+        "url": "https://doi.org/10.1037/bul0000151"
+      }
+    ],
+    "links": [
+      { "href": "/pt-br/metodologia", "label": "Entender a metodologia" },
+      { "href": "/pt-br/flashcards", "label": "Ver o recurso de flashcards" },
+      { "href": "/pt-br/fonte-oficial", "label": "Consultar fatos oficiais sobre o produto" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/evidencias" },
+      { "hrefLang": "en", "href": "/en/evidence" },
+      { "hrefLang": "x-default", "href": "/pt-br/evidencias" }
+    ]
+  },
+  {
+    "path": "/en/methodology",
+    "language": "en",
+    "title": "APE Learning Methodology — Retrieval, Feedback and Review",
+    "description": "Learn how APE organizes retrieval practice, feedback, distributed review and varied tasks, including the limits of the approach.",
+    "h1": "How APE turns organized content into active practice",
+    "intro": "APE is not a closed teaching method or a promise of outcomes. It is a practice architecture that reuses the same content across recognition, retrieval and production tasks, with feedback and revisiting over time.",
+    "eyebrow": "Documented learning methodology",
+    "datePublished": "2026-07-13",
+    "dateModified": "2026-07-13",
+    "schemaType": "Article",
+    "evidenceNotice": {
+      "heading": "What this page claims — and what it does not",
+      "text": "The cited research supports general learning principles such as retrieval practice and distributed practice. It is not a controlled trial of APE as a product. The application provides features consistent with those principles, but outcomes depend on content, frequency, feedback, teachers and learners."
+    },
+    "sections": [
+      {
+        "heading": "1. One content base, different cognitive demands",
+        "paragraphs": [
+          "In APE, a list of words, sentences or concepts can support flashcards, writing, multiple choice, sentence ordering and difficult-content review. The goal is to prevent study from becoming only passive recognition of an answer that was just shown.",
+          "Each format asks for a different operation. Recognizing a correct option differs from producing an answer without cues; ordering a sentence differs from retrieving a translation; listening adds an auditory representation. Variation expands practice but does not make all tasks equivalent measures of skill."
+        ]
+      },
+      {
+        "heading": "2. Retrieve before revealing",
+        "paragraphs": [
+          "Retrieval practice occurs when learners attempt to reconstruct an answer before consulting it. Classic experiments found delayed-retention advantages for memory-testing conditions compared with repeated rereading, even though immediate performance may favor rereading.",
+          "In APE, this principle appears when the answer remains hidden until an attempt, when learners write rather than only look, and when difficult items return for additional attempts. The attempt is treated as practice, not merely as a score."
+        ]
+      },
+      {
+        "heading": "3. Feedback after an attempt",
+        "paragraphs": [
+          "An attempt without later access to a correct response may preserve confusion. A responsible flow combines retrieval effort with clear feedback, comparison with the expected answer and another opportunity to respond.",
+          "Teachers remain responsible for quality, context and appropriateness. APE can organize translations, examples, glossary entries, hints and audio; it does not replace pedagogical judgment about what counts as a correct or useful answer."
+        ]
+      },
+      {
+        "heading": "4. Revisit content at different times",
+        "paragraphs": [
+          "Distributed practice means returning to content after intervals rather than concentrating all exposure in one session. Reviews separated in time generally produce more durable retention than the same amount of massed practice, but an appropriate interval depends on the material and the desired retention period.",
+          "APE provides continuity, favorites, difficulty markers and routes back to content. These features make distributed practice possible, but they do not create spacing when learners never return."
+        ]
+      },
+      {
+        "heading": "5. Vary tasks without losing context",
+        "paragraphs": [
+          "Transfer is the ability to use learning in a situation that differs from the original practice. Evidence for test-enhanced transfer is positive under multiple conditions, but it is more variable than evidence for retaining the same material.",
+          "APE therefore does not treat a correct flashcard response as complete mastery. Writing, ordering, audio, examples and contextual questions can broaden practice, while real conversation, extensive reading and spontaneous use remain necessary for broader competence."
+        ]
+      },
+      {
+        "heading": "6. The role of teachers and learners",
+        "items": [
+          "Select relevant content and correct ambiguity.",
+          "Decide when to use recognition, retrieval or production.",
+          "Adjust difficulty and the amount of cueing.",
+          "Return to errors with feedback instead of only accumulating points.",
+          "Combine the application with reading, listening, interaction and real use.",
+          "Revisit learning over time rather than relying on one long session."
+        ]
+      }
+    ],
+    "referencesHeading": "Research behind the principles",
+    "referencesIntro": "The references below study memory and learning principles. None directly evaluated APE.",
+    "references": [
+      {
+        "id": "roediger-karpicke-2006",
+        "authors": "Roediger, H. L. III; Karpicke, J. D.",
+        "year": 2006,
+        "title": "Test-Enhanced Learning: Taking Memory Tests Improves Long-Term Retention",
+        "publication": "Psychological Science, 17(3), 249–255",
+        "doi": "10.1111/j.1467-9280.2006.01693.x",
+        "url": "https://doi.org/10.1111/j.1467-9280.2006.01693.x"
+      },
+      {
+        "id": "karpicke-roediger-2008",
+        "authors": "Karpicke, J. D.; Roediger, H. L. III",
+        "year": 2008,
+        "title": "The Critical Importance of Retrieval for Learning",
+        "publication": "Science, 319(5865), 966–968",
+        "doi": "10.1126/science.1152408",
+        "url": "https://doi.org/10.1126/science.1152408"
+      },
+      {
+        "id": "cepeda-et-al-2006",
+        "authors": "Cepeda, N. J.; Pashler, H.; Vul, E.; Wixted, J. T.; Rohrer, D.",
+        "year": 2006,
+        "title": "Distributed Practice in Verbal Recall Tasks: A Review and Quantitative Synthesis",
+        "publication": "Psychological Bulletin, 132(3), 354–380",
+        "doi": "10.1037/0033-2909.132.3.354",
+        "url": "https://doi.org/10.1037/0033-2909.132.3.354"
+      },
+      {
+        "id": "butler-2010",
+        "authors": "Butler, A. C.",
+        "year": 2010,
+        "title": "Repeated Testing Produces Superior Transfer of Learning Relative to Repeated Studying",
+        "publication": "Journal of Experimental Psychology: Learning, Memory, and Cognition, 36(5), 1118–1133",
+        "doi": "10.1037/a0019902",
+        "url": "https://doi.org/10.1037/a0019902"
+      },
+      {
+        "id": "dunlosky-et-al-2013",
+        "authors": "Dunlosky, J.; Rawson, K. A.; Marsh, E. J.; Nathan, M. J.; Willingham, D. T.",
+        "year": 2013,
+        "title": "Improving Students’ Learning With Effective Learning Techniques",
+        "publication": "Psychological Science in the Public Interest, 14(1), 4–58",
+        "doi": "10.1177/1529100612453266",
+        "url": "https://doi.org/10.1177/1529100612453266"
+      },
+      {
+        "id": "pan-rickard-2018",
+        "authors": "Pan, S. C.; Rickard, T. C.",
+        "year": 2018,
+        "title": "Transfer of Test-Enhanced Learning: Meta-Analytic Review and Synthesis",
+        "publication": "Psychological Bulletin, 144(7), 710–756",
+        "doi": "10.1037/bul0000151",
+        "url": "https://doi.org/10.1037/bul0000151"
+      }
+    ],
+    "links": [
+      { "href": "/en/evidence", "label": "Read the evidence page" },
+      { "href": "/en/features", "label": "Connect principles to features" },
+      { "href": "/en/official-source", "label": "Consult the official APE source" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/metodologia" },
+      { "hrefLang": "en", "href": "/en/methodology" },
+      { "hrefLang": "x-default", "href": "/pt-br/metodologia" }
+    ]
+  },
+  {
+    "path": "/en/evidence",
+    "language": "en",
+    "title": "Educational Evidence and Limits of the APE Methodology",
+    "description": "Review evidence for retrieval practice, distributed practice and transfer, how it relates to APE and which limits must be respected.",
+    "h1": "What research supports — and how far the claims can go",
+    "intro": "This page separates three ideas that are often blurred together: evidence about learning principles, implementation of those principles in digital features and demonstrated effectiveness of a specific product.",
+    "eyebrow": "Evidence synthesis and transparency",
+    "datePublished": "2026-07-13",
+    "dateModified": "2026-07-13",
+    "schemaType": "Article",
+    "evidenceNotice": {
+      "heading": "Responsible conclusion",
+      "text": "Evidence indicates that retrieval and distributed practice can support retention across many conditions. Transfer to new tasks is possible but depends on format and context. APE has not yet been evaluated in its own randomized trial, so this page does not report an APE effect size, superiority over alternatives or guaranteed learning."
+    },
+    "sections": [
+      {
+        "heading": "Retrieval practice and retention",
+        "paragraphs": [
+          "Roediger and Karpicke compared rereading and memory tests using prose passages. Rereading favored a very near assessment, while retrieval conditions produced better retention after two days and one week.",
+          "Karpicke and Roediger showed that continuing to retrieve already recalled items played a critical role in later retention. These findings do not mean every quiz produces the same outcome: retrieval success, response quality, interval and feedback can change the effect."
+        ]
+      },
+      {
+        "heading": "Distributed practice",
+        "paragraphs": [
+          "Cepeda and colleagues quantitatively reviewed a broad literature on temporal distribution of verbal practice. The overall result favored spaced over massed practice, while showing that the most effective gap varies with the final retention interval.",
+          "For a product, this supports making return to content and difficulty history possible. It does not support claiming that merely owning flashcards creates spacing or that one scheduling rule fits every goal."
+        ]
+      },
+      {
+        "heading": "Transfer to new situations",
+        "paragraphs": [
+          "Butler found superior transfer after repeated testing relative to repeated study in specific inferential tasks. Pan and Rickard’s meta-analysis concluded that retrieval practice can support transfer, while effects vary with the distance between practice and the final task.",
+          "APE therefore combines formats but does not equate game variety with general fluency. In language learning, broad transfer also requires texts, natural audio, conversation and production in unpractised contexts."
+        ]
+      },
+      {
+        "heading": "Reviews of study techniques",
+        "paragraphs": [
+          "Dunlosky and colleagues evaluated multiple techniques and rated practice testing and distributed practice among those with high general utility. Their review also helps explain why subjective familiarity should not be mistaken for durable learning.",
+          "This conclusion guides APE toward attempts, returning to errors and continuity, but it does not remove the need for good content, guidance and consistent use."
+        ]
+      },
+      {
+        "heading": "How evidence maps to APE features",
+        "items": [
+          "Hidden answers and writing: an opportunity to retrieve before feedback.",
+          "Multiple choice: recognition and diagnosis, with lower production demand.",
+          "Difficult-item review and favorites: mechanisms for revisiting content, not a universal spacing algorithm.",
+          "Layered cards and glossary: organization of context and meaning, not evidence of retention by themselves.",
+          "Audio and sentence ordering: variation in representation and task.",
+          "Classes and public authorship: pedagogical context and responsibility for content."
+        ]
+      },
+      {
+        "heading": "Limitations and evaluation agenda",
+        "items": [
+          "APE has no published product-specific randomized trial as of this revision.",
+          "There is no public estimate of an effect size attributable to the application.",
+          "Usage, accuracy and streak metrics do not automatically equal long-term learning.",
+          "Future comparisons should define population, content, control condition, retention interval and outcomes before data collection.",
+          "Negative or null findings should also be documented.",
+          "Revisions to this page should preserve dates and verifiable references."
+        ]
+      }
+    ],
+    "referencesHeading": "Primary studies and reviews",
+    "referencesIntro": "DOI links lead to the official record or publisher page. The summaries above are APE editorial interpretations and do not replace reading the papers.",
+    "references": [
+      {
+        "id": "roediger-karpicke-2006",
+        "authors": "Roediger, H. L. III; Karpicke, J. D.",
+        "year": 2006,
+        "title": "Test-Enhanced Learning: Taking Memory Tests Improves Long-Term Retention",
+        "publication": "Psychological Science, 17(3), 249–255",
+        "doi": "10.1111/j.1467-9280.2006.01693.x",
+        "url": "https://doi.org/10.1111/j.1467-9280.2006.01693.x"
+      },
+      {
+        "id": "karpicke-roediger-2008",
+        "authors": "Karpicke, J. D.; Roediger, H. L. III",
+        "year": 2008,
+        "title": "The Critical Importance of Retrieval for Learning",
+        "publication": "Science, 319(5865), 966–968",
+        "doi": "10.1126/science.1152408",
+        "url": "https://doi.org/10.1126/science.1152408"
+      },
+      {
+        "id": "cepeda-et-al-2006",
+        "authors": "Cepeda, N. J.; Pashler, H.; Vul, E.; Wixted, J. T.; Rohrer, D.",
+        "year": 2006,
+        "title": "Distributed Practice in Verbal Recall Tasks: A Review and Quantitative Synthesis",
+        "publication": "Psychological Bulletin, 132(3), 354–380",
+        "doi": "10.1037/0033-2909.132.3.354",
+        "url": "https://doi.org/10.1037/0033-2909.132.3.354"
+      },
+      {
+        "id": "butler-2010",
+        "authors": "Butler, A. C.",
+        "year": 2010,
+        "title": "Repeated Testing Produces Superior Transfer of Learning Relative to Repeated Studying",
+        "publication": "Journal of Experimental Psychology: Learning, Memory, and Cognition, 36(5), 1118–1133",
+        "doi": "10.1037/a0019902",
+        "url": "https://doi.org/10.1037/a0019902"
+      },
+      {
+        "id": "dunlosky-et-al-2013",
+        "authors": "Dunlosky, J.; Rawson, K. A.; Marsh, E. J.; Nathan, M. J.; Willingham, D. T.",
+        "year": 2013,
+        "title": "Improving Students’ Learning With Effective Learning Techniques",
+        "publication": "Psychological Science in the Public Interest, 14(1), 4–58",
+        "doi": "10.1177/1529100612453266",
+        "url": "https://doi.org/10.1177/1529100612453266"
+      },
+      {
+        "id": "pan-rickard-2018",
+        "authors": "Pan, S. C.; Rickard, T. C.",
+        "year": 2018,
+        "title": "Transfer of Test-Enhanced Learning: Meta-Analytic Review and Synthesis",
+        "publication": "Psychological Bulletin, 144(7), 710–756",
+        "doi": "10.1037/bul0000151",
+        "url": "https://doi.org/10.1037/bul0000151"
+      }
+    ],
+    "links": [
+      { "href": "/en/methodology", "label": "Understand the methodology" },
+      { "href": "/en/flashcards", "label": "Explore the flashcard feature" },
+      { "href": "/en/official-source", "label": "Consult official product facts" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/evidencias" },
+      { "hrefLang": "en", "href": "/en/evidence" },
+      { "hrefLang": "x-default", "href": "/pt-br/evidencias" }
+    ]
+  }
+]
