@@ -39,7 +39,6 @@ import {
 } from "@/features/study/lib/folderGlossaryCoverage";
 import { getFolderGlossaryCoveragePresentation } from "@/features/study/lib/folderGlossaryCoveragePresentation";
 import {
-  getExactCoveredOccurrences,
   getExactCoveragePendingTerms,
   parseExactCoverageCompletionJson,
   serializeExactCoverageRequest,
@@ -119,9 +118,12 @@ export function FolderGlossaryCoverageCard({
       const next = await loadFolderGlossaryCoverage(folderId, latest.entries);
       setAuditGlossary(latest.entries);
       setReport(next);
-      if (getExactCoveragePendingTerms(next).length === 0) {
-        setStatusFilter("all");
-      }
+
+      if (next.missingTerms > 0) setStatusFilter("missing");
+      else if (next.wrongSideTerms > 0) setStatusFilter("wrong_side");
+      else if (next.inactiveTerms > 0) setStatusFilter("inactive");
+      else if (next.expressionTerms > 0) setStatusFilter("expression");
+      else setStatusFilter("all");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível auditar o glossário.");
     } finally {
@@ -149,10 +151,9 @@ export function FolderGlossaryCoverageCard({
     () => report ? getExactCoveragePendingTerms(report) : [],
     [report],
   );
-  const exactCoveredOccurrences = report ? getExactCoveredOccurrences(report) : 0;
   const coverage = getFolderGlossaryCoveragePresentation(
-    exactCoveredOccurrences,
-    report?.totalOccurrences ?? 0,
+    report?.coveredTerms ?? 0,
+    report?.distinctTerms ?? 0,
   );
 
   const exportPending = () => {
@@ -261,9 +262,9 @@ export function FolderGlossaryCoverageCard({
                 <section className="space-y-3 rounded-xl border bg-muted/20 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold">Cobertura exata das ocorrências: {coverage.label}%</p>
+                      <p className="font-semibold">Cobertura exata das palavras distintas: {coverage.label}%</p>
                       <p className="text-sm text-muted-foreground">
-                        {report.listsScanned.toLocaleString("pt-BR")} listas · {report.cardsScanned.toLocaleString("pt-BR")} cards · {report.distinctTerms.toLocaleString("pt-BR")} termos distintos
+                        {report.coveredTerms.toLocaleString("pt-BR")} de {report.distinctTerms.toLocaleString("pt-BR")} palavras possuem entrada individual · {report.listsScanned.toLocaleString("pt-BR")} listas · {report.cardsScanned.toLocaleString("pt-BR")} cards
                       </p>
                     </div>
                     {coverage.complete && (
