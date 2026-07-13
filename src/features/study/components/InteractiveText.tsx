@@ -140,23 +140,29 @@ function GlossaryPanel({
   const hiddenCount = Math.max(0, prioritized.length - visible.length);
 
   return (
-    <div className={cn("flex min-h-0 flex-col bg-background", mobile && "max-h-[72dvh]")}>
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-4 py-3">
+    <div
+      className={cn(
+        "flex min-h-0 w-full flex-col overflow-hidden bg-background",
+        mobile ? "h-full" : "max-h-[min(24rem,calc(100dvh-2rem))]",
+      )}
+      data-testid="folder-glossary-panel"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-4 py-3 sm:px-5">
         <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">
             Glossário da pasta
           </p>
-          <p className="truncate text-base font-semibold">{value}</p>
+          <p className="truncate text-base font-semibold sm:text-lg">{value}</p>
         </div>
         {prioritized.length > 1 && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
-            <Layers3 className="h-3 w-3" />
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary sm:text-xs">
+            <Layers3 className="h-3.5 w-3.5" />
             {prioritized.length} camadas
           </span>
         )}
       </div>
 
-      <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain">
+      <div className="min-h-0 flex-1 divide-y overflow-y-auto overscroll-contain scroll-pb-4">
         {visible.map((match) => {
           const translations = uniqueTranslations(match);
           const isExact = normalize(match.text) === normalize(value);
@@ -165,25 +171,25 @@ function GlossaryPanel({
           return (
             <section
               key={`${match.key}-${match.startIndex}-${match.endIndex}`}
-              className="space-y-2 px-4 py-3"
+              className="space-y-2.5 px-4 py-3.5 sm:px-5 sm:py-4"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0 break-words text-sm font-semibold text-foreground">
+              <div className="flex items-start justify-between gap-2">
+                <span className="min-w-0 break-words text-sm font-semibold leading-snug text-foreground sm:text-base">
                   {match.text}
                 </span>
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
                   {isExact ? "exata" : isExpression ? "expressão" : "relacionada"}
                 </span>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {translations.map((translation) => (
-                  <div key={normalize(translation.text)}>
-                    <p className="text-sm font-medium leading-snug">
+                  <div key={normalize(translation.text)} className="min-w-0">
+                    <p className="break-words text-sm font-medium leading-relaxed sm:text-base">
                       {translation.text}
                     </p>
                     {translation.note && (
-                      <p className="mt-1 text-xs italic leading-relaxed text-muted-foreground">
+                      <p className="mt-1 break-words text-xs italic leading-relaxed text-muted-foreground sm:text-sm">
                         {translation.note}
                       </p>
                     )}
@@ -195,7 +201,7 @@ function GlossaryPanel({
         })}
 
         {hiddenCount > 0 && (
-          <p className="px-4 py-3 text-xs text-muted-foreground">
+          <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground sm:px-5">
             {hiddenCount} camada{hiddenCount === 1 ? "" : "s"} adicional
             {hiddenCount === 1 ? "" : "is"} foi ocultada para manter a leitura organizada.
           </p>
@@ -244,17 +250,19 @@ function LayeredHintToken({
         <SheetTrigger asChild>{trigger}</SheetTrigger>
         <SheetContent
           side="bottom"
-          className="max-h-[78dvh] rounded-t-2xl border-t bg-background p-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="z-[80] flex max-h-[min(86dvh,44rem)] w-full flex-col gap-0 overflow-hidden rounded-t-3xl border-t bg-background p-0 shadow-2xl [&>button.absolute]:hidden"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Glossário da pasta: {value}</SheetTitle>
           </SheetHeader>
-          <GlossaryPanel value={value} matches={matches} mobile />
-          <div className="shrink-0 border-t bg-background px-4 py-3">
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <GlossaryPanel value={value} matches={matches} mobile />
+          </div>
+          <div className="shrink-0 border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <SheetClose asChild>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="min-h-[44px] w-full rounded-xl">
                 <X className="mr-2 h-4 w-4" />
                 Fechar
               </Button>
@@ -272,8 +280,8 @@ function LayeredHintToken({
         side="bottom"
         align="center"
         sideOffset={8}
-        collisionPadding={12}
-        className="w-[min(19rem,calc(100vw-1.5rem))] max-h-[min(18rem,60vh)] overflow-hidden bg-background p-0 shadow-lg"
+        collisionPadding={20}
+        className="z-[80] flex w-[min(22rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] flex-col overflow-hidden bg-background p-0 shadow-xl"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >

@@ -106,14 +106,26 @@ describe("folder-scoped glossary", () => {
     expect(migration).toContain("sync_folder_glossaries_from_super_import_v1");
   });
 
-  it("uses a bottom sheet on mobile and keeps exact plus contextual layers", () => {
+  it("uses a bounded, scrollable bottom sheet on mobile and keeps exact plus contextual layers", () => {
     expect(interactiveText).toContain("<Sheet");
     expect(interactiveText).toContain('side="bottom"');
+    expect(interactiveText).toContain("max-h-[min(86dvh,44rem)]");
+    expect(interactiveText).toContain("flex-col gap-0 overflow-hidden");
     expect(interactiveText).toContain("safe-area-inset-bottom");
+    expect(interactiveText).toContain("min-h-0 flex-1 overflow-hidden");
+    expect(interactiveText).toContain("overflow-y-auto overscroll-contain");
+    expect(interactiveText).toContain("[&>button.absolute]:hidden");
     expect(interactiveText).toContain("prioritizeLayeredHintMatches(value, matches)");
     expect(glossaryLayers).toContain("const aExact = normalizeText(a.text) === clicked ? 0 : 1");
     expect(glossaryLayers).toContain("existing.translations.push(...match.translations)");
     expect(interactiveText).not.toContain("setTimeout(() => setOpen(false)");
+  });
+
+  it("keeps the desktop popover inside the viewport and above study controls", () => {
+    expect(interactiveText).toContain("max-h-[min(24rem,calc(100dvh-2rem))]");
+    expect(interactiveText).toContain("collisionPadding={20}");
+    expect(interactiveText).toContain("z-[80]");
+    expect(interactiveText).toContain("max-w-[calc(100vw-1rem)]");
   });
 
   it("retires the global account box from the main glossary route", () => {
