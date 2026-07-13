@@ -2820,6 +2820,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_list_study_preferences: {
+        Row: {
+          card_order: string | null
+          direction: string | null
+          fast_mode: boolean | null
+          list_id: string
+          mode: string | null
+          play_mode: string | null
+          play_side: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_order?: string | null
+          direction?: string | null
+          fast_mode?: boolean | null
+          list_id: string
+          mode?: string | null
+          play_mode?: string | null
+          play_side?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_order?: string | null
+          direction?: string | null
+          fast_mode?: boolean | null
+          list_id?: string
+          mode?: string | null
+          play_mode?: string | null
+          play_side?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_list_study_preferences_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_red_list: {
         Row: {
           created_at: string
@@ -2911,6 +2958,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_study_preferences: {
+        Row: {
+          card_order: string
+          direction: string
+          fast_mode: boolean
+          mode: string
+          play_mode: string
+          play_side: string
+          scope: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_order?: string
+          direction?: string
+          fast_mode?: boolean
+          mode?: string
+          play_mode?: string
+          play_side?: string
+          scope?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_order?: string
+          direction?: string
+          fast_mode?: boolean
+          mode?: string
+          play_mode?: string
+          play_side?: string
+          scope?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       videos: {
         Row: {
@@ -3147,6 +3230,16 @@ export type Database = {
           source_language: string
           target_language: string
           updated_at: string
+        }[]
+      }
+      get_glossary_source_cards_page: {
+        Args: { p_limit?: number; p_list_ids: string[]; p_offset?: number }
+        Returns: {
+          id: string
+          list_id: string
+          term: string
+          total_count: number
+          translation: string
         }[]
       }
       get_lists_with_card_counts: {
@@ -3646,6 +3739,15 @@ export type Database = {
       }
       restore_list: {
         Args: { p_list_id: string; p_user_id: string }
+        Returns: Json
+      }
+      save_layered_card_group_v2: {
+        Args: {
+          _layers: Json
+          _list_id: string
+          _principal_id: string
+          _title: string
+        }
         Returns: Json
       }
       search_public_profiles: {
