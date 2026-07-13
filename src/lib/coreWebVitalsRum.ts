@@ -43,6 +43,8 @@ interface RumPayload {
   buildId: string | null;
 }
 
+type RumSessionStorage = Pick<Storage, "getItem" | "setItem">;
+
 const CANONICAL_HOST = "www.apeeducation.org";
 const SESSION_SAMPLE_KEY = "ape_rum_sample_v1";
 const SESSION_SNAPSHOT_KEY = "ape_web_vitals_latest_v1";
@@ -224,7 +226,7 @@ function createPageViewId() {
   }
 }
 
-export function resolveSessionSample(sampleRate: number, storage: Pick<Storage, "getItem" | "setItem"> | null = null) {
+export function resolveSessionSample(sampleRate: number, storage: RumSessionStorage | null = null) {
   if (sampleRate <= 0) return false;
   if (sampleRate >= 1) return true;
   const key = `${SESSION_SAMPLE_KEY}:${sampleRate}`;
@@ -237,6 +239,16 @@ export function resolveSessionSample(sampleRate: number, storage: Pick<Storage, 
     return sampled;
   } catch {
     return randomUnit() < sampleRate;
+  }
+}
+
+export function readOptionalSessionStorage(
+  getter: () => RumSessionStorage = () => window.sessionStorage,
+): RumSessionStorage | null {
+  try {
+    return getter();
+  } catch {
+    return null;
   }
 }
 
@@ -289,7 +301,7 @@ function selectInpValue(interactions: Map<number, number>) {
   return values[index];
 }
 
-export function startCoreWebVitalsRum() {
+function startCoreWebVitalsRumInternal() {
   if (activeStop || typeof window === "undefined" || typeof PerformanceObserver === "undefined") {
     return activeStop ?? (() => undefined);
   }
@@ -300,7 +312,7 @@ export function startCoreWebVitalsRum() {
     window.location.hostname,
     import.meta.env.PROD,
   );
-  const sampled = resolveSessionSample(sampleRate, window.sessionStorage);
+  const sampled = resolveSessionSample(sampleRate, readOptionalSessionStorage());
   const navigationEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   const navigationType = getRumNavigationType(navigationEntry?.type);
   const deviceClass = getRumDeviceClass(window.innerWidth);
@@ -429,6 +441,16 @@ export function startCoreWebVitalsRum() {
   };
   activeStop = stop;
   return stop;
+}
+
+export function startCoreWebVitalsRum() {
+  try {
+    return startCoreWebVitalsRumInternal();
+  } catch (error) {
+    activeStop = null;
+    console.warn("[CoreWebVitalsRum] Collector disabled after startup failure:", error);
+    return () => undefined;
+  }
 }
 
 export const CORE_WEB_VITAL_EVENT = LOCAL_EVENT_NAME;
