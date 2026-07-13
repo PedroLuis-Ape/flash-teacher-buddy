@@ -59,6 +59,12 @@ describe("Core Web Vitals RUM", () => {
     expect(getRumNavigationType("restore")).toBe("unknown");
   });
 
+  it("records an explicit zero baseline for pages without layout shifts", () => {
+    const client = readFileSync("src/lib/coreWebVitalsRum.ts", "utf8");
+    expect(client).toContain('update("CLS", 0)');
+    expect(client.indexOf('update("CLS", 0)')).toBeLessThan(client.indexOf('observe("layout-shift"'));
+  });
+
   it("does not add account, email, query or raw URL fields", () => {
     const client = readFileSync("src/lib/coreWebVitalsRum.ts", "utf8");
     const edge = readFileSync("netlify/edge-functions/rum-web-vital.js", "utf8");
