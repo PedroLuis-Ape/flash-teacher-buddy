@@ -34,6 +34,30 @@ describe("glossary index", () => {
     expect(matches.map((match) => match.matchText)).toEqual(expect.arrayContaining(["sou", "estou"]));
   });
 
+  it("matches straight and typographic apostrophes as the same word", () => {
+    const matches = findRelevantGlossaryMatches(
+      "Millions don’t know.",
+      "A",
+      [entry("don't", "não")],
+    );
+
+    expect(matches).toEqual([
+      expect.objectContaining({ matchText: "don't", translationText: "não" }),
+    ]);
+  });
+
+  it("matches typographic hyphen variants as the same term", () => {
+    const matches = findRelevantGlossaryMatches(
+      "Long‑term learning matters.",
+      "A",
+      [entry("long-term", "de longo prazo")],
+    );
+
+    expect(matches).toEqual([
+      expect.objectContaining({ matchText: "long-term", translationText: "de longo prazo" }),
+    ]);
+  });
+
   it("reuses the built index while the glossary reference is unchanged", () => {
     const glossary = [entry("run", "correr")];
 
