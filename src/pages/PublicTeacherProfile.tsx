@@ -8,6 +8,7 @@ import { ApeGrid } from '@/components/ape/ApeGrid';
 import { AuthAwareCTA } from '@/components/auth/AuthAwareLink';
 import { PublicPageHeader } from '@/components/seo/PublicPageHeader';
 import { SEOHead } from '@/components/seo/SEOHead';
+import { buildPublicTeacherStructuredData } from '@/components/seo/publicTeacherStructuredData';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,19 @@ export default function PublicTeacherProfile() {
       const { data, error } = await (supabase.rpc as any)('get_public_teacher_profile', { _slug: slug });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      return (row ?? null) as PublicTeacherProfileRow | null;
+      if (row) return row as PublicTeacherProfileRow;
+
+      // Compatibilidade com bancos que ainda usam a implementação antiga do
+      // perfil, limitada aos primeiros 24 professores do diretório.
+      const legacy = await (supabase.rpc as any)('search_public_teachers', {
+        _q: slug,
+        _limit: 24,
+      });
+      if (legacy.error) throw legacy.error;
+      const exact = (legacy.data ?? []).find(
+        (candidate: PublicTeacherProfileRow) => candidate.public_slug.toLocaleLowerCase('en-US') === slug.toLocaleLowerCase('en-US'),
+      );
+      return (exact ?? null) as PublicTeacherProfileRow | null;
     },
     enabled: Boolean(slug),
     retry: false,
@@ -115,6 +128,13 @@ export default function PublicTeacherProfile() {
   if (profileQuery.isError) {
     return (
       <div className="min-h-screen bg-background">
+        <SEOHead
+          title="Perfil público temporariamente indisponível | APE"
+          description="Não foi possível consultar este perfil público agora."
+          path={`/portal/professor/${slug}`}
+          canonicalPath={null}
+          robots="noindex,nofollow"
+        />
         <PublicPageHeader title="Perfil público" fallbackPath="/portal" />
         <main className="mx-auto max-w-3xl px-4 py-12">
           <Card className="p-8 text-center">
@@ -133,6 +153,13 @@ export default function PublicTeacherProfile() {
   if (!profile) {
     return (
       <div className="min-h-screen bg-background">
+        <SEOHead
+          title="Professor não encontrado | APE"
+          description="Este perfil não existe, deixou de ser público ou ainda não foi publicado."
+          path={`/portal/professor/${slug}`}
+          canonicalPath={null}
+          robots="noindex,nofollow"
+        />
         <PublicPageHeader title="Perfil público" fallbackPath="/portal" />
         <main className="mx-auto max-w-3xl px-4 py-12">
           <Card className="p-8 text-center">
@@ -158,13 +185,9 @@ export default function PublicTeacherProfile() {
         title={`${profile.display_name} | Materiais públicos de inglês`}
         description={profile.public_bio || `Explore materiais públicos de inglês compartilhados por ${profile.display_name}.`}
         path={`/portal/professor/${profile.public_slug}`}
-        jsonLd={{
-          '@context': 'https://schema.org',
-          '@type': 'Person',
-          name: profile.display_name,
-          description: profile.public_bio || undefined,
-          url: `https://www.apeeducation.org/portal/professor/${profile.public_slug}`,
-        }}
+        image={profile.avatar_url || undefined}
+        imageAlt={`Foto ou identidade visual de ${profile.display_name}`}
+        jsonLd={buildPublicTeacherStructuredData(profile, folders)}
       />
 
       <PublicPageHeader title="Perfil do professor" fallbackPath="/portal" />
