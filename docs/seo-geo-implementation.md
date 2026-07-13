@@ -6,7 +6,7 @@ Updated: 2026-07-13
 
 The managed Supabase project is `xrnfhhoxmmstagmelvyi`.
 
-The production data currently used by the application is stored in `ymahldldyxvwjeruaxpr`. Build-time public discovery must apply the same runtime validation used by the frontend and must never generate a sitemap from the empty managed project by mistake.
+The production data currently used by the application is stored in `ymahldldyxvwjeruaxpr`. Build-time public discovery and runtime public-status checks must apply the same production-data validation used by the frontend and must never use the empty managed project by mistake.
 
 Repository configuration, frontend initialization, database changes and documentation must keep this transition explicit until both responsibilities are consolidated into one project.
 
@@ -35,7 +35,21 @@ Repository configuration, frontend initialization, database changes and document
 - client-side canonical metadata when navigating to a public folder without a page reload;
 - `noindex` protection for removed, private or unavailable public folders;
 - anonymous portal RPCs restricted to folders, lists and cards explicitly marked public and outside classroom context;
+- privacy-safe publication lifecycle registry for public teachers and learning resources;
+- real HTTP `404 Not Found` for dynamic public keys that were never published;
+- real HTTP `410 Gone` for previously published profiles or materials that were withdrawn;
+- Netlify Edge Function bypass for valid public entities and temporary backend failures;
+- static and database smoke validation of `200`, `404`, `410`, slug changes, withdrawal and republication;
 - SEO consistency validation in CI.
+
+## HTTP status semantics
+
+- `200`: the profile or learning resource is currently public and the request continues to the existing pre-rendered page;
+- `404`: the dynamic key has no publication history and must not reveal whether a private database row exists;
+- `410`: the exact public URL was previously published and was later withdrawn, unpublished or soft-deleted;
+- temporary RPC or network failure: the edge layer bypasses status interception instead of producing a false error.
+
+Only URLs recorded through an actual public state transition can return `410`. Private entities that were never published remain indistinguishable from unknown identifiers.
 
 ## Current environment work
 
@@ -43,6 +57,7 @@ Repository configuration, frontend initialization, database changes and document
 - versioned environment files were removed;
 - the frontend validates and selects the production data backend;
 - the public-directory and learning-resource builds follow the same production-data validation;
+- the edge HTTP-status lookup validates and selects the production data backend;
 - the bootstrap validates project identity before loading the application;
 - CI validates runtime and optional deployment settings.
 
@@ -57,11 +72,10 @@ The bilingual official pages are the preferred first-party sources for factual d
 
 ## Remaining work
 
-1. Return real HTTP 404 or 410 responses for missing public entities.
-2. Publish deeper first-party methodology and educational evidence pages.
-3. Add canonical indexable pages for individual public lists when editorially useful.
-4. Add real-user INP, LCP and CLS monitoring.
-5. Expand international URLs beyond the current Portuguese and English foundation when content is ready.
-6. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
-7. Monitor AI citations, brand mentions and Share of Model.
-8. Build external authority through useful references, partnerships and legitimate backlinks.
+1. Publish deeper first-party methodology and educational evidence pages.
+2. Add canonical indexable pages for individual public lists when editorially useful.
+3. Add real-user INP, LCP and CLS monitoring.
+4. Expand international URLs beyond the current Portuguese and English foundation when content is ready.
+5. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
+6. Monitor AI citations, brand mentions and Share of Model.
+7. Build external authority through useful references, partnerships and legitimate backlinks.
