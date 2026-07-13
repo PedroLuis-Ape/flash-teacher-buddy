@@ -164,7 +164,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuthContext() {
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
+  if (!context) {
+    return {
+      status: "initializing",
+      user: null,
+      session: null,
+      userId: undefined,
+      accessToken: undefined,
+      initializing: true,
+      error: null,
+    };
+  }
+  return context;
+}
+
+export function useAuthContext(): AuthContextValue {
   const value = useContext(AuthContext);
   if (!value) throw new Error("useAuthContext must be used inside AuthProvider");
   return value;
