@@ -8,6 +8,7 @@ const migration = readFileSync(
   "utf8",
 );
 const interactiveText = readFileSync(new URL("./components/InteractiveText.tsx", import.meta.url), "utf8");
+const glossaryLayers = readFileSync(new URL("./lib/glossaryLayers.ts", import.meta.url), "utf8");
 const folderGlossaryManager = readFileSync(
   new URL("./components/FolderGlossaryManagerCore.tsx", import.meta.url),
   "utf8",
@@ -105,11 +106,13 @@ describe("folder-scoped glossary", () => {
     expect(migration).toContain("sync_folder_glossaries_from_super_import_v1");
   });
 
-  it("uses a bottom sheet on mobile and prioritizes the exact clicked term", () => {
+  it("uses a bottom sheet on mobile and keeps exact plus contextual layers", () => {
     expect(interactiveText).toContain("<Sheet");
     expect(interactiveText).toContain('side="bottom"');
     expect(interactiveText).toContain("safe-area-inset-bottom");
-    expect(interactiveText).toContain("exact.length > 0 ? exact : matches");
+    expect(interactiveText).toContain("prioritizeLayeredHintMatches(value, matches)");
+    expect(glossaryLayers).toContain("const aExact = normalizeText(a.text) === clicked ? 0 : 1");
+    expect(glossaryLayers).toContain("existing.translations.push(...match.translations)");
     expect(interactiveText).not.toContain("setTimeout(() => setOpen(false)");
   });
 

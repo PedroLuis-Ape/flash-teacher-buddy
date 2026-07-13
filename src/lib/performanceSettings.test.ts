@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   PRESET_LIGHT,
@@ -48,7 +49,7 @@ describe("performance settings glossary safety", () => {
     expect(storage.setItem).toHaveBeenCalledWith("ape-performance-settings-version", "2");
   });
 
-  it("preserves an explicit non-light custom choice", () => {
+  it("preserves an explicit non-light custom choice for backward compatibility", () => {
     const storage = createStorage({
       "ape-performance-settings": JSON.stringify({
         preset: "high",
@@ -58,5 +59,21 @@ describe("performance settings glossary safety", () => {
     vi.stubGlobal("localStorage", storage);
 
     expect(readPerformanceSettings().wordTooltips).toBe(false);
+  });
+
+  it("does not allow a visual setting to disable core glossary interaction", () => {
+    const interactiveText = readFileSync(
+      "src/features/study/components/InteractiveText.tsx",
+      "utf8",
+    );
+    const performancePage = readFileSync(
+      "src/pages/PerformanceSettings.tsx",
+      "utf8",
+    );
+
+    expect(interactiveText).not.toContain("getPerfSettings");
+    expect(interactiveText).not.toContain("perf.wordTooltips");
+    expect(performancePage).not.toContain("Tooltips por palavra");
+    expect(performancePage).toContain("traduções do glossário permanecem sempre disponíveis");
   });
 });

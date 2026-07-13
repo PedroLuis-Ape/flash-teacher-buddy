@@ -3,6 +3,7 @@ import {
   buildLayeredTextSegments,
   definitionsFromMergedHints,
   findGlossaryOccurrences,
+  prioritizeLayeredHintMatches,
   type LayeredHintDefinition,
 } from "./glossaryLayers";
 
@@ -25,6 +26,24 @@ describe("findGlossaryOccurrences", () => {
 
   it("finds repeated expressions", () => {
     expect(findGlossaryOccurrences("because of rain and because of wind", "because of")).toHaveLength(2);
+  });
+
+  it("matches straight and curly apostrophes without changing display indexes", () => {
+    expect(findGlossaryOccurrences("They don’t know", "don't")).toEqual([
+      { startIndex: 5, endIndex: 10 },
+    ]);
+    expect(findGlossaryOccurrences("They don't know", "don’t")).toEqual([
+      { startIndex: 5, endIndex: 10 },
+    ]);
+  });
+
+  it("matches common Unicode hyphen variants", () => {
+    expect(findGlossaryOccurrences("long‑term memory", "long-term")).toEqual([
+      { startIndex: 0, endIndex: 9 },
+    ]);
+    expect(findGlossaryOccurrences("long-term memory", "long‑term")).toEqual([
+      { startIndex: 0, endIndex: 9 },
+    ]);
   });
 });
 
@@ -71,5 +90,16 @@ describe("buildLayeredTextSegments", () => {
     ]);
     const segment = buildLayeredTextSegments("because", definitions)[0];
     expect(segment.matches[0].translations.map((translation) => translation.text)).toEqual(["porque", "já que"]);
+  });
+
+  it("keeps the exact word first and the expression visible in the same popover", () => {
+    const segments = buildLayeredTextSegments("because of", [
+      definition("because", "porque"),
+      definition("because of", "por causa de"),
+    ]);
+    const because = segments.find((segment) => segment.value === "because");
+    const prioritized = prioritizeLayeredHintMatches("because", because?.matches ?? []);
+
+    expect(prioritized.map((match) => match.text)).toEqual(["because", "because of"]);
   });
 });

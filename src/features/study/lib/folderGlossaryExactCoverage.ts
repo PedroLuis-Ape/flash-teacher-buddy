@@ -2,13 +2,16 @@ import type {
   FolderGlossaryCoverageReport,
   FolderGlossaryCoverageTerm,
 } from "./folderGlossaryCoverage";
+import { folderGlossaryIdentity } from "./folderGlossaryCompact";
 import { normalizeFolderGlossaryInput } from "./folderGlossaryTransfer";
 import type { FolderGlossaryInput, GlossarySide } from "./folderGlossaryTypes";
 
-const PLACEHOLDER_TRANSLATION = /^(?:-|todo|tbd|n\/?a|null|undefined|translation|tradu[cç][aã]o)$/iu;
+const EXACT_COVERAGE_SCHEMA = "app-piteco-folder-glossary-exact-coverage";
+const EXACT_COVERAGE_VERSION = "2.0";
+const PLACEHOLDER_TRANSLATION = /^(?:[-–—.]+|todo|tbd|n\/?a|null|undefined|translation|tradu[cç][aã]o|preencher|pendente)$/iu;
 
 function normalize(value: string): string {
-  return value.trim().replace(/\s+/gu, " ").toLocaleLowerCase();
+  return folderGlossaryIdentity(value);
 }
 
 function sanitizeJsonText(text: string): string {
@@ -34,6 +37,18 @@ function parseJsonObject(text: string): Record<string, unknown> {
   }
 
   return parsed as Record<string, unknown>;
+}
+
+function expectedExamples(term: FolderGlossaryCoverageTerm) {
+  return term.examples.map((example) => ({
+    list: example.listTitle,
+    side: example.side,
+    text: example.text,
+  }));
+}
+
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export function exactCoverageEntryKey(input: Pick<FolderGlossaryCoverageTerm, "side" | "normalized">): string {
@@ -66,8 +81,8 @@ export function serializeExactCoverageRequest(input: {
   };
 
   return JSON.stringify({
-    schema: "app-piteco-folder-glossary-exact-coverage",
-    version: "2.0",
+    schema: EXACT_COVERAGE_SCHEMA,
+    version: EXACT_COVERAGE_VERSION,
     task: "Complete o glossário individual de cada palavra pendente desta pasta.",
     folder: { name: input.folderTitle },
     audit: {
@@ -108,11 +123,7 @@ export function serializeExactCoverageRequest(input: {
         active: true,
         coverage_status: term.status,
         occurrences: term.occurrenceCount,
-        examples: term.examples.map((example) => ({
-          list: example.listTitle,
-          side: example.side,
-          text: example.text,
-        })),
+        examples: expectedExamples(term),
       };
     }),
   }, null, 2);
@@ -123,8 +134,26 @@ export function parseExactCoverageCompletionJson(
   report: FolderGlossaryCoverageReport,
 ): FolderGlossaryInput[] {
   const document = parseJsonObject(text);
-  if (document.schema !== "app-piteco-folder-glossary-exact-coverage") {
+  if (document.schema !== EXACT_COVERAGE_SCHEMA) {
     throw new Error("Este não é o arquivo de cobertura exata exportado pelo App Piteco.");
+  }
+  if (document.version !== EXACT_COVERAGE_VERSION) {
+    throw new Error(`Versão incompatível do glossário exato. Esperado ${EXACT_COVERAGE_VERSION}.`);
+  }
+
+  const pending = getExactCoveragePendingTerms(report);
+  const audit = document.audit;
+  if (!audit || typeof audit !== "object" || Array.isArray(audit)) {
+    throw new Error('O arquivo precisa manter o objeto "audit" original.');
+  }
+  const auditRow = audit as Record<string, unknown>;
+  if (auditRow.exact_coverage_required !== true) {
+    throw new Error("O contrato de cobertura exata foi removido ou alterado.");
+  }
+  if (Number(auditRow.expected_entries) !== pending.length) {
+    throw new Error(
+      `O arquivo foi exportado para outra auditoria. Esperado ${pending.length} entradas pendentes no estado atual.`,
+    );
   }
 
   const rows = document.entries;
@@ -132,7 +161,6 @@ export function parseExactCoverageCompletionJson(
     throw new Error('O arquivo precisa manter a lista "entries" original.');
   }
 
-  const pending = getExactCoveragePendingTerms(report);
   const expectedByKey = new Map(pending.map((term) => [exactCoverageEntryKey(term), term]));
   const completedByKey = new Map<string, FolderGlossaryInput>();
   const problems: string[] = [];
@@ -162,20 +190,33 @@ export function parseExactCoverageCompletionJson(
       problems.push(`entrada ${position}: termo extra ou alterado (${rawSide}: ${rawTerm})`);
       return;
     }
+    if (rawTerm !== expected.term) {
+      problems.push(`entrada ${position} (${expected.term}): term deve permanecer exatamente igual ao arquivo exportado`);
+      return;
+    }
     if (completedByKey.has(key)) {
       problems.push(`entrada duplicada: ${rawSide}: ${expected.term}`);
       return;
     }
 
     const returnedEntryKey = typeof row.entry_key === "string" ? row.entry_key.trim() : "";
-    if (returnedEntryKey && returnedEntryKey !== key) {
-      problems.push(`entrada ${position} (${expected.term}): entry_key foi alterado`);
+    if (returnedEntryKey !== key) {
+      problems.push(`entrada ${position} (${expected.term}): entry_key ausente ou alterado`);
       return;
     }
 
     const returnedStatus = typeof row.coverage_status === "string" ? row.coverage_status : "";
-    if (returnedStatus && returnedStatus !== expected.status) {
-      problems.push(`entrada ${position} (${expected.term}): coverage_status foi alterado`);
+    if (returnedStatus !== expected.status) {
+      problems.push(`entrada ${position} (${expected.term}): coverage_status ausente ou alterado`);
+      return;
+    }
+
+    if (Number(row.occurrences) !== expected.occurrenceCount) {
+      problems.push(`entrada ${position} (${expected.term}): occurrences foi alterado`);
+      return;
+    }
+    if (!sameJsonValue(row.examples, expectedExamples(expected))) {
+      problems.push(`entrada ${position} (${expected.term}): examples foi alterado`);
       return;
     }
 

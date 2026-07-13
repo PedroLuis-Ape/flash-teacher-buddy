@@ -6,6 +6,7 @@
 import type { WordHint } from "./wordHints";
 import { findGlossaryOccurrences } from "./glossaryLayers";
 import { findRelevantGlossaryMatches } from "./glossaryIndex";
+import { folderGlossaryIdentity } from "./folderGlossaryCompact";
 
 export interface GlossaryItem {
   original_text: string;
@@ -26,8 +27,7 @@ export interface ExtendedWordHint extends WordHint {
   suppressGlobal?: boolean;
 }
 
-const normalize = (value: string) =>
-  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+const normalize = (value: string) => folderGlossaryIdentity(value);
 
 function mergeNotes(current?: string, next?: string | null) {
   const notes = [current, next]
