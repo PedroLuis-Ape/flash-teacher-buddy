@@ -27,9 +27,8 @@ describe("public teacher discovery", () => {
     expect(JSON.stringify(data)).toContain("/portal/folder/11111111-1111-4111-8111-111111111111");
   });
 
-  it("keeps missing profiles out of search indexes and supports the legacy backend", () => {
+  it("keeps missing profiles out of search indexes and supports the legacy RPC fallback", () => {
     const page = readFileSync("src/pages/PublicTeacherProfile.tsx", "utf8");
-
     expect(page).toContain("search_public_teachers");
     expect(page).toContain("candidate.public_slug.toLocaleLowerCase");
     expect(page.match(/robots="noindex,nofollow"/g)).toHaveLength(2);
@@ -37,7 +36,7 @@ describe("public teacher discovery", () => {
     expect(page).toContain("buildPublicTeacherStructuredData(profile, folders)");
   });
 
-  it("integrates dynamic pre-rendering into the production build", () => {
+  it("integrates dynamic pre-rendering with the official single project", () => {
     const packageJson = readFileSync("package.json", "utf8");
     const loader = readFileSync("scripts/public-directory-data.mjs", "utf8");
     const prerender = readFileSync("scripts/prerender-public-teachers.mjs", "utf8");
@@ -45,8 +44,10 @@ describe("public teacher discovery", () => {
 
     expect(packageJson).toContain("prerender-public-teachers.mjs");
     expect(packageJson).toContain("validate-public-teacher-prerender.mjs");
-    expect(loader).toContain("PRODUCTION_DATA_PROJECT_ID");
-    expect(loader).toContain("repository-fallback");
+    expect(loader).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
+    expect(loader).toContain("official-runtime");
+    expect(loader).not.toContain("PRODUCTION_DATA_PROJECT_ID");
+    expect(loader).not.toContain("repository-fallback");
     expect(prerender).toContain("public-teacher-prerender-report.json");
     expect(prerender).toContain("appendTeacherUrlsToSitemap");
     expect(prerender).toContain("injectTeacherRedirects");
