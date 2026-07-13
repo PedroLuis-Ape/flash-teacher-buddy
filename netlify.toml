@@ -11,3 +11,7 @@
 [[edge_functions]]
   path = "/portal/list/*"
   function = "public-list-status"
+
+[[edge_functions]]
+  path = "/api/rum"
+  function = "rum-web-vital"
