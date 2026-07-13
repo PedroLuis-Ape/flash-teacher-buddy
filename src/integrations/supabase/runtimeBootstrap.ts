@@ -54,7 +54,7 @@ export async function loadOfficialPlatformRuntime(
   }
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 5_000);
+  const timeout = globalThis.setTimeout(() => controller.abort(), 5_000);
   try {
     const response = await fetchImpl(OFFICIAL_RUNTIME_ENDPOINT, {
       headers: { Accept: "application/json" },
@@ -66,6 +66,6 @@ export async function loadOfficialPlatformRuntime(
     }
     return validateOfficialRuntime(await response.json());
   } finally {
-    window.clearTimeout(timeout);
+    globalThis.clearTimeout(timeout);
   }
 }
