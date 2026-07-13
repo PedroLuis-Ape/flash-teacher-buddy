@@ -28,6 +28,13 @@ Repository configuration, frontend initialization, database changes and document
 - dynamic teacher URLs appended to the deployed sitemap;
 - `ProfilePage`, `Person`, `ItemList` and `BreadcrumbList` entities for public teachers;
 - `noindex` protection for removed, private or unavailable teacher profiles;
+- build-time discovery and pre-rendering of public folders;
+- dynamic learning-resource URLs appended to the deployed sitemap;
+- `CollectionPage`, `LearningResource`, `Person`, `ItemList` and `BreadcrumbList` entities for public folders;
+- visible authorship, languages, counts and update dates in static public-folder HTML;
+- client-side canonical metadata when navigating to a public folder without a page reload;
+- `noindex` protection for removed, private or unavailable public folders;
+- anonymous portal RPCs restricted to folders, lists and cards explicitly marked public and outside classroom context;
 - SEO consistency validation in CI.
 
 ## Current environment work
@@ -35,7 +42,7 @@ Repository configuration, frontend initialization, database changes and document
 - `supabase/config.toml` uses the managed project;
 - versioned environment files were removed;
 - the frontend validates and selects the production data backend;
-- the public-directory build follows the same production-data validation;
+- the public-directory and learning-resource builds follow the same production-data validation;
 - the bootstrap validates project identity before loading the application;
 - CI validates runtime and optional deployment settings.
 
@@ -43,18 +50,18 @@ Repository configuration, frontend initialization, database changes and document
 
 - `/pt-br/fonte-oficial`;
 - `/en/official-source`;
-- `/portal/professor/:public_slug` for explicitly public teacher profiles.
+- `/portal/professor/:public_slug` for explicitly public teacher profiles;
+- `/portal/folder/:folder_id` for teacher-owned folders intentionally published outside classroom context.
 
-The bilingual official pages are the preferred first-party sources for factual descriptions of APE / App Piteco. Public teacher profiles are canonical sources for the teacher identity, declared specialties and materials intentionally published by that teacher.
+The bilingual official pages are the preferred first-party sources for factual descriptions of APE / App Piteco. Public teacher profiles are canonical sources for teacher identity and declared specialties. Public folders are canonical sources for the learning materials, languages, list structure and authorship intentionally published by that teacher.
 
 ## Remaining work
 
-1. Pre-render public folders and published learning resources with stable `LearningResource` entities.
-2. Return real HTTP 404 or 410 responses for missing public entities.
-3. Publish deeper first-party methodology and educational evidence pages.
-4. Add update timestamps and stable authorship to published learning resources.
-5. Add real-user INP, LCP and CLS monitoring.
-6. Expand international URLs beyond the current Portuguese and English foundation when content is ready.
-7. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
-8. Monitor AI citations, brand mentions and Share of Model.
-9. Build external authority through useful references, partnerships and legitimate backlinks.
+1. Return real HTTP 404 or 410 responses for missing public entities.
+2. Publish deeper first-party methodology and educational evidence pages.
+3. Add canonical indexable pages for individual public lists when editorially useful.
+4. Add real-user INP, LCP and CLS monitoring.
+5. Expand international URLs beyond the current Portuguese and English foundation when content is ready.
+6. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
+7. Monitor AI citations, brand mentions and Share of Model.
+8. Build external authority through useful references, partnerships and legitimate backlinks.
