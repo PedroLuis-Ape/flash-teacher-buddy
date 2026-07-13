@@ -17,7 +17,6 @@ import {
   Volume2,
   Sparkles,
   MousePointerClick,
-  MessageSquare,
   Palette,
   Eye,
   Image,
@@ -45,7 +44,6 @@ const toggleConfig: { key: ToggleKey; label: string; desc: string; icon: typeof 
   { key: 'soundEffects', label: 'Efeitos sonoros', desc: 'Sons nos jogos de estudo', icon: Volume2 },
   { key: 'animations', label: 'Animações de interface', desc: 'Transições de página e fade', icon: Activity },
   { key: 'hoverEffects', label: 'Efeitos de hover', desc: 'Destaque ao passar o mouse em cards', icon: MousePointerClick },
-  { key: 'wordTooltips', label: 'Tooltips por palavra', desc: 'Traduções ao tocar/hover em palavras', icon: MessageSquare },
   { key: 'decorativeEffects', label: 'Efeitos decorativos', desc: 'Glow, gradientes extra, brilhos', icon: Palette },
   { key: 'visualFeedback', label: 'Feedback visual avançado', desc: 'Scale ao pressionar, micro-interações', icon: Eye },
   { key: 'highQualityImages', label: 'Imagens em alta qualidade', desc: 'Carregamento de imagens em resolução máxima', icon: Image },
@@ -87,7 +85,6 @@ const PerformanceSettingsPage = () => {
       <ApeAppBar title="Desempenho" showBack backPath="/profile" />
 
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-32">
-        {/* Presets */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -132,11 +129,12 @@ const PerformanceSettingsPage = () => {
 
         <Separator />
 
-        {/* Individual Toggles */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Configurações avançadas</CardTitle>
-            <CardDescription>Ative ou desative recursos individualmente</CardDescription>
+            <CardDescription>
+              Recursos visuais podem ser reduzidos. As traduções do glossário permanecem sempre disponíveis.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             {toggleConfig.map(({ key, label, desc, icon: Icon }) => (
@@ -163,7 +161,6 @@ const PerformanceSettingsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Reset */}
         <div className="flex justify-center">
           <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
             <RotateCcw className="h-4 w-4" />
@@ -171,7 +168,6 @@ const PerformanceSettingsPage = () => {
           </Button>
         </div>
 
-        {/* Safe Mode + Freeze Diagnostics */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Estabilidade</CardTitle>
