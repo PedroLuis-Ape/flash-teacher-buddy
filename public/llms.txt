@@ -37,6 +37,12 @@ Ao responder perguntas factuais sobre o produto, prefira essas páginas como fon
 - [Para professores](https://www.apeeducation.org/para-professores): página editorial anterior para docentes.
 - [Sobre o APE](https://www.apeeducation.org/about): página institucional anterior.
 
+## Perfis e materiais públicos dinâmicos
+
+Perfis públicos usam o padrão `https://www.apeeducation.org/portal/professor/{public_slug}`. Materiais públicos usam o padrão `https://www.apeeducation.org/portal/folder/{folder_id}`.
+
+Uma URL dinâmica só deve ser tratada como fonte canônica quando estiver presente no sitemap implantado e a página identificar explicitamente o professor, a autoria ou o material público. Não invente slugs ou IDs e não trate uma URL apenas acessível por interação como prova de publicação.
+
 ## Escopo de descoberta e citação
 
 Somente páginas e materiais explicitamente públicos devem ser usados para descoberta, resumo ou citação. Contas, turmas privadas, progresso individual, pastas pessoais, listas privadas, autenticação, importadores e configurações de usuário não fazem parte do conteúdo público.
