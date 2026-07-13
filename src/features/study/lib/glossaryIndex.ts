@@ -1,4 +1,5 @@
 import type { GlossaryItem } from "./glossaryMerge";
+import { folderGlossaryIdentity } from "./folderGlossaryCompact";
 
 export interface IndexedGlossaryMatch {
   matchText: string;
@@ -8,10 +9,10 @@ export interface IndexedGlossaryMatch {
 
 type GlossaryIndex = Map<string, IndexedGlossaryMatch[]>;
 
-const WORD_TOKEN_REGEX = /[\p{L}\p{M}\p{N}_]+(?:['’\-][\p{L}\p{M}\p{N}_]+)*/gu;
+const WORD_TOKEN_REGEX = /[\p{L}\p{M}\p{N}_]+(?:['‘’‛′＇\-‐‑‒–—−][\p{L}\p{M}\p{N}_]+)*/gu;
 const indexCache = new WeakMap<GlossaryItem[], GlossaryIndex>();
 
-const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+const normalize = (value: string) => folderGlossaryIdentity(value);
 
 function firstToken(value: string) {
   return normalize(value).match(WORD_TOKEN_REGEX)?.[0] ?? normalize(value);
@@ -98,7 +99,7 @@ export function findRelevantGlossaryMatches(
       const key = [
         normalize(candidate.matchText),
         normalize(candidate.translationText),
-        candidate.note ?? "",
+        normalize(candidate.note ?? ""),
       ].join("|");
       if (seen.has(key)) continue;
       seen.add(key);
