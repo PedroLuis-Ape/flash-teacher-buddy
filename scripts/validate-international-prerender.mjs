@@ -8,6 +8,13 @@ const pages = [
 ];
 const errors = [];
 
+const escapeHtml = (value) => String(value)
+  .replaceAll("&", "&amp;")
+  .replaceAll("<", "&lt;")
+  .replaceAll(">", "&gt;")
+  .replaceAll('"', "&quot;")
+  .replaceAll("'", "&#39;");
+
 for (const page of pages) {
   const path = resolve(root, "dist", page.path.slice(1), "index.html");
   if (!existsSync(path)) {
@@ -36,7 +43,7 @@ for (const page of pages) {
     }
     if (!html.includes(`"@type":"Person"`)) errors.push(`${page.path}: entidade Person ausente`);
     if (!html.includes(`"@type":"FAQPage"`)) errors.push(`${page.path}: FAQPage ausente`);
-    if (!html.includes(page.citation.text)) errors.push(`${page.path}: descrição de citação ausente no HTML`);
+    if (!html.includes(escapeHtml(page.citation.text))) errors.push(`${page.path}: descrição de citação ausente no HTML`);
     if (!html.includes(`datetime="${page.dateModified}"`)) errors.push(`${page.path}: data editorial ausente`);
   }
 }
