@@ -1,5 +1,6 @@
 import type { MergedHint } from "./glossaryMerge";
 import { parseWordHints, type WordHint } from "./wordHints";
+import { cleanFolderGlossaryText, folderGlossaryIdentity } from "./folderGlossaryCompact";
 
 export type GlossaryTranslationSource = "global" | "manual";
 
@@ -28,11 +29,22 @@ export interface LayeredTextSegment {
 }
 
 const WORD_CHAR = /[\p{L}\p{M}\p{N}_]/u;
-const TOKEN_REGEX = /\s+|[\p{L}\p{M}\p{N}_]+(?:['’\-][\p{L}\p{M}\p{N}_]+)*|[^\s]/gu;
+const TOKEN_REGEX = /\s+|[\p{L}\p{M}\p{N}_]+(?:['‘’‛′＇\-‐‑‒–—−][\p{L}\p{M}\p{N}_]+)*|[^\s]/gu;
+const APOSTROPHE_PATTERN = "['‘’‛′＇]";
+const HYPHEN_PATTERN = "[-‐‑‒–—−]";
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const normalizeText = (value: string) => folderGlossaryIdentity(value);
 
-const normalizeText = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+function glossaryCharacterPattern(value: string): string {
+  if (value === "'") return APOSTROPHE_PATTERN;
+  if (value === "-") return HYPHEN_PATTERN;
+  return escapeRegExp(value);
+}
+
+function glossaryTermPartPattern(value: string): string {
+  return Array.from(value, glossaryCharacterPattern).join("");
+}
 
 function isWordChar(value: string | undefined): boolean {
   return !!value && WORD_CHAR.test(value);
@@ -40,14 +52,15 @@ function isWordChar(value: string | undefined): boolean {
 
 /**
  * Finds every whole-word/whole-expression occurrence of a glossary term.
- * Whitespace inside multi-word expressions is flexible, so an entry such as
- * "because of" still matches text containing line breaks or repeated spaces.
+ * Whitespace inside multi-word expressions is flexible. Typographic apostrophe
+ * and hyphen variants are treated as the same term, so `don't` matches `don’t`
+ * and `well-being` matches `well‑being` without changing displayed text.
  */
 export function findGlossaryOccurrences(text: string, term: string): Array<{ startIndex: number; endIndex: number }> {
-  const cleanTerm = term.trim();
+  const cleanTerm = cleanFolderGlossaryText(term);
   if (!text || !cleanTerm) return [];
 
-  const parts = cleanTerm.split(/\s+/).map(escapeRegExp);
+  const parts = cleanTerm.split(/\s+/u).map(glossaryTermPartPattern);
   const core = parts.join("\\s+");
   const prefix = isWordChar(cleanTerm[0]) ? "(?<![\\p{L}\\p{M}\\p{N}_])" : "";
   const suffix = isWordChar(cleanTerm[cleanTerm.length - 1]) ? "(?![\\p{L}\\p{M}\\p{N}_])" : "";
@@ -141,6 +154,44 @@ export function buildLayeredTextSegments(text: string, definitions: LayeredHintD
   }
 
   return segments;
+}
+
+/**
+ * Groups duplicate layers and keeps the individual word first without hiding
+ * the expressions that also contain it. This preserves the exact translation
+ * and the contextual phrase in the same popover.
+ */
+export function prioritizeLayeredHintMatches(
+  value: string,
+  matches: LayeredHintMatch[],
+): LayeredHintMatch[] {
+  const clicked = normalizeText(value);
+  const grouped = new Map<string, LayeredHintMatch>();
+
+  for (const match of matches) {
+    const key = normalizeText(match.text);
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, {
+        ...match,
+        translations: [...match.translations],
+      });
+      continue;
+    }
+    existing.translations.push(...match.translations);
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    const aExact = normalizeText(a.text) === clicked ? 0 : 1;
+    const bExact = normalizeText(b.text) === clicked ? 0 : 1;
+    if (aExact !== bExact) return aExact - bExact;
+
+    const aExpression = /\s/u.test(a.text.trim()) ? 0 : 1;
+    const bExpression = /\s/u.test(b.text.trim()) ? 0 : 1;
+    if (aExpression !== bExpression) return aExpression - bExpression;
+
+    return a.text.length - b.text.length || a.text.localeCompare(b.text);
+  });
 }
 
 export function definitionsFromMergedHints(hints: MergedHint[]): LayeredHintDefinition[] {
