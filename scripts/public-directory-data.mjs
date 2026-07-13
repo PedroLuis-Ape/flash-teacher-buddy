@@ -38,67 +38,46 @@ function readRuntimeSource() {
   return readFileSync(resolve(root, "src/integrations/supabase/platformRuntime.ts"), "utf8");
 }
 
-function parseKnownProjects(source) {
-  return {
-    managedProjectId: source.match(/MANAGED_SUPABASE_PROJECT_ID\s*=\s*"([a-z]{20})"/)?.[1],
-    productionProjectId: source.match(/PRODUCTION_DATA_PROJECT_ID\s*=\s*"([a-z]{20})"/)?.[1],
-  };
-}
-
-function parseSourceFallback(source) {
-  const { productionProjectId } = parseKnownProjects(source);
-  const keyBlock = source.match(/PRODUCTION_DATA_PUBLIC_VALUE\s*=\s*\[([\s\S]*?)\]\.join\(""\)/)?.[1];
-  const publicValue = keyBlock
-    ? [...keyBlock.matchAll(/"([^"]*)"/g)].map((match) => match[1]).join("")
-    : "";
-
-  if (!productionProjectId || !publicValue) return null;
-  return {
-    projectId: productionProjectId,
-    url: `https://${productionProjectId}.supabase.co`,
-    publicValue,
-    source: "repository-fallback",
-  };
+function parseOfficialProjectId(source) {
+  return source.match(/OFFICIAL_SUPABASE_PROJECT_ID\s*=\s*"([a-z]{20})"/)?.[1];
 }
 
 function readEnvironmentRuntime(source) {
-  const { productionProjectId } = parseKnownProjects(source);
+  const officialProjectId = parseOfficialProjectId(source);
   const url = process.env.VITE_SUPABASE_URL?.trim();
   const publicValue = process.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
   const projectId = process.env.VITE_SUPABASE_PROJECT_ID?.trim();
   const runtime = { projectId, url, publicValue, source: "environment" };
-  return isRuntime(runtime, productionProjectId) ? runtime : null;
+  return isRuntime(runtime, officialProjectId) ? runtime : null;
 }
 
-async function readManagedRuntime(source) {
-  const { managedProjectId, productionProjectId } = parseKnownProjects(source);
-  if (!managedProjectId || !productionProjectId) return null;
+async function readOfficialRuntime(source) {
+  const officialProjectId = parseOfficialProjectId(source);
+  if (!officialProjectId) return null;
 
   try {
     const response = await timedFetch(
-      `https://${managedProjectId}.supabase.co/functions/v1/app-public-config`,
-      { headers: { Accept: "application/json" } },
+      `https://${officialProjectId}.supabase.co/functions/v1/app-public-config`,
+      { headers: { Accept: "application/json" }, cache: "no-store" },
     );
     if (!response.ok) return null;
     const payload = await response.json();
     const runtime = {
       projectId: payload.projectId,
       url: payload.url,
-      publicValue: payload.publishableKey,
-      source: "managed-runtime",
+      publicValue: payload.publicValue ?? payload.publishableKey,
+      source: "official-runtime",
     };
-    return isRuntime(runtime, productionProjectId) ? runtime : null;
+    return isRuntime(runtime, officialProjectId) ? runtime : null;
   } catch (error) {
-    console.warn("[PublicDirectory] Endpoint de runtime indisponível; usando fallback público.", error?.message ?? error);
+    console.warn("[PublicDirectory] Endpoint oficial indisponível; pré-renderização dinâmica será ignorada.", error?.message ?? error);
     return null;
   }
 }
 
 export async function resolvePublicDirectoryRuntime() {
   const source = readRuntimeSource();
-  return readEnvironmentRuntime(source)
-    ?? await readManagedRuntime(source)
-    ?? parseSourceFallback(source);
+  return readEnvironmentRuntime(source) ?? await readOfficialRuntime(source);
 }
 
 function isMissingDiscoveryRpc(error) {
