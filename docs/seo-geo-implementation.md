@@ -4,11 +4,11 @@ Updated: 2026-07-13
 
 ## Backend architecture
 
-The managed Supabase project is `xrnfhhoxmmstagmelvyi`.
+APE uses one official Supabase project for authentication, runtime data, public discovery, HTTP status checks and RUM:
 
-The production data currently used by the application is stored in `ymahldldyxvwjeruaxpr`. Build-time public discovery and runtime public-status checks must apply the same production-data validation used by the frontend and must never use the empty managed project by mistake.
+`xrnfhhoxmmstagmelvyi`
 
-Repository configuration, frontend initialization, database changes and documentation must keep this transition explicit until both responsibilities are consolidated into one project.
+Frontend initialization, build-time discovery and Netlify Edge Functions reject a different Supabase project. The browser obtains the public configuration from environment variables or from `app-public-config` in the official project before importing the application.
 
 ## Completed foundation
 
@@ -23,77 +23,65 @@ Repository configuration, frontend initialization, database changes and document
 - validation of canonical, language, alternate links and static HTML in CI;
 - `llms.txt` with public/private discovery boundaries;
 - official bilingual source pages for product identity, authorship, privacy and citation wording;
-- bilingual methodology pages describing retrieval, feedback, distributed review, task variation and teacher responsibility;
-- bilingual evidence pages separating research on learning principles from validation of APE as a product;
-- visible disclosure that APE has no published product-specific randomized trial or effect-size estimate at this revision;
-- six DOI-linked primary studies and reviews shared consistently across Portuguese and English evidence pages;
-- editorial CI rules against claims such as guaranteed learning, clinical proof or proven grade improvement;
-- `Article`, `ScholarlyArticle`, `Person`, `Organization`, `WebPage` and `BreadcrumbList` structured data for methodology and evidence;
-- static authorship, publication date, revision date, evidence boundary and references in initial HTML;
-- `Person`, `Organization`, `SoftwareApplication`, `AboutPage`, `FAQPage` and `BreadcrumbList` entities on the official sources;
+- bilingual methodology and evidence pages with explicit research limits and DOI-linked references;
+- `Person`, `Organization`, `SoftwareApplication`, `Article`, `ScholarlyArticle`, `FAQPage` and breadcrumb structured data;
 - build-time discovery and pre-rendering of public teacher profiles;
-- dynamic teacher URLs appended to the deployed sitemap;
-- `ProfilePage`, `Person`, `ItemList` and `BreadcrumbList` entities for public teachers;
-- `noindex` protection for removed, private or unavailable teacher profiles;
-- build-time discovery and pre-rendering of public folders;
-- dynamic learning-resource URLs appended to the deployed sitemap;
-- `CollectionPage`, `LearningResource`, `Person`, `ItemList` and `BreadcrumbList` entities for public folders;
-- visible authorship, languages, counts and update dates in static public-folder HTML;
-- client-side canonical metadata when navigating to a public folder without a page reload;
-- `noindex` protection for removed, private or unavailable public folders;
-- anonymous portal RPCs restricted to folders, lists and cards explicitly marked public and outside classroom context;
-- privacy-safe publication lifecycle registry for public teachers and learning resources;
-- real HTTP `404 Not Found` for dynamic public keys that were never published;
-- real HTTP `410 Gone` for previously published profiles or materials that were withdrawn;
-- Netlify Edge Function bypass for valid public entities and temporary backend failures;
-- static and database smoke validation of `200`, `404`, `410`, slug changes, withdrawal and republication;
-- SEO consistency validation in CI.
+- build-time discovery and pre-rendering of public folders and individual public lists;
+- dynamic public URLs appended to the deployed sitemap;
+- `ProfilePage`, `CollectionPage`, `LearningResource`, `ItemList` and `BreadcrumbList` entities;
+- visible authorship, languages, counts and revision dates in static HTML;
+- client-side canonical metadata during internal navigation;
+- `noindex` protection for missing, private or unavailable public entities;
+- strict anonymous RPC boundaries for profiles, folders, lists and cards intentionally published outside classroom context;
+- privacy-safe publication registry for teachers, folders and lists;
+- real HTTP `404 Not Found` for keys with no publication history;
+- real HTTP `410 Gone` for withdrawn public URLs;
+- first-party sampled LCP, INP and CLS monitoring with normalized routes and no user identifiers;
+- service-only p75 aggregation and retention controls;
+- SEO, runtime, privacy and database smoke validation in CI.
 
 ## Evidence claim boundary
 
-The evidence pages distinguish three layers:
+The evidence pages distinguish:
 
-1. evidence about general learning principles, such as retrieval practice and distributed practice;
+1. evidence about general learning principles;
 2. implementation of related opportunities in APE features;
 3. product-specific causal effectiveness.
 
-The current public claim is limited to layers 1 and 2. APE does not currently claim a product-specific causal effect, superiority over competitors or guaranteed learning. Any future effectiveness claim should require a pre-specified evaluation design, defined comparison group, retention interval and publicly documented results, including null or negative findings.
+Current public claims are limited to the first two layers. APE does not claim guaranteed learning, superiority over competitors or a product-specific causal effect without a dedicated evaluation.
 
 ## HTTP status semantics
 
-- `200`: the profile or learning resource is currently public and the request continues to the existing pre-rendered page;
-- `404`: the dynamic key has no publication history and must not reveal whether a private database row exists;
-- `410`: the exact public URL was previously published and was later withdrawn, unpublished or soft-deleted;
-- temporary RPC or network failure: the edge layer bypasses status interception instead of producing a false error.
+- `200`: the profile, folder or list is currently public;
+- `404`: the key has no recorded publication history;
+- `410`: the exact URL was previously public and was withdrawn;
+- temporary network or RPC failure: the edge layer bypasses interception instead of creating a false error.
 
-Only URLs recorded through an actual public state transition can return `410`. Private entities that were never published remain indistinguishable from unknown identifiers.
+Private entities that were never published remain indistinguishable from unknown identifiers.
 
-## Current environment work
+## Current environment
 
-- `supabase/config.toml` uses the managed project;
-- versioned environment files were removed;
-- the frontend validates and selects the production data backend;
-- the public-directory and learning-resource builds follow the same production-data validation;
-- the edge HTTP-status lookup validates and selects the production data backend;
-- the bootstrap validates project identity before loading the application;
-- CI validates runtime and optional deployment settings.
+- `supabase/config.toml` points to `xrnfhhoxmmstagmelvyi`;
+- the frontend installs and validates the official runtime before importing the application;
+- public-directory, folder and list builds use the same official runtime;
+- HTTP-status and RUM Edge Functions validate the same project;
+- MCP OAuth uses the official issuer;
+- CI rejects the former split-project constants and any active reference to a different runtime project.
 
 ## Current canonical authority pages
 
-- `/pt-br/fonte-oficial` and `/en/official-source` for product facts, identity and authorship;
-- `/pt-br/metodologia` and `/en/methodology` for the documented learning approach;
-- `/pt-br/evidencias` and `/en/evidence` for evidence interpretation, references and claim limits;
-- `/portal/professor/:public_slug` for explicitly public teacher profiles;
-- `/portal/folder/:folder_id` for teacher-owned folders intentionally published outside classroom context.
-
-The bilingual official pages are the preferred first-party sources for factual descriptions of APE / App Piteco. Methodology and evidence pages are the preferred first-party sources for explaining how APE maps research principles to features and where that inference stops. Public teacher profiles and folders remain canonical sources for intentionally published identities and learning materials.
+- `/pt-br/fonte-oficial` and `/en/official-source`;
+- `/pt-br/metodologia` and `/en/methodology`;
+- `/pt-br/evidencias` and `/en/evidence`;
+- `/portal/professor/:public_slug`;
+- `/portal/folder/:folder_id`;
+- `/portal/list/:list_id`.
 
 ## Remaining work
 
-1. Add canonical indexable pages for individual public lists when editorially useful.
-2. Add real-user INP, LCP and CLS monitoring.
-3. Expand international URLs beyond the current Portuguese and English foundation when content is ready.
-4. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
-5. Monitor AI citations, brand mentions and Share of Model.
-6. Build external authority through useful references, partnerships and legitimate backlinks.
-7. Design a product-specific evaluation protocol before making causal effectiveness claims.
+1. Rebuild and validate the complete classroom schema in the official project.
+2. Connect Google Search Console and Bing Webmaster monitoring.
+3. Monitor AI citations, brand mentions and Share of Model.
+4. Expand useful international content when editorially ready.
+5. Build external authority through legitimate references, partnerships and backlinks.
+6. Design a product-specific evaluation protocol before making causal effectiveness claims.
