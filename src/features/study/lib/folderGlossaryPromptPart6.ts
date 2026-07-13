@@ -1,19 +1,17 @@
 export function folderGlossaryPromptPart6(): string {
   return `# 12. REGRAS DOS CAMPOS DE IDIOMA
 
-Use exatamente os rótulos definidos para a pasta.
+Use exatamente os rótulos definidos para a pasta nas seções iniciais e no exemplo canônico.
 
 Para uma entrada com side "A":
 
-* source_language deve ser "${'${sideA}'}" no prompt final gerado;
-* target_language deve ser o rótulo do lado B.
+* source_language deve ser o rótulo exato do lado A;
+* target_language deve ser o rótulo exato do lado B.
 
 Para uma entrada com side "B":
 
-* source_language deve ser o rótulo do lado B;
-* target_language deve ser o rótulo do lado A.
-
-Como esta função não recebe os rótulos diretamente, siga os valores já impressos nas seções iniciais do prompt e no exemplo canônico.
+* source_language deve ser o rótulo exato do lado B;
+* target_language deve ser o rótulo exato do lado A.
 
 Regras obrigatórias:
 
