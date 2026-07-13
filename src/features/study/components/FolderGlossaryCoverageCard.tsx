@@ -39,6 +39,7 @@ import {
   type FolderGlossaryCoverageReport,
   type FolderGlossaryCoverageStatus,
 } from "@/features/study/lib/folderGlossaryCoverage";
+import { getFolderGlossaryCoveragePresentation } from "@/features/study/lib/folderGlossaryCoveragePresentation";
 
 interface Props {
   folderId: string;
@@ -140,9 +141,10 @@ export function FolderGlossaryCoverageCard({
     });
   }, [report, search, statusFilter]);
 
-  const coveragePercent = report && report.totalOccurrences > 0
-    ? Math.round((report.coveredOccurrences / report.totalOccurrences) * 100)
-    : 0;
+  const coverage = getFolderGlossaryCoveragePresentation(
+    report?.coveredOccurrences ?? 0,
+    report?.totalOccurrences ?? 0,
+  );
 
   const exportPending = () => {
     if (!report) return;
@@ -245,18 +247,18 @@ export function FolderGlossaryCoverageCard({
                 <section className="space-y-3 rounded-xl border bg-muted/20 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold">Cobertura das ocorrências: {coveragePercent}%</p>
+                      <p className="font-semibold">Cobertura das ocorrências: {coverage.label}%</p>
                       <p className="text-sm text-muted-foreground">
                         {report.listsScanned.toLocaleString("pt-BR")} listas · {report.cardsScanned.toLocaleString("pt-BR")} cards · {report.distinctTerms.toLocaleString("pt-BR")} termos distintos
                       </p>
                     </div>
-                    {coveragePercent === 100 && (
+                    {coverage.complete && (
                       <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
                         <CheckCircle2 className="mr-1 h-3.5 w-3.5" />Cobertura completa
                       </Badge>
                     )}
                   </div>
-                  <Progress value={coveragePercent} className="h-2" />
+                  <Progress value={coverage.percent} className="h-2" />
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline" className={statusClasses.covered}>{report.coveredTerms} exatas</Badge>
                     <Badge variant="outline" className={statusClasses.expression}>{report.expressionTerms} por expressão</Badge>
