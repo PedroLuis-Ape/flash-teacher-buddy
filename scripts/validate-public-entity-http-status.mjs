@@ -12,6 +12,7 @@ import publicEntityStatusHandler, {
 const root = process.cwd();
 const migrationPath = resolve(root, "supabase/migrations/20260713143000_public_entity_http_status.sql");
 const edgePath = resolve(root, "netlify/edge-functions/public-entity-status.js");
+const netlifyConfigPath = resolve(root, "netlify.toml");
 
 const folderId = "17171717-1717-4717-8717-171717171717";
 assert.deepEqual(
@@ -173,6 +174,11 @@ try {
   );
   assert.equal(publicResponse, undefined, "Entidades públicas devem continuar para o HTML existente.");
 
+  const postResponse = await publicEntityStatusHandler(
+    new Request("https://www.apeeducation.org/portal/professor/pedro", { method: "POST" }),
+  );
+  assert.equal(postResponse, undefined, "Métodos diferentes de GET e HEAD devem ser ignorados.");
+
   globalThis.fetch = async () => {
     throw new Error("temporary network failure");
   };
@@ -200,6 +206,7 @@ try {
 
 const migration = readFileSync(migrationPath, "utf8");
 const edge = readFileSync(edgePath, "utf8");
+const netlifyConfig = readFileSync(netlifyConfigPath, "utf8");
 assert.ok(migration.includes("public_entity_publications"));
 assert.ok(migration.includes("sync_folder_publication_registry_trigger"));
 assert.ok(migration.includes("sync_profile_publication_registry_trigger"));
@@ -208,10 +215,14 @@ assert.ok(migration.includes("CASE WHEN matched.current_public THEN 200 ELSE 410
 assert.ok(migration.includes("404"));
 assert.ok(migration.includes("REVOKE ALL ON TABLE"));
 assert.ok(migration.includes("GRANT EXECUTE ON FUNCTION public.get_public_entity_http_status"));
-assert.ok(edge.includes('path: ["/portal/folder/*", "/portal/professor/*"]'));
-assert.ok(edge.includes('method: ["GET", "HEAD"]'));
+assert.ok(edge.includes('method !== "GET" && method !== "HEAD"'));
 assert.ok(edge.includes("if (!status || status.statusCode === 200) return"));
-assert.ok(edge.includes("globalThis.Netlify?.env?.get"));
+assert.ok(edge.includes("Netlify.env.get"));
 assert.ok(!edge.includes("eyJhbGci"), "Nenhuma chave JWT pode ficar embutida na Edge Function.");
+assert.equal((netlifyConfig.match(/\[\[edge_functions\]\]/g) ?? []).length, 2);
+assert.ok(netlifyConfig.includes('path = "/portal/folder/*"'));
+assert.ok(netlifyConfig.includes('path = "/portal/professor/*"'));
+assert.equal((netlifyConfig.match(/function = "public-entity-status"/g) ?? []).length, 2);
+assert.ok(!netlifyConfig.includes("[build]"), "O arquivo não deve sobrescrever build/publish configurados no projeto.");
 
 console.log("Contrato HTTP público validado: 200 bypass, 404 nunca publicado e 410 retirado.");
