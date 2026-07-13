@@ -1,10 +1,21 @@
-# Runtime de dados e projeto administrado
+# Runtime e dados do App Piteco
 
-O App Piteco possui dois papéis distintos de Supabase durante a transição:
+Atualizado: 2026-07-13
 
-- Projeto administrado pelo repositório e ferramentas: `xrnfhhoxmmstagmelvyi`.
-- Backend de produção que contém contas e dados existentes: `ymahldldyxvwjeruaxpr`.
+O App Piteco usa um único projeto Supabase para runtime, autenticação, dados, migrations e funções públicas:
 
-O frontend deve usar o backend de produção até que uma migração completa e validada dos dados seja concluída. Alterar o runtime do frontend para o projeto administrado sem migrar usuários, pastas, listas e flashcards provoca uma aplicação vazia.
+`xrnfhhoxmmstagmelvyi`
 
-Esta separação é temporária, explícita e deve ser removida somente após auditoria e migração de dados.
+A separação anteriormente documentada entre um projeto administrado e outro backend de dados estava incorreta. Ela foi removida do frontend, dos scripts de pré-renderização, das Edge Functions da Netlify, do MCP e dos contratos de CI.
+
+## Regra atual
+
+- todo cliente deve validar `xrnfhhoxmmstagmelvyi`;
+- outro hostname Supabase deve ser rejeitado;
+- nenhuma chave pública de projeto alternativo fica embutida no bundle;
+- o navegador recebe a configuração pública pelas variáveis oficiais ou por `app-public-config`;
+- credenciais de servidor permanecem fora do frontend.
+
+## Estado do schema
+
+O projeto oficial contém o núcleo de estudo, importação, glossários e loja. Em 2026-07-13 foram adicionadas de forma idempotente as estruturas de perfil público, páginas canônicas, ciclo HTTP público e Core Web Vitals. A camada completa de turmas continua sendo uma reconstrução separada, porque essas tabelas não faziam parte do rebuild atual do banco.
