@@ -14,7 +14,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { OFFICIAL_SUPABASE_URL } from "@/integrations/supabase/platformRuntime";
+import { readPlatformRuntime } from "@/integrations/supabase/platformRuntime";
 
 export type AuthStatus =
   | "initializing"
@@ -42,8 +42,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
  */
 function readPersistedSession(): Session | null {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || OFFICIAL_SUPABASE_URL;
-    const ref = new URL(supabaseUrl).hostname.split(".")[0];
+    const ref = new URL(readPlatformRuntime().url).hostname.split(".")[0];
     const raw = localStorage.getItem(`sb-${ref}-auth-token`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
