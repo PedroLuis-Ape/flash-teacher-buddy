@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
-  const rpc = vi.fn();
+  const rpcRange = vi.fn();
+  const rpc = vi.fn((functionName: string) => ({
+    range: (from: number, to: number) => rpcRange(functionName, from, to),
+  }));
   const from = vi.fn();
   const listMaybeSingle = vi.fn();
   const folderRange = vi.fn();
@@ -22,6 +25,7 @@ const mocks = vi.hoisted(() => {
 
   return {
     rpc,
+    rpcRange,
     from,
     listMaybeSingle,
     folderRange,
@@ -39,20 +43,27 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import { loadListGlossaryRuntime } from "./listGlossaryRuntime";
 
+function makeRpcEntry(index: number, originalText = `term-${String(index).padStart(4, "0")}`) {
+  return {
+    id: `entry-${index}`,
+    owner_id: "owner-1",
+    original_text: originalText,
+    translated_text: `tradução-${index}`,
+    note: null,
+    side: "A" as const,
+    is_active: true,
+    created_at: "2026-07-13T00:00:00.000Z",
+    updated_at: "2026-07-13T00:00:00.000Z",
+  };
+}
+
 const rpcEntry = {
-  id: "entry-1",
-  owner_id: "owner-1",
-  original_text: "history",
+  ...makeRpcEntry(1, "history"),
   translated_text: "história",
-  note: null,
-  side: "A" as const,
-  is_active: true,
-  created_at: "2026-07-13T00:00:00.000Z",
-  updated_at: "2026-07-13T00:00:00.000Z",
 };
 
 const directEntry = {
-  id: "entry-2",
+  id: "entry-direct",
   owner_id: "owner-1",
   original_text: "enslaved",
   primary_translation: "escravizado",
@@ -65,7 +76,8 @@ const directEntry = {
 };
 
 beforeEach(() => {
-  mocks.rpc.mockReset();
+  mocks.rpc.mockClear();
+  mocks.rpcRange.mockReset();
   mocks.from.mockClear();
   mocks.listMaybeSingle.mockReset();
   mocks.folderRange.mockReset();
@@ -75,7 +87,7 @@ beforeEach(() => {
 
 describe("list glossary runtime", () => {
   it("uses the canonical v2 RPC when it succeeds", async () => {
-    mocks.rpc.mockResolvedValueOnce({ data: [rpcEntry], error: null });
+    mocks.rpcRange.mockResolvedValue({ data: [rpcEntry], error: null });
 
     const result = await loadListGlossaryRuntime("list-1");
 
@@ -85,16 +97,44 @@ describe("list glossary runtime", () => {
       glossary: [rpcEntry],
     });
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    expect(mocks.rpcRange).toHaveBeenCalledWith("get_folder_glossary_for_list_v2", 0, 999);
     expect(mocks.folderRange).not.toHaveBeenCalled();
   });
 
+  it("loads entries beyond the first 1,000-row API page", async () => {
+    const firstPage = Array.from({ length: 1_000 }, (_, index) => makeRpcEntry(index));
+    const laterEntry = {
+      ...makeRpcEntry(1_000, "millions"),
+      translated_text: "milhões",
+    };
+
+    mocks.rpcRange.mockImplementation((functionName: string, from: number) => {
+      if (functionName !== "get_folder_glossary_for_list_v2") {
+        return Promise.resolve({ data: [], error: null });
+      }
+      if (from === 0) return Promise.resolve({ data: firstPage, error: null });
+      if (from === 1_000) return Promise.resolve({ data: [laterEntry], error: null });
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    const result = await loadListGlossaryRuntime("list-1");
+
+    expect(result.source).toBe("rpc-v2");
+    expect(result.glossary).toHaveLength(1_001);
+    expect(result.glossary.at(-1)).toEqual(laterEntry);
+    expect(mocks.rpcRange).toHaveBeenCalledWith("get_folder_glossary_for_list_v2", 1_000, 1_999);
+  });
+
   it("recovers through the compatible v1 RPC instead of returning an empty glossary", async () => {
-    mocks.rpc
-      .mockResolvedValueOnce({
-        data: null,
-        error: { code: "57014", message: "statement timeout" },
-      })
-      .mockResolvedValueOnce({ data: [rpcEntry], error: null });
+    mocks.rpcRange.mockImplementation((functionName: string) => {
+      if (functionName === "get_folder_glossary_for_list_v2") {
+        return Promise.resolve({
+          data: null,
+          error: { code: "57014", message: "statement timeout" },
+        });
+      }
+      return Promise.resolve({ data: [rpcEntry], error: null });
+    });
 
     const result = await loadListGlossaryRuntime("list-1");
 
@@ -104,9 +144,7 @@ describe("list glossary runtime", () => {
   });
 
   it("does not trust false-empty RPC responses when the folder still has entries", async () => {
-    mocks.rpc
-      .mockResolvedValueOnce({ data: [], error: null })
-      .mockResolvedValueOnce({ data: [], error: null });
+    mocks.rpcRange.mockResolvedValue({ data: [], error: null });
     mocks.folderRange.mockResolvedValueOnce({ data: [directEntry], error: null });
 
     const result = await loadListGlossaryRuntime("list-1");
@@ -125,9 +163,10 @@ describe("list glossary runtime", () => {
   });
 
   it("falls back to a paginated direct read and preserves grouped translations", async () => {
-    mocks.rpc
-      .mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "v2 missing" } })
-      .mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "v1 missing" } });
+    mocks.rpcRange.mockResolvedValue({
+      data: null,
+      error: { code: "PGRST202", message: "function missing" },
+    });
     mocks.folderRange.mockResolvedValueOnce({
       data: [directEntry],
       error: null,
@@ -148,7 +187,7 @@ describe("list glossary runtime", () => {
 
   it("does not disguise permission failures as an empty glossary", async () => {
     const denied = { code: "42501", message: "permission denied" };
-    mocks.rpc.mockResolvedValueOnce({ data: null, error: denied });
+    mocks.rpcRange.mockResolvedValueOnce({ data: null, error: denied });
 
     await expect(loadListGlossaryRuntime("list-1")).rejects.toBe(denied);
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
@@ -156,9 +195,10 @@ describe("list glossary runtime", () => {
   });
 
   it("returns a diagnostic error without deleting or replacing data", async () => {
-    mocks.rpc
-      .mockResolvedValueOnce({ data: null, error: { code: "57014", message: "v2 timeout" } })
-      .mockResolvedValueOnce({ data: null, error: { code: "57014", message: "v1 timeout" } });
+    mocks.rpcRange.mockResolvedValue({
+      data: null,
+      error: { code: "57014", message: "statement timeout" },
+    });
     mocks.folderRange.mockResolvedValueOnce({
       data: null,
       error: { code: "08006", message: "connection failure" },
