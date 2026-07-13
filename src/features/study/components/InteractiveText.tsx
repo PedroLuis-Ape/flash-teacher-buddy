@@ -12,15 +12,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
-import { getPerfSettings } from "@/lib/performanceSettings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import { folderGlossaryIdentity } from "@/features/study/lib/folderGlossaryCompact";
 import { getSpeechRate } from "./SpeechRateControl";
 import {
   buildLayeredTextSegments,
   definitionsFromMergedHints,
   definitionsFromWordHints,
+  prioritizeLayeredHintMatches,
   type LayeredHintMatch,
 } from "@/features/study/lib/glossaryLayers";
 
@@ -33,8 +34,7 @@ interface InteractiveTextProps {
   speakLang?: string;
 }
 
-const normalize = (value: string) =>
-  value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+const normalize = (value: string) => folderGlossaryIdentity(value);
 
 export const InteractiveText = ({
   text = "",
@@ -46,15 +46,16 @@ export const InteractiveText = ({
 }: InteractiveTextProps) => {
   const { speak } = useTTS();
   const safeText = typeof text === "string" ? text : String(text ?? "");
-  const perf = getPerfSettings();
-  const hintsDisabled = !FEATURE_FLAGS.word_hints_enabled || !perf.wordTooltips;
 
+  // Word translations are core learning content. Performance presets may reduce
+  // animations and decoration, but they must never turn valid glossary data into
+  // plain, non-interactive text.
   const definitions = useMemo(() => {
-    if (hintsDisabled) return [];
+    if (!FEATURE_FLAGS.word_hints_enabled) return [];
     return mergedHints
       ? definitionsFromMergedHints(mergedHints)
       : definitionsFromWordHints(wordHints);
-  }, [hintsDisabled, mergedHints, wordHints]);
+  }, [mergedHints, wordHints]);
 
   const segments = useMemo(
     () => buildLayeredTextSegments(safeText, definitions),
@@ -125,34 +126,6 @@ function uniqueTranslations(match: LayeredHintMatch) {
   return Array.from(grouped.values());
 }
 
-function prioritizedMatches(value: string, matches: LayeredHintMatch[]) {
-  const clicked = normalize(value);
-  const exact = matches.filter((match) => normalize(match.text) === clicked);
-  const candidates = exact.length > 0 ? exact : matches;
-  const grouped = new Map<string, LayeredHintMatch>();
-
-  for (const match of candidates) {
-    const key = normalize(match.text);
-    const existing = grouped.get(key);
-    if (!existing) {
-      grouped.set(key, {
-        ...match,
-        translations: [...match.translations],
-      });
-      continue;
-    }
-
-    existing.translations.push(...match.translations);
-  }
-
-  return Array.from(grouped.values()).sort((a, b) => {
-    const aExpression = /\s/u.test(a.text.trim()) ? 1 : 0;
-    const bExpression = /\s/u.test(b.text.trim()) ? 1 : 0;
-    if (aExpression !== bExpression) return aExpression - bExpression;
-    return a.text.length - b.text.length || a.text.localeCompare(b.text);
-  });
-}
-
 function GlossaryPanel({
   value,
   matches,
@@ -162,7 +135,7 @@ function GlossaryPanel({
   matches: LayeredHintMatch[];
   mobile?: boolean;
 }) {
-  const prioritized = prioritizedMatches(value, matches);
+  const prioritized = prioritizeLayeredHintMatches(value, matches);
   const visible = prioritized.slice(0, 3);
   const hiddenCount = Math.max(0, prioritized.length - visible.length);
 
@@ -243,7 +216,7 @@ function LayeredHintToken({
 }) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
-  const layerCount = prioritizedMatches(value, matches).length;
+  const layerCount = prioritizeLayeredHintMatches(value, matches).length;
 
   const trigger = (
     <button
