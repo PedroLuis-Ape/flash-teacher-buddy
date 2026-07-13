@@ -5,20 +5,28 @@ on:
     paths:
       - "src/lib/coreWebVitalsRum.ts"
       - "src/lib/coreWebVitalsRum.test.ts"
+      - "src/components/system/CoreWebVitalsStatusCard.tsx"
+      - "src/pages/SystemStatus.tsx"
       - "src/App.tsx"
       - "netlify/edge-functions/rum-web-vital.js"
       - "netlify.toml"
+      - "supabase/migrations/20260713160000_core_web_vitals_rum.sql"
       - "scripts/validate-core-web-vitals-rum.mjs"
+      - "package.json"
       - ".github/workflows/core-web-vitals-rum-contract.yml"
   push:
     branches: [main]
     paths:
       - "src/lib/coreWebVitalsRum.ts"
       - "src/lib/coreWebVitalsRum.test.ts"
+      - "src/components/system/CoreWebVitalsStatusCard.tsx"
+      - "src/pages/SystemStatus.tsx"
       - "src/App.tsx"
       - "netlify/edge-functions/rum-web-vital.js"
       - "netlify.toml"
+      - "supabase/migrations/20260713160000_core_web_vitals_rum.sql"
       - "scripts/validate-core-web-vitals-rum.mjs"
+      - "package.json"
       - ".github/workflows/core-web-vitals-rum-contract.yml"
   workflow_dispatch:
 
