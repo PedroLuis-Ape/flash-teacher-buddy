@@ -1,0 +1,9 @@
+# Explicit edge declarations avoid relying on automatic inline declaration
+# parsing and keep the existing build/publish settings managed by Netlify.
+[[edge_functions]]
+  path = "/portal/folder/*"
+  function = "public-entity-status"
+
+[[edge_functions]]
+  path = "/portal/professor/*"
+  function = "public-entity-status"
