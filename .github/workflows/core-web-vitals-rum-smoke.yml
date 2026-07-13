@@ -1,0 +1,54 @@
+name: Core Web Vitals RUM Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/core_web_vitals_rum_smoke.sql"
+      - "src/lib/coreWebVitalsRum.ts"
+      - "src/lib/coreWebVitalsRum.test.ts"
+      - "netlify/edge-functions/rum-web-vital.js"
+      - "netlify.toml"
+      - ".github/workflows/core-web-vitals-rum-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/core_web_vitals_rum_smoke.sql"
+      - "src/lib/coreWebVitalsRum.ts"
+      - "src/lib/coreWebVitalsRum.test.ts"
+      - "netlify/edge-functions/rum-web-vital.js"
+      - "netlify.toml"
+      - ".github/workflows/core-web-vitals-rum-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rum-privacy-and-aggregation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        run: |
+          supabase start
+          supabase db reset --local --no-seed
+
+      - name: Verify RUM privacy, validation and p75 summary
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/core_web_vitals_rum_smoke.sql
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup

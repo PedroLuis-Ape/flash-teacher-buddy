@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
+import { CoreWebVitalsStatusCard } from "@/components/system/CoreWebVitalsStatusCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,7 +148,7 @@ export default function SystemStatusPage() {
   return (
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Diagnóstico do sistema" showBack backPath="/" />
-      <main className="mx-auto max-w-2xl space-y-5 p-4 pb-32">
+      <main className="mx-auto max-w-3xl space-y-5 p-4 pb-32">
         <Card>
           <CardHeader className="space-y-3">
             <div className="flex items-start justify-between gap-3">
@@ -183,6 +184,8 @@ export default function SystemStatusPage() {
             <StatusLine icon={Gauge} title="Orçamento do bundle" value={bundleCopy.label} detail={bundleCopy.detail} ok={bundleCopy.ok} />
           </CardContent>
         </Card>
+
+        <CoreWebVitalsStatusCard />
       </main>
     </div>
   );

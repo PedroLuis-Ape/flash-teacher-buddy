@@ -1,0 +1,69 @@
+name: Core Web Vitals RUM Contract
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/coreWebVitalsRum.ts"
+      - "src/lib/coreWebVitalsRum.test.ts"
+      - "src/components/system/CoreWebVitalsStatusCard.tsx"
+      - "src/pages/SystemStatus.tsx"
+      - "src/App.tsx"
+      - "netlify/edge-functions/rum-web-vital.js"
+      - "netlify.toml"
+      - "supabase/migrations/20260713160000_core_web_vitals_rum.sql"
+      - "scripts/validate-core-web-vitals-rum.mjs"
+      - "package.json"
+      - ".github/workflows/core-web-vitals-rum-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/coreWebVitalsRum.ts"
+      - "src/lib/coreWebVitalsRum.test.ts"
+      - "src/components/system/CoreWebVitalsStatusCard.tsx"
+      - "src/pages/SystemStatus.tsx"
+      - "src/App.tsx"
+      - "netlify/edge-functions/rum-web-vital.js"
+      - "netlify.toml"
+      - "supabase/migrations/20260713160000_core_web_vitals_rum.sql"
+      - "scripts/validate-core-web-vitals-rum.mjs"
+      - "package.json"
+      - ".github/workflows/core-web-vitals-rum-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rum-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: Validate browser and edge contract
+        run: |
+          set -o pipefail
+          node scripts/validate-core-web-vitals-rum.mjs 2>&1 | tee rum-contract.log
+
+      - name: Upload RUM contract diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-web-vitals-rum-contract
+          path: rum-contract.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run focused unit tests
+        run: npx vitest run src/lib/coreWebVitalsRum.test.ts --passWithNoTests

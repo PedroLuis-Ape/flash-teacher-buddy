@@ -36,4 +36,7 @@ export default async function publicListStatusHandler(request) {
   }
 }
 
-export { classifyListPath };
+export {
+  classifyListPath,
+  classifyListPath as classifyPublicListPath,
+};
