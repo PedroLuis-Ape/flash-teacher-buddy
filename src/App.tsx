@@ -1,4 +1,3 @@
-
 /**
  * APE – Apprentice Practice & Enhancement
  * © 2025 APE Education. Todos os direitos reservados.
@@ -36,6 +35,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
 const FolderWithExport = lazy(() => import("./pages/FolderWithExport"));
 const PublicFolderRoute = lazy(() => import("./pages/PublicFolderRoute"));
+const PublicLearningListPage = lazy(() => import("./pages/PublicLearningListPage"));
 const ListDetail = lazy(() => import("./pages/ListDetail"));
 const Collection = lazy(() => import("./pages/Collection"));
 const PublicCollection = lazy(() => import("./pages/PublicCollection"));
@@ -180,6 +180,7 @@ const App = () => {
                           <Route path="/portal" element={<PublicPortal />} />
                           <Route path="/portal/professor/:slug" element={<PublicTeacherProfile />} />
                           <Route path="/portal/folder/:id" element={<PublicFolderRoute />} />
+                          <Route path="/portal/list/:id" element={<PublicLearningListPage />} />
                           <Route path="/portal/list/:id/games" element={<PublicListGamesRoute />} />
                           <Route path="/portal/list/:id/study" element={<ListDirectionGate><Study /></ListDirectionGate>} />
                           <Route path="/portal/list/:id/mixed-study" element={<ListDirectionGate><MixedStudy /></ListDirectionGate>} />
