@@ -57,6 +57,10 @@ describe("public learning-resource discovery", () => {
       "supabase/migrations/20260713134600_public_learning_resource_compatibility.sql",
       "utf8",
     );
+    const canonicalCountsMigration = readFileSync(
+      "supabase/migrations/20260713134700_public_learning_resource_canonical_counts.sql",
+      "utf8",
+    );
 
     expect(discoveryMigration).toContain("list_public_learning_resource_entries");
     expect(discoveryMigration).toContain("get_public_learning_resource_lists");
@@ -71,6 +75,11 @@ describe("public learning-resource discovery", () => {
     expect(compatibilityMigration).toContain("a.fonte_tipo::text = 'pasta'");
     expect(compatibilityMigration).toContain("REVOKE ALL ON FUNCTION");
     expect(compatibilityMigration).toContain("GRANT EXECUTE");
+
+    expect(canonicalCountsMigration.match(/fc\.parent_card_id IS NULL/g)).toHaveLength(3);
+    expect(canonicalCountsMigration).toContain("list_public_learning_resource_entries");
+    expect(canonicalCountsMigration).toContain("get_public_learning_resource(");
+    expect(canonicalCountsMigration).toContain("get_public_learning_resource_lists");
   });
 
   it("integrates static resource generation and validation into production builds", () => {
