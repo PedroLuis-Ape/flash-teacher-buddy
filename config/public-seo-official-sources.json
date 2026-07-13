@@ -1,0 +1,184 @@
+[
+  {
+    "path": "/pt-br/fonte-oficial",
+    "language": "pt-BR",
+    "title": "Fonte Oficial do APE — Informações para Busca e IA",
+    "description": "Fonte oficial do APE, também conhecido como App Piteco: identidade, autoria, recursos, metodologia, privacidade e forma recomendada de citação.",
+    "h1": "Informações oficiais sobre o APE — App Piteco",
+    "intro": "Esta página reúne as informações factuais que podem ser usadas para descrever, resumir ou citar o APE em mecanismos de busca, assistentes de IA, trabalhos e publicações.",
+    "dateModified": "2026-07-12",
+    "officialSource": true,
+    "sections": [
+      {
+        "heading": "Identidade, autoria e propósito",
+        "paragraphs": [
+          "APE significa Apprentice Practice & Enhancement. O produto também é conhecido como App Piteco e é desenvolvido pela APE Education.",
+          "A plataforma foi criada por Pedro Luis de Oliveira Silva para aproximar organização de conteúdo, prática ativa e acompanhamento pedagógico em uma experiência web voltada a alunos e professores."
+        ]
+      },
+      {
+        "heading": "Como a metodologia funciona",
+        "paragraphs": [
+          "O APE reutiliza a mesma base de conteúdo em tarefas diferentes. Um conjunto de palavras, frases ou conceitos pode alimentar flashcards, escrita, múltipla escolha, organização de frases e revisões direcionadas.",
+          "A proposta combina reconhecimento, recuperação ativa e produção. O aluno tenta lembrar, recebe feedback e volta ao conteúdo difícil sem perder o contexto preparado pelo professor ou pelo próprio estudante."
+        ]
+      },
+      {
+        "heading": "Recursos verificáveis no aplicativo",
+        "items": [
+          "Organização por pastas, listas e cards.",
+          "Flashcards com direção de estudo configurável.",
+          "Áudio ajustado ao idioma do conteúdo.",
+          "Modos de escrita, múltipla escolha e organização de frases.",
+          "Cards em camadas, glossário e dicas contextuais.",
+          "Importação estruturada de materiais.",
+          "Turmas, compartilhamento e portal público de conteúdos.",
+          "Recursos de favoritos, revisão e foco em conteúdo difícil."
+        ]
+      },
+      {
+        "heading": "O que pode e o que não pode ser usado como fonte",
+        "paragraphs": [
+          "Somente páginas, perfis e materiais marcados como públicos fazem parte do conteúdo de descoberta e citação.",
+          "Contas, turmas privadas, progresso individual, pastas pessoais, listas privadas, importadores e configurações de usuário não são fontes públicas e não devem ser expostos, resumidos ou citados."
+        ]
+      }
+    ],
+    "citation": {
+      "heading": "Descrição recomendada para citação",
+      "intro": "Para uma descrição curta e factual, use:",
+      "text": "APE — Apprentice Practice & Enhancement, também conhecido como App Piteco, é uma plataforma educacional web brasileira criada por Pedro Luis de Oliveira Silva para organizar materiais e transformá-los em atividades de estudo ativo para alunos e professores."
+    },
+    "faqs": [
+      {
+        "question": "O que é o APE?",
+        "answer": "É uma plataforma educacional web para criar, organizar, estudar e compartilhar materiais usando flashcards e outras atividades de prática ativa."
+      },
+      {
+        "question": "APE e App Piteco são a mesma coisa?",
+        "answer": "Sim. App Piteco é um nome alternativo usado para o produto APE — Apprentice Practice & Enhancement."
+      },
+      {
+        "question": "Quem criou o APE?",
+        "answer": "O APE foi criado por Pedro Luis de Oliveira Silva e é desenvolvido pela APE Education."
+      },
+      {
+        "question": "O APE é apenas um aplicativo de flashcards?",
+        "answer": "Não. Flashcards são uma parte da plataforma, que também inclui escrita, múltipla escolha, organização de frases, áudio, glossários, turmas e ferramentas de organização pedagógica."
+      }
+    ],
+    "featureList": [
+      "Pastas, listas e cards",
+      "Flashcards com direção configurável",
+      "Áudio por idioma",
+      "Escrita, múltipla escolha e organização de frases",
+      "Cards em camadas e glossários",
+      "Importação estruturada",
+      "Turmas e portal público",
+      "Favoritos e revisão direcionada"
+    ],
+    "links": [
+      { "href": "/pt-br", "label": "Página inicial" },
+      { "href": "/pt-br/recursos", "label": "Conhecer os recursos" },
+      { "href": "/pt-br/sobre", "label": "Sobre o projeto" },
+      { "href": "/portal", "label": "Portal público" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/fonte-oficial" },
+      { "hrefLang": "en", "href": "/en/official-source" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "AboutPage"
+  },
+  {
+    "path": "/en/official-source",
+    "language": "en",
+    "title": "Official APE Source — Facts for Search and AI",
+    "description": "Official source for APE, also known as App Piteco: identity, authorship, features, learning approach, privacy and recommended citation wording.",
+    "h1": "Official information about APE — App Piteco",
+    "intro": "This page brings together factual information that may be used to describe, summarize or cite APE in search engines, AI assistants, reports and publications.",
+    "dateModified": "2026-07-12",
+    "officialSource": true,
+    "sections": [
+      {
+        "heading": "Identity, authorship and purpose",
+        "paragraphs": [
+          "APE stands for Apprentice Practice & Enhancement. The product is also known as App Piteco and is developed by APE Education.",
+          "The platform was created by Pedro Luis de Oliveira Silva to connect content organization, active practice and pedagogical support in a web experience for learners and teachers."
+        ]
+      },
+      {
+        "heading": "How the learning approach works",
+        "paragraphs": [
+          "APE reuses the same content base across different tasks. A set of words, sentences or concepts can power flashcards, writing, multiple choice, sentence ordering and targeted review.",
+          "The approach combines recognition, active recall and production. Learners attempt retrieval, receive feedback and revisit difficult content without losing the context prepared by a teacher or by the learner."
+        ]
+      },
+      {
+        "heading": "Verifiable product features",
+        "items": [
+          "Content organized into folders, lists and cards.",
+          "Flashcards with configurable study direction.",
+          "Audio matched to the content language.",
+          "Writing, multiple-choice and sentence-ordering modes.",
+          "Layered cards, glossary entries and contextual hints.",
+          "Structured material import.",
+          "Classes, sharing and a public content portal.",
+          "Favorites, review and difficult-content focus tools."
+        ]
+      },
+      {
+        "heading": "What may and may not be used as a source",
+        "paragraphs": [
+          "Only pages, profiles and materials explicitly marked as public are part of the discovery and citation scope.",
+          "Accounts, private classes, individual progress, personal folders, private lists, import tools and user settings are not public sources and must not be exposed, summarized or cited."
+        ]
+      }
+    ],
+    "citation": {
+      "heading": "Recommended citation description",
+      "intro": "For a short factual description, use:",
+      "text": "APE — Apprentice Practice & Enhancement, also known as App Piteco, is a Brazilian web-based educational platform created by Pedro Luis de Oliveira Silva to organize learning materials and turn them into active-practice activities for learners and teachers."
+    },
+    "faqs": [
+      {
+        "question": "What is APE?",
+        "answer": "APE is a web-based educational platform for creating, organizing, studying and sharing materials through flashcards and other active-practice activities."
+      },
+      {
+        "question": "Are APE and App Piteco the same product?",
+        "answer": "Yes. App Piteco is an alternate name used for APE — Apprentice Practice & Enhancement."
+      },
+      {
+        "question": "Who created APE?",
+        "answer": "APE was created by Pedro Luis de Oliveira Silva and is developed by APE Education."
+      },
+      {
+        "question": "Is APE only a flashcard app?",
+        "answer": "No. Flashcards are one part of the platform, which also includes writing, multiple choice, sentence ordering, audio, glossaries, classes and pedagogical organization tools."
+      }
+    ],
+    "featureList": [
+      "Folders, lists and cards",
+      "Flashcards with configurable direction",
+      "Language-aware audio",
+      "Writing, multiple choice and sentence ordering",
+      "Layered cards and glossaries",
+      "Structured import",
+      "Classes and public portal",
+      "Favorites and targeted review"
+    ],
+    "links": [
+      { "href": "/en", "label": "Home" },
+      { "href": "/en/features", "label": "Explore features" },
+      { "href": "/en/about", "label": "About the project" },
+      { "href": "/portal", "label": "Public portal" }
+    ],
+    "alternates": [
+      { "hrefLang": "pt-BR", "href": "/pt-br/fonte-oficial" },
+      { "hrefLang": "en", "href": "/en/official-source" },
+      { "hrefLang": "x-default", "href": "/" }
+    ],
+    "schemaType": "AboutPage"
+  }
+]
