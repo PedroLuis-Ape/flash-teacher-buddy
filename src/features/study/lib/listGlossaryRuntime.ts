@@ -50,8 +50,14 @@ function describeFailure(label: string, error: unknown): string {
   return code ? `${label} (${code}): ${message}` : `${label}: ${message}`;
 }
 
-function normalizeRpcRows(data: unknown): AccountGlossaryEntry[] {
-  return Array.isArray(data) ? data as AccountGlossaryEntry[] : [];
+function normalizeRpcRows(data: unknown): AccountGlossaryEntry[] | null {
+  return Array.isArray(data) ? data as AccountGlossaryEntry[] : null;
+}
+
+function describeEmptyRpc(label: string, rows: AccountGlossaryEntry[] | null): string {
+  return rows
+    ? `${label}: retornou 0 entradas; validando diretamente a pasta`
+    : `${label}: retornou um formato inválido; validando diretamente a pasta`;
 }
 
 function mapDirectRows(rows: FolderGlossaryRuntimeRow[]): AccountGlossaryEntry[] {
@@ -105,10 +111,10 @@ async function loadDirectFolderGlossary(folderId: string): Promise<AccountGlossa
 /**
  * Canonical read path used by study screens.
  *
- * The folder glossary is never treated as empty merely because one RPC failed.
- * We try the current RPC, the compatible RPC, then a paginated RLS-protected
- * table read. Permission failures remain fatal and are never disguised as an
- * empty glossary.
+ * The folder glossary is never treated as empty merely because one RPC failed
+ * or unexpectedly returned no rows. We try the current RPC, the compatible
+ * RPC, then a paginated RLS-protected table read. Permission failures remain
+ * fatal and are never disguised as an empty glossary.
  */
 export async function loadListGlossaryRuntime(listId: string): Promise<ListGlossaryRuntimeResult> {
   const folderId = await loadFolderId(listId);
@@ -118,24 +124,34 @@ export async function loadListGlossaryRuntime(listId: string): Promise<ListGloss
     _list_id: listId,
   });
   if (!v2.error) {
-    return { folderId, glossary: normalizeRpcRows(v2.data), source: "rpc-v2" };
+    const rows = normalizeRpcRows(v2.data);
+    if (rows && rows.length > 0) {
+      return { folderId, glossary: rows, source: "rpc-v2" };
+    }
+    failures.push(describeEmptyRpc("RPC v2", rows));
+  } else {
+    if (isPermissionError(v2.error)) throw v2.error;
+    failures.push(describeFailure("RPC v2", v2.error));
   }
-  if (isPermissionError(v2.error)) throw v2.error;
-  failures.push(describeFailure("RPC v2", v2.error));
 
   const v1 = await (supabase as any).rpc("get_folder_glossary_for_list_v1", {
     _list_id: listId,
   });
   if (!v1.error) {
-    return {
-      folderId,
-      glossary: normalizeRpcRows(v1.data),
-      source: "rpc-v1",
-      recoveredFrom: failures,
-    };
+    const rows = normalizeRpcRows(v1.data);
+    if (rows && rows.length > 0) {
+      return {
+        folderId,
+        glossary: rows,
+        source: "rpc-v1",
+        recoveredFrom: failures,
+      };
+    }
+    failures.push(describeEmptyRpc("RPC v1", rows));
+  } else {
+    if (isPermissionError(v1.error)) throw v1.error;
+    failures.push(describeFailure("RPC v1", v1.error));
   }
-  if (isPermissionError(v1.error)) throw v1.error;
-  failures.push(describeFailure("RPC v1", v1.error));
 
   try {
     return {
