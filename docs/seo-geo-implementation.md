@@ -1,12 +1,14 @@
 # SEO/GEO implementation status
 
-Updated: 2026-07-12
+Updated: 2026-07-13
 
-## Official backend
+## Backend architecture
 
-App Piteco uses Supabase project `xrnfhhoxmmstagmelvyi`.
+The managed Supabase project is `xrnfhhoxmmstagmelvyi`.
 
-Repository configuration, frontend initialization, database changes and documentation must remain aligned with this project.
+The production data currently used by the application is stored in `ymahldldyxvwjeruaxpr`. Build-time public discovery must apply the same runtime validation used by the frontend and must never generate a sitemap from the empty managed project by mistake.
+
+Repository configuration, frontend initialization, database changes and documentation must keep this transition explicit until both responsibilities are consolidated into one project.
 
 ## Completed foundation
 
@@ -22,29 +24,35 @@ Repository configuration, frontend initialization, database changes and document
 - `llms.txt` with public/private discovery boundaries;
 - official bilingual source pages for product identity, authorship, methodology, privacy and citation wording;
 - `Person`, `Organization`, `SoftwareApplication`, `AboutPage`, `FAQPage` and `BreadcrumbList` entities on the official sources;
+- build-time discovery and pre-rendering of public teacher profiles;
+- dynamic teacher URLs appended to the deployed sitemap;
+- `ProfilePage`, `Person`, `ItemList` and `BreadcrumbList` entities for public teachers;
+- `noindex` protection for removed, private or unavailable teacher profiles;
 - SEO consistency validation in CI.
 
 ## Current environment work
 
-- `supabase/config.toml` uses the official project;
+- `supabase/config.toml` uses the managed project;
 - versioned environment files were removed;
-- the frontend obtains its public runtime settings from the official project;
+- the frontend validates and selects the production data backend;
+- the public-directory build follows the same production-data validation;
 - the bootstrap validates project identity before loading the application;
 - CI validates runtime and optional deployment settings.
 
 ## Current canonical authority pages
 
 - `/pt-br/fonte-oficial`;
-- `/en/official-source`.
+- `/en/official-source`;
+- `/portal/professor/:public_slug` for explicitly public teacher profiles.
 
-These pages are the preferred first-party sources for factual descriptions of APE / App Piteco. They are present in the sitemap, linked from `llms.txt`, paired with reciprocal `hreflang`, and emitted as static HTML during the production build.
+The bilingual official pages are the preferred first-party sources for factual descriptions of APE / App Piteco. Public teacher profiles are canonical sources for the teacher identity, declared specialties and materials intentionally published by that teacher.
 
 ## Remaining work
 
-1. Generate a dynamic sitemap for public teachers and materials.
+1. Pre-render public folders and published learning resources with stable `LearningResource` entities.
 2. Return real HTTP 404 or 410 responses for missing public entities.
 3. Publish deeper first-party methodology and educational evidence pages.
-4. Add stable author/profile entities for public teachers and published learning resources.
+4. Add update timestamps and stable authorship to published learning resources.
 5. Add real-user INP, LCP and CLS monitoring.
 6. Expand international URLs beyond the current Portuguese and English foundation when content is ready.
 7. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
