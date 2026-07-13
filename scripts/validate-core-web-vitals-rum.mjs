@@ -140,6 +140,8 @@ const extraFieldResponse = await ingestWebVital(
 assert.equal(extraFieldResponse.status, 400);
 assert.equal(extraFieldResponse.headers.get("x-ape-rum-state"), "invalid-payload");
 
+const clsZeroPosition = client.indexOf('update("CLS", 0)');
+const clsObserverPosition = client.indexOf('observe("layout-shift"');
 assert.ok(client.includes("navigator.sendBeacon"));
 assert.ok(client.includes("new PerformanceObserver"));
 assert.ok(client.includes('"largest-contentful-paint"'));
@@ -148,8 +150,8 @@ assert.ok(client.includes('"event"'));
 assert.ok(client.includes("durationThreshold: 16"));
 assert.ok(client.includes("normalizeRumRoute"));
 assert.ok(client.includes("window.location.hostname"));
-assert.ok(client.includes('update("CLS", 0)'));
-assert.ok(client.indexOf('update("CLS", 0)') < client.indexOf('observe("layout-shift"')));
+assert.ok(clsZeroPosition >= 0);
+assert.ok(clsObserverPosition > clsZeroPosition);
 assert.ok(!client.includes("location.search"));
 assert.ok(!client.match(/userId|user_id|email|ipAddress|ip_address|userAgent|user_agent/));
 assert.ok(edge.includes("ALLOWED_KEYS"));
