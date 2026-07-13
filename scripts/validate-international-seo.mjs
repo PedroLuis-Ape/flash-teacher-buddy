@@ -5,6 +5,7 @@ const root = process.cwd();
 const pages = [
   ...JSON.parse(readFileSync(resolve(root, "config/public-seo-pages-international.json"), "utf8")),
   ...JSON.parse(readFileSync(resolve(root, "config/public-seo-official-sources.json"), "utf8")),
+  ...JSON.parse(readFileSync(resolve(root, "config/public-seo-methodology-evidence.json"), "utf8")),
 ];
 const sitemap = readFileSync(resolve(root, "public/sitemap.xml"), "utf8");
 const redirects = readFileSync(resolve(root, "public/_redirects"), "utf8");
@@ -20,7 +21,9 @@ for (const page of pages) {
     errors.push(`${page.path}: ausente antes do fallback em _redirects`);
   }
   if (!appSource.includes(`path="${page.path}"`)) errors.push(`${page.path}: rota ausente em src/App.tsx`);
-  if (page.officialSource && !llms.includes(expectedUrl)) errors.push(`${page.path}: fonte oficial ausente em llms.txt`);
+  if ((page.officialSource || page.schemaType === "Article") && !llms.includes(expectedUrl)) {
+    errors.push(`${page.path}: fonte editorial ausente em llms.txt`);
+  }
 
   const self = page.alternates.find((alternate) => alternate.hrefLang === page.language);
   if (!self || self.href !== page.path) errors.push(`${page.path}: alternate próprio inválido`);
