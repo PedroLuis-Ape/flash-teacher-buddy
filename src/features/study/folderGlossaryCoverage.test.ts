@@ -113,15 +113,15 @@ describe("folder glossary exact coverage audit", () => {
     });
   });
 
-  it("shows complete only when every occurrence has an individual entry", () => {
+  it("shows complete only when every distinct word has an individual entry", () => {
     expect(getFolderGlossaryCoveragePresentation(8_656, 8_656)).toEqual({
       percent: 100,
       label: "100",
       complete: true,
     });
     expect(getFolderGlossaryCoveragePresentation(
-      getExactCoveredOccurrences(report),
-      report.totalOccurrences,
+      report.coveredTerms,
+      report.distinctTerms,
     )).toEqual({
       percent: 25,
       label: "25",
@@ -228,10 +228,10 @@ describe("folder glossary exact coverage audit", () => {
     );
     expect(component).toContain("Auditar cobertura exata do glossário");
     expect(component).toContain("Expressões não substituem palavras isoladas");
+    expect(component).toContain("Cobertura exata das palavras distintas");
     expect(component).toContain("Exportar glossário exato JSON");
     expect(component).toContain("Importar glossário preenchido");
     expect(component).toContain("coverage.complete");
-    expect(component).toContain("getExactCoveredOccurrences");
     expect(component).not.toContain("serializeMissingCoverageTerms");
   });
 });
