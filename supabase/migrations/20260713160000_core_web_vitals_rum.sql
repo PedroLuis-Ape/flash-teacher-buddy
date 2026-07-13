@@ -80,7 +80,11 @@ BEGIN
     RAISE EXCEPTION 'INVALID_METRIC' USING ERRCODE = '22023';
   END IF;
 
-  IF _value IS NULL OR NOT isfinite(_value) THEN
+  IF _value IS NULL
+     OR NOT (
+       _value > '-Infinity'::double precision
+       AND _value < 'Infinity'::double precision
+     ) THEN
     RAISE EXCEPTION 'INVALID_VALUE' USING ERRCODE = '22023';
   END IF;
 
@@ -122,7 +126,13 @@ BEGIN
     RAISE EXCEPTION 'INVALID_NAVIGATION_TYPE' USING ERRCODE = '22023';
   END IF;
 
-  IF _sample_rate IS NULL OR NOT isfinite(_sample_rate) OR _sample_rate <= 0 OR _sample_rate > 1 THEN
+  IF _sample_rate IS NULL
+     OR NOT (
+       _sample_rate > '-Infinity'::double precision
+       AND _sample_rate < 'Infinity'::double precision
+     )
+     OR _sample_rate <= 0
+     OR _sample_rate > 1 THEN
     RAISE EXCEPTION 'INVALID_SAMPLE_RATE' USING ERRCODE = '22023';
   END IF;
 
