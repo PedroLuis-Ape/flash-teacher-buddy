@@ -2,9 +2,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
-const pages = JSON.parse(readFileSync(resolve(root, "config/public-seo-pages-international.json"), "utf8"));
+const pages = [
+  ...JSON.parse(readFileSync(resolve(root, "config/public-seo-pages-international.json"), "utf8")),
+  ...JSON.parse(readFileSync(resolve(root, "config/public-seo-official-sources.json"), "utf8")),
+];
 const sitemap = readFileSync(resolve(root, "public/sitemap.xml"), "utf8");
 const redirects = readFileSync(resolve(root, "public/_redirects"), "utf8");
+const llms = readFileSync(resolve(root, "public/llms.txt"), "utf8");
+const appSource = readFileSync(resolve(root, "src/App.tsx"), "utf8");
 const errors = [];
 const byPath = new Map(pages.map((page) => [page.path, page]));
 
@@ -14,6 +19,8 @@ for (const page of pages) {
   if (!redirects.split(/\r?\n/).some((line) => line.trim().startsWith(`${page.path} `))) {
     errors.push(`${page.path}: ausente antes do fallback em _redirects`);
   }
+  if (!appSource.includes(`path="${page.path}"`)) errors.push(`${page.path}: rota ausente em src/App.tsx`);
+  if (page.officialSource && !llms.includes(expectedUrl)) errors.push(`${page.path}: fonte oficial ausente em llms.txt`);
 
   const self = page.alternates.find((alternate) => alternate.hrefLang === page.language);
   if (!self || self.href !== page.path) errors.push(`${page.path}: alternate próprio inválido`);
