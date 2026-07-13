@@ -1,3 +1,4 @@
+
 /**
  * APE – Apprentice Practice & Enhancement
  * © 2025 APE Education. Todos os direitos reservados.
@@ -30,6 +31,7 @@ const FlashcardsDeIngles = lazy(() => import("./pages/seo/FlashcardsDeIngles"));
 const ParaProfessores = lazy(() => import("./pages/seo/ParaProfessores"));
 const InternationalSEOPage = lazy(() => import("./pages/seo/InternationalSEOPage"));
 const OfficialSourcePage = lazy(() => import("./pages/seo/OfficialSourcePage"));
+const MethodologyEvidencePage = lazy(() => import("./pages/seo/MethodologyEvidencePage"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Folders = lazy(() => import("./pages/Folders"));
 const FolderWithExport = lazy(() => import("./pages/FolderWithExport"));
@@ -148,12 +150,16 @@ const App = () => {
                           <Route path="/pt-br/para-professores" element={<InternationalSEOPage />} />
                           <Route path="/pt-br/sobre" element={<InternationalSEOPage />} />
                           <Route path="/pt-br/fonte-oficial" element={<OfficialSourcePage />} />
+                          <Route path="/pt-br/metodologia" element={<MethodologyEvidencePage />} />
+                          <Route path="/pt-br/evidencias" element={<MethodologyEvidencePage />} />
                           <Route path="/en" element={<InternationalSEOPage />} />
                           <Route path="/en/features" element={<InternationalSEOPage />} />
                           <Route path="/en/flashcards" element={<InternationalSEOPage />} />
                           <Route path="/en/for-teachers" element={<InternationalSEOPage />} />
                           <Route path="/en/about" element={<InternationalSEOPage />} />
                           <Route path="/en/official-source" element={<OfficialSourcePage />} />
+                          <Route path="/en/methodology" element={<MethodologyEvidencePage />} />
+                          <Route path="/en/evidence" element={<MethodologyEvidencePage />} />
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/auth/callback" element={<AuthCallback />} />
                           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
