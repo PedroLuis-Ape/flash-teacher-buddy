@@ -5,6 +5,7 @@
 
 import { lazy, useEffect } from "react";
 import { perfTelemetry } from "@/lib/perfTelemetry";
+import { startCoreWebVitalsRum } from "@/lib/coreWebVitalsRum";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -121,7 +122,10 @@ queryClient.getQueryCache().config.onError = (error, query) => {
 };
 
 const App = () => {
-  useEffect(() => { perfTelemetry.logBoot(); }, []);
+  useEffect(() => {
+    perfTelemetry.logBoot();
+    return startCoreWebVitalsRum();
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <PerformanceProvider>
