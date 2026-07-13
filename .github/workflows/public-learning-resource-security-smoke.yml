@@ -1,0 +1,209 @@
+name: Public Learning Resource Security Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/public-learning-resource-security-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/public-learning-resource-security-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-learning-resource-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        run: |
+          supabase start
+          supabase db reset --local --no-seed
+
+      - name: Seed canonical public and private material fixtures
+        shell: bash
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO auth.users (
+            instance_id, id, aud, role, email, encrypted_password,
+            email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+            created_at, updated_at
+          ) VALUES (
+            '00000000-0000-0000-0000-000000000000',
+            '16161616-1616-4616-8616-161616161616',
+            'authenticated',
+            'authenticated',
+            'public-resource-security@app-piteco.local',
+            crypt('smoke-password', gen_salt('bf')),
+            now(),
+            '{"provider":"email","providers":["email"]}'::jsonb,
+            '{}'::jsonb,
+            now(),
+            now()
+          ) ON CONFLICT (id) DO NOTHING;
+
+          INSERT INTO public.profiles (
+            id, first_name, is_teacher, public_access_enabled,
+            public_profile_searchable, public_slug
+          ) VALUES (
+            '16161616-1616-4616-8616-161616161616',
+            'Resource Teacher',
+            true,
+            true,
+            true,
+            'resource-teacher'
+          ) ON CONFLICT (id) DO UPDATE SET
+            first_name = EXCLUDED.first_name,
+            is_teacher = true,
+            public_access_enabled = true,
+            public_profile_searchable = true,
+            public_slug = EXCLUDED.public_slug;
+
+          INSERT INTO public.folders (
+            id, owner_id, title, visibility, class_id
+          ) VALUES (
+            '17171717-1717-4717-8717-171717171717',
+            '16161616-1616-4616-8616-161616161616',
+            'Canonical public resource',
+            'class',
+            NULL
+          ) ON CONFLICT (id) DO NOTHING;
+
+          INSERT INTO public.lists (
+            id, folder_id, owner_id, title, visibility, class_id, order_index
+          ) VALUES
+            (
+              '18181818-1818-4818-8818-181818181818',
+              '17171717-1717-4717-8717-171717171717',
+              '16161616-1616-4616-8616-161616161616',
+              'Published list',
+              'class',
+              NULL,
+              0
+            ),
+            (
+              '19191919-1919-4919-8919-191919191919',
+              '17171717-1717-4717-8717-171717171717',
+              '16161616-1616-4616-8616-161616161616',
+              'Private draft list',
+              'private',
+              NULL,
+              1
+            )
+          ON CONFLICT (id) DO NOTHING;
+
+          INSERT INTO public.flashcards (
+            id, user_id, list_id, term, translation
+          ) VALUES
+            (
+              '20202020-2020-4020-8020-202020202020',
+              '16161616-1616-4616-8616-161616161616',
+              '18181818-1818-4818-8818-181818181818',
+              'Published card',
+              'Carta publicada'
+            ),
+            (
+              '21212121-2121-4121-8121-212121212121',
+              '16161616-1616-4616-8616-161616161616',
+              '19191919-1919-4919-8919-191919191919',
+              'Private draft card',
+              'Carta privada'
+            )
+          ON CONFLICT (id) DO NOTHING;
+          SQL
+
+      - name: Verify anonymous learning-resource boundaries
+        shell: bash
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          SET ROLE anon;
+          DO $$
+          DECLARE
+            counts record;
+          BEGIN
+            IF (
+              SELECT COUNT(*)
+              FROM public.list_public_learning_resource_entries(100)
+              WHERE id = '17171717-1717-4717-8717-171717171717'
+                AND list_count = 1
+                AND card_count = 1
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Canonical public resource discovery is missing or counts private content';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.get_public_learning_resource('17171717-1717-4717-8717-171717171717')
+              WHERE list_count = 1
+                AND card_count = 1
+                AND author_slug = 'resource-teacher'
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Canonical public resource metadata is invalid';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.get_public_learning_resource_lists('17171717-1717-4717-8717-171717171717')
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Private draft list leaked through canonical discovery';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.get_public_learning_resource_lists('17171717-1717-4717-8717-171717171717')
+              WHERE id = '19191919-1919-4919-8919-191919191919'
+            ) <> 0 THEN
+              RAISE EXCEPTION 'Private draft list leaked by id';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.get_portal_lists_with_counts('17171717-1717-4717-8717-171717171717')
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Legacy portal list endpoint leaked a private draft';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.get_portal_flashcards('18181818-1818-4818-8818-181818181818')
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Published material is not playable anonymously';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.get_portal_flashcards('19191919-1919-4919-8919-191919191919')
+            ) <> 0 THEN
+              RAISE EXCEPTION 'Private draft cards leaked anonymously';
+            END IF;
+
+            SELECT * INTO counts
+            FROM public.get_portal_counts('17171717-1717-4717-8717-171717171717');
+
+            IF counts.list_count <> 1 OR counts.card_count <> 1 THEN
+              RAISE EXCEPTION 'Portal counts include private or layered content: %, %', counts.list_count, counts.card_count;
+            END IF;
+          END;
+          $$;
+          RESET ROLE;
+          SQL
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
