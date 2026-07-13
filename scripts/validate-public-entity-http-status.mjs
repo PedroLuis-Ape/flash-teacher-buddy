@@ -40,9 +40,29 @@ assert.equal(
   "invalid",
 );
 
-const runtime = resolvePublicDataRuntime();
-assert.equal(runtime.url, "https://ymahldldyxvwjeruaxpr.supabase.co");
-assert.ok(runtime.publicValue.length > 100);
+assert.equal(
+  resolvePublicDataRuntime(),
+  null,
+  "Sem variáveis Functions, a Edge Function deve fazer bypass seguro.",
+);
+assert.deepEqual(
+  resolvePublicDataRuntime({
+    url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+    publicValue: "public-test-key",
+  }),
+  {
+    url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+    publicValue: "public-test-key",
+  },
+);
+assert.equal(
+  resolvePublicDataRuntime({
+    url: "https://wrong-project.supabase.co",
+    publicValue: "public-test-key",
+  }),
+  null,
+  "Uma configuração de outro projeto deve ser recusada.",
+);
 
 let capturedRequest = null;
 const okFetch = async (url, init) => {
@@ -75,6 +95,15 @@ assert.deepEqual(JSON.parse(capturedRequest.init.body), {
 });
 assert.equal(capturedRequest.init.headers.apikey, "public-test-key");
 
+const noRuntime = await fetchPublicEntityHttpStatus(
+  { kind: "entity", entityType: "teacher", entityKey: "pedro" },
+  async () => {
+    throw new Error("fetch must not run without a validated runtime");
+  },
+  null,
+);
+assert.equal(noRuntime, null);
+
 const missingMigration = await fetchPublicEntityHttpStatus(
   { kind: "entity", entityType: "teacher", entityKey: "pedro" },
   async () => new Response("missing function", { status: 404 }),
@@ -102,7 +131,22 @@ for (const statusCode of [404, 410]) {
 }
 
 const originalFetch = globalThis.fetch;
+const originalNetlify = globalThis.Netlify;
 try {
+  globalThis.Netlify = {
+    env: {
+      get(name) {
+        if (name === "VITE_SUPABASE_URL") {
+          return "https://ymahldldyxvwjeruaxpr.supabase.co";
+        }
+        if (name === "VITE_SUPABASE_PUBLISHABLE_KEY") {
+          return "public-test-key";
+        }
+        return undefined;
+      },
+    },
+  };
+
   globalThis.fetch = async () => new Response(JSON.stringify([{
     status_code: 404,
     state: "not_found",
@@ -136,8 +180,22 @@ try {
     new Request("https://www.apeeducation.org/portal/professor/pedro"),
   );
   assert.equal(bypassResponse, undefined, "Falhas temporárias não podem criar falsos 404.");
+
+  globalThis.Netlify = { env: { get: () => undefined } };
+  globalThis.fetch = async () => {
+    throw new Error("fetch must not run without function-scoped variables");
+  };
+  const unconfiguredResponse = await publicEntityStatusHandler(
+    new Request("https://www.apeeducation.org/portal/professor/pedro"),
+  );
+  assert.equal(unconfiguredResponse, undefined);
 } finally {
   globalThis.fetch = originalFetch;
+  if (originalNetlify === undefined) {
+    delete globalThis.Netlify;
+  } else {
+    globalThis.Netlify = originalNetlify;
+  }
 }
 
 const migration = readFileSync(migrationPath, "utf8");
@@ -153,5 +211,7 @@ assert.ok(migration.includes("GRANT EXECUTE ON FUNCTION public.get_public_entity
 assert.ok(edge.includes('path: ["/portal/folder/*", "/portal/professor/*"]'));
 assert.ok(edge.includes('method: ["GET", "HEAD"]'));
 assert.ok(edge.includes("if (!status || status.statusCode === 200) return"));
+assert.ok(edge.includes("globalThis.Netlify?.env?.get"));
+assert.ok(!edge.includes("eyJhbGci"), "Nenhuma chave JWT pode ficar embutida na Edge Function.");
 
 console.log("Contrato HTTP público validado: 200 bypass, 404 nunca publicado e 410 retirado.");
