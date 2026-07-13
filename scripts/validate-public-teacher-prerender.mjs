@@ -12,11 +12,11 @@ import { publicTeacherPath } from "./public-directory-data.mjs";
 const root = process.cwd();
 const distDir = resolve(root, "dist");
 const reportPath = resolve(distDir, "public-teacher-prerender-report.json");
-const templatePath = resolve(distDir, "index.html");
+const sourceTemplatePath = resolve(root, "index.html");
 const sitemapPath = resolve(distDir, "sitemap.xml");
 const redirectsPath = resolve(distDir, "_redirects");
 
-for (const path of [reportPath, templatePath, sitemapPath, redirectsPath]) {
+for (const path of [reportPath, sourceTemplatePath, sitemapPath, redirectsPath]) {
   assert.ok(existsSync(path), `Arquivo obrigatório ausente: ${path}`);
 }
 
@@ -40,19 +40,19 @@ const sample = {
   ],
 };
 
-const template = readFileSync(templatePath, "utf8");
-const rendered = renderTeacherHtml(template, sample);
+const sourceTemplate = readFileSync(sourceTemplatePath, "utf8");
+const rendered = renderTeacherHtml(sourceTemplate, sample);
 const samplePath = publicTeacherPath(sample.public_slug);
 const sampleUrl = `https://www.apeeducation.org${samplePath}`;
 
 assert.match(rendered, /data-prerendered="true"/);
 assert.ok(rendered.includes("Professora Ana &amp; Silva"), "Nome escapado ausente no HTML.");
 assert.ok(rendered.includes(`<link rel="canonical" href="${sampleUrl}"`), "Canonical dinâmica ausente.");
+assert.ok(rendered.includes('<script id="public-teacher-jsonld" type="application/ld+json">'), "Script JSON-LD tipado ausente.");
 assert.ok(rendered.includes('"@type":"ProfilePage"'), "ProfilePage ausente no JSON-LD.");
 assert.ok(rendered.includes('"@type":"Person"'), "Person ausente no JSON-LD.");
 assert.ok(rendered.includes('"@type":"ItemList"'), "ItemList de materiais ausente no JSON-LD.");
 assert.ok(rendered.includes("Inglês A1 &amp; A2"), "Material público não está visível no HTML.");
-assert.ok(!rendered.includes("<script id=\"public-teacher-jsonld\">{\"@context\":"), "JSON-LD deve declarar o type application/ld+json.");
 
 const graph = buildTeacherJsonLd(sample)["@graph"];
 assert.equal(graph[0]["@type"], "ProfilePage");
