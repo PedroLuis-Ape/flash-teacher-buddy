@@ -1,0 +1,60 @@
+name: Public Learning List Pages Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/public_learning_list_pages_smoke.sql"
+      - "scripts/public-learning-list-data.mjs"
+      - "scripts/prerender-public-learning-lists.mjs"
+      - "scripts/validate-public-learning-list-prerender.mjs"
+      - "src/pages/PublicLearningListPage.tsx"
+      - "src/components/seo/publicLearningListStructuredData.ts"
+      - "netlify/edge-functions/public-list-status.js"
+      - "netlify.toml"
+      - ".github/workflows/public-learning-list-pages-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/public_learning_list_pages_smoke.sql"
+      - "scripts/public-learning-list-data.mjs"
+      - "scripts/prerender-public-learning-lists.mjs"
+      - "scripts/validate-public-learning-list-prerender.mjs"
+      - "src/pages/PublicLearningListPage.tsx"
+      - "src/components/seo/publicLearningListStructuredData.ts"
+      - "netlify/edge-functions/public-list-status.js"
+      - "netlify.toml"
+      - ".github/workflows/public-learning-list-pages-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-learning-list-pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        run: |
+          supabase start
+          supabase db reset --local --no-seed
+
+      - name: Verify canonical public list privacy and lifecycle
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/public_learning_list_pages_smoke.sql
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
