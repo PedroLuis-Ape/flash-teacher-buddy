@@ -36,6 +36,27 @@ describe("folder glossary AI prompt", () => {
     expect(prompt).toContain("todas as palavras únicas do material possuem entrada individual exata no mesmo lado");
   });
 
+  it("requires semantic quality during the initial glossary generation", () => {
+    const prompt = buildFolderGlossaryAiPrompt({
+      folderTitle: "Avançado",
+      labelA: "English",
+      labelB: "Português",
+    });
+
+    expect(prompt).toContain("A qualidade semântica também é obrigatória desde a primeira geração");
+    expect(prompt).toContain("leia silenciosamente todos os exemplos e contextos fornecidos");
+    expect(prompt).toContain("classe gramatical real no contexto");
+    expect(prompt).toContain("número, pessoa, tempo, aspecto, voz, grau, modalidade");
+    expect(prompt).toContain("falsos cognatos");
+    expect(prompt).toContain("traduções excessivamente literais");
+    expect(prompt).toContain("traduzir um auxiliar como se fosse o verbo principal");
+    expect(prompt).toContain('traduzir "because" ou "of" apenas com o significado global de "because of"');
+    expect(prompt).toContain("não esconda o conflito acumulando alternativas");
+    expect(prompt).toContain("revisão semântica independente");
+    expect(prompt).toContain("todos os exemplos disponíveis foram lidos antes da escolha da tradução");
+    expect(prompt).toContain("palavra individual e expressão completa foram avaliadas separadamente");
+  });
+
   it("uses safe labels when folder metadata is blank", () => {
     const prompt = buildFolderGlossaryAiPrompt({
       folderTitle: " ",
