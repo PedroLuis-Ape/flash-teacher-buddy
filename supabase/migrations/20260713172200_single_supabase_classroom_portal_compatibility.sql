@@ -52,9 +52,9 @@ BEGIN
                 AND a.fonte_id = rl.id
                 AND a.turma_id = rl.class_id
                 AND t.id = rl.class_id
-                AND t.professor_id = rl.owner_id
-                AND t.public_access_enabled = true
-                AND t.is_active = true
+                AND t.owner_teacher_id = rl.owner_id
+                AND t.public = true
+                AND t.ativo = true
             )
           )
         )
@@ -112,9 +112,9 @@ BEGIN
                     AND a.fonte_id = l.id
                     AND a.turma_id = l.class_id
                     AND t.id = l.class_id
-                    AND t.professor_id = rf.owner_id
-                    AND t.public_access_enabled = true
-                    AND t.is_active = true
+                    AND t.owner_teacher_id = rf.owner_id
+                    AND t.public = true
+                    AND t.ativo = true
                 )
               )
             )
