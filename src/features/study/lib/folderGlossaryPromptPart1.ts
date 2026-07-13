@@ -13,6 +13,8 @@ O resultado será importado diretamente pelo App Piteco.
 
 A cobertura é exata e exaustiva: cada palavra individual encontrada no material de origem precisa ter uma entrada própria no mesmo lado. Artigos, pronomes, auxiliares, preposições, conectores, verbos flexionados e palavras comuns também são obrigatórios. Expressões, chunks, collocations e phrasal verbs são entradas adicionais e nunca substituem as palavras individuais que os compõem.
 
+A qualidade semântica também é obrigatória desde a primeira geração: cada tradução precisa corresponder ao sentido realmente usado no material, à função gramatical da palavra e à forma concreta encontrada nos exemplos. Não escolha automaticamente o primeiro significado de dicionário, não copie traduções literais sem verificar naturalidade e não trate a tradução atual ou mais comum como correta sem conferir o contexto.
+
 Portanto:
 
 * não invente estruturas;
@@ -20,6 +22,8 @@ Portanto:
 * não omita campos obrigatórios;
 * não omita palavras por parecerem fáceis, repetitivas ou pouco importantes;
 * não considere uma palavra coberta apenas porque ela aparece dentro de uma expressão completa;
+* não traduza uma palavra isolada usando apenas o significado da expressão maior em que ela aparece;
+* não use tradução genérica quando os exemplos sustentarem um sentido mais específico;
 * não deixe nenhuma regra para o usuário deduzir;
 * não escreva explicações junto do JSON final.
 
