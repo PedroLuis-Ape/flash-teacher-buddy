@@ -1,13 +1,11 @@
 import {
-  MANAGED_SUPABASE_PROJECT_ID,
-  PRODUCTION_DATA_PROJECT_ID,
-  PRODUCTION_DATA_RUNTIME,
-  PRODUCTION_DATA_URL,
+  OFFICIAL_SUPABASE_PROJECT_ID,
+  OFFICIAL_SUPABASE_URL,
   type PlatformRuntime,
 } from "./platformRuntime";
 
-export { MANAGED_SUPABASE_PROJECT_ID, PRODUCTION_DATA_PROJECT_ID } from "./platformRuntime";
-export const OFFICIAL_RUNTIME_ENDPOINT = `https://${MANAGED_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/app-public-config`;
+export { OFFICIAL_SUPABASE_PROJECT_ID } from "./platformRuntime";
+export const OFFICIAL_RUNTIME_ENDPOINT = `${OFFICIAL_SUPABASE_URL}/functions/v1/app-public-config`;
 
 function normalize(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -29,17 +27,19 @@ export function validateOfficialRuntime(value: unknown): PlatformRuntime {
 
   const parsedUrl = new URL(url);
   if (
-    projectId !== PRODUCTION_DATA_PROJECT_ID
+    projectId !== OFFICIAL_SUPABASE_PROJECT_ID
     || parsedUrl.protocol !== "https:"
-    || parsedUrl.hostname !== `${PRODUCTION_DATA_PROJECT_ID}.supabase.co`
+    || parsedUrl.hostname !== `${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`
   ) {
-    throw new Error("A configuração não aponta para o backend de dados em produção.");
+    throw new Error("A configuração não aponta para o projeto Supabase oficial do App Piteco.");
   }
 
-  return { projectId, url, publicValue };
+  return { projectId, url: parsedUrl.origin, publicValue };
 }
 
-export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
+export async function loadOfficialPlatformRuntime(
+  fetchImpl: typeof fetch = fetch,
+): Promise<PlatformRuntime> {
   const injected = {
     projectId: import.meta.env.VITE_SUPABASE_PROJECT_ID,
     url: import.meta.env.VITE_SUPABASE_URL,
@@ -48,11 +48,24 @@ export async function loadOfficialPlatformRuntime(): Promise<PlatformRuntime> {
 
   try {
     return validateOfficialRuntime(injected);
-  } catch (error) {
-    console.warn("[RuntimeBootstrap] Ambiente injetado não contém os dados atuais; usando o backend de produção.", error);
-    return {
-      ...PRODUCTION_DATA_RUNTIME,
-      url: PRODUCTION_DATA_URL,
-    };
+  } catch {
+    // Production can obtain the public browser configuration from the official
+    // project before any Supabase client is imported.
+  }
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 5_000);
+  try {
+    const response = await fetchImpl(OFFICIAL_RUNTIME_ENDPOINT, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`app-public-config respondeu HTTP ${response.status}.`);
+    }
+    return validateOfficialRuntime(await response.json());
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
