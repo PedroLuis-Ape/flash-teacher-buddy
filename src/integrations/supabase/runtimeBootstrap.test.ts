@@ -1,39 +1,61 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-  MANAGED_SUPABASE_PROJECT_ID,
   OFFICIAL_RUNTIME_ENDPOINT,
-  PRODUCTION_DATA_PROJECT_ID,
+  OFFICIAL_SUPABASE_PROJECT_ID,
+  loadOfficialPlatformRuntime,
   validateOfficialRuntime,
 } from "./runtimeBootstrap";
 
+const officialPayload = {
+  projectId: OFFICIAL_SUPABASE_PROJECT_ID,
+  url: `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`,
+  publishableKey: "test-public-value",
+};
+
 describe("Supabase runtime bootstrap", () => {
-  it("accepts the production data runtime payload", () => {
-    expect(validateOfficialRuntime({
-      projectId: PRODUCTION_DATA_PROJECT_ID,
-      url: `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`,
-      publishableKey: "test-public-value",
-    })).toEqual({
-      projectId: PRODUCTION_DATA_PROJECT_ID,
-      url: `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`,
+  it("accepts the official runtime payload", () => {
+    expect(validateOfficialRuntime(officialPayload)).toEqual({
+      projectId: OFFICIAL_SUPABASE_PROJECT_ID,
+      url: `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`,
       publicValue: "test-public-value",
     });
-    expect(OFFICIAL_RUNTIME_ENDPOINT).toContain(MANAGED_SUPABASE_PROJECT_ID);
-    expect(OFFICIAL_RUNTIME_ENDPOINT).toContain("/functions/v1/app-public-config");
+    expect(OFFICIAL_RUNTIME_ENDPOINT).toBe(
+      `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/app-public-config`,
+    );
   });
 
-  it("rejects the empty managed project as the current data backend", () => {
+  it("rejects a different project", () => {
     expect(() => validateOfficialRuntime({
-      projectId: MANAGED_SUPABASE_PROJECT_ID,
-      url: `https://${MANAGED_SUPABASE_PROJECT_ID}.supabase.co`,
-      publishableKey: "managed-project-value",
-    })).toThrow("backend de dados em produção");
+      projectId: "abcdefghijklmnopqrst",
+      url: "https://abcdefghijklmnopqrst.supabase.co",
+      publishableKey: "wrong-project-value",
+    })).toThrow("projeto Supabase oficial");
   });
 
-  it("rejects mismatched project id and URL", () => {
-    expect(() => validateOfficialRuntime({
-      projectId: PRODUCTION_DATA_PROJECT_ID,
-      url: "https://example.supabase.co",
-      publicValue: "test",
-    })).toThrow("backend de dados em produção");
+  it("loads the official public configuration endpoint when env is absent", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(officialPayload), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }));
+
+    await expect(loadOfficialPlatformRuntime(fetchMock as typeof fetch)).resolves.toEqual({
+      projectId: OFFICIAL_SUPABASE_PROJECT_ID,
+      url: `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`,
+      publicValue: "test-public-value",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      OFFICIAL_RUNTIME_ENDPOINT,
+      expect.objectContaining({ cache: "no-store" }),
+    );
+  });
+
+  it("fails instead of silently switching projects", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      projectId: "abcdefghijklmnopqrst",
+      url: "https://abcdefghijklmnopqrst.supabase.co",
+      publishableKey: "wrong-project-value",
+    }), { status: 200 }));
+
+    await expect(loadOfficialPlatformRuntime(fetchMock as typeof fetch)).rejects.toThrow("projeto Supabase oficial");
   });
 });
