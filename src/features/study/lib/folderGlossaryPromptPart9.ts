@@ -9,7 +9,7 @@ Depois do inventário individual, adicione chunks, phrasal verbs, collocations e
 
 Não transforme frases comuns inteiras em entradas apenas para inflar o glossário.
 
-# 15. QUALIDADE SEMÂNTICA OBRIGATÓRIA
+# 15. QUALIDADE SEMÂNTICA E PALAVRAS COM VÁRIOS SENTIDOS
 
 Para cada entrada, leia silenciosamente todos os exemplos e contextos fornecidos antes de escolher translation, alternatives e note.
 
@@ -49,8 +49,6 @@ Exemplos de erros proibidos:
 * usar uma tradução de dicionário que soe artificial ou incorreta no exemplo;
 * repetir o próprio termo como tradução quando os idiomas de origem e destino forem diferentes;
 * inventar um sentido que não aparece no material.
-
-# 16. PALAVRAS COM VÁRIOS SENTIDOS
 
 Quando todos os exemplos compartilharem um sentido principal, use esse sentido em translation e inclua apenas alternativas secundárias realmente úteis e compatíveis.
 
