@@ -78,7 +78,7 @@ const response = await ingestWebVital(
   }),
   async (url, init) => {
     captured = { url, init };
-    return new Response("", { status: 204 });
+    return new Response(null, { status: 204 });
   },
   runtime,
 );
