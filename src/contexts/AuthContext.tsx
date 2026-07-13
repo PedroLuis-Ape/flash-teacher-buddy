@@ -14,7 +14,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PRODUCTION_DATA_URL } from "@/integrations/supabase/platformRuntime";
+import { OFFICIAL_SUPABASE_URL } from "@/integrations/supabase/platformRuntime";
 
 export type AuthStatus =
   | "initializing"
@@ -42,7 +42,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
  */
 function readPersistedSession(): Session | null {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || PRODUCTION_DATA_URL;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || OFFICIAL_SUPABASE_URL;
     const ref = new URL(supabaseUrl).hostname.split(".")[0];
     const raw = localStorage.getItem(`sb-${ref}-auth-token`);
     if (!raw) return null;
@@ -94,8 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // INITIAL_SESSION may arrive before the persisted refresh finishes.
-        // Keep the optimistic identity until getSession() confirms the result.
         if (event === "INITIAL_SESSION" && optimistic.current) {
           setSession(optimistic.current);
           setStatus("initializing");
@@ -117,7 +115,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (hydrationError) {
           setError(hydrationError);
           if (optimistic.current) {
-            // Network or refresh outages must not masquerade as logout.
             setSession(optimistic.current);
             setStatus("authenticated");
             syncQueryCache(optimistic.current);
@@ -140,7 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ? unknownError
           : new Error(String(unknownError));
         setError(normalized);
-
         if (optimistic.current) {
           setSession(optimistic.current);
           setStatus("authenticated");
@@ -154,38 +150,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       subscription.unsubscribe();
     };
-    // queryClient is stable; mount exactly once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [queryClient]);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      status,
-      user: session?.user ?? null,
-      session,
-      userId: session?.user?.id,
-      accessToken: session?.access_token,
-      initializing: status === "initializing",
-      error,
-    }),
-    [status, session, error],
-  );
+  const value = useMemo<AuthContextValue>(() => ({
+    status,
+    user: session?.user ?? null,
+    session,
+    userId: session?.user?.id,
+    accessToken: session?.access_token,
+    initializing: status === "initializing",
+    error,
+  }), [error, session, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (!context) {
-    return {
-      status: "initializing",
-      user: null,
-      session: null,
-      userId: undefined,
-      accessToken: undefined,
-      initializing: true,
-      error: null,
-    };
-  }
-  return context;
+export function useAuthContext() {
+  const value = useContext(AuthContext);
+  if (!value) throw new Error("useAuthContext must be used inside AuthProvider");
+  return value;
 }
