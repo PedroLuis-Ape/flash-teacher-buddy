@@ -1,36 +1,35 @@
 import { describe, expect, it } from "vitest";
 import {
-  PRODUCTION_DATA_PROJECT_ID,
-  PRODUCTION_DATA_RUNTIME,
-  PRODUCTION_DATA_URL,
+  OFFICIAL_SUPABASE_PROJECT_ID,
+  OFFICIAL_SUPABASE_URL,
   resolvePlatformRuntime,
 } from "./platformRuntime";
 
-const production = {
-  projectId: PRODUCTION_DATA_PROJECT_ID,
-  url: PRODUCTION_DATA_URL,
+const official = {
+  projectId: OFFICIAL_SUPABASE_PROJECT_ID,
+  url: OFFICIAL_SUPABASE_URL,
   publicValue: "test-value",
 };
 
 describe("platform runtime", () => {
-  it("uses an injected production data configuration", () => {
-    expect(resolvePlatformRuntime(production)).toEqual(production);
+  it("uses an injected official configuration", () => {
+    expect(resolvePlatformRuntime(official)).toEqual(official);
   });
 
-  it("prefers an installed production data runtime", () => {
-    expect(resolvePlatformRuntime(production, false, { ...production, publicValue: "installed-value" }).publicValue).toBe("installed-value");
+  it("prefers an installed official runtime", () => {
+    expect(resolvePlatformRuntime(official, false, { ...official, publicValue: "installed-value" }).publicValue).toBe("installed-value");
   });
 
-  it("ignores the empty managed project and keeps the production data backend", () => {
-    expect(resolvePlatformRuntime({
-      projectId: "xrnfhhoxmmstagmelvyi",
-      url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
-      publicValue: "managed-project-value",
-    })).toEqual(PRODUCTION_DATA_RUNTIME);
+  it("rejects configurations from another project", () => {
+    expect(() => resolvePlatformRuntime({
+      projectId: "abcdefghijklmnopqrst",
+      url: "https://abcdefghijklmnopqrst.supabase.co",
+      publicValue: "wrong-project-value",
+    })).toThrow("ainda não foi instalada");
   });
 
-  it("uses the production data runtime when configuration is absent", () => {
-    expect(resolvePlatformRuntime({})).toEqual(PRODUCTION_DATA_RUNTIME);
+  it("fails clearly when public configuration is absent", () => {
+    expect(() => resolvePlatformRuntime({})).toThrow("ainda não foi instalada");
   });
 
   it("keeps tests isolated", () => {
