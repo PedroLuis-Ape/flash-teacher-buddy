@@ -109,21 +109,34 @@ jobs:
           ON CONFLICT (id) DO NOTHING;
 
           INSERT INTO public.flashcards (
-            id, user_id, list_id, term, translation
+            id, user_id, list_id, term, translation, parent_card_id, layer_index
           ) VALUES
             (
               '20202020-2020-4020-8020-202020202020',
               '16161616-1616-4616-8616-161616161616',
               '18181818-1818-4818-8818-181818181818',
-              'Published card',
-              'Carta publicada'
+              'Published principal card',
+              'Carta principal publicada',
+              NULL,
+              NULL
+            ),
+            (
+              '22222222-2222-4222-8222-222222222222',
+              '16161616-1616-4616-8616-161616161616',
+              '18181818-1818-4818-8818-181818181818',
+              'Published layer',
+              'Camada publicada',
+              '20202020-2020-4020-8020-202020202020',
+              0
             ),
             (
               '21212121-2121-4121-8121-212121212121',
               '16161616-1616-4616-8616-161616161616',
               '19191919-1919-4919-8919-191919191919',
               'Private draft card',
-              'Carta privada'
+              'Carta privada',
+              NULL,
+              NULL
             )
           ON CONFLICT (id) DO NOTHING;
           SQL
@@ -144,7 +157,7 @@ jobs:
                 AND list_count = 1
                 AND card_count = 1
             ) <> 1 THEN
-              RAISE EXCEPTION 'Canonical public resource discovery is missing or counts private content';
+              RAISE EXCEPTION 'Canonical public resource discovery is missing or counts private/layer content';
             END IF;
 
             IF (
@@ -155,6 +168,15 @@ jobs:
                 AND author_slug = 'resource-teacher'
             ) <> 1 THEN
               RAISE EXCEPTION 'Canonical public resource metadata is invalid';
+            END IF;
+
+            IF (
+              SELECT COUNT(*)
+              FROM public.get_public_learning_resource_lists('17171717-1717-4717-8717-171717171717')
+              WHERE id = '18181818-1818-4818-8818-181818181818'
+                AND card_count = 1
+            ) <> 1 THEN
+              RAISE EXCEPTION 'Canonical list count includes an internal layer';
             END IF;
 
             IF (
@@ -175,15 +197,16 @@ jobs:
             IF (
               SELECT COUNT(*)
               FROM public.get_portal_lists_with_counts('17171717-1717-4717-8717-171717171717')
+              WHERE card_count = 1
             ) <> 1 THEN
-              RAISE EXCEPTION 'Legacy portal list endpoint leaked a private draft';
+              RAISE EXCEPTION 'Legacy portal endpoint leaked a draft or counted an internal layer';
             END IF;
 
             IF (
               SELECT COUNT(*)
               FROM public.get_portal_flashcards('18181818-1818-4818-8818-181818181818')
-            ) <> 1 THEN
-              RAISE EXCEPTION 'Published material is not playable anonymously';
+            ) <> 2 THEN
+              RAISE EXCEPTION 'Published principal card and its layer are not both playable anonymously';
             END IF;
 
             IF (
