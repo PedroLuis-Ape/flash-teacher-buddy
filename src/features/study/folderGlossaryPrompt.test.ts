@@ -19,6 +19,23 @@ describe("folder glossary AI prompt", () => {
     expect(prompt).toContain("entries");
   });
 
+  it("requires exact exhaustive coverage instead of a useful-word sample", () => {
+    const prompt = buildFolderGlossaryAiPrompt({
+      folderTitle: "Avançado",
+      labelA: "English",
+      labelB: "Português",
+    });
+
+    expect(prompt).toContain("cada palavra individual encontrada no material de origem precisa ter uma entrada própria");
+    expect(prompt).toContain("Artigos, pronomes, auxiliares, preposições, conectores");
+    expect(prompt).toContain("Uma expressão completa nunca substitui as entradas individuais");
+    expect(prompt).toContain('"were" deve continuar "were"');
+    expect(prompt).toContain('"enslaved" deve continuar "enslaved"');
+    expect(prompt).toContain('"because", "of" e "because of" podem e devem coexistir');
+    expect(prompt).toContain("Uma quantidade aproximada nunca autoriza cortar a cobertura");
+    expect(prompt).toContain("todas as palavras únicas do material possuem entrada individual exata no mesmo lado");
+  });
+
   it("uses safe labels when folder metadata is blank", () => {
     const prompt = buildFolderGlossaryAiPrompt({
       folderTitle: " ",

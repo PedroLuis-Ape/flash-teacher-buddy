@@ -11,11 +11,15 @@ Crie um arquivo JSON de glossário para a pasta:
 
 O resultado será importado diretamente pelo App Piteco.
 
+A cobertura é exata e exaustiva: cada palavra individual encontrada no material de origem precisa ter uma entrada própria no mesmo lado. Artigos, pronomes, auxiliares, preposições, conectores, verbos flexionados e palavras comuns também são obrigatórios. Expressões, chunks, collocations e phrasal verbs são entradas adicionais e nunca substituem as palavras individuais que os compõem.
+
 Portanto:
 
 * não invente estruturas;
 * não altere os nomes dos campos;
 * não omita campos obrigatórios;
+* não omita palavras por parecerem fáceis, repetitivas ou pouco importantes;
+* não considere uma palavra coberta apenas porque ela aparece dentro de uma expressão completa;
 * não deixe nenhuma regra para o usuário deduzir;
 * não escreva explicações junto do JSON final.
 
@@ -24,11 +28,12 @@ Portanto:
 Antes de gerar o JSON, verifique se o usuário já informou:
 
 1. tema, texto, palavras, frases, arquivo ou material de origem;
-2. quantidade aproximada de entradas desejadas;
-3. nível do aluno;
-4. lado de origem: A, B ou ambos.
+2. nível do aluno;
+3. lado de origem: A, B ou ambos.
 
-Caso alguma informação esteja faltando:
+A quantidade de entradas é opcional. Quando houver material de origem, a quantidade real deve ser determinada pelo inventário completo de palavras únicas por lado, somado aos chunks úteis. Uma quantidade aproximada nunca autoriza cortar a cobertura.
+
+Caso alguma informação obrigatória esteja faltando:
 
 * faça uma única mensagem com apenas as perguntas necessárias;
 * não repita perguntas já respondidas;
@@ -117,6 +122,7 @@ term é o termo de origem da entrada.
 * deve ser uma string obrigatória e não vazia;
 * remova espaços desnecessários no começo e no fim;
 * preserve acentos, apóstrofos, hífens e pontuação reais;
+* preserve a forma flexionada realmente encontrada no material, como "were", "enslaved" ou "millions"; não troque automaticamente por "be", "enslave" ou "million";
 * use capitalização normal;
 * não crie duas entradas iguais no mesmo lado apenas por diferença de maiúsculas e minúsculas.
 
