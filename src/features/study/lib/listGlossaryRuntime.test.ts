@@ -51,6 +51,19 @@ const rpcEntry = {
   updated_at: "2026-07-13T00:00:00.000Z",
 };
 
+const directEntry = {
+  id: "entry-2",
+  owner_id: "owner-1",
+  original_text: "enslaved",
+  primary_translation: "escravizado",
+  alternative_translations: ["subjugado"],
+  note: "particípio",
+  side: "A",
+  is_active: true,
+  created_at: "2026-07-13T00:00:00.000Z",
+  updated_at: "2026-07-13T00:00:00.000Z",
+};
+
 beforeEach(() => {
   mocks.rpc.mockReset();
   mocks.from.mockClear();
@@ -90,23 +103,33 @@ describe("list glossary runtime", () => {
     expect(result.recoveredFrom?.[0]).toMatch(/RPC v2.*57014/iu);
   });
 
+  it("does not trust false-empty RPC responses when the folder still has entries", async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+    mocks.folderRange.mockResolvedValueOnce({ data: [directEntry], error: null });
+
+    const result = await loadListGlossaryRuntime("list-1");
+
+    expect(result.source).toBe("direct");
+    expect(result.glossary).toEqual([
+      expect.objectContaining({
+        original_text: "enslaved",
+        translated_text: "escravizado, subjugado",
+      }),
+    ]);
+    expect(result.recoveredFrom).toEqual([
+      expect.stringMatching(/RPC v2.*0 entradas/iu),
+      expect.stringMatching(/RPC v1.*0 entradas/iu),
+    ]);
+  });
+
   it("falls back to a paginated direct read and preserves grouped translations", async () => {
     mocks.rpc
       .mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "v2 missing" } })
       .mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "v1 missing" } });
     mocks.folderRange.mockResolvedValueOnce({
-      data: [{
-        id: "entry-2",
-        owner_id: "owner-1",
-        original_text: "enslaved",
-        primary_translation: "escravizado",
-        alternative_translations: ["subjugado"],
-        note: "particípio",
-        side: "A",
-        is_active: true,
-        created_at: "2026-07-13T00:00:00.000Z",
-        updated_at: "2026-07-13T00:00:00.000Z",
-      }],
+      data: [directEntry],
       error: null,
     });
 
