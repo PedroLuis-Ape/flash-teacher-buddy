@@ -21,11 +21,14 @@ function timedFetch(input, init = {}) {
     .finally(() => clearTimeout(timer));
 }
 
-function isRuntime(value) {
-  if (!value?.url || !value?.publicValue) return false;
+function isRuntime(value, expectedProjectId) {
+  if (!value?.url || !value?.publicValue || !expectedProjectId) return false;
   try {
     const parsed = new URL(value.url);
-    return parsed.protocol === "https:" && parsed.hostname.endsWith(".supabase.co");
+    const projectId = value.projectId || parsed.hostname.split(".")[0];
+    return parsed.protocol === "https:"
+      && parsed.hostname === `${expectedProjectId}.supabase.co`
+      && projectId === expectedProjectId;
   } catch {
     return false;
   }
@@ -58,17 +61,18 @@ function parseSourceFallback(source) {
   };
 }
 
-function readEnvironmentRuntime() {
+function readEnvironmentRuntime(source) {
+  const { productionProjectId } = parseKnownProjects(source);
   const url = process.env.VITE_SUPABASE_URL?.trim();
   const publicValue = process.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
   const projectId = process.env.VITE_SUPABASE_PROJECT_ID?.trim();
   const runtime = { projectId, url, publicValue, source: "environment" };
-  return isRuntime(runtime) ? runtime : null;
+  return isRuntime(runtime, productionProjectId) ? runtime : null;
 }
 
 async function readManagedRuntime(source) {
-  const { managedProjectId } = parseKnownProjects(source);
-  if (!managedProjectId) return null;
+  const { managedProjectId, productionProjectId } = parseKnownProjects(source);
+  if (!managedProjectId || !productionProjectId) return null;
 
   try {
     const response = await timedFetch(
@@ -83,7 +87,7 @@ async function readManagedRuntime(source) {
       publicValue: payload.publishableKey,
       source: "managed-runtime",
     };
-    return isRuntime(runtime) ? runtime : null;
+    return isRuntime(runtime, productionProjectId) ? runtime : null;
   } catch (error) {
     console.warn("[PublicDirectory] Endpoint de runtime indisponível; usando fallback público.", error?.message ?? error);
     return null;
@@ -92,7 +96,7 @@ async function readManagedRuntime(source) {
 
 export async function resolvePublicDirectoryRuntime() {
   const source = readRuntimeSource();
-  return readEnvironmentRuntime()
+  return readEnvironmentRuntime(source)
     ?? await readManagedRuntime(source)
     ?? parseSourceFallback(source);
 }
@@ -112,7 +116,7 @@ function asCount(value) {
 function sanitizeTeacher(row) {
   const publicSlug = typeof row?.public_slug === "string" ? row.public_slug.trim() : "";
   const displayName = typeof row?.display_name === "string" ? row.display_name.trim() : "";
-  if (!publicSlug || !displayName || publicSlug.includes("/") || publicSlug.includes("\\")) return null;
+  if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(publicSlug) || !displayName) return null;
 
   return {
     display_name: displayName,
@@ -174,7 +178,7 @@ export async function loadPublicTeacherDirectory() {
 
   let response = await client.rpc("list_public_teacher_discovery_entries", { _limit: MAX_TEACHERS });
   if (response.error && isMissingDiscoveryRpc(response.error)) {
-    console.warn("[PublicDirectory] RPC escalável ainda não publicado; usando diretório legado limitado a 24 professores.");
+    console.warn("[PublicDirectory] RPC escalável ainda não publicada; usando diretório legado limitado a 24 professores.");
     response = await client.rpc("search_public_teachers", { _q: "", _limit: 24 });
   }
 
