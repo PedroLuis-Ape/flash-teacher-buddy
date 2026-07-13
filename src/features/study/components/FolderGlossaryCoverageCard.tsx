@@ -164,8 +164,10 @@ export function FolderGlossaryCoverageCard({
       labelB,
       report,
     });
-    downloadJson(content, `app-piteco-glossario-exato-${slugify(folderTitle)}.json`);
-    toast.success("Arquivo exato exportado. A IA deve preencher todas as palavras sem alterar a lista.");
+    downloadJson(content, `app-piteco-palavras-pendentes-${slugify(folderTitle)}.json`);
+    toast.success(
+      `${exactPendingTerms.length.toLocaleString("pt-BR")} palavra(s) pendente(s) exportada(s) com exemplos dos cards. Envie este JSON à IA.`,
+    );
   };
 
   const exportCovered = () => {
@@ -182,8 +184,8 @@ export function FolderGlossaryCoverageCard({
       report,
       glossary: coveredGlossary,
     });
-    downloadJson(content, `app-piteco-cobertas-${slugify(folderTitle)}.json`);
-    toast.success("Entradas realmente usadas nos cards foram exportadas.");
+    downloadJson(content, `app-piteco-glossario-ja-coberto-${slugify(folderTitle)}.json`);
+    toast.success("Backup das entradas já existentes e usadas nos cards exportado.");
   };
 
   const importCompletedFile = async (file?: File) => {
@@ -204,7 +206,7 @@ export function FolderGlossaryCoverageCard({
     try {
       const parsed = parseExactCoverageCompletionJson(await file.text(), report);
       await importEntries.mutateAsync({ entries: parsed, mode: "merge" });
-      toast.success(`${parsed.length.toLocaleString("pt-BR")} entrada(s) exata(s) importada(s). Reanalisando...`);
+      toast.success(`${parsed.length.toLocaleString("pt-BR")} palavra(s) preenchida(s) importada(s). Reanalisando a pasta...`);
       await runAudit();
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Não foi possível importar o arquivo preenchido.");
@@ -281,72 +283,152 @@ export function FolderGlossaryCoverageCard({
                     <Badge variant="outline" className={statusClasses.wrong_side}>{report.wrongSideTerms} no lado oposto</Badge>
                     <Badge variant="outline" className={statusClasses.inactive}>{report.inactiveTerms} inativas</Badge>
                   </div>
-                  {exactPendingTerms.length > 0 && (
+                  {exactPendingTerms.length > 0 ? (
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      Faltam {exactPendingTerms.length.toLocaleString("pt-BR")} palavra(s) distinta(s) com entrada individual exata. Todas serão incluídas no JSON de preenchimento.
+                      Existem {exactPendingTerms.length.toLocaleString("pt-BR")} palavra(s) pendente(s). Pendente significa: ausente, coberta somente por expressão, inativa ou cadastrada no lado oposto.
+                    </p>
+                  ) : (
+                    <p className="text-xs leading-relaxed text-emerald-600">
+                      Nenhuma palavra pendente. Todas possuem entrada individual ativa no lado correto.
                     </p>
                   )}
                 </section>
 
-                <section className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
-                  <Input
-                    type="search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Buscar palavra ou frase de exemplo..."
-                  />
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | FolderGlossaryCoverageStatus)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os resultados</SelectItem>
-                      <SelectItem value="missing">Ausentes</SelectItem>
-                      <SelectItem value="wrong_side">No lado oposto</SelectItem>
-                      <SelectItem value="inactive">Inativas</SelectItem>
-                      <SelectItem value="expression">Somente por expressão</SelectItem>
-                      <SelectItem value="covered">Entrada individual exata</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <section className="space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-4">
+                  <div>
+                    <p className="font-semibold">Completar as palavras que faltam</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      Siga os passos abaixo. O primeiro arquivo contém somente as palavras pendentes e os exemplos dos cards em que elas aparecem.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-3">
+                    <div className="flex min-h-full flex-col rounded-xl border bg-background p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
+                        <div>
+                          <p className="font-medium">Exportar apenas as pendentes</p>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            Baixa {exactPendingTerms.length.toLocaleString("pt-BR")} palavra(s) sem entrada individual correta, junto com exemplos reais dos cards. Envie esse JSON à IA.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        className="mt-4 w-full"
+                        onClick={exportPending}
+                        disabled={exactPendingTerms.length === 0}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar palavras faltantes ({exactPendingTerms.length.toLocaleString("pt-BR")})
+                      </Button>
+                    </div>
+
+                    <div className="flex min-h-full flex-col rounded-xl border bg-background p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
+                        <div>
+                          <p className="font-medium">Importar as respostas da IA</p>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            Depois que a IA preencher o campo de tradução, selecione o mesmo JSON. As novas palavras serão mescladas ao glossário da pasta.
+                          </p>
+                        </div>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".json,application/json"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          void importCompletedFile(file);
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="mt-4 w-full"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={importEntries.isPending || exactPendingTerms.length === 0}
+                      >
+                        {importEntries.isPending
+                          ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          : <FileUp className="mr-2 h-4 w-4" />}
+                        Importar palavras preenchidas
+                      </Button>
+                    </div>
+
+                    <div className="flex min-h-full flex-col rounded-xl border bg-background p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
+                        <div>
+                          <p className="font-medium">Confirmar o resultado</p>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            A reanálise acontece automaticamente após a importação. Use este botão depois de outras alterações manuais no glossário ou nos cards.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="mt-4 w-full"
+                        onClick={() => void runAudit()}
+                        disabled={loading || importEntries.isPending}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Reanalisar cobertura
+                      </Button>
+                    </div>
+                  </div>
                 </section>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    onClick={exportPending}
-                    disabled={exactPendingTerms.length === 0}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar glossário exato JSON
-                  </Button>
-                  <Button type="button" variant="outline" onClick={exportCovered} disabled={report.usedGlossaryEntryIds.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar cobertas JSON
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json,application/json"
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      void importCompletedFile(file);
-                      event.currentTarget.value = "";
-                    }}
-                  />
+                <section className="flex flex-col gap-3 rounded-xl border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">Backup das palavras já cobertas</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Este arquivo contém apenas entradas que já existem e são usadas nos cards. Ele serve para backup ou conferência; não é o arquivo usado para preencher palavras faltantes.
+                    </p>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={importEntries.isPending || exactPendingTerms.length === 0}
+                    className="shrink-0"
+                    onClick={exportCovered}
+                    disabled={report.usedGlossaryEntryIds.length === 0}
                   >
-                    {importEntries.isPending
-                      ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      : <FileUp className="mr-2 h-4 w-4" />}
-                    Importar glossário preenchido
+                    <Download className="mr-2 h-4 w-4" />
+                    Baixar glossário já coberto ({report.usedGlossaryEntryIds.length.toLocaleString("pt-BR")})
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => void runAudit()}>
-                    <RefreshCw className="mr-2 h-4 w-4" />Reanalisar
-                  </Button>
-                </div>
+                </section>
+
+                <section className="space-y-3">
+                  <div>
+                    <p className="font-semibold">Consultar resultados da auditoria</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Use a busca e o filtro para conferir quais palavras estão ausentes, no lado errado, inativas, cobertas só por expressão ou já resolvidas.
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+                    <Input
+                      type="search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Buscar palavra ou frase de exemplo..."
+                    />
+                    <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | FolderGlossaryCoverageStatus)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os resultados</SelectItem>
+                        <SelectItem value="missing">Ausentes</SelectItem>
+                        <SelectItem value="wrong_side">No lado oposto</SelectItem>
+                        <SelectItem value="inactive">Inativas</SelectItem>
+                        <SelectItem value="expression">Somente por expressão</SelectItem>
+                        <SelectItem value="covered">Entrada individual exata</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </section>
 
                 <section className="space-y-2">
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
