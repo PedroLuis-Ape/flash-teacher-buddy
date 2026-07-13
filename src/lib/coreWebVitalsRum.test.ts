@@ -5,6 +5,7 @@ import {
   getRumDeviceClass,
   getRumNavigationType,
   normalizeRumRoute,
+  readOptionalSessionStorage,
   resolveRumSampleRate,
   resolveSessionSample,
 } from "./coreWebVitalsRum";
@@ -51,6 +52,12 @@ describe("Core Web Vitals RUM", () => {
     expect(resolveSessionSample(0.5, storage)).toBe(sampled);
   });
 
+  it("treats blocked iframe session storage as unavailable instead of throwing", () => {
+    expect(readOptionalSessionStorage(() => {
+      throw new DOMException("Access denied", "SecurityError");
+    })).toBeNull();
+  });
+
   it("uses only coarse device and navigation classes", () => {
     expect(getRumDeviceClass(390)).toBe("mobile");
     expect(getRumDeviceClass(900)).toBe("tablet");
@@ -63,6 +70,13 @@ describe("Core Web Vitals RUM", () => {
     const client = readFileSync("src/lib/coreWebVitalsRum.ts", "utf8");
     expect(client).toContain('update("CLS", 0)');
     expect(client.indexOf('update("CLS", 0)')).toBeLessThan(client.indexOf('observe("layout-shift"'));
+  });
+
+  it("keeps optional telemetry from crashing application startup", () => {
+    const client = readFileSync("src/lib/coreWebVitalsRum.ts", "utf8");
+    expect(client).toContain("startCoreWebVitalsRumInternal");
+    expect(client).toContain("Collector disabled after startup failure");
+    expect(client).toContain("readOptionalSessionStorage()");
   });
 
   it("does not add account, email, query or raw URL fields", () => {
