@@ -30,16 +30,20 @@ import {
 } from "@/components/ui/select";
 import { useFolderGlossary } from "@/hooks/useFolderGlossary";
 import { loadFolderGlossary } from "@/features/study/lib/folderGlossaryApi";
-import { parseFolderGlossaryJson } from "@/features/study/lib/folderGlossaryTransfer";
 import type { FolderGlossaryEntry } from "@/features/study/lib/folderGlossaryTypes";
 import {
   loadFolderGlossaryCoverage,
-  serializeMissingCoverageTerms,
   serializeUsedCoverageEntries,
   type FolderGlossaryCoverageReport,
   type FolderGlossaryCoverageStatus,
 } from "@/features/study/lib/folderGlossaryCoverage";
 import { getFolderGlossaryCoveragePresentation } from "@/features/study/lib/folderGlossaryCoveragePresentation";
+import {
+  getExactCoveredOccurrences,
+  getExactCoveragePendingTerms,
+  parseExactCoverageCompletionJson,
+  serializeExactCoverageRequest,
+} from "@/features/study/lib/folderGlossaryExactCoverage";
 
 interface Props {
   folderId: string;
@@ -49,8 +53,8 @@ interface Props {
 }
 
 const statusLabels: Record<FolderGlossaryCoverageStatus, string> = {
-  covered: "No glossário",
-  expression: "Coberta por expressão",
+  covered: "Entrada individual exata",
+  expression: "Somente por expressão",
   inactive: "Entrada inativa",
   wrong_side: "Lado oposto",
   missing: "Ausente",
@@ -58,7 +62,7 @@ const statusLabels: Record<FolderGlossaryCoverageStatus, string> = {
 
 const statusClasses: Record<FolderGlossaryCoverageStatus, string> = {
   covered: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
-  expression: "border-sky-500/30 bg-sky-500/10 text-sky-600",
+  expression: "border-amber-500/30 bg-amber-500/10 text-amber-600",
   inactive: "border-amber-500/30 bg-amber-500/10 text-amber-600",
   wrong_side: "border-orange-500/30 bg-orange-500/10 text-orange-600",
   missing: "border-destructive/30 bg-destructive/10 text-destructive",
@@ -115,7 +119,7 @@ export function FolderGlossaryCoverageCard({
       const next = await loadFolderGlossaryCoverage(folderId, latest.entries);
       setAuditGlossary(latest.entries);
       setReport(next);
-      if (next.missingTerms === 0 && next.inactiveTerms === 0 && next.wrongSideTerms === 0) {
+      if (getExactCoveragePendingTerms(next).length === 0) {
         setStatusFilter("all");
       }
     } catch (cause) {
@@ -141,16 +145,26 @@ export function FolderGlossaryCoverageCard({
     });
   }, [report, search, statusFilter]);
 
+  const exactPendingTerms = useMemo(
+    () => report ? getExactCoveragePendingTerms(report) : [],
+    [report],
+  );
+  const exactCoveredOccurrences = report ? getExactCoveredOccurrences(report) : 0;
   const coverage = getFolderGlossaryCoveragePresentation(
-    report?.coveredOccurrences ?? 0,
+    exactCoveredOccurrences,
     report?.totalOccurrences ?? 0,
   );
 
   const exportPending = () => {
     if (!report) return;
-    const content = serializeMissingCoverageTerms({ folderTitle, report });
-    downloadJson(content, `app-piteco-pendencias-${slugify(folderTitle)}.json`);
-    toast.success("Pendências exportadas. Envie o JSON para uma IA preencher as traduções.");
+    const content = serializeExactCoverageRequest({
+      folderTitle,
+      labelA,
+      labelB,
+      report,
+    });
+    downloadJson(content, `app-piteco-glossario-exato-${slugify(folderTitle)}.json`);
+    toast.success("Arquivo exato exportado. A IA deve preencher todas as palavras sem alterar a lista.");
   };
 
   const exportCovered = () => {
@@ -168,7 +182,7 @@ export function FolderGlossaryCoverageCard({
       glossary: coveredGlossary,
     });
     downloadJson(content, `app-piteco-cobertas-${slugify(folderTitle)}.json`);
-    toast.success("Entradas realmente cobertas nos cards foram exportadas.");
+    toast.success("Entradas realmente usadas nos cards foram exportadas.");
   };
 
   const importCompletedFile = async (file?: File) => {
@@ -181,15 +195,15 @@ export function FolderGlossaryCoverageCard({
       toast.error("O arquivo excede 25 MB.");
       return;
     }
+    if (!report) {
+      toast.error("Execute a auditoria novamente antes de importar.");
+      return;
+    }
 
     try {
-      const parsed = parseFolderGlossaryJson(await file.text());
-      if (parsed.length === 0) {
-        toast.error("Nenhuma entrada preenchida foi encontrada. As traduções vazias não são importadas.");
-        return;
-      }
+      const parsed = parseExactCoverageCompletionJson(await file.text(), report);
       await importEntries.mutateAsync({ entries: parsed, mode: "merge" });
-      toast.success(`${parsed.length.toLocaleString("pt-BR")} entrada(s) importada(s). Reanalisando a cobertura...`);
+      toast.success(`${parsed.length.toLocaleString("pt-BR")} entrada(s) exata(s) importada(s). Reanalisando...`);
       await runAudit();
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Não foi possível importar o arquivo preenchido.");
@@ -204,9 +218,9 @@ export function FolderGlossaryCoverageCard({
         <div className="flex min-w-0 gap-3">
           <ScanSearch className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
           <div className="min-w-0">
-            <p className="font-medium">Auditar cobertura do glossário</p>
+            <p className="font-medium">Auditar cobertura exata do glossário</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Compare todas as palavras dos cards com o glossário e exporte somente o que estiver faltando.
+              Confirme que cada palavra, em cada lado, possui uma entrada individual ativa. Expressões não substituem palavras isoladas.
             </p>
           </div>
         </div>
@@ -219,9 +233,9 @@ export function FolderGlossaryCoverageCard({
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-5xl flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Auditoria de cobertura — {folderTitle}</DialogTitle>
+            <DialogTitle>Auditoria exata — {folderTitle}</DialogTitle>
             <DialogDescription>
-              Correspondência exata por lado, incluindo palavras cobertas por expressões completas.
+              Uma palavra só conta como concluída quando existe uma entrada individual ativa no lado correto. Cobertura por expressão continua pendente.
             </DialogDescription>
           </DialogHeader>
 
@@ -247,25 +261,30 @@ export function FolderGlossaryCoverageCard({
                 <section className="space-y-3 rounded-xl border bg-muted/20 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold">Cobertura das ocorrências: {coverage.label}%</p>
+                      <p className="font-semibold">Cobertura exata das ocorrências: {coverage.label}%</p>
                       <p className="text-sm text-muted-foreground">
                         {report.listsScanned.toLocaleString("pt-BR")} listas · {report.cardsScanned.toLocaleString("pt-BR")} cards · {report.distinctTerms.toLocaleString("pt-BR")} termos distintos
                       </p>
                     </div>
                     {coverage.complete && (
                       <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
-                        <CheckCircle2 className="mr-1 h-3.5 w-3.5" />Cobertura completa
+                        <CheckCircle2 className="mr-1 h-3.5 w-3.5" />Cobertura exata completa
                       </Badge>
                     )}
                   </div>
                   <Progress value={coverage.percent} className="h-2" />
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="outline" className={statusClasses.covered}>{report.coveredTerms} exatas</Badge>
-                    <Badge variant="outline" className={statusClasses.expression}>{report.expressionTerms} por expressão</Badge>
+                    <Badge variant="outline" className={statusClasses.expression}>{report.expressionTerms} somente por expressão</Badge>
                     <Badge variant="outline" className={statusClasses.missing}>{report.missingTerms} ausentes</Badge>
                     <Badge variant="outline" className={statusClasses.wrong_side}>{report.wrongSideTerms} no lado oposto</Badge>
                     <Badge variant="outline" className={statusClasses.inactive}>{report.inactiveTerms} inativas</Badge>
                   </div>
+                  {exactPendingTerms.length > 0 && (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Faltam {exactPendingTerms.length.toLocaleString("pt-BR")} palavra(s) distinta(s) com entrada individual exata. Todas serão incluídas no JSON de preenchimento.
+                    </p>
+                  )}
                 </section>
 
                 <section className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
@@ -282,8 +301,8 @@ export function FolderGlossaryCoverageCard({
                       <SelectItem value="missing">Ausentes</SelectItem>
                       <SelectItem value="wrong_side">No lado oposto</SelectItem>
                       <SelectItem value="inactive">Inativas</SelectItem>
-                      <SelectItem value="expression">Cobertas por expressão</SelectItem>
-                      <SelectItem value="covered">No glossário</SelectItem>
+                      <SelectItem value="expression">Somente por expressão</SelectItem>
+                      <SelectItem value="covered">Entrada individual exata</SelectItem>
                     </SelectContent>
                   </Select>
                 </section>
@@ -292,10 +311,10 @@ export function FolderGlossaryCoverageCard({
                   <Button
                     type="button"
                     onClick={exportPending}
-                    disabled={report.missingTerms + report.wrongSideTerms + report.inactiveTerms === 0}
+                    disabled={exactPendingTerms.length === 0}
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Exportar pendências JSON
+                    Exportar glossário exato JSON
                   </Button>
                   <Button type="button" variant="outline" onClick={exportCovered} disabled={report.usedGlossaryEntryIds.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
@@ -316,12 +335,12 @@ export function FolderGlossaryCoverageCard({
                     type="button"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={importEntries.isPending}
+                    disabled={importEntries.isPending || exactPendingTerms.length === 0}
                   >
                     {importEntries.isPending
                       ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       : <FileUp className="mr-2 h-4 w-4" />}
-                    Importar pendências preenchidas
+                    Importar glossário preenchido
                   </Button>
                   <Button type="button" variant="ghost" onClick={() => void runAudit()}>
                     <RefreshCw className="mr-2 h-4 w-4" />Reanalisar
