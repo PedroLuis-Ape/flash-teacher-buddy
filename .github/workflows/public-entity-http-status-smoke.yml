@@ -1,0 +1,58 @@
+name: Public Entity HTTP Status Smoke
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/public_entity_http_status_smoke.sql"
+      - "netlify/edge-functions/public-entity-status.js"
+      - "scripts/validate-public-entity-http-status.mjs"
+      - ".github/workflows/public-entity-http-status-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/public_entity_http_status_smoke.sql"
+      - "netlify/edge-functions/public-entity-status.js"
+      - "scripts/validate-public-entity-http-status.mjs"
+      - ".github/workflows/public-entity-http-status-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-entity-http-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate edge response contract
+        run: node scripts/validate-public-entity-http-status.mjs
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Rebuild local database
+        run: |
+          supabase start
+          supabase db reset --local --no-seed
+
+      - name: Verify publication lifecycle and anonymous statuses
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/public_entity_http_status_smoke.sql
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup

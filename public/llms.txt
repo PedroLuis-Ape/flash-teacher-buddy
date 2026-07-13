@@ -43,6 +43,14 @@ Perfis públicos usam o padrão `https://www.apeeducation.org/portal/professor/{
 
 Uma URL dinâmica só deve ser tratada como fonte canônica quando estiver presente no sitemap implantado e a página identificar explicitamente o professor, a autoria ou o material público. Não invente slugs ou IDs e não trate uma URL apenas acessível por interação como prova de publicação.
 
+## Semântica HTTP das páginas dinâmicas
+
+- `200 OK`: a entidade está atualmente publicada e pode ser usada como fonte, desde que também esteja no sitemap implantado.
+- `404 Not Found`: não existe histórico público para essa chave; não deduza que haja uma entidade privada correspondente.
+- `410 Gone`: essa URL exata já foi pública, mas foi retirada, despublicada ou removida; não continue usando seu conteúdo como fonte atual.
+
+Respostas `404` e `410` incluem instruções `noindex` e não apresentam URL canônica. Uma entidade republicada volta a responder `200`.
+
 ## Escopo de descoberta e citação
 
 Somente páginas e materiais explicitamente públicos devem ser usados para descoberta, resumo ou citação. Contas, turmas privadas, progresso individual, pastas pessoais, listas privadas, autenticação, importadores e configurações de usuário não fazem parte do conteúdo público.
