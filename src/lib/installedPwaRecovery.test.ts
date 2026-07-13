@@ -17,8 +17,6 @@ const watchdog = read("src/lib/bootWatchdog.ts");
 const runtime = read("src/integrations/supabase/platformRuntime.ts");
 const bootstrap = read("src/integrations/supabase/runtimeBootstrap.ts");
 
-const officialProjectId = "xrnfhhoxmmstagmelvyi";
-
 describe("installed PWA recovery", () => {
   it("keeps one install identity while versioning the launch URL", () => {
     expect(manifest.id).toBe("/");
@@ -48,10 +46,12 @@ describe("installed PWA recovery", () => {
   it("runs cleanup while keeping the single official backend", () => {
     expect(watchdog).toContain("2026-06-27-installed-pwa-reset-2");
     expect(runtime).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
-    expect(runtime).toContain(officialProjectId);
+    expect(runtime).toContain("xrnfhhoxmmstagmelvyi");
     expect(runtime).toContain("assertOfficialPlatformRuntime");
     expect(runtime).not.toContain("PRODUCTION_DATA_PROJECT_ID");
-    expect(bootstrap).toContain(`${officialProjectId}.supabase.co`);
+    expect(bootstrap).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
+    expect(bootstrap).toContain("OFFICIAL_SUPABASE_URL");
+    expect(bootstrap).toContain("OFFICIAL_RUNTIME_ENDPOINT");
     expect(bootstrap).toContain("app-public-config");
   });
 });
