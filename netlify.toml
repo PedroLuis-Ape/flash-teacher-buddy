@@ -7,3 +7,7 @@
 [[edge_functions]]
   path = "/portal/professor/*"
   function = "public-entity-status"
+
+[[edge_functions]]
+  path = "/portal/list/*"
+  function = "public-list-status"
