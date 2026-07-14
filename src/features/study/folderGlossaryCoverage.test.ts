@@ -221,7 +221,7 @@ describe("folder glossary exact coverage audit", () => {
       .toThrow(/termo extra ou alterado/iu);
   });
 
-  it("exposes the strict exact export and import controls on the glossary screen", () => {
+  it("exposes a guided and unambiguous pending-word workflow", () => {
     const component = readFileSync(
       "src/features/study/components/FolderGlossaryCoverageCard.tsx",
       "utf8",
@@ -229,9 +229,16 @@ describe("folder glossary exact coverage audit", () => {
     expect(component).toContain("Auditar cobertura exata do glossário");
     expect(component).toContain("Expressões não substituem palavras isoladas");
     expect(component).toContain("Cobertura exata das palavras distintas");
-    expect(component).toContain("Exportar glossário exato JSON");
-    expect(component).toContain("Importar glossário preenchido");
+    expect(component).toContain("Completar as palavras que faltam");
+    expect(component).toContain("Exportar palavras faltantes");
+    expect(component).toContain("Importar palavras preenchidas");
+    expect(component).toContain("Reanalisar cobertura");
+    expect(component).toContain("Backup das palavras já cobertas");
+    expect(component).toContain("não é o arquivo usado para preencher palavras faltantes");
+    expect(component).toContain("Pendente significa: ausente, coberta somente por expressão, inativa ou cadastrada no lado oposto");
     expect(component).toContain("coverage.complete");
+    expect(component).not.toContain("Exportar glossário exato JSON");
+    expect(component).not.toContain("Exportar cobertas JSON");
     expect(component).not.toContain("serializeMissingCoverageTerms");
   });
 });
