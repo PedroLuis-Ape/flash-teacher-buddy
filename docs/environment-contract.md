@@ -1,50 +1,53 @@
 # Contrato de ambiente do App Piteco
 
-## Produção com dados reais
+Atualizado: 2026-07-13
 
-O frontend publicado do App Piteco deve usar o projeto Lovable Cloud que contém as contas e os dados existentes:
+## Projeto único e oficial
 
-`ymahldldyxvwjeruaxpr`
-
-Esse é o backend de produção do navegador para autenticação, perfis, pastas, listas, flashcards e glossários já existentes.
-
-## Projeto Supabase conectado às ferramentas administrativas
-
-O projeto abaixo permanece conectado para operações administrativas, migrations e auditorias específicas:
+Autenticação, perfis, pastas, listas, flashcards, glossários, loja, páginas públicas e telemetria usam o mesmo projeto Supabase:
 
 `xrnfhhoxmmstagmelvyi`
 
-Ele não deve substituir automaticamente o backend do frontend enquanto não existir uma migração de dados completa, validada e explicitamente aprovada. Apontar o aplicativo publicado para esse projeto faz contas e flashcards existentes parecerem ausentes.
+URL canônica da API:
 
-## Regra obrigatória do frontend
+`https://xrnfhhoxmmstagmelvyi.supabase.co`
 
-- `src/integrations/supabase/platformRuntime.ts` é a única fonte de configuração do cliente do navegador.
-- Em produção, URL, project ref e chave pública devem formar um conjunto atômico do projeto `ymahldldyxvwjeruaxpr`.
-- Valores `VITE_SUPABASE_*` injetados por uma integração antiga não podem trocar o backend de produção.
-- Overrides para outro projeto são permitidos somente em desenvolvimento local explícito.
-- Todos os clientes do navegador, incluindo sincronização de convidado, devem usar `readPlatformRuntime()`.
+Não existe separação entre “projeto administrado” e “backend de dados”. Configurações que apontem para outro project ref devem ser rejeitadas.
+
+## Inicialização do navegador
+
+- `src/integrations/supabase/platformRuntime.ts` valida o project ref e a URL oficial.
+- `src/integrations/supabase/runtimeBootstrap.ts` aceita um conjunto completo de variáveis públicas oficiais ou consulta `app-public-config` no próprio projeto.
+- `src/main.tsx` instala o runtime antes de importar `App.tsx` e antes de criar qualquer cliente Supabase.
+- `src/integrations/supabase/client.ts` usa exclusivamente `readPlatformRuntime()`.
+- Builds, Edge Functions da Netlify e MCP aplicam a mesma validação de projeto.
+
+## Variáveis públicas opcionais
+
+As três variáveis devem ser fornecidas juntas quando a plataforma optar por injetá-las:
+
+- `VITE_SUPABASE_PROJECT_ID=xrnfhhoxmmstagmelvyi`
+- `VITE_SUPABASE_URL=https://xrnfhhoxmmstagmelvyi.supabase.co`
+- `VITE_SUPABASE_PUBLISHABLE_KEY=<chave pública ativa>`
+
+Quando não forem injetadas, o bootstrap consulta:
+
+`/functions/v1/app-public-config`
 
 ## Segurança
 
-A URL e a chave anon são configurações públicas enviadas ao navegador. A segurança continua dependendo de RLS, RPCs, Edge Functions e autorização no servidor.
+A URL e a chave publicável são configurações públicas do navegador. A segurança depende de RLS, RPCs validadas, Edge Functions e autorização no servidor.
 
 Nunca colocar no frontend:
 
 - service role;
-- senha de banco;
-- tokens administrativos;
-- segredos de Edge Functions.
+- senha do banco;
+- token administrativo;
+- segredo de Edge Function;
+- chave privada de integração.
 
-## Mudança futura de backend
+Credenciais de servidor, como a usada por `/api/rum`, devem existir somente no escopo Functions da Netlify.
 
-Uma troca do projeto de produção só pode ocorrer após:
+## Regra de mudança
 
-1. inventário das contas e registros;
-2. migração integral dos dados;
-3. validação de autenticação e ownership;
-4. comparação de contagens;
-5. testes de leitura e escrita;
-6. plano de rollback;
-7. aprovação explícita do proprietário do App Piteco.
-
-Até essa migração existir, o frontend de produção permanece bloqueado em `ymahldldyxvwjeruaxpr`.
+Uma futura troca de projeto exige inventário, migração, comparação de contagens, validação de autenticação e ownership, testes de escrita/leitura, rollback e aprovação explícita. Até isso acontecer, qualquer project ref diferente de `xrnfhhoxmmstagmelvyi` é inválido.

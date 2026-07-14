@@ -16,20 +16,8 @@ declare global {
   }
 }
 
-export const MANAGED_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
-export const PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
-export const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
-export const PRODUCTION_DATA_PUBLIC_VALUE = [
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-  ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
-  ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
-].join("");
-
-export const PRODUCTION_DATA_RUNTIME: PlatformRuntime = Object.freeze({
-  projectId: PRODUCTION_DATA_PROJECT_ID,
-  url: PRODUCTION_DATA_URL,
-  publicValue: PRODUCTION_DATA_PUBLIC_VALUE,
-});
+export const OFFICIAL_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
+export const OFFICIAL_SUPABASE_URL = `https://${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`;
 
 function normalize(value: string | undefined): string | undefined {
   const result = value?.trim();
@@ -43,26 +31,26 @@ function completeRuntime(input: PlatformRuntimeInput | undefined): PlatformRunti
   return url && publicValue ? { projectId, url, publicValue } : null;
 }
 
-function assertProductionDataRuntime(runtime: PlatformRuntime): PlatformRuntime {
+export function assertOfficialPlatformRuntime(runtime: PlatformRuntime): PlatformRuntime {
   const parsed = new URL(runtime.url);
   const projectId = runtime.projectId ?? parsed.hostname.split(".")[0];
   if (
-    projectId !== PRODUCTION_DATA_PROJECT_ID
+    projectId !== OFFICIAL_SUPABASE_PROJECT_ID
     || parsed.protocol !== "https:"
-    || parsed.hostname !== `${PRODUCTION_DATA_PROJECT_ID}.supabase.co`
+    || parsed.hostname !== `${OFFICIAL_SUPABASE_PROJECT_ID}.supabase.co`
   ) {
-    throw new Error("A configuração não aponta para o backend de dados em produção.");
+    throw new Error("A configuração não aponta para o projeto Supabase oficial do App Piteco.");
   }
-  return { ...runtime, projectId };
+  return { ...runtime, projectId, url: parsed.origin };
 }
 
-function readIfProductionData(input: PlatformRuntimeInput | undefined): PlatformRuntime | null {
+function readIfOfficial(input: PlatformRuntimeInput | undefined): PlatformRuntime | null {
   const runtime = completeRuntime(input);
   if (!runtime) return null;
   try {
-    return assertProductionDataRuntime(runtime);
+    return assertOfficialPlatformRuntime(runtime);
   } catch (error) {
-    console.warn("[PlatformRuntime] Configuração externa ignorada; mantendo o backend com os dados existentes.", error);
+    console.warn("[PlatformRuntime] Configuração externa de outro projeto ignorada.", error);
     return null;
   }
 }
@@ -80,14 +68,16 @@ export function resolvePlatformRuntime(
     };
   }
 
-  return readIfProductionData(installed)
-    ?? readIfProductionData(input)
-    ?? { ...PRODUCTION_DATA_RUNTIME };
+  const runtime = readIfOfficial(installed) ?? readIfOfficial(input);
+  if (!runtime) {
+    throw new Error("A configuração pública do Supabase oficial ainda não foi instalada.");
+  }
+  return runtime;
 }
 
 export function installPlatformRuntime(runtime: PlatformRuntime): void {
-  const production = assertProductionDataRuntime(runtime);
-  if (typeof window !== "undefined") window.__APE_PLATFORM_RUNTIME__ = production;
+  const official = assertOfficialPlatformRuntime(runtime);
+  if (typeof window !== "undefined") window.__APE_PLATFORM_RUNTIME__ = official;
 }
 
 export function readPlatformRuntime(): PlatformRuntime {

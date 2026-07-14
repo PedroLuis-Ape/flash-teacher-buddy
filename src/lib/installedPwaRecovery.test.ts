@@ -15,6 +15,7 @@ const primaryWorker = read("public/sw.js");
 const compatibilityWorker = read("public/service-worker.js");
 const watchdog = read("src/lib/bootWatchdog.ts");
 const runtime = read("src/integrations/supabase/platformRuntime.ts");
+const bootstrap = read("src/integrations/supabase/runtimeBootstrap.ts");
 
 describe("installed PWA recovery", () => {
   it("keeps one install identity while versioning the launch URL", () => {
@@ -42,12 +43,15 @@ describe("installed PWA recovery", () => {
     expect(headers).toMatch(/\/service-worker\.js\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
   });
 
-  it("runs a cleanup cycle while keeping the backend that contains existing accounts", () => {
+  it("runs cleanup while keeping the single official backend", () => {
     expect(watchdog).toContain("2026-06-27-installed-pwa-reset-2");
-    expect(runtime).toContain("MANAGED_SUPABASE_PROJECT_ID");
+    expect(runtime).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
     expect(runtime).toContain("xrnfhhoxmmstagmelvyi");
-    expect(runtime).toContain("PRODUCTION_DATA_PROJECT_ID");
-    expect(runtime).toContain("ymahldldyxvwjeruaxpr");
-    expect(runtime).toContain("PRODUCTION_DATA_RUNTIME");
+    expect(runtime).toContain("assertOfficialPlatformRuntime");
+    expect(runtime).not.toContain("PRODUCTION_DATA_PROJECT_ID");
+    expect(bootstrap).toContain("OFFICIAL_SUPABASE_PROJECT_ID");
+    expect(bootstrap).toContain("OFFICIAL_SUPABASE_URL");
+    expect(bootstrap).toContain("OFFICIAL_RUNTIME_ENDPOINT");
+    expect(bootstrap).toContain("app-public-config");
   });
 });

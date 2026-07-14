@@ -46,9 +46,21 @@ jobs:
           version: latest
 
       - name: Rebuild local database
+        shell: bash
         run: |
-          supabase start
-          supabase db reset --local --no-seed
+          set -o pipefail
+          mkdir -p diagnostics
+          supabase start 2>&1 | tee diagnostics/supabase-start.log
+          supabase db reset --local --no-seed 2>&1 | tee diagnostics/supabase-reset.log
+
+      - name: Upload database reset diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-entity-http-status-db-reset
+          path: diagnostics/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Verify publication lifecycle and anonymous statuses
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/public_entity_http_status_smoke.sql

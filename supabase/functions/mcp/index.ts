@@ -18,7 +18,7 @@ var echo_default = defineTool({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "ymahldldyxvwjeruaxpr";
+var projectRef = "xrnfhhoxmmstagmelvyi";
 var mcp_default = defineMcp({
   name: "ape-piteco-mcp",
   title: "APE Piteco",
