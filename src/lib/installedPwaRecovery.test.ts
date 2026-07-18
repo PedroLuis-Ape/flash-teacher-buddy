@@ -17,27 +17,41 @@ const compatibilityWorker = read("public/service-worker.js");
 const watchdog = read("src/lib/bootWatchdog.ts");
 const runtime = read("src/integrations/supabase/platformRuntime.ts");
 const orientationGuard = read("src/lib/portraitOrientationLock.ts");
+const portraitRouteGuard = read("src/components/layout/PortraitOnlyGameGuard.tsx");
 const globalLayout = read("src/components/layout/GlobalLayout.tsx");
 
 describe("installed PWA recovery", () => {
   it("keeps one install identity while versioning the launch URL", () => {
     expect(manifest.id).toBe("/");
     expect(manifest.scope).toBe("/");
-    expect(manifest.start_url).toContain("app_shell=20260627-reset1");
+    expect(manifest.start_url).toContain("app_shell=20260718-portrait3");
   });
 
   it("keeps the installed mobile app in upright portrait orientation", () => {
     expect(manifest.orientation).toBe("portrait-primary");
   });
 
-  it("reinforces portrait orientation at runtime for installed app sessions", () => {
-    expect(orientationGuard).toContain("(display-mode: ${mode})");
-    expect(orientationGuard).toContain('orientation.lock?.("portrait-primary")');
+  it("tries standard and legacy portrait locks without depending on standalone detection", () => {
+    expect(orientationGuard).toContain('LOCK_CANDIDATES: PortraitOrientation[] = ["portrait", "portrait-primary"]');
+    expect(orientationGuard).toContain("await orientation.lock(candidate)");
+    expect(orientationGuard).toContain("legacyScreen.lockOrientation");
     expect(orientationGuard).toContain('document.addEventListener("visibilitychange"');
     expect(orientationGuard).toContain('window.addEventListener("pageshow"');
     expect(orientationGuard).toContain('window.addEventListener("orientationchange"');
     expect(orientationGuard).toContain('window.addEventListener("pointerdown"');
+    expect(orientationGuard).not.toContain("isInstalledAppWindow");
     expect(globalLayout).toContain("installPortraitOrientationGuard()");
+  });
+
+  it("blocks handheld landscape game routes when the browser refuses the lock", () => {
+    expect(portraitRouteGuard).toContain('pathname.endsWith("/games")');
+    expect(portraitRouteGuard).toContain('pathname.endsWith("/study")');
+    expect(portraitRouteGuard).toContain('pathname.endsWith("/mixed-study")');
+    expect(portraitRouteGuard).toContain('const LANDSCAPE_QUERY = "(orientation: landscape)"');
+    expect(portraitRouteGuard).toContain("requestFullscreen");
+    expect(portraitRouteGuard).toContain("requestPortraitOrientationLock");
+    expect(portraitRouteGuard).toContain("O jogo foi pausado");
+    expect(globalLayout).toContain("<PortraitOnlyGameGuard />");
   });
 
   it.each([
