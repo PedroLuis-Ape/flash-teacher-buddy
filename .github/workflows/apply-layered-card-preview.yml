@@ -27,6 +27,7 @@ jobs:
         with:
           ref: feat/layered-card-preview
           fetch-depth: 0
+          show-progress: false
 
       - name: Apply focused source transformation
         run: python scripts/apply-layered-card-preview.py
