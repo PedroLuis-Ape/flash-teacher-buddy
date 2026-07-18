@@ -132,17 +132,19 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
           size="icon"
           className="bg-background/50 backdrop-blur-sm hover:bg-background/80"
           disabled={disabled}
+          aria-label="Abrir configurações da sessão"
+          title="Configurações da sessão"
         >
           <Settings className="h-5 w-5 text-muted-foreground" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="grid-rows-[auto_minmax(0,1fr)] max-h-[calc(100dvh-1rem)] gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:gap-4 sm:p-6">
+        <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 text-left sm:border-0 sm:p-0">
           <DialogTitle>Configurações da Sessão</DialogTitle>
         </DialogHeader>
-        <div className="space-y-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
+        <div className="min-h-0 space-y-6 overflow-y-auto overscroll-contain px-5 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-0 sm:pb-0 sm:pt-0">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <Label htmlFor="random-mode" className="font-medium">Ordem Aleatória</Label>
               <p className="text-sm text-muted-foreground">
                 {redFocusActive ? "Desativada no Foco Vermelho" : "Embaralha os cards a cada reinício"}
@@ -150,29 +152,31 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
             </div>
             <Switch
               id="random-mode"
+              className="shrink-0"
               checked={settings.mode === "random" && !redFocusActive}
               onCheckedChange={handleModeChange}
               disabled={redFocusActive}
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <Label htmlFor="favorites-only" className="font-medium">Apenas Favoritos</Label>
               <p className="text-sm text-muted-foreground">Estude apenas os cards marcados com estrela</p>
             </div>
             <Switch
               id="favorites-only"
+              className="shrink-0"
               checked={favoritesActive}
               onCheckedChange={handleSubsetChange}
               disabled={redFocusActive}
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <Flame className="h-4 w-4 text-red-500" />
+                <Flame className="h-4 w-4 shrink-0 text-red-500" />
                 <Label htmlFor="red-focus" className="font-medium">Foco Vermelho</Label>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -181,6 +185,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
             </div>
             <Switch
               id="red-focus"
+              className="shrink-0"
               checked={redFocusActive}
               onCheckedChange={handleRedFocusChange}
             />
@@ -188,16 +193,17 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
 
           {showFastMode && (
             <>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-yellow-500" />
+                    <Zap className="h-4 w-4 shrink-0 text-yellow-500" />
                     <Label htmlFor="fast-mode" className="font-medium">Fast Mode</Label>
                   </div>
                   <p className="text-sm text-muted-foreground">Mostra os dois lados ao mesmo tempo</p>
                 </div>
                 <Switch
                   id="fast-mode"
+                  className="shrink-0"
                   checked={settings.fastMode ?? false}
                   onCheckedChange={handleFastModeChange}
                 />
@@ -206,7 +212,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               <div className="space-y-3 rounded-xl border p-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Play className="h-4 w-4 text-primary" />
+                    <Play className="h-4 w-4 shrink-0 text-primary" />
                     <Label className="font-medium">Configurações do Play</Label>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -214,7 +220,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Button
                     type="button"
                     variant={playRuntime.playMode === "both" ? "default" : "outline"}
@@ -235,7 +241,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Button
                     type="button"
                     variant={playRuntime.playSide === "a" ? "secondary" : "outline"}
