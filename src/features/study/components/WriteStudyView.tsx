@@ -12,6 +12,7 @@ import { StudyCardDeck } from "./StudyCardDeck";
 import { getBalancedDirection, type RuntimeDirection } from "@/features/study/lib/runtimeStudySchedule";
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
+import { useResolvedStudyGlossaryHints } from "@/features/study/hooks/useResolvedStudyGlossaryHints";
 
 const LazyWriteStudyView = lazy(() =>
   import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
@@ -40,6 +41,15 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   const submitLockedRef = useRef(false);
   const navigationLockedRef = useRef(false);
   const shortcuts = useShortcutMap();
+  const glossaryHints = useResolvedStudyGlossaryHints({
+    front: props.front,
+    back: props.back,
+    wordHints: props.wordHintsA,
+    mergedHintsA: props.mergedHintsA,
+    mergedHintsB: props.mergedHintsB,
+    langA: props.langA,
+    langB: props.langB,
+  });
 
   useEffect(() => {
     submitLockedRef.current = false;
@@ -155,6 +165,16 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     event.stopPropagation();
   };
 
+  if (glossaryHints.isLoading) {
+    return (
+      <StudyCardDeck cardKey={cardKey} density="compact">
+        <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
+          Carregando glossário da pasta...
+        </div>
+      </StudyCardDeck>
+    );
+  }
+
   return (
     <StudyCardDeck cardKey={cardKey} density="compact">
       <div
@@ -166,6 +186,8 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
         <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando modo Escrita...</div>}>
           <LazyWriteStudyView
             {...props}
+            mergedHintsA={glossaryHints.mergedHintsA}
+            mergedHintsB={glossaryHints.mergedHintsB}
             direction={direction}
             onCorrect={() => runOnce(props.onCorrect)}
             onIncorrect={() => runOnce(props.onIncorrect)}
