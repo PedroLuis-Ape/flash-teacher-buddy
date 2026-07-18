@@ -31,8 +31,8 @@ jobs:
       - name: Apply focused source transformation
         working-directory: repo
         run: |
-          sed -i 's/"                 onDelete={handleDeleteFlashcard}/"                onDelete={handleDeleteFlashcard}/' scripts/apply-layered-card-preview.py
-          sed -i 's/"                 onUnmerge={handleUnmergeLayers}/"                onUnmerge={handleUnmergeLayers}/' scripts/apply-layered-card-preview.py
+          sed -i 's/^                onDelete={handleDeleteFlashcard}/                 onDelete={handleDeleteFlashcard}/' src/pages/ListDetail.tsx
+          sed -i 's/^                onUnmerge={handleUnmergeLayers}/                 onUnmerge={handleUnmergeLayers}/' src/pages/ListDetail.tsx
           python scripts/apply-layered-card-preview.py
 
       - name: Commit transformed source
