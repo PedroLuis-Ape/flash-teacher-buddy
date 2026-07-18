@@ -7,6 +7,7 @@ import {
   isMixedStudySession,
   type RuntimeDirection,
 } from "@/features/study/lib/runtimeStudySchedule";
+import { useResolvedStudyGlossaryHints } from "@/features/study/hooks/useResolvedStudyGlossaryHints";
 
 const LazyMultipleChoiceStudyView = lazy(() =>
   import("./MultipleChoiceStudyView.impl").then((module) => ({ default: module.MultipleChoiceStudyView }))
@@ -19,6 +20,15 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const renderWrite = isMixedStudySession() && getMixedMultipleSlotMode(cardKey) === "write";
   const navigationLockedRef = useRef(false);
+  const glossaryHints = useResolvedStudyGlossaryHints({
+    front: props.currentCard.term,
+    back: props.currentCard.translation,
+    wordHints: props.currentCard.word_hints,
+    mergedHintsA: props.mergedHintsA,
+    mergedHintsB: props.mergedHintsB,
+    langA: props.langA,
+    langB: props.langB,
+  });
 
   useEffect(() => {
     navigationLockedRef.current = false;
@@ -33,6 +43,16 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
   const onCorrect = () => runOnce(props.onCorrect);
   const onIncorrect = () => runOnce(props.onIncorrect);
 
+  if (glossaryHints.isLoading) {
+    return (
+      <StudyCardDeck cardKey={cardKey} density="compact">
+        <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
+          Carregando glossário da pasta...
+        </div>
+      </StudyCardDeck>
+    );
+  }
+
   if (renderWrite) {
     return (
       <WriteStudyView
@@ -41,8 +61,8 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
         hint={props.currentCard.hint}
         flashcardId={props.currentCard.id}
         wordHintsA={props.currentCard.word_hints}
-        mergedHintsA={props.mergedHintsA}
-        mergedHintsB={props.mergedHintsB}
+        mergedHintsA={glossaryHints.mergedHintsA}
+        mergedHintsB={glossaryHints.mergedHintsB}
         direction={direction}
         langA={props.langA}
         langB={props.langB}
@@ -64,6 +84,8 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
       <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando atividade...</div>}>
         <LazyMultipleChoiceStudyView
           {...props}
+          mergedHintsA={glossaryHints.mergedHintsA}
+          mergedHintsB={glossaryHints.mergedHintsB}
           direction={direction}
           onCorrect={onCorrect}
           onIncorrect={onIncorrect}

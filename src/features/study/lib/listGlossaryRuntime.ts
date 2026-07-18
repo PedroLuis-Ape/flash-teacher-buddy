@@ -54,6 +54,10 @@ function describeEmptyRpc(label: string): string {
   return `${label}: retornou 0 entradas; validando diretamente a pasta`;
 }
 
+function describeIncomplete(label: string, received: number, expected: number): string {
+  return `${label}: carregou somente ${received} de ${expected} entradas ativas; tentando outra fonte`;
+}
+
 function mapDirectRows(rows: FolderGlossaryRuntimeRow[]): AccountGlossaryEntry[] {
   return rows.map((entry) => ({
     id: entry.id,
@@ -81,6 +85,17 @@ async function loadFolderId(listId: string): Promise<string> {
   if (error) throw error;
   if (!data?.folder_id) throw new Error("A lista não pertence a uma pasta válida.");
   return data.folder_id as string;
+}
+
+async function loadExpectedActiveCount(folderId: string): Promise<number | null> {
+  const response = await (supabase as any).rpc("get_folder_glossary_summary_v2", {
+    _folder_id: folderId,
+  });
+  if (response.error) return null;
+
+  const row = Array.isArray(response.data) ? response.data[0] : response.data;
+  const value = Number(row?.active_count);
+  return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 async function loadRpcGlossary(
@@ -113,26 +128,32 @@ async function loadDirectFolderGlossary(folderId: string): Promise<AccountGlossa
   return mapDirectRows(rows);
 }
 
+function hasCompleteCount(rows: AccountGlossaryEntry[], expectedActiveCount: number | null): boolean {
+  return expectedActiveCount === null || rows.length >= expectedActiveCount;
+}
+
 /**
  * Canonical read path used by study screens.
  *
- * Every RPC result is paginated. Accepting the first non-empty response as the
- * complete glossary silently truncates large folders at the API max-row limit,
- * which makes the coverage audit report entries that the study runtime never
- * received. We therefore read all ranges before considering an RPC successful.
+ * Every RPC result is paginated and checked against the folder summary. A
+ * non-empty but truncated response must not be accepted, otherwise the audit
+ * can report full coverage while the game receives only part of the glossary.
  *
  * Permission failures remain fatal and are never disguised as an empty glossary.
  */
 export async function loadListGlossaryRuntime(listId: string): Promise<ListGlossaryRuntimeResult> {
   const folderId = await loadFolderId(listId);
+  const expectedActiveCount = await loadExpectedActiveCount(folderId);
   const failures: string[] = [];
 
   try {
     const rows = await loadRpcGlossary("get_folder_glossary_for_list_v2", listId);
-    if (rows.length > 0) {
+    if (rows.length > 0 && hasCompleteCount(rows, expectedActiveCount)) {
       return { folderId, glossary: rows, source: "rpc-v2" };
     }
-    failures.push(describeEmptyRpc("RPC v2"));
+    failures.push(rows.length === 0
+      ? describeEmptyRpc("RPC v2")
+      : describeIncomplete("RPC v2", rows.length, expectedActiveCount as number));
   } catch (error) {
     if (isPermissionError(error)) throw error;
     failures.push(describeFailure("RPC v2", error));
@@ -140,7 +161,7 @@ export async function loadListGlossaryRuntime(listId: string): Promise<ListGloss
 
   try {
     const rows = await loadRpcGlossary("get_folder_glossary_for_list_v1", listId);
-    if (rows.length > 0) {
+    if (rows.length > 0 && hasCompleteCount(rows, expectedActiveCount)) {
       return {
         folderId,
         glossary: rows,
@@ -148,16 +169,22 @@ export async function loadListGlossaryRuntime(listId: string): Promise<ListGloss
         recoveredFrom: failures,
       };
     }
-    failures.push(describeEmptyRpc("RPC v1"));
+    failures.push(rows.length === 0
+      ? describeEmptyRpc("RPC v1")
+      : describeIncomplete("RPC v1", rows.length, expectedActiveCount as number));
   } catch (error) {
     if (isPermissionError(error)) throw error;
     failures.push(describeFailure("RPC v1", error));
   }
 
   try {
+    const rows = await loadDirectFolderGlossary(folderId);
+    if (!hasCompleteCount(rows, expectedActiveCount)) {
+      throw new Error(describeIncomplete("leitura direta", rows.length, expectedActiveCount as number));
+    }
     return {
       folderId,
-      glossary: await loadDirectFolderGlossary(folderId),
+      glossary: rows,
       source: "direct",
       recoveredFrom: failures,
     };
@@ -165,7 +192,7 @@ export async function loadListGlossaryRuntime(listId: string): Promise<ListGloss
     if (isPermissionError(directError)) throw directError;
     failures.push(describeFailure("leitura direta", directError));
     throw new Error(
-      "O glossário da pasta existe, mas não pôde ser carregado no estudo. "
+      "O glossário da pasta existe, mas não pôde ser carregado por inteiro no estudo. "
       + "Nenhum dado foi apagado. Detalhes: "
       + failures.join(" | "),
     );
