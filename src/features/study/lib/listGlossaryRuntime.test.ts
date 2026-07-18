@@ -96,7 +96,8 @@ describe("list glossary runtime", () => {
       source: "rpc-v2",
       glossary: [rpcEntry],
     });
-    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc).toHaveBeenCalledTimes(2);
+    expect(mocks.rpc).toHaveBeenCalledWith("get_folder_glossary_summary_v2", { _folder_id: "folder-1" });
     expect(mocks.rpcRange).toHaveBeenCalledWith("get_folder_glossary_for_list_v2", 0, 999);
     expect(mocks.folderRange).not.toHaveBeenCalled();
   });
@@ -190,7 +191,7 @@ describe("list glossary runtime", () => {
     mocks.rpcRange.mockResolvedValueOnce({ data: null, error: denied });
 
     await expect(loadListGlossaryRuntime("list-1")).rejects.toBe(denied);
-    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc).toHaveBeenCalledTimes(2);
     expect(mocks.folderRange).not.toHaveBeenCalled();
   });
 
