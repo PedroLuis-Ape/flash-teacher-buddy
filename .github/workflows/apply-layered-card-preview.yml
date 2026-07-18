@@ -30,11 +30,14 @@ jobs:
           show-progress: false
 
       - name: Apply focused source transformation
-        run: python scripts/apply-layered-card-preview.py
+        run: |
+          sed -i 's/^                 onDelete={handleDeleteFlashcard}/                onDelete={handleDeleteFlashcard}/' scripts/apply-layered-card-preview.py
+          sed -i 's/^                 onUnmerge={handleUnmergeLayers}/                onUnmerge={handleUnmergeLayers}/' scripts/apply-layered-card-preview.py
+          python scripts/apply-layered-card-preview.py
 
       - name: Commit transformed source
         run: |
-          if git diff --quiet; then
+          if git diff --quiet src/pages/ListDetail.tsx; then
             echo "No source change was required."
             exit 0
           fi
