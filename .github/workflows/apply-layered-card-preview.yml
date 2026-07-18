@@ -7,6 +7,13 @@ on:
     paths:
       - scripts/apply-layered-card-preview.py
       - .github/workflows/apply-layered-card-preview.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - scripts/apply-layered-card-preview.py
+      - .github/workflows/apply-layered-card-preview.yml
+      - src/features/cards/components/LayeredCardPreviewDialog.tsx
 
 permissions:
   contents: write
