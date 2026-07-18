@@ -22,20 +22,21 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch
-        uses: actions/checkout@v4
-        with:
-          ref: feat/layered-card-preview
-          fetch-depth: 1
-          show-progress: false
+      - name: Clone feature branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git clone --quiet --depth=1 --branch feat/layered-card-preview "https://x-access-token:${GH_TOKEN}@github.com/PedroLuis-Ape/flash-teacher-buddy.git" repo
 
       - name: Apply focused source transformation
+        working-directory: repo
         run: |
           sed -i 's/"                 onDelete={handleDeleteFlashcard}/"                onDelete={handleDeleteFlashcard}/' scripts/apply-layered-card-preview.py
           sed -i 's/"                 onUnmerge={handleUnmergeLayers}/"                onUnmerge={handleUnmergeLayers}/' scripts/apply-layered-card-preview.py
           python scripts/apply-layered-card-preview.py
 
       - name: Commit transformed source
+        working-directory: repo
         run: |
           if git diff --quiet src/pages/ListDetail.tsx; then
             echo "No source change was required."
