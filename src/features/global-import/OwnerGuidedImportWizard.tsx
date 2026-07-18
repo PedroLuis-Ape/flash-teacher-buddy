@@ -45,6 +45,7 @@ import {
 import type { GlobalImportPackage } from "./schema";
 import { useGlobalImportSource } from "./useGlobalImportSource";
 import type { GlobalImportV2ValidationResult } from "./validation";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 const V3_STORAGE_KEY = "app-piteco:super-import-v3";
 type WizardStep = 1 | 2 | 3 | 4;
@@ -431,7 +432,7 @@ export default function OwnerGuidedImportWizard() {
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-28">
         <div className="mx-auto max-w-5xl space-y-6">
           <header className="flex flex-wrap items-start gap-4">
-            <Button type="button" variant="ghost" size="icon" onClick={() => classroomMode && turmaId ? navigate(`/turmas/${turmaId}`) : navigate(-1)} aria-label="Voltar">
+            <Button type="button" variant="ghost" size="icon" onClick={() => classroomMode && turmaId ? navigate(`/turmas/${turmaId}`) : safeGoBack(navigate)} aria-label="Voltar">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="min-w-0 flex-1">

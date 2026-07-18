@@ -27,6 +27,7 @@ import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useListAttention, useToggleListAttention } from "@/hooks/useListAttention";
 import { ListMarkerButtons } from "@/features/study/components/ListMarkerButtons";
 import { sortListsWithFavoritesFirst } from "@/features/study/lib/listMarkers";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface ListType {
   id: string;
@@ -652,7 +653,7 @@ const Folder = () => {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)}
+            onClick={() => safeGoBack(navigate)}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />

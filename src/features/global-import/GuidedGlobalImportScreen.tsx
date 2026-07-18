@@ -43,6 +43,7 @@ import {
 import type { GlobalImportPackage } from "./schema";
 import { useGlobalImportSource } from "./useGlobalImportSource";
 import type { GlobalImportV2ValidationResult } from "./validation";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 const V3_STORAGE_KEY = "app-piteco:super-import-v3";
 
@@ -268,7 +269,7 @@ export default function GuidedGlobalImportScreen() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-24">
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex flex-wrap items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => classroomMode && turmaId ? navigate(`/turmas/${turmaId}`) : navigate(-1)} aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => classroomMode && turmaId ? navigate(`/turmas/${turmaId}`) : safeGoBack(navigate)} aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Button>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-3xl font-bold">Importar conteúdo</h1>

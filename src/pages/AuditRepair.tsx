@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getLangLabel } from "@/features/study/lib/resolveStudySides";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -336,7 +337,7 @@ export default function AuditRepair() {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>

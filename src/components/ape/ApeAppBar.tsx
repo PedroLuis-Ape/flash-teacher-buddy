@@ -7,6 +7,7 @@ import { EconomyBadge } from "@/features/gamification/components/EconomyBadge";
 import { PresentBoxBadge } from "@/features/gamification/components/PresentBoxBadge";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { cn } from "@/lib/utils";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface ApeAppBarProps {
   title?: string;
@@ -71,7 +72,7 @@ export function ApeAppBar({
     } else if (backPath) {
       navigate(backPath);
     } else {
-      navigate(-1);
+      safeGoBack(navigate);
     }
   };
 

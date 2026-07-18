@@ -1,25 +1,21 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, BookOpen } from "lucide-react";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface PublicBackBarProps {
   showPortal?: boolean;
 }
 
 /**
- * Lightweight back/home bar for public pages so visitors never
- * get trapped. Uses history when available, falls back to "/".
+ * Lightweight back/home bar for public pages so visitors never get trapped.
  */
 export function PublicBackBar({ showPortal = true }: PublicBackBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/", { replace: true });
-    }
+    safeGoBack(navigate, { fallbackRoute: "/" });
   };
 
   const onPortal = location.pathname.startsWith("/portal");

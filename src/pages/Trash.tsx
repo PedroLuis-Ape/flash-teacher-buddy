@@ -13,6 +13,7 @@ import { useTrash, TrashItem } from "@/hooks/useTrash";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 function daysUntilExpiry(deletedAt: string): number {
   const deleted = new Date(deletedAt);
@@ -174,7 +175,7 @@ export default function Trash() {
     <div className="min-h-screen bg-background px-4 py-6 max-w-3xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-10 w-10">
+        <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)} className="h-10 w-10">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">

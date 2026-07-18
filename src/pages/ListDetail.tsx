@@ -51,6 +51,7 @@ import { MergeIntoLayersDialog } from "@/features/cards/components/MergeIntoLaye
 import { LayeredCardPreviewDialog } from "@/features/cards/components/LayeredCardPreviewDialog";
 import { unmergeLayers } from "@/features/cards/lib/layeredCards";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface ListType {
   id: string;
@@ -961,7 +962,7 @@ const ListDetail = () => {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)}
+            onClick={() => safeGoBack(navigate)}
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />

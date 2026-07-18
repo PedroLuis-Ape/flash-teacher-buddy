@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import { SessionWatcher } from "@/components/SessionWatcher";
+import { NavigationHistoryTracker } from "@/components/NavigationHistoryTracker";
 import { PerformanceProvider } from "@/contexts/PerformanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalLayout } from "@/components/layout/GlobalLayout";
@@ -135,6 +136,7 @@ const App = () => {
             <Sonner />
             <LazyErrorBoundary>
               <BrowserRouter>
+                <NavigationHistoryTracker />
                 <SessionWatcher />
                 <GlobalLayout>
                   <RouteErrorBoundary>

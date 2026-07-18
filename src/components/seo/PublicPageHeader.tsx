@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { PitecoLogo } from '@/features/gamification/components/PitecoLogo';
 import { PublicThemeToggle } from '@/components/seo/PublicThemeToggle';
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface PublicPageHeaderProps {
   title: string;
@@ -10,21 +11,14 @@ interface PublicPageHeaderProps {
 }
 
 /**
- * Cabeçalho reutilizável para páginas públicas. O retorno usa o histórico do
- * React Router quando existe e cai para uma rota segura quando o visitante
- * abriu a página diretamente por um link externo.
+ * Cabeçalho reutilizável para páginas públicas. O retorno usa o histórico
+ * interno do app e cai para a rota informada em acessos diretos.
  */
 export function PublicPageHeader({ title, fallbackPath = '/' }: PublicPageHeaderProps) {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    const historyIndex = Number(window.history.state?.idx ?? 0);
-    if (historyIndex > 0) {
-      navigate(-1);
-      return;
-    }
-
-    navigate(fallbackPath, { replace: true });
+    safeGoBack(navigate, { fallbackRoute: fallbackPath });
   };
 
   return (

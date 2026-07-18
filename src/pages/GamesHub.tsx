@@ -26,6 +26,7 @@ import {
   GAME_MODE_VISUALS,
   type GameModeVisualKey,
 } from "@/features/study/lib/gameModeVisuals";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface Collection {
   id: string;
@@ -187,7 +188,7 @@ const GamesHub = () => {
   const handleBack = () => {
     const onPortal = isPortalPath(location.pathname);
     if (window.history.state?.idx > 0) {
-      navigate(-1);
+      safeGoBack(navigate);
     } else if (collection) {
       navigate(`/collection/${collection.id}`);
     } else if (list) {
