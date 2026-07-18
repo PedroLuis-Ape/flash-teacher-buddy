@@ -9,6 +9,7 @@ import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
 import { MixedModeRecommendationBubble } from "@/features/study/components/MixedModeRecommendationBubble";
 import { installPortraitOrientationGuard } from "@/lib/portraitOrientationLock";
+import { PortraitOnlyGameGuard } from "@/components/layout/PortraitOnlyGameGuard";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -54,6 +55,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     <>
       <PortalHistorySyncAgent />
       {content}
+      <PortraitOnlyGameGuard />
       <MixedModeRecommendationBubble />
       {location.pathname === "/import" && user && (
         <div className="fixed bottom-24 right-4 z-50 sm:bottom-8 sm:right-8">
