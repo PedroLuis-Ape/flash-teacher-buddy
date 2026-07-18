@@ -35,10 +35,14 @@ export function ApeTabBar() {
     location.pathname === "/import/super" ||
     /^\/turmas\/[^/]+\/import\/super\/?$/.test(location.pathname);
 
-  // The Super Importer owns the bottom action area. Keeping the global tab bar
-  // mounted there creates two fixed interactive layers competing for clicks,
-  // especially below the desktop breakpoint.
-  if (isSuperImportRoute) return null;
+  const isActiveStudyRoute =
+    location.pathname.endsWith("/study") ||
+    location.pathname.endsWith("/mixed-study");
+
+  // Full-screen study sessions already provide their own exit and navigation
+  // controls. Keeping the global tab bar mounted steals valuable mobile height
+  // and can cover the answer buttons at the bottom of the study surface.
+  if (isSuperImportRoute || isActiveStudyRoute) return null;
 
   return (
     <nav
