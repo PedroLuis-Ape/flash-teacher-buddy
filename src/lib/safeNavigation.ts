@@ -4,7 +4,7 @@ const NAVIGATION_STACK_KEY = "ape:navigation-stack:v2";
 const MAX_TRACKED_ROUTES = 50;
 const ROUTE_TTL_MS = 12 * 60 * 60 * 1000;
 
-type NavigationAction = "POP" | "PUSH" | "REPLACE";
+type NavigationAction = "POP" | "PUSH" | "REPLACE" | "RESET";
 
 type TrackedRoute = {
   path: string;
@@ -108,7 +108,9 @@ export function trackAppNavigation(path: string, action: NavigationAction): void
   let stack = readStack();
   const last = stack.at(-1);
 
-  if (action === "POP") {
+  if (action === "RESET") {
+    stack = [{ path: normalized, visitedAt: now }];
+  } else if (action === "POP") {
     let matchingIndex = -1;
     for (let index = stack.length - 1; index >= 0; index -= 1) {
       if (stack[index].path === normalized) {
