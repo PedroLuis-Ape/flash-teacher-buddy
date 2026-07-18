@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { pageMount, perfLog } from "@/lib/perfLog";
 import { MergeIntoLayersDialog } from "@/features/cards/components/MergeIntoLayersDialog";
+import { LayeredCardPreviewDialog } from "@/features/cards/components/LayeredCardPreviewDialog";
 import { unmergeLayers } from "@/features/cards/lib/layeredCards";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 
@@ -116,6 +117,7 @@ const FlashcardRow = memo(({
   onEdit,
   onDelete,
   onUnmerge,
+  onViewLayers,
 }: {
   flashcard: Flashcard;
   isSelected: boolean;
@@ -127,11 +129,27 @@ const FlashcardRow = memo(({
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
   onUnmerge?: (id: string) => void;
+  onViewLayers: (f: Flashcard) => void;
 }) => (
-  <Card className={`p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}>
+  <Card
+    className={`p-4 sm:p-6 transition-shadow ${flashcard.__layerCount && flashcard.__layerCount > 0 ? 'cursor-pointer hover:shadow-md hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''} ${isSelected ? 'ring-2 ring-primary' : ''}`}
+    role={flashcard.__layerCount && flashcard.__layerCount > 0 ? "button" : undefined}
+    tabIndex={flashcard.__layerCount && flashcard.__layerCount > 0 ? 0 : undefined}
+    aria-label={flashcard.__layerCount && flashcard.__layerCount > 0 ? `Ver ${flashcard.__layerCount} camadas do card ${flashcard.term}` : undefined}
+    onClick={() => {
+      if (flashcard.__layerCount && flashcard.__layerCount > 0) onViewLayers(flashcard);
+    }}
+    onKeyDown={(event) => {
+      if (!flashcard.__layerCount || flashcard.__layerCount <= 0) return;
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onViewLayers(flashcard);
+      }
+    }}
+  >
     <div className="flex items-start gap-3">
       {canEdit && (
-        <div className="pt-1">
+        <div className="pt-1" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onToggleSelection(flashcard.id)}
@@ -165,7 +183,7 @@ const FlashcardRow = memo(({
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-1 shrink-0" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
         {userId && (
           <>
             <FavoriteButton
@@ -224,6 +242,7 @@ const MemoizedCardList = memo(({
   onEdit,
   onDelete,
   onUnmerge,
+  onViewLayers,
 }: {
   flashcards: Flashcard[];
   selectedCards: string[];
@@ -235,6 +254,7 @@ const MemoizedCardList = memo(({
   onEdit: (f: Flashcard) => void;
   onDelete: (id: string) => void;
   onUnmerge?: (id: string) => void;
+  onViewLayers: (f: Flashcard) => void;
 }) => {
   // Convert to Set for O(1) lookups
   const selectedSet = useMemo(() => new Set(selectedCards), [selectedCards]);
@@ -260,6 +280,7 @@ const MemoizedCardList = memo(({
               onEdit={onEdit}
               onDelete={onDelete}
               onUnmerge={onUnmerge}
+              onViewLayers={onViewLayers}
             />
           );
         })()
@@ -281,6 +302,7 @@ const ListDetail = () => {
 
   const [isSharing, setIsSharing] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
+  const [viewingLayeredCard, setViewingLayeredCard] = useState<Flashcard | null>(null);
   const [isCloning, setIsCloning] = useState(false);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -400,6 +422,17 @@ const ListDetail = () => {
     },
     staleTime: 30_000,
   });
+
+  const viewingLayers = useMemo(() => {
+    if (!viewingLayeredCard) return [];
+    return (flashcards as Flashcard[])
+      .filter((card) => card.parent_card_id === viewingLayeredCard.id)
+      .sort((left, right) => {
+        const leftIndex = left.layer_index ?? Number.MAX_SAFE_INTEGER;
+        const rightIndex = right.layer_index ?? Number.MAX_SAFE_INTEGER;
+        return leftIndex - rightIndex || left.id.localeCompare(right.id);
+      });
+  }, [flashcards, viewingLayeredCard]);
 
   // ── PERF: Memoized filtered flashcard list ──
   const visibleFlashcards = useMemo(() => {
@@ -1280,8 +1313,9 @@ const ListDetail = () => {
                 redListIds={redListIds}
                 onToggleSelection={toggleCardSelection}
                 onEdit={setEditingFlashcard}
-                onDelete={handleDeleteFlashcard}
-                onUnmerge={handleUnmergeLayers}
+                 onDelete={handleDeleteFlashcard}
+                 onUnmerge={handleUnmergeLayers}
+                 onViewLayers={setViewingLayeredCard}
               />
 
               {filteredFlashcards.length > pagedFlashcards.length && (
@@ -1308,6 +1342,18 @@ const ListDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Read-only layered card preview opened by clicking the card row */}
+      <LayeredCardPreviewDialog
+        open={!!viewingLayeredCard}
+        onOpenChange={(open) => {
+          if (!open) setViewingLayeredCard(null);
+        }}
+        title={viewingLayeredCard?.term}
+        layers={viewingLayers}
+        labelA={effectiveSettings.labelsA}
+        labelB={effectiveSettings.labelsB}
+      />
 
       {/* Edit Dialog */}
       <EditFlashcardDialog
