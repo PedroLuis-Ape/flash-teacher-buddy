@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface MixedFlashcard {
   id: string;
@@ -256,7 +257,7 @@ export default function MixedStudy() {
 
   const exit = () => {
     if (window.history.state?.idx > 0) {
-      navigate(-1);
+      safeGoBack(navigate);
       return;
     }
 

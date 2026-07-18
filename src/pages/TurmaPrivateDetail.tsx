@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
 import { TurmaActivityPanel } from '@/features/classroom/components/TurmaActivityPanel';
 import { ClassGoalsTab } from '@/components/ClassGoalsTab';
+import { safeGoBack } from "@/lib/safeNavigation";
 
 export default function TurmaDetail() {
   const { turmaId } = useParams<{ turmaId: string }>();
@@ -441,7 +442,7 @@ export default function TurmaDetail() {
       <div className="sticky top-0 z-10 bg-background border-b p-4">
         <div className="max-w-6xl mx-auto lg:px-4">
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1 min-w-0">

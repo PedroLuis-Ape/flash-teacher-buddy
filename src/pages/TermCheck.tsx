@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface ExtractedTerm {
   original: string;
@@ -139,7 +140,7 @@ export default function TermCheck() {
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>

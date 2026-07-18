@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface Profile {
   id: string;
@@ -182,7 +183,7 @@ export default function SearchFixed() {
     <div className="min-h-screen bg-background pb-24">
       <header className="sticky top-0 z-10 border-b bg-background">
         <div className="mx-auto flex max-w-6xl items-center gap-4 p-4 lg:px-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)}><ArrowLeft className="h-5 w-5" /></Button>
           <h1 className="text-2xl font-bold">Buscar</h1>
         </div>
       </header>

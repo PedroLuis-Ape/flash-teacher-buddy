@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface Profile {
   id: string;
@@ -210,7 +211,7 @@ export default function Search() {
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-10 bg-background border-b p-4">
         <div className="max-w-6xl mx-auto p-4 lg:px-8 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-2xl font-bold">Buscar</h1>

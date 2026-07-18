@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import ImportExplanationsDialog from "@/components/ImportExplanationsDialog";
 import SpecialExportDialog from "./components/SpecialExportDialog";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 const FOCUS_TAG_LABELS = {
   grammar: "Gramática",
@@ -72,7 +73,7 @@ export default function GemQueue() {
     <Helmet><title>Cards Especiais | App Piteco</title></Helmet>
 
     <div className="mb-4 flex items-center gap-3 sm:mb-6 sm:flex-wrap">
-      <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0"><ArrowLeft className="h-5 w-5" /></Button>
+      <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)} className="shrink-0"><ArrowLeft className="h-5 w-5" /></Button>
       <div className="rounded-xl bg-sky-100 p-2.5 dark:bg-sky-950/40"><Gem className="h-6 w-6 text-sky-600" /></div>
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-xl font-bold sm:text-3xl">Cards Especiais</h1>

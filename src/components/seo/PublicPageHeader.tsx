@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { PitecoLogo } from '@/features/gamification/components/PitecoLogo';
 import { PublicThemeToggle } from '@/components/seo/PublicThemeToggle';
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface PublicPageHeaderProps {
   title: string;
@@ -20,7 +21,7 @@ export function PublicPageHeader({ title, fallbackPath = '/' }: PublicPageHeader
   const handleBack = () => {
     const historyIndex = Number(window.history.state?.idx ?? 0);
     if (historyIndex > 0) {
-      navigate(-1);
+      safeGoBack(navigate);
       return;
     }
 

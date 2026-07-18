@@ -32,6 +32,7 @@ import {
 import type { GlobalImportPackage } from "./schema";
 import { useGlobalImportSource } from "./useGlobalImportSource";
 import type { GlobalImportV2ValidationResult } from "./validation";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 function packageCounts(packageValue: GlobalImportPackage | null) {
   if (!packageValue) return { folders: 0, lists: 0, cards: 0 };
@@ -215,7 +216,7 @@ export default function SuperGlobalImportScreenV2() {
 
   const handleBack = () => {
     if (classroomMode && turmaId) navigate(`/turmas/${turmaId}`);
-    else navigate(-1);
+    else safeGoBack(navigate);
   };
 
   return (

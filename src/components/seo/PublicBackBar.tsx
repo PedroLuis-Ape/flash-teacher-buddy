@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, BookOpen } from "lucide-react";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 interface PublicBackBarProps {
   showPortal?: boolean;
@@ -16,7 +17,7 @@ export function PublicBackBar({ showPortal = true }: PublicBackBarProps) {
 
   const handleBack = () => {
     if (window.history.length > 1) {
-      navigate(-1);
+      safeGoBack(navigate);
     } else {
       navigate("/", { replace: true });
     }

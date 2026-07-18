@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RefreshCcw, ArrowLeft, Home } from "lucide-react";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 /**
  * RouteErrorBoundary — isolates errors to the route content area.
@@ -133,7 +134,7 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
         navigate(location.pathname + location.search, { replace: true });
       }}
       onNavigateHome={() => navigate("/dashboard")}
-      onNavigateBack={() => navigate(-1)}
+      onNavigateBack={() => safeGoBack(navigate)}
     >
       {children}
     </InnerRouteErrorBoundary>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { isSafeModeEnabled } from "@/lib/safeMode";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 const SWIPE_THRESHOLD = 100;
 const SWIPE_VELOCITY_THRESHOLD = 0.3;
@@ -129,7 +130,7 @@ export function useSwipeNavigation({ enabled = true }: UseSwipeNavigationOptions
         const currentIndex = getCurrentRouteIndex();
 
         if (currentIndex === -1) {
-          if (deltaX > 0) window.history.back();
+          if (deltaX > 0) safeGoBack(navigate);
         } else {
           if (deltaX > 0 && currentIndex > 0) {
             navigate(mainRoutes[currentIndex - 1]);

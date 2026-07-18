@@ -14,6 +14,7 @@ import { parsePastedFlashcards, deduplicateFlashcards } from "@/lib/bulkImport";
 import { extractCamadasBlock } from "@/features/cards/lib/layeredImport";
 import { createLayeredCard } from "@/features/cards/lib/layeredCards";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { safeGoBack } from "@/lib/safeNavigation";
 
 const CHUNK_SIZE = 200;
 
@@ -256,7 +257,7 @@ export default function GlobalImport() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => safeGoBack(navigate)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
