@@ -1,68 +1,127 @@
-type PortraitOrientation = "portrait-primary";
+type PortraitOrientation = "portrait" | "portrait-primary";
 
 type LockableScreenOrientation = ScreenOrientation & {
   lock?: (orientation: PortraitOrientation) => Promise<void>;
 };
 
-type StandaloneNavigator = Navigator & {
-  standalone?: boolean;
+type LegacyLockableScreen = Screen & {
+  lockOrientation?: (orientation: PortraitOrientation) => boolean;
+  mozLockOrientation?: (orientation: PortraitOrientation) => boolean;
+  msLockOrientation?: (orientation: PortraitOrientation) => boolean;
 };
 
-const INSTALLED_DISPLAY_MODES = [
-  "standalone",
-  "fullscreen",
-  "minimal-ui",
-  "window-controls-overlay",
-] as const;
+const HANDHELD_QUERY = "(pointer: coarse)";
+const LOCK_CANDIDATES: PortraitOrientation[] = ["portrait", "portrait-primary"];
 
-function isInstalledAppWindow(): boolean {
-  const matchesInstalledDisplayMode =
+function isLikelyHandheld(): boolean {
+  if (typeof window === "undefined") return false;
+
+  const coarsePointer =
     typeof window.matchMedia === "function" &&
-    INSTALLED_DISPLAY_MODES.some((mode) =>
-      window.matchMedia(`(display-mode: ${mode})`).matches
-    );
+    window.matchMedia(HANDHELD_QUERY).matches;
 
-  const iosStandalone =
-    (window.navigator as StandaloneNavigator).standalone === true;
+  return coarsePointer || window.navigator.maxTouchPoints > 0;
+}
 
-  return matchesInstalledDisplayMode || iosStandalone;
+function setLockState(state: string): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.dataset.orientationLock = state;
+}
+
+function getErrorName(error: unknown): string {
+  return error instanceof DOMException ? error.name : "error";
 }
 
 /**
- * Reinforces the portrait-only manifest setting at runtime.
- *
- * Some installed browsers keep an older manifest snapshot for a while. The
- * runtime lock makes the current session request portrait immediately and
- * retries after resume, rotation and the first user interaction.
+ * Requests portrait orientation without assuming that the app is running in a
+ * specific display mode. Some Android shortcuts and WebAPK/TWA windows do not
+ * report `display-mode: standalone` consistently, even though orientation
+ * locking is available.
  */
-export function installPortraitOrientationGuard(): () => void {
+export async function requestPortraitOrientationLock(): Promise<boolean> {
   if (
     typeof window === "undefined" ||
     typeof document === "undefined" ||
-    !isInstalledAppWindow()
+    document.hidden ||
+    !isLikelyHandheld()
   ) {
-    return () => undefined;
+    return false;
   }
 
   const orientation = window.screen?.orientation as
     | LockableScreenOrientation
     | undefined;
 
+  if (orientation && typeof orientation.lock === "function") {
+    let lastError = "denied";
+
+    for (const candidate of LOCK_CANDIDATES) {
+      try {
+        await orientation.lock(candidate);
+        setLockState("locked");
+        return true;
+      } catch (error) {
+        lastError = getErrorName(error);
+      }
+    }
+
+    setLockState(`rejected:${lastError}`);
+  }
+
+  const legacyScreen = window.screen as LegacyLockableScreen;
+  const legacyLock =
+    legacyScreen.lockOrientation ||
+    legacyScreen.mozLockOrientation ||
+    legacyScreen.msLockOrientation;
+
+  if (typeof legacyLock === "function") {
+    try {
+      const locked =
+        legacyLock.call(legacyScreen, "portrait") ||
+        legacyLock.call(legacyScreen, "portrait-primary");
+
+      if (locked) {
+        setLockState("locked:legacy");
+        return true;
+      }
+    } catch {
+      setLockState("rejected:legacy");
+      return false;
+    }
+  }
+
   if (!orientation || typeof orientation.lock !== "function") {
+    setLockState("unsupported");
+  }
+
+  return false;
+}
+
+/**
+ * Keeps retrying the portrait request when the browser regains focus, rotates,
+ * or receives a real user gesture. The calls are harmless on browsers that do
+ * not support orientation locking; the landscape route guard remains the final
+ * deterministic fallback for game screens.
+ */
+export function installPortraitOrientationGuard(): () => void {
+  if (
+    typeof window === "undefined" ||
+    typeof document === "undefined" ||
+    !isLikelyHandheld()
+  ) {
     return () => undefined;
   }
 
   let disposed = false;
+  let pending = false;
 
   const lockPortrait = () => {
-    if (disposed || document.hidden) return;
+    if (disposed || pending || document.hidden) return;
 
-    try {
-      const request = orientation.lock?.("portrait-primary");
-      request?.catch(() => undefined);
-    } catch {
-      // Unsupported or temporarily disallowed by the browser. A later retry may work.
-    }
+    pending = true;
+    void requestPortraitOrientationLock().finally(() => {
+      pending = false;
+    });
   };
 
   const handleVisibilityChange = () => {
@@ -74,20 +133,19 @@ export function installPortraitOrientationGuard(): () => void {
   document.addEventListener("visibilitychange", handleVisibilityChange);
   window.addEventListener("pageshow", lockPortrait);
   window.addEventListener("orientationchange", lockPortrait);
-  window.addEventListener("pointerdown", lockPortrait, {
-    once: true,
-    passive: true,
-  });
-  window.addEventListener("keydown", lockPortrait, { once: true });
-  orientation.addEventListener("change", lockPortrait);
+  window.addEventListener("resize", lockPortrait);
+  window.addEventListener("pointerdown", lockPortrait, { passive: true });
+  window.addEventListener("keydown", lockPortrait);
+  window.screen?.orientation?.addEventListener("change", lockPortrait);
 
   return () => {
     disposed = true;
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     window.removeEventListener("pageshow", lockPortrait);
     window.removeEventListener("orientationchange", lockPortrait);
+    window.removeEventListener("resize", lockPortrait);
     window.removeEventListener("pointerdown", lockPortrait);
     window.removeEventListener("keydown", lockPortrait);
-    orientation.removeEventListener("change", lockPortrait);
+    window.screen?.orientation?.removeEventListener("change", lockPortrait);
   };
 }
