@@ -1,0 +1,149 @@
+name: Apply mixed study folder glossary
+
+on:
+  push:
+    branches:
+      - fix/mixed-study-folder-glossary
+    paths:
+      - .github/workflows/apply-mixed-study-glossary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/mixed-study-folder-glossary
+          fetch-depth: 1
+
+      - name: Connect folder glossary to every study runtime
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(source: str, old: str, new: str, label: str) -> str:
+              count = source.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{label}: expected 1 occurrence, found {count}")
+              return source.replace(old, new, 1)
+
+          mixed_path = Path("src/pages/MixedStudy.tsx")
+          mixed = mixed_path.read_text(encoding="utf-8")
+
+          mixed = replace_once(
+              mixed,
+              'import { useAuth } from "@/contexts/AuthContext";\n',
+              'import { useAuth } from "@/contexts/AuthContext";\n'
+              'import { useListGlossary } from "@/hooks/useListGlossary";\n'
+              'import { mergeGlossaryAndManual, parseExtendedWordHints } from "@/features/study/lib/glossaryMerge";\n'
+              'import { FEATURE_FLAGS } from "@/lib/featureFlags";\n',
+              "mixed imports",
+          )
+
+          mixed = replace_once(
+              mixed,
+              '  const listId = isListRoute ? resolvedId : undefined;\n\n',
+              '  const listId = isListRoute ? resolvedId : undefined;\n'
+              '  const { activeGlossary, isLoading: glossaryLoading } = useListGlossary(\n'
+              '    FEATURE_FLAGS.glossary_enabled ? listId : undefined,\n'
+              '  );\n\n',
+              "mixed glossary hook",
+          )
+
+          direction_block = '''  const resolvedDirection: Direction = baseDirection === "any"
+    ? (mixed.currentCardId && hashToBool(mixed.currentCardId) ? "a-b" : "b-a")
+    : baseDirection;
+'''
+          mixed_hints = direction_block + '''
+
+  const currentManualHints = useMemo(
+    () => parseExtendedWordHints(currentCard?.word_hints),
+    [currentCard?.word_hints],
+  );
+  const currentMergedHintsA = useMemo(() => {
+    if (!currentCard?.term) return undefined;
+    if (activeGlossary.length === 0 && currentManualHints.length === 0) return undefined;
+    return mergeGlossaryAndManual(
+      currentCard.term,
+      "A",
+      activeGlossary,
+      currentManualHints,
+      { langA: labels.langA, langB: labels.langB },
+    );
+  }, [currentCard?.id, currentCard?.term, activeGlossary, currentManualHints, labels.langA, labels.langB]);
+  const currentMergedHintsB = useMemo(() => {
+    if (!currentCard?.translation) return undefined;
+    if (activeGlossary.length === 0 && currentManualHints.length === 0) return undefined;
+    return mergeGlossaryAndManual(
+      currentCard.translation,
+      "B",
+      activeGlossary,
+      currentManualHints,
+      { langA: labels.langA, langB: labels.langB },
+    );
+  }, [currentCard?.id, currentCard?.translation, activeGlossary, currentManualHints, labels.langA, labels.langB]);
+'''
+          mixed = replace_once(mixed, direction_block, mixed_hints, "mixed merged hints")
+
+          mixed = replace_once(
+              mixed,
+              '  if (loading || !mixed.state || !mixed.progress) {\n',
+              '  if (loading || (isListRoute && FEATURE_FLAGS.glossary_enabled && glossaryLoading) || !mixed.state || !mixed.progress) {\n',
+              "mixed loading gate",
+          )
+
+          mixed = replace_once(
+              mixed,
+              '    wordHintsA: currentCard.word_hints,\n    direction: resolvedDirection,\n',
+              '    wordHintsA: currentCard.word_hints,\n'
+              '    mergedHintsA: FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined,\n'
+              '    mergedHintsB: FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined,\n'
+              '    direction: resolvedDirection,\n',
+              "mixed shared props",
+          )
+
+          mixed = replace_once(
+              mixed,
+              '              langA={labels.langA}\n              langB={labels.langB}\n              onCorrect={() => handleAnswer(true)}\n',
+              '              langA={labels.langA}\n'
+              '              langB={labels.langB}\n'
+              '              mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}\n'
+              '              mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}\n'
+              '              onCorrect={() => handleAnswer(true)}\n',
+              "mixed multiple choice props",
+          )
+
+          mixed_path.write_text(mixed, encoding="utf-8")
+
+          study_path = Path("src/pages/Study.tsx")
+          study = study_path.read_text(encoding="utf-8")
+          study = replace_once(
+              study,
+              '  const { activeGlossary } = useListGlossary(FEATURE_FLAGS.glossary_enabled ? listId : undefined);\n',
+              '  const { activeGlossary, isLoading: glossaryLoading } = useListGlossary(\n'
+              '    FEATURE_FLAGS.glossary_enabled ? listId : undefined,\n'
+              '  );\n',
+              "study glossary hook",
+          )
+          study = replace_once(
+              study,
+              '  if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {\n',
+              '  if (loading || studyLoading || (isListRoute && FEATURE_FLAGS.glossary_enabled && glossaryLoading) || (favoritesOnly && favoritesLoading)) {\n',
+              "study loading gate",
+          )
+          study_path.write_text(study, encoding="utf-8")
+          PY
+
+          git diff --check
+
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/MixedStudy.tsx src/pages/Study.tsx
+          git commit -m "fix(glossary): sincronizar prática mista com glossário da pasta"
+          git push origin HEAD:fix/mixed-study-folder-glossary
