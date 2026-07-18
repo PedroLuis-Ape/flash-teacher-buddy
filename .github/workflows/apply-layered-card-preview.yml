@@ -1,0 +1,37 @@
+name: Apply layered card preview
+
+on:
+  push:
+    branches:
+      - feat/layered-card-preview
+    paths:
+      - scripts/apply-layered-card-preview.py
+      - .github/workflows/apply-layered-card-preview.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/layered-card-preview
+          fetch-depth: 0
+
+      - name: Apply focused source transformation
+        run: python scripts/apply-layered-card-preview.py
+
+      - name: Commit transformed source
+        run: |
+          if git diff --quiet; then
+            echo "No source change was required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/ListDetail.tsx
+          git commit -m "feat(cards): abrir camadas ao clicar no card"
+          git push origin HEAD:feat/layered-card-preview
