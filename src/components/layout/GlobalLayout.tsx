@@ -8,6 +8,7 @@ import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
 import { MixedModeRecommendationBubble } from "@/features/study/components/MixedModeRecommendationBubble";
+import { MobilePortraitOnlyGate } from "@/components/layout/MobilePortraitOnlyGate";
 import { installPortraitOrientationGuard } from "@/lib/portraitOrientationLock";
 
 interface GlobalLayoutProps {
@@ -50,10 +51,15 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     ? <PublicShell>{children}</PublicShell>
     : <PrivateShell>{children}</PrivateShell>;
 
+  const portraitOnlySession =
+    location.pathname.endsWith("/study") ||
+    location.pathname.endsWith("/mixed-study");
+
   return (
     <>
       <PortalHistorySyncAgent />
       {content}
+      <MobilePortraitOnlyGate active={portraitOnlySession} />
       <MixedModeRecommendationBubble />
       {location.pathname === "/import" && user && (
         <div className="fixed bottom-24 right-4 z-50 sm:bottom-8 sm:right-8">
