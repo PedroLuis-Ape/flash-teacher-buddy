@@ -117,9 +117,11 @@ export function trackAppNavigation(path: string, action: NavigationAction): void
       }
     }
 
+    // A POP route that is not in the tracked stack is a fresh/direct entry.
+    // Reset instead of treating a route from an older tab session as its parent.
     stack = matchingIndex >= 0
       ? stack.slice(0, matchingIndex + 1)
-      : [...stack, { path: normalized, visitedAt: now }];
+      : [{ path: normalized, visitedAt: now }];
   } else if (action === "REPLACE" && stack.length > 0) {
     stack = [...stack.slice(0, -1), { path: normalized, visitedAt: now }];
   } else if (last?.path === normalized) {
@@ -231,7 +233,7 @@ export function getFallbackRoute(pathname: string): string {
   if (path.startsWith("/settings/")) return "/profile";
   if (path.startsWith("/admin/")) return "/dashboard";
   if (path.startsWith("/portal")) return "/portal";
-  if (path.startsWith("/pt-br") || path.startsWith("/en/")) return "/landing";
+  if (path === "/en" || path.startsWith("/en/") || path.startsWith("/pt-br")) return "/landing";
   if (path === "/auth") return "/";
 
   return "/folders";
