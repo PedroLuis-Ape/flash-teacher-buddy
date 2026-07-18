@@ -9,6 +9,7 @@ const manifest = JSON.parse(read("public/manifest.webmanifest")) as {
   id: string;
   start_url: string;
   scope: string;
+  orientation: string;
 };
 const headers = read("public/_headers");
 const primaryWorker = read("public/sw.js");
@@ -21,6 +22,10 @@ describe("installed PWA recovery", () => {
     expect(manifest.id).toBe("/");
     expect(manifest.scope).toBe("/");
     expect(manifest.start_url).toContain("app_shell=20260627-reset1");
+  });
+
+  it("keeps the installed mobile app in upright portrait orientation", () => {
+    expect(manifest.orientation).toBe("portrait-primary");
   });
 
   it.each([
