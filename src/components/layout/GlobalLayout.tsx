@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
 import { MixedModeRecommendationBubble } from "@/features/study/components/MixedModeRecommendationBubble";
+import { installPortraitOrientationGuard } from "@/lib/portraitOrientationLock";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -42,6 +43,8 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuthUser();
   useFreezeWatchdog();
+
+  useEffect(() => installPortraitOrientationGuard(), []);
 
   const content = isPublicRoute(location.pathname, !user)
     ? <PublicShell>{children}</PublicShell>

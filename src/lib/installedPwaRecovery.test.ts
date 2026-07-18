@@ -16,6 +16,8 @@ const primaryWorker = read("public/sw.js");
 const compatibilityWorker = read("public/service-worker.js");
 const watchdog = read("src/lib/bootWatchdog.ts");
 const runtime = read("src/integrations/supabase/platformRuntime.ts");
+const orientationGuard = read("src/lib/portraitOrientationLock.ts");
+const globalLayout = read("src/components/layout/GlobalLayout.tsx");
 
 describe("installed PWA recovery", () => {
   it("keeps one install identity while versioning the launch URL", () => {
@@ -26,6 +28,16 @@ describe("installed PWA recovery", () => {
 
   it("keeps the installed mobile app in upright portrait orientation", () => {
     expect(manifest.orientation).toBe("portrait-primary");
+  });
+
+  it("reinforces portrait orientation at runtime for installed app sessions", () => {
+    expect(orientationGuard).toContain("(display-mode: ${mode})");
+    expect(orientationGuard).toContain('orientation.lock?.("portrait-primary")');
+    expect(orientationGuard).toContain('document.addEventListener("visibilitychange"');
+    expect(orientationGuard).toContain('window.addEventListener("pageshow"');
+    expect(orientationGuard).toContain('window.addEventListener("orientationchange"');
+    expect(orientationGuard).toContain('window.addEventListener("pointerdown"');
+    expect(globalLayout).toContain("installPortraitOrientationGuard()");
   });
 
   it.each([
