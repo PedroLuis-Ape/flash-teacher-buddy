@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { appendPreferredJsonFileDelivery } from "@/lib/aiJsonFileDelivery";
 import { toast } from "sonner";
 import {
   buildSpecialExportBatches,
@@ -77,6 +78,10 @@ function persistV3(batch: SpecialV3ExportBatch): boolean {
   return Boolean(saveSpecialV3Manifest(batch));
 }
 
+function resultFilename(batch: SpecialV3ExportBatch): string {
+  return `piteco-cards-especiais-resposta-lote-${String(batch.batch_index).padStart(2, "0")}-de-${String(batch.batch_count).padStart(2, "0")}.json`;
+}
+
 export default function SpecialExportDialog({ open, onOpenChange, cards }: Props) {
   const [batchSize, setBatchSize] = useState(20);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -90,6 +95,9 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
   );
   const current = batches[activeIndex] ?? null;
   const legacyCurrent = legacyBatches[activeIndex] ?? null;
+  const currentTxt = useMemo(() => current
+    ? appendPreferredJsonFileDelivery(buildSpecialV3Txt(current), resultFilename(current))
+    : "", [current]);
 
   useEffect(() => setActiveIndex(0), [batchSize, cards]);
 
@@ -98,7 +106,7 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
     const saved = persistV3(current);
     downloadText(
       specialV3TxtFilename(current),
-      buildSpecialV3Txt(current),
+      currentTxt,
       "text/plain;charset=utf-8",
     );
     toast[saved ? "success" : "warning"](
@@ -111,7 +119,7 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
   const handleCopyTxt = async () => {
     if (!current) return;
     const saved = persistV3(current);
-    const copied = await copyText(buildSpecialV3Txt(current));
+    const copied = await copyText(currentTxt);
     if (!copied) {
       toast.error("Não foi possível copiar o TXT.");
       return;
@@ -172,7 +180,7 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
             Preparar Cards Especiais para a IA
           </DialogTitle>
           <DialogDescription>
-            O App Piteco envia um TXT completo. A IA deve devolver somente o JSON oficial v3.
+            O App Piteco envia um TXT completo. A IA deve devolver preferencialmente um arquivo JSON oficial v3.
           </DialogDescription>
         </DialogHeader>
 
@@ -180,7 +188,7 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
           {[
             [FileText, "1. Baixar TXT"],
             [Sparkles, "2. Enviar à IA"],
-            [FileJson, "3. Receber JSON"],
+            [FileJson, "3. Receber .json"],
             [Upload, "4. Importar"],
           ].map(([Icon, label]) => (
             <div key={String(label)} className="flex items-center justify-center gap-1.5 rounded-lg bg-background px-2 py-2 font-medium shadow-sm">
@@ -195,9 +203,9 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <div>
-                <div className="font-semibold">Um arquivo de ida, um formato de volta</div>
+                <div className="font-semibold">Um arquivo de ida, um arquivo de volta</div>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  O TXT já contém o prompt, o contrato e os cards. Não edite os identificadores. Depois, importe o JSON puro devolvido pela IA.
+                  O TXT já contém o prompt, o contrato e os cards. A IA deve devolver de preferência um arquivo .json pronto para importar; JSON puro no chat é apenas o fallback.
                 </p>
               </div>
             </div>
@@ -251,11 +259,11 @@ export default function SpecialExportDialog({ open, onOpenChange, cards }: Props
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div className="text-sm font-medium">Prévia do arquivo oficial</div>
-                    <div className="text-xs text-muted-foreground">A resposta esperada está descrita dentro deste TXT.</div>
+                    <div className="text-xs text-muted-foreground">O nome preferido do retorno é {resultFilename(current)}.</div>
                   </div>
-                  <Badge variant="outline">TXT → JSON v3</Badge>
+                  <Badge variant="outline">TXT → arquivo JSON v3</Badge>
                 </div>
-                <Textarea readOnly value={buildSpecialV3Txt(current)} className="min-h-[230px] resize-y font-mono text-[11px]" />
+                <Textarea readOnly value={currentTxt} className="min-h-[230px] resize-y font-mono text-[11px]" />
               </div>
 
               <details className="rounded-lg border bg-muted/20 p-3 text-sm">
