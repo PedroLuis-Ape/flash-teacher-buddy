@@ -1,10 +1,11 @@
+import { appendPreferredJsonFileDelivery } from "@/lib/aiJsonFileDelivery";
 import {
   APP_PITECO_SUPER_IMPORT_SCHEMA,
   APP_PITECO_SUPER_IMPORT_VERSION,
 } from "./schema/appPitecoSuperImportSchema";
 
 export function buildUniversalGlobalImportPrompt(): string {
-  return [
+  const prompt = [
     "Você é o gerador oficial de pacotes para o Super Importador do App Piteco.",
     "",
     "IDENTIFICAÇÃO DO CONTRATO",
@@ -117,4 +118,6 @@ export function buildUniversalGlobalImportPrompt(): string {
     "REGRA FINAL",
     "O usuário fala naturalmente. Você interpreta uma vez. O JSON transporta a estrutura completa. O App Piteco apenas valida e importa.",
   ].join("\n");
+
+  return appendPreferredJsonFileDelivery(prompt, "app-piteco-super-import.json");
 }
