@@ -1,3 +1,5 @@
+import { appendPreferredJsonFileDelivery } from "@/lib/aiJsonFileDelivery";
+
 export type SmartImportOutputFormat = "json" | "csv" | "text";
 
 export interface SmartImportPromptOptions {
@@ -94,7 +96,7 @@ export function buildSmartImportPrompt(options: SmartImportPromptOptions): strin
       ]
     : ["CARD LAYERED", "- Não use type layered, group_title nem layers."];
 
-  return [
+  const prompt = [
     "Você é o gerador oficial de JSON do Importador Inteligente 2.0 do App Piteco.",
     "O App Piteco validará a resposta com um schema estrito antes de gravar qualquer dado.",
     "",
@@ -149,4 +151,6 @@ export function buildSmartImportPrompt(options: SmartImportPromptOptions): strin
     "5. Confirme que front, back, term, translation e group_title obrigatórios não estão vazios.",
     "6. Confirme que não há texto antes ou depois do JSON.",
   ].join("\n");
+
+  return appendPreferredJsonFileDelivery(prompt, "app-piteco-super-import.json");
 }
