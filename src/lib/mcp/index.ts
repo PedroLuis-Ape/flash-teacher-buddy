@@ -1,4 +1,5 @@
 import { auth, defineMcp } from "@lovable.dev/mcp-js";
+import { PRODUCTION_DATA_PROJECT_ID } from "@/integrations/supabase/platformRuntime";
 import echoTool from "./tools/echo";
 
 // The auth issuer must be the direct supabase.co host of the auth server this
@@ -6,7 +7,9 @@ import echoTool from "./tools/echo";
 // below; see docs/environment-contract.md. The fallback keeps the issuer
 // well-formed during the throwaway manifest-extract eval.
 const projectRef =
-  import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "xrnfhhoxmmstagmelvyi";
+  import.meta.env.VITE_SUPABASE_PROJECT_ID === PRODUCTION_DATA_PROJECT_ID
+    ? import.meta.env.VITE_SUPABASE_PROJECT_ID
+    : PRODUCTION_DATA_PROJECT_ID;
 
 export default defineMcp({
   name: "ape-piteco-mcp",

@@ -23,9 +23,9 @@ describe("platform runtime", () => {
 
   it("ignores a non-canonical project and keeps the canonical data backend", () => {
     expect(resolvePlatformRuntime({
-      projectId: "ymahldldyxvwjeruaxpr",
-      url: "https://ymahldldyxvwjeruaxpr.supabase.co",
-      publicValue: "legacy-project-value",
+      projectId: "xrnfhhoxmmstagmelvyi",
+      url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
+      publicValue: "managed-project-value",
     })).toEqual(PRODUCTION_DATA_RUNTIME);
   });
 
