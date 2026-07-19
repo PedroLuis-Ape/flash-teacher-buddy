@@ -22,7 +22,7 @@ export const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supaba
 export const PRODUCTION_DATA_PUBLIC_VALUE = [
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
   ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
-  ".idlg2X65uZWkJcbLOrtr_0ugG13nP93LUGAfSNv43w",
+  ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
 ].join("");
 
 export const PRODUCTION_DATA_RUNTIME: PlatformRuntime = Object.freeze({
