@@ -1,3 +1,5 @@
+import { JSON_FILE_DELIVERY_CONTRACT, withJsonFileDeliveryContract } from "@/features/import-prompts/deliveryContract";
+
 export type SmartImportOutputFormat = "json" | "csv" | "text";
 
 export interface SmartImportPromptOptions {
@@ -42,12 +44,17 @@ const LAYERED_CARD_EXAMPLE = `{
 }`;
 
 export function buildSmartImportPrompt(options: SmartImportPromptOptions): string {
+  if (options.outputFormat !== "json") {
+    return `${withJsonFileDeliveryContract(buildSmartImportPrompt({ ...options, outputFormat: "json" }))}\n\nMODO DE COMPATIBILIDADE\nA geração por IA agora é JSON-first. O importador ainda aceita ${options.outputFormat.toUpperCase()} em uploads operacionais existentes, mas este prompt deve gerar o pacote JSON oficial.`;
+  }
+
   const languageA = options.languageA || "idioma do lado A";
   const languageB = options.languageB || "idioma do lado B";
   const quantity = options.cardCount ? `Gere aproximadamente ${options.cardCount} cards jogáveis.` : "Use uma quantidade adequada ao pedido.";
   const theme = options.theme?.trim() ? `Tema principal: ${options.theme.trim()}.` : "Use o tema informado pelo usuário.";
 
   const rules = [
+    JSON_FILE_DELIVERY_CONTRACT,
     `O lado A deve usar ${languageA} e o lado B deve usar ${languageB}.`,
     quantity,
     theme,

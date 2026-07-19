@@ -21,11 +21,11 @@ describe("platform runtime", () => {
     expect(resolvePlatformRuntime(production, false, { ...production, publicValue: "installed-value" }).publicValue).toBe("installed-value");
   });
 
-  it("ignores the empty managed project and keeps the production data backend", () => {
+  it("ignores a non-canonical project and keeps the canonical data backend", () => {
     expect(resolvePlatformRuntime({
-      projectId: "xrnfhhoxmmstagmelvyi",
-      url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
-      publicValue: "managed-project-value",
+      projectId: "ymahldldyxvwjeruaxpr",
+      url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+      publicValue: "legacy-project-value",
     })).toEqual(PRODUCTION_DATA_RUNTIME);
   });
 

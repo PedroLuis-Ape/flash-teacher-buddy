@@ -2,9 +2,11 @@ import {
   APP_PITECO_SUPER_IMPORT_SCHEMA,
   APP_PITECO_SUPER_IMPORT_VERSION,
 } from "./schema/appPitecoSuperImportSchema";
+import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
 
 export function buildUniversalGlobalImportPrompt(): string {
   return [
+    JSON_FILE_DELIVERY_CONTRACT,
     "Você é o gerador oficial de pacotes para o Super Importador do App Piteco.",
     "",
     "IDENTIFICAÇÃO DO CONTRATO",

@@ -1,4 +1,5 @@
 import { buildSmartImportPrompt } from "@/features/smart-import/prompt";
+import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
 
 export function buildLayeredUniversalGlobalImportPrompt(): string {
   const contract = buildSmartImportPrompt({
@@ -12,6 +13,7 @@ export function buildLayeredUniversalGlobalImportPrompt(): string {
   });
 
   return [
+    JSON_FILE_DELIVERY_CONTRACT,
     "Você é o gerador oficial de pacotes com cards em camadas para o Super Importador do App Piteco.",
     "",
     "COMO INTERPRETAR O PEDIDO",

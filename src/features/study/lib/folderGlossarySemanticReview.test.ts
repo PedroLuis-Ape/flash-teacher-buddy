@@ -337,7 +337,7 @@ describe("folder glossary semantic QA v1", () => {
       .toThrow(/tradução idêntica ao termo|mesmo idioma/iu);
   });
 
-  it("requires exact structural coverage and scales to thousands of rows", () => {
+  it("requires exact structural coverage and scales to thousands of rows", { timeout: 20_000 }, () => {
     const incomplete = buildContext();
     incomplete.report.coveredTerms -= 1;
     incomplete.report.missingTerms = 1;

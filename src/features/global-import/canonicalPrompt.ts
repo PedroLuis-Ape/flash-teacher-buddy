@@ -9,6 +9,7 @@ import {
   makeGlobalImportRequestId,
   type CanonicalPromptOptions,
 } from "./promptConfiguration";
+import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
 
 export type { CanonicalPromptOptions, PromptFolderConfig } from "./promptConfiguration";
 
@@ -101,6 +102,7 @@ export function buildCanonicalGlobalImportPrompt(options: CanonicalPromptOptions
     total_cards: config.expected_card_count,
   };
   const prompt = [
+    JSON_FILE_DELIVERY_CONTRACT,
     "APE_GLOBAL_IMPORT_CONTENT_REQUEST",
     `PROTOCOL=${GLOBAL_IMPORT_FORMAT}@${GLOBAL_IMPORT_SCHEMA_VERSION}`,
     `REQUEST_ID=${requestId}`,

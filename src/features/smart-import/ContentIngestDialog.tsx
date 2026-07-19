@@ -37,6 +37,14 @@ import {
 import { buildSimpleFlashcardPrompt } from "./simplePrompt";
 import { SmartPromptDialog } from "./SmartPromptDialog";
 import type { SmartImportContext, SmartImportSourceResult } from "./sourceParser";
+import {
+  BASE_IMPORT_CAPABILITIES,
+  evaluateImportCapabilities,
+  fetchImportCapabilities,
+  requirementsForPackage,
+} from "@/features/import-capabilities/capabilities";
+import { ImportCapabilitiesPanel } from "@/features/import-capabilities/ImportCapabilitiesPanel";
+import { useImportCapabilities } from "@/features/import-capabilities/useImportCapabilities";
 
 interface Props {
   listId: string;
@@ -133,6 +141,8 @@ export function ContentIngestDialog({
   const [accountTermCounts, setAccountTermCounts] = useState<Record<string, number>>({});
   const [checkingAccountDuplicates, setCheckingAccountDuplicates] = useState(false);
   const [accountDuplicateError, setAccountDuplicateError] = useState("");
+  const [requestedCapabilities, setRequestedCapabilities] = useState([...BASE_IMPORT_CAPABILITIES]);
+  const capabilities = useImportCapabilities(open);
   const [options, setOptions] = useState<SmartImportPromptOptions>({
     languageA: langA,
     languageB: langB,
@@ -248,6 +258,7 @@ export function ContentIngestDialog({
     setAccountTermCounts({});
     setAccountDuplicateError("");
     setCheckingAccountDuplicates(false);
+    setRequestedCapabilities([...BASE_IMPORT_CAPABILITIES]);
     if (completeFileRef.current) completeFileRef.current.value = "";
   };
 
@@ -271,6 +282,9 @@ export function ContentIngestDialog({
 
   const buildSimplePackage = (): SmartImportSourceResult => {
     if (!target) throw new Error("A lista de destino ainda não foi carregada.");
+    if (/^[\uFEFF\s]*[\[{]/.test(raw)) {
+      return parseAnySmartImportSource(raw, completeContext());
+    }
     const pairs = parsePastedFlashcards(raw);
     const invalid = pairs.filter((pair) => !(pair.sideA || pair.en)?.trim() || !(pair.sideB || pair.pt)?.trim());
     if (!pairs.length || invalid.length) {
@@ -317,6 +331,14 @@ export function ContentIngestDialog({
     try {
       if (!raw.trim()) throw new Error("Cole, digite ou selecione um arquivo antes de analisar.");
       const result = mode === "simple" ? buildSimplePackage() : parseComplete(raw);
+      const requirements = requirementsForPackage(result.packageValue);
+      setRequestedCapabilities(requirements);
+      if (!evaluateImportCapabilities(capabilities.data, requirements).ready) {
+        setParsed(null);
+        setStep(1);
+        toast.error("O pacote exige capabilities que não estão disponíveis neste banco.");
+        return;
+      }
       setParsed(result);
       setAccountTermCounts({});
       setAccountDuplicateError("");
@@ -331,6 +353,14 @@ export function ContentIngestDialog({
       const text = await readCompleteImportFile(file);
       if (!text || !file) return;
       const result = parseComplete(text);
+      const requirements = requirementsForPackage(result.packageValue);
+      setRequestedCapabilities(requirements);
+      if (!evaluateImportCapabilities(capabilities.data, requirements).ready) {
+        setParsed(null);
+        setStep(1);
+        toast.error("O pacote exige capabilities que não estão disponíveis neste banco.");
+        return;
+      }
       setMode("complete");
       setRaw(text);
       setSelectedFileName(file.name);
@@ -350,6 +380,11 @@ export function ContentIngestDialog({
   const save = async () => {
     if (!prepared || !catalog || prepared.errors.length || duplicatePolicyBlocked) return;
     if (strategy === "replace" && !window.confirm("Os cards atuais desta lista serão substituídos. Deseja continuar?")) return;
+    const latestCapabilities = await fetchImportCapabilities();
+    if (!evaluateImportCapabilities(latestCapabilities, requirementsForPackage(prepared.smartPackage)).ready) {
+      toast.error("O ambiente mudou e a importação foi bloqueada para evitar perda de dados.");
+      return;
+    }
     setBusy(true);
     setReport(null);
     try {
@@ -407,6 +442,7 @@ export function ContentIngestDialog({
     setAccountTermCounts({});
     setAccountDuplicateError("");
     setCheckingAccountDuplicates(false);
+    setRequestedCapabilities([...BASE_IMPORT_CAPABILITIES]);
   };
 
   return <>
@@ -422,6 +458,15 @@ export function ContentIngestDialog({
           </div>
           <DialogDescription>Escolha texto rápido ou envie um pacote completo do Super Importador.</DialogDescription>
         </DialogHeader>
+
+        <div className="px-5 pt-4">
+          <ImportCapabilitiesPanel
+            report={capabilities.data ?? null}
+            loading={capabilities.isLoading || capabilities.isFetching}
+            requirements={requestedCapabilities}
+            onRefresh={() => void capabilities.refetch()}
+          />
+        </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {loadingTarget && <div className="flex min-h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>}
@@ -563,9 +608,9 @@ export function ContentIngestDialog({
             </Button>
             <div className="flex flex-wrap gap-2">
               {report && <Button variant="outline" disabled={undoing} onClick={undo}>{undoing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}Desfazer</Button>}
-              {step === 1 && <Button disabled={!raw.trim() || loadingTarget} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
-              {step === 2 && <Button disabled={Boolean(prepared?.errors.length)} onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
-              {step === 3 && !report && <Button disabled={busy || Boolean(prepared?.errors.length) || duplicatePolicyBlocked} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Importar</Button>}
+              {step === 1 && <Button disabled={!raw.trim() || loadingTarget || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+              {step === 2 && <Button disabled={Boolean(prepared?.errors.length) || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
+              {step === 3 && !report && <Button disabled={busy || Boolean(prepared?.errors.length) || duplicatePolicyBlocked || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={save}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Importar</Button>}
               {report && <Button onClick={() => setOpen(false)}>Concluir</Button>}
             </div>
           </div>

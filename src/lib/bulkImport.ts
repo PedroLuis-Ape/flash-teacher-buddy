@@ -2,6 +2,7 @@
 // Format: SIDE_A / SIDE_B (short observation) [detailed hint]
 
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
+import { buildSimpleFlashcardPrompt } from "@/features/smart-import/simplePrompt";
 
 /**
  * Strip common AI formatting artifacts from a line:
@@ -408,6 +409,14 @@ function langName(code?: string): string {
  * Falls back to generic "Lado A / Lado B" when no languages are set.
  */
 export function buildAIHelperPrompt(langA?: string, langB?: string): string {
+  return buildSimpleFlashcardPrompt({
+    listName: "Lista atual",
+    sideALabel: langName(langA) || "Lado A",
+    sideBLabel: langName(langB) || "Lado B",
+  });
+}
+
+export function buildLegacyAIHelperPrompt(langA?: string, langB?: string): string {
   const hasLangs = langA && langB;
   const nameA = langName(langA);
   const nameB = langName(langB);
@@ -630,5 +639,4 @@ Regras para CSV:
 
 // Legacy constant for backward compatibility
 export const AI_HELPER_PROMPT = buildAIHelperPrompt();
-
 

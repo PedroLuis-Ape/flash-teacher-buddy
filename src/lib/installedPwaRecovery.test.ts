@@ -64,7 +64,7 @@ describe("installed PWA recovery", () => {
     expect(runtime).toContain("MANAGED_SUPABASE_PROJECT_ID");
     expect(runtime).toContain("xrnfhhoxmmstagmelvyi");
     expect(runtime).toContain("PRODUCTION_DATA_PROJECT_ID");
-    expect(runtime).toContain("ymahldldyxvwjeruaxpr");
+    expect(runtime).not.toContain("ymahldldyxvwjeruaxpr");
     expect(runtime).toContain("PRODUCTION_DATA_RUNTIME");
   });
 });

@@ -3,6 +3,7 @@ import {
   SMART_IMPORT_VERSION,
 } from "@/features/smart-import/schema";
 import type { GlobalImportDestinationMode } from "../destinationModes";
+import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
 
 export type GlobalImportAiPreset = "batch" | "detailed" | "complete";
 
@@ -101,6 +102,7 @@ function presetRules(preset: GlobalImportAiPreset): string[] {
   }
 
   return [
+    JSON_FILE_DELIVERY_CONTRACT,
     "MODO SELECIONADO: PACOTE COMPLETO COM GLOSSÁRIO GLOBAL",
     "- Crie somente cards normais enriquecidos com explicações, exemplos, notas de uso e erros comuns quando forem pedagogicamente úteis.",
     "- Inclua word_hints para palavras ou chunks que precisem de ajuda contextual dentro de cada card.",
