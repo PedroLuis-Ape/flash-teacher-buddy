@@ -1,5 +1,4 @@
-import { buildAdvancedCsvPrompt } from "./advancedCsvPrompt";
-import { GLOBAL_IMPORT_CSV_HEADER } from "./csvContract";
+import { buildCanonicalGlobalImportPrompt } from "./canonicalPrompt";
 import type { GlobalImportDestinationMode } from "./destinationModes";
 import type { GlobalImportStudySettings } from "./schema/globalImportSchema";
 
@@ -30,29 +29,46 @@ export interface GlobalImportPromptOptions {
 }
 
 export function getOfficialGlobalImportExample(): string {
-  return [
-    GLOBAL_IMPORT_CSV_HEADER,
-    '"Viagens","Aeroporto","Where is the boarding gate?","Onde fica o portão de embarque?"',
-  ].join("\n");
+  return JSON.stringify({
+    format: "ape-global-import",
+    schema_version: 1,
+    request_id: "00000000-0000-4000-8000-000000000000",
+    package: {
+      title: "Viagens",
+      folders: [{
+        title: "Aeroporto",
+        lists: [{
+          title: "Check-in",
+          cards: [{ type: "normal", term: "Where is the boarding gate?", translation: "Onde fica o portão de embarque?" }],
+        }],
+      }],
+    },
+  }, null, 2);
 }
 
 export function buildGlobalImportPrompt(options: GlobalImportPromptOptions): string {
-  const folders = options.mode === "from-file" ? options.folders : [{
-    name: options.destinationFolderName?.trim() || "Destino escolhido no aplicativo",
-    lists: options.folders.flatMap((folder) => folder.lists),
-  }];
   const preferences = [
-    options.includeExamples ? "Inclua exemplos quando forem úteis." : "",
-    options.includeExplanations ? "Inclua explicações curtas quando forem úteis." : "",
     options.extraInstructions?.trim() || "",
+    options.includeTags ? "Use tags somente quando agregarem organização real." : "",
   ].filter(Boolean).join(" ");
-  return buildAdvancedCsvPrompt({
+
+  return buildCanonicalGlobalImportPrompt({
+    mode: options.mode,
+    destinationFolderName: options.destinationFolderName,
     packageName: options.packageName,
+    description: options.description,
+    studyType: options.studyType,
     sourceLanguage: options.sourceLanguage,
     targetLanguage: options.targetLanguage,
+    labelA: options.labelA,
+    labelB: options.labelB,
+    ttsEnabled: options.ttsEnabled,
     level: options.level,
     theme: options.theme,
-    folders,
+    folders: options.folders,
+    includeExamples: options.includeExamples,
+    includeExplanations: options.includeExplanations,
+    allowRepetitions: options.allowRepetitions,
     extraInstructions: preferences,
-  });
+  }).prompt;
 }
