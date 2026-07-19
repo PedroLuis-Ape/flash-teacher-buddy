@@ -1,3 +1,5 @@
+import { buildPreferredJsonFileDelivery } from "@/lib/aiJsonFileDelivery";
+
 export type GlossarySourceSide = "A" | "B" | "both";
 
 export interface GlossarySourceCard {
@@ -94,8 +96,7 @@ TRADUÇÕES
 - is_active deve ser true.
 
 SAÍDA
-- Entregue somente app-piteco-glossario.json, em JSON UTF-8 válido.
-- Não use Markdown, CSV, TXT, JSONL, comentários ou texto externo.
+${buildPreferredJsonFileDelivery("app-piteco-glossario.json")}
 - Use exatamente esta raiz: schema, version, entries.
 - schema: \"app-piteco-glossary\"; version: 2.
 - Cada entry contém somente original_text, translated_text, note, side e is_active.
