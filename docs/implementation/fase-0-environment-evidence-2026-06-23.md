@@ -2,9 +2,17 @@
 
 Atualizado em 27 de junho de 2026.
 
-## Conclusão
+## Conclusão histórica — substituída pelo contrato atual
 
-O backend oficial do App Piteco é o projeto Supabase `xrnfhhoxmmstagmelvyi`.
+Este documento é uma evidência histórica de 2026-06-23 e não deve ser usado como fonte de verdade atual.
+
+O backend de dados atual do App Piteco é `ymahldldyxvwjeruaxpr`, conforme `docs/runtime-data-split.md` e `src/integrations/supabase/platformRuntime.ts`.
+
+O projeto `xrnfhhoxmmstagmelvyi` é o projeto administrado pelas ferramentas durante a transição, mas não é o runtime do frontend enquanto os dados reais permanecerem em `ymahldldyxvwjeruaxpr`.
+
+## Registro original
+
+O backend oficial do App Piteco foi registrado naquele momento como o projeto Supabase `xrnfhhoxmmstagmelvyi`.
 
 A conexão administrativa possui acesso a esse projeto, e o repositório está sendo alinhado para usar o mesmo project ref no `supabase/config.toml`, no bootstrap do frontend e nos contratos de CI.
 
