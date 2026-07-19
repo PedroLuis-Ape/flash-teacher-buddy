@@ -14,6 +14,12 @@ import type { AppPitecoSuperImportPackage } from "./schema/appPitecoSuperImportS
 import { smartImportToOfficialV1Package } from "./liveBackendCompatibility";
 import { updateGlobalImportManifestStatus } from "./manifest";
 import { richImportRequirements } from "./richImportRequirements";
+import {
+  capabilityLabel,
+  evaluateImportCapabilities,
+  fetchImportCapabilities,
+  requirementsForPackage,
+} from "@/features/import-capabilities/capabilities";
 
 export type CardConflictPolicy = "skip" | "replace" | "copy" | "error";
 export type ImportTargetScope = "personal" | "classroom";
@@ -256,6 +262,18 @@ export async function executeMappedGlobalImport(
   const totalCards = countCards(packageValue);
   const sourceSmart = options.smartPackage ?? legacyPackageToSmartImport(packageValue);
   const smartPackage = smartPackageForEffectiveLegacy(sourceSmart, packageValue);
+  const capabilities = await fetchImportCapabilities();
+  const capabilityEvaluation = evaluateImportCapabilities(
+    capabilities,
+    requirementsForPackage(smartPackage),
+  );
+  if (!capabilityEvaluation.ready) {
+    const missing = capabilityEvaluation.missing.map(capabilityLabel).join(", ");
+    throw new Error(
+      `O banco conectado não passou no diagnóstico antecipado${missing ? `: ${missing}` : "."} `
+      + "A importação foi bloqueada para evitar perda de dados.",
+    );
+  }
   const cardPackage = stripGlossariesForFolderImport(smartPackage);
   const request = getOrCreateRequestId(packageValue, smartPackage, options);
 

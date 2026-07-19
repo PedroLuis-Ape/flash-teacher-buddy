@@ -6,7 +6,7 @@ import echoTool from "./tools/echo";
 // below; see docs/environment-contract.md. The fallback keeps the issuer
 // well-formed during the throwaway manifest-extract eval.
 const projectRef =
-  import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "ymahldldyxvwjeruaxpr";
+  import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "xrnfhhoxmmstagmelvyi";
 
 export default defineMcp({
   name: "ape-piteco-mcp",

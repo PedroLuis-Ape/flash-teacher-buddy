@@ -1,32 +1,26 @@
 # Contrato de ambiente do App Piteco
 
-## Produção com dados reais
+## Projeto Supabase canônico
 
-O frontend publicado do App Piteco deve usar o projeto Lovable Cloud que contém as contas e os dados existentes:
-
-`ymahldldyxvwjeruaxpr`
-
-Esse é o backend de produção do navegador para autenticação, perfis, pastas, listas, flashcards e glossários já existentes.
-
-## Projeto Supabase conectado às ferramentas administrativas
-
-O projeto abaixo permanece conectado para operações administrativas, migrations e auditorias específicas:
+O frontend, preview, Edge Functions e migrations do App Piteco usam o projeto:
 
 `xrnfhhoxmmstagmelvyi`
 
-Ele não deve substituir automaticamente o backend do frontend enquanto não existir uma migração de dados completa, validada e explicitamente aprovada. Apontar o aplicativo publicado para esse projeto faz contas e flashcards existentes parecerem ausentes.
+URL: `https://xrnfhhoxmmstagmelvyi.supabase.co`
+
+Esse projeto é a fonte canônica para autenticação, perfis, pastas, listas, flashcards, glossários e importações transacionais.
 
 ## Regra obrigatória do frontend
 
 - `src/integrations/supabase/platformRuntime.ts` é a única fonte de configuração do cliente do navegador.
-- Em produção, URL, project ref e chave pública devem formar um conjunto atômico do projeto `ymahldldyxvwjeruaxpr`.
-- Valores `VITE_SUPABASE_*` injetados por uma integração antiga não podem trocar o backend de produção.
-- Overrides para outro projeto são permitidos somente em desenvolvimento local explícito.
+- URL, project ref e chave pública devem formar um conjunto atômico do projeto `xrnfhhoxmmstagmelvyi`.
+- Valores `VITE_SUPABASE_*` de um projeto legado são rejeitados e não podem trocar o backend do aplicativo.
 - Todos os clientes do navegador, incluindo sincronização de convidado, devem usar `readPlatformRuntime()`.
+- O preflight dos importadores deve exibir o project ref efetivamente conectado antes de aceitar análise ou gravação.
 
 ## Segurança
 
-A URL e a chave anon são configurações públicas enviadas ao navegador. A segurança continua dependendo de RLS, RPCs, Edge Functions e autorização no servidor.
+A URL e a chave pública são configurações enviadas ao navegador. A segurança continua dependendo de RLS, RPCs, Edge Functions e autorização no servidor.
 
 Nunca colocar no frontend:
 
@@ -35,16 +29,8 @@ Nunca colocar no frontend:
 - tokens administrativos;
 - segredos de Edge Functions.
 
-## Mudança futura de backend
+## Troca futura de backend
 
-Uma troca do projeto de produção só pode ocorrer após:
+Uma troca do projeto canônico só pode ocorrer após inventário de dados, validação de autenticação e ownership, comparação de contagens, testes de leitura e escrita, plano de rollback e aprovação explícita do proprietário do App Piteco.
 
-1. inventário das contas e registros;
-2. migração integral dos dados;
-3. validação de autenticação e ownership;
-4. comparação de contagens;
-5. testes de leitura e escrita;
-6. plano de rollback;
-7. aprovação explícita do proprietário do App Piteco.
-
-Até essa migração existir, o frontend de produção permanece bloqueado em `ymahldldyxvwjeruaxpr`.
+O projeto legado `ymahldldyxvwjeruaxpr` não recebe alterações nesta implementação.

@@ -25,13 +25,13 @@ const statusCard = readFileSync(statusCardPath, "utf8");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
 
 const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
-const serviceKey = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ ref: "ymahldldyxvwjeruaxpr", role: "service_role" })}.test-signature`;
+const serviceKey = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ ref: "xrnfhhoxmmstagmelvyi", role: "service_role" })}.test-signature`;
 const runtime = resolveRumRuntime({
-  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+  url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
   serviceKey,
 });
 assert.deepEqual(runtime, {
-  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+  url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
   serviceKey,
 });
 assert.equal(resolveRumRuntime({
@@ -39,8 +39,8 @@ assert.equal(resolveRumRuntime({
   serviceKey,
 }), null);
 assert.equal(resolveRumRuntime({
-  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
-  serviceKey: `${encode({ alg: "HS256" })}.${encode({ ref: "ymahldldyxvwjeruaxpr", role: "anon" })}.signature`,
+  url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
+  serviceKey: `${encode({ alg: "HS256" })}.${encode({ ref: "xrnfhhoxmmstagmelvyi", role: "anon" })}.signature`,
 }), null);
 
 assert.equal(classifyWebVital("LCP", 2500), "good");
@@ -84,7 +84,7 @@ const response = await ingestWebVital(
 );
 assert.equal(response.status, 204);
 assert.equal(response.headers.get("x-ape-rum-state"), "recorded");
-assert.equal(captured.url, "https://ymahldldyxvwjeruaxpr.supabase.co/rest/v1/rpc/record_web_vital_sample");
+assert.equal(captured.url, "https://xrnfhhoxmmstagmelvyi.supabase.co/rest/v1/rpc/record_web_vital_sample");
 const rpcBody = JSON.parse(captured.init.body);
 assert.deepEqual(Object.keys(rpcBody).sort(), [
   "_build_id",

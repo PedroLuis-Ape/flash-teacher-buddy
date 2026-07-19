@@ -1,4 +1,4 @@
-const PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
+const PRODUCTION_DATA_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
 const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
 const CANONICAL_HOST = "www.apeeducation.org";
 const MAX_BODY_BYTES = 4096;

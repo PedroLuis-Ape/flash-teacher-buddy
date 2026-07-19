@@ -45,7 +45,7 @@ export function AdvancedPromptBuilder({ mode, destinationFolderName }: Props) {
       <PromptStructureFields mode={mode} folders={value.folders} onChange={(folders) => setField("folders", folders)} />
       <Field label="Instruções adicionais"><Textarea value={value.extraInstructions} onChange={(event) => setField("extraInstructions", event.target.value)} /></Field>
       <div className="text-sm text-muted-foreground">Estrutura atual: {cards} flashcard(s).</div>
-      <Button className="w-full" onClick={generate}>Gerar prompt avançado em CSV</Button>
+      <Button className="w-full" onClick={generate}>Gerar prompt avançado em JSON</Button>
       {preview && <Textarea value={preview} readOnly onFocus={(event) => event.currentTarget.select()} className="min-h-72 font-mono text-xs" />}
     </Card>
   );

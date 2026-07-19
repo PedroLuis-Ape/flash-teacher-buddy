@@ -1,5 +1,7 @@
 export type GlossarySourceSide = "A" | "B" | "both";
 
+import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
+
 export interface GlossarySourceCard {
   id: string;
   list_id: string;
@@ -134,7 +136,7 @@ ${GLOSSARY_AI_PROMPT_FOOTER}`;
 }
 
 export function buildGlossaryAiPromptParts(cards: readonly GlossarySourceCard[], sourceSide: GlossarySourceSide = "both", chunkSize = 1000): BlobPart[] {
-  const parts: BlobPart[] = [buildGlossaryAiPromptHeader(sourceSide)];
+  const parts: BlobPart[] = [JSON_FILE_DELIVERY_CONTRACT, "\n\n", buildGlossaryAiPromptHeader(sourceSide)];
   for (let index = 0; index < cards.length; index += chunkSize) {
     parts.push(buildGlossaryAiSourceChunk(cards.slice(index, index + chunkSize), sourceSide, index));
   }

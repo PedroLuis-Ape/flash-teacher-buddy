@@ -11,6 +11,13 @@ import { GlobalImportJsonSection } from "./components/GlobalImportJsonSection";
 import { GlobalImportValidationPreview } from "./components/GlobalImportValidationPreview";
 import { PromptBuilderCard } from "./components/PromptBuilderCard";
 import {
+  evaluateImportCapabilities,
+  fetchImportCapabilities,
+  requirementsForPackage,
+} from "@/features/import-capabilities/capabilities";
+import { ImportCapabilitiesPanel } from "@/features/import-capabilities/ImportCapabilitiesPanel";
+import { useImportCapabilities } from "@/features/import-capabilities/useImportCapabilities";
+import {
   loadImportDestinationCatalog,
   validateDestinationPlan,
   type GlobalImportDestinationPlan,
@@ -50,6 +57,7 @@ export default function SuperGlobalImportScreenV2() {
   const { turmaId } = useParams<{ turmaId?: string }>();
   const classroomMode = Boolean(turmaId);
   const source = useGlobalImportSource();
+  const capabilities = useImportCapabilities(true);
   const [destinationMode, setDestinationMode] = useState<GlobalImportDestinationMode>("from-file");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
@@ -100,6 +108,8 @@ export default function SuperGlobalImportScreenV2() {
   const counts = packageCounts(packageToPreview);
   const destinationErrors = destinationMode === "from-file" ? [] : prepared?.errors ?? [];
   const destinationWarnings = destinationMode === "from-file" ? [] : prepared?.warnings ?? [];
+  const capabilityRequirements = requirementsForPackage(source.validation?.smartPackage);
+  const capabilityEvaluation = evaluateImportCapabilities(capabilities.data, capabilityRequirements);
 
   const prepareValidPackage = async (validation: GlobalImportV2ValidationResult) => {
     setReport(null);
@@ -116,6 +126,10 @@ export default function SuperGlobalImportScreenV2() {
   };
 
   const handleAnalyze = async () => {
+    if (!capabilityEvaluation.ready) {
+      toast.error("O diagnóstico do banco ainda não permite iniciar a análise.");
+      return;
+    }
     try {
       await prepareValidPackage(source.analyze());
     } catch (error: any) {
@@ -125,6 +139,10 @@ export default function SuperGlobalImportScreenV2() {
   };
 
   const handleFile = async (file?: File) => {
+    if (!capabilityEvaluation.ready) {
+      toast.error("O diagnóstico do banco ainda não permite carregar este pacote.");
+      return;
+    }
     try {
       const result = await source.readFile(file);
       if (result) await prepareValidPackage(result.validation);
@@ -155,6 +173,15 @@ export default function SuperGlobalImportScreenV2() {
     }
     if (!effectivePackage || !effectivePlan) {
       toast.error("Defina um destino válido antes de importar.");
+      return;
+    }
+    const latestCapabilities = await fetchImportCapabilities();
+    const latestEvaluation = evaluateImportCapabilities(
+      latestCapabilities,
+      requirementsForPackage(validation.smartPackage),
+    );
+    if (!latestEvaluation.ready) {
+      toast.error("O ambiente mudou e não suporta todos os dados deste pacote. A importação foi bloqueada.");
       return;
     }
     const planErrors = validateDestinationPlan(effectivePackage, catalog, effectivePlan);
@@ -259,6 +286,13 @@ export default function SuperGlobalImportScreenV2() {
           </div>
         )}
 
+        <ImportCapabilitiesPanel
+          report={capabilities.data ?? null}
+          loading={capabilities.isLoading || capabilities.isFetching}
+          requirements={capabilityRequirements}
+          onRefresh={() => void capabilities.refetch()}
+        />
+
         <GlobalImportDestinationSection
           mode={destinationMode}
           onModeChange={setDestinationMode}
@@ -272,9 +306,9 @@ export default function SuperGlobalImportScreenV2() {
         />
 
         <PromptBuilderCard mode={destinationMode} destinationFolderName={destinationFolderName} />
-        <GlobalImportJsonSection value={source.raw} busy={busy} onChange={handleRawChange} onAnalyze={handleAnalyze} onFile={handleFile} />
+        <GlobalImportJsonSection value={source.raw} busy={busy} disabled={!capabilityEvaluation.ready} onChange={handleRawChange} onAnalyze={handleAnalyze} onFile={handleFile} />
 
-        {source.validation && (
+        {source.validation && capabilityEvaluation.ready && (
           <GlobalImportValidationPreview
             validation={source.validation}
             packageValue={packageToPreview}
@@ -290,7 +324,7 @@ export default function SuperGlobalImportScreenV2() {
         )}
 
         <GlobalImportExecutionSection
-          enabled={Boolean(source.validation?.valid && source.validation.package && catalog)}
+          enabled={Boolean(capabilityEvaluation.ready && source.validation?.valid && source.validation.package && catalog)}
           count={counts.cards}
           mode={destinationMode}
           listConflictPolicy={listConflictPolicy}

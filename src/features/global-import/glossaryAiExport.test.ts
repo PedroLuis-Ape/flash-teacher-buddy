@@ -73,11 +73,11 @@ describe("glossary AI export", () => {
       id: String(index),
     }));
     const parts = buildGlossaryAiPromptParts(largeCatalog, "both", 1000);
-    expect(parts).toHaveLength(37);
+    expect(parts).toHaveLength(39);
     expect(parts.at(-1)).toContain(GLOSSARY_AI_PROMPT_FOOTER);
-    expect(String(parts[1])).toContain("[CARD 1");
-    expect(String(parts[34])).toContain("[CARD 33001");
-    expect(String(parts[36])).toContain("[A] affordable");
+    expect(String(parts[3])).toContain("[CARD 1");
+    expect(String(parts[36])).toContain("[CARD 33001");
+    expect(String(parts[38])).toContain("[A] affordable");
   });
 
   it("filters by term, translation, list or folder", () => {

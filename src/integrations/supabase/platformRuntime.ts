@@ -17,13 +17,9 @@ declare global {
 }
 
 export const MANAGED_SUPABASE_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
-export const PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
+export const PRODUCTION_DATA_PROJECT_ID = MANAGED_SUPABASE_PROJECT_ID;
 export const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
-export const PRODUCTION_DATA_PUBLIC_VALUE = [
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-  ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltYWhsZGxkeXh2d2plcnVheHByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzNDE2ODMsImV4cCI6MjA3NDkxNzY4M30",
-  ".idlg2X65uZWkJcbLOrtr_0ug8G13nP93LUGAfSNv43w",
-].join("");
+export const PRODUCTION_DATA_PUBLIC_VALUE = "sb_publishable_w2P1WAWgbZy7_RI_vu2AvA_kuEmvp5O";
 
 export const PRODUCTION_DATA_RUNTIME: PlatformRuntime = Object.freeze({
   projectId: PRODUCTION_DATA_PROJECT_ID,

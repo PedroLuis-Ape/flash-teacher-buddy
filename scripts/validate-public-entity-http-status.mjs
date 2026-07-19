@@ -41,10 +41,10 @@ assert.equal(classifyPublicListPath("https://www.apeeducation.org/portal/list/no
 
 assert.equal(resolvePublicDataRuntime(), null, "Sem variáveis Functions, a Edge Function deve fazer bypass seguro.");
 assert.deepEqual(resolvePublicDataRuntime({
-  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+  url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
   publicValue: "public-test-key",
 }), {
-  url: "https://ymahldldyxvwjeruaxpr.supabase.co",
+  url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
   publicValue: "public-test-key",
 });
 assert.equal(resolvePublicDataRuntime({
@@ -122,7 +122,7 @@ try {
   globalThis.Netlify = {
     env: {
       get(name) {
-        if (name === "VITE_SUPABASE_URL") return "https://ymahldldyxvwjeruaxpr.supabase.co";
+        if (name === "VITE_SUPABASE_URL") return "https://xrnfhhoxmmstagmelvyi.supabase.co";
         if (name === "VITE_SUPABASE_PUBLISHABLE_KEY") return "public-test-key";
         return undefined;
       },
@@ -157,7 +157,7 @@ try {
   globalThis.Netlify = {
     env: {
       get(name) {
-        if (name === "VITE_SUPABASE_URL") return "https://ymahldldyxvwjeruaxpr.supabase.co";
+        if (name === "VITE_SUPABASE_URL") return "https://xrnfhhoxmmstagmelvyi.supabase.co";
         if (name === "VITE_SUPABASE_PUBLISHABLE_KEY") return "public-test-key";
         return undefined;
       },

@@ -1,5 +1,6 @@
 import { folderGlossaryPromptGroupA } from "./folderGlossaryPromptGroupA";
 import { folderGlossaryPromptGroupB } from "./folderGlossaryPromptGroupB";
+import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
 
 export interface FolderGlossaryPromptOptions {
   folderTitle: string;
@@ -15,6 +16,7 @@ export function buildFolderGlossaryAiPrompt(options: FolderGlossaryPromptOptions
   const sideB = clean(options.labelB, "Lado B");
 
   return [
+    JSON_FILE_DELIVERY_CONTRACT,
     folderGlossaryPromptGroupA(title, sideA, sideB),
     folderGlossaryPromptGroupB(title),
   ].join("\n\n");

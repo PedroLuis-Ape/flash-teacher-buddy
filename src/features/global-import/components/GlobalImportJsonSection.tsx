@@ -11,12 +11,13 @@ import { isSuperImportTestRolloutEnabled } from "../testRollout";
 interface Props {
   value: string;
   busy: boolean;
+  disabled?: boolean;
   onChange: (value: string) => void;
   onAnalyze: () => void;
   onFile: (file?: File) => void;
 }
 
-export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFile }: Props) {
+export function GlobalImportJsonSection({ value, busy, disabled = false, onChange, onAnalyze, onFile }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const testRollout = isSuperImportTestRolloutEnabled();
 
@@ -47,7 +48,7 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
               event.currentTarget.value = "";
             }}
           />
-          <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} disabled={busy}>
+          <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} disabled={busy || disabled}>
             <Upload className="mr-2 h-4 w-4" />Selecionar arquivo JSON
           </Button>
         </div>
@@ -57,7 +58,7 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="min-h-64 font-mono text-xs"
-        disabled={busy}
+        disabled={busy || disabled}
         placeholder={'{"schema":"app-piteco-super-import","version":"2.0",...}'}
       />
       <p className="text-xs text-muted-foreground">
@@ -65,7 +66,7 @@ export function GlobalImportJsonSection({ value, busy, onChange, onAnalyze, onFi
           ? "O fluxo de teste trabalha com o JSON 2.0 e corrige automaticamente alguns erros comuns de formatação antes de validar."
           : "CSV e pacotes JSON antigos continuam aceitos apenas por compatibilidade."}
       </p>
-      <Button type="button" className="w-full" onClick={onAnalyze} disabled={!value.trim() || busy}>
+      <Button type="button" className="w-full" onClick={onAnalyze} disabled={!value.trim() || busy || disabled}>
         Analisar pacote
       </Button>
     </Card>
