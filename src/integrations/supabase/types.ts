@@ -3113,10 +3113,6 @@ export type Database = {
       }
     }
     Functions: {
-      get_import_capabilities_v1: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       apply_special_flashcard_explanations: {
         Args: { p_conflict_mode?: string; p_items: Json }
         Returns: Json

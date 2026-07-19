@@ -21,16 +21,13 @@ describe("Supabase runtime bootstrap", () => {
     expect(OFFICIAL_RUNTIME_ENDPOINT).toContain("/functions/v1/app-public-config");
   });
 
-  it("accepts the canonical managed project as the current data backend", () => {
-    expect(validateOfficialRuntime({
+  it("rejects the managed project while data still lives in the production backend", () => {
+    expect(MANAGED_SUPABASE_PROJECT_ID).not.toBe(PRODUCTION_DATA_PROJECT_ID);
+    expect(() => validateOfficialRuntime({
       projectId: MANAGED_SUPABASE_PROJECT_ID,
       url: `https://${MANAGED_SUPABASE_PROJECT_ID}.supabase.co`,
       publishableKey: "managed-project-value",
-    })).toEqual({
-      projectId: MANAGED_SUPABASE_PROJECT_ID,
-      url: `https://${MANAGED_SUPABASE_PROJECT_ID}.supabase.co`,
-      publicValue: "managed-project-value",
-    });
+    })).toThrow("backend de dados em produção");
   });
 
   it("rejects mismatched project id and URL", () => {
