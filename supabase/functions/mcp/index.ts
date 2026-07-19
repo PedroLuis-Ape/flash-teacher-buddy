@@ -4,7 +4,6 @@
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.1";
-import { PRODUCTION_DATA_PROJECT_ID } from "npm:@/integrations/supabase/platformRuntime";
 
 // src/lib/mcp/tools/echo.ts
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.1";
@@ -19,7 +18,7 @@ var echo_default = defineTool({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "ymahldldyxvwjeruaxpr" === PRODUCTION_DATA_PROJECT_ID ? "ymahldldyxvwjeruaxpr" : PRODUCTION_DATA_PROJECT_ID;
+var projectRef = "ymahldldyxvwjeruaxpr";
 var mcp_default = defineMcp({
   name: "ape-piteco-mcp",
   title: "APE Piteco",
