@@ -1,28 +1,30 @@
 # Contrato de ambiente do App Piteco
 
-## Backend de dados canônico
+## Backend de dados em producao
 
-O frontend, preview, Edge Functions e migrations do App Piteco usam o projeto:
+O frontend publicado do App Piteco deve usar o projeto que contem as contas e os dados existentes:
 
 `ymahldldyxvwjeruaxpr`
 
 URL: `https://ymahldldyxvwjeruaxpr.supabase.co`
 
-Esse projeto é a fonte canônica para autenticação, perfis, pastas, listas, flashcards, glossários e importações transacionais.
+Esse e o backend de producao para autenticacao, perfis, pastas, listas, flashcards e glossarios existentes.
 
-O projeto `xrnfhhoxmmstagmelvyi` continua sendo o projeto administrado pelas ferramentas durante a transição, mas não deve receber o runtime do frontend enquanto os dados reais permanecerem em `ymahldldyxvwjeruaxpr`.
+## Projeto gerenciado para operacoes administrativas
 
-## Regra obrigatória do frontend
+O projeto `xrnfhhoxmmstagmelvyi` permanece reservado para operacoes administrativas, migrations e diagnosticos especificos. Ele nao deve substituir o backend de dados do navegador sem migracao completa, validacao de ownership, comparacao de contagens e aprovacao explicita.
 
-- `src/integrations/supabase/platformRuntime.ts` é a única fonte de configuração do cliente do navegador.
-- URL, project ref e chave pública devem formar um conjunto atômico do projeto `ymahldldyxvwjeruaxpr`.
-- Valores `VITE_SUPABASE_*` de outro projeto são rejeitados e não podem trocar o backend do aplicativo.
-- Todos os clientes do navegador, incluindo sincronização de convidado, devem usar `readPlatformRuntime()`.
-- O preflight dos importadores deve exibir o project ref efetivamente conectado antes de aceitar análise ou gravação.
+## Regra obrigatoria do frontend
 
-## Segurança
+- `src/integrations/supabase/platformRuntime.ts` e a fonte unica de configuracao do cliente do navegador.
+- Em producao, URL, project ref e chave publica devem formar um conjunto atomico do projeto `ymahldldyxvwjeruaxpr`.
+- Valores `VITE_SUPABASE_*` de outro projeto nao podem trocar silenciosamente o backend de producao.
+- Todos os clientes do navegador, incluindo sincronizacao de convidado, devem usar `readPlatformRuntime()`.
+- O preflight dos importadores deve exibir o project ref efetivamente conectado antes de aceitar analise ou gravacao.
 
-A URL e a chave pública são configurações enviadas ao navegador. A segurança continua dependendo de RLS, RPCs, Edge Functions e autorização no servidor.
+## Seguranca
+
+A URL e a chave publica sao configuracoes enviadas ao navegador. A seguranca depende de RLS, RPCs, Edge Functions e autorizacao no servidor.
 
 Nunca colocar no frontend:
 
@@ -33,6 +35,6 @@ Nunca colocar no frontend:
 
 ## Troca futura de backend
 
-Uma troca do projeto canônico só pode ocorrer após inventário de dados, validação de autenticação e ownership, comparação de contagens, testes de leitura e escrita, plano de rollback e aprovação explícita do proprietário do App Piteco.
+Uma troca do backend de producao so pode ocorrer apos inventario de contas e registros, migracao integral, validacao de autenticacao e ownership, comparacao de contagens, testes de leitura e escrita, plano de rollback e aprovacao explicita do proprietario do App Piteco.
 
-Uma migração futura para `xrnfhhoxmmstagmelvyi` só pode ocorrer depois que os dados, usuários e permissões forem migrados e validados.
+Nenhuma migration desta correcao altera ou remove dados do projeto `ymahldldyxvwjeruaxpr`.

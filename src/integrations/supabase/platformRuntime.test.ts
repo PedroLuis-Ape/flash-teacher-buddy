@@ -21,7 +21,7 @@ describe("platform runtime", () => {
     expect(resolvePlatformRuntime(production, false, { ...production, publicValue: "installed-value" }).publicValue).toBe("installed-value");
   });
 
-  it("ignores a non-canonical project and keeps the canonical data backend", () => {
+  it("ignores the managed project and keeps the production data backend", () => {
     expect(resolvePlatformRuntime({
       projectId: "xrnfhhoxmmstagmelvyi",
       url: "https://xrnfhhoxmmstagmelvyi.supabase.co",
