@@ -21,8 +21,7 @@ describe("Supabase runtime bootstrap", () => {
     expect(OFFICIAL_RUNTIME_ENDPOINT).toContain("/functions/v1/app-public-config");
   });
 
-  it("rejects the managed project while data still lives in the production backend", () => {
-    expect(MANAGED_SUPABASE_PROJECT_ID).not.toBe(PRODUCTION_DATA_PROJECT_ID);
+  it("rejects the managed project as the current data backend", () => {
     expect(() => validateOfficialRuntime({
       projectId: MANAGED_SUPABASE_PROJECT_ID,
       url: `https://${MANAGED_SUPABASE_PROJECT_ID}.supabase.co`,

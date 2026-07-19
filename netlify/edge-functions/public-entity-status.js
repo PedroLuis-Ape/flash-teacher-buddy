@@ -1,4 +1,4 @@
-const PRODUCTION_DATA_PROJECT_ID = "xrnfhhoxmmstagmelvyi";
+const PRODUCTION_DATA_PROJECT_ID = "ymahldldyxvwjeruaxpr";
 const PRODUCTION_DATA_URL = `https://${PRODUCTION_DATA_PROJECT_ID}.supabase.co`;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
