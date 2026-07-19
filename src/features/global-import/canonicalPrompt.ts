@@ -1,3 +1,4 @@
+import { appendPreferredJsonFileDelivery } from "@/lib/aiJsonFileDelivery";
 import {
   GLOBAL_IMPORT_FORMAT,
   GLOBAL_IMPORT_SCHEMA_VERSION,
@@ -68,6 +69,7 @@ export function buildCanonicalGlobalImportPrompt(options: CanonicalPromptOptions
   }));
   const constraints = {
     output: "JSON_ONLY",
+    delivery: "DOWNLOADABLE_JSON_FILE_PREFERRED_WITH_PURE_JSON_CHAT_FALLBACK",
     markdown: false,
     request_id: "SAME_AS_TEMPLATE",
     editable_paths: ["package.folders[*].lists[*].cards"],
@@ -100,7 +102,7 @@ export function buildCanonicalGlobalImportPrompt(options: CanonicalPromptOptions
     structure,
     total_cards: config.expected_card_count,
   };
-  const prompt = [
+  const basePrompt = [
     "APE_GLOBAL_IMPORT_CONTENT_REQUEST",
     `PROTOCOL=${GLOBAL_IMPORT_FORMAT}@${GLOBAL_IMPORT_SCHEMA_VERSION}`,
     `REQUEST_ID=${requestId}`,
@@ -109,5 +111,6 @@ export function buildCanonicalGlobalImportPrompt(options: CanonicalPromptOptions
     `CARD_SCHEMA=${cardShape}`,
     `JSON_TEMPLATE=${template}`,
   ].join("\n\n");
+  const prompt = appendPreferredJsonFileDelivery(basePrompt, `app-piteco-importacao-${requestId}.json`);
   return { requestId, prompt, template, manifest };
 }
