@@ -1,3 +1,4 @@
+import { appendPreferredJsonFileDelivery } from "@/lib/aiJsonFileDelivery";
 import {
   buildGlobalImportPresetPrompt,
   type GlobalImportAiPreset,
@@ -44,7 +45,7 @@ export function buildFinalGlobalImportPrompt(
       ]
     : [];
 
-  return [
+  const prompt = [
     buildGlobalImportPresetPrompt(preset, context),
     "",
     "REGRA FINAL ESPECÍFICA DO MODO — TEM PRIORIDADE SOBRE O EXEMPLO DE ESTRUTURA",
@@ -53,4 +54,6 @@ export function buildFinalGlobalImportPrompt(
     ...classroomRules,
     "Revise o objeto inteiro e remova qualquer objeto layered, group_title ou layers antes de responder.",
   ].join("\n");
+
+  return appendPreferredJsonFileDelivery(prompt, "app-piteco-super-import.json");
 }
