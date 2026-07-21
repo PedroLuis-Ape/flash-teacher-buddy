@@ -22,8 +22,8 @@ const batch: SpecialExportPackage = {
   batch_count: 1,
   card_count: 2,
   cards: [
-    { card_ref: "CARD_001", flashcard_id: A, term: "take", translation: "pegar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: "Verbos" },
-    { card_ref: "CARD_002", flashcard_id: B, term: "leave", translation: "deixar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: "Verbos" },
+    { card_ref: "CARD_001", flashcard_id: A, term: "take", translation: "pegar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: "Verbos", focus_text: null, focus_tag: null, focus_note: null },
+    { card_ref: "CARD_002", flashcard_id: B, term: "leave", translation: "deixar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: "Verbos", focus_text: null, focus_tag: null, focus_note: null },
   ],
 };
 
@@ -42,6 +42,9 @@ function completedRecord(overrides: Partial<SpecialCsvRecord> = {}): SpecialCsvR
     flashcard_id: A,
     term: "take",
     translation: "pegar",
+    focus_text: "",
+    focus_tag: "",
+    focus_note: "",
     detailed_explanation: "Explicação completa.",
     usage_notes: "Uso cotidiano.",
     common_mistakes: "Não confundir com bring.",

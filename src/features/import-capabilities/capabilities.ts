@@ -89,7 +89,7 @@ export async function fetchImportCapabilities(): Promise<ImportCapabilitiesRepor
   const runtime = readPlatformRuntime();
   const projectRef = runtimeProjectRef(runtime.url, runtime.projectId);
   try {
-    const { data, error } = await supabase.rpc("get_import_capabilities_v1");
+    const { data, error } = await supabase.rpc("get_import_capabilities_v1" as any);
     if (error) throw error;
     const payload = recordOf(data);
     if (!payload) throw new Error("O diagnóstico retornou uma resposta desconhecida.");
@@ -113,7 +113,7 @@ export async function fetchImportCapabilities(): Promise<ImportCapabilitiesRepor
           }];
         })
       : [];
-    const codes = Array.isArray(payload.diagnostic_codes)
+    const codes: CapabilityDiagnosticCode[] = Array.isArray(payload.diagnostic_codes)
       ? payload.diagnostic_codes.map(diagnosticCode)
       : ["unknown"];
 

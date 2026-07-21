@@ -10,6 +10,8 @@ URL: `https://ymahldldyxvwjeruaxpr.supabase.co`
 
 Esse e o backend de producao para autenticacao, perfis, pastas, listas, flashcards e glossarios existentes.
 
+Guia operacional para nao confundir os ambientes: `docs/orientacao-banco-correto.md`.
+
 ## Projeto gerenciado para operacoes administrativas
 
 O projeto `xrnfhhoxmmstagmelvyi` permanece reservado para operacoes administrativas, migrations e diagnosticos especificos. Ele nao deve substituir o backend de dados do navegador sem migracao completa, validacao de ownership, comparacao de contagens e aprovacao explicita.

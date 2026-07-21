@@ -343,7 +343,7 @@ export function parseSpecialV3Result(input: string): SpecialV3Result {
 
   const parsed = resultSchema.safeParse(value);
   if (!parsed.success) throw new Error(describeZodError(parsed.error));
-  return parsed.data;
+  return parsed.data as SpecialV3Result;
 }
 
 function browserStorage(): Storage | null {

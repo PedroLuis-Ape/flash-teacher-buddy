@@ -15,6 +15,7 @@ function card(id: string, term: string): SpecialFlashcardDetail {
     id: `queue-${id}`,
     flashcard_id: id,
     created_at: "2026-06-17T00:00:00Z",
+    updated_at: null,
     term,
     translation: `tradução de ${term}`,
     hint: null,
@@ -25,6 +26,11 @@ function card(id: string, term: string): SpecialFlashcardDetail {
     parent_card_id: null,
     list_id: "list-1",
     list_title: "Lista",
+    focus_text: null,
+    focus_side: null,
+    focus_tag: null,
+    focus_note: null,
+    notes: null,
   };
 }
 

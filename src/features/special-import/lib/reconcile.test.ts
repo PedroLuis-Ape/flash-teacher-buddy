@@ -13,8 +13,8 @@ const manifest: import("./protocolPolicy").StoredSpecialExportManifest = {
   created_at: "2026-06-17T00:00:00Z",
   status: "awaiting_import",
   cards: [
-    { card_ref: "CARD_001", flashcard_id: A, term: "take", translation: "pegar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null },
-    { card_ref: "CARD_002", flashcard_id: B, term: "leave", translation: "deixar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null },
+    { card_ref: "CARD_001", flashcard_id: A, term: "take", translation: "pegar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null, focus_text: null, focus_tag: null, focus_note: null },
+    { card_ref: "CARD_002", flashcard_id: B, term: "leave", translation: "deixar", hint: null, context_tag: null, example_text: null, example_translation: null, is_layer: false, layer_number: null, list_title: null, focus_text: null, focus_tag: null, focus_note: null },
   ],
 };
 
