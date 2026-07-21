@@ -403,10 +403,11 @@ export function analyzeFolderGlossaryCoverageOffThread(
       if (settled) return;
       settled = true;
       close();
-      if (event.data.ok) {
-        resolve(event.data.report);
+      const response = event.data;
+      if (response.ok) {
+        resolve(response.report);
       } else {
-        reject(new Error(event.data.error));
+        reject(new Error(response.error));
       }
     };
 

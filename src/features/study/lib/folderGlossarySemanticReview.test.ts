@@ -68,8 +68,8 @@ const canonicalWords = [
   ["history", "history", "história"],
 ] as const;
 
-function buildContext(size = canonicalWords.length): SemanticReviewContext {
-  const source = size === canonicalWords.length
+function buildContext(size: number = canonicalWords.length): SemanticReviewContext {
+  const source: readonly (readonly [string, string, string])[] = size === canonicalWords.length
     ? canonicalWords
     : Array.from({ length: size }, (_, index) => [
       `id-${index}`,
@@ -77,10 +77,13 @@ function buildContext(size = canonicalWords.length): SemanticReviewContext {
       `tradução ${index}`,
     ] as const);
   const sentence = "Millions were enslaved throughout history.";
-  const terms = source.map(([, value]) =>
+  const terms = source.map((entry) => {
+    const [, value] = entry;
+    return 
     coverageTerm(value, size === canonicalWords.length
       ? sentence
-      : `${value} appears in this educational example.`));
+      : `${value} appears in this educational example.`);
+  });
   const glossary = source.map(([id, value, translation]) =>
     glossaryEntry(id, value, translation));
   const report: FolderGlossaryCoverageReport = {

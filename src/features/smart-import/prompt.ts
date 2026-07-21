@@ -67,29 +67,6 @@ export function buildSmartImportPrompt(options: SmartImportPromptOptions): strin
     "Não escreva explicações fora do formato solicitado.",
   ];
 
-  if (options.outputFormat === "csv") {
-    return [
-      "Você gera conteúdo compatível com o importador inteligente 2.0 do App Piteco.",
-      ...rules,
-      "Entregue CSV puro, com uma linha de cabeçalho e campos entre aspas quando necessário.",
-      "Cabeçalho recomendado: record_type,folder_name,list_name,key,parent_key,front,back,term,translation,side,note,occurrence,start_index,end_index,group_title,hint,short_observation,detailed_explanation,usage_notes,common_mistakes,example,example_translation,context_tag,tags,front_language,back_language,primary_side,study_type,label_a,label_b,tts_enabled",
-      "Use record_type card, glossary, word_hint, layer_group ou layer.",
-      "Use primary_side somente como a ou b minúsculos.",
-      "Use side somente como A ou B maiúsculos.",
-    ].join("\n");
-  }
-
-  if (options.outputFormat === "text") {
-    return [
-      "Você gera conteúdo compatível com o importador inteligente 2.0 do App Piteco.",
-      ...rules,
-      "Entregue texto puro.",
-      "Use === GLOSSÁRIO GLOBAL === para glossário e === CARDS === para cards normais.",
-      "Use termo / tradução em cada linha.",
-      "Use [CAMADAS] antes de um grupo; na linha seguinte escreva o título e depois pelo menos duas linhas frente / verso.",
-    ].join("\n");
-  }
-
   const layeredRules = options.includeLayeredCards
     ? [
         "CARD LAYERED",

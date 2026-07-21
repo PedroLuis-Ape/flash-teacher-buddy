@@ -23,7 +23,7 @@ function report(overrides: Partial<ImportCapabilitiesReport> = {}): ImportCapabi
       layered_cards: "ready",
     },
     checks: [],
-    diagnosticCodes: ["ready"],
+    diagnosticCodes: ["unknown"],
     errorMessage: null,
     ...overrides,
   };
