@@ -77,7 +77,7 @@ function buildJsonLd(page) {
   const homePath = page.language === "en" ? "/en" : "/pt-br";
   const homeLabel = page.language === "en" ? "Home" : "Início";
   const organizationId = `${siteUrl}/#organization`;
-  const personId = `${siteUrl}/#pedro-luis-de-oliveira-silva`;
+  const personId = `${siteUrl}/#pedro-luis`;
   const applicationId = `${siteUrl}/#application`;
   const faqId = `${canonical}#faq`;
   const graph = [];

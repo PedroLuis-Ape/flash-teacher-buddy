@@ -166,7 +166,7 @@ function absolute(path: string) {
 
 function buildJsonLd(page: SourceDefinition) {
   const canonical = absolute(page.path);
-  const personId = `${SITE_URL}/#pedro-luis-de-oliveira-silva`;
+  const personId = `${SITE_URL}/#pedro-luis`;
   const organizationId = `${SITE_URL}/#organization`;
   const applicationId = `${SITE_URL}/#application`;
   const faqId = `${canonical}#faq`;
