@@ -404,7 +404,7 @@ export function analyzeFolderGlossaryCoverageOffThread(
       settled = true;
       close();
       const response = event.data;
-      if (response.ok) {
+      if (response.ok === true) {
         resolve(response.report);
       } else {
         reject(new Error(response.error));

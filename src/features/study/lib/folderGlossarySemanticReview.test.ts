@@ -79,8 +79,7 @@ function buildContext(size: number = canonicalWords.length): SemanticReviewConte
   const sentence = "Millions were enslaved throughout history.";
   const terms = source.map((entry) => {
     const [, value] = entry;
-    return 
-    coverageTerm(value, size === canonicalWords.length
+    return coverageTerm(value, size === canonicalWords.length
       ? sentence
       : `${value} appears in this educational example.`);
   });
