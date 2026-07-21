@@ -13,8 +13,19 @@ const scanTargets = [
 ];
 const textExtensions = new Set([".css", ".html", ".js", ".json", ".jsx", ".md", ".mjs", ".sql", ".ts", ".tsx", ".txt"]);
 const privateSurname = ["de", "Oliveira", "Silva"].join(" ");
-const forbidden = [["Pedro", "Luis", privateSurname].join(" "), privateSurname];
+const forbidden = [
+  { label: "nome completo privado", value: ["Pedro", "Luis", privateSurname].join(" ") },
+  { label: "sobrenome privado", value: privateSurname },
+];
 const violations = [];
+
+function normalizeSeparators(value) {
+  return value
+    .replace(/%(?:20|2d|5f)/gi, " ")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("pt-BR");
+}
 
 function visit(path) {
   const stat = statSync(path);
@@ -24,9 +35,11 @@ function visit(path) {
   }
   if (!textExtensions.has(extname(path).toLowerCase())) return;
 
-  const content = readFileSync(path, "utf8");
-  for (const value of forbidden) {
-    if (content.includes(value)) violations.push(`${path.replace(`${root}\\`, "")}: ${value}`);
+  const content = normalizeSeparators(readFileSync(path, "utf8"));
+  for (const entry of forbidden) {
+    if (content.includes(normalizeSeparators(entry.value))) {
+      violations.push(`${path.replace(`${root}\\`, "")}: ${entry.label}`);
+    }
   }
 }
 

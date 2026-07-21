@@ -34,7 +34,7 @@ assert.ok(sampleHtml.includes('"dateModified":"2026-07-13"'));
 const graph = buildMethodologyEvidenceJsonLd(sample)["@graph"];
 const article = graph.find((node) => node["@type"] === "Article");
 assert.ok(article, "Article ausente no JSON-LD.");
-assert.equal(article.author["@id"], "https://www.apeeducation.org/#pedro-luis-de-oliveira-silva");
+assert.equal(article.author["@id"], "https://www.apeeducation.org/#pedro-luis");
 assert.equal(article.publisher["@id"], "https://www.apeeducation.org/#organization");
 assert.equal(article.citation.length, sample.references.length);
 assert.ok(article.citation.every((citation) => citation["@type"] === "ScholarlyArticle"));

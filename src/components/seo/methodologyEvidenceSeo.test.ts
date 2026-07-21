@@ -27,7 +27,7 @@ describe("methodology and evidence SEO", () => {
     const article = graph.find((node) => node["@type"] === "Article") as Record<string, unknown>;
     const citations = article.citation as Array<Record<string, unknown>>;
 
-    expect(article.author).toEqual({ "@id": "https://www.apeeducation.org/#pedro-luis-de-oliveira-silva" });
+    expect(article.author).toEqual({ "@id": "https://www.apeeducation.org/#pedro-luis" });
     expect(article.publisher).toEqual({ "@id": "https://www.apeeducation.org/#organization" });
     expect(article.datePublished).toBe("2026-07-13");
     expect(article.dateModified).toBe("2026-07-13");

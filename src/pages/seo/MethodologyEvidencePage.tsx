@@ -54,7 +54,7 @@ function absolute(path: string) {
 export function buildMethodologyEvidenceJsonLd(page: MethodologyArticle) {
   const canonical = absolute(page.path);
   const organizationId = `${SITE_URL}/#organization`;
-  const personId = `${SITE_URL}/#pedro-luis-de-oliveira-silva`;
+  const personId = `${SITE_URL}/#pedro-luis`;
   const websiteId = `${SITE_URL}/#website`;
   const english = page.language === "en";
 
