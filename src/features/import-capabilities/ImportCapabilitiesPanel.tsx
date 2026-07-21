@@ -33,7 +33,7 @@ export function ImportCapabilitiesPanel({ report, loading = false, requirements,
         </div>
         {report?.source === "production-basic-compatibility" && (
           <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-950 dark:text-amber-100">
-            <strong>Modo básico compatível ativo.</strong> Cards simples podem ser importados pelo gateway transacional existente. Cards em camadas, glossário e campos enriquecidos continuam bloqueados até o RPC unificado ser publicado neste projeto.
+            <strong>Modo básico compatível ativo.</strong> Cards simples podem seguir para análise; o gateway transacional será confirmado antes da gravação. Cards em camadas, glossário e campos enriquecidos continuam bloqueados até o RPC unificado ser publicado neste projeto.
           </div>
         )}
         <div className="grid gap-2 sm:grid-cols-2">

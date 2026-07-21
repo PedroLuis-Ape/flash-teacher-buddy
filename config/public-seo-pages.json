@@ -1,30 +1,119 @@
 [
   {
     "path": "/",
-    "title": "APE — Inglês com Flashcards, Jogos e Prática Ativa",
-    "description": "Estude inglês com flashcards, atividades interativas, vocabulário, frases e jogos de revisão criados para alunos e professores.",
-    "h1": "Inglês com flashcards, jogos e prática ativa",
-    "intro": "O APE, também conhecido como App Piteco, reúne materiais, flashcards e modos de prática para alunos e professores de inglês.",
+    "title": "APE — App Piteco | Flashcards e Prática Ativa",
+    "description": "Conheça o APE, também chamado App Piteco: uma plataforma educacional de flashcards e prática ativa para alunos e professores.",
+    "h1": "APE — App Piteco: flashcards e prática ativa para alunos e professores",
+    "intro": "APE significa Apprentice Practice & Enhancement. Também conhecido como App Piteco, o aplicativo transforma uma mesma base de conteúdo em diferentes atividades de estudo.",
+    "eyebrow": "APE — Apprentice Practice & Enhancement",
+    "dateModified": "2026-07-21",
+    "author": {
+      "name": "Pedro Luis de Oliveira Silva",
+      "role": "Criador do APE — App Piteco",
+      "text": "O APE foi criado por Pedro Luis de Oliveira Silva e é desenvolvido pela APE Education para aproximar organização de conteúdo, prática ativa e acompanhamento pedagógico."
+    },
+    "steps": [
+      { "title": "Organize", "text": "Reúna palavras, frases ou conceitos em pastas e listas." },
+      { "title": "Prepare", "text": "Defina os dois lados dos cards, idiomas, dicas e contexto." },
+      { "title": "Tente lembrar", "text": "Recupere a resposta antes de revelá-la." },
+      { "title": "Receba feedback", "text": "Compare sua tentativa com a resposta esperada." },
+      { "title": "Varie a prática", "text": "Use o mesmo conteúdo em flashcards, escrita, escolha e ordenação." },
+      { "title": "Retome o difícil", "text": "Volte aos itens que precisam de mais prática." }
+    ],
+    "oneBase": {
+      "heading": "Uma base, muitas atividades",
+      "text": "Uma lista não fica presa a um único exercício. O mesmo conteúdo pode apoiar reconhecimento, recuperação e produção sem perder o contexto preparado pelo aluno ou professor."
+    },
+    "audiences": [
+      {
+        "title": "Para alunos",
+        "text": "Pratique em sessões curtas, compare respostas e retome o conteúdo difícil.",
+        "items": ["Flashcards e escrita", "Múltipla escolha e ordenação", "Favoritos e revisão"]
+      },
+      {
+        "title": "Para professores",
+        "text": "Organize materiais reutilizáveis e compartilhe somente o que decidir publicar.",
+        "items": ["Pastas, listas e cards", "Importação estruturada", "Turmas e portal público"]
+      }
+    ],
+    "demo": {
+      "heading": "Veja como o conteúdo ganha profundidade",
+      "intro": "Exemplo editorial acessível; não grava dados e não depende de uma conta.",
+      "items": [
+        {
+          "id": "normal",
+          "label": "Card normal",
+          "title": "to practice",
+          "subtitle": "verbo · inglês → português",
+          "lines": ["praticar", "I practice every day. → Eu pratico todos os dias."]
+        },
+        {
+          "id": "glossary",
+          "label": "Com glossário",
+          "title": "active recall",
+          "subtitle": "conceito de aprendizagem",
+          "lines": ["recuperação ativa", "Tentar lembrar antes de consultar a resposta."]
+        },
+        {
+          "id": "layers",
+          "label": "Em camadas",
+          "title": "get",
+          "subtitle": "um card, sentidos relacionados",
+          "lines": ["Camada 1: obter", "Camada 2: entender", "Camada 3: chegar"]
+        }
+      ]
+    },
+    "methodology": {
+      "heading": "Metodologia documentada, sem promessas fáceis",
+      "text": "O APE organiza recursos coerentes com recuperação ativa, feedback e prática distribuída. Isso não significa garantia de aprendizagem nem prova de superioridade do produto; resultados dependem do conteúdo, da frequência, do feedback e do contexto.",
+      "links": [
+        { "href": "/pt-br/metodologia", "label": "Como a metodologia funciona" },
+        { "href": "/pt-br/evidencias", "label": "Evidências e limites" },
+        { "href": "/pt-br/fonte-oficial", "label": "Fonte oficial do APE" }
+      ]
+    },
+    "faqs": [
+      {
+        "question": "O que é o APE?",
+        "answer": "O APE é uma plataforma educacional web para criar, organizar, estudar e compartilhar materiais por meio de flashcards e outras atividades de prática ativa."
+      },
+      {
+        "question": "APE e App Piteco são a mesma coisa?",
+        "answer": "Sim. App Piteco é um nome alternativo usado para o produto APE — Apprentice Practice & Enhancement."
+      },
+      {
+        "question": "Quem criou o APE?",
+        "answer": "O APE foi criado por Pedro Luis de Oliveira Silva e é desenvolvido pela APE Education."
+      },
+      {
+        "question": "O APE é apenas um aplicativo de flashcards?",
+        "answer": "Não. Os flashcards são uma parte da plataforma, que também oferece escrita, múltipla escolha, organização de frases, áudio, glossários, turmas e ferramentas de organização pedagógica."
+      },
+      {
+        "question": "Preciso de uma conta para conhecer o APE?",
+        "answer": "Não. A apresentação, a metodologia e os materiais explicitamente publicados podem ser consultados sem acesso a dados privados. Uma conta é necessária para salvar conteúdo e progresso pessoal."
+      }
+    ],
     "sections": [
       {
-        "heading": "Estudo ativo em sessões curtas",
+        "heading": "Da organização à revisão",
         "paragraphs": [
-          "Crie ou abra listas de vocabulário e frases, ouça o conteúdo e pratique com desafios diferentes usando o mesmo material.",
-          "O aplicativo oferece revisão com flashcards, escrita, múltipla escolha, organização de frases e acompanhamento de progresso."
+          "Organize palavras, frases ou conceitos, tente recuperar a resposta antes de revelá-la e use o feedback para decidir o que precisa voltar.",
+          "A mesma lista pode alimentar flashcards, escrita, múltipla escolha, organização de frases e revisões direcionadas."
         ]
       },
       {
-        "heading": "Recursos para professores",
+        "heading": "Privacidade e publicação consciente",
         "paragraphs": [
-          "Professores podem organizar pastas e listas, compartilhar materiais e reunir atividades em turmas.",
-          "O portal público permite consultar materiais que foram publicados para acesso aberto."
+          "Contas, progresso, turmas privadas e materiais pessoais não fazem parte da descoberta pública.",
+          "O portal deve mostrar apenas perfis e materiais marcados para publicação pelo responsável pelo conteúdo."
         ]
       }
     ],
     "links": [
       { "href": "/portal", "label": "Explorar materiais públicos" },
-      { "href": "/ingles-para-iniciantes", "label": "Inglês para iniciantes" },
-      { "href": "/para-professores", "label": "Recursos para professores" }
+      { "href": "/pt-br/metodologia", "label": "Conhecer a metodologia" },
+      { "href": "/pt-br/fonte-oficial", "label": "Consultar a fonte oficial" }
     ],
     "schemaType": "WebPage"
   },

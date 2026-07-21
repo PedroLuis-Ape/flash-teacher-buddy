@@ -126,7 +126,7 @@ function productionBasicCompatibilityReport(
         code: "rpc",
         status: "ready",
         required: true,
-        detail: "O contrato básico de produção está habilitado pelo gateway transacional compatível.",
+        detail: "Compatibilidade básica reconhecida para este projeto; o gateway será confirmado antes da gravação.",
       },
       {
         key: "capability_rpc",

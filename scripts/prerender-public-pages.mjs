@@ -50,8 +50,39 @@ function renderSection(section) {
   return `<section><h2>${escapeHtml(section.heading)}</h2>${paragraphs}${items}</section>`;
 }
 
+function renderHomeAuthorityContent(page) {
+  if (page.path !== "/") return "";
+
+  const steps = page.steps?.length
+    ? `<section><h2>Seis passos do conteúdo à revisão</h2><ol>${page.steps
+        .map((step) => `<li><strong>${escapeHtml(step.title)}</strong>: ${escapeHtml(step.text)}</li>`)
+        .join("")}</ol></section>`
+    : "";
+  const oneBase = page.oneBase
+    ? `<section><h2>${escapeHtml(page.oneBase.heading)}</h2><p>${escapeHtml(page.oneBase.text)}</p></section>`
+    : "";
+  const audiences = page.audiences?.length
+    ? page.audiences.map((audience) => `<section><h2>${escapeHtml(audience.title)}</h2><p>${escapeHtml(audience.text)}</p><ul>${audience.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>`).join("")
+    : "";
+  const demo = page.demo
+    ? `<section><h2>${escapeHtml(page.demo.heading)}</h2><p>${escapeHtml(page.demo.intro)}</p>${page.demo.items.map((item) => `<article><h3>${escapeHtml(item.label)}: ${escapeHtml(item.title)}</h3><p>${escapeHtml(item.subtitle)}</p><ul>${item.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul></article>`).join("")}</section>`
+    : "";
+  const methodology = page.methodology
+    ? `<section><h2>${escapeHtml(page.methodology.heading)}</h2><p>${escapeHtml(page.methodology.text)}</p><ul>${page.methodology.links.map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`).join("")}</ul></section>`
+    : "";
+  const faqs = page.faqs?.length
+    ? `<section><h2>Perguntas frequentes</h2>${page.faqs.map((faq) => `<article><h3>${escapeHtml(faq.question)}</h3><p>${escapeHtml(faq.answer)}</p></article>`).join("")}</section>`
+    : "";
+  const author = page.author
+    ? `<section><h2>Autoria e revisão</h2><p><strong>${escapeHtml(page.author.name)}</strong> — ${escapeHtml(page.author.role)}</p><p>${escapeHtml(page.author.text)}</p><p>Revisado em ${escapeHtml(page.dateModified)}.</p></section>`
+    : "";
+
+  return `${steps}${oneBase}${audiences}${demo}${methodology}${faqs}${author}`;
+}
+
 function renderStaticContent(page) {
   const sections = page.sections.map(renderSection).join("\n");
+  const authorityContent = renderHomeAuthorityContent(page);
   const links = page.links?.length
     ? `<nav aria-label="Conteúdo relacionado"><h2>Explore também</h2><ul>${page.links
         .map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`)
@@ -63,6 +94,7 @@ function renderStaticContent(page) {
     <p class="seo-static-brand"><a href="/">APE — App Piteco</a></p>
     <h1>${escapeHtml(page.h1)}</h1>
     <p class="seo-static-intro">${escapeHtml(page.intro)}</p>
+    ${authorityContent}
     ${sections}
     ${links}
   </article>
@@ -146,6 +178,22 @@ function buildSchema(page, canonical) {
 
   if (page.path === "/") {
     mainEntity.push({ "@id": appId });
+    if (page.faqs?.length) {
+      const faqId = `${canonical}#faq`;
+      graph.push({
+        "@type": "FAQPage",
+        "@id": faqId,
+        mainEntity: page.faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: faq.answer,
+          },
+        })),
+      });
+      mainEntity.push({ "@id": faqId });
+    }
   }
 
   if (!pageSchemaTypes.has(page.schemaType)) {

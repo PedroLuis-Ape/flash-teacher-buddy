@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { to: "/atividades-de-ingles", label: "Atividades" },
   { to: "/flashcards-de-ingles", label: "Flashcards" },
   { to: "/para-professores", label: "Professores" },
+  { to: "/pt-br/metodologia", label: "Metodologia" },
   { to: "/portal", label: "Portal" },
 ];
 
@@ -95,6 +96,9 @@ export function PublicFooter() {
         <p>© {new Date().getFullYear()} APE — Apprentice Practice & Enhancement</p>
         <nav className="flex flex-wrap gap-4">
           <Link to="/about" className="nav-link-animated hover:text-foreground">Sobre</Link>
+          <Link to="/pt-br/metodologia" className="nav-link-animated hover:text-foreground">Metodologia</Link>
+          <Link to="/pt-br/evidencias" className="nav-link-animated hover:text-foreground">Evidências</Link>
+          <Link to="/pt-br/fonte-oficial" className="nav-link-animated hover:text-foreground">Fonte oficial</Link>
           <Link to="/portal" className="nav-link-animated hover:text-foreground">Portal</Link>
           <Link to="/auth" className="nav-link-animated hover:text-foreground">Entrar</Link>
         </nav>

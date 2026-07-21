@@ -117,6 +117,7 @@ describe("import capability preflight", () => {
     expect(result.capabilities.safe_import).toBe("ready");
     expect(result.capabilities.layered_cards).toBe("unknown");
     expect(result.capabilities.enriched_fields).toBe("unknown");
+    expect(result.checks[0]?.detail).toContain("será confirmado antes da gravação");
     expect(evaluateImportCapabilities(result, BASE_IMPORT_CAPABILITIES).ready).toBe(true);
     expect(evaluateImportCapabilities(result, [...BASE_IMPORT_CAPABILITIES, "layered_cards"]).ready).toBe(false);
   });

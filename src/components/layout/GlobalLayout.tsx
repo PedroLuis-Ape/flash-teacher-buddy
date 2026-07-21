@@ -24,6 +24,7 @@ const PUBLIC_EXACT = new Set<string>([
   "/atividades-de-ingles",
   "/flashcards-de-ingles",
   "/para-professores",
+  "/about",
 ]);
 
 function isClassSharePath(pathname: string): boolean {
@@ -34,6 +35,8 @@ function isClassSharePath(pathname: string): boolean {
 
 function isPublicRoute(pathname: string, isGuest: boolean): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
+  if (pathname === "/pt-br" || pathname.startsWith("/pt-br/")) return true;
+  if (pathname === "/en" || pathname.startsWith("/en/")) return true;
   if (pathname === "/portal" || pathname.startsWith("/portal/")) return true;
   if (isGuest && isClassSharePath(pathname)) return true;
   return false;
