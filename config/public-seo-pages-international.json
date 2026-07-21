@@ -96,7 +96,7 @@
     "h1": "Sobre o APE — App Piteco",
     "intro": "APE significa Apprentice Practice & Enhancement, uma plataforma criada para aproximar organização de conteúdo e prática real.",
     "sections": [
-      { "heading": "Propósito", "paragraphs": ["O projeto foi criado por Pedro Luis de Oliveira Silva para reunir criação de materiais, estudo ativo e organização pedagógica."] },
+      { "heading": "Propósito", "paragraphs": ["O projeto foi criado por Pedro Luis para reunir criação de materiais, estudo ativo e organização pedagógica."] },
       { "heading": "Metodologia", "paragraphs": ["O foco é reutilizar o mesmo conteúdo em tarefas diferentes para desenvolver reconhecimento, recuperação e produção."] }
     ],
     "links": [
@@ -207,7 +207,7 @@
     "h1": "About APE — App Piteco",
     "intro": "APE stands for Apprentice Practice & Enhancement, a platform built to connect content organization with real practice.",
     "sections": [
-      { "heading": "Purpose", "paragraphs": ["The project was created by Pedro Luis de Oliveira Silva to combine material creation, active learning and pedagogical organization."] },
+      { "heading": "Purpose", "paragraphs": ["The project was created by Pedro Luis to combine material creation, active learning and pedagogical organization."] },
       { "heading": "Learning approach", "paragraphs": ["The same content is reused across different tasks to develop recognition, retrieval and production."] }
     ],
     "links": [

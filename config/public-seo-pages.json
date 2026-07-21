@@ -8,9 +8,9 @@
     "eyebrow": "APE — Apprentice Practice & Enhancement",
     "dateModified": "2026-07-21",
     "author": {
-      "name": "Pedro Luis de Oliveira Silva",
+      "name": "Pedro Luis",
       "role": "Criador do APE — App Piteco",
-      "text": "O APE foi criado por Pedro Luis de Oliveira Silva e é desenvolvido pela APE Education para aproximar organização de conteúdo, prática ativa e acompanhamento pedagógico."
+      "text": "O APE foi criado por Pedro Luis e é desenvolvido pela APE Education para aproximar organização de conteúdo, prática ativa e acompanhamento pedagógico."
     },
     "steps": [
       { "title": "Organize", "text": "Reúna palavras, frases ou conceitos em pastas e listas." },
@@ -83,7 +83,7 @@
       },
       {
         "question": "Quem criou o APE?",
-        "answer": "O APE foi criado por Pedro Luis de Oliveira Silva e é desenvolvido pela APE Education."
+        "answer": "O APE foi criado por Pedro Luis e é desenvolvido pela APE Education."
       },
       {
         "question": "O APE é apenas um aplicativo de flashcards?",
@@ -265,7 +265,7 @@
     "title": "Sobre o APE e o App Piteco",
     "description": "Conheça o propósito do APE, aplicativo educacional criado por Pedro Luis para estudo ativo com flashcards, atividades e turmas.",
     "h1": "Sobre o APE — App Piteco",
-    "intro": "APE significa Apprentice Practice & Enhancement. O projeto foi criado por Pedro Luis de Oliveira Silva para reunir criação de materiais, prática ativa e organização de estudos.",
+    "intro": "APE significa Apprentice Practice & Enhancement. O projeto foi criado por Pedro Luis para reunir criação de materiais, prática ativa e organização de estudos.",
     "sections": [
       {
         "heading": "Propósito",

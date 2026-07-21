@@ -5,7 +5,7 @@ describe("landing authority content", () => {
   it("keeps identity, authorship and the six-step flow in one source", () => {
     expect(landingContent.h1).toContain("APE — App Piteco");
     expect(landingContent.intro).toContain("Apprentice Practice & Enhancement");
-    expect(landingContent.author.name).toBe("Pedro Luis de Oliveira Silva");
+    expect(landingContent.author.name).toBe("Pedro Luis");
     expect(landingContent.steps).toHaveLength(6);
   });
 

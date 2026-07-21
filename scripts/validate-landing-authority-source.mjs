@@ -17,7 +17,7 @@ assert(Boolean(home), "A fonte editorial não contém a rota raiz.");
 if (home) {
   assert(home.h1.includes("APE — App Piteco"), "O H1 não identifica APE e App Piteco.");
   assert(home.intro.includes("Apprentice Practice & Enhancement"), "A expansão da sigla APE está ausente.");
-  assert(home.author?.name === "Pedro Luis de Oliveira Silva", "A autoria oficial está ausente ou divergente.");
+  assert(home.author?.name === "Pedro Luis", "A autoria oficial está ausente ou divergente.");
   assert(/^\d{4}-\d{2}-\d{2}$/.test(home.dateModified ?? ""), "A data de revisão deve usar YYYY-MM-DD.");
   assert(home.steps?.length === 6, "O fluxo editorial deve ter exatamente seis passos.");
   assert(home.audiences?.length === 2, "Os blocos de alunos e professores devem estar presentes.");
