@@ -4,6 +4,20 @@ export type PlatformRuntime = {
   publicValue: string;
 };
 
+/**
+ * AI EDITOR GUARD — DO NOT CHANGE WITHOUT AN EXPLICIT DATA-BACKEND MIGRATION.
+ *
+ * The real production accounts, flashcards, folders, lists, favorites and progress
+ * live under PRODUCTION_DATA_PROJECT_ID. The managed project ID below is only for
+ * repository/tooling operations during the transition; it is NOT the browser data
+ * backend. If the app looks empty, login says "Invalid API Key", or data appears
+ * to disappear after a large edit, first run `node scripts/check-platform.mjs` and
+ * verify this file still points the browser runtime to PRODUCTION_DATA_PROJECT_ID.
+ *
+ * Never "fix" missing data by swapping these constants or by editing
+ * src/integrations/supabase/client.ts. See docs/orientacao-banco-correto.md.
+ */
+
 type PlatformRuntimeInput = {
   projectId?: string;
   url?: string;
