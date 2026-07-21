@@ -28,8 +28,14 @@ export function ImportCapabilitiesPanel({ report, loading = false, requirements,
         <div className="flex flex-wrap items-center gap-2">
           <span>Projeto conectado: <strong>{project}</strong></span>
           {report?.engineVersion && <Badge variant="outline">Motor {report.engineVersion}</Badge>}
+          {report?.source === "production-basic-compatibility" && <Badge variant="secondary">Compatibilidade básica</Badge>}
           {report?.buildId && <Badge variant="outline">Build {report.buildId}</Badge>}
         </div>
+        {report?.source === "production-basic-compatibility" && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-950 dark:text-amber-100">
+            <strong>Modo básico compatível ativo.</strong> Cards simples podem seguir para análise; o gateway transacional será confirmado antes da gravação. Cards em camadas, glossário e campos enriquecidos continuam bloqueados até o RPC unificado ser publicado neste projeto.
+          </div>
+        )}
         <div className="grid gap-2 sm:grid-cols-2">
           {requirements.map((key) => {
             const status = report?.capabilities[key] ?? "unknown";

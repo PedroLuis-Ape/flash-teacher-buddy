@@ -48,7 +48,7 @@ export default function About() {
           <CardContent className="space-y-4 text-muted-foreground">
             <p>
               O <strong className="text-foreground">APE (Apprentice Practice & Enhancement)</strong> é 
-              um aplicativo educacional focado em prática guiada de idiomas, desenvolvido pela equipe APE.
+              um aplicativo educacional focado em prática guiada de idiomas, criado por Pedro Luis e desenvolvido pela APE Education.
             </p>
             <p>
               Todos os materiais visuais, fluxo de estudo, lógica de gamificação e recursos de 
@@ -72,11 +72,10 @@ export default function About() {
           </CardHeader>
           <CardContent className="text-muted-foreground">
             <p>
-              <strong className="text-foreground">Equipe APE</strong>
+              <strong className="text-foreground">Pedro Luis</strong>
             </p>
             <p className="text-sm mt-2">
-              Equipe dedicada a criar ferramentas 
-              educacionais inovadoras para o ensino de idiomas.
+              Criador do APE — App Piteco.
             </p>
           </CardContent>
         </Card>
@@ -134,7 +133,7 @@ export default function About() {
             © 2025 APE – Apprentice Practice & Enhancement
           </p>
           <p>
-            Desenvolvido pela equipe APE. Todos os direitos reservados.
+            Criado por Pedro Luis. Todos os direitos reservados.
           </p>
         </div>
       </div>

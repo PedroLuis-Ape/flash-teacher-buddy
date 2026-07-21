@@ -13,6 +13,15 @@ function assert(condition, message) {
   if (!condition) errors.push(message);
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function destinationFor(path) {
   return path === "/"
     ? resolve(distDir, "index.html")
@@ -78,6 +87,13 @@ for (const page of pages) {
     if (page.path === "/") {
       const mainEntityIds = (webPage?.mainEntity ?? []).map((entry) => entry?.["@id"]);
       assert(mainEntityIds.includes(`${siteUrl}/#app`), `${page.path}: aplicativo não é a entidade principal da home`);
+      const faqPage = graph.find((node) => node?.["@id"] === `${canonical}#faq`);
+      assert(hasType(faqPage, "FAQPage"), `${page.path}: FAQPage ausente`);
+      assert(faqPage?.mainEntity?.length === page.faqs?.length, `${page.path}: FAQ visível e schema divergentes`);
+      for (const faq of page.faqs ?? []) {
+        assert(html.includes(`<h3>${escapeHtml(faq.question)}</h3>`), `${page.path}: pergunta visível ausente (${faq.question})`);
+        assert(html.includes(`<p>${escapeHtml(faq.answer)}</p>`), `${page.path}: resposta visível ausente (${faq.question})`);
+      }
     } else {
       const breadcrumb = graph.find((node) => node?.["@id"] === `${canonical}#breadcrumb`);
       assert(hasType(breadcrumb, "BreadcrumbList"), `${page.path}: BreadcrumbList ausente`);

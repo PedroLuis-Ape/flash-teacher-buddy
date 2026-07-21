@@ -37,7 +37,7 @@ export function buildMethodologyEvidenceJsonLd(page) {
       {
         "@type": "Person",
         "@id": personId,
-        name: "Pedro Luis de Oliveira Silva",
+        name: "Pedro Luis",
         jobTitle: english ? "Founder and creator of APE" : "Fundador e criador do APE",
       },
       {

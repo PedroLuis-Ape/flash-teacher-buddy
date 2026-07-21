@@ -52,7 +52,7 @@ describe("official APE sources for search and AI", () => {
   it("keeps factual claims visible in the React page and JSON-LD", () => {
     const page = read("src/pages/seo/OfficialSourcePage.tsx");
 
-    expect(page).toContain("Pedro Luis de Oliveira Silva");
+    expect(page).toContain("Pedro Luis");
     expect(page).toContain("APE Education");
     expect(page).toContain("Descrição recomendada para citação");
     expect(page).toContain("Recommended citation description");

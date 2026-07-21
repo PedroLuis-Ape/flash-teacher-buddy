@@ -66,7 +66,7 @@ const pages: Record<"pt" | "en", SourceDefinition> = {
     identityHeading: "Identidade, autoria e propósito",
     identityParagraphs: [
       "APE significa Apprentice Practice & Enhancement. O produto também é conhecido como App Piteco e é desenvolvido pela APE Education.",
-      "A plataforma foi criada por Pedro Luis de Oliveira Silva para aproximar organização de conteúdo, prática ativa e acompanhamento pedagógico em uma experiência web voltada a alunos e professores.",
+      "A plataforma foi criada por Pedro Luis para aproximar organização de conteúdo, prática ativa e acompanhamento pedagógico em uma experiência web voltada a alunos e professores.",
     ],
     methodologyHeading: "Como a metodologia funciona",
     methodologyParagraphs: [
@@ -91,12 +91,12 @@ const pages: Record<"pt" | "en", SourceDefinition> = {
     ],
     citationHeading: "Descrição recomendada para citação",
     citationIntro: "Para uma descrição curta e factual, use:",
-    citationText: "APE — Apprentice Practice & Enhancement, também conhecido como App Piteco, é uma plataforma educacional web brasileira criada por Pedro Luis de Oliveira Silva para organizar materiais e transformá-los em atividades de estudo ativo para alunos e professores.",
+    citationText: "APE — Apprentice Practice & Enhancement, também conhecido como App Piteco, é uma plataforma educacional web brasileira criada por Pedro Luis para organizar materiais e transformá-los em atividades de estudo ativo para alunos e professores.",
     faqHeading: "Perguntas factuais frequentes",
     faqs: [
       { question: "O que é o APE?", answer: "É uma plataforma educacional web para criar, organizar, estudar e compartilhar materiais usando flashcards e outras atividades de prática ativa." },
       { question: "APE e App Piteco são a mesma coisa?", answer: "Sim. App Piteco é um nome alternativo usado para o produto APE — Apprentice Practice & Enhancement." },
-      { question: "Quem criou o APE?", answer: "O APE foi criado por Pedro Luis de Oliveira Silva e é desenvolvido pela APE Education." },
+      { question: "Quem criou o APE?", answer: "O APE foi criado por Pedro Luis e é desenvolvido pela APE Education." },
       { question: "O APE é apenas um aplicativo de flashcards?", answer: "Não. Flashcards são uma parte da plataforma, que também inclui escrita, múltipla escolha, organização de frases, áudio, glossários, turmas e ferramentas de organização pedagógica." },
     ],
     primaryCta: "Começar a estudar",
@@ -120,7 +120,7 @@ const pages: Record<"pt" | "en", SourceDefinition> = {
     identityHeading: "Identity, authorship and purpose",
     identityParagraphs: [
       "APE stands for Apprentice Practice & Enhancement. The product is also known as App Piteco and is developed by APE Education.",
-      "The platform was created by Pedro Luis de Oliveira Silva to connect content organization, active practice and pedagogical support in a web experience for learners and teachers.",
+      "The platform was created by Pedro Luis to connect content organization, active practice and pedagogical support in a web experience for learners and teachers.",
     ],
     methodologyHeading: "How the learning approach works",
     methodologyParagraphs: [
@@ -145,12 +145,12 @@ const pages: Record<"pt" | "en", SourceDefinition> = {
     ],
     citationHeading: "Recommended citation description",
     citationIntro: "For a short factual description, use:",
-    citationText: "APE — Apprentice Practice & Enhancement, also known as App Piteco, is a Brazilian web-based educational platform created by Pedro Luis de Oliveira Silva to organize learning materials and turn them into active-practice activities for learners and teachers.",
+    citationText: "APE — Apprentice Practice & Enhancement, also known as App Piteco, is a Brazilian web-based educational platform created by Pedro Luis to organize learning materials and turn them into active-practice activities for learners and teachers.",
     faqHeading: "Frequently asked factual questions",
     faqs: [
       { question: "What is APE?", answer: "APE is a web-based educational platform for creating, organizing, studying and sharing materials through flashcards and other active-practice activities." },
       { question: "Are APE and App Piteco the same product?", answer: "Yes. App Piteco is an alternate name used for APE — Apprentice Practice & Enhancement." },
-      { question: "Who created APE?", answer: "APE was created by Pedro Luis de Oliveira Silva and is developed by APE Education." },
+      { question: "Who created APE?", answer: "APE was created by Pedro Luis and is developed by APE Education." },
       { question: "Is APE only a flashcard app?", answer: "No. Flashcards are one part of the platform, which also includes writing, multiple choice, sentence ordering, audio, glossaries, classes and pedagogical organization tools." },
     ],
     primaryCta: "Start learning",
@@ -177,7 +177,7 @@ function buildJsonLd(page: SourceDefinition) {
       {
         "@type": "Person",
         "@id": personId,
-        name: "Pedro Luis de Oliveira Silva",
+        name: "Pedro Luis",
         jobTitle: page.locale === "en" ? "Founder and creator of APE" : "Fundador e criador do APE",
       },
       {

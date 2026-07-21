@@ -96,7 +96,7 @@ const pages: Record<string, PageDefinition> = {
     intro: "APE significa Apprentice Practice & Enhancement, uma plataforma criada para aproximar organização de conteúdo e prática real.",
     schemaType: "AboutPage",
     sections: [
-      { title: "Propósito", paragraphs: ["O projeto foi criado por Pedro Luis de Oliveira Silva para reunir criação de materiais, estudo ativo e organização pedagógica."] },
+      { title: "Propósito", paragraphs: ["O projeto foi criado por Pedro Luis para reunir criação de materiais, estudo ativo e organização pedagógica."] },
       { title: "Metodologia", paragraphs: ["O foco é reutilizar o mesmo conteúdo em tarefas diferentes para desenvolver reconhecimento, recuperação e produção."] },
     ],
   },
@@ -166,7 +166,7 @@ const pages: Record<string, PageDefinition> = {
     intro: "APE stands for Apprentice Practice & Enhancement, a platform built to connect content organization with real practice.",
     schemaType: "AboutPage",
     sections: [
-      { title: "Purpose", paragraphs: ["The project was created by Pedro Luis de Oliveira Silva to combine material creation, active learning and pedagogical organization."] },
+      { title: "Purpose", paragraphs: ["The project was created by Pedro Luis to combine material creation, active learning and pedagogical organization."] },
       { title: "Learning approach", paragraphs: ["The same content is reused across different tasks to develop recognition, retrieval and production."] },
     ],
   },

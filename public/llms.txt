@@ -76,6 +76,6 @@ Informações estruturadas devem corresponder ao conteúdo visível da página. 
 - Produto: APE — Apprentice Practice & Enhancement
 - Nome alternativo: App Piteco
 - Organização: APE Education
-- Autor e fundador: Pedro Luis de Oliveira Silva
+- Autor e fundador: Pedro Luis
 - Idiomas públicos desta fase: português do Brasil e inglês
 - Site canônico: https://www.apeeducation.org/

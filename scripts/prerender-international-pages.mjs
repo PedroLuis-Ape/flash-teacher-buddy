@@ -86,7 +86,7 @@ function buildJsonLd(page) {
     graph.push({
       "@type": "Person",
       "@id": personId,
-      name: "Pedro Luis de Oliveira Silva",
+      name: "Pedro Luis",
       jobTitle: page.language === "en" ? "Founder and creator of APE" : "Fundador e criador do APE",
     });
   }

@@ -1,11 +1,15 @@
 import type { SmartImportPackage } from "@/features/smart-import/schema";
 import { supabase } from "@/integrations/supabase/client";
-import { readPlatformRuntime } from "@/integrations/supabase/platformRuntime";
+import {
+  PRODUCTION_DATA_PROJECT_ID,
+  readPlatformRuntime,
+} from "@/integrations/supabase/platformRuntime";
 import { richImportRequirements } from "@/features/global-import/richImportRequirements";
 
 export type ImportCapabilityKey = "safe_import" | "layered_cards" | "enriched_fields" | "basic_import";
 export type CapabilityStatus = "ready" | "missing" | "unknown";
 export type CapabilityDiagnosticCode = "connection" | "project" | "migration" | "rpc" | "grant" | "schema" | "auth" | "unknown";
+export type ImportCapabilitiesSource = "rpc" | "production-basic-compatibility" | "unavailable";
 
 export interface ImportCapabilityCheck {
   key: string;
@@ -23,6 +27,7 @@ export interface ImportCapabilitiesReport {
   runtimeUrl: string;
   buildId: string | null;
   rpcAvailable: boolean;
+  source: ImportCapabilitiesSource;
   capabilities: Record<ImportCapabilityKey, CapabilityStatus>;
   checks: ImportCapabilityCheck[];
   diagnosticCodes: CapabilityDiagnosticCode[];
@@ -85,6 +90,57 @@ function diagnosticFromError(error: unknown): CapabilityDiagnosticCode {
   return "unknown";
 }
 
+function isMissingCapabilitiesRpcError(error: unknown): boolean {
+  const record = recordOf(error);
+  const code = stringValue(record?.code)?.toUpperCase();
+  const message = errorMessageOf(error).toLowerCase();
+  if (code === "PGRST202") return true;
+  return message.includes("could not find the function")
+    && message.includes("get_import_capabilities_v1")
+    && message.includes("schema cache");
+}
+
+function productionBasicCompatibilityReport(
+  runtimeUrl: string,
+  projectRef: string,
+  error: unknown,
+): ImportCapabilitiesReport {
+  return {
+    contractVersion: "production-basic-compatibility-v1",
+    engineVersion: "1.0 compatível",
+    migrationRevision: null,
+    projectRef,
+    runtimeUrl,
+    buildId: stringValue(import.meta.env.VITE_BUILD_ID),
+    rpcAvailable: false,
+    source: "production-basic-compatibility",
+    capabilities: {
+      safe_import: "ready",
+      basic_import: "ready",
+      layered_cards: "unknown",
+      enriched_fields: "unknown",
+    },
+    checks: [
+      {
+        key: "production_basic_contract",
+        code: "rpc",
+        status: "ready",
+        required: true,
+        detail: "Compatibilidade básica reconhecida para este projeto; o gateway será confirmado antes da gravação.",
+      },
+      {
+        key: "capability_rpc",
+        code: "rpc",
+        status: "missing",
+        required: false,
+        detail: `O RPC unificado não está publicado neste projeto: ${errorMessageOf(error)}`,
+      },
+    ],
+    diagnosticCodes: ["rpc"],
+    errorMessage: null,
+  };
+}
+
 export async function fetchImportCapabilities(): Promise<ImportCapabilitiesReport> {
   const runtime = readPlatformRuntime();
   const projectRef = runtimeProjectRef(runtime.url, runtime.projectId);
@@ -125,12 +181,20 @@ export async function fetchImportCapabilities(): Promise<ImportCapabilitiesRepor
       runtimeUrl: runtime.url,
       buildId: stringValue(import.meta.env.VITE_BUILD_ID),
       rpcAvailable: true,
+      source: "rpc",
       capabilities,
       checks,
       diagnosticCodes: codes.length ? codes : ["unknown"],
       errorMessage: null,
     };
   } catch (error: unknown) {
+    if (
+      projectRef === PRODUCTION_DATA_PROJECT_ID
+      && isMissingCapabilitiesRpcError(error)
+    ) {
+      return productionBasicCompatibilityReport(runtime.url, projectRef, error);
+    }
+
     const code = diagnosticFromError(error);
     return {
       contractVersion: null,
@@ -140,6 +204,7 @@ export async function fetchImportCapabilities(): Promise<ImportCapabilitiesRepor
       runtimeUrl: runtime.url,
       buildId: stringValue(import.meta.env.VITE_BUILD_ID),
       rpcAvailable: false,
+      source: "unavailable",
       capabilities: emptyCapabilities("unknown"),
       checks: [{
         key: "capability_rpc",
@@ -169,9 +234,11 @@ export function evaluateImportCapabilities(
   requirements: ImportCapabilityKey[] = BASE_IMPORT_CAPABILITIES,
 ) {
   const missing = requirements.filter((key) => report?.capabilities[key] !== "ready");
-  const failedChecks = (report?.checks ?? []).filter((check) => check.status !== "ready");
+  const failedChecks = (report?.checks ?? []).filter((check) => check.required && check.status !== "ready");
+  const sourceAvailable = report?.source === "rpc"
+    || report?.source === "production-basic-compatibility";
   return {
-    ready: Boolean(report?.rpcAvailable && missing.length === 0),
+    ready: Boolean(sourceAvailable && missing.length === 0),
     missing,
     failedChecks,
     diagnosticCodes: report?.diagnosticCodes ?? ["unknown"],
