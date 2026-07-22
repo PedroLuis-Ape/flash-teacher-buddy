@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,7 +47,7 @@ export default function TurmaDetailWorkspace() {
   const trafficView = isOwner && selectedTab === "trafego";
   const glossaryView = isOwner && selectedTab === "glossario";
 
-  const rememberClassContext = (event: React.MouseEvent<HTMLDivElement>) => {
+  const rememberClassContext = (event: MouseEvent<HTMLDivElement>) => {
     if (!turmaId) return;
     const target = event.target as HTMLElement;
     if (target.closest("button,a,[role='button']")) {
