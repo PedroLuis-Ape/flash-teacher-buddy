@@ -50,7 +50,7 @@ export default function TurmaDetailWorkspace() {
   const rememberClassContext = (event: MouseEvent<HTMLDivElement>) => {
     if (!turmaId) return;
     const target = event.target as HTMLElement;
-    if (target.closest("button,a,[role='button']")) {
+    if (target.closest(".cursor-pointer,button,a,[role='button']")) {
       markPendingClassGlossaryContext(turmaId);
     }
   };
