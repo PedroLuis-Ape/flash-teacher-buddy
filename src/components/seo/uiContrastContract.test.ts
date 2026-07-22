@@ -24,4 +24,13 @@ describe("public UI contrast contract", () => {
     expect(privateShell).not.toContain("opacity-70 text-[10px]");
     expect(publicShell).not.toContain("opacity-70 text-[10px]");
   });
+
+  it("keeps small editorial labels on a readable foreground token", () => {
+    const landing = read("src/pages/LandingPage.tsx");
+    const demo = read("src/components/landing/LandingProductDemo.tsx");
+    const lowContrastLabel = "text-xs font-semibold uppercase tracking-wider text-primary";
+
+    expect(landing).not.toContain(lowContrastLabel);
+    expect(demo).not.toContain(lowContrastLabel);
+  });
 });
