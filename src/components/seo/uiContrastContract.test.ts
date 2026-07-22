@@ -6,9 +6,12 @@ const read = (path: string) => readFileSync(path, "utf8");
 describe("public UI contrast contract", () => {
   it("keeps active navigation labels on the high-contrast foreground token", () => {
     const tabs = read("src/components/ape/ApeTabBar.tsx");
+    const widgets = read("src/styles/space-ui-widgets.css");
 
     expect(tabs).toContain('active ? "space-ui-tab-active text-foreground"');
     expect(tabs).not.toContain('active ? "space-ui-tab-active text-primary"');
+    expect(widgets).toContain(".space-ui-tab-active{color:hsl(var(--foreground))!important");
+    expect(widgets).not.toContain(".space-ui-tab-active{color:hsl(var(--primary))!important");
   });
 
   it("does not dim legal links or version labels below readable contrast", () => {
