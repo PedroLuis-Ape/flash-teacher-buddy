@@ -100,10 +100,9 @@ The bilingual official pages are the preferred first-party sources for factual d
 
 ### Still required
 
-1. Publish this rollout through Lovable and compare the deployed sitemap segments and HTML with the build report.
-2. Resolve real host-level `404` and `410` responses if Lovable exposes a supported routing or server handler; client-side `noindex` remains only a fallback.
-3. Add real-user INP, LCP and CLS monitoring without reintroducing a second hosting platform.
-4. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
-5. Monitor AI citations, brand mentions and Share of Model.
-6. Build external authority through useful references, partnerships and legitimate backlinks.
-7. Design a product-specific evaluation protocol before making causal effectiveness claims.
+1. Resolve real host-level `404` and `410` responses if Lovable exposes a supported routing or server handler; client-side `noindex` remains only a fallback.
+2. Add real-user INP, LCP and CLS monitoring without reintroducing a second hosting platform.
+3. Review Search Console and IndexNow results on a recurring cadence; the verified Google property uses `/sitemap.xml`, while `npm run seo:indexnow` submits the deployed URLs without sharing a personal login with Bing.
+4. Monitor AI citations, brand mentions and Share of Model.
+5. Build external authority through useful references, partnerships and legitimate backlinks.
+6. Design a product-specific evaluation protocol before making causal effectiveness claims.
