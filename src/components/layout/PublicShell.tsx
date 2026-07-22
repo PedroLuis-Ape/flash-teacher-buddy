@@ -19,7 +19,7 @@ export function PublicShell({ children }: PublicShellProps) {
       <GuestHistoryTracker />
       <div className="space-ui-main min-h-screen">{children}</div>
       <div className="space-ui-version-badge fixed bottom-3 right-3 z-50 pointer-events-none">
-        <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
+        <Badge variant="outline" className="bg-background text-foreground border-border text-[10px] shadow-sm">
           {formatVersionLabel()}
         </Badge>
       </div>
