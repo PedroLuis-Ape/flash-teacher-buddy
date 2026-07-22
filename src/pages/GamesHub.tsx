@@ -23,6 +23,11 @@ import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
 import {
+  clearPendingClassGlossaryContext,
+  isListAssignedToClass,
+  readPendingClassGlossaryContext,
+} from "@/features/classroom/lib/classGlossary";
+import {
   GAME_MODE_VISUALS,
   type GameModeVisualKey,
 } from "@/features/study/lib/gameModeVisuals";
@@ -65,9 +70,15 @@ const GamesHub = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
+  const [pendingTurmaId] = useState(() => readPendingClassGlossaryContext());
 
   const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
   const isPrivateList = isListRoute && !isPortalPath(location.pathname);
+  const explicitTurmaId = useMemo(
+    () => new URLSearchParams(location.search).get("turma"),
+    [location.search],
+  );
+  const candidateTurmaId = explicitTurmaId || pendingTurmaId;
 
   const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
@@ -99,6 +110,20 @@ const GamesHub = () => {
     enabled: !!id && isListRoute,
     staleTime: 5 * 60_000,
   });
+
+  const classContextQuery = useQuery({
+    queryKey: ["gameshub-class-context", candidateTurmaId, id],
+    queryFn: () => isListAssignedToClass(candidateTurmaId as string, id as string),
+    enabled: Boolean(candidateTurmaId && id && isListRoute),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const activeTurmaId = classContextQuery.data ? candidateTurmaId : null;
+
+  useEffect(() => {
+    if (!pendingTurmaId || classContextQuery.isLoading) return;
+    clearPendingClassGlossaryContext(pendingTurmaId);
+  }, [classContextQuery.isLoading, pendingTurmaId]);
 
   const { data: folderRow } = useQuery({
     queryKey: ["gameshub-folder", list?.folder_id],
@@ -165,6 +190,11 @@ const GamesHub = () => {
 
   const startGame = (rawMode: StudyMode | "multiple") => {
     if (!id) return;
+    if (candidateTurmaId && classContextQuery.isLoading) {
+      toast.info("Confirmando o contexto da turma antes de iniciar...");
+      return;
+    }
+
     const mode = normalizeStudyMode(rawMode);
     const launchPreset = { ...effectivePreset, mode };
     updateForCurrentScope({ mode });
@@ -179,6 +209,7 @@ const GamesHub = () => {
       fastMode: String(launchPreset.fastMode),
     });
     if (useFavoritesOnly) params.set("favorites", "true");
+    if (activeTurmaId && isListRoute) params.set("turma", activeTurmaId);
 
     const route = mode === "mixed" ? "mixed-study" : "study";
     navigate(`${basePath}/${route}?${params.toString()}`);
@@ -191,7 +222,8 @@ const GamesHub = () => {
     } else if (collection) {
       navigate(`/collection/${collection.id}`);
     } else if (list) {
-      if (onPortal && list.folder_id) navigate(`/portal/folder/${list.folder_id}`);
+      if (activeTurmaId) navigate(`/turmas/${activeTurmaId}`);
+      else if (onPortal && list.folder_id) navigate(`/portal/folder/${list.folder_id}`);
       else if (list.folder_id) navigate(`/folder/${list.folder_id}`);
       else navigate(onPortal ? "/portal" : "/folders");
     } else {
@@ -224,6 +256,11 @@ const GamesHub = () => {
           ) : (
             <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
               {isListRoute ? list?.title : collection?.name}
+            </p>
+          )}
+          {activeTurmaId && (
+            <p className="mt-2 text-xs font-medium text-primary">
+              Glossário e contexto desta turma serão usados na sessão.
             </p>
           )}
         </div>

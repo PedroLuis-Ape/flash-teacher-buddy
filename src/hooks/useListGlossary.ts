@@ -17,6 +17,11 @@ import {
   publishFolderGlossaryRefresh,
   subscribeFolderGlossaryRefresh,
 } from "@/features/study/lib/folderGlossaryRefresh";
+import {
+  clearPendingClassGlossaryContext,
+  loadClassGlossaryForList,
+  readPendingClassGlossaryContext,
+} from "@/features/classroom/lib/classGlossary";
 
 export interface GlossaryEntry extends AccountGlossaryEntry {
   list_id?: string;
@@ -35,35 +40,87 @@ export interface GlossaryImportResult {
 }
 
 export type ListGlossaryStatus = "idle" | "loading" | "ready" | "empty" | "error";
+export type ScopedGlossaryRuntimeSource = ListGlossaryRuntimeSource | "class-glossary";
 
 export const FOLDER_GLOSSARY_QUERY_KEY = ["folder-glossary"] as const;
 export const ACCOUNT_GLOSSARY_QUERY_KEY = FOLDER_GLOSSARY_QUERY_KEY;
 
 const EMPTY_GLOSSARY: GlossaryEntry[] = [];
 
-async function loadListGlossaryContext(listId: string) {
-  return loadListGlossaryRuntime(listId);
+function explicitTurmaIdFromLocation(): string | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("guest") === "true") return null;
+  return params.get("turma");
+}
+
+async function loadListGlossaryContext(input: {
+  listId: string;
+  turmaId: string | null;
+  turmaIsExplicit: boolean;
+}) {
+  if (input.turmaId) {
+    const classResult = await loadClassGlossaryForList({
+      turmaId: input.turmaId,
+      listId: input.listId,
+    });
+    if (classResult.assigned) {
+      clearPendingClassGlossaryContext(input.turmaId);
+      return {
+        folderId: classResult.storageFolderId ?? undefined,
+        glossary: classResult.glossary,
+        source: "class-glossary" as const,
+        recoveredFrom: [],
+      };
+    }
+
+    clearPendingClassGlossaryContext(input.turmaId);
+    if (input.turmaIsExplicit) {
+      return {
+        folderId: undefined,
+        glossary: EMPTY_GLOSSARY,
+        source: "class-glossary" as const,
+        recoveredFrom: [],
+      };
+    }
+  }
+
+  return loadListGlossaryRuntime(input.listId);
 }
 
 export function useListGlossary(listId?: string) {
   const queryClient = useQueryClient();
   const lastReportedErrorRef = useRef<unknown>(null);
+  const explicitTurmaId = explicitTurmaIdFromLocation();
+  const pendingTurmaId = useMemo(
+    () => explicitTurmaId || readPendingClassGlossaryContext(),
+    [explicitTurmaId, listId],
+  );
   const queryKey = useMemo(
-    () => [...FOLDER_GLOSSARY_QUERY_KEY, "list", listId ?? "none"] as const,
-    [listId],
+    () => [
+      ...FOLDER_GLOSSARY_QUERY_KEY,
+      "list",
+      listId ?? "none",
+      pendingTurmaId ? `turma:${pendingTurmaId}` : "folder",
+    ] as const,
+    [listId, pendingTurmaId],
   );
   const invalidate = () => queryClient.invalidateQueries({ queryKey, exact: true });
 
   const query = useQuery({
     queryKey,
-    queryFn: () => loadListGlossaryContext(listId as string),
+    queryFn: () => loadListGlossaryContext({
+      listId: listId as string,
+      turmaId: pendingTurmaId,
+      turmaIsExplicit: Boolean(explicitTurmaId),
+    }),
     enabled: Boolean(listId),
     staleTime: 60_000,
     refetchOnMount: "always",
   });
 
   const folderId = query.data?.folderId;
-  const source = query.data?.source as ListGlossaryRuntimeSource | undefined;
+  const source = query.data?.source as ScopedGlossaryRuntimeSource | undefined;
   const recoveredFrom = query.data?.recoveredFrom ?? [];
   const glossary = (query.data?.glossary ?? EMPTY_GLOSSARY) as GlossaryEntry[];
   const activeGlossary = useMemo(
@@ -118,7 +175,7 @@ export function useListGlossary(listId?: string) {
   }), [folderId, queryClient, queryKey]);
 
   const requireFolder = () => {
-    if (!folderId) throw new Error("Abra uma lista vinculada a uma pasta para editar o glossário.");
+    if (!folderId) throw new Error("Abra uma lista vinculada a um glossário editável.");
     return folderId;
   };
 
@@ -144,7 +201,9 @@ export function useListGlossary(listId?: string) {
     onSuccess: () => {
       void invalidate();
       announceEdit();
-      toast.success("Entrada adicionada ao glossário da pasta.");
+      toast.success(source === "class-glossary"
+        ? "Entrada adicionada ao glossário da turma."
+        : "Entrada adicionada ao glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -162,7 +221,9 @@ export function useListGlossary(listId?: string) {
     onSuccess: () => {
       void invalidate();
       announceEdit();
-      toast.success("Entrada atualizada no glossário da pasta.");
+      toast.success(source === "class-glossary"
+        ? "Entrada atualizada no glossário da turma."
+        : "Entrada atualizada no glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -172,7 +233,9 @@ export function useListGlossary(listId?: string) {
     onSuccess: () => {
       void invalidate();
       announceEdit();
-      toast.success("Entrada removida do glossário da pasta.");
+      toast.success(source === "class-glossary"
+        ? "Entrada removida do glossário da turma."
+        : "Entrada removida do glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -192,7 +255,9 @@ export function useListGlossary(listId?: string) {
     onSuccess: () => {
       void invalidate();
       announceEdit();
-      toast.success("Entradas removidas do glossário da pasta.");
+      toast.success(source === "class-glossary"
+        ? "Entradas removidas do glossário da turma."
+        : "Entradas removidas do glossário da pasta.");
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -245,7 +310,9 @@ export function useListGlossary(listId?: string) {
           source: "import",
         });
       }
-      toast.success(`Glossário da pasta: ${result.inserted} nova(s), ${result.updated} alterada(s).`);
+      toast.success(source === "class-glossary"
+        ? `Glossário da turma: ${result.inserted} nova(s), ${result.updated} alterada(s).`
+        : `Glossário da pasta: ${result.inserted} nova(s), ${result.updated} alterada(s).`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
