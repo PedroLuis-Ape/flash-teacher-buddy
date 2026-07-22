@@ -53,9 +53,10 @@ describe("class glossary contract", () => {
   it("keeps folder and class glossaries independent", () => {
     const storage = read("src/features/classroom/lib/classGlossary.ts");
     const manager = read("src/features/classroom/components/ClassGlossaryManager.tsx");
+    const sync = read("src/features/classroom/components/ClassGlossarySyncCard.tsx");
 
     expect(storage).toContain('visibility: "class"');
     expect(manager).toContain("não altera os glossários das pastas pessoais");
-    expect(manager).toContain("Nenhuma entrada é copiada para pastas pessoais");
+    expect(sync).toContain("Nenhuma entrada é copiada para pastas pessoais");
   });
 });
