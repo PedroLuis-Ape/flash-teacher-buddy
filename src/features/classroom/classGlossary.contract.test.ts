@@ -42,8 +42,11 @@ describe("class glossary contract", () => {
   it("uses the class glossary during study entered from a classroom", () => {
     const hook = read("src/hooks/useListGlossary.ts");
     const workspace = read("src/pages/TurmaDetailWorkspace.tsx");
+    const hub = read("src/pages/GamesHub.tsx");
 
     expect(workspace).toContain("markPendingClassGlossaryContext(turmaId)");
+    expect(hub).toContain("isListAssignedToClass");
+    expect(hub).toContain('params.set("turma", activeTurmaId)');
     expect(hook).toContain("readPendingClassGlossaryContext");
     expect(hook).toContain("loadClassGlossaryForList");
     expect(hook).toContain('source: "class-glossary"');
