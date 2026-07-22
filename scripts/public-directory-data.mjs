@@ -168,7 +168,7 @@ export async function loadPublicTeacherDirectory() {
   const runtime = await resolvePublicDirectoryRuntime();
   if (!runtime) {
     console.warn("[PublicDirectory] Runtime público não resolvido; pré-renderização dinâmica ignorada.");
-    return { runtimeSource: "unavailable", teachers: [] };
+    return { runtimeSource: "unavailable", runtimeProjectId: null, discoveryMode: "unavailable", teachers: [] };
   }
 
   const client = createClient(runtime.url, runtime.publicValue, {
@@ -177,14 +177,16 @@ export async function loadPublicTeacherDirectory() {
   });
 
   let response = await client.rpc("list_public_teacher_discovery_entries", { _limit: MAX_TEACHERS });
+  let discoveryMode = "canonical-rpc";
   if (response.error && isMissingDiscoveryRpc(response.error)) {
+    discoveryMode = "legacy-rpc";
     console.warn("[PublicDirectory] RPC escalável ainda não publicada; usando diretório legado limitado a 24 professores.");
     response = await client.rpc("search_public_teachers", { _q: "", _limit: 24 });
   }
 
   if (response.error) {
     console.warn("[PublicDirectory] Diretório público indisponível; mantendo apenas páginas estáticas.", response.error.message);
-    return { runtimeSource: runtime.source, teachers: [] };
+    return { runtimeSource: runtime.source, runtimeProjectId: runtime.projectId, discoveryMode: "unavailable", teachers: [] };
   }
 
   const seen = new Set();
@@ -212,5 +214,10 @@ export async function loadPublicTeacherDirectory() {
     }
   });
 
-  return { runtimeSource: runtime.source, teachers: hydrated };
+  return {
+    runtimeSource: runtime.source,
+    runtimeProjectId: runtime.projectId,
+    discoveryMode,
+    teachers: hydrated,
+  };
 }

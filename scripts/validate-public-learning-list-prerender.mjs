@@ -13,7 +13,7 @@ const root = process.cwd();
 const distDir = resolve(root, "dist");
 const reportPath = resolve(distDir, "public-learning-list-prerender-report.json");
 const templatePath = resolve(root, "index.html");
-const sitemapPath = resolve(distDir, "sitemap.xml");
+const sitemapPath = resolve(distDir, "sitemap-lists.xml");
 const redirectsPath = resolve(distDir, "_redirects");
 for (const path of [reportPath, templatePath, sitemapPath, redirectsPath]) assert.ok(existsSync(path), `Arquivo ausente: ${path}`);
 

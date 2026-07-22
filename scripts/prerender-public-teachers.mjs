@@ -7,7 +7,7 @@ const SITE_URL = "https://www.apeeducation.org";
 const root = process.cwd();
 const distDir = resolve(root, "dist");
 const templatePath = resolve(distDir, "index.html");
-const sitemapPath = resolve(distDir, "sitemap.xml");
+const sitemapPath = resolve(distDir, "sitemap-teachers.xml");
 const redirectsPath = resolve(distDir, "_redirects");
 const reportPath = resolve(distDir, "public-teacher-prerender-report.json");
 
@@ -155,7 +155,7 @@ export function appendTeacherUrlsToSitemap(sitemap, teachers, lastmod) {
   if (!teachers.length) return sitemap;
   const entries = teachers
     .filter((teacher) => !sitemap.includes(`<loc>${absolute(publicTeacherPath(teacher.public_slug))}</loc>`))
-    .map((teacher) => `  <url><loc>${absolute(publicTeacherPath(teacher.public_slug))}</loc><lastmod>${lastmod}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`)
+    .map((teacher) => `  <url><loc>${absolute(publicTeacherPath(teacher.public_slug))}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}<changefreq>weekly</changefreq><priority>0.7</priority></url>`)
     .join("\n");
   return entries ? sitemap.replace(/\s*<\/urlset>\s*$/i, `\n${entries}\n</urlset>\n`) : sitemap;
 }
@@ -183,7 +183,6 @@ export async function prerenderPublicTeachers() {
   const directory = await loadPublicTeacherDirectory();
   const teachers = directory.teachers ?? [];
   const generatedAt = new Date().toISOString();
-  const lastmod = generatedAt.slice(0, 10);
   const generatedPaths = [];
 
   for (const teacher of teachers) {
@@ -194,7 +193,7 @@ export async function prerenderPublicTeachers() {
     generatedPaths.push(path);
   }
 
-  const sitemap = appendTeacherUrlsToSitemap(readFileSync(sitemapPath, "utf8"), teachers, lastmod);
+  const sitemap = appendTeacherUrlsToSitemap(readFileSync(sitemapPath, "utf8"), teachers, null);
   writeFileSync(sitemapPath, sitemap, "utf8");
   const redirects = injectTeacherRedirects(readFileSync(redirectsPath, "utf8"), teachers);
   writeFileSync(redirectsPath, redirects, "utf8");
@@ -202,6 +201,8 @@ export async function prerenderPublicTeachers() {
   const report = {
     generatedAt,
     runtimeSource: directory.runtimeSource,
+    runtimeProjectId: directory.runtimeProjectId,
+    discoveryMode: directory.discoveryMode,
     teacherCount: teachers.length,
     folderCount: teachers.reduce((sum, teacher) => sum + (teacher.folders?.length ?? 0), 0),
     generatedPaths,

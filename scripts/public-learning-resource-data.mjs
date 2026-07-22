@@ -120,6 +120,35 @@ function fallbackResourcesFromTeachers(teachers) {
   }))).filter(Boolean);
 }
 
+async function hydrateLegacyResources(client, resources) {
+  let failedFolderCount = 0;
+  const hydrated = await mapWithConcurrency(resources, LIST_CONCURRENCY, async (resource) => {
+    const response = await client.rpc("get_portal_lists_with_counts", { _folder_id: resource.id });
+    if (response.error) {
+      failedFolderCount += 1;
+      console.warn(`[PublicLearningResources] Listas legadas de ${resource.id} indisponiveis.`, response.error.message);
+      return resource;
+    }
+
+    const lists = (response.data ?? []).map(sanitizeList).filter(Boolean);
+    const newestListDate = lists
+      .map((list) => list.updated_at)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null;
+
+    return {
+      ...resource,
+      updated_at: [resource.updated_at, newestListDate].filter(Boolean).sort().at(-1) ?? null,
+      list_count: lists.length || resource.list_count,
+      card_count: lists.length ? lists.reduce((sum, list) => sum + list.card_count, 0) : resource.card_count,
+      lists,
+    };
+  });
+
+  return { resources: hydrated, failedFolderCount };
+}
+
 export function publicLearningResourcePath(id) {
   return `/portal/folder/${id}`;
 }
@@ -131,7 +160,9 @@ export async function loadPublicLearningResources() {
     const directory = await loadPublicTeacherDirectory();
     return {
       runtimeSource: directory.runtimeSource,
+      runtimeProjectId: directory.runtimeProjectId,
       discoveryMode: "teacher-directory-fallback",
+      failedFolderCount: 0,
       resources: fallbackResourcesFromTeachers(directory.teachers ?? []),
     };
   }
@@ -145,16 +176,26 @@ export async function loadPublicLearningResources() {
   if (discovery.error && isMissingRpc(discovery.error, "list_public_learning_resource_entries")) {
     console.warn("[PublicLearningResources] RPC canônica ainda não publicada; usando pastas aprovadas pelo diretório público de professores.");
     const directory = await loadPublicTeacherDirectory();
+    const fallback = fallbackResourcesFromTeachers(directory.teachers ?? []);
+    const legacy = await hydrateLegacyResources(client, fallback);
     return {
       runtimeSource: directory.runtimeSource,
-      discoveryMode: "teacher-directory-fallback",
-      resources: fallbackResourcesFromTeachers(directory.teachers ?? []),
+      runtimeProjectId: runtime.projectId,
+      discoveryMode: "teacher-directory-legacy-rpc",
+      failedFolderCount: legacy.failedFolderCount,
+      resources: legacy.resources,
     };
   }
 
   if (discovery.error) {
     console.warn("[PublicLearningResources] Descoberta indisponível; mantendo o build sem materiais dinâmicos.", discovery.error.message);
-    return { runtimeSource: runtime.source, discoveryMode: "unavailable", resources: [] };
+    return {
+      runtimeSource: runtime.source,
+      runtimeProjectId: runtime.projectId,
+      discoveryMode: "unavailable",
+      failedFolderCount: 0,
+      resources: [],
+    };
   }
 
   const seen = new Set();
@@ -195,7 +236,9 @@ export async function loadPublicLearningResources() {
 
   return {
     runtimeSource: runtime.source,
+    runtimeProjectId: runtime.projectId,
     discoveryMode: "canonical-rpc",
+    failedFolderCount: 0,
     resources: hydrated,
   };
 }
