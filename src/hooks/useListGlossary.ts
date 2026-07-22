@@ -49,7 +49,9 @@ const EMPTY_GLOSSARY: GlossaryEntry[] = [];
 
 function explicitTurmaIdFromLocation(): string | null {
   if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("turma");
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("guest") === "true") return null;
+  return params.get("turma");
 }
 
 async function loadListGlossaryContext(input: {
