@@ -1,6 +1,6 @@
 # SEO/GEO implementation status
 
-Updated: 2026-07-13
+Updated: 2026-07-22
 
 ## Backend architecture
 
@@ -48,6 +48,14 @@ Repository configuration, frontend initialization, database changes and document
 - client-side noindex handling for unavailable public entities;
 - static and database smoke validation of `200`, `404`, `410`, slug changes, withdrawal and republication;
 - SEO consistency validation in CI.
+- segmented sitemap index published for static pages, teachers, folders and individual public lists;
+- compatibility discovery through the existing read-only public gateways in the production data backend;
+- canonical pre-rendering for public lists declared by public folders;
+- fail-closed publication report checking project identity, discovery availability, counts and sitemap parity;
+- Google Search Console ownership verification and canonical sitemap submission;
+- IndexNow ownership verification and initial sitemap submission;
+- daily read-only production audit of robots, sitemaps, canonical metadata, indexability, structured data and `llms.txt`;
+- selective IndexNow notification only for new URLs or URLs whose published `lastmod` changed.
 
 ## Evidence claim boundary
 
@@ -89,20 +97,27 @@ The bilingual official pages are the preferred first-party sources for factual d
 
 ## Remaining work
 
-### Implemented in code, pending publication
-
-- segmented sitemap index for static pages, teachers, folders and individual public lists;
-- compatibility discovery through the existing read-only public gateways in the production data backend;
-- canonical pre-rendering for the 27 lists currently declared by the eight public folders;
-- fail-closed publication report that checks project identity, discovery availability, cross-count consistency and sitemap parity;
-- CI artifact retention for the publication report;
-- local environment example corrected to the production data runtime without changing Supabase data, Auth, schema or migrations.
-
 ### Still required
 
 1. Resolve real host-level `404` and `410` responses if Lovable exposes a supported routing or server handler; client-side `noindex` remains only a fallback.
 2. Add real-user INP, LCP and CLS monitoring without reintroducing a second hosting platform.
-3. Review Search Console and IndexNow results on a recurring cadence; the verified Google property uses `/sitemap.xml`, while `npm run seo:indexnow` submits the deployed URLs without sharing a personal login with Bing.
+3. Review Search Console indexing trends on a recurring cadence. The verified Google property uses `/sitemap.xml`; the automated monitor audits production daily and notifies IndexNow only after an approved sitemap change.
 4. Monitor AI citations, brand mentions and Share of Model.
 5. Build external authority through useful references, partnerships and legitimate backlinks.
 6. Design a product-specific evaluation protocol before making causal effectiveness claims.
+
+## Production monitoring contract
+
+The `SEO Production Monitor` GitHub workflow runs on a daily schedule and can also be started manually. It reads only public production URLs and does not connect to Supabase, Auth, migrations, application builds or private data.
+
+The monitor validates the deployed robots policy, `llms.txt`, IndexNow ownership file, root and segmented sitemaps, and every sitemap page. A page must return HTML with HTTP 200 at its canonical URL, remain crawlable, omit `noindex`, and include a title, H1, language, canonical link and JSON-LD.
+
+The first successful execution creates a baseline and sends nothing. Later executions compare the current sitemap URL and `lastmod` pairs with the last approved state. Only new or updated URLs are eligible for IndexNow; removed URLs are reported for human review and are never submitted automatically. Any audit failure blocks the notification and prevents the failed state from replacing the approved baseline.
+
+Local read-only audit:
+
+```sh
+npm run seo:audit:production
+```
+
+Manual IndexNow submission still defaults to the complete deployed sitemap. A tightly scoped submission can instead use `INDEXNOW_URL_FILE` (one URL per line) or `INDEXNOW_URLS` (comma/newline separated). Every selected URL must already exist in the deployed sitemap.

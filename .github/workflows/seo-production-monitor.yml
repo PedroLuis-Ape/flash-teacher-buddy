@@ -1,0 +1,77 @@
+name: SEO Production Monitor
+
+on:
+  schedule:
+    - cron: "17 09 * * *"
+  workflow_dispatch:
+    inputs:
+      submit_indexnow:
+        description: "Notificar o IndexNow sobre URLs novas ou atualizadas"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-production-monitor
+  cancel-in-progress: false
+
+jobs:
+  audit-production:
+    name: Audit live public SEO
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore last approved sitemap state
+        uses: actions/cache/restore@v4
+        with:
+          path: .seo-monitor/state.json
+          key: seo-production-state-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            seo-production-state-${{ runner.os }}-
+
+      - name: Audit deployed public pages
+        id: audit
+        run: >-
+          node scripts/audit-production-seo.mjs
+          --report seo-production-report.json
+          --previous-state .seo-monitor/state.json
+          --state-out .seo-monitor/state.json
+          --changes-out indexnow-changed-urls.txt
+
+      - name: Notify IndexNow only about changed published URLs
+        if: >-
+          steps.audit.outputs.changed_count != '0' &&
+          (github.event_name == 'schedule' || inputs.submit_indexnow == true)
+        env:
+          INDEXNOW_URL_FILE: indexnow-changed-urls.txt
+        run: node scripts/submit-indexnow.mjs
+
+      - name: Save approved sitemap state
+        if: steps.audit.outputs.state_changed == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .seo-monitor/state.json
+          key: seo-production-state-${{ runner.os }}-${{ steps.audit.outputs.fingerprint }}-${{ github.run_id }}
+
+      - name: Upload production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-production-report-${{ github.run_id }}
+          path: |
+            seo-production-report.json
+            indexnow-changed-urls.txt
+          if-no-files-found: warn
+          retention-days: 30
