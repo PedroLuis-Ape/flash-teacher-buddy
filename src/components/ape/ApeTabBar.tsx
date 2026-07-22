@@ -75,7 +75,7 @@ export function ApeTabBar() {
                 "space-ui-tab relative flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[76px] h-[3.55rem] rounded-2xl px-2",
                 settings.animations && "transition-all duration-200",
                 settings.visualFeedback && "active:scale-95",
-                active ? "space-ui-tab-active text-primary" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground"),
+                active ? "space-ui-tab-active text-foreground" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground"),
               )}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
