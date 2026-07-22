@@ -62,13 +62,9 @@ export default function KingdomDetail() {
       if (kingdomError) throw kingdomError;
       setKingdom(kingdomData);
 
-      // Load activities
+      // Load activities via SECURITY DEFINER RPC that omits answer keys
       const { data: activitiesData, error: activitiesError } = await supabase
-        .from("kingdom_activities")
-        .select("*")
-        .eq("kingdom_code", code)
-        .order("level_code")
-        .order("unit");
+        .rpc("get_kingdom_activities", { _kingdom_code: code });
 
       if (activitiesError) throw activitiesError;
 
@@ -89,9 +85,10 @@ export default function KingdomDetail() {
       });
 
       // Cast to correct types
-      const typedActivities = (activitiesData || []).map((a) => ({
+      const typedActivities = (activitiesData || []).map((a: any) => ({
         ...a,
-        alt_answers: a.alt_answers as string[] | null,
+        alt_answers: null,
+        canonical_answer: null,
         choices: a.choices as any[] | null,
         tags: a.tags as string[] | null,
       }));
