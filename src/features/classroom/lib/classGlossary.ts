@@ -17,6 +17,8 @@ const PENDING_CONTEXT_KEY = "ape:pending-class-glossary-context:v1";
 const PENDING_CONTEXT_TTL_MS = 5 * 60 * 1000;
 const QUERY_CHUNK_SIZE = 50;
 const PAGE_SIZE = 1_000;
+const UUID_HEX_LENGTH = 32;
+const CLASS_GLOSSARY_UUID_MASK = "a5c1f09e7b2d4a8c9e3f16b405d27c81";
 
 interface PendingClassContext {
   turmaId: string;
@@ -58,6 +60,34 @@ function readStorage(): Storage | null {
   }
 }
 
+/**
+ * Produz um UUID estável e exclusivo a partir do UUID da turma.
+ *
+ * O XOR usa todos os 128 bits e é bijetivo: turmas diferentes continuam
+ * gerando contêineres diferentes. O ID determinístico permite que membros da
+ * turma carreguem o glossário via RLS sem precisar listar a pasta interna.
+ */
+export function classGlossaryStorageFolderId(turmaId: string): string {
+  const compact = turmaId.replaceAll("-", "").toLocaleLowerCase();
+  if (!/^[0-9a-f]{32}$/u.test(compact)) {
+    throw new Error("ID da turma inválido para o glossário.");
+  }
+
+  const transformed = Array.from({ length: UUID_HEX_LENGTH }, (_, index) => {
+    const source = Number.parseInt(compact[index], 16);
+    const mask = Number.parseInt(CLASS_GLOSSARY_UUID_MASK[index], 16);
+    return (source ^ mask).toString(16);
+  }).join("");
+
+  return [
+    transformed.slice(0, 8),
+    transformed.slice(8, 12),
+    transformed.slice(12, 16),
+    transformed.slice(16, 20),
+    transformed.slice(20),
+  ].join("-");
+}
+
 export function markPendingClassGlossaryContext(turmaId: string): void {
   if (!turmaId) return;
   readStorage()?.setItem(PENDING_CONTEXT_KEY, JSON.stringify({
@@ -95,14 +125,14 @@ export function clearPendingClassGlossaryContext(turmaId?: string): void {
 export async function findClassGlossaryStorageFolder(
   turmaId: string,
 ): Promise<ClassGlossaryStorageFolder | null> {
+  const storageFolderId = classGlossaryStorageFolderId(turmaId);
   const { data, error } = await (supabase as any)
     .from("folders")
     .select("id,title,owner_id,class_id")
+    .eq("id", storageFolderId)
     .eq("class_id", turmaId)
     .eq("description", CLASS_GLOSSARY_FOLDER_MARKER)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true })
-    .limit(1)
     .maybeSingle();
 
   if (error) throw error;
@@ -113,6 +143,7 @@ export async function ensureClassGlossaryStorageFolder(input: {
   turmaId: string;
   turmaTitle: string;
 }): Promise<ClassGlossaryStorageFolder> {
+  const storageFolderId = classGlossaryStorageFolderId(input.turmaId);
   const existing = await findClassGlossaryStorageFolder(input.turmaId);
   if (existing) return existing;
 
@@ -141,10 +172,11 @@ export async function ensureClassGlossaryStorageFolder(input: {
   const { data, error } = await (supabase as any)
     .from("folders")
     .insert({
+      id: storageFolderId,
       owner_id: turma.owner_teacher_id,
       title,
       description: CLASS_GLOSSARY_FOLDER_MARKER,
-      visibility: "class",
+      visibility: "private",
       class_id: input.turmaId,
     })
     .select("id,title,owner_id,class_id")
@@ -299,13 +331,11 @@ export async function loadClassGlossaryForList(input: {
   const assigned = await isListAssignedToClass(input.turmaId, input.listId);
   if (!assigned) return { glossary: [], storageFolderId: null, assigned: false };
 
-  const storage = await findClassGlossaryStorageFolder(input.turmaId);
-  if (!storage) return { glossary: [], storageFolderId: null, assigned: true };
-
-  const loaded = await loadFolderGlossary(storage.id);
+  const storageFolderId = classGlossaryStorageFolderId(input.turmaId);
+  const loaded = await loadFolderGlossary(storageFolderId);
   return {
     assigned: true,
-    storageFolderId: storage.id,
+    storageFolderId,
     glossary: loaded.entries
       .filter((entry) => entry.is_active)
       .map<AccountGlossaryEntry>((entry) => ({
