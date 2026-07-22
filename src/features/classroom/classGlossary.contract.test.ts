@@ -22,8 +22,9 @@ describe("class glossary contract", () => {
     const storage = read("src/features/classroom/lib/classGlossary.ts");
 
     expect(storage).toContain("classGlossaryStorageFolderId");
-    expect(storage).toContain('.eq("class_id", turmaId)');
-    expect(storage).toContain('.eq("description", CLASS_GLOSSARY_FOLDER_MARKER)');
+    expect(storage).toContain('description: CLASS_GLOSSARY_FOLDER_MARKER');
+    expect(storage).toContain('.rpc("can_manage_folder_glossary_v1"');
+    expect(storage).not.toContain('.select("id,title,owner_id,class_id")');
     expect(storage).toContain('visibility: "private"');
     expect(storage).toContain('.from("atribuicoes")');
     expect(storage).toContain('item.fonte_tipo === "lista"');
