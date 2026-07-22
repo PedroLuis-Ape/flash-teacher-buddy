@@ -1,140 +1,41 @@
-# Core Web Vitals RUM
+# Core Web Vitals — diagnóstico local
 
-Updated: 2026-07-13
+Atualizado em 2026-07-21.
 
-## Purpose
+## Regra ativa
 
-APE collects sampled first-party field measurements for the current Core Web Vitals:
+O APE mede LCP, INP e CLS localmente em navegadores compatíveis. O diagnóstico serve para inspecionar a sessão atual e não é um sistema de análise de comportamento.
 
-- LCP — Largest Contentful Paint;
-- INP — Interaction to Next Paint;
-- CLS — Cumulative Layout Shift.
+Os limites usados são:
 
-The collector is designed to answer operational questions such as which normalized routes and device classes need performance work. It is not a user-behavior analytics system.
-
-## Thresholds
-
-The application and database use the current good / needs-improvement boundaries:
-
-| Metric | Good | Needs improvement | Poor |
+| Métrica | Bom | A melhorar | Ruim |
 |---|---:|---:|---:|
-| LCP | ≤ 2,500 ms | ≤ 4,000 ms | > 4,000 ms |
-| INP | ≤ 200 ms | ≤ 500 ms | > 500 ms |
-| CLS | ≤ 0.10 | ≤ 0.25 | > 0.25 |
+| LCP | até 2.500 ms | até 4.000 ms | acima de 4.000 ms |
+| INP | até 200 ms | até 500 ms | acima de 500 ms |
+| CLS | até 0,10 | até 0,25 | acima de 0,25 |
 
-Product-level evaluation must use the 75th percentile and must segment mobile, tablet and desktop observations. A single session value is only a diagnostic sample.
+## Dados locais
 
-## Data collected
+O snapshot da sessão contém somente:
 
-Each stored row contains only:
+- nome e valor da métrica;
+- classificação calculada localmente;
+- grupo de rota normalizado, como `/portal/list/:id`;
+- classe ampla de dispositivo;
+- tipo de navegação;
+- horário local da observação.
 
-- an ephemeral random page-view UUID;
-- metric name;
-- metric value;
-- server-validated rating;
-- normalized route group, such as `/portal/list/:id`;
-- coarse device class;
-- navigation type;
-- configured sampling rate;
-- optional build identifier;
-- server observation timestamp.
+O coletor não inclui conta, nome, email, URL completa, query string, termos pesquisados, respostas, conteúdo de cards ou identificadores de pastas, listas, turmas e alunos. Rotas desconhecidas viram `/other`, e segmentos dinâmicos são substituídos antes do armazenamento local.
 
-## Data intentionally excluded
+## Persistência e rede
 
-The implementation does not store or accept:
+- O snapshot fica apenas em `sessionStorage` durante a sessão atual.
+- O coletor não chama endpoint de rede.
+- A página de status do sistema pode exibir o snapshot local.
+- Falhas no Performance Observer ou no armazenamento da sessão nunca bloqueiam a inicialização do aplicativo.
 
-- account or user ID;
-- email address;
-- name;
-- IP address in the application database;
-- user-agent string;
-- full or raw URL;
-- query string;
-- folder, list, classroom or student UUID;
-- search terms;
-- card answers or study content;
-- cross-session tracking identifier.
+## Banco
 
-Unknown paths are grouped as `/other`. Dynamic route values are replaced by placeholders before any network request.
+O repositório mantém o schema agregado de Web Vitals para eventual uso futuro. Ele permanece inativo enquanto não existir um endpoint oficial compatível com a arquitetura Lovable/Supabase e validado separadamente em produção.
 
-## Sampling and delivery
-
-- Local observation runs in compatible browsers.
-- Network delivery occurs only on `www.apeeducation.org` in production.
-- The default sample rate is 10% and can be changed with `VITE_RUM_SAMPLE_RATE`.
-- One sampling decision is retained in `sessionStorage` for the current browser session.
-- Metrics are sent with `sendBeacon` when possible and `fetch(..., keepalive: true)` as a fallback.
-- The same page-view UUID and metric are upserted, preventing periodic and page-hide flushes from creating duplicate rows.
-- Preview, development and noncanonical hosts do not send samples.
-
-## Browser observer
-
-The browser collector uses native Performance Observer entries:
-
-- `largest-contentful-paint` for LCP;
-- `layout-shift` with the standard session-window accumulation for CLS;
-- `event` entries grouped by `interactionId` for an INP field estimate.
-
-The native INP observer is intended for first-party operational monitoring. CrUX and the official `web-vitals` implementation remain the external reference when exact ecosystem parity is required.
-
-## Ingestion boundary
-
-`/api/rum` is a Netlify Edge Function. It:
-
-1. accepts POST requests only;
-2. accepts the canonical production hostname only;
-3. limits the request body to 4 KB;
-4. rejects every field outside a closed allowlist;
-5. recalculates the rating;
-6. validates metric ranges, route safety and coarse enums;
-7. uses a server-only Supabase service credential;
-8. writes through a service-only PostgreSQL RPC;
-9. returns an empty response and never blocks the application when storage is unavailable.
-
-The Edge Function requires one of these function-scoped secrets:
-
-- `SUPABASE_SERVICE_ROLE_KEY`; or
-- `SUPABASE_SECRET_KEY`.
-
-It also validates that the configured Supabase URL is the production data project `ymahldldyxvwjeruaxpr`.
-
-## Database access
-
-- `web_vital_samples` has RLS enabled.
-- `anon` and `authenticated` have no table privileges.
-- The ingestion RPC is executable only by `service_role`.
-- The daily aggregate view is readable only by `service_role`.
-- The purge RPC is executable only by `service_role`.
-
-## Aggregation
-
-`web_vital_daily_summary` groups by:
-
-- day;
-- metric;
-- device class;
-- normalized route group.
-
-It exposes:
-
-- sample count;
-- continuous p75 value;
-- proportion rated good;
-- minimum and maximum.
-
-Operational dashboards should suppress or clearly qualify segments with low sample counts. A practical initial rule is not to make route-level decisions from fewer than 75 observations in the selected period.
-
-## Retention
-
-`purge_web_vital_samples(retention_days)` supports retention from 7 to 730 days. The intended default is 90 days. Production should schedule the purge after the real data backend receives the migration.
-
-## Activation checklist
-
-1. Apply `20260713160000_core_web_vitals_rum.sql` to `ymahldldyxvwjeruaxpr`.
-2. Add the correct service credential to Netlify with Functions scope.
-3. Confirm `VITE_SUPABASE_URL` or `SUPABASE_URL` points to `ymahldldyxvwjeruaxpr`.
-4. Deploy `main`.
-5. Visit the canonical production site and allow the tab to become hidden or wait for a periodic flush.
-6. Confirm rows appear through a service-only SQL session.
-7. Schedule 90-day retention.
-8. Review p75 by device class after sufficient samples have accumulated.
+Uma ativação futura deverá preservar o isolamento da credencial de serviço, limitar e validar o payload, confirmar o projeto `ymahldldyxvwjeruaxpr`, testar CORS e falhas de rede e só então habilitar o envio no navegador.

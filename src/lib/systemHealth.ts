@@ -23,8 +23,10 @@ export function classifyRuntimeHost(hostname: string): RuntimeHostKind {
   if (
     normalized === "localhost" ||
     normalized === "127.0.0.1" ||
-    normalized.endsWith(".netlify.app") ||
-    normalized.endsWith(".lovable.app")
+    normalized.endsWith(".lovable.app") ||
+    normalized.endsWith(".lovableproject.com") ||
+    normalized.endsWith(".lovableproject-dev.com") ||
+    normalized.endsWith(".lovable.dev")
   ) {
     return "preview";
   }

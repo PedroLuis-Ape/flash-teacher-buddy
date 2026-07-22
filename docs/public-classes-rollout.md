@@ -9,7 +9,7 @@ This branch introduces public, read-only classroom sharing and a persisted landi
 - Anonymous visitors and authenticated non-members receive the public read-only page when the classroom is public.
 - Public database views expose only explicitly allowed fields and verify classroom ownership of assigned content.
 - The public Galaxy theme is lazy-loaded on capable devices and uses a static backdrop on mobile, slow-update and reduced-motion devices.
-- Netlify serves SPA redirects, safe response headers, immutable hashed assets and a no-cache application shell.
+- Lovable serves the published SPA and canonical custom domain.
 
 ## Deployment order
 
@@ -33,4 +33,4 @@ This branch introduces public, read-only classroom sharing and a persisted landi
 
 ## Preview limitation
 
-The Netlify preview validates the web build and interface. Public classroom records will appear there only after the migration and Edge Functions are also available in the connected Supabase environment.
+The Lovable preview validates the web build and interface. Public classroom records appear only when the required migration and Edge Functions are available in the connected Supabase environment.

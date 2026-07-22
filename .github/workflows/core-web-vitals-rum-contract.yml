@@ -8,10 +8,7 @@ on:
       - "src/components/system/CoreWebVitalsStatusCard.tsx"
       - "src/pages/SystemStatus.tsx"
       - "src/App.tsx"
-      - "netlify/edge-functions/rum-web-vital.js"
-      - "netlify.toml"
       - "supabase/migrations/20260713160000_core_web_vitals_rum.sql"
-      - "scripts/validate-core-web-vitals-rum.mjs"
       - "package.json"
       - ".github/workflows/core-web-vitals-rum-contract.yml"
   push:
@@ -22,10 +19,7 @@ on:
       - "src/components/system/CoreWebVitalsStatusCard.tsx"
       - "src/pages/SystemStatus.tsx"
       - "src/App.tsx"
-      - "netlify/edge-functions/rum-web-vital.js"
-      - "netlify.toml"
       - "supabase/migrations/20260713160000_core_web_vitals_rum.sql"
-      - "scripts/validate-core-web-vitals-rum.mjs"
       - "package.json"
       - ".github/workflows/core-web-vitals-rum-contract.yml"
   workflow_dispatch:
@@ -50,20 +44,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps --no-audit --no-fund
-
-      - name: Validate browser and edge contract
-        run: |
-          set -o pipefail
-          node scripts/validate-core-web-vitals-rum.mjs 2>&1 | tee rum-contract.log
-
-      - name: Upload RUM contract diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: core-web-vitals-rum-contract
-          path: rum-contract.log
-          if-no-files-found: warn
-          retention-days: 7
 
       - name: Run focused unit tests
         run: npx vitest run src/lib/coreWebVitalsRum.test.ts --passWithNoTests

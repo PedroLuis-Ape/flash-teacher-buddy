@@ -7,8 +7,6 @@ on:
       - "supabase/tests/core_web_vitals_rum_smoke.sql"
       - "src/lib/coreWebVitalsRum.ts"
       - "src/lib/coreWebVitalsRum.test.ts"
-      - "netlify/edge-functions/rum-web-vital.js"
-      - "netlify.toml"
       - ".github/workflows/core-web-vitals-rum-smoke.yml"
   push:
     branches: [main]
@@ -17,8 +15,6 @@ on:
       - "supabase/tests/core_web_vitals_rum_smoke.sql"
       - "src/lib/coreWebVitalsRum.ts"
       - "src/lib/coreWebVitalsRum.test.ts"
-      - "netlify/edge-functions/rum-web-vital.js"
-      - "netlify.toml"
       - ".github/workflows/core-web-vitals-rum-smoke.yml"
   workflow_dispatch:
 

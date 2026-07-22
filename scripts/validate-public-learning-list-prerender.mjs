@@ -88,14 +88,10 @@ for (const generatedPath of report.generatedPaths) {
 
 const migration = readFileSync(resolve(root, "supabase/migrations/20260713152000_public_learning_list_pages.sql"), "utf8");
 const app = readFileSync(resolve(root, "src/App.tsx"), "utf8");
-const edge = readFileSync(resolve(root, "netlify/edge-functions/public-list-status.js"), "utf8");
-const netlify = readFileSync(resolve(root, "netlify.toml"), "utf8");
 assert.ok(migration.includes("list_public_learning_list_entries"));
 assert.ok(migration.includes("get_public_learning_list_card_preview"));
 assert.ok(migration.includes("fc.parent_card_id IS NULL"));
 assert.ok(migration.includes("learning_list"));
 assert.ok(app.includes('path="/portal/list/:id" element={<PublicLearningListPage />}'));
-assert.ok(edge.includes('entityType: "learning_list"'));
-assert.ok(netlify.includes('path = "/portal/list/*"'));
 
 console.log(`Listas públicas validadas: ${report.listCount} páginas reais e contrato sintético completo.`);
