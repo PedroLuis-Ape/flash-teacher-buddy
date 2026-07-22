@@ -18,7 +18,7 @@ export function LandingProductDemo({ demo }: LandingProductDemoProps) {
     <section aria-labelledby={`${groupId}-heading`} className="border-y border-border/40 bg-muted/15">
       <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[.82fr_1.18fr] lg:items-center">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Demonstração editorial</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Demonstração editorial</p>
           <h2 id={`${groupId}-heading`} className="mt-2 text-2xl font-bold sm:text-4xl">{demo.heading}</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">{demo.intro}</p>
           <div role="tablist" aria-label="Tipos de card" className="mt-5 flex flex-wrap gap-2">
