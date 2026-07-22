@@ -122,21 +122,12 @@ export function clearPendingClassGlossaryContext(turmaId?: string): void {
   }
 }
 
-export async function findClassGlossaryStorageFolder(
-  turmaId: string,
-): Promise<ClassGlossaryStorageFolder | null> {
-  const storageFolderId = classGlossaryStorageFolderId(turmaId);
-  const { data, error } = await (supabase as any)
-    .from("folders")
-    .select("id,title,owner_id,class_id")
-    .eq("id", storageFolderId)
-    .eq("class_id", turmaId)
-    .eq("description", CLASS_GLOSSARY_FOLDER_MARKER)
-    .is("deleted_at", null)
-    .maybeSingle();
-
+async function canManageClassGlossaryStorage(storageFolderId: string): Promise<boolean> {
+  const { data, error } = await (supabase as any).rpc("can_manage_folder_glossary_v1", {
+    _folder_id: storageFolderId,
+  });
   if (error) throw error;
-  return (data ?? null) as ClassGlossaryStorageFolder | null;
+  return data === true;
 }
 
 export async function ensureClassGlossaryStorageFolder(input: {
@@ -144,9 +135,6 @@ export async function ensureClassGlossaryStorageFolder(input: {
   turmaTitle: string;
 }): Promise<ClassGlossaryStorageFolder> {
   const storageFolderId = classGlossaryStorageFolderId(input.turmaId);
-  const existing = await findClassGlossaryStorageFolder(input.turmaId);
-  if (existing) return existing;
-
   const [{ data: auth }, turmaResult] = await Promise.all([
     supabase.auth.getUser(),
     (supabase as any)
@@ -168,26 +156,31 @@ export async function ensureClassGlossaryStorageFolder(input: {
     throw new Error("Somente o professor responsável pode iniciar o glossário da turma.");
   }
 
-  const title = `Glossário interno · ${input.turmaTitle.trim() || "Turma"}`;
-  const { data, error } = await (supabase as any)
+  const storage: ClassGlossaryStorageFolder = {
+    id: storageFolderId,
+    title: `Glossário interno · ${input.turmaTitle.trim() || "Turma"}`,
+    owner_id: turma.owner_teacher_id,
+    class_id: input.turmaId,
+  };
+
+  if (await canManageClassGlossaryStorage(storageFolderId)) return storage;
+
+  const { error } = await (supabase as any)
     .from("folders")
     .insert({
-      id: storageFolderId,
-      owner_id: turma.owner_teacher_id,
-      title,
+      id: storage.id,
+      owner_id: storage.owner_id,
+      title: storage.title,
       description: CLASS_GLOSSARY_FOLDER_MARKER,
       visibility: "private",
-      class_id: input.turmaId,
-    })
-    .select("id,title,owner_id,class_id")
-    .single();
+      class_id: storage.class_id,
+    });
 
-  if (!error && data) return data as ClassGlossaryStorageFolder;
+  if (!error) return storage;
 
-  // Uma segunda aba pode ter criado o contêiner entre a leitura e a inserção.
-  const recovered = await findClassGlossaryStorageFolder(input.turmaId);
-  if (recovered) return recovered;
-  throw error ?? new Error("Não foi possível criar a caixa de glossário da turma.");
+  // Uma segunda aba pode ter criado o contêiner entre a verificação e a inserção.
+  if (await canManageClassGlossaryStorage(storageFolderId)) return storage;
+  throw error;
 }
 
 async function loadClassAssignments(turmaId: string): Promise<ClassAssignmentRow[]> {
