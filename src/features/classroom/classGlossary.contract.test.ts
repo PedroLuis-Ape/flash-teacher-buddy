@@ -12,17 +12,19 @@ describe("class glossary contract", () => {
 
     expect(storage).toContain('CLASS_GLOSSARY_FOLDER_MARKER = "ape-system:class-glossary:v1"');
     expect(storage).toContain('.from("folders")');
-    expect(storage).toContain("loadFolderGlossary(storage.id)");
+    expect(storage).toContain("loadFolderGlossary(storageFolderId)");
     expect(storage).not.toContain('.from("class_glossary")');
     expect(manager).toContain("FolderGlossaryManagerCore");
     expect(manager).toContain("FolderGlossaryBulkDeleteCard");
   });
 
-  it("isolates one storage container per class and scans only assigned materials", () => {
+  it("isolates one hidden storage container per class and scans only assigned materials", () => {
     const storage = read("src/features/classroom/lib/classGlossary.ts");
 
+    expect(storage).toContain("classGlossaryStorageFolderId");
     expect(storage).toContain('.eq("class_id", turmaId)');
     expect(storage).toContain('.eq("description", CLASS_GLOSSARY_FOLDER_MARKER)');
+    expect(storage).toContain('visibility: "private"');
     expect(storage).toContain('.from("atribuicoes")');
     expect(storage).toContain('item.fonte_tipo === "lista"');
     expect(storage).toContain('item.fonte_tipo === "pasta"');
@@ -39,7 +41,7 @@ describe("class glossary contract", () => {
     expect(workspace).toContain('selectedTab === "glossario"');
   });
 
-  it("uses the class glossary during study entered from a classroom", () => {
+  it("uses the class glossary during authenticated study entered from a classroom", () => {
     const hook = read("src/hooks/useListGlossary.ts");
     const workspace = read("src/pages/TurmaDetailWorkspace.tsx");
     const hub = read("src/pages/GamesHub.tsx");
@@ -51,6 +53,7 @@ describe("class glossary contract", () => {
     expect(hook).toContain("loadClassGlossaryForList");
     expect(hook).toContain('source: "class-glossary"');
     expect(hook).toContain("turmaIsExplicit");
+    expect(hook).toContain('params.get("guest") === "true"');
   });
 
   it("keeps folder and class glossaries independent", () => {
@@ -58,7 +61,7 @@ describe("class glossary contract", () => {
     const manager = read("src/features/classroom/components/ClassGlossaryManager.tsx");
     const sync = read("src/features/classroom/components/ClassGlossarySyncCard.tsx");
 
-    expect(storage).toContain('visibility: "class"');
+    expect(storage).toContain('visibility: "private"');
     expect(manager).toContain("não altera os glossários das pastas pessoais");
     expect(sync).toContain("Nenhuma entrada é copiada para pastas pessoais");
   });
