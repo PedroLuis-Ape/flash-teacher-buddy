@@ -3242,6 +3242,24 @@ export type Database = {
           translation: string
         }[]
       }
+      get_kingdom_activities: {
+        Args: { _kingdom_code: string }
+        Returns: {
+          activity_type: string
+          choices: Json
+          created_at: string
+          hint: string
+          id: string
+          kingdom_code: string
+          lang: string
+          level_code: string
+          points: number
+          prompt: string
+          tags: string[]
+          unit: string
+          updated_at: string
+        }[]
+      }
       get_lists_with_card_counts: {
         Args: { _folder_id: string }
         Returns: {
