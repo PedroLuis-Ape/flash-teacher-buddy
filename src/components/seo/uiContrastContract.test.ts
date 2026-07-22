@@ -32,5 +32,7 @@ describe("public UI contrast contract", () => {
 
     expect(landing).not.toContain(lowContrastLabel);
     expect(demo).not.toContain(lowContrastLabel);
+    expect(landing).not.toContain("bg-clip-text");
+    expect(landing).not.toContain("text-transparent");
   });
 });

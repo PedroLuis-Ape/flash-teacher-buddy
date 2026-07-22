@@ -101,7 +101,7 @@ export default function LandingPage() {
               <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground">
                 <Sparkles className="h-3.5 w-3.5" /> {landingContent.eyebrow}
               </p>
-              <h1 className="mt-3 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-3xl font-extrabold leading-tight text-transparent sm:text-5xl lg:text-[3.5rem]">
+              <h1 className="mt-3 text-3xl font-extrabold leading-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
                 {landingContent.h1}
               </h1>
               <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-lg lg:mx-0">
