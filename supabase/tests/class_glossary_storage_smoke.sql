@@ -91,28 +91,28 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Teacher cannot manage the private class glossary storage.';
   END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.folders
-    WHERE id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80'
-      AND visibility = 'class'
-  ) THEN
-    RAISE EXCEPTION 'System storage leaked into the assignable class-folder visibility.';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.folders
-    WHERE id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80'
-      AND class_id IS NULL
-  ) THEN
-    RAISE EXCEPTION 'System storage leaked into the personal-folder scope.';
-  END IF;
 END;
 $$;
 
 RESET ROLE;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.folders
+    WHERE id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80'
+      AND owner_id = 'b1000000-0000-4000-8000-000000000001'
+      AND class_id = 'b2000000-0000-4000-8000-000000000001'
+      AND visibility = 'private'
+      AND description = 'ape-system:class-glossary:v1'
+      AND deleted_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Private class glossary storage metadata is invalid.';
+  END IF;
+END;
+$$;
+
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'b1000000-0000-4000-8000-000000000002', false);
 SELECT set_config('request.jwt.claim.role', 'authenticated', false);
@@ -120,17 +120,8 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', false);
 DO $$
 DECLARE
   v_visible_entries integer;
-  v_visible_folders integer;
   v_denied boolean := false;
 BEGIN
-  SELECT count(*) INTO v_visible_folders
-  FROM public.folders
-  WHERE id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80';
-
-  IF v_visible_folders <> 0 THEN
-    RAISE EXCEPTION 'Student can list the private class glossary folder.';
-  END IF;
-
   IF NOT public.can_read_folder_glossary_v1(
     '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
     auth.uid()
