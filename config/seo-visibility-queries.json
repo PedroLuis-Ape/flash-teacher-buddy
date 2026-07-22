@@ -1,0 +1,71 @@
+{
+  "schema": "ape-search-visibility-benchmark",
+  "version": "1.0",
+  "site_url": "https://www.apeeducation.org",
+  "observation_window_days": 14,
+  "max_code_hypotheses_per_cycle": 1,
+  "engines": [
+    "ChatGPT Search",
+    "Google Search",
+    "Bing Search"
+  ],
+  "query_groups": [
+    {
+      "id": "brand",
+      "label": "Marca e identidade",
+      "queries": [
+        "App Piteco",
+        "App Piteco flashcards",
+        "APE App Piteco",
+        "APE Apprentice Practice Enhancement",
+        "O que é o App Piteco?",
+        "Quem criou o App Piteco?"
+      ]
+    },
+    {
+      "id": "category",
+      "label": "Categoria",
+      "queries": [
+        "aplicativo de flashcards para professores",
+        "plataforma de flashcards para alunos e professores",
+        "aplicativo brasileiro de flashcards",
+        "ferramenta para criar atividades de inglês",
+        "aplicativo de flashcards com áudio",
+        "aplicativo de flashcards com glossário"
+      ]
+    },
+    {
+      "id": "differentiators",
+      "label": "Diferenciais",
+      "queries": [
+        "aplicativo com cards em camadas",
+        "flashcards com glossário interativo",
+        "transformar flashcards em vários jogos",
+        "aplicativo para importar flashcards com JSON",
+        "ferramenta de flashcards para professor de inglês"
+      ]
+    },
+    {
+      "id": "entity",
+      "label": "Entidade e domínio",
+      "queries": [
+        "APE Education flashcards",
+        "Pedro Luis App Piteco",
+        "apeeducation.org",
+        "site:apeeducation.org App Piteco"
+      ]
+    }
+  ],
+  "result_fields": [
+    "engine",
+    "query",
+    "brand_mentioned",
+    "domain_cited",
+    "source_url",
+    "description_accurate",
+    "entity_confusion",
+    "approximate_position",
+    "tested_at",
+    "deployed_commit"
+  ]
+}
