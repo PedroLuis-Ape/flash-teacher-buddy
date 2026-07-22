@@ -62,7 +62,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', false);
 INSERT INTO public.folders(
   id, owner_id, title, description, visibility, class_id
 ) VALUES (
-  '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80',
+  '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
   'b1000000-0000-4000-8000-000000000001',
   'Glossário interno · Turma de teste',
   'ape-system:class-glossary:v1',
@@ -75,7 +75,7 @@ DECLARE
   v_report jsonb;
 BEGIN
   v_report := public.import_folder_glossary_v1(
-    '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80',
+    '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
     '[{"term":"classroom","translation":"turma","side":"A"}]'::jsonb,
     'merge',
     false
@@ -86,7 +86,7 @@ BEGIN
   END IF;
 
   IF NOT public.can_manage_folder_glossary_v1(
-    '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80',
+    '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
     auth.uid()
   ) THEN
     RAISE EXCEPTION 'Teacher cannot manage the private class glossary storage.';
@@ -95,7 +95,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM public.folders
-    WHERE id = '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80'
+    WHERE id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80'
       AND visibility = 'class'
   ) THEN
     RAISE EXCEPTION 'System storage leaked into the assignable class-folder visibility.';
@@ -104,7 +104,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM public.folders
-    WHERE id = '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80'
+    WHERE id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80'
       AND class_id IS NULL
   ) THEN
     RAISE EXCEPTION 'System storage leaked into the personal-folder scope.';
@@ -125,17 +125,17 @@ DECLARE
 BEGIN
   SELECT count(*) INTO v_visible_folders
   FROM public.folders
-  WHERE id = '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80';
+  WHERE id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80';
 
   IF v_visible_folders <> 0 THEN
     RAISE EXCEPTION 'Student can list the private class glossary folder.';
   END IF;
 
   IF NOT public.can_read_folder_glossary_v1(
-    '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80',
+    '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
     auth.uid()
   ) OR public.can_manage_folder_glossary_v1(
-    '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80',
+    '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
     auth.uid()
   ) THEN
     RAISE EXCEPTION 'Student class glossary permissions are invalid.';
@@ -143,7 +143,7 @@ BEGIN
 
   SELECT count(*) INTO v_visible_entries
   FROM public.folder_glossary
-  WHERE folder_id = '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80';
+  WHERE folder_id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80';
 
   IF v_visible_entries <> 1 THEN
     RAISE EXCEPTION 'Student cannot read the class glossary entry: %', v_visible_entries;
@@ -151,7 +151,7 @@ BEGIN
 
   BEGIN
     PERFORM public.import_folder_glossary_v1(
-      '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80',
+      '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
       '[{"term":"forbidden","translation":"proibido","side":"A"}]'::jsonb,
       'merge',
       false
@@ -174,7 +174,7 @@ SELECT set_config('request.jwt.claim.role', 'authenticated', false);
 DO $$
 BEGIN
   IF public.can_read_folder_glossary_v1(
-    '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80',
+    '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80',
     auth.uid()
   ) THEN
     RAISE EXCEPTION 'Outsider can read the class glossary.';
@@ -183,7 +183,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM public.folder_glossary
-    WHERE folder_id = '1ec1f09e-7b2d-0a8c-1e3f-16b405d27c80'
+    WHERE folder_id = '17c1f09e-7b2d-0a8c-1e3f-16b405d27c80'
   ) THEN
     RAISE EXCEPTION 'RLS leaked the class glossary to an outsider.';
   END IF;
