@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTurmasAsAluno } from '@/features/classroom/hooks/useTurmas';
 import { useAtribuicoesMinhas } from '@/features/classroom/hooks/useAtribuicoes';
+import { markPendingClassGlossaryContext } from '@/features/classroom/lib/classGlossary';
 
 export default function TurmasAluno() {
   const navigate = useNavigate();
@@ -49,6 +50,18 @@ export default function TurmasAluno() {
         return <Badge className="bg-yellow-500">Em Andamento</Badge>;
       default:
         return <Badge variant="outline">Pendente</Badge>;
+    }
+  };
+
+  const openAssignment = (atribuicao: any) => {
+    const turmaId = typeof atribuicao.turma_id === 'string' ? atribuicao.turma_id : '';
+    if (turmaId) markPendingClassGlossaryContext(turmaId);
+
+    if (atribuicao.fonte_tipo === 'lista') {
+      const query = turmaId ? `?turma=${encodeURIComponent(turmaId)}` : '';
+      navigate(`/list/${atribuicao.fonte_id}/games${query}`);
+    } else if (atribuicao.fonte_tipo === 'pasta') {
+      navigate(`/folder/${atribuicao.fonte_id}`);
     }
   };
 
@@ -124,17 +137,7 @@ export default function TurmasAluno() {
                       )}
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      // Navigate directly to study/games (skip intermediate)
-                      if (atribuicao.fonte_tipo === 'lista') {
-                        navigate(`/list/${atribuicao.fonte_id}/games`);
-                      } else if (atribuicao.fonte_tipo === 'pasta') {
-                        navigate(`/folder/${atribuicao.fonte_id}`);
-                      }
-                    }}
-                  >
+                  <Button size="sm" onClick={() => openAssignment(atribuicao)}>
                     {atribuicao.status === 'concluida' ? 'Revisar' : 'Estudar'}
                   </Button>
                 </div>
