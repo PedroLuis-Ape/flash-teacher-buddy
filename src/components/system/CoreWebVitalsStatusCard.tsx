@@ -70,9 +70,7 @@ export function CoreWebVitalsStatusCard() {
               Diagnóstico local do documento atual, sem identificação de usuário.
             </CardDescription>
           </div>
-          <Badge variant={snapshot?.sampled ? "default" : "outline"}>
-            {snapshot?.sampled ? "Sessão amostrada" : "Somente local"}
-          </Badge>
+          <Badge variant="outline">Somente local</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

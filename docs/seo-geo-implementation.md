@@ -43,9 +43,9 @@ Repository configuration, frontend initialization, database changes and document
 - `noindex` protection for removed, private or unavailable public folders;
 - anonymous portal RPCs restricted to folders, lists and cards explicitly marked public and outside classroom context;
 - privacy-safe publication lifecycle registry for public teachers and learning resources;
-- real HTTP `404 Not Found` for dynamic public keys that were never published;
-- real HTTP `410 Gone` for previously published profiles or materials that were withdrawn;
-- Netlify Edge Function bypass for valid public entities and temporary backend failures;
+- database classification of unknown public keys as `404 Not Found`;
+- database classification of withdrawn public URLs as `410 Gone`;
+- client-side noindex handling for unavailable public entities;
 - static and database smoke validation of `200`, `404`, `410`, slug changes, withdrawal and republication;
 - SEO consistency validation in CI.
 
@@ -59,14 +59,14 @@ The evidence pages distinguish three layers:
 
 The current public claim is limited to layers 1 and 2. APE does not currently claim a product-specific causal effect, superiority over competitors or guaranteed learning. Any future effectiveness claim should require a pre-specified evaluation design, defined comparison group, retention interval and publicly documented results, including null or negative findings.
 
-## HTTP status semantics
+## Public entity status semantics
 
-- `200`: the profile or learning resource is currently public and the request continues to the existing pre-rendered page;
+- `200`: the profile or learning resource is currently public;
 - `404`: the dynamic key has no publication history and must not reveal whether a private database row exists;
 - `410`: the exact public URL was previously published and was later withdrawn, unpublished or soft-deleted;
-- temporary RPC or network failure: the edge layer bypasses status interception instead of producing a false error.
+- temporary RPC or network failure: the client must avoid producing a false unavailable state.
 
-Only URLs recorded through an actual public state transition can return `410`. Private entities that were never published remain indistinguishable from unknown identifiers.
+Only URLs recorded through an actual public state transition can be classified as `410`. Private entities that were never published remain indistinguishable from unknown identifiers. Hosting-level HTTP interception is not currently part of the Lovable deployment, so direct SPA routes may still receive an initial HTTP 200 before the client resolves the entity state.
 
 ## Current environment work
 
@@ -74,7 +74,6 @@ Only URLs recorded through an actual public state transition can return `410`. P
 - versioned environment files were removed;
 - the frontend validates and selects the production data backend;
 - the public-directory and learning-resource builds follow the same production-data validation;
-- the edge HTTP-status lookup validates and selects the production data backend;
 - the bootstrap validates project identity before loading the application;
 - CI validates runtime and optional deployment settings.
 

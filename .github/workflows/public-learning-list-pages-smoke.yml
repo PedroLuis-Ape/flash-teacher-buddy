@@ -10,8 +10,6 @@ on:
       - "scripts/validate-public-learning-list-prerender.mjs"
       - "src/pages/PublicLearningListPage.tsx"
       - "src/components/seo/publicLearningListStructuredData.ts"
-      - "netlify/edge-functions/public-list-status.js"
-      - "netlify.toml"
       - ".github/workflows/public-learning-list-pages-smoke.yml"
   push:
     branches: [main]
@@ -23,8 +21,6 @@ on:
       - "scripts/validate-public-learning-list-prerender.mjs"
       - "src/pages/PublicLearningListPage.tsx"
       - "src/components/seo/publicLearningListStructuredData.ts"
-      - "netlify/edge-functions/public-list-status.js"
-      - "netlify.toml"
       - ".github/workflows/public-learning-list-pages-smoke.yml"
   workflow_dispatch:
 

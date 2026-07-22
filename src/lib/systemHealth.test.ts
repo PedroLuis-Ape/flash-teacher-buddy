@@ -13,7 +13,8 @@ describe("systemHealth", () => {
   it("classifica domínio canônico, domínio raiz e previews", () => {
     expect(classifyRuntimeHost("www.apeeducation.org")).toBe("canonical");
     expect(classifyRuntimeHost("apeeducation.org")).toBe("apex");
-    expect(classifyRuntimeHost("deploy-preview-77--ape.netlify.app")).toBe("preview");
+    expect(classifyRuntimeHost("preview.ape.lovableproject.com")).toBe("preview");
+    expect(classifyRuntimeHost("ape-flashcards.lovable.app")).toBe("preview");
     expect(classifyRuntimeHost("localhost")).toBe("preview");
     expect(classifyRuntimeHost("example.com")).toBe("other");
   });

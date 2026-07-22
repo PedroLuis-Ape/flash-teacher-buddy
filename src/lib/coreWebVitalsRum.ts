@@ -11,12 +11,9 @@ export interface CoreWebVitalValue {
 }
 
 export interface CoreWebVitalsSnapshot {
-  pageViewId: string;
   routeGroup: string;
   deviceClass: RumDeviceClass;
   navigationType: RumNavigationType;
-  sampled: boolean;
-  sampleRate: number;
   updatedAt: number;
   metrics: Partial<Record<CoreWebVitalName, CoreWebVitalValue>>;
 }
@@ -31,26 +28,8 @@ interface InteractionEntry extends PerformanceEntry {
   duration: number;
 }
 
-interface RumPayload {
-  pageViewId: string;
-  metric: CoreWebVitalName;
-  value: number;
-  rating: CoreWebVitalRating;
-  routeGroup: string;
-  deviceClass: RumDeviceClass;
-  navigationType: RumNavigationType;
-  sampleRate: number;
-  buildId: string | null;
-}
-
-type RumSessionStorage = Pick<Storage, "getItem" | "setItem">;
-
-const CANONICAL_HOST = "www.apeeducation.org";
-const SESSION_SAMPLE_KEY = "ape_rum_sample_v1";
 const SESSION_SNAPSHOT_KEY = "ape_web_vitals_latest_v1";
 const LOCAL_EVENT_NAME = "ape:web-vital";
-const DEFAULT_SAMPLE_RATE = 0.1;
-const FLUSH_INTERVAL_MS = 15_000;
 const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const STATIC_ROUTES = new Set([
@@ -139,11 +118,6 @@ const DYNAMIC_ROUTE_PATTERNS: Array<[RegExp, string]> = [
 
 let activeStop: (() => void) | null = null;
 
-function clampSampleRate(value: number) {
-  if (!Number.isFinite(value)) return DEFAULT_SAMPLE_RATE;
-  return Math.min(1, Math.max(0, value));
-}
-
 export function classifyCoreWebVital(metric: CoreWebVitalName, value: number): CoreWebVitalRating {
   if (metric === "LCP") {
     if (value <= 2500) return "good";
@@ -185,12 +159,6 @@ export function normalizeRumRoute(pathname: string): string {
   return "/other";
 }
 
-export function resolveRumSampleRate(rawValue: string | undefined, hostname: string, production: boolean) {
-  if (!production || hostname !== CANONICAL_HOST) return 0;
-  if (!rawValue?.trim()) return DEFAULT_SAMPLE_RATE;
-  return clampSampleRate(Number(rawValue));
-}
-
 export function getRumDeviceClass(width: number): RumDeviceClass {
   if (width <= 767) return "mobile";
   if (width <= 1024) return "tablet";
@@ -201,55 +169,6 @@ export function getRumNavigationType(entryType?: string): RumNavigationType {
   return entryType === "navigate" || entryType === "reload" || entryType === "back_forward" || entryType === "prerender"
     ? entryType
     : "unknown";
-}
-
-function randomUnit() {
-  try {
-    const values = new Uint32Array(1);
-    crypto.getRandomValues(values);
-    return values[0] / 0x1_0000_0000;
-  } catch {
-    return Math.random();
-  }
-}
-
-function createPageViewId() {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-  }
-}
-
-export function resolveSessionSample(sampleRate: number, storage: RumSessionStorage | null = null) {
-  if (sampleRate <= 0) return false;
-  if (sampleRate >= 1) return true;
-  const key = `${SESSION_SAMPLE_KEY}:${sampleRate}`;
-  try {
-    const existing = storage?.getItem(key);
-    if (existing === "1") return true;
-    if (existing === "0") return false;
-    const sampled = randomUnit() < sampleRate;
-    storage?.setItem(key, sampled ? "1" : "0");
-    return sampled;
-  } catch {
-    return randomUnit() < sampleRate;
-  }
-}
-
-export function readOptionalSessionStorage(
-  getter: () => RumSessionStorage = () => window.sessionStorage,
-): RumSessionStorage | null {
-  try {
-    return getter();
-  } catch {
-    return null;
-  }
 }
 
 export function getLatestCoreWebVitals(): CoreWebVitalsSnapshot | null {
@@ -272,28 +191,6 @@ function storeSnapshot(snapshot: CoreWebVitalsSnapshot) {
   }
 }
 
-function sendPayload(payload: RumPayload) {
-  const body = JSON.stringify(payload);
-  try {
-    if (navigator.sendBeacon) {
-      const accepted = navigator.sendBeacon(
-        "/api/rum",
-        new Blob([body], { type: "application/json" }),
-      );
-      if (accepted) return;
-    }
-  } catch {
-    // Fall through to fetch keepalive.
-  }
-  void fetch("/api/rum", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body,
-    keepalive: true,
-    credentials: "omit",
-  }).catch(() => undefined);
-}
-
 function selectInpValue(interactions: Map<number, number>) {
   const values = Array.from(interactions.values()).sort((a, b) => b - a);
   if (!values.length) return null;
@@ -307,28 +204,16 @@ function startCoreWebVitalsRumInternal() {
   }
 
   const routeGroup = normalizeRumRoute(window.location.pathname);
-  const sampleRate = resolveRumSampleRate(
-    import.meta.env.VITE_RUM_SAMPLE_RATE,
-    window.location.hostname,
-    import.meta.env.PROD,
-  );
-  const sampled = resolveSessionSample(sampleRate, readOptionalSessionStorage());
   const navigationEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   const navigationType = getRumNavigationType(navigationEntry?.type);
   const deviceClass = getRumDeviceClass(window.innerWidth);
-  const pageViewId = createPageViewId();
-  const buildId = (import.meta.env.VITE_BUILD_ID || import.meta.env.VITE_COMMIT_REF || "").trim().slice(0, 80) || null;
   const snapshot: CoreWebVitalsSnapshot = {
-    pageViewId,
     routeGroup,
     deviceClass,
     navigationType,
-    sampled,
-    sampleRate,
     updatedAt: Date.now(),
     metrics: {},
   };
-  const sentValues = new Map<CoreWebVitalName, number>();
   const observers: PerformanceObserver[] = [];
   const interactions = new Map<number, number>();
   let clsSessionValue = 0;
@@ -402,41 +287,10 @@ function startCoreWebVitalsRumInternal() {
     if (inp != null) update("INP", inp);
   }, { durationThreshold: 16 });
 
-  const flush = () => {
-    if (!sampled || sampleRate <= 0) return;
-    for (const metric of ["LCP", "INP", "CLS"] as CoreWebVitalName[]) {
-      const current = snapshot.metrics[metric];
-      if (!current || sentValues.get(metric) === current.value) continue;
-      sendPayload({
-        pageViewId,
-        metric,
-        value: current.value,
-        rating: current.rating,
-        routeGroup,
-        deviceClass,
-        navigationType,
-        sampleRate,
-        buildId,
-      });
-      sentValues.set(metric, current.value);
-    }
-  };
-
-  const onVisibilityChange = () => {
-    if (document.visibilityState === "hidden") flush();
-  };
-  const onPageHide = () => flush();
-  document.addEventListener("visibilitychange", onVisibilityChange, true);
-  window.addEventListener("pagehide", onPageHide, true);
-  const interval = window.setInterval(flush, FLUSH_INTERVAL_MS);
   storeSnapshot(snapshot);
 
   const stop = () => {
-    flush();
     observers.forEach((observer) => observer.disconnect());
-    document.removeEventListener("visibilitychange", onVisibilityChange, true);
-    window.removeEventListener("pagehide", onPageHide, true);
-    window.clearInterval(interval);
     activeStop = null;
   };
   activeStop = stop;
