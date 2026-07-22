@@ -41,12 +41,15 @@ describe("class glossary contract", () => {
     expect(workspace).toContain('selectedTab === "glossario"');
   });
 
-  it("uses the class glossary during authenticated study entered from a classroom", () => {
+  it("uses the class glossary during authenticated study entered from every class entry point", () => {
     const hook = read("src/hooks/useListGlossary.ts");
     const workspace = read("src/pages/TurmaDetailWorkspace.tsx");
+    const studentClasses = read("src/pages/TurmasAluno.tsx");
     const hub = read("src/pages/GamesHub.tsx");
 
     expect(workspace).toContain("markPendingClassGlossaryContext(turmaId)");
+    expect(studentClasses).toContain("markPendingClassGlossaryContext(turmaId)");
+    expect(studentClasses).toContain('`?turma=${encodeURIComponent(turmaId)}`');
     expect(hub).toContain("isListAssignedToClass");
     expect(hub).toContain('params.set("turma", activeTurmaId)');
     expect(hook).toContain("readPendingClassGlossaryContext");
