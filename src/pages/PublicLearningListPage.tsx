@@ -25,6 +25,46 @@ function asCards(data: unknown): PublicLearningListCard[] {
   return Array.isArray(data) ? data as PublicLearningListCard[] : [];
 }
 
+function isMissingRpc(error: unknown, functionName: string) {
+  const candidate = error as { code?: string; message?: string; details?: string } | null;
+  const text = `${candidate?.code ?? ""} ${candidate?.message ?? ""} ${candidate?.details ?? ""}`.toLowerCase();
+  return text.includes("pgrst202") || text.includes("42883") || text.includes(functionName.toLowerCase());
+}
+
+async function loadLegacyPublicList(id: string): Promise<PublicLearningList | null> {
+  const listResponse = await (supabase as any)
+    .from("lists")
+    .select("id, folder_id, title, description, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, created_at, updated_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (listResponse.error) throw listResponse.error;
+  if (!listResponse.data) return null;
+
+  const folderResponse = await (supabase.rpc as any)("get_portal_folder", {
+    _id: listResponse.data.folder_id,
+  });
+  if (folderResponse.error) throw folderResponse.error;
+  const folder = Array.isArray(folderResponse.data) ? folderResponse.data[0] : folderResponse.data;
+  if (!folder) return null;
+
+  return {
+    ...listResponse.data,
+    folder_title: folder.title || "Material publico",
+    author_display_name: "Professor no APE",
+    author_slug: null,
+    author_avatar_url: null,
+    card_count: 0,
+  } as PublicLearningList;
+}
+
+async function loadLegacyPublicCards(id: string): Promise<PublicLearningListCard[]> {
+  const response = await (supabase.rpc as any)("get_portal_flashcards", { _list_id: id });
+  if (response.error) throw response.error;
+  return asCards(response.data)
+    .filter((card) => !(card as PublicLearningListCard & { parent_card_id?: string | null }).parent_card_id)
+    .slice(0, PREVIEW_LIMIT);
+}
+
 function languageLabel(code?: string | null) {
   const labels: Record<string, string> = {
     en: "Inglês",
@@ -47,24 +87,35 @@ export default function PublicLearningListPage() {
     enabled: Boolean(id),
     retry: 1,
     queryFn: async () => {
-      const [listResponse, cardsResponse] = await Promise.all([
-        (supabase as any).rpc("get_public_learning_list", { _id: id }),
-        (supabase as any).rpc("get_public_learning_list_card_preview", {
-          _list_id: id,
-          _limit: PREVIEW_LIMIT,
-        }),
-      ]);
-
-      if (listResponse.error) throw listResponse.error;
-      const list = asList(listResponse.data);
+      const listResponse = await (supabase as any).rpc("get_public_learning_list", { _id: id });
+      const list = listResponse.error && isMissingRpc(listResponse.error, "get_public_learning_list")
+        ? await loadLegacyPublicList(id)
+        : asList(listResponse.data);
+      if (listResponse.error && !isMissingRpc(listResponse.error, "get_public_learning_list")) {
+        throw listResponse.error;
+      }
       if (!list) return { list: null, cards: [] as PublicLearningListCard[] };
-      if (cardsResponse.error) throw cardsResponse.error;
-      return { list, cards: asCards(cardsResponse.data) };
+
+      const cardsResponse = await (supabase as any).rpc("get_public_learning_list_card_preview", {
+        _list_id: id,
+        _limit: PREVIEW_LIMIT,
+      });
+      const cards = cardsResponse.error && isMissingRpc(cardsResponse.error, "get_public_learning_list_card_preview")
+        ? await loadLegacyPublicCards(id)
+        : asCards(cardsResponse.data);
+      if (cardsResponse.error && !isMissingRpc(cardsResponse.error, "get_public_learning_list_card_preview")) {
+        throw cardsResponse.error;
+      }
+
+      return {
+        list: { ...list, card_count: Number(list.card_count ?? cards.length) || cards.length },
+        cards,
+      };
     },
   });
 
   const list = query.data?.list ?? null;
-  const cards = query.data?.cards ?? [];
+  const cards = useMemo(() => query.data?.cards ?? [], [query.data?.cards]);
   const path = `/portal/list/${id}`;
   const description = list
     ? publicLearningListDescription(list)

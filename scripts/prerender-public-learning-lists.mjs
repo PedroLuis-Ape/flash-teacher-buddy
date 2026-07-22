@@ -10,7 +10,7 @@ const SITE_URL = "https://www.apeeducation.org";
 const root = process.cwd();
 const distDir = resolve(root, "dist");
 const templatePath = resolve(distDir, "index.html");
-const sitemapPath = resolve(distDir, "sitemap.xml");
+const sitemapPath = resolve(distDir, "sitemap-lists.xml");
 const redirectsPath = resolve(distDir, "_redirects");
 const reportPath = resolve(distDir, "public-learning-list-prerender-report.json");
 
@@ -171,8 +171,8 @@ export function appendPublicLearningListUrlsToSitemap(sitemap, lists, generatedA
   const entries = lists
     .filter((list) => !sitemap.includes(`<loc>${absolute(publicLearningListPath(list.id))}</loc>`))
     .map((list) => {
-      const lastmod = (list.updated_at || list.created_at || generatedAt).slice(0, 10);
-      return `  <url><loc>${absolute(publicLearningListPath(list.id))}</loc><lastmod>${lastmod}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`;
+      const lastmod = (list.updated_at || list.created_at || generatedAt || "").slice(0, 10) || null;
+      return `  <url><loc>${absolute(publicLearningListPath(list.id))}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}<changefreq>weekly</changefreq><priority>0.7</priority></url>`;
     })
     .join("\n");
   return entries ? sitemap.replace(/\s*<\/urlset>\s*$/i, `\n${entries}\n</urlset>\n`) : sitemap;
@@ -207,9 +207,9 @@ export async function prerenderPublicLearningLists() {
     generatedPaths.push(path);
   }
 
-  writeFileSync(sitemapPath, appendPublicLearningListUrlsToSitemap(readFileSync(sitemapPath, "utf8"), lists, generatedAt), "utf8");
+  writeFileSync(sitemapPath, appendPublicLearningListUrlsToSitemap(readFileSync(sitemapPath, "utf8"), lists, null), "utf8");
   writeFileSync(redirectsPath, injectPublicLearningListRedirects(readFileSync(redirectsPath, "utf8"), lists), "utf8");
-  const report = { generatedAt, runtimeSource: directory.runtimeSource, discoveryMode: directory.discoveryMode, listCount: lists.length, previewCardCount: lists.reduce((sum, list) => sum + (list.cards?.length ?? 0), 0), generatedPaths };
+  const report = { generatedAt, runtimeSource: directory.runtimeSource, runtimeProjectId: directory.runtimeProjectId, discoveryMode: directory.discoveryMode, failedPreviewCount: directory.failedPreviewCount, listCount: lists.length, previewCardCount: lists.reduce((sum, list) => sum + (list.cards?.length ?? 0), 0), generatedPaths };
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   console.log(`Pré-render público de listas: ${lists.length} páginas (${directory.discoveryMode}).`);
   return report;

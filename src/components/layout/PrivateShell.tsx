@@ -173,7 +173,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
 
       {!isActiveStudyRoute && (
         <div className="space-ui-version-badge fixed bottom-20 md:bottom-6 right-3 z-50 pointer-events-none">
-          <Badge variant="secondary" className="opacity-70 text-[10px] shadow-sm">
+          <Badge variant="outline" className="bg-background text-foreground border-border text-[10px] shadow-sm">
             {formatVersionLabel()}
           </Badge>
         </div>

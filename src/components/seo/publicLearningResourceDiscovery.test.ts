@@ -42,6 +42,7 @@ describe("public learning-resource discovery", () => {
     expect(route).toContain("get_public_learning_resource");
     expect(route).toContain("get_public_learning_resource_lists");
     expect(route).toContain("get_portal_folder");
+    expect(route).toContain("get_portal_lists_with_counts");
     expect(route).toContain("buildPublicLearningResourceStructuredData(resource, lists)");
     expect(route).toContain('robots="noindex,nofollow"');
     expect(route).toContain("canonicalPath={null}");

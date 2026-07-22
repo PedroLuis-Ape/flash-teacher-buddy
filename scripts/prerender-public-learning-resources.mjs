@@ -10,7 +10,7 @@ const SITE_URL = "https://www.apeeducation.org";
 const root = process.cwd();
 const distDir = resolve(root, "dist");
 const templatePath = resolve(distDir, "index.html");
-const sitemapPath = resolve(distDir, "sitemap.xml");
+const sitemapPath = resolve(distDir, "sitemap-folders.xml");
 const redirectsPath = resolve(distDir, "_redirects");
 const reportPath = resolve(distDir, "public-learning-resource-prerender-report.json");
 
@@ -221,8 +221,8 @@ export function appendLearningResourceUrlsToSitemap(sitemap, resources, fallback
   const entries = resources
     .filter((resource) => !sitemap.includes(`<loc>${absolute(publicLearningResourcePath(resource.id))}</loc>`))
     .map((resource) => {
-      const lastmod = resource.updated_at?.slice(0, 10) || fallbackDate;
-      return `  <url><loc>${absolute(publicLearningResourcePath(resource.id))}</loc><lastmod>${lastmod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
+      const lastmod = resource.updated_at?.slice(0, 10) || fallbackDate || null;
+      return `  <url><loc>${absolute(publicLearningResourcePath(resource.id))}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}<changefreq>weekly</changefreq><priority>0.8</priority></url>`;
     })
     .join("\n");
   return entries ? sitemap.replace(/\s*<\/urlset>\s*$/i, `\n${entries}\n</urlset>\n`) : sitemap;
@@ -251,7 +251,6 @@ export async function prerenderPublicLearningResources() {
   const discovery = await loadPublicLearningResources();
   const resources = discovery.resources ?? [];
   const generatedAt = new Date().toISOString();
-  const fallbackDate = generatedAt.slice(0, 10);
   const generatedPaths = [];
 
   for (const resource of resources) {
@@ -264,7 +263,7 @@ export async function prerenderPublicLearningResources() {
 
   writeFileSync(
     sitemapPath,
-    appendLearningResourceUrlsToSitemap(readFileSync(sitemapPath, "utf8"), resources, fallbackDate),
+    appendLearningResourceUrlsToSitemap(readFileSync(sitemapPath, "utf8"), resources, null),
     "utf8",
   );
   writeFileSync(
@@ -276,7 +275,9 @@ export async function prerenderPublicLearningResources() {
   const report = {
     generatedAt,
     runtimeSource: discovery.runtimeSource,
+    runtimeProjectId: discovery.runtimeProjectId,
     discoveryMode: discovery.discoveryMode,
+    failedFolderCount: discovery.failedFolderCount,
     resourceCount: resources.length,
     listCount: resources.reduce((sum, resource) => sum + (resource.lists?.length ?? 0), 0),
     generatedPaths,

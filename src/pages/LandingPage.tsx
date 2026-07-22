@@ -65,7 +65,7 @@ function formattedReviewDate() {
 function SectionHeading({ eyebrow, title, text }: { eyebrow?: string; title: string; text: string }) {
   return (
     <div className="mx-auto mb-7 max-w-3xl text-center">
-      {eyebrow && <p className="text-xs font-semibold uppercase tracking-wider text-primary">{eyebrow}</p>}
+      {eyebrow && <p className="text-xs font-semibold uppercase tracking-wider text-foreground">{eyebrow}</p>}
       <h2 className="mt-2 text-2xl font-bold sm:text-4xl">{title}</h2>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">{text}</p>
     </div>
@@ -98,10 +98,10 @@ export default function LandingPage() {
 
           <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 sm:px-6 sm:py-16 lg:grid-cols-[1.08fr_.92fr] lg:gap-12 lg:py-20">
             <div className="text-center lg:text-left">
-              <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+              <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground">
                 <Sparkles className="h-3.5 w-3.5" /> {landingContent.eyebrow}
               </p>
-              <h1 className="mt-3 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-3xl font-extrabold leading-tight text-transparent sm:text-5xl lg:text-[3.5rem]">
+              <h1 className="mt-3 text-3xl font-extrabold leading-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
                 {landingContent.h1}
               </h1>
               <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-lg lg:mx-0">
@@ -127,7 +127,7 @@ export default function LandingPage() {
 
             <Card className="relative overflow-hidden border-primary/25 shadow-xl">
               <CardContent className="p-6 sm:p-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Uma base de estudo</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Uma base de estudo</p>
                 <p className="mt-2 text-3xl font-bold">to practice</p>
                 <p className="mt-1 text-sm text-muted-foreground">praticar · verbo</p>
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
@@ -223,7 +223,7 @@ export default function LandingPage() {
           <Card className="border-primary/25 bg-primary/5">
             <CardContent className="grid gap-5 p-5 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">Transparência pedagógica</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Transparência pedagógica</p>
                 <h2 className="mt-2 text-2xl font-bold sm:text-3xl">{landingContent.methodology.heading}</h2>
                 <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
                   {landingContent.methodology.text}
@@ -268,7 +268,7 @@ export default function LandingPage() {
                   <UserRound className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">Autoria e revisão</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Autoria e revisão</p>
                   <h2 className="mt-1 text-lg font-bold">{landingContent.author.name}</h2>
                   <p className="text-sm text-muted-foreground">{landingContent.author.role}</p>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{landingContent.author.text}</p>
