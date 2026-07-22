@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
+    "seo:audit:production": "node scripts/audit-production-seo.mjs",
     "validate:landing-authority": "node scripts/validate-landing-authority-source.mjs",
     "validate:author-privacy": "node scripts/validate-public-author-privacy.mjs",
     "store:validate": "node scripts/store-packages/validate.mjs",
