@@ -52,7 +52,11 @@ async function loadPublicFolderMetadata(id: string): Promise<PublicFolderMetadat
 async function loadPublicFolderLists(id: string): Promise<PublicFolderListMetadata[]> {
   const response = await (supabase.rpc as any)("get_public_learning_resource_lists", { _folder_id: id });
   if (!response.error) return (response.data ?? []) as PublicFolderListMetadata[];
-  if (isMissingRpc(response.error, "get_public_learning_resource_lists")) return [];
+  if (isMissingRpc(response.error, "get_public_learning_resource_lists")) {
+    const legacy = await (supabase.rpc as any)("get_portal_lists_with_counts", { _folder_id: id });
+    if (legacy.error) throw legacy.error;
+    return (legacy.data ?? []) as PublicFolderListMetadata[];
+  }
   throw response.error;
 }
 

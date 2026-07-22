@@ -89,9 +89,20 @@ The bilingual official pages are the preferred first-party sources for factual d
 
 ## Remaining work
 
-1. Add canonical indexable pages for individual public lists when editorially useful.
-2. Add real-user INP, LCP and CLS monitoring.
-3. Expand international URLs beyond the current Portuguese and English foundation when content is ready.
+### Implemented in code, pending publication
+
+- segmented sitemap index for static pages, teachers, folders and individual public lists;
+- compatibility discovery through the existing read-only public gateways in the production data backend;
+- canonical pre-rendering for the 27 lists currently declared by the eight public folders;
+- fail-closed publication report that checks project identity, discovery availability, cross-count consistency and sitemap parity;
+- CI artifact retention for the publication report;
+- local environment example corrected to the production data runtime without changing Supabase data, Auth, schema or migrations.
+
+### Still required
+
+1. Publish this rollout through Lovable and compare the deployed sitemap segments and HTML with the build report.
+2. Resolve real host-level `404` and `410` responses if Lovable exposes a supported routing or server handler; client-side `noindex` remains only a fallback.
+3. Add real-user INP, LCP and CLS monitoring without reintroducing a second hosting platform.
 4. Connect Search Console and Bing Webmaster monitoring to a recurring review process.
 5. Monitor AI citations, brand mentions and Share of Model.
 6. Build external authority through useful references, partnerships and legitimate backlinks.

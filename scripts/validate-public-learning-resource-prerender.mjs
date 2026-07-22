@@ -13,7 +13,7 @@ const root = process.cwd();
 const distDir = resolve(root, "dist");
 const reportPath = resolve(distDir, "public-learning-resource-prerender-report.json");
 const sourceTemplatePath = resolve(root, "index.html");
-const sitemapPath = resolve(distDir, "sitemap.xml");
+const sitemapPath = resolve(distDir, "sitemap-folders.xml");
 const redirectsPath = resolve(distDir, "_redirects");
 
 for (const path of [reportPath, sourceTemplatePath, sitemapPath, redirectsPath]) {

@@ -101,6 +101,41 @@ async function mapWithConcurrency(values, limit, worker) {
   return output;
 }
 
+async function hydrateListPreviews(client, lists) {
+  let failedPreviewCount = 0;
+  const hydrated = await mapWithConcurrency(lists, PREVIEW_CONCURRENCY, async (list) => {
+    const canonical = await client.rpc("get_public_learning_list_card_preview", {
+      _list_id: list.id,
+      _limit: PREVIEW_LIMIT,
+    });
+    if (!canonical.error) {
+      return {
+        ...list,
+        cards: (canonical.data ?? []).map(sanitizePublicLearningListCard).filter(Boolean),
+      };
+    }
+    if (!isMissingRpc(canonical.error, "get_public_learning_list_card_preview")) {
+      failedPreviewCount += 1;
+      return list;
+    }
+
+    const legacy = await client.rpc("get_portal_flashcards", { _list_id: list.id });
+    if (legacy.error) {
+      failedPreviewCount += 1;
+      return list;
+    }
+    return {
+      ...list,
+      cards: (legacy.data ?? [])
+        .filter((row) => !row?.parent_card_id)
+        .slice(0, PREVIEW_LIMIT)
+        .map(sanitizePublicLearningListCard)
+        .filter(Boolean),
+    };
+  });
+  return { lists: hydrated, failedPreviewCount };
+}
+
 function fallbackListsFromResources(resources) {
   return resources.flatMap((resource) => (resource.lists ?? []).map((list) => sanitizePublicLearningList({
     ...list,
@@ -123,7 +158,9 @@ export async function loadPublicLearningLists() {
     const resources = await loadPublicLearningResources();
     return {
       runtimeSource: resources.runtimeSource,
+      runtimeProjectId: resources.runtimeProjectId,
       discoveryMode: "public-resource-fallback",
+      failedPreviewCount: 0,
       lists: fallbackListsFromResources(resources.resources ?? []),
     };
   }
@@ -136,15 +173,25 @@ export async function loadPublicLearningLists() {
   const discovery = await client.rpc("list_public_learning_list_entries", { _limit: MAX_LISTS });
   if (discovery.error && isMissingRpc(discovery.error, "list_public_learning_list_entries")) {
     const resources = await loadPublicLearningResources();
+    const fallback = fallbackListsFromResources(resources.resources ?? []);
+    const hydrated = await hydrateListPreviews(client, fallback);
     return {
       runtimeSource: resources.runtimeSource,
-      discoveryMode: "public-resource-fallback",
-      lists: fallbackListsFromResources(resources.resources ?? []),
+      runtimeProjectId: runtime.projectId,
+      discoveryMode: "public-resource-legacy-rpc",
+      failedPreviewCount: hydrated.failedPreviewCount,
+      lists: hydrated.lists,
     };
   }
   if (discovery.error) {
     console.warn("[PublicLearningLists] Descoberta indisponível; mantendo o build sem listas canônicas.", discovery.error.message);
-    return { runtimeSource: runtime.source, discoveryMode: "unavailable", lists: [] };
+    return {
+      runtimeSource: runtime.source,
+      runtimeProjectId: runtime.projectId,
+      discoveryMode: "unavailable",
+      failedPreviewCount: 0,
+      lists: [],
+    };
   }
 
   const seen = new Set();
@@ -173,9 +220,12 @@ export async function loadPublicLearningLists() {
     };
   });
 
+  const finalized = await hydrateListPreviews(client, hydrated);
   return {
     runtimeSource: runtime.source,
+    runtimeProjectId: runtime.projectId,
     discoveryMode: "canonical-rpc",
-    lists: hydrated,
+    failedPreviewCount: finalized.failedPreviewCount,
+    lists: finalized.lists,
   };
 }
