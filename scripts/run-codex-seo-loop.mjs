@@ -47,7 +47,8 @@ if (!allowDirty && gitStatus.stdout.trim()) {
   fail("A árvore de trabalho não está limpa. Faça commit/stash ou use --allow-dirty conscientemente.");
 }
 
-const prompt = readFileSync(promptPath, "utf8");
+const masterPrompt = readFileSync(promptPath, "utf8");
+const prompt = `${masterPrompt}\n\nExecute agora este protocolo no repositório atual e pare conforme as regras de parada.`;
 const codexCommand = process.platform === "win32" ? "codex.cmd" : "codex";
 const codexVersion = run(codexCommand, ["--version"]);
 
@@ -83,7 +84,7 @@ const args = [
   "--json",
   "--output-last-message",
   lastMessagePath,
-  "Execute o APE Search Visibility Experiment Loop seguindo integralmente o contexto recebido por stdin.",
+  "-",
 ];
 
 const result = spawnSync(codexCommand, args, {
