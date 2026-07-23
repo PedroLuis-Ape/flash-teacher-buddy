@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APE Pronúncia e Notas</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p>APE — App Piteco</p>
+        <h1>Pronúncia e Notas</h1>
+        <span>Preset principal: inglês americano (en-US)</span>
+      </header>
+      <section class="hint">Selecione uma palavra ou frase em qualquer página. Use <strong>🔊 Ouvir</strong> ou <strong>📝 Salvar</strong>.</section>
+      <div class="toolbar"><strong id="count">0 notas</strong><button id="clear" type="button">Limpar tudo</button></div>
+      <section id="notes" class="notes" aria-live="polite"></section>
+      <p id="status" class="status"></p>
+    </main>
+    <template id="note-template">
+      <article class="note">
+        <p class="text"></p>
+        <small class="source"></small>
+        <div><button data-action="speak" type="button">🔊 Ouvir</button><button data-action="delete" type="button">Apagar</button></div>
+      </article>
+    </template>
+    <script src="popup.js"></script>
+  </body>
+</html>
