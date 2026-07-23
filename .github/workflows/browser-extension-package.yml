@@ -1,0 +1,34 @@
+name: Browser Extension Package
+
+on:
+  pull_request:
+    paths:
+      - "browser-extension/ape-pronunciation-notes/**"
+      - ".github/workflows/browser-extension-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate manifest and JavaScript
+        run: |
+          python -m json.tool browser-extension/ape-pronunciation-notes/manifest.json >/dev/null
+          node --check browser-extension/ape-pronunciation-notes/background.js
+          node --check browser-extension/ape-pronunciation-notes/content.js
+          node --check browser-extension/ape-pronunciation-notes/popup.js
+      - name: Build store package
+        run: |
+          mkdir -p dist/browser-extension
+          cd browser-extension/ape-pronunciation-notes
+          zip -r ../../dist/browser-extension/ape-pronunciation-notes.zip . -x "*.DS_Store"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ape-pronunciation-notes-store-package
+          path: dist/browser-extension/ape-pronunciation-notes.zip
+          retention-days: 14
