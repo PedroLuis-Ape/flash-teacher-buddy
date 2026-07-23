@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "APE Pronúncia e Notas",
+  "version": "1.0.0",
+  "description": "Selecione palavras e frases para ouvir em inglês americano e salvar notas durante os estudos.",
+  "permissions": ["contextMenus", "storage", "tts"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "APE Pronúncia e Notas",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
