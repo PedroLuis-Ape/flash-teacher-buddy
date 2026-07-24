@@ -50,6 +50,10 @@ export async function saveLayeredCardGroup({
     back: layer.back,
     example: layer.example ?? null,
     example_translation: layer.exampleTranslation ?? null,
+    ...(layer.contextTag != null ? { context_tag: layer.contextTag } : {}),
+    ...(layer.shortObservation != null
+      ? { short_observation: layer.shortObservation }
+      : {}),
   }));
 
   const { data, error } = await (supabase as any).rpc("save_layered_card_group_v2", {
@@ -95,6 +99,8 @@ export async function createLayeredCard({
       back: layer.translation,
       example: layer.example ?? null,
       exampleTranslation: layer.exampleTranslation ?? null,
+      contextTag: layer.contextTag ?? null,
+      shortObservation: layer.shortExplanation ?? null,
     })),
   });
   return { principalId: result.principalId };
