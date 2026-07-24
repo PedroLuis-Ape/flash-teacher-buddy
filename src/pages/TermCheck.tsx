@@ -59,9 +59,10 @@ function extractTermsFromJson(input: unknown): ExtractedTerm[] {
       });
     }
 
-    Object.values(obj).forEach((value) => {
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === "layers") continue;
       if (value && typeof value === "object") walk(value);
-    });
+    }
   };
 
   walk(input);
