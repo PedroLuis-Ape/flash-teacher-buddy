@@ -4,6 +4,8 @@ export interface LayeredCardDraft {
   back: string;
   example?: string | null;
   exampleTranslation?: string | null;
+  contextTag?: string | null;
+  shortObservation?: string | null;
 }
 
 function cleanOptional(value: unknown): string | null {
@@ -20,6 +22,12 @@ export function normalizeLayeredCardDrafts(
     ...(cleanOptional(layer.example) ? { example: cleanOptional(layer.example) } : {}),
     ...(cleanOptional(layer.exampleTranslation)
       ? { exampleTranslation: cleanOptional(layer.exampleTranslation) }
+      : {}),
+    ...(cleanOptional(layer.contextTag)
+      ? { contextTag: cleanOptional(layer.contextTag) }
+      : {}),
+    ...(cleanOptional(layer.shortObservation)
+      ? { shortObservation: cleanOptional(layer.shortObservation) }
       : {}),
   }));
 }
