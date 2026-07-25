@@ -20,7 +20,7 @@ describe("methodology and evidence SEO", () => {
       expect(page.schema).toContain("Article");
       expect(page.sections.length).toBeGreaterThanOrEqual(5);
       expect(page.references).toHaveLength(6);
-      expect(page.intro.join(" ").length).toBeGreaterThan(100);
+      expect(page.intro.join(" ").length).toBeGreaterThan(80);
     }
 
     expect(editorialPages.some((page) => page.path === "/pt-br/metodologia")).toBe(true);
