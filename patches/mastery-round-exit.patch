@@ -1,0 +1,20 @@
+diff --git a/src/pages/Study.tsx b/src/pages/Study.tsx
+--- a/src/pages/Study.tsx
++++ b/src/pages/Study.tsx
+@@ -1309,10 +1309,10 @@ const Study = () => {
+               <Button 
+                 variant="ghost" 
+                 size="lg" 
+-                onClick={() => void handleFinishedExit()}
++                onClick={() => void (showNextRound ? handleExit() : handleFinishedExit())}
+                 disabled={isCompleting || isRestarting}
+               >
+-                Voltar à Lista
++                {showNextRound ? "Encerrar por agora" : "Voltar à Lista"}
+               </Button>
+@@ -1343,8 +1343,8 @@ const Study = () => {
+-              <Button variant="ghost" size="sm" onClick={() => void handleFinishedExit()} disabled={isCompleting || isRestarting}>
+-                Voltar
++              <Button variant="ghost" size="sm" onClick={() => void (showNextRound ? handleExit() : handleFinishedExit())} disabled={isCompleting || isRestarting}>
++                {showNextRound ? "Encerrar por agora" : "Voltar"}
+               </Button>
