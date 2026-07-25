@@ -4,21 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, SkipForward, Volume2 } from "lucide-react";
-import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
+import { getHint } from "@/lib/textMatch";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
-import { isAlmostCorrect } from "@/lib/levenshtein";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
+import {
+  evaluateWriteAnswer,
+  summarizeDifferences,
+  type WriteAnswerEvaluation,
+} from "@/features/study/lib/writeAnswerEvaluation";
+import {
+  DEFAULT_WRITE_CORRECTION_MODE,
+  readWriteCorrectionMode,
+  writeWriteCorrectionMode,
+  type WriteCorrectionMode,
+} from "@/features/study/lib/writeCorrectionMode";
+import { WriteAnswerDiff } from "./WriteAnswerDiff";
 
 interface WriteStudyViewProps {
   front: string;
@@ -72,11 +82,29 @@ export const WriteStudyView = ({
   onSkip,
 }: WriteStudyViewProps) => {
   const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<"correct" | "almost" | "incorrect" | null>(null);
+  const [evaluation, setEvaluation] = useState<WriteAnswerEvaluation | null>(null);
   const [hintLevel, setHintLevel] = useState(0);
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
+  const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
+    () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
+  );
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<WriteCorrectionMode>).detail;
+      if (detail === "flexible" || detail === "hard") setCorrectionMode(detail);
+    };
+    window.addEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
+    return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
+  }, []);
+
+  const handleModeChange = (next: WriteCorrectionMode) => {
+    if (next === correctionMode) return;
+    setCorrectionMode(next);
+    writeWriteCorrectionMode(next);
+  };
 
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
@@ -105,7 +133,7 @@ export const WriteStudyView = ({
 
   useEffect(() => {
     setAnswer("");
-    setFeedback(null);
+    setEvaluation(null);
     setHintLevel(0);
     setCurrentHint("");
     setRevealed(false);
@@ -131,27 +159,15 @@ export const WriteStudyView = ({
       return;
     }
 
-    const result = isAcceptableAnswer(userOriginalAnswer, acceptedAnswers);
-
-    if (result.isCorrect) {
-      setFeedback("correct");
-      playCorrect();
-      return;
-    }
-
-    const almostCorrect = acceptedAnswers.some((accepted) => isAlmostCorrect(userOriginalAnswer, accepted));
-
-    if (almostCorrect) {
-      setFeedback("almost");
-      playCorrect();
-      toast.warning(`Correto! (Atenção ao erro de digitação: "${correctAnswer}")`, {
-        duration: 3000,
-      });
-      return;
-    }
-
-    setFeedback("incorrect");
-    playWrong();
+    const result = evaluateWriteAnswer({
+      userAnswer: userOriginalAnswer,
+      correctAnswer,
+      alternatives: alternativeAnswers,
+      mode: correctionMode,
+    });
+    setEvaluation(result);
+    if (result.accepted) playCorrect();
+    else playWrong();
   };
 
   const handleHint = () => {
@@ -174,17 +190,30 @@ export const WriteStudyView = ({
 
     if (key === confirmKey) {
       event.preventDefault();
-      if (!feedback) handleSubmit();
-      else if (feedback === "correct" || feedback === "almost") onCorrect();
+      if (!evaluation) handleSubmit();
+      else if (evaluation.accepted) onCorrect();
       else onIncorrect();
       return;
     }
 
-    if (key === skipKey && !feedback) {
+    if (key === skipKey && !evaluation) {
       event.preventDefault();
       onSkip();
     }
   };
+
+  const feedbackStatus: "correct" | "almost" | "incorrect" | null = evaluation
+    ? evaluation.status === "exact"
+      ? "correct"
+      : evaluation.status === "accepted_with_corrections"
+        ? "almost"
+        : "incorrect"
+    : null;
+  const accuracyPercent = evaluation ? Math.round(evaluation.accuracy * 100) : undefined;
+  const { messages: correctionMessages, hiddenCount: hiddenCorrectionCount } = evaluation
+    ? summarizeDifferences(evaluation.differences, evaluation.status === "incorrect" ? 5 : 6)
+    : { messages: [] as string[], hiddenCount: 0 };
+  const referenceAnswer = evaluation?.matchedAnswer ?? correctAnswer;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
@@ -247,7 +276,7 @@ export const WriteStudyView = ({
           onChange={(event) => setAnswer(event.target.value)}
           onKeyDown={handleKeyPress}
           placeholder="Digite sua resposta..."
-          disabled={feedback !== null}
+          disabled={evaluation !== null}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
@@ -257,55 +286,102 @@ export const WriteStudyView = ({
           className={cn(
             "min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
             shake && "animate-[shake_0.5s_ease-in-out]",
-            feedback === "correct" && "border-2 border-emerald-500 bg-emerald-500/8",
-            feedback === "almost" && "border-2 border-amber-500 bg-amber-500/8",
-            feedback === "incorrect" && "border-2 border-destructive bg-destructive/6",
+            feedbackStatus === "correct" && "border-2 border-emerald-500 bg-emerald-500/8",
+            feedbackStatus === "almost" && "border-2 border-amber-500 bg-amber-500/8",
+            feedbackStatus === "incorrect" && "border-2 border-destructive bg-destructive/6",
           )}
         />
 
-        {feedback === "correct" && (
+        {feedbackStatus === "correct" && (
           <StudyFeedbackPanel
             status="correct"
             title="Muito bem!"
             message="Sua resposta está correta."
-            correctAnswer={correctAnswer}
+            correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
             onAction={onCorrect}
-            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
 
-        {feedback === "almost" && (
+        {feedbackStatus === "almost" && evaluation && (
           <StudyFeedbackPanel
             status="almost"
-            message="Faltou ou sobrou apenas um caractere. O resultado contará como acerto."
+            title="Quase lá! Sua resposta foi aceita."
+            message={evaluation.summary}
+            accuracyPercent={accuracyPercent}
             userAnswer={answer.trim()}
-            correctAnswer={correctAnswer}
+            correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
-            actionLabel="Próximo card"
+            extraContent={<WriteAnswerDiff differences={evaluation.differences} />}
+            correctionMessages={correctionMessages}
+            hiddenCorrectionCount={hiddenCorrectionCount}
+            actionLabel="Continuar"
             onAction={onCorrect}
-            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
 
-        {feedback === "incorrect" && (
+        {feedbackStatus === "incorrect" && evaluation && (
           <StudyFeedbackPanel
             status="incorrect"
+            title="Vamos corrigir."
+            message={evaluation.summary}
+            accuracyPercent={accuracyPercent}
             userAnswer={answer.trim()}
-            correctAnswer={correctAnswer}
+            correctAnswer={referenceAnswer}
+            extraContent={<WriteAnswerDiff differences={evaluation.differences} />}
+            correctionMessages={correctionMessages}
+            hiddenCorrectionCount={hiddenCorrectionCount}
             actionLabel="Continuar"
             onAction={onIncorrect}
-            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
       </div>
 
-      {feedback === null && (
+      {evaluation === null && (
         <div className="sticky bottom-4 z-10 rounded-lg bg-background/95 p-2 shadow-lg backdrop-blur-sm">
+          <div
+            role="radiogroup"
+            aria-label="Modo de correção"
+            className="mb-2 flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 p-1 text-xs"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={correctionMode === "flexible"}
+              onClick={() => handleModeChange("flexible")}
+              className={cn(
+                "flex-1 rounded px-2 py-1.5 font-semibold transition-colors",
+                correctionMode === "flexible"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Aceita pequenos erros e mostra as correções."
+            >
+              Flexível
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={correctionMode === "hard"}
+              onClick={() => handleModeChange("hard")}
+              className={cn(
+                "flex-1 rounded px-2 py-1.5 font-semibold transition-colors",
+                correctionMode === "hard"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Exige a resposta exata."
+            >
+              Hard
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
