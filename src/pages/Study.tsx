@@ -1308,10 +1308,10 @@ const Study = () => {
               <Button 
                 variant="ghost" 
                 size="lg" 
-                onClick={() => void handleFinishedExit()}
+                onClick={() => void (showNextRound ? handleExit() : handleFinishedExit())}
                 disabled={isCompleting || isRestarting}
               >
-                Voltar à Lista
+                {showNextRound ? "Encerrar por agora" : "Voltar à Lista"}
               </Button>
             </div>
 
@@ -1339,8 +1339,8 @@ const Study = () => {
                   ← Metas
                 </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={() => void handleFinishedExit()} disabled={isCompleting || isRestarting}>
-                Voltar
+              <Button variant="ghost" size="sm" onClick={() => void (showNextRound ? handleExit() : handleFinishedExit())} disabled={isCompleting || isRestarting}>
+                {showNextRound ? "Encerrar por agora" : "Voltar"}
               </Button>
             </div>
           </Card>
