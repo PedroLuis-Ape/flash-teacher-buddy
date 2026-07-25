@@ -2,7 +2,7 @@ diff --git a/src/features/study/hooks/useStudyEngine.ts b/src/features/study/hoo
 index abc033d..0000000 100644
 --- a/src/features/study/hooks/useStudyEngine.ts
 +++ b/src/features/study/hooks/useStudyEngine.ts
-@@ -38,8 +38,7 @@ import {
+@@ -38,6 +38,5 @@ import {
    createMasterySession,
    getCurrentCardId,
 -  isRoundFinished,
@@ -10,7 +10,7 @@ index abc033d..0000000 100644
    recordResult as recordMasteryResult,
 +  summarizeCurrentRound,
    startNextRound as startNextMasteryRound,
-@@ -150,7 +151,10 @@ export function useStudyEngine(
+@@ -150,5 +151,8 @@ export function useStudyEngine(
  
    const isMasteryMode = useMemo(
 -    () => studyFlowMode === "mastery_rounds" && (mode === "write" || mode === "mixed"),
@@ -20,7 +20,7 @@ index abc033d..0000000 100644
 +    ),
      [studyFlowMode, mode],
    );
-@@ -848,7 +852,22 @@ export function useStudyEngine(
+@@ -848,5 +852,17 @@ export function useStudyEngine(
          if (!prev) return prev;
          const cardId = getCurrentCardId(prev);
          if (!cardId) return prev;
@@ -39,7 +39,7 @@ index abc033d..0000000 100644
 +          currentRoundResults: { ...prev.currentRoundResults },
 +        }, cardId, resultType);
        });
-@@ -937,17 +956,9 @@ export function useStudyEngine(
+@@ -937,14 +956,7 @@ export function useStudyEngine(
  
    const goToNext = useCallback(() => {
 -    if (isMasteryMode && masterySession) {
@@ -57,7 +57,7 @@ index abc033d..0000000 100644
 +      // on the summary screen until the user explicitly starts the next one.
        return;
      }
-@@ -979,6 +990,21 @@ export function useStudyEngine(
+@@ -979,3 +990,20 @@ export function useStudyEngine(
    // Start next round (for quiz modes)
    const startNextRound = useCallback(() => {
 +    if (isMasteryMode) {
@@ -78,19 +78,19 @@ index abc033d..0000000 100644
 +      return;
 +    }
      if (isGameComplete) {
-@@ -993,7 +1019,7 @@ export function useStudyEngine(
+@@ -993,3 +1019,3 @@ export function useStudyEngine(
        toast.info(`Rodada ${roundNumber + 1} iniciada!`);
      }
 -  }, [generateNextRound, isGameComplete, roundNumber]);
 +  }, [generateNextRound, isGameComplete, roundNumber, isMasteryMode, masterySession]);
-@@ -1198,8 +1224,15 @@ export function useStudyEngine(
+@@ -1198,4 +1224,6 @@ export function useStudyEngine(
      if (!isMasteryMode || !masterySession) return;
      setCardsOrder(masterySession.currentRoundIds);
      setCurrentIndex(masterySession.currentRoundIndex);
 +    setRoundNumber(masterySession.roundNumber);
 +    setIsFinished(masterySession.status !== "active");
    }, [isMasteryMode, masterySession]);
-@@ -1208,7 +1241,10 @@ export function useStudyEngine(
+@@ -1208,4 +1241,5 @@ export function useStudyEngine(
  
    useEffect(() => {
 -    if (isFinished) trackCompleted();
@@ -98,7 +98,7 @@ index abc033d..0000000 100644
 +    if (!isFinished) return;
 +    if (!isMasteryMode || masterySession?.status === "journey-complete") trackCompleted();
 +  }, [isFinished, isMasteryMode, masterySession?.status, trackCompleted]);
-@@ -1239,7 +1275,7 @@ export function useStudyEngine(
+@@ -1239,5 +1275,5 @@ export function useStudyEngine(
    useEffect(() => {
      if (!isMasteryMode) return;
 -    if (isLoading || isFinished || !masterySession) return;
@@ -106,7 +106,7 @@ index abc033d..0000000 100644
      writeMasterySnapshot(masterySnapshotKey, masterySession);
 -  }, [isMasteryMode, masterySession, masterySnapshotKey, isLoading, isFinished]);
 +  }, [isMasteryMode, masterySession, masterySnapshotKey, isLoading]);
-@@ -1312,10 +1348,18 @@ export function useStudyEngine(
+@@ -1312,5 +1348,17 @@ export function useStudyEngine(
  
    // Calculate round stats
 -  const roundCorrect = roundResults.filter(r => r.correct && !r.skipped).length;
@@ -127,12 +127,12 @@ index abc033d..0000000 100644
 +  const resolvedGameComplete = isMasteryMode
 +    ? masterySession?.status === "journey-complete"
 +    : isGameComplete;
-@@ -1331,7 +1375,7 @@ export function useStudyEngine(
+@@ -1331,3 +1375,3 @@ export function useStudyEngine(
      currentCard,
      cardsOrder,
 -    totalCards: cardsOrder.length,
 +    totalCards: isMasteryMode ? (masterySession?.currentRoundIds.length ?? cardsOrder.length) : cardsOrder.length,
-@@ -1342,9 +1386,10 @@ export function useStudyEngine(
+@@ -1342,5 +1386,6 @@ export function useStudyEngine(
      roundNumber,
      roundCorrect,
      roundErrors,
@@ -140,7 +140,7 @@ index abc033d..0000000 100644
      hasMoreRounds,
 -    isGameComplete,
 +    isGameComplete: resolvedGameComplete,
-@@ -1352,8 +1397,10 @@ export function useStudyEngine(
+@@ -1352,4 +1397,6 @@ export function useStudyEngine(
      gameSettings,
      setGameSettings,
 -    unseenCardsCount: unseenCards.length,
@@ -153,12 +153,12 @@ diff --git a/src/pages/Study.tsx b/src/pages/Study.tsx
 index 99145bd..0000000 100644
 --- a/src/pages/Study.tsx
 +++ b/src/pages/Study.tsx
-@@ -315,6 +315,7 @@ const Study = () => {
+@@ -315,3 +315,4 @@ const Study = () => {
      roundNumber,
      roundCorrect,
      roundErrors,
 +    roundRecovered,
-@@ -426,14 +427,21 @@ const Study = () => {
+@@ -426,11 +427,16 @@ const Study = () => {
    // Auto-open completion modal when activity finishes OR on re-entry if already completed
    useEffect(() => {
 -    if (isFinished) {
@@ -177,7 +177,7 @@ index 99145bd..0000000 100644
 +      try { localStorage.removeItem(completionKey); } catch {}
 +    }
 +  }, [isFinished, isGameComplete, completionKey]);
-@@ -1188,7 +1196,9 @@ const Study = () => {
+@@ -1188,8 +1196,10 @@ const Study = () => {
  
              <h1 className="text-3xl font-bold">
 -              {isGameComplete && correctCount === totalCards && errorCount === 0 && skippedCount === 0
@@ -190,7 +190,7 @@ index 99145bd..0000000 100644
  
 -            <div className="grid grid-cols-3 gap-4 py-6">
 +            <div className="grid grid-cols-2 gap-4 py-6 sm:grid-cols-4">
-@@ -1205,6 +1215,10 @@ const Study = () => {
+@@ -1205,4 +1215,8 @@ const Study = () => {
                  <div className="text-3xl font-bold text-destructive">{isFlipMode ? errorCount : roundErrors}</div>
                  <div className="text-sm text-muted-foreground">Erros</div>
                </div>
@@ -199,7 +199,7 @@ index 99145bd..0000000 100644
 +                <div className="text-sm text-muted-foreground">Recuperados</div>
 +              </div>
                <div className="space-y-2">
-@@ -1239,18 +1253,20 @@ const Study = () => {
+@@ -1239,14 +1253,16 @@ const Study = () => {
  
              {/* Desktop buttons */}
              <div className="hidden md:flex flex-wrap gap-4 justify-center pt-4">
@@ -227,12 +227,12 @@ index 99145bd..0000000 100644
 +                  {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
 +                </Button>
 +              )}
-@@ -1331,7 +1347,7 @@ const Study = () => {
+@@ -1331,3 +1347,3 @@ const Study = () => {
  
          {/* Mobile: Sticky bottom button */}
 -        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:hidden">
 +        {!showNextRound && <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:hidden">
-@@ -1344,7 +1360,7 @@ const Study = () => {
+@@ -1344,3 +1360,3 @@ const Study = () => {
              {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
            </Button>
 -        </div>
