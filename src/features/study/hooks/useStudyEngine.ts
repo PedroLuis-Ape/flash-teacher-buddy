@@ -1148,6 +1148,9 @@ export function useStudyEngine(
     setUnseenCards([]);
     setRoundNumber(1);
     setIsFinished(false);
+    setMasterySession(null);
+    masterySessionRef.current = null;
+    setPendingRoundSummary(null);
     initializeSession();
   }, [listId, isFlipMode, flashcards, initializeSession, flipProgressKey]);
 
@@ -1187,6 +1190,9 @@ export function useStudyEngine(
     setUnseenCards([]);
     setRoundNumber(1);
     setIsFinished(false);
+    setMasterySession(null);
+    masterySessionRef.current = null;
+    setPendingRoundSummary(null);
 
     try {
       const userId = authUserIdRef.current;
