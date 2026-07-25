@@ -1082,6 +1082,7 @@ const Study = () => {
   // layer cycling, and restarting the session. Disabled while a modal is open
   // so it doesn't fight with dialog focus / Escape handling.
   useStudyShortcuts(
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     {
       nextCard: () => {
         if (writeShortcutsLocked) return;
