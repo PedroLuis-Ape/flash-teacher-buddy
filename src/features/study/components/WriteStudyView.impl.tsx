@@ -112,6 +112,7 @@ export const WriteStudyView = ({
   const promptLang = toBCP47(promptSide.lang);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
 
@@ -219,9 +220,29 @@ export const WriteStudyView = ({
     }, 50);
   };
 
+  useEffect(() => {
+    if (!evaluation) return;
+    const node = feedbackRef.current;
+    if (!node) return;
+    const timer = window.setTimeout(() => {
+      try {
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch {
+        node.scrollIntoView();
+      }
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [evaluation]);
+
+  const hasFeedback = evaluation !== null;
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
-      <Card className={cn("relative min-h-[168px] bg-gradient-to-br from-card to-muted/20 p-5 sm:min-h-0 sm:p-8", getRedListCardClass(isRedListed))}>
+      <Card className={cn(
+        "relative bg-gradient-to-br from-card to-muted/20 transition-all duration-200",
+        hasFeedback ? "min-h-0 p-3 sm:p-4" : "min-h-[168px] p-5 sm:min-h-0 sm:p-8",
+        getRedListCardClass(isRedListed),
+      )}>
         <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-4 sm:top-4 sm:gap-2">
           <StudyToolsMenu
             hint={hint}
@@ -236,10 +257,19 @@ export const WriteStudyView = ({
           />
         </div>
 
-        <div className="flex min-h-[128px] flex-col items-center justify-center pt-2 text-center sm:min-h-0 sm:pt-0">
-          <p className="mb-3 pr-20 text-xs text-muted-foreground sm:mb-4 sm:pr-0 sm:text-sm">{promptLabel}</p>
-          <div className="mb-4 flex w-full flex-col items-center justify-center gap-2 sm:mb-8 sm:flex-row sm:gap-3">
-            <p className={cn("mx-auto max-w-[94%] break-words px-2 font-semibold leading-tight [text-wrap:balance] sm:text-3xl", promptSizeClass)}>
+        <div className={cn(
+          "flex flex-col items-center justify-center text-center",
+          hasFeedback ? "min-h-0 pt-0 gap-1" : "min-h-[128px] pt-2 sm:min-h-0 sm:pt-0",
+        )}>
+          <p className={cn("pr-20 text-xs text-muted-foreground sm:pr-0 sm:text-sm", hasFeedback ? "mb-1" : "mb-3 sm:mb-4")}>{promptLabel}</p>
+          <div className={cn(
+            "flex w-full flex-col items-center justify-center gap-2 sm:flex-row sm:gap-3",
+            hasFeedback ? "mb-0" : "mb-4 sm:mb-8",
+          )}>
+            <p className={cn(
+              "mx-auto max-w-[94%] break-words px-2 font-semibold leading-tight [text-wrap:balance]",
+              hasFeedback ? "text-base sm:text-lg" : cn(promptSizeClass, "sm:text-3xl"),
+            )}>
               <InteractiveText
                 text={prompt}
                 wordHints={promptWordHints}
@@ -251,17 +281,19 @@ export const WriteStudyView = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-9 shrink-0 p-0"
+              className={cn("shrink-0 p-0", hasFeedback ? "h-8 w-8" : "h-9 w-9")}
               onClick={() => {
                 const rate = getSpeechRate();
                 speak(prompt, { langOverride: promptLang, rate });
               }}
               aria-label="Ouvir frase"
             >
-              <Volume2 className="h-5 w-5" />
+              <Volume2 className={cn(hasFeedback ? "h-4 w-4" : "h-5 w-5")} />
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground sm:text-sm">Traduza para {answerLabel}:</p>
+          {!hasFeedback && (
+            <p className="text-sm text-muted-foreground sm:text-sm">Traduza para {answerLabel}:</p>
+          )}
         </div>
       </Card>
 
@@ -273,6 +305,7 @@ export const WriteStudyView = ({
       )}
 
       <div className="space-y-4" tabIndex={-1}>
+        {!hasFeedback && (
         <Textarea
           ref={inputRef}
           rows={2}
@@ -295,7 +328,9 @@ export const WriteStudyView = ({
             feedbackStatus === "incorrect" && "border-2 border-destructive bg-destructive/6",
           )}
         />
+        )}
 
+        <div ref={feedbackRef}>
         {feedbackStatus === "correct" && (
           <StudyFeedbackPanel
             status="correct"
@@ -350,6 +385,7 @@ export const WriteStudyView = ({
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
+        </div>
       </div>
 
       {evaluation === null && (
