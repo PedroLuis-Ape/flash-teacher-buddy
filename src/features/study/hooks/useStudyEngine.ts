@@ -125,6 +125,7 @@ export function useStudyEngine(
   initialSettings?: Partial<GameSettings>,
   redListIds: string[] = [],
   userScope?: string | null,
+  studyFlowMode: StudyFlowMode = "continuous",
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
