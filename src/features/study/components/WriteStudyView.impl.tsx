@@ -112,6 +112,7 @@ export const WriteStudyView = ({
   const promptLang = toBCP47(promptSide.lang);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
 
@@ -219,9 +220,29 @@ export const WriteStudyView = ({
     }, 50);
   };
 
+  useEffect(() => {
+    if (!evaluation) return;
+    const node = feedbackRef.current;
+    if (!node) return;
+    const timer = window.setTimeout(() => {
+      try {
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch {
+        node.scrollIntoView();
+      }
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [evaluation]);
+
+  const hasFeedback = evaluation !== null;
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
-      <Card className={cn("relative min-h-[168px] bg-gradient-to-br from-card to-muted/20 p-5 sm:min-h-0 sm:p-8", getRedListCardClass(isRedListed))}>
+      <Card className={cn(
+        "relative bg-gradient-to-br from-card to-muted/20 transition-all duration-200",
+        hasFeedback ? "min-h-0 p-3 sm:p-4" : "min-h-[168px] p-5 sm:min-h-0 sm:p-8",
+        getRedListCardClass(isRedListed),
+      )}>
         <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-4 sm:top-4 sm:gap-2">
           <StudyToolsMenu
             hint={hint}
