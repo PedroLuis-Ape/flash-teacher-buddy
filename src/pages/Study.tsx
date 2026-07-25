@@ -55,6 +55,7 @@ import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdenti
 import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
+import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
 import { ArrowLeft, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { buildStudyReturnRoute } from "@/features/study/lib/studyCompletionNavigation";
@@ -1080,16 +1081,28 @@ const Study = () => {
   // actions that always make sense regardless of the active mode: navigation,
   // layer cycling, and restarting the session. Disabled while a modal is open
   // so it doesn't fight with dialog focus / Escape handling.
+  // Track whether the active Write view is still waiting for a first
+  // submission — while true, suppress global next/prev/next-layer shortcuts
+  // so they don't conflict with typing or bypass the Advance Gate.
+  const [writeShortcutsLocked, setWriteShortcutsLocked] = useState<boolean>(() => isWriteAnswerLocked());
+  useEffect(() => {
+    setWriteShortcutsLocked(isWriteAnswerLocked());
+    return subscribeWriteAnswerLock(setWriteShortcutsLocked);
+  }, []);
+
   useStudyShortcuts(
     {
       nextCard: () => {
+        if (writeShortcutsLocked) return;
         // Treat global "next" as a skip — equivalent to the existing skip flow.
         if (currentCard) handleNext(false, true);
       },
       prevCard: () => {
+        if (writeShortcutsLocked) return;
         goToPrevious();
       },
       nextLayer: () => {
+        if (writeShortcutsLocked) return;
         if (hasLayers && cardLayers) {
           setLayerIdx((i) => (i + 1) % cardLayers.length);
         }

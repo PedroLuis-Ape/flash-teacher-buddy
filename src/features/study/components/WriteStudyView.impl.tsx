@@ -31,6 +31,7 @@ import { WriteAnswerDiff } from "./WriteAnswerDiff";
 import { useAdvanceController } from "@/features/study/hooks/useAdvanceController";
 import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
 import { LayeredCardHintButton } from "./LayeredCardHintButton";
+import { setWriteAnswerLocked } from "@/features/study/lib/writeAnswerLock";
 
 interface WriteStudyViewProps {
   front: string;
@@ -107,6 +108,14 @@ export const WriteStudyView = ({
     window.addEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
     return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
   }, []);
+
+  // Lock global "next / skip / next-layer" shortcuts while this Write view
+  // has no evaluation yet — the user must submit first. Once feedback is
+  // shown (right/wrong screen), shortcuts unlock automatically.
+  useEffect(() => {
+    setWriteAnswerLocked(!evaluation);
+    return () => setWriteAnswerLocked(false);
+  }, [evaluation]);
 
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };

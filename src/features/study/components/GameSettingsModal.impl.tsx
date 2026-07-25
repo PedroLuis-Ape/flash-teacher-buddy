@@ -168,6 +168,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     ?? "any";
 
   const applyDirection = (next: Direction) => {
+    // Persist as a study preference so it survives reload / new sessions.
+    updateForCurrentScope({ direction: next });
     if (onDirectionChange) {
       onDirectionChange(next);
     } else {
