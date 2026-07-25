@@ -28,6 +28,9 @@ import {
   type WriteCorrectionMode,
 } from "@/features/study/lib/writeCorrectionMode";
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
+import { useAdvanceController } from "@/features/study/hooks/useAdvanceController";
+import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
+import { LayeredCardHintButton } from "./LayeredCardHintButton";
 
 interface WriteStudyViewProps {
   front: string;
@@ -53,6 +56,9 @@ interface WriteStudyViewProps {
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
+  layerCount?: number;
+  layersVisitedCount?: number;
+  onOpenLayers?: () => void;
 }
 
 export const WriteStudyView = ({
@@ -79,6 +85,9 @@ export const WriteStudyView = ({
   onCorrect,
   onIncorrect,
   onSkip,
+  layerCount = 1,
+  layersVisitedCount = 0,
+  onOpenLayers,
 }: WriteStudyViewProps) => {
   const [answer, setAnswer] = useState("");
   const [evaluation, setEvaluation] = useState<WriteAnswerEvaluation | null>(null);
@@ -115,6 +124,21 @@ export const WriteStudyView = ({
   const feedbackRef = useRef<HTMLDivElement>(null);
   const { speak } = useTTS();
   const shortcuts = useShortcutMap();
+
+  // Central advance gate — every "next"/"skip" path goes through this
+  // controller so we can (a) demand a finalized status before advancing and
+  // (b) prevent duplicate onAdvance calls for the same attempt.
+  const advance = useAdvanceController({
+    cardId: flashcardId ?? `${front}|${back}`,
+    mode: "write",
+    flowMode: "mastery_rounds",
+    onAdvance: (final) => {
+      if (final === "correct" || final === "accepted_with_corrections") onCorrect();
+      else if (final === "incorrect") onIncorrect();
+      else onSkip(); // "skipped" and "revealed"
+    },
+    onCancelSkip: () => window.setTimeout(() => inputRef.current?.focus(), 30),
+  });
 
   const acceptedAnswers = [correctAnswer, ...(answerSide.acceptedAnswers || [])];
   const alternativeAnswers = acceptedAnswers.slice(1).filter((item, index, values) => values.indexOf(item) === index);
@@ -162,6 +186,13 @@ export const WriteStudyView = ({
     setEvaluation(result);
     if (result.accepted) playCorrect();
     else playWrong();
+    advance.setStatus(
+      result.status === "exact"
+        ? "correct"
+        : result.status === "accepted_with_corrections"
+          ? "accepted_with_corrections"
+          : "incorrect",
+    );
   };
 
   const handleHint = () => {
@@ -172,6 +203,7 @@ export const WriteStudyView = ({
     } else {
       setRevealed(true);
       setCurrentHint(correctAnswer);
+      advance.setStatus("revealed");
     }
   };
 
@@ -185,15 +217,15 @@ export const WriteStudyView = ({
     if (key === confirmKey) {
       event.preventDefault();
       if (!evaluation) handleSubmit();
-      else if (evaluation.accepted) onCorrect();
+      else if (evaluation.accepted) advance.requestAdvance({ source: "keyboard" });
       else if (correctionMode === "hard") handleRetry();
-      else onIncorrect();
+      else advance.requestAdvance({ source: "keyboard" });
       return;
     }
 
     if (key === skipKey && !evaluation) {
       event.preventDefault();
-      onSkip();
+      advance.requestAdvance({ source: "keyboard" });
     }
   };
 
@@ -212,6 +244,7 @@ export const WriteStudyView = ({
 
   const handleRetry = () => {
     setEvaluation(null);
+    advance.setStatus("unanswered");
     window.setTimeout(() => {
       const input = inputRef.current;
       if (!input) return;
@@ -340,7 +373,7 @@ export const WriteStudyView = ({
             correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
-            onAction={onCorrect}
+            onAction={() => advance.requestAdvance({ source: "next_button" })}
             onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
@@ -359,7 +392,7 @@ export const WriteStudyView = ({
             correctionMessages={correctionMessages}
             hiddenCorrectionCount={hiddenCorrectionCount}
             actionLabel="Continuar"
-            onAction={onCorrect}
+            onAction={() => advance.requestAdvance({ source: "next_button" })}
             secondaryActionLabel="Tentar corrigir"
             onSecondaryAction={handleRetry}
             onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
@@ -379,7 +412,11 @@ export const WriteStudyView = ({
             correctionMessages={correctionMessages}
             hiddenCorrectionCount={hiddenCorrectionCount}
             actionLabel={correctionMode === "hard" ? "Tentar corrigir" : "Continuar"}
-            onAction={correctionMode === "hard" ? handleRetry : onIncorrect}
+            onAction={
+              correctionMode === "hard"
+                ? handleRetry
+                : () => advance.requestAdvance({ source: "next_button" })
+            }
             secondaryActionLabel={correctionMode === "hard" ? undefined : "Tentar corrigir"}
             onSecondaryAction={correctionMode === "hard" ? undefined : handleRetry}
             onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
@@ -395,13 +432,20 @@ export const WriteStudyView = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onSkip}
+              onClick={() => advance.requestAdvance({ source: "next_button" })}
               className="h-11 shrink-0 px-3 text-muted-foreground"
               title="Pular"
             >
               <SkipForward className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Pular</span>
             </Button>
+            {onOpenLayers && (
+              <LayeredCardHintButton
+                layerCount={layerCount}
+                visitedCount={layersVisitedCount}
+                onOpen={onOpenLayers}
+              />
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -419,6 +463,12 @@ export const WriteStudyView = ({
           </div>
         </div>
       )}
+      <SkipCardConfirmDialog
+        open={advance.dialog.open}
+        flowMode={advance.dialog.flowMode}
+        onCancel={advance.dialog.cancel}
+        onConfirm={advance.dialog.confirm}
+      />
     </div>
   );
 };
