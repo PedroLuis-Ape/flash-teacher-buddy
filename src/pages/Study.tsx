@@ -1081,8 +1081,16 @@ const Study = () => {
   // actions that always make sense regardless of the active mode: navigation,
   // layer cycling, and restarting the session. Disabled while a modal is open
   // so it doesn't fight with dialog focus / Escape handling.
+  // Track whether the active Write view is still waiting for a first
+  // submission — while true, suppress global next/prev/next-layer shortcuts
+  // so they don't conflict with typing or bypass the Advance Gate.
+  const [writeShortcutsLocked, setWriteShortcutsLocked] = useState<boolean>(() => isWriteAnswerLocked());
+  useEffect(() => {
+    setWriteShortcutsLocked(isWriteAnswerLocked());
+    return subscribeWriteAnswerLock(setWriteShortcutsLocked);
+  }, []);
+
   useStudyShortcuts(
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     {
       nextCard: () => {
         if (writeShortcutsLocked) return;
