@@ -2,7 +2,7 @@ diff --git a/src/features/study/lib/studySessionFlow.ts b/src/features/study/lib
 index a22c55d..0000000 100644
 --- a/src/features/study/lib/studySessionFlow.ts
 +++ b/src/features/study/lib/studySessionFlow.ts
-@@ -18,9 +18,13 @@ export const MASTERY_ROUND_SIZE = 15;
+@@ -18,12 +18,15 @@ export const MASTERY_ROUND_SIZE = 15;
  
  export type StudyFlowMode = "mastery_rounds" | "continuous";
  
@@ -27,7 +27,7 @@ index a22c55d..0000000 100644
  }
  
  export interface RoundSummary {
-@@ -45,10 +51,12 @@ export interface RoundSummary {
+@@ -45,8 +51,10 @@ export interface RoundSummary {
    cardsPlayed: number;
    correctFirstTry: number;
 +  correctCards: number;
@@ -81,7 +81,7 @@ index a22c55d..0000000 100644
  }
  
  /**
-@@ -190,7 +196,12 @@ export function recordResult(
+@@ -190,7 +196,13 @@ export function recordResult(
    cardId: string,
    result: StudyCardResult,
  ): MasterySessionState {
@@ -95,7 +95,7 @@ index a22c55d..0000000 100644
  
    if (result === "correct") {
      if (!state.correctThisRoundIds.includes(cardId)) state.correctThisRoundIds.push(cardId);
-@@ -204,6 +215,15 @@ export function recordResult(
+@@ -204,6 +215,13 @@ export function recordResult(
    }
  
    state.currentRoundIndex += 1;
@@ -109,7 +109,7 @@ index a22c55d..0000000 100644
    return state;
  }
  
-@@ -211,15 +231,19 @@ export function recordResult(
+@@ -211,23 +231,25 @@ export function recordResult(
   * Snapshot summary of the round that just ended. Call before startNextRound.
   */
  export function summarizeCurrentRound(state: MasterySessionState): RoundSummary {
@@ -144,7 +144,7 @@ index a22c55d..0000000 100644
      pendingReview: state.retryIds.length + state.failedThisRoundIds.length,
      unseenRemaining: state.unseenIds.length,
      masteredTotal: state.masteredIds.length,
-@@ -240,8 +264,8 @@ export function summarizeCurrentRound(state: MasterySessionState): RoundSummary {
+@@ -240,7 +264,7 @@ export function summarizeCurrentRound(state: MasterySessionState): RoundSummary {
   * mastered, then composes the next round.
   */
  export function startNextRound(state: MasterySessionState): MasterySessionState {
@@ -154,7 +154,7 @@ index a22c55d..0000000 100644
 +  if (isSessionFinished(state)) {
      return state;
    }
-@@ -266,7 +290,9 @@ export function startNextRound(state: MasterySessionState): MasterySessionState {
+@@ -266,5 +290,7 @@ export function startNextRound(state: MasterySessionState): MasterySessionState {
    state.correctThisRoundIds = [];
    state.failedThisRoundIds = [];
    state.reviewSourceThisRound = composed.reviewSource;
@@ -166,12 +166,12 @@ diff --git a/src/features/study/lib/masterySessionSnapshot.ts b/src/features/stu
 index 0000000..0000000 100644
 --- a/src/features/study/lib/masterySessionSnapshot.ts
 +++ b/src/features/study/lib/masterySessionSnapshot.ts
-@@ -5,7 +5,7 @@
+@@ -5,3 +5,3 @@
   * mirroring the pattern in studySessionSnapshot.ts.
   */
 -import type { MasterySessionState } from "./studySessionFlow";
 +import type { MasterySessionState, StudyCardResult } from "./studySessionFlow";
-@@ -22,6 +22,15 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
+@@ -22,2 +22,9 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
    );
  }
 +
@@ -181,7 +181,7 @@ index 0000000..0000000 100644
 +    result === "correct" || result === "incorrect" || result === "skipped" || result === "revealed"
 +  );
 +}
-@@ -34,6 +43,9 @@ export function sanitizeMasterySnapshot(
+@@ -34,4 +43,6 @@ export function sanitizeMasterySnapshot(
    const row = value as Partial<MasterySessionState>;
    if (
 -    typeof row.totalEligible !== "number"
@@ -189,13 +189,13 @@ index 0000000..0000000 100644
 +    || (row.status !== "active" && row.status !== "round-complete" && row.status !== "journey-complete")
 +    || typeof row.totalEligible !== "number"
      || typeof row.roundSize !== "number"
-@@ -51,6 +63,7 @@ export function sanitizeMasterySnapshot(
+@@ -51,4 +63,5 @@ export function sanitizeMasterySnapshot(
      || !isStringArray(row.reviewSourceThisRound)
      || !isNumberRecord(row.attemptsByCard)
      || !isNumberRecord(row.mistakesByCard)
 +    || !isResultRecord(row.currentRoundResults)
    ) {
-@@ -75,6 +88,18 @@ export function sanitizeMasterySnapshot(
+@@ -75,5 +88,21 @@ export function sanitizeMasterySnapshot(
      if (!union.has(id)) return null;
    }
 +
@@ -217,14 +217,14 @@ index 0000000..0000000 100644
    return {
 +    version: 2,
      totalEligible: row.totalEligible,
-@@ -82,10 +107,11 @@ export function sanitizeMasterySnapshot(
+@@ -82,4 +107,5 @@ export function sanitizeMasterySnapshot(
      shuffle: row.shuffle,
 +    status,
      roundNumber: row.roundNumber,
      currentRoundIds,
 -    currentRoundIndex: Math.min(Math.max(row.currentRoundIndex, 0), currentRoundIds.length - 1),
 +    currentRoundIndex,
-@@ -98,6 +124,7 @@ export function sanitizeMasterySnapshot(
+@@ -98,4 +124,5 @@ export function sanitizeMasterySnapshot(
      failedThisRoundIds: filterIds(row.failedThisRoundIds),
      reviewSourceThisRound: filterIds(row.reviewSourceThisRound),
 +    currentRoundResults,
@@ -234,7 +234,7 @@ diff --git a/src/features/study/lib/studySessionFlow.test.ts b/src/features/stud
 index 0000000..0000000 100644
 --- a/src/features/study/lib/studySessionFlow.test.ts
 +++ b/src/features/study/lib/studySessionFlow.test.ts
-@@ -35,6 +35,19 @@ describe("studySessionFlow — mastery rounds", () => {
+@@ -35,2 +35,24 @@ describe("studySessionFlow — mastery rounds", () => {
      expect(state.unseenIds).toHaveLength(15);
    });
 +
@@ -259,7 +259,7 @@ index 0000000..0000000 100644
 +    expect(state.currentRoundResults.c1).toBe("correct");
 +    expect(state.attemptsByCard.c1).toBe(1);
 +  });
-@@ -129,6 +142,9 @@ describe("studySessionFlow — mastery rounds", () => {
+@@ -129,4 +142,7 @@ describe("studySessionFlow — mastery rounds", () => {
      expect(summary.recoveredCards).toBe(2);
      expect(summary.correctFirstTry).toBe(13);
 +    expect(summary.correctCards).toBe(15);
