@@ -31,6 +31,7 @@ import {
   readMasterySnapshot,
   writeMasterySnapshot,
 } from "@/features/study/lib/masterySessionSnapshot";
+import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
   getCurrentCardId,
