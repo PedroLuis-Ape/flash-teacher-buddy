@@ -346,42 +346,6 @@ export const WriteStudyView = ({
 
       {evaluation === null && (
         <div className="sticky bottom-4 z-10 rounded-lg bg-background/95 p-2 shadow-lg backdrop-blur-sm">
-          <div
-            role="radiogroup"
-            aria-label="Modo de correção"
-            className="mb-2 flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 p-1 text-xs"
-          >
-            <button
-              type="button"
-              role="radio"
-              aria-checked={correctionMode === "flexible"}
-              onClick={() => handleModeChange("flexible")}
-              className={cn(
-                "flex-1 rounded px-2 py-1.5 font-semibold transition-colors",
-                correctionMode === "flexible"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              title="Aceita pequenos erros e mostra as correções."
-            >
-              Flexível
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={correctionMode === "hard"}
-              onClick={() => handleModeChange("hard")}
-              className={cn(
-                "flex-1 rounded px-2 py-1.5 font-semibold transition-colors",
-                correctionMode === "hard"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              title="Exige a resposta exata."
-            >
-              Hard
-            </button>
-          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
