@@ -137,6 +137,13 @@ export function useStudyEngine(
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [masterySession, setMasterySession] = useState<MasterySessionState | null>(null);
+
+  const isMasteryMode = useMemo(
+    () => studyFlowMode === "mastery_rounds" && (mode === "write" || mode === "mixed"),
+    [studyFlowMode, mode],
+  );
+
   
   // Refs for preventing duplicate init, debouncing saves, and batching progress
   const lastInitSignatureRef = useRef<string>("");
