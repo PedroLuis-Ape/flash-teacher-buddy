@@ -18,6 +18,11 @@ const assert = (condition, message) => {
 };
 
 const SITE_ORIGIN = "https://www.apeeducation.org";
+const APPROVED_EXTERNAL_SOURCES = [
+  "https://preply.com/pt/professor/6349931",
+  "https://github.com/PedroLuis-Ape",
+  "https://github.com/PedroLuis-Ape/flash-teacher-buddy",
+];
 const REQUIRED_PUBLIC_PATHS = [
   "/",
   "/portal",
@@ -64,6 +69,10 @@ function isBlocked(path, disallowRules) {
     if (rule.endsWith("$")) return path === rule.slice(0, -1);
     return path.startsWith(rule);
   });
+}
+
+function isApprovedExternalSource(url) {
+  return APPROVED_EXTERNAL_SOURCES.some((approved) => url === approved || url.startsWith(`${approved}/`));
 }
 
 assert(
@@ -116,7 +125,8 @@ assert(!sitemapPaths.includes("/auth"), "/auth is private and must not be in sit
 const llmsUrls = [...llmsTxt.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)]
   .map((match) => match[1].trim())
   .filter((value) => /^https?:\/\//i.test(value));
-const llmsPaths = llmsUrls.map(pathFromUrl).filter(Boolean);
+const llmsInternalUrls = llmsUrls.filter((url) => url.startsWith(`${SITE_ORIGIN}/`));
+const llmsPaths = llmsInternalUrls.map(pathFromUrl).filter(Boolean);
 
 assert(llmsUrls.length > 0, "llms.txt must link to canonical public pages.");
 assert(
@@ -125,12 +135,17 @@ assert(
 );
 
 for (const url of llmsUrls) {
-  assert(
-    url.startsWith(`${SITE_ORIGIN}/`),
-    `llms.txt URL must use the canonical origin: ${url}`,
-  );
+  if (!url.startsWith(`${SITE_ORIGIN}/`)) {
+    assert(isApprovedExternalSource(url), `llms.txt links to an unapproved external source: ${url}`);
+    continue;
+  }
+
   const path = pathFromUrl(url);
   assert(path && !isBlocked(path, disallowRules), `llms.txt links to a robots-blocked path: ${url}`);
+}
+
+for (const approved of APPROVED_EXTERNAL_SOURCES) {
+  assert(llmsUrls.includes(approved), `Approved authorship source is missing from llms.txt: ${approved}`);
 }
 
 for (const path of REQUIRED_PUBLIC_PATHS) {
@@ -176,5 +191,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `SEO/GEO validation passed: ${sitemapUrls.length} sitemap URLs, ${llmsUrls.length} llms.txt URLs and ${disallowRules.length} private-route rules.`,
+  `SEO/GEO validation passed: ${sitemapUrls.length} sitemap URLs, ${llmsInternalUrls.length} internal llms.txt URLs, ${llmsUrls.length - llmsInternalUrls.length} approved external sources and ${disallowRules.length} private-route rules.`,
 );
