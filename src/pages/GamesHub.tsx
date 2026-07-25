@@ -21,7 +21,8 @@ import { buildBasePath, cn, isPortalPath } from "@/lib/utils";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from "@/features/study/lib/studyMode";
+import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
+import { buildStudyLaunchSearchParams } from "@/features/study/lib/studyLaunchParams";
 import {
   clearPendingClassGlossaryContext,
   isListAssignedToClass,
@@ -65,12 +66,33 @@ const gameOptions: Array<{
   { mode: "pronunciation", visualKey: "pronunciation", title: "Prática de Pronúncia", beta: true },
 ];
 
+const HUB_CONFIG_MODE_STORAGE_KEY = "piteco:games-hub-config-mode:v1";
+
+function readConfiguredMode(): StudyMode {
+  if (typeof window === "undefined") return "flip";
+  try {
+    return normalizeStudyMode(window.localStorage.getItem(HUB_CONFIG_MODE_STORAGE_KEY) || "flip");
+  } catch {
+    return "flip";
+  }
+}
+
+function rememberConfiguredMode(mode: StudyMode): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(HUB_CONFIG_MODE_STORAGE_KEY, mode);
+  } catch {
+    // The mode still works for the current render when storage is unavailable.
+  }
+}
+
 const GamesHub = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
   const [pendingTurmaId] = useState(() => readPendingClassGlossaryContext());
+  const [configuredMode, setConfiguredMode] = useState<StudyMode>(readConfiguredMode);
 
   const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
   const isPrivateList = isListRoute && !isPortalPath(location.pathname);
@@ -91,9 +113,21 @@ const GamesHub = () => {
     resetListOverride,
   } = useStudyPreferences(userId, {
     listId: isPrivateList ? id : undefined,
+    gameMode: configuredMode,
     persistScope: isPrivateList ? "list" : "global",
     canPersistList: isPrivateList,
   });
+
+  const configuredModeTitle = useMemo(() => {
+    return gameOptions.find((option) => normalizeStudyMode(option.mode) === configuredMode)?.title
+      ?? "Virar Cartas";
+  }, [configuredMode]);
+
+  const handleConfiguredModeChange = (value: string) => {
+    const next = normalizeStudyMode(value);
+    rememberConfiguredMode(next);
+    setConfiguredMode(next);
+  };
 
   const { data: list, isLoading: listLoading } = useQuery({
     queryKey: ["gameshub-list", id],
@@ -196,20 +230,15 @@ const GamesHub = () => {
     }
 
     const mode = normalizeStudyMode(rawMode);
-    const launchPreset = { ...effectivePreset, mode };
-    updateForCurrentScope({ mode });
+    rememberConfiguredMode(mode);
+    setConfiguredMode(mode);
 
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id);
-    const useFavoritesOnly = launchPreset.scope === "favorites" && favoritesCount > 0;
-    const params = new URLSearchParams({
-      mode: studyModeToUrlParam(mode),
-      dir: launchPreset.direction,
-      order: launchPreset.order,
-      fastMode: String(launchPreset.fastMode),
-    });
-    if (useFavoritesOnly) params.set("favorites", "true");
-    if (activeTurmaId && isListRoute) params.set("turma", activeTurmaId);
+    const params = buildStudyLaunchSearchParams(
+      mode,
+      activeTurmaId && isListRoute ? activeTurmaId : undefined,
+    );
 
     const route = mode === "mixed" ? "mixed-study" : "study";
     navigate(`${basePath}/${route}?${params.toString()}`);
@@ -233,12 +262,12 @@ const GamesHub = () => {
 
   const handleResetListPreset = async () => {
     await resetListOverride();
-    toast.success("Esta lista voltou a usar o padrão global.");
+    toast.success(`O modo ${configuredModeTitle} voltou a usar o padrão global.`);
   };
 
   const handleSaveAsGlobal = async () => {
     await saveAsGlobal(effectivePreset);
-    toast.success("Estas configurações agora são o seu padrão global.");
+    toast.success(`As configurações de ${configuredModeTitle} agora são o padrão global desse modo.`);
   };
 
   return (
@@ -267,17 +296,34 @@ const GamesHub = () => {
 
         <div className="mx-auto max-w-6xl space-y-4">
           <div className="rounded-xl border bg-card/95 p-3 shadow-sm">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">
                   {isPrivateList && source === "list" ? "Personalizado nesta lista" : "Padrão global"}
+                  {` · ${configuredModeTitle}`}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {isHydrating ? "Sincronizando com sua conta..." : "Suas escolhas serão lembradas automaticamente."}
+                  {isHydrating ? "Sincronizando com sua conta..." : "Cada modo lembra suas próprias configurações."}
                 </p>
               </div>
+              <div className="w-full sm:w-56">
+                <label className="mb-1.5 block text-xs font-medium">Configurar o modo</label>
+                <Select value={configuredMode} onValueChange={handleConfiguredModeChange}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {gameOptions.map((option) => {
+                      const mode = normalizeStudyMode(option.mode);
+                      return (
+                        <SelectItem key={option.mode} value={mode}>
+                          {option.title}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
               {isPrivateList && userId && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                   <Button
                     type="button"
                     variant="outline"
@@ -371,7 +417,7 @@ const GamesHub = () => {
             {gameOptions.map(({ mode, visualKey, title, beta, recommended }) => {
               const visual = GAME_MODE_VISUALS[visualKey];
               const normalizedMode = normalizeStudyMode(mode);
-              const isRemembered = effectivePreset.mode === normalizedMode;
+              const isConfigured = configuredMode === normalizedMode;
               return (
                 <button
                   key={mode}
@@ -381,7 +427,7 @@ const GamesHub = () => {
                     "relative flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-xl border p-3 text-center shadow-sm transition-all",
                     "hover:-translate-y-0.5 hover:shadow-md",
                     recommended && "border-primary/60 ring-2 ring-primary/15",
-                    isRemembered && "outline outline-2 outline-primary/50",
+                    isConfigured && "outline outline-2 outline-primary/50",
                     visual.cardClass,
                   )}
                 >

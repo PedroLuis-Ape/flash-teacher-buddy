@@ -165,7 +165,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
 
   const currentDirection: Direction = direction
     ?? (new URLSearchParams(location.search).get("dir") as Direction | null)
-    ?? "any";
+    ?? effectivePreset.direction;
 
   const applyDirection = (next: Direction) => {
     // Persist as a study preference so it survives reload / new sessions.
