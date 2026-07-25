@@ -17,11 +17,14 @@ export const MASTERY_ROUND_SIZE = 15;
 export type StudyFlowMode = "mastery_rounds" | "continuous";
 
 export type StudyCardResult = "correct" | "incorrect" | "skipped" | "revealed";
+export type MasterySessionStatus = "active" | "round-complete" | "journey-complete";
 
 export interface MasterySessionState {
+  readonly version: 2;
   readonly totalEligible: number;
   readonly roundSize: number;
   readonly shuffle: boolean;
+  status: MasterySessionStatus;
   roundNumber: number;
   currentRoundIds: string[];
   currentRoundIndex: number;
@@ -36,15 +39,19 @@ export interface MasterySessionState {
   failedThisRoundIds: string[];
   /** Cards that came from retryIds when this round was composed. */
   reviewSourceThisRound: string[];
+  /** Final result submitted for each card in the current round. */
+  currentRoundResults: Record<string, StudyCardResult>;
 }
 
 export interface RoundSummary {
   roundNumber: number;
   cardsPlayed: number;
   correctFirstTry: number;
+  correctCards: number;
   recoveredCards: number;
   incorrectCards: number;
   skippedCards: number;
+  revealedCards: number;
   pendingReview: number;
   unseenRemaining: number;
   masteredTotal: number;
@@ -140,9 +147,11 @@ export function createMasterySession(
   const composed = composeRound([], pool, roundSize);
 
   return {
+    version: 2,
     totalEligible: base.length,
     roundSize,
     shuffle,
+    status: composed.roundIds.length === 0 ? "journey-complete" : "active",
     roundNumber: 1,
     currentRoundIds: composed.roundIds,
     currentRoundIndex: 0,
@@ -154,6 +163,7 @@ export function createMasterySession(
     correctThisRoundIds: [],
     failedThisRoundIds: [],
     reviewSourceThisRound: composed.reviewSource,
+    currentRoundResults: {},
   };
 }
 
@@ -163,7 +173,7 @@ export function getCurrentCardId(state: MasterySessionState): string | null {
 }
 
 export function isRoundFinished(state: MasterySessionState): boolean {
-  return state.currentRoundIndex >= state.currentRoundIds.length;
+  return state.status !== "active" || state.currentRoundIndex >= state.currentRoundIds.length;
 }
 
 /**
@@ -171,12 +181,7 @@ export function isRoundFinished(state: MasterySessionState): boolean {
  * round has been fully played through.
  */
 export function isSessionFinished(state: MasterySessionState): boolean {
-  return (
-    isRoundFinished(state)
-    && state.unseenIds.length === 0
-    && state.retryIds.length === 0
-    && state.failedThisRoundIds.length === 0
-  );
+  return state.status === "journey-complete";
 }
 
 /**
@@ -188,7 +193,13 @@ export function recordResult(
   cardId: string,
   result: StudyCardResult,
 ): MasterySessionState {
+  if (state.status !== "active") return state;
+  const currentCardId = getCurrentCardId(state);
+  if (!currentCardId || currentCardId !== cardId) return state;
+  if (state.currentRoundResults[cardId]) return state;
+
   state.attemptsByCard[cardId] = (state.attemptsByCard[cardId] ?? 0) + 1;
+  state.currentRoundResults[cardId] = result;
 
   if (result === "correct") {
     if (!state.correctThisRoundIds.includes(cardId)) state.correctThisRoundIds.push(cardId);
@@ -202,6 +213,13 @@ export function recordResult(
   }
 
   state.currentRoundIndex += 1;
+  if (state.currentRoundIndex >= state.currentRoundIds.length) {
+    const journeyComplete = state.unseenIds.length === 0
+      && state.retryIds.length === 0
+      && state.failedThisRoundIds.length === 0;
+    state.status = journeyComplete ? "journey-complete" : "round-complete";
+  }
+
   return state;
 }
 
@@ -209,23 +227,25 @@ export function recordResult(
  * Snapshot summary of the round that just ended. Call before startNextRound.
  */
 export function summarizeCurrentRound(state: MasterySessionState): RoundSummary {
-  const cardsPlayed = state.currentRoundIds.length;
-  const recoveredCards = state.correctThisRoundIds.filter((id) =>
-    state.reviewSourceThisRound.includes(id),
-  ).length;
-  const correctFirstTry = state.correctThisRoundIds.length - recoveredCards;
-  const incorrectCards = state.failedThisRoundIds.filter(
-    (id) => (state.mistakesByCard[id] ?? 0) > 0,
-  ).length;
-  const skippedCards = 0; // captured inside failedThisRoundIds already; kept for API shape
+  const entries = Object.entries(state.currentRoundResults);
+  const cardsPlayed = entries.length;
+  const correctIds = entries.filter(([, result]) => result === "correct").map(([id]) => id);
+  const recoveredCards = correctIds.filter((id) => state.reviewSourceThisRound.includes(id)).length;
+  const correctCards = correctIds.length;
+  const correctFirstTry = correctCards - recoveredCards;
+  const incorrectCards = entries.filter(([, result]) => result === "incorrect").length;
+  const skippedCards = entries.filter(([, result]) => result === "skipped").length;
+  const revealedCards = entries.filter(([, result]) => result === "revealed").length;
 
   return {
     roundNumber: state.roundNumber,
     cardsPlayed,
     correctFirstTry: Math.max(0, correctFirstTry),
+    correctCards,
     recoveredCards,
     incorrectCards,
     skippedCards,
+    revealedCards,
     pendingReview: state.retryIds.length + state.failedThisRoundIds.length,
     unseenRemaining: state.unseenIds.length,
     masteredTotal: state.masteredIds.length,
@@ -238,8 +258,8 @@ export function summarizeCurrentRound(state: MasterySessionState): RoundSummary 
  * mastered, then composes the next round.
  */
 export function startNextRound(state: MasterySessionState): MasterySessionState {
-  if (!isRoundFinished(state)) return state;
-  if (state.unseenIds.length === 0 && state.retryIds.length === 0 && state.failedThisRoundIds.length === 0) {
+  if (state.status !== "round-complete") return state;
+  if (isSessionFinished(state)) {
     return state;
   }
 
@@ -265,6 +285,8 @@ export function startNextRound(state: MasterySessionState): MasterySessionState 
   state.correctThisRoundIds = [];
   state.failedThisRoundIds = [];
   state.reviewSourceThisRound = composed.reviewSource;
+  state.currentRoundResults = {};
+  state.status = composed.roundIds.length === 0 ? "journey-complete" : "active";
   return state;
 }
 

@@ -16,11 +16,11 @@ function answerCurrent(state: ReturnType<typeof createAdaptiveMixedSession>, cor
 }
 
 describe("adaptive mixed session", () => {
-  it("escolhe 10 ou 15 cards conforme o tamanho da lista", () => {
+  it("usa rodadas de até 15 cards em qualquer tamanho de lista", () => {
     expect(getAdaptiveRoundSize(8)).toBe(8);
     expect(getAdaptiveRoundSize(15)).toBe(15);
-    expect(getAdaptiveRoundSize(16)).toBe(10);
-    expect(getAdaptiveRoundSize(35)).toBe(10);
+    expect(getAdaptiveRoundSize(16)).toBe(15);
+    expect(getAdaptiveRoundSize(35)).toBe(15);
     expect(getAdaptiveRoundSize(36)).toBe(15);
     expect(getAdaptiveRoundSize(50)).toBe(15);
   });
@@ -44,12 +44,12 @@ describe("adaptive mixed session", () => {
 
     expect(state.status).toBe("round-complete");
     expect(state.pendingCardIds).toEqual(expect.arrayContaining([round[2], round[7]]));
-    expect(state.masteredCardIds).toHaveLength(8);
+    expect(state.masteredCardIds).toHaveLength(13);
 
     state = startNextAdaptiveMixedRound(state, fixedRandom);
-    expect(state.currentRoundCardIds).toHaveLength(10);
+    expect(state.currentRoundCardIds).toHaveLength(15);
     expect(state.currentRoundCardIds).toEqual(expect.arrayContaining([round[2], round[7]]));
-    expect(state.currentRoundCardIds.filter((id) => state.currentRoundOrigins[id] === "new")).toHaveLength(8);
+    expect(state.currentRoundCardIds.filter((id) => state.currentRoundOrigins[id] === "new")).toHaveLength(13);
   });
 
   it("encerra apenas a tentativa quando os três corações acabam", () => {
@@ -86,8 +86,8 @@ describe("adaptive mixed session", () => {
     const failedIndex = state.currentRoundCardIds.indexOf(failedCard);
     expect(failedIndex).toBeGreaterThanOrEqual(0);
 
-    state.currentRoundCardIds.forEach((_, index) => {
-      state = answerCurrent(state, index === failedIndex || true);
+    state.currentRoundCardIds.forEach(() => {
+      state = answerCurrent(state, true);
     });
 
     expect(state.pendingCardIds).not.toContain(failedCard);
@@ -104,7 +104,7 @@ describe("adaptive mixed session", () => {
     });
 
     expect(state.status).toBe("round-complete");
-    expect(state.masteredCardIds).toHaveLength(10);
+    expect(state.masteredCardIds).toHaveLength(15);
 
     state = restartAdaptiveMixedRound(state, fixedRandom);
     expect(state.status).toBe("active");
@@ -119,8 +119,8 @@ describe("adaptive mixed session", () => {
       state = answerCurrent(state, true);
     });
     const progress = getAdaptiveMixedProgress(state);
-    expect(progress.masteredCards).toBe(10);
+    expect(progress.masteredCards).toBe(15);
     expect(progress.totalCards).toBe(20);
-    expect(progress.overallPercent).toBe(50);
+    expect(progress.overallPercent).toBe(75);
   });
 });
