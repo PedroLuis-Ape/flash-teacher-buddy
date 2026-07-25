@@ -44,6 +44,7 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
+import { RoundSummaryDialog } from "@/features/study/components/RoundSummaryDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
@@ -316,6 +317,7 @@ const Study = () => {
     hasMoreRounds,
     isGameComplete,
     startNextRound,
+    pendingRoundSummary,
     resetSession,
     restartSession,
     gameSettings,
@@ -1678,6 +1680,13 @@ const Study = () => {
         onOpenChange={setShowCompletionModal}
         fromGoalId={fromGoalId}
         onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
+      />
+
+      <RoundSummaryDialog
+        open={!!pendingRoundSummary}
+        summary={pendingRoundSummary ?? null}
+        onNextRound={() => startNextRound()}
+        onExit={() => void handleExit()}
       />
 
       {/* In-game card editor — reuses the same dialog as ListDetail.

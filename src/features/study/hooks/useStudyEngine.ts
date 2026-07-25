@@ -39,7 +39,9 @@ import {
   isSessionFinished,
   recordResult as recordMasteryResult,
   startNextRound as startNextMasteryRound,
+  summarizeCurrentRound,
   type MasterySessionState,
+  type RoundSummary,
   type StudyCardResult,
   type StudyFlowMode,
 } from "@/features/study/lib/studySessionFlow";
@@ -145,6 +147,8 @@ export function useStudyEngine(
   const [isCompleting, setIsCompleting] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [masterySession, setMasterySession] = useState<MasterySessionState | null>(null);
+  const masterySessionRef = useRef<MasterySessionState | null>(null);
+  const [pendingRoundSummary, setPendingRoundSummary] = useState<RoundSummary | null>(null);
 
   const isMasteryMode = useMemo(
     () => studyFlowMode === "mastery_rounds" && (mode === "write" || mode === "mixed"),
@@ -346,6 +350,8 @@ export function useStudyEngine(
           shuffle: gameSettings.mode === "random",
         });
       setMasterySession(session);
+      masterySessionRef.current = session;
+      setPendingRoundSummary(null);
       setCardsOrder(session.currentRoundIds);
       setCurrentIndex(session.currentRoundIndex);
       setRoundNumber(session.roundNumber);
@@ -845,12 +851,15 @@ export function useStudyEngine(
     // repetition logic stay centralized in studySessionFlow.ts.
     if (isMasteryMode) {
       const resultType: StudyCardResult = skipped ? "skipped" : correct ? "correct" : "incorrect";
-      setMasterySession((prev) => {
-        if (!prev) return prev;
+      const prev = masterySessionRef.current ?? masterySession;
+      if (prev) {
         const cardId = getCurrentCardId(prev);
-        if (!cardId) return prev;
-        return recordMasteryResult({ ...prev }, cardId, resultType);
-      });
+        if (cardId) {
+          const next = recordMasteryResult({ ...prev }, cardId, resultType);
+          masterySessionRef.current = next;
+          setMasterySession(next);
+        }
+      }
     }
 
     // Update results
@@ -933,16 +942,22 @@ export function useStudyEngine(
   }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
-    if (isMasteryMode && masterySession) {
-      if (isSessionFinished(masterySession)) {
+    if (isMasteryMode) {
+      // Use the ref so we observe the state produced by the most recent
+      // recordResult call, even if the React state hasn't committed yet.
+      const current = masterySessionRef.current ?? masterySession;
+      if (!current) return;
+      if (isSessionFinished(current)) {
+        setPendingRoundSummary(null);
         setIsFinished(true);
         return;
       }
-      if (isRoundFinished(masterySession)) {
-        setMasterySession((prev) => (prev ? startNextMasteryRound({ ...prev }) : prev));
-        setRoundResults([]);
+      if (isRoundFinished(current)) {
+        // Show the round summary popup. The user advances via startNextRound.
+        setPendingRoundSummary(summarizeCurrentRound(current));
+        return;
       }
-      // currentIndex/currentRoundIds are synchronized via useEffect below.
+      // Round still in progress — sync happens through the effect below.
       return;
     }
     if (currentIndex < cardsOrder.length - 1) {
@@ -977,6 +992,26 @@ export function useStudyEngine(
 
   // Start next round (for quiz modes)
   const startNextRound = useCallback(() => {
+    // Mastery rounds path — advance the dedicated flow engine and dismiss
+    // the round summary popup. This is what the "Próxima rodada" button
+    // calls in the summary dialog.
+    if (isMasteryMode) {
+      const current = masterySessionRef.current;
+      if (!current) return;
+      if (isSessionFinished(current)) {
+        setPendingRoundSummary(null);
+        setIsFinished(true);
+        return;
+      }
+      const next = startNextMasteryRound({ ...current });
+      masterySessionRef.current = next;
+      setMasterySession(next);
+      setRoundNumber(next.roundNumber);
+      setRoundResults([]);
+      setPendingRoundSummary(null);
+      return;
+    }
+
     if (isGameComplete) {
       toast.success("Parabéns! Você completou todos os cards! 🎉");
       return;
@@ -989,7 +1024,7 @@ export function useStudyEngine(
     } else {
       toast.info(`Rodada ${roundNumber + 1} iniciada!`);
     }
-  }, [generateNextRound, isGameComplete, roundNumber]);
+  }, [generateNextRound, isGameComplete, roundNumber, isMasteryMode]);
 
   const completeSession = useCallback(async (): Promise<boolean> => {
     if (completionInFlightRef.current) return false;
@@ -1114,6 +1149,9 @@ export function useStudyEngine(
     setUnseenCards([]);
     setRoundNumber(1);
     setIsFinished(false);
+    setMasterySession(null);
+    masterySessionRef.current = null;
+    setPendingRoundSummary(null);
     initializeSession();
   }, [listId, isFlipMode, flashcards, initializeSession, flipProgressKey]);
 
@@ -1153,6 +1191,9 @@ export function useStudyEngine(
     setUnseenCards([]);
     setRoundNumber(1);
     setIsFinished(false);
+    setMasterySession(null);
+    masterySessionRef.current = null;
+    setPendingRoundSummary(null);
 
     try {
       const userId = authUserIdRef.current;
@@ -1198,7 +1239,12 @@ export function useStudyEngine(
   useEffect(() => {
     if (!isMasteryMode || !masterySession) return;
     setCardsOrder(masterySession.currentRoundIds);
-    setCurrentIndex(masterySession.currentRoundIndex);
+    // Clamp: after answering the last card in a round, the flow engine
+    // moves currentRoundIndex past the last slot. Keep the visible index
+    // on the final card until startNextRound loads the next batch so the
+    // UI doesn't render an undefined card behind the summary popup.
+    const maxIdx = Math.max(0, masterySession.currentRoundIds.length - 1);
+    setCurrentIndex(Math.min(masterySession.currentRoundIndex, maxIdx));
   }, [isMasteryMode, masterySession]);
 
   useEffect(() => {
@@ -1341,6 +1387,7 @@ export function useStudyEngine(
     hasMoreRounds,
     isGameComplete,
     startNextRound,
+    pendingRoundSummary,
     discardSession,
     resetSession,
     restartSession,
