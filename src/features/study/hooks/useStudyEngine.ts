@@ -25,6 +25,17 @@ import {
   sanitizePersistedStudyOrder,
   writeStudySnapshot,
 } from "@/features/study/lib/studySessionSnapshot";
+import {
+  createMasterySession,
+  getCurrentCardId,
+  isRoundFinished,
+  isSessionFinished,
+  recordResult as recordMasteryResult,
+  startNextRound,
+  type MasterySessionState,
+  type StudyCardResult,
+  type StudyFlowMode,
+} from "@/features/study/lib/studySessionFlow";
 
 export interface StudyResult {
   flashcardId: string;
