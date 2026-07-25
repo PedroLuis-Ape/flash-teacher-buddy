@@ -1510,6 +1510,9 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
+              layerCount={cardLayers?.length ?? 1}
+              layersVisitedCount={safeLayerIdx + 1}
+              onOpenLayers={hasLayers ? goToNextLayer : undefined}
             />
           )}
           {effectiveMode === "multiple-choice" && displayedCard && (
