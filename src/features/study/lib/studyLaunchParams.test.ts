@@ -17,7 +17,7 @@ describe("buildStudyLaunchSearchParams", () => {
   it("normalizes aliases and preserves the optional class context", () => {
     const params = buildStudyLaunchSearchParams("multiple", "turma-123");
 
-    expect(params.get("mode")).toBe("multiple");
+    expect(params.get("mode")).toBe("multiple-choice");
     expect(params.get("turma")).toBe("turma-123");
   });
 });
