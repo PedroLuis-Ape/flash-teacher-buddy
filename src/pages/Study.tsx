@@ -313,6 +313,7 @@ const Study = () => {
     roundNumber,
     roundCorrect,
     roundErrors,
+    roundRecovered,
     hasMoreRounds,
     isGameComplete,
     startNextRound,
@@ -1254,17 +1255,19 @@ const Study = () => {
 
             {/* Desktop buttons */}
             <div className="hidden md:flex flex-wrap gap-4 justify-center pt-4">
-              <Button 
-                variant="default" 
-                size="lg" 
-                type="button"
-                onClick={() => void handleCompleteAndExit()}
-                disabled={isCompleting || isRestarting}
-                className="w-full sm:w-auto min-w-[220px] text-lg font-bold shadow-lg bg-green-600 hover:bg-green-700"
-              >
-                {isCompleting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CheckCircle className="mr-2 h-6 w-6" />}
-                {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
-              </Button>
+              {!showNextRound && (
+                <Button 
+                  variant="default" 
+                  size="lg" 
+                  type="button"
+                  onClick={() => void handleCompleteAndExit()}
+                  disabled={isCompleting || isRestarting}
+                  className="w-full sm:w-auto min-w-[220px] text-lg font-bold shadow-lg bg-green-600 hover:bg-green-700"
+                >
+                  {isCompleting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CheckCircle className="mr-2 h-6 w-6" />}
+                  {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
+                </Button>
+              )}
 
               {showNextRound && (
                 <Button variant="secondary" size="lg" onClick={startNextRound}>
