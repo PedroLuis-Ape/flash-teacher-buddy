@@ -2,7 +2,7 @@
  * Avaliação inteligente e determinística de respostas do modo Escrever.
  *
  * Não usa IA externa nem serviços pagos. Executa localmente:
- * - normalização neutra (case, espaços, pontuação leve, parênteses, acentos)
+ * - normalização neutra (case, espaços, pontuação básica, apóstrofos, parênteses, acentos)
  * - alinhamento token a token via programação dinâmica
  * - classificação em "exact" / "accepted_with_corrections" / "incorrect"
  * - descrição objetiva das diferenças em português
@@ -74,6 +74,18 @@ export const EVALUATION_THRESHOLDS = {
 
 // ---------- normalização ----------
 
+/**
+ * Pontuação que pode aparecer dentro da palavra sem mudar a resposta escrita.
+ * Inclui apóstrofos retos, tipográficos e variantes comuns de teclado móvel.
+ */
+const IGNORABLE_INLINE_PUNCTUATION = /['’‘ʼ`´\u02bc\uff07]/g;
+
+/**
+ * Pontuação básica tratada como separador neutro. Substituir por espaço evita
+ * juntar palavras quando o aluno omite o espaço depois de uma vírgula.
+ */
+const IGNORABLE_SEPARATOR_PUNCTUATION = /[.,!?;:…"“”«»\-‐‑‒–—/\\]/g;
+
 /** Normalização usada APENAS para comparação. Nunca aplicar ao texto exibido. */
 export function normalizeForCompare(input: string): string {
   if (!input || typeof input !== "string") return "";
@@ -81,7 +93,8 @@ export function normalizeForCompare(input: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[.,!?;:]/g, "")
+    .replace(IGNORABLE_INLINE_PUNCTUATION, "")
+    .replace(IGNORABLE_SEPARATOR_PUNCTUATION, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -96,7 +109,8 @@ function tokenize(normalized: string): string[] {
 function tokenizeDisplay(original: string): string[] {
   const stripped = stripParentheses(original);
   return stripped
-    .replace(/[.,!?;:]/g, " ")
+    .replace(IGNORABLE_INLINE_PUNCTUATION, "")
+    .replace(IGNORABLE_SEPARATOR_PUNCTUATION, " ")
     .split(/\s+/)
     .filter(Boolean);
 }

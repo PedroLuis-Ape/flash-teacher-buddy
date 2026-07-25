@@ -23,6 +23,54 @@ describe("evaluateWriteAnswer", () => {
     expect(r.status).toBe("exact");
   });
 
+  it("accepts missing commas, final marks and accents as exact", () => {
+    const cases = [
+      { userAnswer: "Hello John how are you", correctAnswer: "Hello, John, how are you?" },
+      { userAnswer: "Voce esta bem", correctAnswer: "Você está bem?" },
+      { userAnswer: "Yes I am", correctAnswer: "Yes! I am." },
+      { userAnswer: "Hello John", correctAnswer: "\"Hello, John!\"" },
+    ];
+
+    for (const input of cases) {
+      const result = evaluateWriteAnswer({ ...hard, ...input });
+      expect(result.status).toBe("exact");
+      expect(result.accepted).toBe(true);
+    }
+  });
+
+  it("accepts missing straight or typographic apostrophes", () => {
+    const result = evaluateWriteAnswer({
+      ...hard,
+      userAnswer: "I dont know where Johns book is",
+      correctAnswer: "I don’t know where John’s book is.",
+    });
+
+    expect(result.status).toBe("exact");
+    expect(result.accepted).toBe(true);
+  });
+
+  it("treats basic separators and missing spaces consistently", () => {
+    const result = evaluateWriteAnswer({
+      ...hard,
+      userAnswer: "This is a well known fact",
+      correctAnswer: "This is a well-known fact.",
+    });
+
+    expect(result.status).toBe("exact");
+    expect(result.accepted).toBe(true);
+  });
+
+  it("does not ignore letters while tolerating punctuation", () => {
+    const result = evaluateWriteAnswer({
+      ...hard,
+      userAnswer: "I do know",
+      correctAnswer: "I don't know.",
+    });
+
+    expect(result.status).toBe("incorrect");
+    expect(result.accepted).toBe(false);
+  });
+
   it("accepts a typo in flexible but rejects it in hard", () => {
     const input = { userAnswer: "The house is beatiful.", correctAnswer: "The house is beautiful." };
     const flex = evaluateWriteAnswer({ ...flexible, ...input });
