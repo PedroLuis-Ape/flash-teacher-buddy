@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "patches/mastery-round-fix.patch"
+      - "patches/mastery-round-fix/**"
       - ".github/workflows/apply-mastery-round-fix.yml"
 
 permissions:
@@ -31,11 +31,16 @@ jobs:
             echo "applied=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Apply tested patch
+      - name: Apply tested patches
         if: steps.detect.outputs.applied != 'true'
+        shell: bash
         run: |
-          git apply --check patches/mastery-round-fix.patch
-          git apply patches/mastery-round-fix.patch
+          for patch in patches/mastery-round-fix/*.patch; do
+            git apply --check "$patch"
+          done
+          for patch in patches/mastery-round-fix/*.patch; do
+            git apply "$patch"
+          done
 
       - name: Commit implementation
         if: steps.detect.outputs.applied != 'true'
