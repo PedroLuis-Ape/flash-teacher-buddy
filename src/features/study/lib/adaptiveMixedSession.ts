@@ -7,7 +7,7 @@ export type MixedSessionStatus =
   | "journey-complete";
 
 export interface AdaptiveMixedSessionState {
-  version: 1;
+  version: 2;
   deckSignature: string;
   allCardIds: string[];
   unseenCardIds: string[];
@@ -63,9 +63,7 @@ export function shuffleMixedCards<T>(values: readonly T[], random: () => number 
 
 export function getAdaptiveRoundSize(totalCards: number): number {
   const total = Math.max(0, Math.floor(totalCards));
-  if (total <= 15) return total;
-  if (total <= 35) return 10;
-  return 15;
+  return Math.min(15, total);
 }
 
 export function weightedShuffleMixedCards(
@@ -155,7 +153,7 @@ export function createAdaptiveMixedSession(
   const roundSize = getAdaptiveRoundSize(allCardIds.length);
   const unseenCardIds = weightedShuffleMixedCards(allCardIds, options.weightByCardId, random);
   const emptyState: AdaptiveMixedSessionState = {
-    version: 1,
+    version: 2,
     deckSignature: signature(allCardIds),
     allCardIds,
     unseenCardIds,
@@ -304,13 +302,15 @@ export function isAdaptiveMixedStateCompatible(
 ): value is AdaptiveMixedSessionState {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AdaptiveMixedSessionState>;
-  return candidate.version === 1
+  return candidate.version === 2
     && candidate.deckSignature === signature(cardIds)
     && Array.isArray(candidate.allCardIds)
     && Array.isArray(candidate.currentRoundCardIds)
     && typeof candidate.currentIndex === "number"
     && typeof candidate.hearts === "number"
-    && typeof candidate.status === "string";
+    && typeof candidate.status === "string"
+    && (candidate.status !== "active"
+      || candidate.currentIndex < candidate.currentRoundCardIds.length);
 }
 
 export function getAdaptiveMixedProgress(state: AdaptiveMixedSessionState) {

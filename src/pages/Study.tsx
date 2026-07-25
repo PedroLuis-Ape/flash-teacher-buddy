@@ -44,7 +44,6 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
-import { RoundSummaryDialog } from "@/features/study/components/RoundSummaryDialog";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
@@ -317,7 +316,6 @@ const Study = () => {
     hasMoreRounds,
     isGameComplete,
     startNextRound,
-    pendingRoundSummary,
     resetSession,
     restartSession,
     gameSettings,
@@ -425,15 +423,20 @@ const Study = () => {
 
   // Auto-open completion modal when activity finishes OR on re-entry if already completed
   useEffect(() => {
-    if (isFinished) {
+    if (isFinished && isGameComplete) {
       setCompletionWasRestored(false);
       setShowCompletionModal(true);
       // Persist completion state
       if (completionKey) {
         try { localStorage.setItem(completionKey, Date.now().toString()); } catch {}
       }
+      return;
     }
-  }, [isFinished, completionKey]);
+    setShowCompletionModal(false);
+    if (completionKey && !isGameComplete) {
+      try { localStorage.removeItem(completionKey); } catch {}
+    }
+  }, [isFinished, isGameComplete, completionKey]);
 
   // On mount: check if this session was already completed and show restart prompt
   useEffect(() => {
@@ -1201,12 +1204,14 @@ const Study = () => {
             </div>
 
             <h1 className="text-3xl font-bold">
-              {isGameComplete && correctCount === totalCards && errorCount === 0 && skippedCount === 0
+              {showNextRound
+                ? `Rodada ${roundNumber} concluída`
+                : isGameComplete && errorCount === 0 && skippedCount === 0
                 ? "Parabéns! Todos os cards dominados! 🎉"
                 : "Sessão finalizada!"}
             </h1>
 
-            <div className="grid grid-cols-3 gap-4 py-6">
+            <div className="grid grid-cols-2 gap-4 py-6 sm:grid-cols-4">
               <div className="space-y-2">
                 <div className="text-3xl font-bold text-green-600">{isFlipMode ? correctCount : roundCorrect}</div>
                 <div className="text-sm text-muted-foreground">Acertos</div>
@@ -1214,6 +1219,10 @@ const Study = () => {
               <div className="space-y-2">
                 <div className="text-3xl font-bold text-destructive">{isFlipMode ? errorCount : roundErrors}</div>
                 <div className="text-sm text-muted-foreground">Erros</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-3xl font-bold text-primary">{roundRecovered}</div>
+                <div className="text-sm text-muted-foreground">Recuperados</div>
               </div>
               <div className="space-y-2">
                 <div className="text-3xl font-bold text-warning">{skippedCount}</div>
@@ -1335,7 +1344,7 @@ const Study = () => {
         </div>
 
         {/* Mobile: Sticky bottom button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:hidden">
+        {!showNextRound && <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t md:hidden">
           <Button 
             variant="default" 
             size="lg" 
@@ -1347,7 +1356,7 @@ const Study = () => {
             {isCompleting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <CheckCircle className="mr-2 h-6 w-6" />}
             {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
           </Button>
-        </div>
+        </div>}
       </div>
     );
   }
@@ -1680,13 +1689,6 @@ const Study = () => {
         onOpenChange={setShowCompletionModal}
         fromGoalId={fromGoalId}
         onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
-      />
-
-      <RoundSummaryDialog
-        open={!!pendingRoundSummary}
-        summary={pendingRoundSummary ?? null}
-        onNextRound={() => startNextRound()}
-        onExit={() => void handleExit()}
       />
 
       {/* In-game card editor — reuses the same dialog as ListDetail.

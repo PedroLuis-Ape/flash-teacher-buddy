@@ -4,7 +4,7 @@
  * The database session remains authoritative; this is a client-side fallback
  * mirroring the pattern in studySessionSnapshot.ts.
  */
-import type { MasterySessionState } from "./studySessionFlow";
+import type { MasterySessionState, StudyCardResult } from "./studySessionFlow";
 
 const SUFFIX = ":mastery";
 
@@ -21,6 +21,13 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
   return Object.values(value as Record<string, unknown>).every(
     (v) => typeof v === "number" && Number.isFinite(v),
   );
+
+function isResultRecord(value: unknown): value is Record<string, StudyCardResult> {
+  if (!value || typeof value !== "object") return false;
+  return Object.values(value as Record<string, unknown>).every((result) =>
+    result === "correct" || result === "incorrect" || result === "skipped" || result === "revealed"
+  );
+}
 }
 
 export function sanitizeMasterySnapshot(
@@ -30,7 +37,9 @@ export function sanitizeMasterySnapshot(
   if (!value || typeof value !== "object") return null;
   const row = value as Partial<MasterySessionState>;
   if (
-    typeof row.totalEligible !== "number"
+    row.version !== 2
+    || (row.status !== "active" && row.status !== "round-complete" && row.status !== "journey-complete")
+    || typeof row.totalEligible !== "number"
     || typeof row.roundSize !== "number"
     || typeof row.shuffle !== "boolean"
     || typeof row.roundNumber !== "number"
@@ -44,6 +53,7 @@ export function sanitizeMasterySnapshot(
     || !isStringArray(row.reviewSourceThisRound)
     || !isNumberRecord(row.attemptsByCard)
     || !isNumberRecord(row.mistakesByCard)
+    || !isResultRecord(row.currentRoundResults)
   ) {
     return null;
   }
@@ -70,13 +80,30 @@ export function sanitizeMasterySnapshot(
     if (!union.has(id)) return null;
   }
 
+  const currentRoundIndex = Math.min(Math.max(row.currentRoundIndex, 0), currentRoundIds.length);
+  let status = row.status;
+  if (status === "active" && currentRoundIndex >= currentRoundIds.length) {
+    status = unseenIds.length === 0
+      && retryIds.length === 0
+      && filterIds(row.failedThisRoundIds).length === 0
+      ? "journey-complete"
+      : "round-complete";
+  }
+
+  const currentRoundSet = new Set(currentRoundIds);
+  const currentRoundResults = Object.fromEntries(
+    Object.entries(row.currentRoundResults).filter(([id]) => currentRoundSet.has(id)),
+  ) as Record<string, StudyCardResult>;
+
   return {
+    version: 2,
     totalEligible: row.totalEligible,
     roundSize: row.roundSize,
     shuffle: row.shuffle,
+    status,
     roundNumber: row.roundNumber,
     currentRoundIds,
-    currentRoundIndex: Math.min(Math.max(row.currentRoundIndex, 0), currentRoundIds.length - 1),
+    currentRoundIndex,
     unseenIds,
     retryIds,
     masteredIds,
@@ -85,6 +112,7 @@ export function sanitizeMasterySnapshot(
     correctThisRoundIds: filterIds(row.correctThisRoundIds),
     failedThisRoundIds: filterIds(row.failedThisRoundIds),
     reviewSourceThisRound: filterIds(row.reviewSourceThisRound),
+    currentRoundResults,
   };
 }
 
