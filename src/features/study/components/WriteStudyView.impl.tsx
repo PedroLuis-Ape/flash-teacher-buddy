@@ -82,11 +82,29 @@ export const WriteStudyView = ({
   onSkip,
 }: WriteStudyViewProps) => {
   const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<"correct" | "almost" | "incorrect" | null>(null);
+  const [evaluation, setEvaluation] = useState<WriteAnswerEvaluation | null>(null);
   const [hintLevel, setHintLevel] = useState(0);
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
+  const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
+    () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
+  );
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<WriteCorrectionMode>).detail;
+      if (detail === "flexible" || detail === "hard") setCorrectionMode(detail);
+    };
+    window.addEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
+    return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
+  }, []);
+
+  const handleModeChange = (next: WriteCorrectionMode) => {
+    if (next === correctionMode) return;
+    setCorrectionMode(next);
+    writeWriteCorrectionMode(next);
+  };
 
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
@@ -115,7 +133,7 @@ export const WriteStudyView = ({
 
   useEffect(() => {
     setAnswer("");
-    setFeedback(null);
+    setEvaluation(null);
     setHintLevel(0);
     setCurrentHint("");
     setRevealed(false);
@@ -141,27 +159,15 @@ export const WriteStudyView = ({
       return;
     }
 
-    const result = isAcceptableAnswer(userOriginalAnswer, acceptedAnswers);
-
-    if (result.isCorrect) {
-      setFeedback("correct");
-      playCorrect();
-      return;
-    }
-
-    const almostCorrect = acceptedAnswers.some((accepted) => isAlmostCorrect(userOriginalAnswer, accepted));
-
-    if (almostCorrect) {
-      setFeedback("almost");
-      playCorrect();
-      toast.warning(`Correto! (Atenção ao erro de digitação: "${correctAnswer}")`, {
-        duration: 3000,
-      });
-      return;
-    }
-
-    setFeedback("incorrect");
-    playWrong();
+    const result = evaluateWriteAnswer({
+      userAnswer: userOriginalAnswer,
+      correctAnswer,
+      alternatives: alternativeAnswers,
+      mode: correctionMode,
+    });
+    setEvaluation(result);
+    if (result.accepted) playCorrect();
+    else playWrong();
   };
 
   const handleHint = () => {
