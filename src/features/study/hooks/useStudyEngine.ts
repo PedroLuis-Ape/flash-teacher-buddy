@@ -26,6 +26,12 @@ import {
   writeStudySnapshot,
 } from "@/features/study/lib/studySessionSnapshot";
 import {
+  buildMasterySnapshotKey,
+  clearMasterySnapshot,
+  readMasterySnapshot,
+  writeMasterySnapshot,
+} from "@/features/study/lib/masterySessionSnapshot";
+import {
   createMasterySession,
   getCurrentCardId,
   isRoundFinished,
