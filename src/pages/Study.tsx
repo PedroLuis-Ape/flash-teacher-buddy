@@ -59,6 +59,10 @@ import { ArrowLeft, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, Che
 import { toast } from "sonner";
 import { buildStudyReturnRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
+import {
+  readStudyLayerSnapshot,
+  writeStudyLayerSnapshot,
+} from "@/features/study/lib/studyLayerSnapshot";
 
 interface Flashcard {
   id: string;
@@ -321,6 +325,7 @@ const Study = () => {
     discardSession,
     cardsOrder,
     saveProgressNow,
+    studySnapshotKey,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
@@ -830,16 +835,33 @@ const Study = () => {
       setLayerIdx(0);
       return;
     }
-    // CLARA MASTER P0 — Favorite/Red list live on the canonical group id, not
-    // per layer. Always start on layer 0 and let the user navigate; we no
-    // longer try to pick "the layer the user starred" because that concept
-    // does not exist anymore (a group has a single favorite mark).
+    // CLARA MASTER — Persistência de camada. Antes de cair no default 0,
+    // tentamos restaurar a última camada visitada NESTE card, para que ao
+    // fechar e reabrir o app o usuário retome exatamente onde parou.
+    const persisted = engineCurrentCardId && studySnapshotKey
+      ? readStudyLayerSnapshot(studySnapshotKey)
+      : null;
+    if (
+      persisted
+      && persisted.cardId === engineCurrentCardId
+      && persisted.layerIdx < layers.length
+    ) {
+      setLayerIdx(persisted.layerIdx);
+      return;
+    }
     setLayerIdx(0);
     return;
-  }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck]);
+  }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck, studySnapshotKey]);
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+
+  // Persiste a camada visível a cada mudança, escopada ao snapshot atual.
+  useEffect(() => {
+    if (!studySnapshotKey || !engineCurrentCardId) return;
+    if (!hasLayers) return;
+    writeStudyLayerSnapshot(studySnapshotKey, engineCurrentCardId, safeLayerIdx);
+  }, [studySnapshotKey, engineCurrentCardId, safeLayerIdx, hasLayers]);
 
   // Centralized status-target resolution lives further below (after
   // `displayedCard` is defined) — see `currentStatusTargets`.
@@ -1607,9 +1629,10 @@ const Study = () => {
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sair do estudo?</AlertDialogTitle>
+            <AlertDialogTitle>Salvar e sair do estudo?</AlertDialogTitle>
             <AlertDialogDescription>
-              Seu progresso será salvo e você poderá voltar depois.
+              Seu progresso será salvo — incluindo o card e a camada em que
+              você parou. Ao voltar, você retoma exatamente deste ponto.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1618,10 +1641,10 @@ const Study = () => {
               onClick={(e) => {
                 e.preventDefault();
                 setShowExitDialog(false);
-                handleExit();
+                void handleExit();
               }}
             >
-              Sair
+              Salvar e sair
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

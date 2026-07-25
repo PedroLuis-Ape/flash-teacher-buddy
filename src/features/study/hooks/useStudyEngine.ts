@@ -31,6 +31,7 @@ import {
   readMasterySnapshot,
   writeMasterySnapshot,
 } from "@/features/study/lib/masterySessionSnapshot";
+import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
   getCurrentCardId,
@@ -1069,6 +1070,7 @@ export function useStudyEngine(
 
       clearStudySnapshot(studySnapshotKey);
       clearMasterySnapshot(masterySnapshotKey);
+      clearStudyLayerSnapshot(studySnapshotKey);
       if (isFlipMode && listId) localStorage.removeItem(flipProgressKey);
       setSessionId(null);
       toast.success("Sessão de estudo concluída! 🎉");
@@ -1086,6 +1088,7 @@ export function useStudyEngine(
   const discardSession = useCallback(async () => {
     clearStudySnapshot(studySnapshotKey);
     clearMasterySnapshot(masterySnapshotKey);
+    clearStudyLayerSnapshot(studySnapshotKey);
     if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
     const currentSessionId = sessionId;
     setSessionId(null);
@@ -1138,6 +1141,7 @@ export function useStudyEngine(
     const previousSessionId = sessionId;
     clearStudySnapshot(studySnapshotKey);
     clearMasterySnapshot(masterySnapshotKey);
+    clearStudyLayerSnapshot(studySnapshotKey);
     if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
 
     setSessionId(null);
@@ -1348,5 +1352,7 @@ export function useStudyEngine(
     completeSession,
     // Scope helpers — used by Study.tsx to switch scopes without resetting
     saveProgressNow,
+    // Chave do snapshot atual — permite persistência satélite (ex: camada visível).
+    studySnapshotKey,
   };
 }
