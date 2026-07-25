@@ -1233,6 +1233,15 @@ export function useStudyEngine(
     });
   }, [studySnapshotKey, sessionId, currentIndex, cardsOrder, results, isLoading, isFinished]);
 
+  // Persist mastery session state so rounds survive a refresh. The regular
+  // study snapshot only captures the current round; the mastery snapshot adds
+  // queue/retry/mastered bookkeeping owned by studySessionFlow.ts.
+  useEffect(() => {
+    if (!isMasteryMode) return;
+    if (isLoading || isFinished || !masterySession) return;
+    writeMasterySnapshot(masterySnapshotKey, masterySession);
+  }, [isMasteryMode, masterySession, masterySnapshotKey, isLoading, isFinished]);
+
   // Force-save current index immediately (no debounce). Used when switching
   // study scope so the previous trail's index isn't lost while waiting for
   // the debounced save to fire.
