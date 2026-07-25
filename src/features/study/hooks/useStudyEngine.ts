@@ -1171,6 +1171,15 @@ export function useStudyEngine(
     initializeSession();
   }, [listId, cardsSignature, mode, sessionScopeKey]); // Only reinit on meaningful changes (scope included)
 
+  // Mastery rounds: keep the legacy cardsOrder/currentIndex in sync with the
+  // dedicated flow engine so the rest of the UI (progress bar, card display,
+  // persistence snapshot) continues to work unchanged.
+  useEffect(() => {
+    if (!isMasteryMode || !masterySession) return;
+    setCardsOrder(masterySession.currentRoundIds);
+    setCurrentIndex(masterySession.currentRoundIndex);
+  }, [isMasteryMode, masterySession]);
+
   useEffect(() => {
     if (isLoading) return;
     const cardId = cardsOrder[currentIndex];
