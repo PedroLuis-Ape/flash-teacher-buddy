@@ -39,7 +39,7 @@ for (const page of pages) {
   assert(page.intro.length >= 1, `${page.path}: introdução ausente.`);
   assert(page.sections.length >= 2, `${page.path}: profundidade editorial insuficiente.`);
   assert(!JSON.stringify(page).includes("PLACEHOLDER"), `${page.path}: placeholder encontrado.`);
-  assert(!JSON.stringify(page).includes("AggregateRating"), `${page.path}: AggregateRating indevido na fonte editorial.`);
+  assert(!Object.hasOwn(page, "aggregateRating") && !Object.hasOwn(page, "reviews"), `${page.path}: avaliações de produto não podem ser definidas na fonte editorial.`);
 
   for (const link of page.relatedLinks) {
     assert(link.href.startsWith("/") || link.href.startsWith("https://"), `${page.path}: link inválido (${link.href}).`);
