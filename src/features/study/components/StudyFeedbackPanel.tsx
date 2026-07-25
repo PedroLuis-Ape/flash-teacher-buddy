@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, Volume2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Pencil, Volume2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,8 @@ interface StudyFeedbackPanelProps {
   actionLabel?: string;
   actionHint?: string;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
   className?: string;
   onPlayAnswer?: () => void;
   isPlayingAnswer?: boolean;
@@ -83,6 +85,8 @@ export function StudyFeedbackPanel({
   actionLabel,
   actionHint,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
   className,
   onPlayAnswer,
   isPlayingAnswer = false,
@@ -226,6 +230,18 @@ export function StudyFeedbackPanel({
 
         {actionLabel && onAction && (
           <div className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:items-center sm:justify-end">
+            {secondaryActionLabel && onSecondaryAction && (
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={onSecondaryAction}
+                className="h-11 w-full gap-2 rounded-xl font-semibold sm:w-auto"
+              >
+                <Pencil className="h-4 w-4" />
+                {secondaryActionLabel}
+              </Button>
+            )}
             <Button
               type="button"
               size="lg"
