@@ -21,13 +21,13 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
   return Object.values(value as Record<string, unknown>).every(
     (v) => typeof v === "number" && Number.isFinite(v),
   );
+}
 
 function isResultRecord(value: unknown): value is Record<string, StudyCardResult> {
   if (!value || typeof value !== "object") return false;
   return Object.values(value as Record<string, unknown>).every((result) =>
     result === "correct" || result === "incorrect" || result === "skipped" || result === "revealed"
   );
-}
 }
 
 export function sanitizeMasterySnapshot(
