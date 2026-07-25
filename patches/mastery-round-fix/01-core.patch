@@ -1,0 +1,269 @@
+diff --git a/src/features/study/lib/studySessionFlow.ts b/src/features/study/lib/studySessionFlow.ts
+index a22c55d..0000000 100644
+--- a/src/features/study/lib/studySessionFlow.ts
++++ b/src/features/study/lib/studySessionFlow.ts
+@@ -18,9 +18,13 @@ export const MASTERY_ROUND_SIZE = 15;
+ 
+ export type StudyFlowMode = "mastery_rounds" | "continuous";
+ 
+ export type StudyCardResult = "correct" | "incorrect" | "skipped" | "revealed";
++export type MasterySessionStatus = "active" | "round-complete" | "journey-complete";
+ 
+ export interface MasterySessionState {
++  readonly version: 2;
+   readonly totalEligible: number;
+   readonly roundSize: number;
+   readonly shuffle: boolean;
++  status: MasterySessionStatus;
+   roundNumber: number;
+   currentRoundIds: string[];
+   currentRoundIndex: number;
+@@ -38,6 +42,8 @@ export interface MasterySessionState {
+   failedThisRoundIds: string[];
+   /** Cards that came from retryIds when this round was composed. */
+   reviewSourceThisRound: string[];
++  /** Final result submitted for each card in the current round. */
++  currentRoundResults: Record<string, StudyCardResult>;
+ }
+ 
+ export interface RoundSummary {
+@@ -45,10 +51,12 @@ export interface RoundSummary {
+   cardsPlayed: number;
+   correctFirstTry: number;
++  correctCards: number;
+   recoveredCards: number;
+   incorrectCards: number;
+   skippedCards: number;
++  revealedCards: number;
+   pendingReview: number;
+   unseenRemaining: number;
+   masteredTotal: number;
+@@ -142,9 +150,11 @@ export function createMasterySession(
+   const composed = composeRound([], pool, roundSize);
+ 
+   return {
++    version: 2,
+     totalEligible: base.length,
+     roundSize,
+     shuffle,
++    status: composed.roundIds.length === 0 ? "journey-complete" : "active",
+     roundNumber: 1,
+     currentRoundIds: composed.roundIds,
+     currentRoundIndex: 0,
+@@ -156,6 +166,7 @@ export function createMasterySession(
+     correctThisRoundIds: [],
+     failedThisRoundIds: [],
+     reviewSourceThisRound: composed.reviewSource,
++    currentRoundResults: {},
+   };
+ }
+ 
+@@ -165,7 +176,7 @@ export function getCurrentCardId(state: MasterySessionState): string | null {
+ }
+ 
+ export function isRoundFinished(state: MasterySessionState): boolean {
+-  return state.currentRoundIndex >= state.currentRoundIds.length;
++  return state.status !== "active" || state.currentRoundIndex >= state.currentRoundIds.length;
+ }
+ 
+ /**
+@@ -173,12 +184,7 @@ export function isRoundFinished(state: MasterySessionState): boolean {
+  * round has been fully played through.
+  */
+ export function isSessionFinished(state: MasterySessionState): boolean {
+-  return (
+-    isRoundFinished(state)
+-    && state.unseenIds.length === 0
+-    && state.retryIds.length === 0
+-    && state.failedThisRoundIds.length === 0
+-  );
++  return state.status === "journey-complete";
+ }
+ 
+ /**
+@@ -190,7 +196,12 @@ export function recordResult(
+   cardId: string,
+   result: StudyCardResult,
+ ): MasterySessionState {
++  if (state.status !== "active") return state;
++  const currentCardId = getCurrentCardId(state);
++  if (!currentCardId || currentCardId !== cardId) return state;
++  if (state.currentRoundResults[cardId]) return state;
++
+   state.attemptsByCard[cardId] = (state.attemptsByCard[cardId] ?? 0) + 1;
++  state.currentRoundResults[cardId] = result;
+ 
+   if (result === "correct") {
+     if (!state.correctThisRoundIds.includes(cardId)) state.correctThisRoundIds.push(cardId);
+@@ -204,6 +215,15 @@ export function recordResult(
+   }
+ 
+   state.currentRoundIndex += 1;
++  if (state.currentRoundIndex >= state.currentRoundIds.length) {
++    const journeyComplete = state.unseenIds.length === 0
++      && state.retryIds.length === 0
++      && state.failedThisRoundIds.length === 0;
++    state.status = journeyComplete ? "journey-complete" : "round-complete";
++  }
++
+   return state;
+ }
+ 
+@@ -211,15 +231,19 @@ export function recordResult(
+  * Snapshot summary of the round that just ended. Call before startNextRound.
+  */
+ export function summarizeCurrentRound(state: MasterySessionState): RoundSummary {
+-  const cardsPlayed = state.currentRoundIds.length;
+-  const recoveredCards = state.correctThisRoundIds.filter((id) =>
+-    state.reviewSourceThisRound.includes(id),
+-  ).length;
+-  const correctFirstTry = state.correctThisRoundIds.length - recoveredCards;
+-  const incorrectCards = state.failedThisRoundIds.filter(
+-    (id) => (state.mistakesByCard[id] ?? 0) > 0,
+-  ).length;
+-  const skippedCards = 0; // captured inside failedThisRoundIds already; kept for API shape
++  const entries = Object.entries(state.currentRoundResults);
++  const cardsPlayed = entries.length;
++  const correctIds = entries.filter(([, result]) => result === "correct").map(([id]) => id);
++  const recoveredCards = correctIds.filter((id) => state.reviewSourceThisRound.includes(id)).length;
++  const correctCards = correctIds.length;
++  const correctFirstTry = correctCards - recoveredCards;
++  const incorrectCards = entries.filter(([, result]) => result === "incorrect").length;
++  const skippedCards = entries.filter(([, result]) => result === "skipped").length;
++  const revealedCards = entries.filter(([, result]) => result === "revealed").length;
+ 
+   return {
+     roundNumber: state.roundNumber,
+     cardsPlayed,
+     correctFirstTry: Math.max(0, correctFirstTry),
++    correctCards,
+     recoveredCards,
+     incorrectCards,
+     skippedCards,
++    revealedCards,
+     pendingReview: state.retryIds.length + state.failedThisRoundIds.length,
+     unseenRemaining: state.unseenIds.length,
+     masteredTotal: state.masteredIds.length,
+@@ -240,8 +264,8 @@ export function summarizeCurrentRound(state: MasterySessionState): RoundSummary {
+  * mastered, then composes the next round.
+  */
+ export function startNextRound(state: MasterySessionState): MasterySessionState {
+-  if (!isRoundFinished(state)) return state;
+-  if (state.unseenIds.length === 0 && state.retryIds.length === 0 && state.failedThisRoundIds.length === 0) {
++  if (state.status !== "round-complete") return state;
++  if (isSessionFinished(state)) {
+     return state;
+   }
+@@ -266,7 +290,9 @@ export function startNextRound(state: MasterySessionState): MasterySessionState {
+   state.correctThisRoundIds = [];
+   state.failedThisRoundIds = [];
+   state.reviewSourceThisRound = composed.reviewSource;
++  state.currentRoundResults = {};
++  state.status = composed.roundIds.length === 0 ? "journey-complete" : "active";
+   return state;
+ }
+diff --git a/src/features/study/lib/masterySessionSnapshot.ts b/src/features/study/lib/masterySessionSnapshot.ts
+index 0000000..0000000 100644
+--- a/src/features/study/lib/masterySessionSnapshot.ts
++++ b/src/features/study/lib/masterySessionSnapshot.ts
+@@ -5,7 +5,7 @@
+  * mirroring the pattern in studySessionSnapshot.ts.
+  */
+-import type { MasterySessionState } from "./studySessionFlow";
++import type { MasterySessionState, StudyCardResult } from "./studySessionFlow";
+@@ -22,6 +22,15 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
+   );
+ }
++
++function isResultRecord(value: unknown): value is Record<string, StudyCardResult> {
++  if (!value || typeof value !== "object") return false;
++  return Object.values(value as Record<string, unknown>).every((result) =>
++    result === "correct" || result === "incorrect" || result === "skipped" || result === "revealed"
++  );
++}
+@@ -34,6 +43,9 @@ export function sanitizeMasterySnapshot(
+   const row = value as Partial<MasterySessionState>;
+   if (
+-    typeof row.totalEligible !== "number"
++    row.version !== 2
++    || (row.status !== "active" && row.status !== "round-complete" && row.status !== "journey-complete")
++    || typeof row.totalEligible !== "number"
+     || typeof row.roundSize !== "number"
+@@ -51,6 +63,7 @@ export function sanitizeMasterySnapshot(
+     || !isStringArray(row.reviewSourceThisRound)
+     || !isNumberRecord(row.attemptsByCard)
+     || !isNumberRecord(row.mistakesByCard)
++    || !isResultRecord(row.currentRoundResults)
+   ) {
+@@ -75,6 +88,18 @@ export function sanitizeMasterySnapshot(
+     if (!union.has(id)) return null;
+   }
++
++  const currentRoundIndex = Math.min(Math.max(row.currentRoundIndex, 0), currentRoundIds.length);
++  let status = row.status;
++  if (status === "active" && currentRoundIndex >= currentRoundIds.length) {
++    status = unseenIds.length === 0
++      && retryIds.length === 0
++      && filterIds(row.failedThisRoundIds).length === 0
++      ? "journey-complete"
++      : "round-complete";
++  }
++
++  const currentRoundSet = new Set(currentRoundIds);
++  const currentRoundResults = Object.fromEntries(
++    Object.entries(row.currentRoundResults).filter(([id]) => currentRoundSet.has(id)),
++  ) as Record<string, StudyCardResult>;
+ 
+   return {
++    version: 2,
+     totalEligible: row.totalEligible,
+@@ -82,10 +107,11 @@ export function sanitizeMasterySnapshot(
+     shuffle: row.shuffle,
++    status,
+     roundNumber: row.roundNumber,
+     currentRoundIds,
+-    currentRoundIndex: Math.min(Math.max(row.currentRoundIndex, 0), currentRoundIds.length - 1),
++    currentRoundIndex,
+@@ -98,6 +124,7 @@ export function sanitizeMasterySnapshot(
+     failedThisRoundIds: filterIds(row.failedThisRoundIds),
+     reviewSourceThisRound: filterIds(row.reviewSourceThisRound),
++    currentRoundResults,
+   };
+ }
+diff --git a/src/features/study/lib/studySessionFlow.test.ts b/src/features/study/lib/studySessionFlow.test.ts
+index 0000000..0000000 100644
+--- a/src/features/study/lib/studySessionFlow.test.ts
++++ b/src/features/study/lib/studySessionFlow.test.ts
+@@ -35,6 +35,19 @@ describe("studySessionFlow — mastery rounds", () => {
+     expect(state.unseenIds).toHaveLength(15);
+   });
++
++  it("stops at a real round boundary after the 15th answer", () => {
++    const state = createMasterySession(ids(30));
++    playRound(state, () => "correct");
++    expect(state.status).toBe("round-complete");
++    expect(state.currentRoundIndex).toBe(15);
++    expect(getCurrentCardId(state)).toBeNull();
++    expect(state.roundNumber).toBe(1);
++    startNextRound(state);
++    expect(state.status).toBe("active");
++    expect(state.roundNumber).toBe(2);
++    expect(state.currentRoundIndex).toBe(0);
++  });
++
++  it("ignores duplicate submissions for the same card", () => {
++    const state = createMasterySession(ids(2));
++    recordResult(state, "c1", "correct");
++    recordResult(state, "c1", "incorrect");
++    expect(state.currentRoundIndex).toBe(1);
++    expect(state.currentRoundResults.c1).toBe("correct");
++    expect(state.attemptsByCard.c1).toBe(1);
++  });
+@@ -129,6 +142,9 @@ describe("studySessionFlow — mastery rounds", () => {
+     expect(summary.recoveredCards).toBe(2);
+     expect(summary.correctFirstTry).toBe(13);
++    expect(summary.correctCards).toBe(15);
++    expect(summary.skippedCards).toBe(0);
++    expect(summary.revealedCards).toBe(0);
+   });
+ });
