@@ -47,12 +47,14 @@ describe("class glossary contract", () => {
     const workspace = read("src/pages/TurmaDetailWorkspace.tsx");
     const studentClasses = read("src/pages/TurmasAluno.tsx");
     const hub = read("src/pages/GamesHub.tsx");
+    const launchParams = read("src/features/study/lib/studyLaunchParams.ts");
 
     expect(workspace).toContain("markPendingClassGlossaryContext(turmaId)");
     expect(studentClasses).toContain("markPendingClassGlossaryContext(turmaId)");
     expect(studentClasses).toContain('`?turma=${encodeURIComponent(turmaId)}`');
     expect(hub).toContain("isListAssignedToClass");
-    expect(hub).toContain('params.set("turma", activeTurmaId)');
+    expect(hub).toContain("buildStudyLaunchSearchParams");
+    expect(launchParams).toContain('params.set("turma", turmaId)');
     expect(hook).toContain("readPendingClassGlossaryContext");
     expect(hook).toContain("loadClassGlossaryForList");
     expect(hook).toContain('source: "class-glossary"');
