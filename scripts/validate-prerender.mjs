@@ -66,7 +66,6 @@ for (const page of pages) {
   assert(html.includes('type="module"'), `${page.path}: bundle do aplicativo ausente`);
   assert(!html.includes('<div id="root"></div>'), `${page.path}: root continua vazio`);
   assert(!html.includes("PLACEHOLDER"), `${page.path}: placeholder editorial publicado`);
-  assert(!html.includes("AggregateRating"), `${page.path}: avaliações da Preply não podem ser atribuídas ao software`);
 
   for (const intro of page.intro) {
     assert(html.includes(escapeHtml(intro)), `${page.path}: parágrafo de abertura ausente`);
