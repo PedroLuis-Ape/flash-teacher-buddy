@@ -36,6 +36,7 @@ jobs:
         id: patch
         shell: bash
         run: |
+          # Patch files are intentionally temporary and are removed before merge.
           rm -f patches/mastery-round-fix/failure.log
           for patch_file in patches/mastery-round-fix/*.patch; do
             sed -i '/^index [0-9a-f]/d' "$patch_file"
