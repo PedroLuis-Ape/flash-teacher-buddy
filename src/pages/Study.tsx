@@ -317,6 +317,7 @@ const Study = () => {
     hasMoreRounds,
     isGameComplete,
     startNextRound,
+    pendingRoundSummary,
     resetSession,
     restartSession,
     gameSettings,
