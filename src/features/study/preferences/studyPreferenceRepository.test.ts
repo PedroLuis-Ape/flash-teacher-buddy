@@ -9,16 +9,18 @@ import {
 } from "./studyPreferenceRepository";
 
 describe("studyPreferenceRepository", () => {
-  it("maps database fields into a global preset", () => {
+  it("uses game_mode as the global preset identity", () => {
     expect(mapGlobalPreferenceRow({
-      mode: "mixed",
+      game_mode: "mixed",
+      mode: "flip",
       direction: "a-b",
       card_order: "sequential",
       scope: "all",
       fast_mode: true,
       play_mode: "single",
       play_side: "b",
-    })).toEqual({
+      study_flow_mode: "continuous",
+    }, "mixed")).toEqual({
       mode: "mixed",
       direction: "a-b",
       order: "sequential",
@@ -26,12 +28,13 @@ describe("studyPreferenceRepository", () => {
       fastMode: true,
       playMode: "single",
       playSide: "b",
-      studyFlowMode: "mastery_rounds",
+      studyFlowMode: "continuous",
     });
   });
 
-  it("maps nullable list fields into a minimal override", () => {
+  it("maps nullable list fields without leaking the game identity into the override", () => {
     expect(mapListPreferenceRow({
+      game_mode: "write",
       mode: "write",
       direction: null,
       card_order: null,
@@ -39,39 +42,50 @@ describe("studyPreferenceRepository", () => {
       fast_mode: null,
       play_mode: "single",
       play_side: "a",
-    })).toEqual({
-      mode: "write",
+      study_flow_mode: "mastery_rounds",
+    }, "write")).toEqual({
       scope: "favorites",
       playMode: "single",
       playSide: "a",
+      studyFlowMode: "mastery_rounds",
     });
   });
 
-  it("serializes global and list values", () => {
-    expect(toGlobalPreferenceRow("user-1", DEFAULT_STUDY_PRESET)).toMatchObject({
+  it("serializes global and list values with a separate game_mode key", () => {
+    expect(toGlobalPreferenceRow("user-1", {
+      ...DEFAULT_STUDY_PRESET,
+      studyFlowMode: "continuous",
+    }, "flip")).toMatchObject({
       user_id: "user-1",
+      game_mode: "flip",
+      mode: "flip",
       card_order: "random",
       fast_mode: false,
       play_mode: "both",
       play_side: "a",
+      study_flow_mode: "continuous",
     });
     expect(toListPreferenceRow("user-1", "list-1", {
-      mode: "write",
       playMode: "single",
       playSide: "b",
-    })).toMatchObject({
+      studyFlowMode: "continuous",
+    }, "write")).toMatchObject({
       user_id: "user-1",
       list_id: "list-1",
-      mode: "write",
+      game_mode: "write",
+      mode: null,
       direction: null,
       play_mode: "single",
       play_side: "b",
+      study_flow_mode: "continuous",
     });
   });
 
   it("classifies missing schema errors for local fallback", () => {
     expect(isMissingStudyPreferenceSchemaError({ code: "42P01" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "PGRST205" })).toBe(true);
+    expect(isMissingStudyPreferenceSchemaError({ code: "42703", message: "game_mode column" })).toBe(true);
+    expect(isMissingStudyPreferenceSchemaError({ code: "42703", message: "study_flow_mode column" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "42501" })).toBe(false);
   });
 });

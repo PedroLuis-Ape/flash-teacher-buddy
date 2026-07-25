@@ -21,9 +21,11 @@ import {
   removeListOverrideCache,
   replacePendingPreferenceWrites,
   stagePendingPreferenceWrites,
+  STUDY_PREFERENCE_CACHE_CHANGED_EVENT,
   writeGlobalCache,
   writeListOverrideCache,
   type PendingPreferenceWrite,
+  type StudyPreferenceCacheChangedDetail,
 } from "@/features/study/preferences/studyPreferenceCache";
 import {
   createStudyPreferenceRepository,
@@ -43,13 +45,14 @@ export type StudyPreferenceSource = "defaults" | "global" | "list";
 
 export type UseStudyPreferencesOptions = {
   listId?: string;
+  gameMode?: string;
   persistScope?: "global" | "list";
   canPersistList?: boolean;
   persistEnabled?: boolean;
   sessionOverrides?: StudySessionOverrides;
 };
 
-export const STUDY_PREFERENCES_VERSION = 3;
+export const STUDY_PREFERENCES_VERSION = 4;
 export const STUDY_DIRECTION_MANUAL_EVENT = "piteco:study-direction-manual";
 export const STUDY_RED_FOCUS_TRANSITION_EVENT = "piteco:study-red-focus-transition";
 
@@ -63,6 +66,10 @@ type ScheduledPreferenceWrite = {
 
 function userScope(userId: string | undefined): string {
   return userId || "anon";
+}
+
+function scopedDefault(gameMode: StudyPreset["mode"]): StudyPreset {
+  return normalizeStudyPreset({ ...DEFAULT_STUDY_PRESET, mode: gameMode });
 }
 
 export function derivePrivateListId(pathname?: string): string | undefined {
@@ -201,7 +208,9 @@ function readWindowSessionOverrides(): StudySessionOverrides {
 }
 
 function pendingWriteKey(write: PendingPreferenceWrite): string {
-  return write.kind === "global-upsert" ? "global" : `list:${write.listId}`;
+  return write.kind === "global-upsert"
+    ? `${write.gameMode}:global`
+    : `${write.gameMode}:list:${write.listId}`;
 }
 
 function removeMatchingPendingWrite(scope: string, completed: PendingPreferenceWrite): void {
@@ -214,11 +223,11 @@ function removeMatchingPendingWrite(scope: string, completed: PendingPreferenceW
 
 async function executePendingWrite(userId: string, write: PendingPreferenceWrite): Promise<void> {
   if (write.kind === "global-upsert") {
-    await repository.upsertGlobal(userId, write.preset);
+    await repository.upsertGlobal(userId, write.gameMode, write.preset);
   } else if (write.kind === "list-upsert") {
-    await repository.upsertListOverride(userId, write.listId, write.override);
+    await repository.upsertListOverride(userId, write.listId, write.gameMode, write.override);
   } else {
-    await repository.deleteListOverride(userId, write.listId);
+    await repository.deleteListOverride(userId, write.listId, write.gameMode);
   }
 }
 
@@ -233,30 +242,41 @@ export function useStudyPreferences(
   const persistenceEnabled = shouldPersistStudyPreferences(undefined, options.persistEnabled);
   const persistenceScope = options.persistScope
     ?? (listId && canPersistList ? "list" : "global");
+  const windowSessionOverrides = readWindowSessionOverrides();
+  const activeMode = normalizeStudyMode(
+    options.gameMode
+      ?? options.sessionOverrides?.mode
+      ?? windowSessionOverrides.mode
+      ?? DEFAULT_STUDY_PRESET.mode,
+  ) as StudyPreset["mode"];
 
-  const initialGlobal = readGlobalCache(scope)
-    ?? migrateLegacyStudyPreferences(scope)
-    ?? { ...DEFAULT_STUDY_PRESET };
-  const initialListOverride = listId ? readListOverrideCache(scope, listId) : null;
+  const initialGlobal = readGlobalCache(scope, activeMode)
+    ?? migrateLegacyStudyPreferences(scope, activeMode)
+    ?? scopedDefault(activeMode);
+  const initialListOverride = listId ? readListOverrideCache(scope, activeMode, listId) : null;
   const initialSessionOverrides = normalizeStudyPresetOverride({
-    ...readWindowSessionOverrides(),
+    ...windowSessionOverrides,
     ...options.sessionOverrides,
+    mode: activeMode,
   });
 
   const [globalPreset, setGlobalPreset] = useState<StudyPreset>(initialGlobal);
   const [listOverride, setListOverride] = useState<StudyPresetOverride | null>(initialListOverride);
   const [sessionOverrides, setSessionOverridesState] = useState<StudySessionOverrides>(initialSessionOverrides);
   const [isHydrating, setIsHydrating] = useState(Boolean(userId));
-  const [hasPersistedGlobal, setHasPersistedGlobal] = useState(Boolean(readGlobalCache(scope)));
+  const [hasPersistedGlobal, setHasPersistedGlobal] = useState(Boolean(readGlobalCache(scope, activeMode)));
   const timersRef = useRef(new Map<string, ScheduledPreferenceWrite>());
   const manualRevisionRef = useRef(0);
   const redFocusTransitionRef = useRef(false);
 
-  const effectivePreset = useMemo(() => resolveStudyPreset({
-    globalPreset,
-    listOverride,
-    sessionOverrides,
-  }), [globalPreset, listOverride, sessionOverrides]);
+  const effectivePreset = useMemo(() => normalizeStudyPreset({
+    ...resolveStudyPreset({
+      globalPreset,
+      listOverride,
+      sessionOverrides,
+    }),
+    mode: activeMode,
+  }), [activeMode, globalPreset, listOverride, sessionOverrides]);
 
   const source: StudyPreferenceSource = listOverride && !isEmptyStudyPresetOverride(listOverride)
     ? "list"
@@ -310,19 +330,20 @@ export function useStudyPreferences(
 
   useEffect(() => {
     const nextScope = userScope(userId);
-    const cachedGlobal = readGlobalCache(nextScope)
-      ?? migrateLegacyStudyPreferences(nextScope)
-      ?? { ...DEFAULT_STUDY_PRESET };
-    const cachedList = listId ? readListOverrideCache(nextScope, listId) : null;
+    const cachedGlobal = readGlobalCache(nextScope, activeMode)
+      ?? migrateLegacyStudyPreferences(nextScope, activeMode)
+      ?? scopedDefault(activeMode);
+    const cachedList = listId ? readListOverrideCache(nextScope, activeMode, listId) : null;
     const nextSession = normalizeStudyPresetOverride({
       ...readWindowSessionOverrides(),
       ...options.sessionOverrides,
+      mode: activeMode,
     });
 
     setGlobalPreset(cachedGlobal);
     setListOverride(cachedList);
     setSessionOverridesState(nextSession);
-    setHasPersistedGlobal(Boolean(readGlobalCache(nextScope)));
+    setHasPersistedGlobal(Boolean(readGlobalCache(nextScope, activeMode)));
 
     if (!userId) {
       setIsHydrating(false);
@@ -337,20 +358,25 @@ export function useStudyPreferences(
       try {
         await flushPending();
         const [serverGlobalResult, serverListResult] = await Promise.allSettled([
-          repository.readGlobal(userId),
-          listId ? repository.readListOverride(userId, listId) : Promise.resolve(null),
+          repository.readGlobal(userId, activeMode),
+          listId ? repository.readListOverride(userId, listId, activeMode) : Promise.resolve(null),
         ]);
         if (cancelled || revisionAtStart !== manualRevisionRef.current) return;
 
         if (serverGlobalResult.status === "fulfilled") {
           if (serverGlobalResult.value) {
             setGlobalPreset(serverGlobalResult.value);
-            writeGlobalCache(nextScope, serverGlobalResult.value);
+            writeGlobalCache(nextScope, activeMode, serverGlobalResult.value);
             setHasPersistedGlobal(true);
           } else if (persistenceEnabled) {
-            writeGlobalCache(nextScope, cachedGlobal);
+            writeGlobalCache(nextScope, activeMode, cachedGlobal);
             setHasPersistedGlobal(true);
-            await runWrite({ kind: "global-upsert", preset: cachedGlobal, updatedAt: Date.now() });
+            await runWrite({
+              kind: "global-upsert",
+              gameMode: activeMode,
+              preset: cachedGlobal,
+              updatedAt: Date.now(),
+            });
           }
         } else if (!isMissingStudyPreferenceSchemaError(serverGlobalResult.reason)) {
           console.warn("[StudyPreferences] Falha ao hidratar preset global", serverGlobalResult.reason);
@@ -359,8 +385,8 @@ export function useStudyPreferences(
         if (listId && serverListResult.status === "fulfilled") {
           const serverOverride = serverListResult.value;
           setListOverride(serverOverride);
-          if (serverOverride) writeListOverrideCache(nextScope, listId, serverOverride);
-          else removeListOverrideCache(nextScope, listId);
+          if (serverOverride) writeListOverrideCache(nextScope, activeMode, listId, serverOverride);
+          else removeListOverrideCache(nextScope, activeMode, listId);
         } else if (serverListResult.status === "rejected"
           && !isMissingStudyPreferenceSchemaError(serverListResult.reason)) {
           console.warn("[StudyPreferences] Falha ao hidratar preset da lista", serverListResult.reason);
@@ -373,14 +399,54 @@ export function useStudyPreferences(
     return () => {
       cancelled = true;
     };
-  }, [flushPending, listId, options.sessionOverrides, persistenceEnabled, runWrite, userId]);
+  }, [
+    activeMode,
+    flushPending,
+    listId,
+    options.sessionOverrides,
+    persistenceEnabled,
+    runWrite,
+    userId,
+  ]);
 
   useEffect(() => {
     setSessionOverridesState(normalizeStudyPresetOverride({
       ...readWindowSessionOverrides(),
       ...options.sessionOverrides,
+      mode: activeMode,
     }));
-  }, [options.sessionOverrides]);
+  }, [activeMode, options.sessionOverrides]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const syncFromCache = () => {
+      const nextGlobal = readGlobalCache(scope, activeMode) ?? scopedDefault(activeMode);
+      const nextList = listId ? readListOverrideCache(scope, activeMode, listId) : null;
+      setGlobalPreset(nextGlobal);
+      setListOverride(nextList);
+      setHasPersistedGlobal(Boolean(readGlobalCache(scope, activeMode)));
+    };
+
+    const handleCacheChanged = (event: Event) => {
+      const detail = (event as CustomEvent<StudyPreferenceCacheChangedDetail>).detail;
+      if (!detail || detail.userId !== scope || detail.gameMode !== activeMode) return;
+      if (detail.scope === "list" && detail.listId !== listId) return;
+      syncFromCache();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key || !event.key.includes(`studyPreferences:v4:${scope}:mode:${activeMode}:`)) return;
+      syncFromCache();
+    };
+
+    window.addEventListener(STUDY_PREFERENCE_CACHE_CHANGED_EVENT, handleCacheChanged);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(STUDY_PREFERENCE_CACHE_CHANGED_EVENT, handleCacheChanged);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [activeMode, listId, scope]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !userId || !persistenceEnabled) return;
@@ -402,12 +468,14 @@ export function useStudyPreferences(
     setSessionOverridesState((current) => {
       const next = { ...current };
       (Object.keys(partial) as Array<keyof StudyPreset>).forEach((key) => delete next[key]);
+      next.mode = activeMode;
       return next;
     });
-  }, []);
+  }, [activeMode]);
 
   const updateForCurrentScope = useCallback((partial: Partial<StudyPreset>) => {
     const normalizedPartial = normalizeStudyPresetOverride(partial);
+    delete normalizedPartial.mode;
     if (isEmptyStudyPresetOverride(normalizedPartial)) return;
     manualRevisionRef.current += 1;
 
@@ -415,6 +483,7 @@ export function useStudyPreferences(
       setSessionOverridesState((current) => normalizeStudyPresetOverride({
         ...current,
         ...normalizedPartial,
+        mode: activeMode,
       }));
       return;
     }
@@ -422,27 +491,51 @@ export function useStudyPreferences(
     clearSessionKeys(normalizedPartial);
 
     if (persistenceScope === "list" && listId) {
-      const persistedEffective = resolveStudyPreset({ globalPreset, listOverride });
-      const nextEffective = normalizeStudyPreset({ ...persistedEffective, ...normalizedPartial });
+      const persistedEffective = normalizeStudyPreset({
+        ...resolveStudyPreset({ globalPreset, listOverride }),
+        mode: activeMode,
+      });
+      const nextEffective = normalizeStudyPreset({
+        ...persistedEffective,
+        ...normalizedPartial,
+        mode: activeMode,
+      });
       const nextOverride = diffStudyPreset(nextEffective, globalPreset);
+      delete nextOverride.mode;
       if (isEmptyStudyPresetOverride(nextOverride)) {
         setListOverride(null);
-        removeListOverrideCache(scope, listId);
-        scheduleWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
+        removeListOverrideCache(scope, activeMode, listId);
+        scheduleWrite({ kind: "list-delete", gameMode: activeMode, listId, updatedAt: Date.now() });
       } else {
         setListOverride(nextOverride);
-        writeListOverrideCache(scope, listId, nextOverride);
-        scheduleWrite({ kind: "list-upsert", listId, override: nextOverride, updatedAt: Date.now() });
+        writeListOverrideCache(scope, activeMode, listId, nextOverride);
+        scheduleWrite({
+          kind: "list-upsert",
+          gameMode: activeMode,
+          listId,
+          override: nextOverride,
+          updatedAt: Date.now(),
+        });
       }
       return;
     }
 
-    const nextGlobal = normalizeStudyPreset({ ...globalPreset, ...normalizedPartial });
+    const nextGlobal = normalizeStudyPreset({
+      ...globalPreset,
+      ...normalizedPartial,
+      mode: activeMode,
+    });
     setGlobalPreset(nextGlobal);
     setHasPersistedGlobal(true);
-    writeGlobalCache(scope, nextGlobal);
-    scheduleWrite({ kind: "global-upsert", preset: nextGlobal, updatedAt: Date.now() });
+    writeGlobalCache(scope, activeMode, nextGlobal);
+    scheduleWrite({
+      kind: "global-upsert",
+      gameMode: activeMode,
+      preset: nextGlobal,
+      updatedAt: Date.now(),
+    });
   }, [
+    activeMode,
     clearSessionKeys,
     globalPreset,
     listId,
@@ -455,34 +548,43 @@ export function useStudyPreferences(
 
   const saveAsGlobal = useCallback(async (preset: StudyPreset = effectivePreset) => {
     if (!persistenceEnabled) return;
-    const normalized = normalizeStudyPreset(preset);
+    const normalized = normalizeStudyPreset({ ...preset, mode: activeMode });
     manualRevisionRef.current += 1;
     setGlobalPreset(normalized);
     setHasPersistedGlobal(true);
-    writeGlobalCache(scope, normalized);
+    writeGlobalCache(scope, activeMode, normalized);
 
     if (listId) {
       setListOverride(null);
-      removeListOverrideCache(scope, listId);
+      removeListOverrideCache(scope, activeMode, listId);
     }
 
     if (userId) {
-      await runWrite({ kind: "global-upsert", preset: normalized, updatedAt: Date.now() });
-      if (listId) await runWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
+      await runWrite({
+        kind: "global-upsert",
+        gameMode: activeMode,
+        preset: normalized,
+        updatedAt: Date.now(),
+      });
+      if (listId) {
+        await runWrite({ kind: "list-delete", gameMode: activeMode, listId, updatedAt: Date.now() });
+      }
     }
-  }, [effectivePreset, listId, persistenceEnabled, runWrite, scope, userId]);
+  }, [activeMode, effectivePreset, listId, persistenceEnabled, runWrite, scope, userId]);
 
   const resetListOverride = useCallback(async () => {
     if (!listId || !persistenceEnabled) return;
     manualRevisionRef.current += 1;
     setListOverride(null);
-    removeListOverrideCache(scope, listId);
-    if (userId) await runWrite({ kind: "list-delete", listId, updatedAt: Date.now() });
-  }, [listId, persistenceEnabled, runWrite, scope, userId]);
+    removeListOverrideCache(scope, activeMode, listId);
+    if (userId) {
+      await runWrite({ kind: "list-delete", gameMode: activeMode, listId, updatedAt: Date.now() });
+    }
+  }, [activeMode, listId, persistenceEnabled, runWrite, scope, userId]);
 
   const setSessionOverrides = useCallback((overrides: StudySessionOverrides) => {
-    setSessionOverridesState(normalizeStudyPresetOverride(overrides));
-  }, []);
+    setSessionOverridesState(normalizeStudyPresetOverride({ ...overrides, mode: activeMode }));
+  }, [activeMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -509,6 +611,7 @@ export function useStudyPreferences(
 
   const updatePrefs = useCallback((partial: Partial<StudyPreferences>) => {
     const changedPartial = selectChangedLegacyPreferences(partial, prefs);
+    delete changedPartial.mode;
     const persistentPartial = stripTransientRedFocusOrder(changedPartial, redFocusTransitionRef.current);
     redFocusTransitionRef.current = false;
     if (persistentPartial.direction) notifyDirectionUrlChange(persistentPartial.direction);
@@ -516,8 +619,8 @@ export function useStudyPreferences(
   }, [prefs, updateForCurrentScope]);
 
   const applyUrlOverrides = useCallback((params: URLSearchParams) => {
-    setSessionOverrides(parseStudySessionOverrides(params));
-  }, [setSessionOverrides]);
+    setSessionOverrides({ ...parseStudySessionOverrides(params), mode: activeMode });
+  }, [activeMode, setSessionOverrides]);
 
   return {
     effectivePreset,

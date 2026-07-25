@@ -33,7 +33,7 @@ Object.defineProperty(globalThis, "localStorage", {
 describe("studyPreferenceCache", () => {
   beforeEach(() => localStorage.clear());
 
-  it("migrates legacy v2 favoritesOnly into scope and preserves Play defaults", () => {
+  it("migrates legacy v2 only into its original game mode", () => {
     localStorage.setItem("studyPreferences:user-1", JSON.stringify({
       version: 2,
       mode: "mixed",
@@ -54,33 +54,51 @@ describe("studyPreferenceCache", () => {
       studyFlowMode: "mastery_rounds" as const,
     };
 
-    expect(migrateLegacyStudyPreferences("user-1")).toEqual(expected);
-    expect(readGlobalCache("user-1")).toEqual(expected);
+    expect(migrateLegacyStudyPreferences("user-1", "mixed")).toEqual(expected);
+    expect(readGlobalCache("user-1", "mixed")).toEqual(expected);
+    expect(readGlobalCache("user-1", "write")).toBeNull();
   });
 
-  it("isolates global and list caches by user", () => {
-    writeGlobalCache("user-1", DEFAULT_STUDY_PRESET);
-    writeListOverrideCache("user-1", "list-1", { mode: "write" });
+  it("isolates global and list caches by user and game mode", () => {
+    writeGlobalCache("user-1", "flip", {
+      ...DEFAULT_STUDY_PRESET,
+      mode: "flip",
+      direction: "a-b",
+    });
+    writeGlobalCache("user-1", "write", {
+      ...DEFAULT_STUDY_PRESET,
+      mode: "write",
+      direction: "b-a",
+    });
+    writeListOverrideCache("user-1", "write", "list-1", { order: "sequential" });
 
-    expect(readGlobalCache("user-2")).toBeNull();
-    expect(readListOverrideCache("user-2", "list-1")).toBeNull();
-    expect(readListOverrideCache("user-1", "list-1")).toEqual({ mode: "write" });
+    expect(readGlobalCache("user-2", "flip")).toBeNull();
+    expect(readGlobalCache("user-1", "flip")?.direction).toBe("a-b");
+    expect(readGlobalCache("user-1", "write")?.direction).toBe("b-a");
+    expect(readListOverrideCache("user-2", "write", "list-1")).toBeNull();
+    expect(readListOverrideCache("user-1", "flip", "list-1")).toBeNull();
+    expect(readListOverrideCache("user-1", "write", "list-1")).toEqual({ order: "sequential" });
   });
 
-  it("removes empty list overrides", () => {
-    writeListOverrideCache("user-1", "list-1", { mode: "write" });
-    removeListOverrideCache("user-1", "list-1");
-    expect(readListOverrideCache("user-1", "list-1")).toBeNull();
+  it("removes only the selected mode list override", () => {
+    writeListOverrideCache("user-1", "flip", "list-1", { order: "random" });
+    writeListOverrideCache("user-1", "write", "list-1", { order: "sequential" });
+    removeListOverrideCache("user-1", "write", "list-1");
+
+    expect(readListOverrideCache("user-1", "write", "list-1")).toBeNull();
+    expect(readListOverrideCache("user-1", "flip", "list-1")).toEqual({ order: "random" });
   });
 
   it("keeps pending writes ordered and replaceable", () => {
     enqueuePendingPreferenceWrite("user-1", {
       kind: "global-upsert",
+      gameMode: "flip",
       preset: DEFAULT_STUDY_PRESET,
       updatedAt: 1,
     });
     enqueuePendingPreferenceWrite("user-1", {
       kind: "list-delete",
+      gameMode: "flip",
       listId: "list-1",
       updatedAt: 2,
     });
@@ -94,37 +112,54 @@ describe("studyPreferenceCache", () => {
     expect(readPendingPreferenceWrites("user-1")).toEqual([]);
   });
 
-  it("stages only the latest write for each target during navigation", () => {
+  it("deduplicates pending writes per target without mixing game modes", () => {
     stagePendingPreferenceWrites("user-1", [
       {
         kind: "global-upsert",
+        gameMode: "flip",
         preset: DEFAULT_STUDY_PRESET,
         updatedAt: 1,
       },
       {
         kind: "global-upsert",
+        gameMode: "mixed",
         preset: { ...DEFAULT_STUDY_PRESET, mode: "mixed" },
         updatedAt: 2,
       },
       {
+        kind: "global-upsert",
+        gameMode: "flip",
+        preset: { ...DEFAULT_STUDY_PRESET, direction: "a-b" },
+        updatedAt: 3,
+      },
+      {
         kind: "list-upsert",
+        gameMode: "mixed",
         listId: "list-1",
         override: { order: "sequential" },
-        updatedAt: 3,
+        updatedAt: 4,
       },
     ]);
 
     expect(readPendingPreferenceWrites("user-1")).toEqual([
       {
         kind: "global-upsert",
+        gameMode: "mixed",
         preset: { ...DEFAULT_STUDY_PRESET, mode: "mixed" },
         updatedAt: 2,
       },
       {
+        kind: "global-upsert",
+        gameMode: "flip",
+        preset: { ...DEFAULT_STUDY_PRESET, direction: "a-b" },
+        updatedAt: 3,
+      },
+      {
         kind: "list-upsert",
+        gameMode: "mixed",
         listId: "list-1",
         override: { order: "sequential" },
-        updatedAt: 3,
+        updatedAt: 4,
       },
     ]);
   });
