@@ -31,7 +31,7 @@ import {
   isRoundFinished,
   isSessionFinished,
   recordResult as recordMasteryResult,
-  startNextRound,
+  startNextRound as startNextMasteryRound,
   type MasterySessionState,
   type StudyCardResult,
   type StudyFlowMode,
@@ -924,7 +924,7 @@ export function useStudyEngine(
         return;
       }
       if (isRoundFinished(masterySession)) {
-        setMasterySession((prev) => (prev ? startNextRound({ ...prev }) : prev));
+        setMasterySession((prev) => (prev ? startNextMasteryRound({ ...prev }) : prev));
         setRoundResults([]);
       }
       // currentIndex/currentRoundIds are synchronized via useEffect below.
