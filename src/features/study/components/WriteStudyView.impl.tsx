@@ -186,6 +186,7 @@ export const WriteStudyView = ({
       event.preventDefault();
       if (!evaluation) handleSubmit();
       else if (evaluation.accepted) onCorrect();
+      else if (correctionMode === "hard") handleRetry();
       else onIncorrect();
       return;
     }
@@ -369,7 +370,7 @@ export const WriteStudyView = ({
         {feedbackStatus === "incorrect" && evaluation && (
           <StudyFeedbackPanel
             status="incorrect"
-            title="Vamos corrigir."
+            title={correctionMode === "hard" ? "Corrija para continuar." : "Vamos corrigir."}
             message={evaluation.summary}
             accuracyPercent={accuracyPercent}
             userAnswer={answer.trim()}
@@ -377,10 +378,10 @@ export const WriteStudyView = ({
             extraContent={<WriteAnswerDiff differences={evaluation.differences} />}
             correctionMessages={correctionMessages}
             hiddenCorrectionCount={hiddenCorrectionCount}
-            actionLabel="Continuar"
-            onAction={onIncorrect}
-            secondaryActionLabel="Tentar corrigir"
-            onSecondaryAction={handleRetry}
+            actionLabel={correctionMode === "hard" ? "Tentar corrigir" : "Continuar"}
+            onAction={correctionMode === "hard" ? handleRetry : onIncorrect}
+            secondaryActionLabel={correctionMode === "hard" ? undefined : "Tentar corrigir"}
+            onSecondaryAction={correctionMode === "hard" ? undefined : handleRetry}
             onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
