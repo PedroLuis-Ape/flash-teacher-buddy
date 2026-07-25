@@ -939,16 +939,22 @@ export function useStudyEngine(
   }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
-    if (isMasteryMode && masterySession) {
-      if (isSessionFinished(masterySession)) {
+    if (isMasteryMode) {
+      // Use the ref so we observe the state produced by the most recent
+      // recordResult call, even if the React state hasn't committed yet.
+      const current = masterySessionRef.current ?? masterySession;
+      if (!current) return;
+      if (isSessionFinished(current)) {
+        setPendingRoundSummary(null);
         setIsFinished(true);
         return;
       }
-      if (isRoundFinished(masterySession)) {
-        setMasterySession((prev) => (prev ? startNextMasteryRound({ ...prev }) : prev));
-        setRoundResults([]);
+      if (isRoundFinished(current)) {
+        // Show the round summary popup. The user advances via startNextRound.
+        setPendingRoundSummary(summarizeCurrentRound(current));
+        return;
       }
-      // currentIndex/currentRoundIds are synchronized via useEffect below.
+      // Round still in progress — sync happens through the effect below.
       return;
     }
     if (currentIndex < cardsOrder.length - 1) {
