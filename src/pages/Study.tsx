@@ -63,16 +63,6 @@ import {
   readStudyLayerSnapshot,
   writeStudyLayerSnapshot,
 } from "@/features/study/lib/studyLayerSnapshot";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface Flashcard {
   id: string;
