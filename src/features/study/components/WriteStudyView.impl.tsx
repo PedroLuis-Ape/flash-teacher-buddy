@@ -208,6 +208,17 @@ export const WriteStudyView = ({
     : { messages: [] as string[], hiddenCount: 0 };
   const referenceAnswer = evaluation?.matchedAnswer ?? correctAnswer;
 
+  const handleRetry = () => {
+    setEvaluation(null);
+    window.setTimeout(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      const length = input.value.length;
+      try { input.setSelectionRange(length, length); } catch { /* noop */ }
+    }, 50);
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
       <Card className={cn("relative min-h-[168px] bg-gradient-to-br from-card to-muted/20 p-5 sm:min-h-0 sm:p-8", getRedListCardClass(isRedListed))}>
@@ -313,6 +324,8 @@ export const WriteStudyView = ({
             hiddenCorrectionCount={hiddenCorrectionCount}
             actionLabel="Continuar"
             onAction={onCorrect}
+            secondaryActionLabel="Tentar corrigir"
+            onSecondaryAction={handleRetry}
             onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
@@ -331,6 +344,8 @@ export const WriteStudyView = ({
             hiddenCorrectionCount={hiddenCorrectionCount}
             actionLabel="Continuar"
             onAction={onIncorrect}
+            secondaryActionLabel="Tentar corrigir"
+            onSecondaryAction={handleRetry}
             onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
