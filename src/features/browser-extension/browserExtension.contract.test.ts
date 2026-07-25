@@ -28,4 +28,14 @@ describe("APE browser extension contract", () => {
     expect(installPage).toContain("Chrome Web Store");
     expect(installPage).toContain("store-config.json");
   });
+
+  it("shows the shortcut briefly and dismisses it for the rest of the browser session", () => {
+    const quickInstall = read("src/features/browser-extension/BrowserExtensionQuickInstall.tsx");
+
+    expect(quickInstall).toContain("AUTO_HIDE_AFTER_MS = 8_000");
+    expect(quickInstall).toContain("SESSION_DISMISS_KEY");
+    expect(quickInstall).toContain("window.sessionStorage.setItem");
+    expect(quickInstall).toContain("Fechar convite da extensão");
+    expect(quickInstall).toContain("translate-y-4 opacity-0");
+  });
 });
