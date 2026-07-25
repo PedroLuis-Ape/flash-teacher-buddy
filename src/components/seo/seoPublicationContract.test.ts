@@ -42,8 +42,8 @@ describe("SEO publication contract", () => {
     expect(workflow).toContain("seo-publication-report.json");
   });
 
-  it("keeps the home sitemap revision aligned with editorial content", () => {
-    const landing = JSON.parse(read("config/public-seo-pages.json"))[0];
+  it("keeps the home sitemap revision aligned with the editorial master", () => {
+    const landing = JSON.parse(read("config/editorial/home.json"));
     const sitemap = read("public/sitemap.xml");
     expect(sitemap).toContain(`<loc>https://www.apeeducation.org/</loc><lastmod>${landing.dateModified}</lastmod>`);
   });
