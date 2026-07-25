@@ -1084,13 +1084,16 @@ const Study = () => {
   useStudyShortcuts(
     {
       nextCard: () => {
+        if (writeShortcutsLocked) return;
         // Treat global "next" as a skip — equivalent to the existing skip flow.
         if (currentCard) handleNext(false, true);
       },
       prevCard: () => {
+        if (writeShortcutsLocked) return;
         goToPrevious();
       },
       nextLayer: () => {
+        if (writeShortcutsLocked) return;
         if (hasLayers && cardLayers) {
           setLayerIdx((i) => (i + 1) % cardLayers.length);
         }
