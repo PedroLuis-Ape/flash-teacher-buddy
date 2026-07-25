@@ -7,6 +7,7 @@ import {
 } from "./studyPreset";
 
 type GlobalPreferenceRow = {
+  game_mode?: unknown;
   mode?: unknown;
   direction?: unknown;
   card_order?: unknown;
@@ -22,10 +23,18 @@ type SupabaseLike = {
   from: (table: string) => any;
 };
 
-export function mapGlobalPreferenceRow(row: GlobalPreferenceRow | null | undefined): StudyPreset | null {
+function normalizeGameMode(value: unknown): StudyPreset["mode"] {
+  return normalizeStudyPreset({ mode: value }).mode;
+}
+
+export function mapGlobalPreferenceRow(
+  row: GlobalPreferenceRow | null | undefined,
+  gameMode?: StudyPreset["mode"],
+): StudyPreset | null {
   if (!row) return null;
+  const identityMode = normalizeGameMode(gameMode ?? row.game_mode ?? row.mode);
   return normalizeStudyPreset({
-    mode: row.mode,
+    mode: identityMode,
     direction: row.direction,
     order: row.card_order,
     scope: row.scope,
@@ -37,10 +46,11 @@ export function mapGlobalPreferenceRow(row: GlobalPreferenceRow | null | undefin
 
 export function mapListPreferenceRow(
   row: ListPreferenceRow | null | undefined,
+  gameMode?: StudyPreset["mode"],
 ): StudyPresetOverride | null {
   if (!row) return null;
   const override = normalizeStudyPresetOverride({
-    mode: row.mode,
+    mode: gameMode ? undefined : row.mode,
     direction: row.direction,
     order: row.card_order,
     scope: row.scope,
@@ -51,11 +61,17 @@ export function mapListPreferenceRow(
   return Object.keys(override).length > 0 ? override : null;
 }
 
-export function toGlobalPreferenceRow(userId: string, preset: StudyPreset) {
-  const normalized = normalizeStudyPreset(preset);
+export function toGlobalPreferenceRow(
+  userId: string,
+  preset: StudyPreset,
+  gameMode: StudyPreset["mode"] = preset.mode,
+) {
+  const identityMode = normalizeGameMode(gameMode);
+  const normalized = normalizeStudyPreset({ ...preset, mode: identityMode });
   return {
     user_id: userId,
-    mode: normalized.mode,
+    game_mode: identityMode,
+    mode: identityMode,
     direction: normalized.direction,
     card_order: normalized.order,
     scope: normalized.scope,
@@ -69,12 +85,15 @@ export function toListPreferenceRow(
   userId: string,
   listId: string,
   override: StudyPresetOverride,
+  gameMode: StudyPreset["mode"] = normalizeGameMode(override.mode),
 ) {
+  const identityMode = normalizeGameMode(gameMode);
   const normalized = normalizeStudyPresetOverride(override);
   return {
     user_id: userId,
     list_id: listId,
-    mode: normalized.mode ?? null,
+    game_mode: identityMode,
+    mode: null,
     direction: normalized.direction ?? null,
     card_order: normalized.order ?? null,
     scope: normalized.scope ?? null,
@@ -92,6 +111,7 @@ export function isMissingStudyPreferenceSchemaError(error: unknown): boolean {
   return ["42P01", "42703", "PGRST204", "PGRST205"].includes(code)
     || message.includes("user_study_preferences") && message.includes("not found")
     || message.includes("user_list_study_preferences") && message.includes("not found")
+    || message.includes("game_mode") && message.includes("column")
     || message.includes("play_mode") && message.includes("column")
     || message.includes("play_side") && message.includes("column");
 }
@@ -113,53 +133,76 @@ export function isRetryableStudyPreferenceError(error: unknown): boolean {
 
 export function createStudyPreferenceRepository(client: SupabaseLike = supabase as unknown as SupabaseLike) {
   return {
-    async readGlobal(userId: string): Promise<StudyPreset | null> {
+    async readGlobal(userId: string, gameMode: StudyPreset["mode"]): Promise<StudyPreset | null> {
+      const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_study_preferences")
-        .select("mode,direction,card_order,scope,fast_mode,play_mode,play_side")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side")
         .eq("user_id", userId)
+        .eq("game_mode", identityMode)
         .maybeSingle();
       if (error) throw error;
-      return mapGlobalPreferenceRow(data);
+      return mapGlobalPreferenceRow(data, identityMode);
     },
 
-    async upsertGlobal(userId: string, preset: StudyPreset): Promise<void> {
+    async upsertGlobal(
+      userId: string,
+      gameMode: StudyPreset["mode"],
+      preset: StudyPreset,
+    ): Promise<void> {
+      const identityMode = normalizeGameMode(gameMode);
       const { error } = await client
         .from("user_study_preferences")
-        .upsert(toGlobalPreferenceRow(userId, preset), { onConflict: "user_id" });
+        .upsert(toGlobalPreferenceRow(userId, preset, identityMode), {
+          onConflict: "user_id,game_mode",
+        });
       if (error) throw error;
     },
 
-    async readListOverride(userId: string, listId: string): Promise<StudyPresetOverride | null> {
+    async readListOverride(
+      userId: string,
+      listId: string,
+      gameMode: StudyPreset["mode"],
+    ): Promise<StudyPresetOverride | null> {
+      const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_list_study_preferences")
-        .select("mode,direction,card_order,scope,fast_mode,play_mode,play_side")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side")
         .eq("user_id", userId)
         .eq("list_id", listId)
+        .eq("game_mode", identityMode)
         .maybeSingle();
       if (error) throw error;
-      return mapListPreferenceRow(data);
+      return mapListPreferenceRow(data, identityMode);
     },
 
     async upsertListOverride(
       userId: string,
       listId: string,
+      gameMode: StudyPreset["mode"],
       override: StudyPresetOverride,
     ): Promise<void> {
+      const identityMode = normalizeGameMode(gameMode);
       const { error } = await client
         .from("user_list_study_preferences")
-        .upsert(toListPreferenceRow(userId, listId, override), {
-          onConflict: "user_id,list_id",
+        .upsert(toListPreferenceRow(userId, listId, override, identityMode), {
+          onConflict: "user_id,list_id,game_mode",
         });
       if (error) throw error;
     },
 
-    async deleteListOverride(userId: string, listId: string): Promise<void> {
+    async deleteListOverride(
+      userId: string,
+      listId: string,
+      gameMode: StudyPreset["mode"],
+    ): Promise<void> {
+      const identityMode = normalizeGameMode(gameMode);
       const { error } = await client
         .from("user_list_study_preferences")
         .delete()
         .eq("user_id", userId)
-        .eq("list_id", listId);
+        .eq("list_id", listId)
+        .eq("game_mode", identityMode);
       if (error) throw error;
     },
   };
