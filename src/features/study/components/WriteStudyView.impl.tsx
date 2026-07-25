@@ -30,7 +30,6 @@ import {
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
 import { useAdvanceController } from "@/features/study/hooks/useAdvanceController";
 import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
-import { readStudyFlowMode } from "@/features/study/lib/studyFlowModePreference";
 import { LayeredCardHintButton } from "./LayeredCardHintButton";
 
 interface WriteStudyViewProps {
@@ -129,11 +128,10 @@ export const WriteStudyView = ({
   // Central advance gate — every "next"/"skip" path goes through this
   // controller so we can (a) demand a finalized status before advancing and
   // (b) prevent duplicate onAdvance calls for the same attempt.
-  const flowMode = readStudyFlowMode();
   const advance = useAdvanceController({
     cardId: flashcardId ?? `${front}|${back}`,
     mode: "write",
-    flowMode,
+    flowMode: "mastery_rounds",
     onAdvance: (final) => {
       if (final === "correct" || final === "accepted_with_corrections") onCorrect();
       else if (final === "incorrect") onIncorrect();
