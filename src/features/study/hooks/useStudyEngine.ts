@@ -350,6 +350,8 @@ export function useStudyEngine(
           shuffle: gameSettings.mode === "random",
         });
       setMasterySession(session);
+      masterySessionRef.current = session;
+      setPendingRoundSummary(null);
       setCardsOrder(session.currentRoundIds);
       setCurrentIndex(session.currentRoundIndex);
       setRoundNumber(session.roundNumber);
