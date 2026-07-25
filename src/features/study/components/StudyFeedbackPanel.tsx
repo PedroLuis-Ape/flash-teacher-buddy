@@ -25,6 +25,14 @@ interface StudyFeedbackPanelProps {
   onPlayAnswer?: () => void;
   isPlayingAnswer?: boolean;
   playAnswerAriaLabel?: string;
+  /** Renderiza um bloco livre acima das respostas (ex: diff palavra a palavra). */
+  extraContent?: ReactNode;
+  /** Lista de mensagens objetivas de correção. */
+  correctionMessages?: string[];
+  /** Quando > 0, mostra "E mais N diferenças." */
+  hiddenCorrectionCount?: number;
+  /** 0..100 — se fornecido, aparece como badge no cabeçalho. */
+  accuracyPercent?: number;
 }
 
 const STATUS_CONFIG = {
@@ -79,6 +87,10 @@ export function StudyFeedbackPanel({
   onPlayAnswer,
   isPlayingAnswer = false,
   playAnswerAriaLabel,
+  extraContent,
+  correctionMessages,
+  hiddenCorrectionCount = 0,
+  accuracyPercent,
 }: StudyFeedbackPanelProps) {
   const config = STATUS_CONFIG[status];
   const StatusIcon = config.icon;
@@ -120,6 +132,18 @@ export function StudyFeedbackPanel({
               <h3 className={cn("text-base font-extrabold leading-tight sm:text-lg", config.titleClass)}>
                 {title ?? config.title}
               </h3>
+              {typeof accuracyPercent === "number" && (
+                <span
+                  className={cn(
+                    "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold",
+                    config.answerClass,
+                    config.titleClass,
+                  )}
+                  aria-label={`Acerto ${accuracyPercent}%`}
+                >
+                  {accuracyPercent}%
+                </span>
+              )}
             </div>
 
             {message && (
@@ -129,6 +153,8 @@ export function StudyFeedbackPanel({
             )}
           </div>
         </div>
+
+        {extraContent && <div className="w-full">{extraContent}</div>}
 
         {/* Answers row: full-width, breathes on its own line */}
         {showAnswers && (
@@ -180,6 +206,22 @@ export function StudyFeedbackPanel({
           <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
             Outras respostas aceitas: <span className="font-semibold text-foreground">{acceptedAnswers.join(", ")}</span>
           </p>
+        )}
+
+        {correctionMessages && correctionMessages.length > 0 && (
+          <ul className="space-y-1 rounded-xl border border-border/60 bg-muted/20 p-3 text-sm text-foreground">
+            {correctionMessages.map((line, index) => (
+              <li key={index} className="flex gap-2">
+                <span aria-hidden="true" className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+                <span className="min-w-0 break-words">{line}</span>
+              </li>
+            ))}
+            {hiddenCorrectionCount > 0 && (
+              <li className="pl-4 text-xs italic text-muted-foreground">
+                E mais {hiddenCorrectionCount} diferença{hiddenCorrectionCount === 1 ? "" : "s"}.
+              </li>
+            )}
+          </ul>
         )}
 
         {actionLabel && onAction && (
