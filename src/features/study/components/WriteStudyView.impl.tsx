@@ -186,6 +186,7 @@ export const WriteStudyView = ({
       event.preventDefault();
       if (!evaluation) handleSubmit();
       else if (evaluation.accepted) onCorrect();
+      else if (correctionMode === "hard") handleRetry();
       else onIncorrect();
       return;
     }
