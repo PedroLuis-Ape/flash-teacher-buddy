@@ -15,7 +15,6 @@ import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -44,6 +43,8 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
+import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
+import { resolveStudyProgressMetrics } from "@/features/study/lib/studyProgressMetrics";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
@@ -323,6 +324,10 @@ const Study = () => {
     setGameSettings,
     unseenCardsCount,
     missedCardsCount,
+    masteryStatus,
+    masteryRoundSummary,
+    masteryTotalEligible,
+    masteryMasteredCount,
     completeSession,
     discardSession,
     cardsOrder,
@@ -335,6 +340,15 @@ const Study = () => {
   const redFocusActive = !!gameSettings.redFocus;
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
+  const masteryProgressActive = masteryStatus !== null;
+  const overallTotalCards = masteryProgressActive ? masteryTotalEligible : totalCards;
+  const studyProgressMetrics = resolveStudyProgressMetrics({
+    mode: masteryProgressActive ? "mastery" : "continuous",
+    overallTotal: overallTotalCards,
+    masteredTotal: masteryMasteredCount,
+    currentIndex,
+    currentRoundTotal: totalCards,
+  });
 
   // ── Sync flipDirection: URL wins, then prefs (handles late-arriving auth) ──
   // The URL is set by GamesHub at startGame() and is the user's most recent
@@ -1212,6 +1226,23 @@ const Study = () => {
                 : "Sessão finalizada!"}
             </h1>
 
+            {masteryProgressActive && (
+              <div className="space-y-2 rounded-xl border bg-muted/30 p-3 text-left">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium">Progresso geral</span>
+                  <strong className="tabular-nums">
+                    {masteryMasteredCount}/{overallTotalCards} dominados · {Math.round(studyProgressMetrics.overallPercent)}%
+                  </strong>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-300"
+                    style={{ width: `${studyProgressMetrics.overallPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4 py-6 sm:grid-cols-4">
               <div className="space-y-2">
                 <div className="text-3xl font-bold text-green-600">{isFlipMode ? correctCount : roundCorrect}</div>
@@ -1233,8 +1264,8 @@ const Study = () => {
 
             {!isFlipMode && !isGameComplete && (
               <div className="text-sm text-muted-foreground space-y-1">
-                <p>Cards restantes: {unseenCardsCount}</p>
-                <p>Cards para revisar: {missedCardsCount}</p>
+                <p>Ainda inéditos: {unseenCardsCount}</p>
+                <p>Para revisar: {missedCardsCount}</p>
               </div>
             )}
 
@@ -1367,7 +1398,7 @@ const Study = () => {
   return (
     <div
       data-red-focus={redFocusActive ? "true" : undefined}
-      className={`min-h-screen py-4 sm:py-8 px-3 sm:px-4 lg:px-8 transition-colors ${
+      className={`min-h-screen py-2 sm:py-4 px-2.5 sm:px-4 lg:px-8 transition-colors ${
         redFocusActive
           ? "bg-gradient-to-b from-red-950/40 via-background to-background"
           : "bg-background"
@@ -1375,14 +1406,14 @@ const Study = () => {
     >
       <div className="container mx-auto max-w-6xl">
         {redFocusActive && (
-          <div className="mb-3 flex items-center justify-center">
+          <div className="mb-2 flex items-center justify-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1 text-sm font-medium text-red-500">
               <Flame className="h-4 w-4" />
               Foco Vermelho
             </div>
           </div>
         )}
-        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
+        <div className="mb-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowExitDialog(true)}>
               <ArrowLeft className="mr-1 h-4 w-4" />
@@ -1425,39 +1456,30 @@ const Study = () => {
                 listTitle={listTitle}
               />
               
-              <div className="hidden sm:flex gap-4 text-sm">
-                <span className="text-success font-medium">✓ {correctCount}</span>
-                <span className="text-destructive font-medium">✗ {errorCount}</span>
-                <span className="text-warning font-medium">⊘ {skippedCount}</span>
-              </div>
             </div>
           </div>
 
           {/* Language direction indicator */}
           {listSettings.studyType === "language" && (
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <div className="hidden lg:flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <span className="px-1.5 py-0.5 rounded bg-muted font-medium">A: {listSettings.labelsA}</span>
               <span>→</span>
               <span className="px-1.5 py-0.5 rounded bg-muted font-medium">B: {listSettings.labelsB}</span>
             </div>
           )}
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>
-                {currentIndex + 1} / {totalCards}
-              </span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} />
-          </div>
-
-          {/* Mobile score display */}
-          <div className="flex sm:hidden justify-center gap-6 text-sm py-2">
-            <span className="text-success font-medium">✓ {correctCount}</span>
-            <span className="text-destructive font-medium">✗ {errorCount}</span>
-            <span className="text-warning font-medium">⊘ {skippedCount}</span>
-          </div>
+          <StudyProgressHud
+            metrics={studyProgressMetrics}
+            overallTotal={overallTotalCards}
+            currentRoundTotal={totalCards}
+            roundNumber={roundNumber}
+            isMasteryMode={masteryProgressActive}
+            correctCount={masteryProgressActive ? roundCorrect : correctCount}
+            errorCount={masteryProgressActive ? roundErrors : errorCount}
+            skippedCount={masteryProgressActive ? (masteryRoundSummary?.skippedCards ?? 0) : skippedCount}
+            pendingReview={missedCardsCount}
+            unseenRemaining={unseenCardsCount}
+          />
         </div>
 
         {hasLayers && cardLayers && (

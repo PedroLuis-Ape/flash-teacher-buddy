@@ -36,10 +36,11 @@ describe("sanitizeMasterySnapshot", () => {
     const restored = sanitizeMasterySnapshot(snapshot, new Set(ids(28)));
 
     expect(restored).not.toBeNull();
-    expect(restored?.roundSize).toBe(MASTERY_ROUND_SIZE);
-    expect(restored?.unseenIds).toEqual(ids(14).map((_, index) => `c${index + 15}`));
-    expect(restored?.unseenIds.some((id) => restored.currentRoundIds.includes(id))).toBe(false);
-    expect(restored?.status).toBe("round-complete");
+    if (!restored) throw new Error("snapshot should be repaired");
+    expect(restored.roundSize).toBe(MASTERY_ROUND_SIZE);
+    expect(restored.unseenIds).toEqual(ids(14).map((_, index) => `c${index + 15}`));
+    expect(restored.unseenIds.some((id) => restored.currentRoundIds.includes(id))).toBe(false);
+    expect(restored.status).toBe("round-complete");
   });
 
   it("finishes a recovered journey instead of offering an empty next round", () => {

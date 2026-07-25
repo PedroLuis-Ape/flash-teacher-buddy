@@ -4,7 +4,7 @@
  * The database session remains authoritative; this is a client-side fallback
  * mirroring the pattern in studySessionSnapshot.ts.
  */
-import type { MasterySessionState, StudyCardResult } from "./studySessionFlow";
+import { MASTERY_ROUND_SIZE, type MasterySessionState, type StudyCardResult } from "./studySessionFlow";
 
 const SUFFIX = ":mastery";
 
@@ -59,16 +59,24 @@ export function sanitizeMasterySnapshot(
   }
 
   const filterIds = (ids: string[]) => ids.filter((id) => availableCardIds.has(id));
-  const currentRoundIds = filterIds(row.currentRoundIds);
+  const dedupeIds = (ids: string[]) => Array.from(new Set(ids));
+  const currentRoundIds = dedupeIds(filterIds(row.currentRoundIds));
   if (currentRoundIds.length === 0) return null;
 
-  // Every card referenced in the snapshot must still exist in the eligible set,
-  // and the union of currentRound + unseen + retry + mastered must equal the
-  // deck. If the deck changed (add/remove card), we discard the snapshot so
-  // the engine rebuilds from scratch.
-  const unseenIds = filterIds(row.unseenIds);
-  const retryIds = filterIds(row.retryIds);
-  const masteredIds = filterIds(row.masteredIds);
+  // Legacy snapshots could contain the same card in the active round and in
+  // unseen/retry queues. That made a recovered card look permanently pending
+  // and could offer endless next rounds. Repair the queues into disjoint sets.
+  const currentRoundSet = new Set(currentRoundIds);
+  const masteredIds = dedupeIds(filterIds(row.masteredIds));
+  const masteredSet = new Set(masteredIds);
+  const unseenIds = dedupeIds(filterIds(row.unseenIds)).filter(
+    (id) => !currentRoundSet.has(id) && !masteredSet.has(id),
+  );
+  const unseenSet = new Set(unseenIds);
+  const retryIds = dedupeIds(filterIds(row.retryIds)).filter(
+    (id) => !currentRoundSet.has(id) && !masteredSet.has(id) && !unseenSet.has(id),
+  );
+
   const union = new Set<string>([
     ...currentRoundIds,
     ...unseenIds,
@@ -80,25 +88,29 @@ export function sanitizeMasterySnapshot(
     if (!union.has(id)) return null;
   }
 
+  const failedThisRoundIds = dedupeIds(filterIds(row.failedThisRoundIds)).filter(
+    (id) => currentRoundSet.has(id) && !masteredSet.has(id),
+  );
   const currentRoundIndex = Math.min(Math.max(row.currentRoundIndex, 0), currentRoundIds.length);
   let status = row.status;
-  if (status === "active" && currentRoundIndex >= currentRoundIds.length) {
+  if (currentRoundIndex < currentRoundIds.length) {
+    status = "active";
+  } else {
     status = unseenIds.length === 0
       && retryIds.length === 0
-      && filterIds(row.failedThisRoundIds).length === 0
+      && failedThisRoundIds.length === 0
       ? "journey-complete"
       : "round-complete";
   }
 
-  const currentRoundSet = new Set(currentRoundIds);
   const currentRoundResults = Object.fromEntries(
     Object.entries(row.currentRoundResults).filter(([id]) => currentRoundSet.has(id)),
   ) as Record<string, StudyCardResult>;
 
   return {
     version: 2,
-    totalEligible: row.totalEligible,
-    roundSize: row.roundSize,
+    totalEligible: availableCardIds.size,
+    roundSize: MASTERY_ROUND_SIZE,
     shuffle: row.shuffle,
     status,
     roundNumber: row.roundNumber,
@@ -110,7 +122,7 @@ export function sanitizeMasterySnapshot(
     attemptsByCard: row.attemptsByCard,
     mistakesByCard: row.mistakesByCard,
     correctThisRoundIds: filterIds(row.correctThisRoundIds),
-    failedThisRoundIds: filterIds(row.failedThisRoundIds),
+    failedThisRoundIds,
     reviewSourceThisRound: filterIds(row.reviewSourceThisRound),
     currentRoundResults,
   };

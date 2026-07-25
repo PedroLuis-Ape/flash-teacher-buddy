@@ -74,7 +74,7 @@ export function StudyProgressHud({
               aria-label={`Abrir detalhes do progresso geral: ${roundedOverallPercent}%`}
             >
               <BarChart3 className="h-3.5 w-3.5 text-primary" />
-              <span className="hidden xs:inline">Geral</span>
+              <span className="hidden min-[380px]:inline">Geral</span>
               <strong className="tabular-nums text-foreground">{roundedOverallPercent}%</strong>
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </button>
