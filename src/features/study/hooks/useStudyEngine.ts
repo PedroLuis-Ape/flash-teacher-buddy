@@ -826,6 +826,18 @@ export function useStudyEngine(
 
   // Record result and buffer flashcard progress for batch save
   const recordResult = useCallback(async (flashcardId: string, correct: boolean, skipped: boolean = false) => {
+    // Mastery rounds: drive the dedicated flow engine so round boundaries and
+    // repetition logic stay centralized in studySessionFlow.ts.
+    if (isMasteryMode) {
+      const resultType: StudyCardResult = skipped ? "skipped" : correct ? "correct" : "incorrect";
+      setMasterySession((prev) => {
+        if (!prev) return prev;
+        const cardId = getCurrentCardId(prev);
+        if (!cardId) return prev;
+        return recordMasteryResult({ ...prev }, cardId, resultType);
+      });
+    }
+
     // Update results
     setResults((prev) => {
       const existing = prev.find((r) => r.flashcardId === flashcardId);
