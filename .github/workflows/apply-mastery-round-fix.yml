@@ -53,14 +53,17 @@ jobs:
           done
           echo "failed=false" >> "$GITHUB_OUTPUT"
 
-      - name: Commit diagnostic
+      - name: Upload patch diagnostic
         if: steps.detect.outputs.applied != 'true' && steps.patch.outputs.failed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add patches/mastery-round-fix/failure.log
-          git commit -m "chore: registrar falha de aplicação do patch"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+        uses: actions/upload-artifact@v4
+        with:
+          name: mastery-round-patch-failure
+          path: patches/mastery-round-fix/failure.log
+          retention-days: 2
+
+      - name: Fail after diagnostic
+        if: steps.detect.outputs.applied != 'true' && steps.patch.outputs.failed == 'true'
+        run: exit 1
 
       - name: Commit implementation
         if: steps.detect.outputs.applied != 'true' && steps.patch.outputs.failed != 'true'
