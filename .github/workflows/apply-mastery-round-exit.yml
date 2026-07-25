@@ -1,0 +1,30 @@
+name: Apply Mastery Round Exit Patch
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "patches/mastery-round-exit.patch"
+      - ".github/workflows/apply-mastery-round-exit.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Apply exit patch
+        run: patch --batch --forward -p1 < patches/mastery-round-exit.patch
+      - name: Commit source fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/Study.tsx
+          git commit -m "fix(study): sair entre rodadas sem concluir o percurso"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
