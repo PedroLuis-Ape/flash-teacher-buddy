@@ -989,6 +989,26 @@ export function useStudyEngine(
 
   // Start next round (for quiz modes)
   const startNextRound = useCallback(() => {
+    // Mastery rounds path — advance the dedicated flow engine and dismiss
+    // the round summary popup. This is what the "Próxima rodada" button
+    // calls in the summary dialog.
+    if (isMasteryMode) {
+      const current = masterySessionRef.current;
+      if (!current) return;
+      if (isSessionFinished(current)) {
+        setPendingRoundSummary(null);
+        setIsFinished(true);
+        return;
+      }
+      const next = startNextMasteryRound({ ...current });
+      masterySessionRef.current = next;
+      setMasterySession(next);
+      setRoundNumber(next.roundNumber);
+      setRoundResults([]);
+      setPendingRoundSummary(null);
+      return;
+    }
+
     if (isGameComplete) {
       toast.success("Parabéns! Você completou todos os cards! 🎉");
       return;
@@ -1001,7 +1021,7 @@ export function useStudyEngine(
     } else {
       toast.info(`Rodada ${roundNumber + 1} iniciada!`);
     }
-  }, [generateNextRound, isGameComplete, roundNumber]);
+  }, [generateNextRound, isGameComplete, roundNumber, isMasteryMode]);
 
   const completeSession = useCallback(async (): Promise<boolean> => {
     if (completionInFlightRef.current) return false;
