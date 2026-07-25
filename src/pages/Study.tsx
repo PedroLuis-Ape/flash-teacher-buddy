@@ -1629,9 +1629,10 @@ const Study = () => {
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sair do estudo?</AlertDialogTitle>
+            <AlertDialogTitle>Salvar e sair do estudo?</AlertDialogTitle>
             <AlertDialogDescription>
-              Seu progresso será salvo e você poderá voltar depois.
+              Seu progresso será salvo — incluindo o card e a camada em que
+              você parou. Ao voltar, você retoma exatamente deste ponto.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1640,10 +1641,10 @@ const Study = () => {
               onClick={(e) => {
                 e.preventDefault();
                 setShowExitDialog(false);
-                handleExit();
+                void handleExit();
               }}
             >
-              Sair
+              Salvar e sair
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
