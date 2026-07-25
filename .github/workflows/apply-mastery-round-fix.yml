@@ -39,7 +39,7 @@ jobs:
           rm -f patches/mastery-round-fix/failure.log
           for patch in patches/mastery-round-fix/*.patch; do
             echo "Checking $patch"
-            if ! git apply --check --verbose "$patch" 2>patch-error.log; then
+            if ! git apply --recount --check --verbose "$patch" 2>patch-error.log; then
               {
                 echo "FAILED_PATCH=$patch"
                 cat patch-error.log
@@ -49,7 +49,7 @@ jobs:
             fi
           done
           for patch in patches/mastery-round-fix/*.patch; do
-            git apply "$patch"
+            git apply --recount "$patch"
           done
           echo "failed=false" >> "$GITHUB_OUTPUT"
 
