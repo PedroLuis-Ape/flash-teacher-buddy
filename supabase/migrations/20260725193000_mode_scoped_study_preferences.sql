@@ -1,7 +1,8 @@
 BEGIN;
 
 ALTER TABLE public.user_study_preferences
-  ADD COLUMN IF NOT EXISTS game_mode text;
+  ADD COLUMN IF NOT EXISTS game_mode text,
+  ADD COLUMN IF NOT EXISTS study_flow_mode text NOT NULL DEFAULT 'mastery_rounds';
 
 UPDATE public.user_study_preferences
 SET game_mode = COALESCE(game_mode, mode, 'flip')
@@ -18,12 +19,19 @@ ALTER TABLE public.user_study_preferences
   CHECK (game_mode IN ('flip', 'write', 'multiple-choice', 'unscramble', 'mixed', 'pronunciation'));
 
 ALTER TABLE public.user_study_preferences
+  DROP CONSTRAINT IF EXISTS user_study_preferences_study_flow_mode_check;
+ALTER TABLE public.user_study_preferences
+  ADD CONSTRAINT user_study_preferences_study_flow_mode_check
+  CHECK (study_flow_mode IN ('mastery_rounds', 'continuous'));
+
+ALTER TABLE public.user_study_preferences
   DROP CONSTRAINT IF EXISTS user_study_preferences_pkey;
 ALTER TABLE public.user_study_preferences
   ADD CONSTRAINT user_study_preferences_pkey PRIMARY KEY (user_id, game_mode);
 
 ALTER TABLE public.user_list_study_preferences
-  ADD COLUMN IF NOT EXISTS game_mode text;
+  ADD COLUMN IF NOT EXISTS game_mode text,
+  ADD COLUMN IF NOT EXISTS study_flow_mode text;
 
 UPDATE public.user_list_study_preferences AS list_pref
 SET game_mode = COALESCE(
@@ -49,6 +57,12 @@ ALTER TABLE public.user_list_study_preferences
 ALTER TABLE public.user_list_study_preferences
   ADD CONSTRAINT user_list_study_preferences_game_mode_check
   CHECK (game_mode IN ('flip', 'write', 'multiple-choice', 'unscramble', 'mixed', 'pronunciation'));
+
+ALTER TABLE public.user_list_study_preferences
+  DROP CONSTRAINT IF EXISTS user_list_study_preferences_study_flow_mode_check;
+ALTER TABLE public.user_list_study_preferences
+  ADD CONSTRAINT user_list_study_preferences_study_flow_mode_check
+  CHECK (study_flow_mode IS NULL OR study_flow_mode IN ('mastery_rounds', 'continuous'));
 
 ALTER TABLE public.user_list_study_preferences
   DROP CONSTRAINT IF EXISTS user_list_study_preferences_pkey;
