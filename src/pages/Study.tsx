@@ -1484,6 +1484,9 @@ const Study = () => {
               onPrevious={navigatePrevious}
               canGoPrevious={canGoPrevious}
               canGoNext={canGoNext}
+              layerCount={cardLayers?.length ?? 1}
+              layersVisitedCount={safeLayerIdx + 1}
+              onOpenLayers={hasLayers ? goToNextLayer : undefined}
             />
           )}
           {effectiveMode === "write" && displayedCard && (

@@ -26,6 +26,12 @@ import {
   writeStudySnapshot,
 } from "@/features/study/lib/studySessionSnapshot";
 import {
+  buildMasterySnapshotKey,
+  clearMasterySnapshot,
+  readMasterySnapshot,
+  writeMasterySnapshot,
+} from "@/features/study/lib/masterySessionSnapshot";
+import {
   createMasterySession,
   getCurrentCardId,
   isRoundFinished,
@@ -223,6 +229,11 @@ export function useStudyEngine(
     cardsSignature,
   }), [userScope, listId, mode, sessionScopeKey, cardsSignature]);
 
+  const masterySnapshotKey = useMemo(
+    () => buildMasterySnapshotKey(studySnapshotKey),
+    [studySnapshotKey],
+  );
+
   const correctCount = results.filter((r) => r.correct && !r.skipped).length;
   const errorCount = results.filter((r) => !r.correct && !r.skipped).length;
   const skippedCount = results.filter((r) => r.skipped).length;
@@ -327,9 +338,12 @@ export function useStudyEngine(
     // owns the queue, round boundaries, and repetition logic.
     if (isMasteryMode) {
       const eligibleIds = flashcards.map((card) => card.id);
-      const session = createMasterySession(eligibleIds, {
-        shuffle: gameSettings.mode === "random",
-      });
+      const availableSet = new Set(eligibleIds);
+      const restored = readMasterySnapshot(masterySnapshotKey, availableSet);
+      const session = restored
+        ?? createMasterySession(eligibleIds, {
+          shuffle: gameSettings.mode === "random",
+        });
       setMasterySession(session);
       setCardsOrder(session.currentRoundIds);
       setCurrentIndex(session.currentRoundIndex);
@@ -1054,6 +1068,7 @@ export function useStudyEngine(
       }
 
       clearStudySnapshot(studySnapshotKey);
+      clearMasterySnapshot(masterySnapshotKey);
       if (isFlipMode && listId) localStorage.removeItem(flipProgressKey);
       setSessionId(null);
       toast.success("Sessão de estudo concluída! 🎉");
@@ -1066,10 +1081,11 @@ export function useStudyEngine(
       completionInFlightRef.current = false;
       setIsCompleting(false);
     }
-  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey, studySnapshotKey]);
+  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey, studySnapshotKey, masterySnapshotKey]);
 
   const discardSession = useCallback(async () => {
     clearStudySnapshot(studySnapshotKey);
+    clearMasterySnapshot(masterySnapshotKey);
     if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
     const currentSessionId = sessionId;
     setSessionId(null);
@@ -1082,7 +1098,7 @@ export function useStudyEngine(
     } catch (error) {
       console.error('[StudyEngine] Falha ao descartar sessão restaurada:', error);
     }
-  }, [studySnapshotKey, listId, isFlipMode, flipProgressKey, sessionId, isAuthenticated]);
+  }, [studySnapshotKey, masterySnapshotKey, listId, isFlipMode, flipProgressKey, sessionId, isAuthenticated]);
 
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
@@ -1121,6 +1137,7 @@ export function useStudyEngine(
 
     const previousSessionId = sessionId;
     clearStudySnapshot(studySnapshotKey);
+    clearMasterySnapshot(masterySnapshotKey);
     if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
 
     setSessionId(null);
@@ -1215,6 +1232,15 @@ export function useStudyEngine(
       timestamp: Date.now(),
     });
   }, [studySnapshotKey, sessionId, currentIndex, cardsOrder, results, isLoading, isFinished]);
+
+  // Persist mastery session state so rounds survive a refresh. The regular
+  // study snapshot only captures the current round; the mastery snapshot adds
+  // queue/retry/mastered bookkeeping owned by studySessionFlow.ts.
+  useEffect(() => {
+    if (!isMasteryMode) return;
+    if (isLoading || isFinished || !masterySession) return;
+    writeMasterySnapshot(masterySnapshotKey, masterySession);
+  }, [isMasteryMode, masterySession, masterySnapshotKey, isLoading, isFinished]);
 
   // Force-save current index immediately (no debounce). Used when switching
   // study scope so the previous trail's index isn't lost while waiting for
