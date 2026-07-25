@@ -120,12 +120,13 @@ describe("studySessionFlow — mastery rounds", () => {
   });
 
   it("summary counts recovered cards separately from first-try wins", () => {
-    const state = createMasterySession(ids(20));
+    const state = createMasterySession(ids(30));
     playRound(state, (id) => (id === "c1" || id === "c2" ? "incorrect" : "correct"));
     startNextRound(state);
-    // Round 2 begins with c1 & c2 as review, plus 13 unseen. Pass everything.
+    // Round 2 begins with c1 & c2 as review, plus 13 new unseen cards. Pass everything.
     playRound(state, () => "correct");
     const summary = summarizeCurrentRound(state);
+    expect(summary.cardsPlayed).toBe(15);
     expect(summary.recoveredCards).toBe(2);
     expect(summary.correctFirstTry).toBe(13);
   });
