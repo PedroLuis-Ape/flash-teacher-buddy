@@ -20,7 +20,12 @@ describe("GitHub authority contract", () => {
     expect(readme).toContain("não fazem parte do conteúdo público");
     expect(readme).toContain("não constituem um ensaio causal do APE como produto");
     expect(readme).not.toContain("Welcome to your Lovable project");
-    expect(readme).not.toContain("Netlify");
+  });
+
+  it("keeps Lovable as the sole publication authority", () => {
+    expect(readme).toContain("A publicação oficial é realizada exclusivamente pela Lovable");
+    expect(readme).toContain("o GitHub mantém o código-fonte e o histórico de alterações");
+    expect(readme).toContain("Um commit no repositório não equivale, por si só, à publicação no domínio oficial");
   });
 
   it("disambiguates the educational product from unrelated Piteco products", () => {
