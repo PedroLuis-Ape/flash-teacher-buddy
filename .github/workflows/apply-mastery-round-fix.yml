@@ -37,22 +37,19 @@ jobs:
         shell: bash
         run: |
           rm -f patches/mastery-round-fix/failure.log
-          for patch in patches/mastery-round-fix/*.patch; do
-            sed -i '/^index [0-9a-f]/d' "$patch"
-          done
-          for patch in patches/mastery-round-fix/*.patch; do
-            echo "Checking $patch"
-            if ! git apply --recount --check --verbose "$patch" 2>patch-error.log; then
+          for patch_file in patches/mastery-round-fix/*.patch; do
+            echo "Checking $patch_file"
+            if ! patch --dry-run --batch --forward -p1 < "$patch_file" >patch-output.log 2>&1; then
               {
-                echo "FAILED_PATCH=$patch"
-                cat patch-error.log
+                echo "FAILED_PATCH=$patch_file"
+                cat patch-output.log
               } > patches/mastery-round-fix/failure.log
               echo "failed=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
           done
-          for patch in patches/mastery-round-fix/*.patch; do
-            git apply --recount "$patch"
+          for patch_file in patches/mastery-round-fix/*.patch; do
+            patch --batch --forward -p1 < "$patch_file"
           done
           echo "failed=false" >> "$GITHUB_OUTPUT"
 
