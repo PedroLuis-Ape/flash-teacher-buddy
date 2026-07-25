@@ -322,6 +322,25 @@ export function useStudyEngine(
     // Mark as initializing with this signature
     lastInitSignatureRef.current = initKey;
 
+    // Mastery rounds: use the dedicated round engine for write/mixed modes.
+    // This bypasses the legacy continuous/batching path so the new flow engine
+    // owns the queue, round boundaries, and repetition logic.
+    if (isMasteryMode) {
+      const eligibleIds = flashcards.map((card) => card.id);
+      const session = createMasterySession(eligibleIds, {
+        shuffle: gameSettings.mode === "random",
+      });
+      setMasterySession(session);
+      setCardsOrder(session.currentRoundIds);
+      setCurrentIndex(session.currentRoundIndex);
+      setRoundNumber(session.roundNumber);
+      setRoundResults([]);
+      setMissedCards([]);
+      setUnseenCards([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       authUserIdRef.current = user?.id ?? userScope ?? null;
