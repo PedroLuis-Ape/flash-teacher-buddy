@@ -1375,6 +1375,7 @@ export function useStudyEngine(
     hasMoreRounds,
     isGameComplete,
     startNextRound,
+    pendingRoundSummary,
     discardSession,
     resetSession,
     restartSession,
