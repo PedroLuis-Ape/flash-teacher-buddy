@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Volume2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,9 @@ interface StudyFeedbackPanelProps {
   actionHint?: string;
   onAction?: () => void;
   className?: string;
+  onPlayAnswer?: () => void;
+  isPlayingAnswer?: boolean;
+  playAnswerAriaLabel?: string;
 }
 
 const STATUS_CONFIG = {
@@ -73,6 +76,9 @@ export function StudyFeedbackPanel({
   actionHint,
   onAction,
   className,
+  onPlayAnswer,
+  isPlayingAnswer = false,
+  playAnswerAriaLabel,
 }: StudyFeedbackPanelProps) {
   const config = STATUS_CONFIG[status];
   const StatusIcon = config.icon;
@@ -95,9 +101,10 @@ export function StudyFeedbackPanel({
     >
       <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-muted/25" />
 
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-muted/30 p-1 shadow-sm sm:h-[4.5rem] sm:w-[4.5rem]">
+      <div className="relative flex flex-col gap-4">
+        {/* Header: mascot + title/message */}
+        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-muted/30 p-1 shadow-sm sm:h-16 sm:w-16">
             <img
               src={config.mascot}
               alt={config.mascotAlt}
@@ -107,8 +114,8 @@ export function StudyFeedbackPanel({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", config.iconClass)}>
-                <StatusIcon className="h-[1.125rem] w-[1.125rem]" />
+              <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", config.iconClass)}>
+                <StatusIcon className="h-4 w-4" />
               </span>
               <h3 className={cn("text-base font-extrabold leading-tight sm:text-lg", config.titleClass)}>
                 {title ?? config.title}
@@ -116,58 +123,78 @@ export function StudyFeedbackPanel({
             </div>
 
             {message && (
-              <div className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              <div className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                 {message}
               </div>
-            )}
-
-            {showAnswers && (
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {userAnswer && (
-                  <div className={cn("min-w-0 rounded-xl border p-3", config.answerClass)}>
-                    <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                      {userAnswerLabel}
-                    </span>
-                    <p className={cn("mt-1 break-words text-sm font-semibold text-foreground", status === "incorrect" && "line-through decoration-destructive/70")}>
-                      {userAnswer}
-                    </p>
-                  </div>
-                )}
-
-                {correctAnswer && (
-                  <div className="min-w-0 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3">
-                    <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                      {correctAnswerLabel}
-                    </span>
-                    <p className="mt-1 break-words text-sm font-extrabold text-emerald-700 dark:text-emerald-300">
-                      {correctAnswer}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {acceptedAnswers.length > 0 && (
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Outras respostas aceitas: <span className="font-semibold text-foreground">{acceptedAnswers.join(", ")}</span>
-              </p>
             )}
           </div>
         </div>
 
+        {/* Answers row: full-width, breathes on its own line */}
+        {showAnswers && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {userAnswer && (
+              <div className={cn("min-w-0 rounded-xl border p-3", config.answerClass)}>
+                <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                  {userAnswerLabel}
+                </span>
+                <p className={cn("mt-1 break-words text-base font-semibold text-foreground", status === "incorrect" && "line-through decoration-destructive/70")}>
+                  {userAnswer}
+                </p>
+              </div>
+            )}
+
+            {correctAnswer && (
+              <div className="min-w-0 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                    {correctAnswerLabel}
+                  </span>
+                  {onPlayAnswer && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={onPlayAnswer}
+                      aria-label={playAnswerAriaLabel ?? "Ouvir resposta correta"}
+                      title={playAnswerAriaLabel ?? "Ouvir resposta correta"}
+                      aria-pressed={isPlayingAnswer}
+                      className={cn(
+                        "h-7 w-7 shrink-0 rounded-full text-emerald-700 hover:bg-emerald-500/15 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200",
+                        isPlayingAnswer && "bg-emerald-500/20",
+                      )}
+                    >
+                      <Volume2 className={cn("h-4 w-4", isPlayingAnswer && "animate-pulse")} />
+                    </Button>
+                  )}
+                </div>
+                <p className="mt-1 break-words text-base font-extrabold leading-snug text-emerald-700 dark:text-emerald-300">
+                  {correctAnswer}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {acceptedAnswers.length > 0 && (
+          <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
+            Outras respostas aceitas: <span className="font-semibold text-foreground">{acceptedAnswers.join(", ")}</span>
+          </p>
+        )}
+
         {actionLabel && onAction && (
-          <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:w-44">
+          <div className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:items-center sm:justify-end">
             <Button
               type="button"
               size="lg"
               onClick={handleAction}
-              className={cn("h-11 w-full gap-2 rounded-xl font-bold shadow-sm", config.buttonClass)}
+              className={cn("h-11 w-full gap-2 rounded-xl font-bold shadow-sm sm:w-auto sm:min-w-[12rem]", config.buttonClass)}
             >
               {actionLabel}
               <ArrowRight className="h-4 w-4" />
             </Button>
             {actionHint && (
-              <p className="text-center text-[10px] leading-tight text-muted-foreground" aria-live="polite">
+              <p className="text-center text-[10px] leading-tight text-muted-foreground sm:text-right" aria-live="polite">
                 {actionHint}
               </p>
             )}
