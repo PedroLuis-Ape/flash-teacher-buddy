@@ -918,13 +918,25 @@ export function useStudyEngine(
   }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
+    if (isMasteryMode && masterySession) {
+      if (isSessionFinished(masterySession)) {
+        setIsFinished(true);
+        return;
+      }
+      if (isRoundFinished(masterySession)) {
+        setMasterySession((prev) => (prev ? startNextRound({ ...prev }) : prev));
+        setRoundResults([]);
+      }
+      // currentIndex/currentRoundIds are synchronized via useEffect below.
+      return;
+    }
     if (currentIndex < cardsOrder.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
       // NO AUTO-COMPLETE: Just set isFinished, let user click "Concluir" manually
       setIsFinished(true);
     }
-  }, [currentIndex, cardsOrder.length]);
+  }, [currentIndex, cardsOrder.length, isMasteryMode, masterySession]);
 
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
