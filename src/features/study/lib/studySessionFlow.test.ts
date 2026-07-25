@@ -34,6 +34,7 @@ describe("studySessionFlow — mastery rounds", () => {
     expect(state.currentRoundIds).toHaveLength(15);
     expect(new Set(state.currentRoundIds).size).toBe(15);
     expect(state.unseenIds).toHaveLength(15);
+  });
 
   it("stops at a real round boundary after the 15th answer", () => {
     const state = createMasterySession(ids(30));
@@ -42,7 +43,9 @@ describe("studySessionFlow — mastery rounds", () => {
     expect(state.currentRoundIndex).toBe(15);
     expect(getCurrentCardId(state)).toBeNull();
     expect(state.roundNumber).toBe(1);
+
     startNextRound(state);
+
     expect(state.status).toBe("active");
     expect(state.roundNumber).toBe(2);
     expect(state.currentRoundIndex).toBe(0);
@@ -55,7 +58,6 @@ describe("studySessionFlow — mastery rounds", () => {
     expect(state.currentRoundIndex).toBe(1);
     expect(state.currentRoundResults.c1).toBe("correct");
     expect(state.attemptsByCard.c1).toBe(1);
-  });
   });
 
   it("Case 2 — incorrect cards return in the next round with 13 new cards", () => {
@@ -96,18 +98,14 @@ describe("studySessionFlow — mastery rounds", () => {
     playRound(state, () => "incorrect");
     startNextRound(state);
     expect(state.currentRoundIds).toHaveLength(15);
-    // Round has 15 review cards, so no new cards are pulled in.
     expect(state.retryIds.length).toBeGreaterThanOrEqual(0);
-    // Unseen still has 25 leftover new cards
     expect(state.unseenIds).toHaveLength(25);
   });
 
   it("Case 7 — after unseen is empty, rounds contain only pending cards", () => {
     const state = createMasterySession(ids(19));
-    // Round 1: 15 cards. Fail 4 (c1..c4), pass rest.
     playRound(state, (id) => (["c1", "c2", "c3", "c4"].includes(id) ? "incorrect" : "correct"));
     startNextRound(state);
-    // Round 2: 4 review + 4 unseen = 8 cards, pass all except keep failing c1
     playRound(state, (id) => (id === "c1" ? "incorrect" : "correct"));
     startNextRound(state);
     expect(state.unseenIds).toHaveLength(0);
@@ -137,7 +135,6 @@ describe("studySessionFlow — mastery rounds", () => {
 
   it("Case 17 — canonical IDs are used verbatim, no duplication within a round", () => {
     const state = createMasterySession(["parent-1", "layer-1", "parent-2", "layer-1"]);
-    // "layer-1" should be deduped by the engine (identity is opaque, dedupe by string equality).
     expect(state.currentRoundIds).toEqual(["parent-1", "layer-1", "parent-2"]);
   });
 
@@ -145,7 +142,6 @@ describe("studySessionFlow — mastery rounds", () => {
     const state = createMasterySession(ids(30));
     playRound(state, (id) => (id === "c1" || id === "c2" ? "incorrect" : "correct"));
     startNextRound(state);
-    // Round 2 begins with c1 & c2 as review, plus 13 new unseen cards. Pass everything.
     playRound(state, () => "correct");
     const summary = summarizeCurrentRound(state);
     expect(summary.cardsPlayed).toBe(15);
@@ -166,7 +162,6 @@ describe("studySessionFlow — continuous queue", () => {
 
   it("Case 10 (continuous) — skipped cards do NOT return", () => {
     const queue = buildContinuousQueue(ids(5));
-    // The engine consumer processes each ID once, regardless of result.
     expect(queue).toEqual(["c1", "c2", "c3", "c4", "c5"]);
   });
 
