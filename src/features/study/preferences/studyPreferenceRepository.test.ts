@@ -26,6 +26,7 @@ describe("studyPreferenceRepository", () => {
       fastMode: true,
       playMode: "single",
       playSide: "b",
+      studyFlowMode: "mastery_rounds",
     });
   });
 
