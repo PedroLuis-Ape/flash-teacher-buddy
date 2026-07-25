@@ -849,8 +849,10 @@ export function useStudyEngine(
       const resultType: StudyCardResult = skipped ? "skipped" : correct ? "correct" : "incorrect";
       setMasterySession((prev) => {
         if (!prev) return prev;
-        const cardId = getCurrentCardId(prev);
-        if (!cardId) return prev;
+        const currentCardId = getCurrentCardId(prev);
+        // Use the submitted identity as an advance gate. A repeated click or
+        // duplicated keyboard event must never answer the following card.
+        if (!currentCardId || currentCardId !== flashcardId) return prev;
         return recordMasteryResult({
           ...prev,
           currentRoundIds: [...prev.currentRoundIds],
@@ -863,7 +865,7 @@ export function useStudyEngine(
           failedThisRoundIds: [...prev.failedThisRoundIds],
           reviewSourceThisRound: [...prev.reviewSourceThisRound],
           currentRoundResults: { ...prev.currentRoundResults },
-        }, cardId, resultType);
+        }, flashcardId, resultType);
       });
     }
 
@@ -1390,6 +1392,8 @@ export function useStudyEngine(
     missedCardsCount: masterySummary?.pendingReview ?? missedCards.length,
     masteryStatus: masterySession?.status ?? null,
     masteryRoundSummary: masterySummary,
+    masteryTotalEligible: masterySession?.totalEligible ?? flashcards.length,
+    masteryMasteredCount: masterySession?.masteredIds.length ?? 0,
     // Manual session completion export
     completeSession,
     // Scope helpers — used by Study.tsx to switch scopes without resetting
