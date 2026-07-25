@@ -1068,6 +1068,7 @@ export function useStudyEngine(
       }
 
       clearStudySnapshot(studySnapshotKey);
+      clearMasterySnapshot(masterySnapshotKey);
       if (isFlipMode && listId) localStorage.removeItem(flipProgressKey);
       setSessionId(null);
       toast.success("Sessão de estudo concluída! 🎉");
@@ -1080,10 +1081,11 @@ export function useStudyEngine(
       completionInFlightRef.current = false;
       setIsCompleting(false);
     }
-  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey, studySnapshotKey]);
+  }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey, studySnapshotKey, masterySnapshotKey]);
 
   const discardSession = useCallback(async () => {
     clearStudySnapshot(studySnapshotKey);
+    clearMasterySnapshot(masterySnapshotKey);
     if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
     const currentSessionId = sessionId;
     setSessionId(null);
@@ -1096,7 +1098,7 @@ export function useStudyEngine(
     } catch (error) {
       console.error('[StudyEngine] Falha ao descartar sessão restaurada:', error);
     }
-  }, [studySnapshotKey, listId, isFlipMode, flipProgressKey, sessionId, isAuthenticated]);
+  }, [studySnapshotKey, masterySnapshotKey, listId, isFlipMode, flipProgressKey, sessionId, isAuthenticated]);
 
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
@@ -1135,6 +1137,7 @@ export function useStudyEngine(
 
     const previousSessionId = sessionId;
     clearStudySnapshot(studySnapshotKey);
+    clearMasterySnapshot(masterySnapshotKey);
     if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
 
     setSessionId(null);
