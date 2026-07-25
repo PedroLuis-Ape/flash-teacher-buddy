@@ -6,12 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { AuthAwareCTA } from '@/components/auth/AuthAwareLink';
 import { GuestContinueSection } from '@/components/portal/GuestContinueSection';
 import { PublicPageHeader } from '@/components/seo/PublicPageHeader';
-import { SEOHead } from '@/components/seo/SEOHead';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { classifyPublicTeacherDirectoryError } from '@/lib/publicTeacherDirectoryError';
 
 interface PublicTeacherRow {
   display_name: string;
@@ -22,29 +22,6 @@ interface PublicTeacherRow {
   folder_count: number | string;
   list_count: number | string;
   card_count: number | string;
-  preview_mode?: boolean;
-}
-
-const PREVIEW_TEACHER: PublicTeacherRow = {
-  display_name: 'Professor Pedro',
-  avatar_url: null,
-  public_slug: 'pedro',
-  public_bio: 'Materiais de inglês organizados para brasileiros, com foco em vocabulário, gramática, conversação e prática ativa.',
-  public_specialties: ['Inglês para iniciantes', 'Conversação', 'Gramática'],
-  folder_count: 0,
-  list_count: 0,
-  card_count: 0,
-  preview_mode: true,
-};
-
-function normalizeSearch(value: string) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
-}
-
-function isMissingDirectoryRpc(error: unknown) {
-  const value = error as { code?: string; message?: string; details?: string } | null;
-  const text = `${value?.message ?? ''} ${value?.details ?? ''}`.toLowerCase();
-  return value?.code === 'PGRST202' || value?.code === '42883' || text.includes('search_public_teachers');
 }
 
 function asNumber(value: number | string | null | undefined) {
@@ -79,15 +56,6 @@ export default function PublicPortalTopFirst() {
       });
 
       if (error) {
-        if (isMissingDirectoryRpc(error)) {
-          const haystack = normalizeSearch([
-            PREVIEW_TEACHER.display_name,
-            PREVIEW_TEACHER.public_bio ?? '',
-            ...(PREVIEW_TEACHER.public_specialties ?? []),
-          ].join(' '));
-          const query = normalizeSearch(debouncedSearch);
-          return query && !haystack.includes(query) ? [] : [PREVIEW_TEACHER];
-        }
         throw error;
       }
 
@@ -99,22 +67,12 @@ export default function PublicPortalTopFirst() {
 
   const teachers = teachersQuery.data ?? [];
   const isSearching = searchTerm.trim() !== debouncedSearch;
+  const directoryErrorKind = teachersQuery.isError
+    ? classifyPublicTeacherDirectoryError(teachersQuery.error)
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead
-        title="Encontre professores de inglês | Portal Público APE"
-        description="Pesquise professores de inglês e acesse materiais públicos organizados dentro do perfil de cada professor."
-        path="/portal"
-        jsonLd={{
-          '@context': 'https://schema.org',
-          '@type': 'CollectionPage',
-          name: 'Portal Público de Professores de Inglês — APE',
-          inLanguage: 'pt-BR',
-          url: 'https://www.apeeducation.org/portal',
-        }}
-      />
-
       <PublicPageHeader title="Portal público" fallbackPath="/" />
 
       <main className="container mx-auto max-w-6xl px-4 pb-12 pt-2 sm:px-6 sm:pb-20 sm:pt-3">
@@ -161,9 +119,15 @@ export default function PublicPortalTopFirst() {
           ) : teachersQuery.isError ? (
             <Card className="px-4 py-8 text-center sm:px-6 sm:py-10">
               <UserRound className="mx-auto mb-2 h-8 w-8 text-muted-foreground sm:h-10 sm:w-10" />
-              <h3 className="font-semibold">Não foi possível pesquisar agora</h3>
+              <h3 className="font-semibold">
+                {directoryErrorKind === 'missing-rpc'
+                  ? 'Diretório público indisponível neste ambiente'
+                  : 'Não foi possível pesquisar agora'}
+              </h3>
               <p className="mx-auto mt-1.5 max-w-md text-xs text-muted-foreground sm:text-sm">
-                Houve um problema ao carregar o diretório público. Tente novamente.
+                {directoryErrorKind === 'missing-rpc'
+                  ? 'O serviço que lista perfis públicos ainda não está disponível. Para preservar a integridade dos dados, nenhum perfil de demonstração será exibido.'
+                  : 'Houve um problema ao carregar o diretório público. Tente novamente.'}
               </p>
               <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => teachersQuery.refetch()}>
                 Tentar novamente
@@ -202,7 +166,6 @@ export default function PublicPortalTopFirst() {
                           <Badge variant="secondary" className="gap-1 px-1.5 py-0 text-[10px] sm:text-xs">
                             <GraduationCap className="h-3 w-3" /> Professor público
                           </Badge>
-                          {teacher.preview_mode && <Badge variant="outline" className="px-1.5 py-0 text-[10px]">Demonstração</Badge>}
                         </div>
                         <h3 className="truncate text-base font-bold sm:text-lg">{teacher.display_name}</h3>
                         <p className="text-[11px] text-muted-foreground sm:text-xs">@{teacher.public_slug}</p>
