@@ -835,16 +835,33 @@ const Study = () => {
       setLayerIdx(0);
       return;
     }
-    // CLARA MASTER P0 — Favorite/Red list live on the canonical group id, not
-    // per layer. Always start on layer 0 and let the user navigate; we no
-    // longer try to pick "the layer the user starred" because that concept
-    // does not exist anymore (a group has a single favorite mark).
+    // CLARA MASTER — Persistência de camada. Antes de cair no default 0,
+    // tentamos restaurar a última camada visitada NESTE card, para que ao
+    // fechar e reabrir o app o usuário retome exatamente onde parou.
+    const persisted = engineCurrentCardId && studySnapshotKey
+      ? readStudyLayerSnapshot(studySnapshotKey)
+      : null;
+    if (
+      persisted
+      && persisted.cardId === engineCurrentCardId
+      && persisted.layerIdx < layers.length
+    ) {
+      setLayerIdx(persisted.layerIdx);
+      return;
+    }
     setLayerIdx(0);
     return;
-  }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck]);
+  }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck, studySnapshotKey]);
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+
+  // Persiste a camada visível a cada mudança, escopada ao snapshot atual.
+  useEffect(() => {
+    if (!studySnapshotKey || !engineCurrentCardId) return;
+    if (!hasLayers) return;
+    writeStudyLayerSnapshot(studySnapshotKey, engineCurrentCardId, safeLayerIdx);
+  }, [studySnapshotKey, engineCurrentCardId, safeLayerIdx, hasLayers]);
 
   // Centralized status-target resolution lives further below (after
   // `displayedCard` is defined) — see `currentStatusTargets`.
