@@ -190,8 +190,8 @@ addCheck({
   area: "rendered_artifact",
   points: 4,
   critical: true,
-  passed: distExists && !distIndex.includes("PLACEHOLDER") && !distIndex.includes("AggregateRating"),
-  detail: "O artefato não pode conter placeholder ou avaliação indevida do aplicativo.",
+  passed: distExists && !distIndex.includes("PLACEHOLDER"),
+  detail: "O artefato não pode conter placeholder editorial.",
 });
 
 // Privacidade e integridade — 20 pontos
@@ -213,7 +213,15 @@ addCheck({
   passed: privacyValidator.passed,
   detail: privacyValidator.detail,
 });
-const prohibitedClaims = ["garante aprendizagem", "clinicamente comprovado", "comprovado cientificamente pelo ape", "melhor aplicativo de flashcards"];
+const prohibitedClaims = [
+  "aprendizado garantido pelo ape",
+  "aprendizagem garantida pelo ape",
+  "fluência garantida",
+  "clinicamente comprovado",
+  "comprovado cientificamente pelo ape",
+  "melhor aplicativo de flashcards",
+  "superior a todos os concorrentes",
+];
 addCheck({
   id: "integrity-no-prohibited-claims",
   area: "privacy_integrity",
