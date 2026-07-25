@@ -132,7 +132,7 @@ const Study = () => {
   // while auth resolved, returned [], and a fallback effect persisted
   // `favoritesOnly:false` to localStorage. See docs/COLD_RESTART_FAVORITES_P0.md.
   const { status: authStatus, userId: authUserId, session: authSession } = useAuth();
-  const { prefs, updatePrefs } = useStudyPreferences(authUserId);
+  const { prefs, updatePrefs, effectivePreset } = useStudyPreferences(authUserId);
   // URL overrides are applied at load time inside useStudyPreferences,
   // but the URL is ALSO read directly here as the canonical SSOT for the
   // session. This prevents stale prefs (e.g. anon storage from a previous
@@ -321,7 +321,7 @@ const Study = () => {
     discardSession,
     cardsOrder,
     saveProgressNow,
-  } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId);
+  } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
@@ -1510,6 +1510,9 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
+              layerCount={cardLayers?.length ?? 1}
+              layersVisitedCount={safeLayerIdx + 1}
+              onOpenLayers={hasLayers ? goToNextLayer : undefined}
             />
           )}
           {effectiveMode === "multiple-choice" && displayedCard && (

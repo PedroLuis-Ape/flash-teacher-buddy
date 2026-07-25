@@ -1,0 +1,241 @@
+{
+  "schema": "ape-seo-visibility-eval",
+  "version": "2.0",
+  "generated_at": "2026-07-25T16:28:18.116Z",
+  "score": 100,
+  "max_score": 100,
+  "target_score": 95,
+  "passed": true,
+  "critical_failures": [],
+  "area_scores": {
+    "entity_clarity": {
+      "score": 20,
+      "max": 20
+    },
+    "editorial_depth": {
+      "score": 20,
+      "max": 20
+    },
+    "discovery": {
+      "score": 20,
+      "max": 20
+    },
+    "rendered_artifact": {
+      "score": 20,
+      "max": 20
+    },
+    "privacy_integrity": {
+      "score": 20,
+      "max": 20
+    }
+  },
+  "checks": [
+    {
+      "id": "entity-home-identity",
+      "area": "entity_clarity",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": true,
+      "detail": "O H1 da home precisa identificar APE e App Piteco."
+    },
+    {
+      "id": "entity-expansion",
+      "area": "entity_clarity",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "A expansão da sigla APE deve estar visível."
+    },
+    {
+      "id": "entity-authorship",
+      "area": "entity_clarity",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "Autoria e organização precisam ser consistentes nas páginas."
+    },
+    {
+      "id": "entity-external-sources",
+      "area": "entity_clarity",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "A entidade Person deve ligar autoria à Preply e ao GitHub."
+    },
+    {
+      "id": "entity-revision-date",
+      "area": "entity_clarity",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "Todas as páginas precisam de data editorial em YYYY-MM-DD."
+    },
+    {
+      "id": "content-route-inventory",
+      "area": "editorial_depth",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": true,
+      "detail": "O mapa mestre deve conter exatamente 23 rotas únicas."
+    },
+    {
+      "id": "content-depth",
+      "area": "editorial_depth",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "Cada rota precisa de introdução e seções substanciais."
+    },
+    {
+      "id": "content-methodology-evidence",
+      "area": "editorial_depth",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "Metodologia e evidências precisam manter referências verificáveis."
+    },
+    {
+      "id": "content-faq",
+      "area": "editorial_depth",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "A home precisa de FAQ visível com perguntas únicas."
+    },
+    {
+      "id": "content-dynamic-models",
+      "area": "editorial_depth",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "Perfis, pastas, listas e coleções públicas precisam de contexto editorial."
+    },
+    {
+      "id": "discovery-robots",
+      "area": "discovery",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": true,
+      "detail": "robots.txt deve permitir páginas públicas e anunciar o sitemap canônico."
+    },
+    {
+      "id": "discovery-sitemap-editorial",
+      "area": "discovery",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": true,
+      "detail": "O sitemap fonte precisa conter todas as 23 rotas editoriais."
+    },
+    {
+      "id": "discovery-llms-authority",
+      "area": "discovery",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": false,
+      "detail": "llms.txt deve apontar para as fontes públicas prioritárias."
+    },
+    {
+      "id": "discovery-no-private-urls",
+      "area": "discovery",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": true,
+      "detail": "Sitemap e llms.txt não podem publicar rotas privadas."
+    },
+    {
+      "id": "render-dist-exists",
+      "area": "rendered_artifact",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": true,
+      "detail": "Execute o build para gerar dist/index.html."
+    },
+    {
+      "id": "render-visible-identity",
+      "area": "rendered_artifact",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": true,
+      "detail": "A identidade principal deve existir no HTML inicial."
+    },
+    {
+      "id": "render-canonical",
+      "area": "rendered_artifact",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": true,
+      "detail": "O HTML inicial deve publicar o canonical da raiz."
+    },
+    {
+      "id": "render-structured-data",
+      "area": "rendered_artifact",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": false,
+      "detail": "O artefato deve conter aplicação, FAQ e fonte externa de autoria."
+    },
+    {
+      "id": "render-no-placeholder",
+      "area": "rendered_artifact",
+      "points": 4,
+      "earned": 4,
+      "passed": true,
+      "critical": true,
+      "detail": "O artefato não pode conter placeholder editorial."
+    },
+    {
+      "id": "integrity-editorial-validator",
+      "area": "privacy_integrity",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": true,
+      "detail": "Mapa editorial mestre validado para 23 rotas, com autoria, prova social e limites preservados."
+    },
+    {
+      "id": "integrity-privacy-validator",
+      "area": "privacy_integrity",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": true,
+      "detail": "Privacidade da autoria validada: somente o nome público abreviado pode ser publicado."
+    },
+    {
+      "id": "integrity-no-prohibited-claims",
+      "area": "privacy_integrity",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": true,
+      "detail": "O conteúdo não pode conter promessas ou superioridade não demonstradas."
+    },
+    {
+      "id": "integrity-editorial-source",
+      "area": "privacy_integrity",
+      "points": 5,
+      "earned": 5,
+      "passed": true,
+      "critical": false,
+      "detail": "A landing deve usar o mapa compartilhado e manter FAQ visível sem dados privados."
+    }
+  ]
+}

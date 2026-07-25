@@ -6,11 +6,15 @@ import {
   type StudyFlowMode,
   type StudyRuntimeMode,
 } from "@/features/study/lib/advanceGate";
+import {
+  readStudyFlowMode,
+  STUDY_FLOW_MODE_CHANGED_EVENT,
+} from "@/features/study/lib/studyFlowModePreference";
 
 export interface AdvanceControllerOptions {
   cardId: string | null | undefined;
   mode: StudyRuntimeMode;
-  flowMode: StudyFlowMode;
+  flowMode?: StudyFlowMode;
   onAdvance: (status: CardCompletionStatus) => void;
   onCancelSkip?: () => void;
 }
@@ -29,10 +33,25 @@ export interface AdvanceControllerApi {
 }
 
 export function useAdvanceController(options: AdvanceControllerOptions): AdvanceControllerApi {
-  const { cardId, mode, flowMode, onAdvance, onCancelSkip } = options;
+  const { cardId, mode, flowMode: flowModeProp, onAdvance, onCancelSkip } = options;
 
   const [status, setStatusState] = useState<CardCompletionStatus>("unanswered");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [flowMode, setFlowMode] = useState<StudyFlowMode>(
+    () => flowModeProp ?? readStudyFlowMode(),
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<StudyFlowMode>).detail;
+      if (detail === "mastery_rounds" || detail === "continuous") {
+        setFlowMode(detail);
+      }
+    };
+    window.addEventListener(STUDY_FLOW_MODE_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(STUDY_FLOW_MODE_CHANGED_EVENT, handler);
+  }, []);
 
   const consumedRef = useRef<string | null>(null);
   const attemptIdRef = useRef<string>("");

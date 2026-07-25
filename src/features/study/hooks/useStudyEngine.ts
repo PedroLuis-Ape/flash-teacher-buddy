@@ -25,6 +25,17 @@ import {
   sanitizePersistedStudyOrder,
   writeStudySnapshot,
 } from "@/features/study/lib/studySessionSnapshot";
+import {
+  createMasterySession,
+  getCurrentCardId,
+  isRoundFinished,
+  isSessionFinished,
+  recordResult as recordMasteryResult,
+  startNextRound,
+  type MasterySessionState,
+  type StudyCardResult,
+  type StudyFlowMode,
+} from "@/features/study/lib/studySessionFlow";
 
 export interface StudyResult {
   flashcardId: string;
@@ -114,6 +125,7 @@ export function useStudyEngine(
   initialSettings?: Partial<GameSettings>,
   redListIds: string[] = [],
   userScope?: string | null,
+  studyFlowMode: StudyFlowMode = "continuous",
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -125,6 +137,13 @@ export function useStudyEngine(
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [masterySession, setMasterySession] = useState<MasterySessionState | null>(null);
+
+  const isMasteryMode = useMemo(
+    () => studyFlowMode === "mastery_rounds" && (mode === "write" || mode === "mixed"),
+    [studyFlowMode, mode],
+  );
+
   
   // Refs for preventing duplicate init, debouncing saves, and batching progress
   const lastInitSignatureRef = useRef<string>("");
@@ -302,6 +321,25 @@ export function useStudyEngine(
     
     // Mark as initializing with this signature
     lastInitSignatureRef.current = initKey;
+
+    // Mastery rounds: use the dedicated round engine for write/mixed modes.
+    // This bypasses the legacy continuous/batching path so the new flow engine
+    // owns the queue, round boundaries, and repetition logic.
+    if (isMasteryMode) {
+      const eligibleIds = flashcards.map((card) => card.id);
+      const session = createMasterySession(eligibleIds, {
+        shuffle: gameSettings.mode === "random",
+      });
+      setMasterySession(session);
+      setCardsOrder(session.currentRoundIds);
+      setCurrentIndex(session.currentRoundIndex);
+      setRoundNumber(session.roundNumber);
+      setRoundResults([]);
+      setMissedCards([]);
+      setUnseenCards([]);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -788,6 +826,18 @@ export function useStudyEngine(
 
   // Record result and buffer flashcard progress for batch save
   const recordResult = useCallback(async (flashcardId: string, correct: boolean, skipped: boolean = false) => {
+    // Mastery rounds: drive the dedicated flow engine so round boundaries and
+    // repetition logic stay centralized in studySessionFlow.ts.
+    if (isMasteryMode) {
+      const resultType: StudyCardResult = skipped ? "skipped" : correct ? "correct" : "incorrect";
+      setMasterySession((prev) => {
+        if (!prev) return prev;
+        const cardId = getCurrentCardId(prev);
+        if (!cardId) return prev;
+        return recordMasteryResult({ ...prev }, cardId, resultType);
+      });
+    }
+
     // Update results
     setResults((prev) => {
       const existing = prev.find((r) => r.flashcardId === flashcardId);
@@ -868,13 +918,25 @@ export function useStudyEngine(
   }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
+    if (isMasteryMode && masterySession) {
+      if (isSessionFinished(masterySession)) {
+        setIsFinished(true);
+        return;
+      }
+      if (isRoundFinished(masterySession)) {
+        setMasterySession((prev) => (prev ? startNextRound({ ...prev }) : prev));
+        setRoundResults([]);
+      }
+      // currentIndex/currentRoundIds are synchronized via useEffect below.
+      return;
+    }
     if (currentIndex < cardsOrder.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
       // NO AUTO-COMPLETE: Just set isFinished, let user click "Concluir" manually
       setIsFinished(true);
     }
-  }, [currentIndex, cardsOrder.length]);
+  }, [currentIndex, cardsOrder.length, isMasteryMode, masterySession]);
 
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
@@ -1108,6 +1170,15 @@ export function useStudyEngine(
   useEffect(() => {
     initializeSession();
   }, [listId, cardsSignature, mode, sessionScopeKey]); // Only reinit on meaningful changes (scope included)
+
+  // Mastery rounds: keep the legacy cardsOrder/currentIndex in sync with the
+  // dedicated flow engine so the rest of the UI (progress bar, card display,
+  // persistence snapshot) continues to work unchanged.
+  useEffect(() => {
+    if (!isMasteryMode || !masterySession) return;
+    setCardsOrder(masterySession.currentRoundIds);
+    setCurrentIndex(masterySession.currentRoundIndex);
+  }, [isMasteryMode, masterySession]);
 
   useEffect(() => {
     if (isLoading) return;
