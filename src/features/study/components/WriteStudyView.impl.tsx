@@ -423,6 +423,16 @@ export const WriteStudyView = ({
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
+
+        {evaluation !== null && onOpenLayers && layerCount >= 2 && (
+          <div className="mt-3 flex justify-center">
+            <LayeredCardHintButton
+              layerCount={layerCount}
+              visitedCount={layersVisitedCount}
+              onOpen={onOpenLayers}
+            />
+          </div>
+        )}
         </div>
       </div>
 
