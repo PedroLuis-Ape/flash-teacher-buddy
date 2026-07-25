@@ -354,9 +354,6 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
             </div>
           )}
 
-          {onEditCurrentCard && (
-            null
-          )}
           {isWriteMode && (
             <div className="space-y-3 rounded-xl border p-3">
               <div>
