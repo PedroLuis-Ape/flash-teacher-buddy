@@ -38,6 +38,9 @@ jobs:
         run: |
           rm -f patches/mastery-round-fix/failure.log
           for patch in patches/mastery-round-fix/*.patch; do
+            sed -i '/^index [0-9a-f]/d' "$patch"
+          done
+          for patch in patches/mastery-round-fix/*.patch; do
             echo "Checking $patch"
             if ! git apply --recount --check --verbose "$patch" 2>patch-error.log; then
               {
