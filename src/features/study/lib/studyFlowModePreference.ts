@@ -1,6 +1,8 @@
+import { normalizeStudyMode } from "@/features/study/lib/studyMode";
 import {
   DEFAULT_STUDY_PRESET,
   type StudyFlowModePreset,
+  type StudyPreset,
 } from "@/features/study/preferences/studyPreset";
 import { readGlobalCache, readListOverrideCache } from "@/features/study/preferences/studyPreferenceCache";
 
@@ -35,6 +37,17 @@ function derivePrivateListId(pathname?: string): string | undefined {
   }
 }
 
+function readActiveGameMode(): StudyPreset["mode"] {
+  if (typeof window === "undefined") return DEFAULT_STUDY_PRESET.mode;
+  try {
+    return normalizeStudyMode(
+      new URLSearchParams(window.location.search).get("mode") ?? DEFAULT_STUDY_PRESET.mode,
+    ) as StudyPreset["mode"];
+  } catch {
+    return DEFAULT_STUDY_PRESET.mode;
+  }
+}
+
 /**
  * Read the effective study flow mode without subscribing to the full
  * useStudyPreferences hook. Resolution order matches the preset hierarchy:
@@ -43,11 +56,12 @@ function derivePrivateListId(pathname?: string): string | undefined {
 export function readStudyFlowMode(userScope = "anon"): StudyFlowModePreset {
   if (typeof window === "undefined") return DEFAULT_STUDY_PRESET.studyFlowMode;
   const listId = derivePrivateListId();
-  const listOverride = listId ? readListOverrideCache(userScope, listId) : null;
+  const gameMode = readActiveGameMode();
+  const listOverride = listId ? readListOverrideCache(userScope, gameMode, listId) : null;
   if (isValidStudyFlowMode(listOverride?.studyFlowMode)) {
     return listOverride.studyFlowMode;
   }
-  const global = readGlobalCache(userScope);
+  const global = readGlobalCache(userScope, gameMode);
   if (isValidStudyFlowMode(global?.studyFlowMode)) {
     return global.studyFlowMode;
   }
