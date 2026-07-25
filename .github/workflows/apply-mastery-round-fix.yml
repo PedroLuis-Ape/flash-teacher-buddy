@@ -1,0 +1,47 @@
+name: Apply Mastery Round Fix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "patches/mastery-round-fix.patch"
+      - ".github/workflows/apply-mastery-round-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Detect already applied fix
+        id: detect
+        shell: bash
+        run: |
+          if grep -q 'readonly version: 2' src/features/study/lib/studySessionFlow.ts; then
+            echo "applied=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply tested patch
+        if: steps.detect.outputs.applied != 'true'
+        run: |
+          git apply --check patches/mastery-round-fix.patch
+          git apply patches/mastery-round-fix.patch
+
+      - name: Commit implementation
+        if: steps.detect.outputs.applied != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/study src/pages/Study.tsx src/pages/MixedStudy.tsx
+          git commit -m "fix(study): restaurar fronteira e resumo das rodadas"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
