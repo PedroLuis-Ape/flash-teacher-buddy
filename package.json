@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/validate-public-author-privacy.mjs && node scripts/validate-landing-authority-source.mjs && node scripts/validate-international-seo.mjs && node scripts/validate-methodology-evidence-source.mjs && vite build && node scripts/prepare-seo-sitemaps.mjs && node scripts/prerender-public-teachers.mjs && node scripts/prerender-public-learning-resources.mjs && node scripts/prerender-public-learning-lists.mjs && node scripts/prerender-international-pages.mjs && node scripts/prerender-methodology-evidence.mjs && node scripts/prerender-public-pages.mjs && node scripts/finalize-seo-publication-report.mjs && node scripts/validate-prerender.mjs && node scripts/validate-international-prerender.mjs && node scripts/validate-public-teacher-prerender.mjs && node scripts/validate-public-learning-resource-prerender.mjs && node scripts/validate-public-learning-list-prerender.mjs && node scripts/validate-methodology-evidence-prerender.mjs && npm run check:bundle && node scripts/seo-visibility-eval.mjs",
+    "build": "node scripts/validate-public-author-privacy.mjs && node scripts/validate-landing-authority-source.mjs && vite build && node scripts/prepare-seo-sitemaps.mjs && node scripts/prerender-public-teachers.mjs && node scripts/prerender-public-learning-resources.mjs && node scripts/prerender-public-learning-lists.mjs && node scripts/prerender-public-pages.mjs && node scripts/finalize-seo-publication-report.mjs && node scripts/validate-prerender.mjs && node scripts/validate-public-teacher-prerender.mjs && node scripts/validate-public-learning-resource-prerender.mjs && node scripts/validate-public-learning-list-prerender.mjs && npm run check:bundle && node scripts/seo-visibility-eval.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -14,6 +14,7 @@
     "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "seo:audit:production": "node scripts/audit-production-seo.mjs",
     "validate:landing-authority": "node scripts/validate-landing-authority-source.mjs",
+    "validate:editorial": "node scripts/validate-landing-authority-source.mjs",
     "validate:author-privacy": "node scripts/validate-public-author-privacy.mjs",
     "seo:visibility:score": "node scripts/seo-visibility-eval.mjs",
     "seo:visibility:check": "npm run build",
