@@ -1239,7 +1239,12 @@ export function useStudyEngine(
   useEffect(() => {
     if (!isMasteryMode || !masterySession) return;
     setCardsOrder(masterySession.currentRoundIds);
-    setCurrentIndex(masterySession.currentRoundIndex);
+    // Clamp: after answering the last card in a round, the flow engine
+    // moves currentRoundIndex past the last slot. Keep the visible index
+    // on the final card until startNextRound loads the next batch so the
+    // UI doesn't render an undefined card behind the summary popup.
+    const maxIdx = Math.max(0, masterySession.currentRoundIds.length - 1);
+    setCurrentIndex(Math.min(masterySession.currentRoundIndex, maxIdx));
   }, [isMasteryMode, masterySession]);
 
   useEffect(() => {
