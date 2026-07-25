@@ -39,7 +39,9 @@ import {
   isSessionFinished,
   recordResult as recordMasteryResult,
   startNextRound as startNextMasteryRound,
+  summarizeCurrentRound,
   type MasterySessionState,
+  type RoundSummary,
   type StudyCardResult,
   type StudyFlowMode,
 } from "@/features/study/lib/studySessionFlow";
