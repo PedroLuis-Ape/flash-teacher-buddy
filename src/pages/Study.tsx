@@ -55,6 +55,7 @@ import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdenti
 import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
+import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
 import { ArrowLeft, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { buildStudyReturnRoute } from "@/features/study/lib/studyCompletionNavigation";
