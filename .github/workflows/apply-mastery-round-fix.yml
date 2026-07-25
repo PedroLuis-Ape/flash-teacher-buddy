@@ -31,19 +31,39 @@ jobs:
             echo "applied=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Apply tested patches
+      - name: Check and apply patches
         if: steps.detect.outputs.applied != 'true'
+        id: patch
         shell: bash
         run: |
+          rm -f patches/mastery-round-fix/failure.log
           for patch in patches/mastery-round-fix/*.patch; do
-            git apply --check "$patch"
+            echo "Checking $patch"
+            if ! git apply --check --verbose "$patch" 2>patch-error.log; then
+              {
+                echo "FAILED_PATCH=$patch"
+                cat patch-error.log
+              } > patches/mastery-round-fix/failure.log
+              echo "failed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           done
           for patch in patches/mastery-round-fix/*.patch; do
             git apply "$patch"
           done
+          echo "failed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Commit diagnostic
+        if: steps.detect.outputs.applied != 'true' && steps.patch.outputs.failed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add patches/mastery-round-fix/failure.log
+          git commit -m "chore: registrar falha de aplicação do patch"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
 
       - name: Commit implementation
-        if: steps.detect.outputs.applied != 'true'
+        if: steps.detect.outputs.applied != 'true' && steps.patch.outputs.failed != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
