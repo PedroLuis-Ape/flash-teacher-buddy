@@ -132,7 +132,7 @@ const Study = () => {
   // while auth resolved, returned [], and a fallback effect persisted
   // `favoritesOnly:false` to localStorage. See docs/COLD_RESTART_FAVORITES_P0.md.
   const { status: authStatus, userId: authUserId, session: authSession } = useAuth();
-  const { prefs, updatePrefs } = useStudyPreferences(authUserId);
+  const { prefs, updatePrefs, effectivePreset } = useStudyPreferences(authUserId);
   // URL overrides are applied at load time inside useStudyPreferences,
   // but the URL is ALSO read directly here as the canonical SSOT for the
   // session. This prevents stale prefs (e.g. anon storage from a previous
