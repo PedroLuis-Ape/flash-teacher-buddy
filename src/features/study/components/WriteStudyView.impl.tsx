@@ -272,6 +272,8 @@ export const WriteStudyView = ({
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
             onAction={onCorrect}
+            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
 
@@ -284,6 +286,8 @@ export const WriteStudyView = ({
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
             onAction={onCorrect}
+            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
 
@@ -294,6 +298,8 @@ export const WriteStudyView = ({
             correctAnswer={correctAnswer}
             actionLabel="Continuar"
             onAction={onIncorrect}
+            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
       </div>
