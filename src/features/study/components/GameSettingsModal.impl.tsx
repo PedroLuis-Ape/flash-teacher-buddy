@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight, Play } from "lucide-react";
+import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight, Play, Shuffle } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Direction } from "@/features/study/lib/gameCore";
 import type { StudyPlayModePreset, StudyPlaySidePreset } from "@/features/study/preferences/studyPreset";
@@ -100,12 +100,11 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     updateForCurrentScope({ playSide });
   };
 
-  const handleInvertDirection = () => {
-    const current = direction
-      ?? (new URLSearchParams(location.search).get("dir") as Direction | null)
-      ?? "any";
-    const next: Direction = current === "a-b" ? "b-a" : "a-b";
+  const currentDirection: Direction = direction
+    ?? (new URLSearchParams(location.search).get("dir") as Direction | null)
+    ?? "any";
 
+  const applyDirection = (next: Direction) => {
     if (onDirectionChange) {
       onDirectionChange(next);
     } else {
@@ -117,6 +116,11 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
         window.dispatchEvent(new CustomEvent(MANUAL_DIRECTION_EVENT, { detail: { direction: next } }));
       }
     }
+  };
+
+  const handleInvertDirection = () => {
+    const next: Direction = currentDirection === "a-b" ? "b-a" : "a-b";
+    applyDirection(next);
     setOpen(false);
   };
 
@@ -268,10 +272,60 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
           )}
 
           {listSession && (
-            <Button onClick={handleInvertDirection} className="w-full" variant="outline">
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Inverter lado
-            </Button>
+            <div className="space-y-3 rounded-xl border p-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ArrowLeftRight className="h-4 w-4 shrink-0 text-primary" />
+                  <Label className="font-medium">Direção da prática</Label>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Escolha em qual lado você quer responder durante esta sessão.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  type="button"
+                  variant={currentDirection === "a-b" ? "default" : "outline"}
+                  size="sm"
+                  aria-pressed={currentDirection === "a-b"}
+                  onClick={() => applyDirection("a-b")}
+                  className="min-w-0 justify-start"
+                >
+                  <span className="truncate">Responder em {playRuntime.labelB}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={currentDirection === "b-a" ? "default" : "outline"}
+                  size="sm"
+                  aria-pressed={currentDirection === "b-a"}
+                  onClick={() => applyDirection("b-a")}
+                  className="min-w-0 justify-start"
+                >
+                  <span className="truncate">Responder em {playRuntime.labelA}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={currentDirection === "any" ? "default" : "outline"}
+                  size="sm"
+                  aria-pressed={currentDirection === "any"}
+                  onClick={() => applyDirection("any")}
+                  className="min-w-0 justify-start"
+                >
+                  <Shuffle className="mr-2 h-4 w-4 shrink-0" />
+                  <span className="truncate">Misto (alternado)</span>
+                </Button>
+              </div>
+              <Button
+                type="button"
+                onClick={handleInvertDirection}
+                variant="ghost"
+                size="sm"
+                className="w-full"
+              >
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                Inverter lado atual
+              </Button>
+            </div>
           )}
 
           {onEditCurrentCard && (
