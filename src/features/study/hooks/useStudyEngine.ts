@@ -851,14 +851,15 @@ export function useStudyEngine(
     // repetition logic stay centralized in studySessionFlow.ts.
     if (isMasteryMode) {
       const resultType: StudyCardResult = skipped ? "skipped" : correct ? "correct" : "incorrect";
-      setMasterySession((prev) => {
-        if (!prev) return prev;
+      const prev = masterySessionRef.current ?? masterySession;
+      if (prev) {
         const cardId = getCurrentCardId(prev);
-        if (!cardId) return prev;
-        const next = recordMasteryResult({ ...prev }, cardId, resultType);
-        masterySessionRef.current = next;
-        return next;
-      });
+        if (cardId) {
+          const next = recordMasteryResult({ ...prev }, cardId, resultType);
+          masterySessionRef.current = next;
+          setMasterySession(next);
+        }
+      }
     }
 
     // Update results
