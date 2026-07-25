@@ -59,6 +59,20 @@ import { ArrowLeft, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, Che
 import { toast } from "sonner";
 import { buildStudyReturnRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
+import {
+  readStudyLayerSnapshot,
+  writeStudyLayerSnapshot,
+} from "@/features/study/lib/studyLayerSnapshot";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Flashcard {
   id: string;
