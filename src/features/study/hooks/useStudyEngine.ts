@@ -147,6 +147,8 @@ export function useStudyEngine(
   const [isCompleting, setIsCompleting] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [masterySession, setMasterySession] = useState<MasterySessionState | null>(null);
+  const masterySessionRef = useRef<MasterySessionState | null>(null);
+  const [pendingRoundSummary, setPendingRoundSummary] = useState<RoundSummary | null>(null);
 
   const isMasteryMode = useMemo(
     () => studyFlowMode === "mastery_rounds" && (mode === "write" || mode === "mixed"),
