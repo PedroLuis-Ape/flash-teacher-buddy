@@ -229,6 +229,11 @@ export function useStudyEngine(
     cardsSignature,
   }), [userScope, listId, mode, sessionScopeKey, cardsSignature]);
 
+  const masterySnapshotKey = useMemo(
+    () => buildMasterySnapshotKey(studySnapshotKey),
+    [studySnapshotKey],
+  );
+
   const correctCount = results.filter((r) => r.correct && !r.skipped).length;
   const errorCount = results.filter((r) => !r.correct && !r.skipped).length;
   const skippedCount = results.filter((r) => r.skipped).length;
