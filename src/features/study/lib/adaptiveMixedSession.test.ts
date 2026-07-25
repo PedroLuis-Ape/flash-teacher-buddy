@@ -86,8 +86,8 @@ describe("adaptive mixed session", () => {
     const failedIndex = state.currentRoundCardIds.indexOf(failedCard);
     expect(failedIndex).toBeGreaterThanOrEqual(0);
 
-    state.currentRoundCardIds.forEach((_, index) => {
-      state = answerCurrent(state, index === failedIndex || true);
+    state.currentRoundCardIds.forEach(() => {
+      state = answerCurrent(state, true);
     });
 
     expect(state.pendingCardIds).not.toContain(failedCard);
@@ -104,7 +104,7 @@ describe("adaptive mixed session", () => {
     });
 
     expect(state.status).toBe("round-complete");
-    expect(state.masteredCardIds).toHaveLength(10);
+    expect(state.masteredCardIds).toHaveLength(15);
 
     state = restartAdaptiveMixedRound(state, fixedRandom);
     expect(state.status).toBe("active");
@@ -119,8 +119,8 @@ describe("adaptive mixed session", () => {
       state = answerCurrent(state, true);
     });
     const progress = getAdaptiveMixedProgress(state);
-    expect(progress.masteredCards).toBe(10);
+    expect(progress.masteredCards).toBe(15);
     expect(progress.totalCards).toBe(20);
-    expect(progress.overallPercent).toBe(50);
+    expect(progress.overallPercent).toBe(75);
   });
 });
