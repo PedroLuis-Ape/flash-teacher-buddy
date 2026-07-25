@@ -853,7 +853,9 @@ export function useStudyEngine(
         if (!prev) return prev;
         const cardId = getCurrentCardId(prev);
         if (!cardId) return prev;
-        return recordMasteryResult({ ...prev }, cardId, resultType);
+        const next = recordMasteryResult({ ...prev }, cardId, resultType);
+        masterySessionRef.current = next;
+        return next;
       });
     }
 
