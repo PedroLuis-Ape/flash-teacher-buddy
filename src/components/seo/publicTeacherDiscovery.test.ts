@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { classifyPublicTeacherDirectoryError } from "@/lib/publicTeacherDirectoryError";
 import { buildPublicTeacherStructuredData } from "./publicTeacherStructuredData";
 
 describe("public teacher discovery", () => {
@@ -52,5 +53,20 @@ describe("public teacher discovery", () => {
     expect(prerender).toContain("injectTeacherRedirects");
     expect(migration).toContain("list_public_teacher_discovery_entries");
     expect(migration).toContain("LOWER(BTRIM(p.public_slug)) = LOWER(BTRIM(_slug))");
+  });
+
+  it("keeps directory failures visible without fabricating public teachers", () => {
+    const page = readFileSync("src/pages/PublicPortalTopFirst.tsx", "utf8");
+
+    expect(classifyPublicTeacherDirectoryError({ code: "PGRST202" })).toBe("missing-rpc");
+    expect(classifyPublicTeacherDirectoryError({ code: "42883" })).toBe("missing-rpc");
+    expect(classifyPublicTeacherDirectoryError({ message: "search_public_teachers was not found" })).toBe("missing-rpc");
+    expect(classifyPublicTeacherDirectoryError(new Error("network unavailable"))).toBe("request-failed");
+
+    expect(page).not.toContain("PREVIEW_TEACHER");
+    expect(page).not.toContain("preview_mode");
+    expect(page).not.toContain("SEOHead");
+    expect(page).toContain("throw error");
+    expect(page).toContain("nenhum perfil de demonstração será exibido");
   });
 });
