@@ -15,6 +15,7 @@ type GlobalPreferenceRow = {
   fast_mode?: unknown;
   play_mode?: unknown;
   play_side?: unknown;
+  study_flow_mode?: unknown;
 };
 
 type ListPreferenceRow = GlobalPreferenceRow;
@@ -41,6 +42,7 @@ export function mapGlobalPreferenceRow(
     fastMode: row.fast_mode,
     playMode: row.play_mode,
     playSide: row.play_side,
+    studyFlowMode: row.study_flow_mode,
   });
 }
 
@@ -57,6 +59,7 @@ export function mapListPreferenceRow(
     fastMode: row.fast_mode,
     playMode: row.play_mode,
     playSide: row.play_side,
+    studyFlowMode: row.study_flow_mode,
   });
   return Object.keys(override).length > 0 ? override : null;
 }
@@ -78,6 +81,7 @@ export function toGlobalPreferenceRow(
     fast_mode: normalized.fastMode,
     play_mode: normalized.playMode,
     play_side: normalized.playSide,
+    study_flow_mode: normalized.studyFlowMode,
   };
 }
 
@@ -100,6 +104,7 @@ export function toListPreferenceRow(
     fast_mode: normalized.fastMode ?? null,
     play_mode: normalized.playMode ?? null,
     play_side: normalized.playSide ?? null,
+    study_flow_mode: normalized.studyFlowMode ?? null,
   };
 }
 
@@ -113,7 +118,8 @@ export function isMissingStudyPreferenceSchemaError(error: unknown): boolean {
     || message.includes("user_list_study_preferences") && message.includes("not found")
     || message.includes("game_mode") && message.includes("column")
     || message.includes("play_mode") && message.includes("column")
-    || message.includes("play_side") && message.includes("column");
+    || message.includes("play_side") && message.includes("column")
+    || message.includes("study_flow_mode") && message.includes("column");
 }
 
 export function isRetryableStudyPreferenceError(error: unknown): boolean {
@@ -137,7 +143,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode")
         .eq("user_id", userId)
         .eq("game_mode", identityMode)
         .maybeSingle();
@@ -167,7 +173,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_list_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode")
         .eq("user_id", userId)
         .eq("list_id", listId)
         .eq("game_mode", identityMode)
