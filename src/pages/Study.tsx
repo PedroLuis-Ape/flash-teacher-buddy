@@ -294,7 +294,6 @@ const Study = () => {
 
   const {
     currentIndex,
-    progress,
     correctCount,
     errorCount,
     skippedCount,
@@ -1257,7 +1256,7 @@ const Study = () => {
                 <div className="text-sm text-muted-foreground">Recuperados</div>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-warning">{skippedCount}</div>
+                <div className="text-3xl font-bold text-warning">{isFlipMode ? skippedCount : (masteryRoundSummary?.skippedCards ?? 0)}</div>
                 <div className="text-sm text-muted-foreground">Pulados</div>
               </div>
             </div>
