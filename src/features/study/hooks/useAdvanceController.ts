@@ -6,6 +6,10 @@ import {
   type StudyFlowMode,
   type StudyRuntimeMode,
 } from "@/features/study/lib/advanceGate";
+import {
+  readStudyFlowMode,
+  STUDY_FLOW_MODE_CHANGED_EVENT,
+} from "@/features/study/lib/studyFlowModePreference";
 
 export interface AdvanceControllerOptions {
   cardId: string | null | undefined;
