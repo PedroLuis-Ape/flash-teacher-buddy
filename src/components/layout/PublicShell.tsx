@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { PublicGalaxyGate } from "@/components/layout/PublicGalaxyGate";
 import { GuestHistoryTracker } from "@/components/portal/GuestHistoryTracker";
+import { DynamicPublicEditorialNote } from "@/components/seo/DynamicPublicEditorialNote";
 import { BrowserExtensionQuickInstall } from "@/features/browser-extension/BrowserExtensionQuickInstall";
 import { formatVersionLabel } from "@/lib/versionManager";
 import "@/styles/space-ui-v1.css";
@@ -23,6 +24,7 @@ export function PublicShell({ children }: PublicShellProps) {
       <PublicGalaxyGate />
       <GuestHistoryTracker />
       <div className="space-ui-main min-h-screen">{children}</div>
+      <DynamicPublicEditorialNote />
       {showExtensionShortcut && <BrowserExtensionQuickInstall />}
       <div className="space-ui-version-badge fixed bottom-3 right-3 z-50 pointer-events-none">
         <Badge variant="outline" className="bg-background text-foreground border-border text-[10px] shadow-sm">
