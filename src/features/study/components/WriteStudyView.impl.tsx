@@ -4,21 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, SkipForward, Volume2 } from "lucide-react";
-import { isAcceptableAnswer, getHint } from "@/lib/textMatch";
+import { getHint } from "@/lib/textMatch";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
-import { isAlmostCorrect } from "@/lib/levenshtein";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
+import {
+  evaluateWriteAnswer,
+  summarizeDifferences,
+  type WriteAnswerEvaluation,
+} from "@/features/study/lib/writeAnswerEvaluation";
+import {
+  DEFAULT_WRITE_CORRECTION_MODE,
+  readWriteCorrectionMode,
+  writeWriteCorrectionMode,
+  type WriteCorrectionMode,
+} from "@/features/study/lib/writeCorrectionMode";
+import { WriteAnswerDiff } from "./WriteAnswerDiff";
 
 interface WriteStudyViewProps {
   front: string;
