@@ -25,7 +25,6 @@ import {
 import {
   DEFAULT_WRITE_CORRECTION_MODE,
   readWriteCorrectionMode,
-  writeWriteCorrectionMode,
   type WriteCorrectionMode,
 } from "@/features/study/lib/writeCorrectionMode";
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
@@ -99,12 +98,6 @@ export const WriteStudyView = ({
     window.addEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
     return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
   }, []);
-
-  const handleModeChange = (next: WriteCorrectionMode) => {
-    if (next === correctionMode) return;
-    setCorrectionMode(next);
-    writeWriteCorrectionMode(next);
-  };
 
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
