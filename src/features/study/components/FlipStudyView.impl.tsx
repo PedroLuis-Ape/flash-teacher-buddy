@@ -151,6 +151,9 @@ interface FlipStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  layerCount?: number;
+  layersVisitedCount?: number;
+  onOpenLayers?: () => void;
 }
 
 export const FlipStudyView = ({
