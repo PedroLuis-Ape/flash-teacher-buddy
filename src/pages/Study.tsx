@@ -321,6 +321,7 @@ const Study = () => {
     discardSession,
     cardsOrder,
     saveProgressNow,
+    studySnapshotKey,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
