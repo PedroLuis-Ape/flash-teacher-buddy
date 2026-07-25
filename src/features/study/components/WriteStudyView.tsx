@@ -152,6 +152,11 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     const button = event.target.closest("button");
     if (!button?.textContent?.toLocaleLowerCase().includes("corrigir")) return;
 
+    if (button.textContent?.toLocaleLowerCase().includes("tentar corrigir")) {
+      submitLockedRef.current = false;
+      return;
+    }
+
     const value = boundaryRef.current
       ?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")
       ?.value.trim();
