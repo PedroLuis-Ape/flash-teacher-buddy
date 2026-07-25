@@ -35,8 +35,9 @@ import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot
 import {
   createMasterySession,
   getCurrentCardId,
+  isRoundFinished,
+  isSessionFinished,
   recordResult as recordMasteryResult,
-  summarizeCurrentRound,
   startNextRound as startNextMasteryRound,
   type MasterySessionState,
   type StudyCardResult,
@@ -146,10 +147,7 @@ export function useStudyEngine(
   const [masterySession, setMasterySession] = useState<MasterySessionState | null>(null);
 
   const isMasteryMode = useMemo(
-    () => studyFlowMode === "mastery_rounds" && (
-      mode === "write" || mode === "mixed" || mode === "multiple-choice"
-      || mode === "unscramble" || mode === "pronunciation"
-    ),
+    () => studyFlowMode === "mastery_rounds" && (mode === "write" || mode === "mixed"),
     [studyFlowMode, mode],
   );
 
@@ -851,19 +849,7 @@ export function useStudyEngine(
         if (!prev) return prev;
         const cardId = getCurrentCardId(prev);
         if (!cardId) return prev;
-        return recordMasteryResult({
-          ...prev,
-          currentRoundIds: [...prev.currentRoundIds],
-          unseenIds: [...prev.unseenIds],
-          retryIds: [...prev.retryIds],
-          masteredIds: [...prev.masteredIds],
-          attemptsByCard: { ...prev.attemptsByCard },
-          mistakesByCard: { ...prev.mistakesByCard },
-          correctThisRoundIds: [...prev.correctThisRoundIds],
-          failedThisRoundIds: [...prev.failedThisRoundIds],
-          reviewSourceThisRound: [...prev.reviewSourceThisRound],
-          currentRoundResults: { ...prev.currentRoundResults },
-        }, cardId, resultType);
+        return recordMasteryResult({ ...prev }, cardId, resultType);
       });
     }
 
@@ -947,9 +933,16 @@ export function useStudyEngine(
   }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
-    if (isMasteryMode) {
-      // recordResult owns card advancement atomically. A finished round waits
-      // on the summary screen until the user explicitly starts the next one.
+    if (isMasteryMode && masterySession) {
+      if (isSessionFinished(masterySession)) {
+        setIsFinished(true);
+        return;
+      }
+      if (isRoundFinished(masterySession)) {
+        setMasterySession((prev) => (prev ? startNextMasteryRound({ ...prev }) : prev));
+        setRoundResults([]);
+      }
+      // currentIndex/currentRoundIds are synchronized via useEffect below.
       return;
     }
     if (currentIndex < cardsOrder.length - 1) {
@@ -984,23 +977,6 @@ export function useStudyEngine(
 
   // Start next round (for quiz modes)
   const startNextRound = useCallback(() => {
-    if (isMasteryMode) {
-      if (!masterySession || masterySession.status !== "round-complete") return;
-      setMasterySession((prev) => {
-        if (!prev || prev.status !== "round-complete") return prev;
-        return startNextMasteryRound({
-          ...prev,
-          currentRoundIds: [...prev.currentRoundIds],
-          unseenIds: [...prev.unseenIds],
-          retryIds: [...prev.retryIds],
-          masteredIds: [...prev.masteredIds],
-        });
-      });
-      setRoundResults([]);
-      setIsFinished(false);
-      toast.info(`Rodada ${masterySession.roundNumber + 1} iniciada!`);
-      return;
-    }
     if (isGameComplete) {
       toast.success("Parabéns! Você completou todos os cards! 🎉");
       return;
@@ -1013,7 +989,7 @@ export function useStudyEngine(
     } else {
       toast.info(`Rodada ${roundNumber + 1} iniciada!`);
     }
-  }, [generateNextRound, isGameComplete, roundNumber, isMasteryMode, masterySession]);
+  }, [generateNextRound, isGameComplete, roundNumber]);
 
   const completeSession = useCallback(async (): Promise<boolean> => {
     if (completionInFlightRef.current) return false;
@@ -1223,8 +1199,6 @@ export function useStudyEngine(
     if (!isMasteryMode || !masterySession) return;
     setCardsOrder(masterySession.currentRoundIds);
     setCurrentIndex(masterySession.currentRoundIndex);
-    setRoundNumber(masterySession.roundNumber);
-    setIsFinished(masterySession.status !== "active");
   }, [isMasteryMode, masterySession]);
 
   useEffect(() => {
@@ -1234,9 +1208,8 @@ export function useStudyEngine(
   }, [cardsOrder, currentIndex, isLoading, roundNumber, trackCardViewed]);
 
   useEffect(() => {
-    if (!isFinished) return;
-    if (!isMasteryMode || masterySession?.status === "journey-complete") trackCompleted();
-  }, [isFinished, isMasteryMode, masterySession?.status, trackCompleted]);
+    if (isFinished) trackCompleted();
+  }, [isFinished, trackCompleted]);
 
   // Save progress on index change
   useEffect(() => {
@@ -1269,9 +1242,9 @@ export function useStudyEngine(
   // queue/retry/mastered bookkeeping owned by studySessionFlow.ts.
   useEffect(() => {
     if (!isMasteryMode) return;
-    if (isLoading || !masterySession) return;
+    if (isLoading || isFinished || !masterySession) return;
     writeMasterySnapshot(masterySnapshotKey, masterySession);
-  }, [isMasteryMode, masterySession, masterySnapshotKey, isLoading]);
+  }, [isMasteryMode, masterySession, masterySnapshotKey, isLoading, isFinished]);
 
   // Force-save current index immediately (no debounce). Used when switching
   // study scope so the previous trail's index isn't lost while waiting for
@@ -1335,21 +1308,9 @@ export function useStudyEngine(
     : null;
 
   // Calculate round stats
-  const masterySummary = isMasteryMode && masterySession
-    ? summarizeCurrentRound(masterySession)
-    : null;
-  const roundCorrect = masterySummary?.correctCards
-    ?? roundResults.filter(r => r.correct && !r.skipped).length;
-  const roundErrors = masterySummary
-    ? masterySummary.incorrectCards + masterySummary.revealedCards
-    : roundResults.filter(r => !r.correct && !r.skipped).length;
-  const roundRecovered = masterySummary?.recoveredCards ?? 0;
-  const hasMoreRounds = isMasteryMode
-    ? masterySession?.status === "round-complete"
-    : unseenCards.length > 0 || missedCards.length > 0;
-  const resolvedGameComplete = isMasteryMode
-    ? masterySession?.status === "journey-complete"
-    : isGameComplete;
+  const roundCorrect = roundResults.filter(r => r.correct && !r.skipped).length;
+  const roundErrors = roundResults.filter(r => !r.correct && !r.skipped).length;
+  const hasMoreRounds = unseenCards.length > 0 || missedCards.length > 0;
 
   return {
     currentIndex,
@@ -1364,7 +1325,7 @@ export function useStudyEngine(
     isRestarting,
     currentCard,
     cardsOrder,
-    totalCards: isMasteryMode ? (masterySession?.currentRoundIds.length ?? cardsOrder.length) : cardsOrder.length,
+    totalCards: cardsOrder.length,
     recordResult,
     goToNext,
     goToPrevious,
@@ -1385,10 +1346,8 @@ export function useStudyEngine(
     restartSession,
     gameSettings,
     setGameSettings,
-    unseenCardsCount: masterySummary?.unseenRemaining ?? unseenCards.length,
-    missedCardsCount: masterySummary?.pendingReview ?? missedCards.length,
-    masteryStatus: masterySession?.status ?? null,
-    masteryRoundSummary: masterySummary,
+    unseenCardsCount: unseenCards.length,
+    missedCardsCount: missedCards.length,
     // Manual session completion export
     completeSession,
     // Scope helpers — used by Study.tsx to switch scopes without resetting

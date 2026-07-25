@@ -34,28 +34,6 @@ describe("studySessionFlow — mastery rounds", () => {
     expect(state.currentRoundIds).toHaveLength(15);
     expect(new Set(state.currentRoundIds).size).toBe(15);
     expect(state.unseenIds).toHaveLength(15);
-
-  it("stops at a real round boundary after the 15th answer", () => {
-    const state = createMasterySession(ids(30));
-    playRound(state, () => "correct");
-    expect(state.status).toBe("round-complete");
-    expect(state.currentRoundIndex).toBe(15);
-    expect(getCurrentCardId(state)).toBeNull();
-    expect(state.roundNumber).toBe(1);
-    startNextRound(state);
-    expect(state.status).toBe("active");
-    expect(state.roundNumber).toBe(2);
-    expect(state.currentRoundIndex).toBe(0);
-  });
-
-  it("ignores duplicate submissions for the same card", () => {
-    const state = createMasterySession(ids(2));
-    recordResult(state, "c1", "correct");
-    recordResult(state, "c1", "incorrect");
-    expect(state.currentRoundIndex).toBe(1);
-    expect(state.currentRoundResults.c1).toBe("correct");
-    expect(state.attemptsByCard.c1).toBe(1);
-  });
   });
 
   it("Case 2 — incorrect cards return in the next round with 13 new cards", () => {
@@ -151,9 +129,6 @@ describe("studySessionFlow — mastery rounds", () => {
     expect(summary.cardsPlayed).toBe(15);
     expect(summary.recoveredCards).toBe(2);
     expect(summary.correctFirstTry).toBe(13);
-    expect(summary.correctCards).toBe(15);
-    expect(summary.skippedCards).toBe(0);
-    expect(summary.revealedCards).toBe(0);
   });
 });
 

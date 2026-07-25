@@ -64,7 +64,7 @@ export default function MixedStudy() {
   const directionParam = searchParams.get("dir") || searchParams.get("direction") || "any";
   const baseDirection: Direction = normalizeDirection(directionParam);
   const scopeKey = [
-    "adaptive-mixed-v1",
+    "adaptive-mixed-v2",
     userId || "anon",
     isListRoute ? "list" : "collection",
     resolvedId,
@@ -319,6 +319,10 @@ export default function MixedStudy() {
   }
 
   if (state.status === "round-complete") {
+    const roundErrors = state.currentRoundErrors.length;
+    const roundCorrect = Math.max(0, state.currentRoundAnswered.length - roundErrors);
+    const recovered = state.currentRoundAnswered.filter((cardId) =>
+      state.currentRoundOrigins[cardId] === "pending" && !state.currentRoundErrors.includes(cardId)).length;
     return (
       <div className="min-h-screen bg-background px-4 py-10">
         <Card className="mx-auto max-w-xl space-y-6 p-6 text-center sm:p-10">
@@ -331,9 +335,12 @@ export default function MixedStudy() {
                 : `${state.currentRoundErrors.length} card(s) voltarão na próxima rodada com novos exercícios.`}
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-sm">
-            <div className="rounded-xl border p-3"><strong className="block text-xl">{progress.masteredCards}</strong>dominados</div>
-            <div className="rounded-xl border p-3"><strong className="block text-xl">{progress.pendingCards}</strong>pendentes</div>
+          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+            <div className="rounded-xl border p-3"><strong className="block text-xl">{state.currentRoundAnswered.length}</strong>praticados</div>
+            <div className="rounded-xl border p-3"><strong className="block text-xl text-green-600">{roundCorrect}</strong>acertos</div>
+            <div className="rounded-xl border p-3"><strong className="block text-xl text-destructive">{roundErrors}</strong>erros</div>
+            <div className="rounded-xl border p-3"><strong className="block text-xl text-primary">{recovered}</strong>recuperados</div>
+            <div className="rounded-xl border p-3"><strong className="block text-xl">{progress.pendingCards}</strong>para revisar</div>
             <div className="rounded-xl border p-3"><strong className="block text-xl">{progress.unseenCards}</strong>novos</div>
           </div>
           <Button size="lg" className="w-full" onClick={mixed.nextRound}>Começar próxima rodada</Button>
