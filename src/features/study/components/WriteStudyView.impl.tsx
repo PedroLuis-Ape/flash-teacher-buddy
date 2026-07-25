@@ -190,17 +190,30 @@ export const WriteStudyView = ({
 
     if (key === confirmKey) {
       event.preventDefault();
-      if (!feedback) handleSubmit();
-      else if (feedback === "correct" || feedback === "almost") onCorrect();
+      if (!evaluation) handleSubmit();
+      else if (evaluation.accepted) onCorrect();
       else onIncorrect();
       return;
     }
 
-    if (key === skipKey && !feedback) {
+    if (key === skipKey && !evaluation) {
       event.preventDefault();
       onSkip();
     }
   };
+
+  const feedbackStatus: "correct" | "almost" | "incorrect" | null = evaluation
+    ? evaluation.status === "exact"
+      ? "correct"
+      : evaluation.status === "accepted_with_corrections"
+        ? "almost"
+        : "incorrect"
+    : null;
+  const accuracyPercent = evaluation ? Math.round(evaluation.accuracy * 100) : undefined;
+  const { messages: correctionMessages, hiddenCount: hiddenCorrectionCount } = evaluation
+    ? summarizeDifferences(evaluation.differences, evaluation.status === "incorrect" ? 5 : 6)
+    : { messages: [] as string[], hiddenCount: 0 };
+  const referenceAnswer = evaluation?.matchedAnswer ?? correctAnswer;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
