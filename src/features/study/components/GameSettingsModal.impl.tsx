@@ -3,13 +3,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight, Play, Shuffle } from "lucide-react";
+import { Settings, RefreshCw, Zap, Flame, Pencil, Keyboard, ArrowLeftRight, Play, Shuffle, SpellCheck } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Direction } from "@/features/study/lib/gameCore";
 import type { StudyPlayModePreset, StudyPlaySidePreset } from "@/features/study/preferences/studyPreset";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
+import {
+  DEFAULT_WRITE_CORRECTION_MODE,
+  readWriteCorrectionMode,
+  writeWriteCorrectionMode,
+  type WriteCorrectionMode,
+} from "@/features/study/lib/writeCorrectionMode";
 
 export interface GameSettings {
   mode: "sequential" | "random";
@@ -52,6 +58,26 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const playRuntime = usePlayPresetRuntime();
   const listSession = location.pathname.includes("/list/")
     && (location.pathname.endsWith("/study") || location.pathname.endsWith("/mixed-study"));
+  const isWriteMode = new URLSearchParams(location.search).get("mode") === "write";
+  const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
+    () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<WriteCorrectionMode>).detail;
+      if (detail === "flexible" || detail === "hard") setCorrectionMode(detail);
+    };
+    window.addEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
+    return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
+  }, []);
+
+  const handleCorrectionModeChange = (next: WriteCorrectionMode) => {
+    if (next === correctionMode) return;
+    setCorrectionMode(next);
+    writeWriteCorrectionMode(next);
+  };
 
   useEffect(() => {
     setPlayPresetRuntime({
@@ -325,6 +351,47 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
                 Inverter lado atual
               </Button>
+            </div>
+          )}
+
+          {onEditCurrentCard && (
+            null
+          )}
+          {isWriteMode && (
+            <div className="space-y-3 rounded-xl border p-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <SpellCheck className="h-4 w-4 shrink-0 text-primary" />
+                  <Label className="font-medium">Modo de correção</Label>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Como o app avalia sua resposta no modo Escrever.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant={correctionMode === "flexible" ? "default" : "outline"}
+                  size="sm"
+                  aria-pressed={correctionMode === "flexible"}
+                  onClick={() => handleCorrectionModeChange("flexible")}
+                  className="min-w-0"
+                  title="Aceita pequenos erros e mostra as correções."
+                >
+                  <span className="truncate">Flexível</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={correctionMode === "hard" ? "default" : "outline"}
+                  size="sm"
+                  aria-pressed={correctionMode === "hard"}
+                  onClick={() => handleCorrectionModeChange("hard")}
+                  className="min-w-0"
+                  title="Exige a resposta exata."
+                >
+                  <span className="truncate">Hard</span>
+                </Button>
+              </div>
             </div>
           )}
 
