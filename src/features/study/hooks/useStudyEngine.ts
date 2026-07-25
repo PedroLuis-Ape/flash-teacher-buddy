@@ -338,9 +338,12 @@ export function useStudyEngine(
     // owns the queue, round boundaries, and repetition logic.
     if (isMasteryMode) {
       const eligibleIds = flashcards.map((card) => card.id);
-      const session = createMasterySession(eligibleIds, {
-        shuffle: gameSettings.mode === "random",
-      });
+      const availableSet = new Set(eligibleIds);
+      const restored = readMasterySnapshot(masterySnapshotKey, availableSet);
+      const session = restored
+        ?? createMasterySession(eligibleIds, {
+          shuffle: gameSettings.mode === "random",
+        });
       setMasterySession(session);
       setCardsOrder(session.currentRoundIds);
       setCurrentIndex(session.currentRoundIndex);
