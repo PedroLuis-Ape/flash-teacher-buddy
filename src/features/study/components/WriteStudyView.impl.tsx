@@ -276,7 +276,7 @@ export const WriteStudyView = ({
           onChange={(event) => setAnswer(event.target.value)}
           onKeyDown={handleKeyPress}
           placeholder="Digite sua resposta..."
-          disabled={feedback !== null}
+          disabled={evaluation !== null}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
@@ -286,55 +286,102 @@ export const WriteStudyView = ({
           className={cn(
             "min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
             shake && "animate-[shake_0.5s_ease-in-out]",
-            feedback === "correct" && "border-2 border-emerald-500 bg-emerald-500/8",
-            feedback === "almost" && "border-2 border-amber-500 bg-amber-500/8",
-            feedback === "incorrect" && "border-2 border-destructive bg-destructive/6",
+            feedbackStatus === "correct" && "border-2 border-emerald-500 bg-emerald-500/8",
+            feedbackStatus === "almost" && "border-2 border-amber-500 bg-amber-500/8",
+            feedbackStatus === "incorrect" && "border-2 border-destructive bg-destructive/6",
           )}
         />
 
-        {feedback === "correct" && (
+        {feedbackStatus === "correct" && (
           <StudyFeedbackPanel
             status="correct"
             title="Muito bem!"
             message="Sua resposta está correta."
-            correctAnswer={correctAnswer}
+            correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
             onAction={onCorrect}
-            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
 
-        {feedback === "almost" && (
+        {feedbackStatus === "almost" && evaluation && (
           <StudyFeedbackPanel
             status="almost"
-            message="Faltou ou sobrou apenas um caractere. O resultado contará como acerto."
+            title="Quase lá! Sua resposta foi aceita."
+            message={evaluation.summary}
+            accuracyPercent={accuracyPercent}
             userAnswer={answer.trim()}
-            correctAnswer={correctAnswer}
+            correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
-            actionLabel="Próximo card"
+            extraContent={<WriteAnswerDiff differences={evaluation.differences} />}
+            correctionMessages={correctionMessages}
+            hiddenCorrectionCount={hiddenCorrectionCount}
+            actionLabel="Continuar"
             onAction={onCorrect}
-            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
 
-        {feedback === "incorrect" && (
+        {feedbackStatus === "incorrect" && evaluation && (
           <StudyFeedbackPanel
             status="incorrect"
+            title="Vamos corrigir."
+            message={evaluation.summary}
+            accuracyPercent={accuracyPercent}
             userAnswer={answer.trim()}
-            correctAnswer={correctAnswer}
+            correctAnswer={referenceAnswer}
+            extraContent={<WriteAnswerDiff differences={evaluation.differences} />}
+            correctionMessages={correctionMessages}
+            hiddenCorrectionCount={hiddenCorrectionCount}
             actionLabel="Continuar"
             onAction={onIncorrect}
-            onPlayAnswer={() => { void speak(correctAnswer, { langOverride: answerSide.lang }); }}
+            onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
         )}
       </div>
 
-      {feedback === null && (
+      {evaluation === null && (
         <div className="sticky bottom-4 z-10 rounded-lg bg-background/95 p-2 shadow-lg backdrop-blur-sm">
+          <div
+            role="radiogroup"
+            aria-label="Modo de correção"
+            className="mb-2 flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 p-1 text-xs"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={correctionMode === "flexible"}
+              onClick={() => handleModeChange("flexible")}
+              className={cn(
+                "flex-1 rounded px-2 py-1.5 font-semibold transition-colors",
+                correctionMode === "flexible"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Aceita pequenos erros e mostra as correções."
+            >
+              Flexível
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={correctionMode === "hard"}
+              onClick={() => handleModeChange("hard")}
+              className={cn(
+                "flex-1 rounded px-2 py-1.5 font-semibold transition-colors",
+                correctionMode === "hard"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Exige a resposta exata."
+            >
+              Hard
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
