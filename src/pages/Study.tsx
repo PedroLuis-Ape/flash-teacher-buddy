@@ -1682,6 +1682,13 @@ const Study = () => {
         onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
       />
 
+      <RoundSummaryDialog
+        open={!!pendingRoundSummary}
+        summary={pendingRoundSummary ?? null}
+        onNextRound={() => startNextRound()}
+        onExit={() => void handleExit()}
+      />
+
       {/* In-game card editor — reuses the same dialog as ListDetail.
           Saving via handleUpdateFlashcardInGame updates `flashcards` in place,
           preserving cardsOrder + currentIndex (no session restart). */}
