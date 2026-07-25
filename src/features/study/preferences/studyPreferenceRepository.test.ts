@@ -19,6 +19,7 @@ describe("studyPreferenceRepository", () => {
       fast_mode: true,
       play_mode: "single",
       play_side: "b",
+      study_flow_mode: "continuous",
     }, "mixed")).toEqual({
       mode: "mixed",
       direction: "a-b",
@@ -27,7 +28,7 @@ describe("studyPreferenceRepository", () => {
       fastMode: true,
       playMode: "single",
       playSide: "b",
-      studyFlowMode: "mastery_rounds",
+      studyFlowMode: "continuous",
     });
   });
 
@@ -41,15 +42,20 @@ describe("studyPreferenceRepository", () => {
       fast_mode: null,
       play_mode: "single",
       play_side: "a",
+      study_flow_mode: "mastery_rounds",
     }, "write")).toEqual({
       scope: "favorites",
       playMode: "single",
       playSide: "a",
+      studyFlowMode: "mastery_rounds",
     });
   });
 
   it("serializes global and list values with a separate game_mode key", () => {
-    expect(toGlobalPreferenceRow("user-1", DEFAULT_STUDY_PRESET, "flip")).toMatchObject({
+    expect(toGlobalPreferenceRow("user-1", {
+      ...DEFAULT_STUDY_PRESET,
+      studyFlowMode: "continuous",
+    }, "flip")).toMatchObject({
       user_id: "user-1",
       game_mode: "flip",
       mode: "flip",
@@ -57,10 +63,12 @@ describe("studyPreferenceRepository", () => {
       fast_mode: false,
       play_mode: "both",
       play_side: "a",
+      study_flow_mode: "continuous",
     });
     expect(toListPreferenceRow("user-1", "list-1", {
       playMode: "single",
       playSide: "b",
+      studyFlowMode: "continuous",
     }, "write")).toMatchObject({
       user_id: "user-1",
       list_id: "list-1",
@@ -69,6 +77,7 @@ describe("studyPreferenceRepository", () => {
       direction: null,
       play_mode: "single",
       play_side: "b",
+      study_flow_mode: "continuous",
     });
   });
 
@@ -76,6 +85,7 @@ describe("studyPreferenceRepository", () => {
     expect(isMissingStudyPreferenceSchemaError({ code: "42P01" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "PGRST205" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "42703", message: "game_mode column" })).toBe(true);
+    expect(isMissingStudyPreferenceSchemaError({ code: "42703", message: "study_flow_mode column" })).toBe(true);
     expect(isMissingStudyPreferenceSchemaError({ code: "42501" })).toBe(false);
   });
 });
