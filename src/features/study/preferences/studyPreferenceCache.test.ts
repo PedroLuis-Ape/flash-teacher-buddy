@@ -51,6 +51,7 @@ describe("studyPreferenceCache", () => {
       fastMode: true,
       playMode: "both" as const,
       playSide: "a" as const,
+      studyFlowMode: "mastery_rounds" as const,
     };
 
     expect(migrateLegacyStudyPreferences("user-1")).toEqual(expected);
