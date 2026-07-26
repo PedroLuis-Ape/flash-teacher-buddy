@@ -24,6 +24,7 @@ interface MixedSlotActivityProps {
   onToggleSpecial?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
+  onSkip?: () => void;
   layerCount?: number;
   layersVisitedCount?: number;
   onOpenLayers?: () => void;
@@ -49,6 +50,9 @@ export function MixedSlotActivity(props: MixedSlotActivityProps) {
         isSpecial={props.isSpecial}
         onToggleSpecial={props.onToggleSpecial}
         onNext={props.onCorrect}
+        onCorrect={props.onCorrect}
+        onIncorrect={props.onIncorrect}
+        onSkip={props.onSkip}
       />
     );
   }
@@ -73,7 +77,7 @@ export function MixedSlotActivity(props: MixedSlotActivityProps) {
       onToggleSpecial={props.onToggleSpecial}
       onCorrect={props.onCorrect}
       onIncorrect={props.onIncorrect}
-      onSkip={props.onIncorrect}
+      onSkip={props.onSkip ?? props.onIncorrect}
       layerCount={props.layerCount}
       layersVisitedCount={props.layersVisitedCount}
       onOpenLayers={props.onOpenLayers}

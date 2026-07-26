@@ -60,7 +60,7 @@ export function sanitizeMasterySnapshot(
 
   const filterIds = (ids: string[]) => ids.filter((id) => availableCardIds.has(id));
   const dedupeIds = (ids: string[]) => Array.from(new Set(ids));
-  const currentRoundIds = dedupeIds(filterIds(row.currentRoundIds));
+  const currentRoundIds = dedupeIds(filterIds(row.currentRoundIds)).slice(0, MASTERY_ROUND_SIZE);
   if (currentRoundIds.length === 0) return null;
 
   // Legacy snapshots could contain the same card in the active round and in

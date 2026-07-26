@@ -42,6 +42,7 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
 
   const onCorrect = () => runOnce(props.onCorrect);
   const onIncorrect = () => runOnce(props.onIncorrect);
+  const onSkip = props.onSkip ? () => runOnce(props.onSkip!) : undefined;
 
   if (glossaryHints.isLoading) {
     return (
@@ -74,7 +75,7 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
         onToggleSpecial={props.onToggleSpecial}
         onCorrect={onCorrect}
         onIncorrect={onIncorrect}
-        onSkip={onIncorrect}
+        onSkip={onSkip ?? onIncorrect}
       />
     );
   }
@@ -87,9 +88,10 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
           mergedHintsA={glossaryHints.mergedHintsA}
           mergedHintsB={glossaryHints.mergedHintsB}
           direction={direction}
-          onCorrect={onCorrect}
-          onIncorrect={onIncorrect}
-        />
+           onCorrect={onCorrect}
+           onIncorrect={onIncorrect}
+           onSkip={onSkip}
+         />
       </Suspense>
     </StudyCardDeck>
   );

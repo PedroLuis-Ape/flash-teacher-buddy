@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -15,14 +14,16 @@ export interface SkipCardConfirmDialogProps {
   open: boolean;
   flowMode: StudyFlowMode;
   onCancel: () => void;
-  onConfirm: () => void;
+  onKnown: () => void;
+  onUnknown: () => void;
 }
 
 export function SkipCardConfirmDialog({
   open,
   flowMode,
   onCancel,
-  onConfirm,
+  onKnown,
+  onUnknown,
 }: SkipCardConfirmDialogProps) {
   const copy = skipDialogCopyFor(flowMode);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -36,10 +37,11 @@ export function SkipCardConfirmDialog({
     window.setTimeout(() => cancelRef.current?.focus(), 30);
   }, [open]);
 
-  const handleConfirm = () => {
+  const handleClassify = (classification: "known" | "unknown") => {
     if (confirmingRef.current) return;
     confirmingRef.current = true;
-    onConfirm();
+    if (classification === "known") onKnown();
+    else onUnknown();
   };
 
   return (
@@ -58,12 +60,22 @@ export function SkipCardConfirmDialog({
           <AlertDialogCancel ref={cancelRef} onClick={onCancel}>
             {copy.cancelLabel}
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleConfirm}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {copy.confirmLabel}
-          </AlertDialogAction>
+          <div className="grid w-full gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => handleClassify("known")}
+              className="inline-flex min-h-11 items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {copy.knownLabel}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleClassify("unknown")}
+              className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {copy.unknownLabel}
+            </button>
+          </div>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

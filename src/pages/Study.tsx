@@ -45,6 +45,7 @@ import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
+import { SkipCardConfirmDialog } from "@/features/study/components/SkipCardConfirmDialog";
 import { resolveStudyProgressMetrics } from "@/features/study/lib/studyProgressMetrics";
 import {
   resolveStudyAnswerIdentity,
@@ -53,6 +54,7 @@ import {
   STUDY_REMOTE_RESTORE_TIMEOUT_MS,
   STUDY_REQUIRED_LOAD_TIMEOUT_MS,
   withStudyRuntimeTimeout,
+  logStudyRuntime,
 } from "@/features/study/lib/studySessionRuntime";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
@@ -188,6 +190,7 @@ const Study = () => {
   const loadGenerationRef = useRef(0);
   const loadAbortRef = useRef<AbortController | null>(null);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showSkipDialog, setShowSkipDialog] = useState(false);
   const [listTitle, setListTitle] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   // userId mirrors authUserId from AuthContext (single source of truth).
@@ -201,6 +204,8 @@ const Study = () => {
   // the visible layer rather than the deck entry-point.
   const displayedCardIdRef = useRef<string | null>(null);
   const answeredCardKeyRef = useRef<string | null>(null);
+  const skipCardKeyRef = useRef<string | null>(null);
+  const exitInFlightRef = useRef(false);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
@@ -350,6 +355,13 @@ const Study = () => {
     saveProgressNow,
     studySnapshotKey,
   } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
+
+  // A new queue reference represents a new answerable session/round. Resetting
+  // this guard prevents a restarted session with the same first card from
+  // inheriting the previous click lock.
+  useEffect(() => {
+    answeredCardKeyRef.current = null;
+  }, [cardsOrder]);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
   const favoritesOnly = gameSettings.subset === 'favorites';
@@ -728,7 +740,18 @@ const Study = () => {
       displayedCardIdRef.current,
       cardsOrder[currentIndex],
     );
-    if (!identity) return;
+    const expectedEngineCardId = cardsOrder[currentIndex];
+    if (!identity || !expectedEngineCardId || identity.engineCardId !== expectedEngineCardId) {
+      logStudyRuntime("answer-rejected", {
+        reason: "card-identity-mismatch",
+        expectedCardId: expectedEngineCardId ?? null,
+        submittedCardId: identity?.engineCardId ?? null,
+        index: currentIndex,
+        round: roundNumber,
+      });
+      toast.error("A sessão precisou reconciliar o card atual. Tente novamente.");
+      return;
+    }
 
     // One answer per rendered queue position. This blocks double Enter/click
     // without preventing a legitimate repeated card at a later index/round.
@@ -736,13 +759,59 @@ const Study = () => {
     if (answeredCardKeyRef.current === answerKey) return;
     answeredCardKeyRef.current = answerKey;
 
+    logStudyRuntime("answer-start", {
+      action: skipped ? "skip-unknown" : correct ? "answer-correct" : "answer-incorrect",
+      cardId: identity.engineCardId,
+      index: currentIndex,
+      round: roundNumber,
+    });
+
     void recordResult(
       identity.progressCardId,
       correct,
       skipped,
       identity.engineCardId,
-    );
+    ).catch((error) => {
+      answeredCardKeyRef.current = null;
+      logStudyRuntime("answer-error", {
+        action: skipped ? "skip-unknown" : correct ? "answer-correct" : "answer-incorrect",
+        cardId: identity.engineCardId,
+        index: currentIndex,
+        round: roundNumber,
+        error: error instanceof Error ? error.name : "unknown",
+      });
+      toast.error("Não foi possível registrar esta ação. Tente novamente.");
+    });
     goToNext();
+  };
+
+  const currentAnswerKey = `${roundNumber}:${currentIndex}:${cardsOrder[currentIndex] ?? "none"}`;
+
+  const requestSkip = () => {
+    if (!cardsOrder[currentIndex] || showSkipDialog) return;
+    skipCardKeyRef.current = currentAnswerKey;
+    logStudyRuntime("skip-requested", {
+      cardId: cardsOrder[currentIndex],
+      index: currentIndex,
+      round: roundNumber,
+    });
+    setShowSkipDialog(true);
+  };
+
+  const classifySkip = (classification: "known" | "unknown") => {
+    if (!showSkipDialog || skipCardKeyRef.current !== currentAnswerKey) {
+      setShowSkipDialog(false);
+      skipCardKeyRef.current = null;
+      toast.info("O card mudou; nenhum pulo foi registrado.");
+      return;
+    }
+    setShowSkipDialog(false);
+    skipCardKeyRef.current = null;
+    if (classification === "known") {
+      handleNext(true);
+      return;
+    }
+    handleNext(false, true);
   };
 
   const handleReviewErrors = () => {
@@ -761,8 +830,13 @@ const Study = () => {
     }
   };
 
-  const handleExit = async () => {
-    await saveProgressNow();
+  const handleExit = () => {
+    if (exitInFlightRef.current) return;
+    exitInFlightRef.current = true;
+    setShowExitDialog(false);
+    // Local persistence happens synchronously inside saveProgressNow. The
+    // bounded remote flush must never hold navigation hostage.
+    void saveProgressNow();
     navigate(returnRoute, { replace: true });
   };
 
@@ -1197,8 +1271,8 @@ const Study = () => {
     {
       nextCard: () => {
         if (writeShortcutsLocked) return;
-        // Treat global "next" as a skip — equivalent to the existing skip flow.
-        if (currentCard) handleNext(false, true);
+        // A global next is a skip request, not an automatic wrong answer.
+        if (currentCard) requestSkip();
       },
       prevCard: () => {
         if (writeShortcutsLocked) return;
@@ -1215,7 +1289,7 @@ const Study = () => {
       },
     },
     {
-      disabled: showExitDialog || showCompletionModal,
+      disabled: showExitDialog || showCompletionModal || showSkipDialog,
     },
   );
 
@@ -1800,6 +1874,7 @@ const Study = () => {
               onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
+              onSkip={requestSkip}
             />
           )}
           {effectiveMode === "unscramble" && displayedCard && (
@@ -1823,7 +1898,7 @@ const Study = () => {
               onToggleSpecial={handleToggleSpecial}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
-              onSkip={() => handleNext(false, true)}
+              onSkip={requestSkip}
             />
           )}
           {effectiveMode === "pronunciation" && displayedCard && (
@@ -1844,7 +1919,9 @@ const Study = () => {
               onToggleRedList={handleToggleRedList}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={handleToggleSpecial}
-              onNext={() => handleNext(true)}
+              onCorrect={() => handleNext(true)}
+              onIncorrect={() => handleNext(false)}
+              onSkip={requestSkip}
             />
           )}
         </div>
@@ -1891,6 +1968,17 @@ const Study = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SkipCardConfirmDialog
+        open={showSkipDialog}
+        flowMode={effectivePreset.studyFlowMode}
+        onCancel={() => {
+          skipCardKeyRef.current = null;
+          setShowSkipDialog(false);
+        }}
+        onKnown={() => classifySkip("known")}
+        onUnknown={() => classifySkip("unknown")}
+      />
 
       <StudyCompletionModal
         open={showCompletionModal}

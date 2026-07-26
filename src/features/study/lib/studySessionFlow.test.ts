@@ -8,6 +8,7 @@ import {
   recordResult,
   startNextRound,
   summarizeCurrentRound,
+  composeMasteryRound,
   type StudyCardResult,
 } from "./studySessionFlow";
 
@@ -126,6 +127,14 @@ describe("studySessionFlow — mastery rounds", () => {
     expect(state.currentRoundIds).toContain("c7");
   });
 
+  it("classifying a skip as known completes the card instead of retrying it", () => {
+    const state = createMasterySession(ids(20));
+    playRound(state, () => "correct");
+    startNextRound(state);
+    expect(state.currentRoundIds).not.toContain("c7");
+    expect(state.masteredIds).toContain("c7");
+  });
+
   it("Case 11 — revealed cards return in the next round (mastery)", () => {
     const state = createMasterySession(ids(20));
     playRound(state, (id) => (id === "c9" ? "revealed" : "correct"));
@@ -175,5 +184,19 @@ describe("studySessionFlow — continuous queue", () => {
     const queue = buildContinuousQueue(source, { shuffle: true, random: () => 0.42 });
     expect(new Set(queue)).toEqual(new Set(source));
     expect(queue).toHaveLength(source.length);
+  });
+
+  it("composes retries first and removes duplicates or mastered cards from both queues", () => {
+    expect(composeMasteryRound(
+      ["retry-1", "retry-1", "mastered", "retry-2"],
+      ["retry-2", "new-1", "new-1", "mastered", "new-2"],
+      3,
+      ["mastered"],
+    )).toEqual({
+      roundIds: ["retry-1", "retry-2", "new-1"],
+      remainingRetry: [],
+      remainingUnseen: ["new-2"],
+      reviewSource: ["retry-1", "retry-2"],
+    });
   });
 });

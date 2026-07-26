@@ -99,16 +99,21 @@ export function buildContinuousQueue(
  * Compose the next mastery round from remaining unseen + retry queues.
  * Retry IDs go to the front; remaining slots (up to roundSize) are filled with unseen.
  */
-function composeRound(
+export function composeMasteryRound(
   retryIds: ReadonlyArray<string>,
   unseenIds: ReadonlyArray<string>,
   roundSize: number,
+  masteredIds: ReadonlyArray<string> = [],
 ): { roundIds: string[]; remainingRetry: string[]; remainingUnseen: string[]; reviewSource: string[] } {
   const roundIds: string[] = [];
   const seen = new Set<string>();
   const reviewSource: string[] = [];
+  const mastered = new Set(dedupe(masteredIds));
+  const retryPool = dedupe(retryIds).filter((id) => !mastered.has(id));
+  const retrySet = new Set(retryPool);
+  const unseenPool = dedupe(unseenIds).filter((id) => !mastered.has(id) && !retrySet.has(id));
 
-  for (const id of retryIds) {
+  for (const id of retryPool) {
     if (roundIds.length >= roundSize) break;
     if (seen.has(id)) continue;
     seen.add(id);
@@ -116,17 +121,17 @@ function composeRound(
     reviewSource.push(id);
   }
 
-  const remainingRetry = retryIds.slice(reviewSource.length);
+  const remainingRetry = retryPool.slice(reviewSource.length);
 
   const unseenConsumed: string[] = [];
-  for (const id of unseenIds) {
+  for (const id of unseenPool) {
     if (roundIds.length >= roundSize) break;
     if (seen.has(id)) continue;
     seen.add(id);
     roundIds.push(id);
     unseenConsumed.push(id);
   }
-  const remainingUnseen = unseenIds.slice(unseenConsumed.length);
+  const remainingUnseen = unseenPool.slice(unseenConsumed.length);
 
   return { roundIds, remainingRetry, remainingUnseen, reviewSource };
 }
@@ -144,7 +149,7 @@ export function createMasterySession(
   const base = dedupe(eligibleIds);
   const pool = shuffle ? shuffleInPlace([...base], random) : base;
 
-  const composed = composeRound([], pool, roundSize);
+  const composed = composeMasteryRound([], pool, roundSize);
 
   return {
     version: 2,
@@ -275,7 +280,12 @@ export function startNextRound(state: MasterySessionState): MasterySessionState 
   state.retryIds.forEach(pushRetry);
   state.failedThisRoundIds.forEach(pushRetry);
 
-  const composed = composeRound(mergedRetry, state.unseenIds, state.roundSize);
+  const composed = composeMasteryRound(
+    mergedRetry,
+    state.unseenIds,
+    state.roundSize,
+    state.masteredIds,
+  );
 
   state.roundNumber += 1;
   state.currentRoundIds = composed.roundIds;

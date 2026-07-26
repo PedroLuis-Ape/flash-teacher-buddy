@@ -74,6 +74,7 @@ describe("advanceGate.decideAdvance", () => {
     expect(skipDialogCopyFor("mastery_rounds").description).toContain("Rodadas de Domínio");
     expect(skipDialogCopyFor("continuous").description).toContain("não voltará automaticamente");
     expect(skipDialogCopyFor("continuous").cancelLabel).toBe("Voltar e responder");
-    expect(skipDialogCopyFor("mastery_rounds").confirmLabel).toBe("Pular mesmo assim");
+    expect(skipDialogCopyFor("mastery_rounds").knownLabel).toBe("Eu sabia");
+    expect(skipDialogCopyFor("mastery_rounds").unknownLabel).toBe("Eu não sabia");
   });
 });

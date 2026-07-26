@@ -44,6 +44,7 @@ interface MultipleChoiceStudyViewProps {
   onRestartJourney?: () => void;
   onCorrect: () => void;
   onIncorrect: () => void;
+  onSkip?: () => void;
 }
 
 export const MultipleChoiceStudyView = ({

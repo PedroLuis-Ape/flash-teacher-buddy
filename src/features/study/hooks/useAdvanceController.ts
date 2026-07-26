@@ -27,7 +27,7 @@ export interface AdvanceControllerApi {
     open: boolean;
     flowMode: StudyFlowMode;
     cancel: () => void;
-    confirm: () => void;
+    classify: (classification: "known" | "unknown") => void;
   };
   isLocked: boolean;
 }
@@ -95,15 +95,16 @@ export function useAdvanceController(options: AdvanceControllerOptions): Advance
     onCancelSkip?.();
   }, [onCancelSkip]);
 
-  const confirm = useCallback(() => {
+  const classify = useCallback((classification: "known" | "unknown") => {
     setDialogOpen(false);
-    setStatusState("skipped");
-    emitAdvance("skipped");
+    const finalStatus = classification === "known" ? "correct" : "skipped";
+    setStatusState(finalStatus);
+    emitAdvance(finalStatus);
   }, [emitAdvance]);
 
   const dialog = useMemo(
-    () => ({ open: dialogOpen, flowMode, cancel, confirm }),
-    [dialogOpen, flowMode, cancel, confirm],
+    () => ({ open: dialogOpen, flowMode, cancel, classify }),
+    [dialogOpen, flowMode, cancel, classify],
   );
 
   return {
