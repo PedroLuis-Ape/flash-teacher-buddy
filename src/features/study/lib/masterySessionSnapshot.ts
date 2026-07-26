@@ -4,7 +4,12 @@
  * The database session remains authoritative; this is a client-side fallback
  * mirroring the pattern in studySessionSnapshot.ts.
  */
-import { MASTERY_ROUND_SIZE, type MasterySessionState, type StudyCardResult } from "./studySessionFlow";
+import {
+  MASTERY_ROUND_SIZE,
+  type MasterySessionState,
+  type StudyCardResult,
+  validateMasterySessionState,
+} from "./studySessionFlow";
 
 const SUFFIX = ":mastery";
 
@@ -63,11 +68,22 @@ export function sanitizeMasterySnapshot(
   const currentRoundIds = dedupeIds(filterIds(row.currentRoundIds)).slice(0, MASTERY_ROUND_SIZE);
   if (currentRoundIds.length === 0) return null;
 
+  const currentRoundSet = new Set(currentRoundIds);
+  const currentRoundResults = Object.fromEntries(
+    Object.entries(row.currentRoundResults).filter(([id]) => currentRoundSet.has(id)),
+  ) as Record<string, StudyCardResult>;
+
   // Legacy snapshots could contain the same card in the active round and in
   // unseen/retry queues. That made a recovered card look permanently pending
   // and could offer endless next rounds. Repair the queues into disjoint sets.
-  const currentRoundSet = new Set(currentRoundIds);
-  const masteredIds = dedupeIds(filterIds(row.masteredIds));
+  // A current card is allowed to remain in masteredIds only when this snapshot
+  // proves it was answered correctly in the current round.
+  const masteredIds = dedupeIds([
+    ...filterIds(row.masteredIds),
+    ...currentRoundIds.filter((id) => currentRoundResults[id] === "correct"),
+  ]).filter(
+    (id) => !currentRoundSet.has(id) || currentRoundResults[id] === "correct",
+  );
   const masteredSet = new Set(masteredIds);
   const unseenIds = dedupeIds(filterIds(row.unseenIds)).filter(
     (id) => !currentRoundSet.has(id) && !masteredSet.has(id),
@@ -75,6 +91,22 @@ export function sanitizeMasterySnapshot(
   const unseenSet = new Set(unseenIds);
   const retryIds = dedupeIds(filterIds(row.retryIds)).filter(
     (id) => !currentRoundSet.has(id) && !masteredSet.has(id) && !unseenSet.has(id),
+  );
+
+  const currentRoundIndex = Math.min(Math.max(Math.floor(row.currentRoundIndex), 0), currentRoundIds.length);
+  const unresolvedCurrentIds = currentRoundIndex >= currentRoundIds.length
+    ? currentRoundIds.filter((id) => !currentRoundResults[id])
+    : [];
+  const failedThisRoundIds = dedupeIds([
+    ...filterIds(row.failedThisRoundIds),
+    ...currentRoundIds.filter((id) => {
+      const result = currentRoundResults[id];
+      return result === "incorrect" || result === "skipped" || result === "revealed";
+    }),
+    ...unresolvedCurrentIds,
+  ]).filter((id) => currentRoundSet.has(id) && !masteredSet.has(id));
+  const correctThisRoundIds = currentRoundIds.filter(
+    (id) => currentRoundResults[id] === "correct",
   );
 
   const union = new Set<string>([
@@ -88,44 +120,44 @@ export function sanitizeMasterySnapshot(
     if (!union.has(id)) return null;
   }
 
-  const failedThisRoundIds = dedupeIds(filterIds(row.failedThisRoundIds)).filter(
-    (id) => currentRoundSet.has(id) && !masteredSet.has(id),
-  );
-  const currentRoundIndex = Math.min(Math.max(row.currentRoundIndex, 0), currentRoundIds.length);
-  let status = row.status;
-  if (currentRoundIndex < currentRoundIds.length) {
-    status = "active";
-  } else {
-    status = unseenIds.length === 0
+  const sanitizeCounters = (record: Record<string, number>): Record<string, number> =>
+    Object.fromEntries(
+      Object.entries(record)
+        .filter(([id, count]) => availableCardIds.has(id) && Number.isFinite(count))
+        .map(([id, count]) => [id, Math.max(0, Math.floor(count))]),
+    );
+
+  const status = currentRoundIndex < currentRoundIds.length
+    ? "active"
+    : unseenIds.length === 0
       && retryIds.length === 0
       && failedThisRoundIds.length === 0
+      && masteredIds.length === availableCardIds.size
       ? "journey-complete"
       : "round-complete";
-  }
 
-  const currentRoundResults = Object.fromEntries(
-    Object.entries(row.currentRoundResults).filter(([id]) => currentRoundSet.has(id)),
-  ) as Record<string, StudyCardResult>;
-
-  return {
+  const repairedState: MasterySessionState = {
     version: 2,
     totalEligible: availableCardIds.size,
     roundSize: MASTERY_ROUND_SIZE,
     shuffle: row.shuffle,
     status,
-    roundNumber: row.roundNumber,
+    roundNumber: Math.max(1, Math.floor(row.roundNumber)),
     currentRoundIds,
     currentRoundIndex,
     unseenIds,
     retryIds,
     masteredIds,
-    attemptsByCard: row.attemptsByCard,
-    mistakesByCard: row.mistakesByCard,
-    correctThisRoundIds: filterIds(row.correctThisRoundIds),
+    attemptsByCard: sanitizeCounters(row.attemptsByCard),
+    mistakesByCard: sanitizeCounters(row.mistakesByCard),
+    correctThisRoundIds,
     failedThisRoundIds,
-    reviewSourceThisRound: filterIds(row.reviewSourceThisRound),
+    reviewSourceThisRound: dedupeIds(filterIds(row.reviewSourceThisRound)).filter((id) => currentRoundSet.has(id)),
     currentRoundResults,
   };
+
+  if (!validateMasterySessionState(repairedState, availableCardIds).valid) return null;
+  return repairedState;
 }
 
 export function readMasterySnapshot(

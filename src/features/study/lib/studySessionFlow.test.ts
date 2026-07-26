@@ -9,6 +9,7 @@ import {
   startNextRound,
   summarizeCurrentRound,
   composeMasteryRound,
+  validateMasterySessionState,
   type StudyCardResult,
 } from "./studySessionFlow";
 
@@ -198,5 +199,115 @@ describe("studySessionFlow — continuous queue", () => {
       remainingUnseen: ["new-2"],
       reviewSource: ["retry-1", "retry-2"],
     });
+  });
+});
+
+describe("mastery invariants", () => {
+  it("caps custom round sizes at the safety limit", () => {
+    const state = createMasterySession(ids(30), { roundSize: 100 });
+
+    expect(state.roundSize).toBe(15);
+    expect(state.currentRoundIds).toHaveLength(15);
+    expect(validateMasterySessionState(state, new Set(ids(30))).valid).toBe(true);
+  });
+
+  it("ignores an answer for a card that is not currently active", () => {
+    const state = createMasterySession(ids(2));
+
+    expect(recordResult(state, "not-current", "correct")).toBe(state);
+    expect(state.currentRoundIndex).toBe(0);
+    expect(state.currentRoundResults).toEqual({});
+  });
+
+  it("does not repeat cards after a fully correct 30-card journey", () => {
+    const state = createMasterySession(ids(30));
+    playRound(state, () => "correct");
+    startNextRound(state);
+
+    expect(state.currentRoundIds).toEqual(ids(15).map((_, index) => `c${index + 16}`));
+    playRound(state, () => "correct");
+
+    expect(isSessionFinished(state)).toBe(true);
+    expect(state.masteredIds).toHaveLength(30);
+    expect(state.currentRoundIds).not.toContain("c1");
+    expect(validateMasterySessionState(state, new Set(ids(30))).valid).toBe(true);
+  });
+
+  it("does not create an empty round when the final partial round is mastered", () => {
+    const state = createMasterySession(ids(19));
+    playRound(state, () => "correct");
+    startNextRound(state);
+    expect(state.currentRoundIds).toEqual(["c16", "c17", "c18", "c19"]);
+
+    playRound(state, () => "correct");
+
+    expect(state.status).toBe("journey-complete");
+    expect(state.currentRoundIds).toHaveLength(4);
+    expect(state.masteredIds).toHaveLength(19);
+    expect(validateMasterySessionState(state, new Set(ids(19))).valid).toBe(true);
+  });
+
+  it("keeps failed cards pending until a later correct answer", () => {
+    const state = createMasterySession(ids(15));
+    playRound(state, () => "incorrect");
+
+    expect(state.status).toBe("round-complete");
+    expect(state.masteredIds).toEqual([]);
+    expect(validateMasterySessionState(state, new Set(ids(15))).valid).toBe(true);
+
+    startNextRound(state);
+    expect(state.currentRoundIds).toEqual(ids(15));
+    expect(state.retryIds).toEqual([]);
+    playRound(state, () => "correct");
+    expect(state.status).toBe("journey-complete");
+  });
+
+  it("preserves invariants through deterministic long sequences", () => {
+    for (const total of [1, 8, 15, 16, 30, 100]) {
+      const eligible = ids(total);
+      const state = createMasterySession(eligible);
+      const attempts = new Map<string, number>();
+      let steps = 0;
+
+      while (!isSessionFinished(state) && steps < 2_000) {
+        expect(validateMasterySessionState(state, new Set(eligible)).valid).toBe(true);
+
+        if (state.status === "round-complete") {
+          startNextRound(state);
+          steps += 1;
+          continue;
+        }
+
+        const id = getCurrentCardId(state);
+        expect(id).not.toBeNull();
+        if (!id) break;
+        const attempt = attempts.get(id) ?? 0;
+        attempts.set(id, attempt + 1);
+        const shouldMissOnce = Number(id.slice(1)) % 3 === 0 && attempt === 0;
+        recordResult(state, id, shouldMissOnce ? "incorrect" : "correct");
+        steps += 1;
+      }
+
+      expect(steps).toBeLessThan(2_000);
+      expect(state.status).toBe("journey-complete");
+      expect(validateMasterySessionState(state, new Set(eligible)).valid).toBe(true);
+    }
+  });
+
+  it("rejects duplicate or overlapping queue state", () => {
+    const state = createMasterySession(ids(20));
+    const corrupted = {
+      ...state,
+      unseenIds: [...state.unseenIds, state.unseenIds[0]],
+      retryIds: [state.unseenIds[0]],
+    };
+
+    const validation = validateMasterySessionState(corrupted, new Set(ids(20)));
+
+    expect(validation.valid).toBe(false);
+    expect(validation.issues).toEqual(expect.arrayContaining([
+      "unseenIds contains duplicate IDs",
+      "unseenIds overlaps retryIds",
+    ]));
   });
 });

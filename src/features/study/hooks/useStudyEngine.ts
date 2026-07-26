@@ -1710,7 +1710,7 @@ export function useStudyEngine(
     masteryStatus: masterySession?.status ?? null,
     masteryRoundSummary: masterySummary,
     masteryTotalEligible: masterySession?.totalEligible ?? flashcards.length,
-    masteryMasteredCount: masterySession?.masteredIds.length ?? 0,
+    masteryMasteredCount: masterySession ? new Set(masterySession.masteredIds).size : 0,
     // Manual session completion export
     completeSession,
     // Scope helpers — used by Study.tsx to switch scopes without resetting
