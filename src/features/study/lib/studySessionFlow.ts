@@ -1,5 +1,7 @@
+import { consumeMasteryRepeatNextRound } from "./masteryRepeatRequest";
+
 /**
- * Study session flow engine — pure, deterministic core shared by Write and Mixed modes.
+ * Study session flow engine — deterministic core shared by Write and Mixed modes.
  *
  * Two formats:
  *  - "mastery_rounds": rounds of up to MASTERY_ROUND_SIZE distinct cards. Incorrect,
@@ -239,8 +241,15 @@ export function recordResult(
   if (!currentCardId || currentCardId !== cardId) return state;
   if (state.currentRoundResults[cardId]) return state;
 
+  // The feedback UI stores a very short-lived request immediately before the
+  // normal correct action. Consuming it here keeps every study mode on the same
+  // answer path while the mastery state still receives an explicit result.
+  const resolvedResult: StudyCardResult = result === "correct" && consumeMasteryRepeatNextRound()
+    ? "correct-repeat"
+    : result;
+
   state.attemptsByCard[cardId] = (state.attemptsByCard[cardId] ?? 0) + 1;
-  state.currentRoundResults[cardId] = result;
+  state.currentRoundResults[cardId] = resolvedResult;
 
   // A submitted answer is authoritative for the card's queue membership. This
   // also repairs a stale/corrupt snapshot that left the current card in a
@@ -248,10 +257,10 @@ export function recordResult(
   removeId(state.unseenIds, cardId);
   removeId(state.retryIds, cardId);
 
-  if (isCorrectResult(result)) {
+  if (isCorrectResult(resolvedResult)) {
     if (!state.correctThisRoundIds.includes(cardId)) state.correctThisRoundIds.push(cardId);
 
-    if (result === "correct") {
+    if (resolvedResult === "correct") {
       if (!state.masteredIds.includes(cardId)) state.masteredIds.push(cardId);
       state.failedThisRoundIds = state.failedThisRoundIds.filter((id) => id !== cardId);
     } else {
