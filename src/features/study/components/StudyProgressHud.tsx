@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BarChart3, ChevronDown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -6,6 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { StudyProgressMetrics } from "@/features/study/lib/studyProgressMetrics";
+import { setMasteryRepeatEnabled } from "@/features/study/lib/masteryRepeatRequest";
 import { cn } from "@/lib/utils";
 
 type StudyProgressHudProps = {
@@ -56,6 +58,14 @@ export function StudyProgressHud({
 }: StudyProgressHudProps) {
   const roundedOverallPercent = Math.round(metrics.overallPercent);
   const roundedRoundPercent = Math.round(metrics.roundPercent);
+
+  // The shared feedback panel is used by several game modes. Publishing the
+  // current flow from the HUD keeps the optional repeat button strictly scoped
+  // to Rodadas de Domínio without threading another prop through every view.
+  useEffect(() => {
+    setMasteryRepeatEnabled(isMasteryMode);
+    return () => setMasteryRepeatEnabled(false);
+  }, [isMasteryMode]);
 
   return (
     <div

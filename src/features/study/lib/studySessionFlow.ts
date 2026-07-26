@@ -1,10 +1,13 @@
+import { consumeMasteryRepeatNextRound } from "./masteryRepeatRequest";
+
 /**
- * Study session flow engine — pure, deterministic core shared by Write and Mixed modes.
+ * Study session flow engine — deterministic core shared by Write and Mixed modes.
  *
  * Two formats:
  *  - "mastery_rounds": rounds of up to MASTERY_ROUND_SIZE distinct cards. Incorrect,
- *    skipped and revealed cards return in later rounds until they are answered
- *    correctly. A card cannot appear twice within the same round.
+ *    skipped, revealed and voluntarily repeated cards return in later rounds until
+ *    they are answered correctly without another repeat request. A card cannot
+ *    appear twice within the same round.
  *  - "continuous": every eligible card is presented exactly once; results do not
  *    reinsert cards.
  *
@@ -16,7 +19,12 @@ export const MASTERY_ROUND_SIZE = 15;
 
 export type StudyFlowMode = "mastery_rounds" | "continuous";
 
-export type StudyCardResult = "correct" | "incorrect" | "skipped" | "revealed";
+export type StudyCardResult =
+  | "correct"
+  | "correct-repeat"
+  | "incorrect"
+  | "skipped"
+  | "revealed";
 export type MasterySessionStatus = "active" | "round-complete" | "journey-complete";
 
 export interface MasterySessionState {
@@ -35,7 +43,7 @@ export interface MasterySessionState {
   mistakesByCard: Record<string, number>;
   /** IDs answered correctly at least once during the current round. */
   correctThisRoundIds: string[];
-  /** IDs that failed (incorrect/skipped/revealed) during the current round. */
+  /** IDs that must return: incorrect/skipped/revealed or voluntarily repeated. */
   failedThisRoundIds: string[];
   /** Cards that came from retryIds when this round was composed. */
   reviewSourceThisRound: string[];
@@ -49,6 +57,7 @@ export interface RoundSummary {
   correctFirstTry: number;
   correctCards: number;
   recoveredCards: number;
+  requestedRepeatCards: number;
   incorrectCards: number;
   skippedCards: number;
   revealedCards: number;
@@ -207,6 +216,17 @@ function removeId(ids: string[], id: string): void {
   }
 }
 
+function isCorrectResult(result: StudyCardResult | undefined): boolean {
+  return result === "correct" || result === "correct-repeat";
+}
+
+function mustReturnNextRound(result: StudyCardResult | undefined): boolean {
+  return result === "correct-repeat"
+    || result === "incorrect"
+    || result === "skipped"
+    || result === "revealed";
+}
+
 /**
  * Record the result for the current card and advance the pointer.
  * Returns the updated state (same reference, mutated).
@@ -221,8 +241,15 @@ export function recordResult(
   if (!currentCardId || currentCardId !== cardId) return state;
   if (state.currentRoundResults[cardId]) return state;
 
+  // The feedback UI stores a very short-lived request immediately before the
+  // normal correct action. Consuming it here keeps every study mode on the same
+  // answer path while the mastery state still receives an explicit result.
+  const resolvedResult: StudyCardResult = result === "correct" && consumeMasteryRepeatNextRound()
+    ? "correct-repeat"
+    : result;
+
   state.attemptsByCard[cardId] = (state.attemptsByCard[cardId] ?? 0) + 1;
-  state.currentRoundResults[cardId] = result;
+  state.currentRoundResults[cardId] = resolvedResult;
 
   // A submitted answer is authoritative for the card's queue membership. This
   // also repairs a stale/corrupt snapshot that left the current card in a
@@ -230,12 +257,18 @@ export function recordResult(
   removeId(state.unseenIds, cardId);
   removeId(state.retryIds, cardId);
 
-  if (result === "correct") {
+  if (isCorrectResult(resolvedResult)) {
     if (!state.correctThisRoundIds.includes(cardId)) state.correctThisRoundIds.push(cardId);
-    // If this card was queued for retry from earlier rounds it is now mastered.
-    if (!state.masteredIds.includes(cardId)) state.masteredIds.push(cardId);
-    // Drop from failed list in case of retry within round (not used today but defensive).
-    state.failedThisRoundIds = state.failedThisRoundIds.filter((id) => id !== cardId);
+
+    if (resolvedResult === "correct") {
+      if (!state.masteredIds.includes(cardId)) state.masteredIds.push(cardId);
+      state.failedThisRoundIds = state.failedThisRoundIds.filter((id) => id !== cardId);
+    } else {
+      // It was correct, but the learner explicitly asked to confirm it once
+      // more. It counts as a round success without becoming mastered yet.
+      removeId(state.masteredIds, cardId);
+      if (!state.failedThisRoundIds.includes(cardId)) state.failedThisRoundIds.push(cardId);
+    }
   } else {
     removeId(state.masteredIds, cardId);
     removeId(state.correctThisRoundIds, cardId);
@@ -359,7 +392,7 @@ export function validateMasterySessionState(
   const currentResults = state.currentRoundResults;
   for (const [id, result] of Object.entries(currentResults)) {
     if (!currentSet.has(id)) addValidationIssue(issues, "currentRoundResults contains a non-current card");
-    if (!(["correct", "incorrect", "skipped", "revealed"] as StudyCardResult[]).includes(result)) {
+    if (!(["correct", "correct-repeat", "incorrect", "skipped", "revealed"] as StudyCardResult[]).includes(result)) {
       addValidationIssue(issues, "currentRoundResults contains an invalid result");
     }
   }
@@ -369,14 +402,14 @@ export function validateMasterySessionState(
     }
   }
   for (const id of state.correctThisRoundIds) {
-    if (!currentSet.has(id) || currentResults[id] !== "correct") {
+    if (!currentSet.has(id) || !isCorrectResult(currentResults[id])) {
       addValidationIssue(issues, "correctThisRoundIds disagrees with current results");
     }
   }
   for (const id of state.failedThisRoundIds) {
     const unresolvedAtRoundEnd = !currentResults[id]
       && state.currentRoundIndex === state.currentRoundIds.length;
-    if (!currentSet.has(id) || currentResults[id] === "correct" || (!currentResults[id] && !unresolvedAtRoundEnd)) {
+    if (!currentSet.has(id) || (!mustReturnNextRound(currentResults[id]) && !unresolvedAtRoundEnd)) {
       addValidationIssue(issues, "failedThisRoundIds disagrees with current results");
     }
   }
@@ -416,8 +449,12 @@ export function validateMasterySessionState(
 export function summarizeCurrentRound(state: MasterySessionState): RoundSummary {
   const entries = Object.entries(state.currentRoundResults);
   const cardsPlayed = entries.length;
-  const correctIds = entries.filter(([, result]) => result === "correct").map(([id]) => id);
-  const recoveredCards = correctIds.filter((id) => state.reviewSourceThisRound.includes(id)).length;
+  const correctIds = entries.filter(([, result]) => isCorrectResult(result)).map(([id]) => id);
+  const masteredThisRoundIds = entries
+    .filter(([, result]) => result === "correct")
+    .map(([id]) => id);
+  const recoveredCards = masteredThisRoundIds.filter((id) => state.reviewSourceThisRound.includes(id)).length;
+  const requestedRepeatCards = entries.filter(([, result]) => result === "correct-repeat").length;
   const correctCards = correctIds.length;
   const correctFirstTry = correctCards - recoveredCards;
   const incorrectCards = entries.filter(([, result]) => result === "incorrect").length;
@@ -430,6 +467,7 @@ export function summarizeCurrentRound(state: MasterySessionState): RoundSummary 
     correctFirstTry: Math.max(0, correctFirstTry),
     correctCards,
     recoveredCards,
+    requestedRepeatCards,
     incorrectCards,
     skippedCards,
     revealedCards,
@@ -441,8 +479,8 @@ export function summarizeCurrentRound(state: MasterySessionState): RoundSummary 
 
 /**
  * Advance from a finished round to the next round.
- * Merges this round's failures into retryIds, drops any card that was later
- * mastered, then composes the next round.
+ * Merges this round's failures and requested repetitions into retryIds, drops
+ * any card that was later mastered, then composes the next round.
  */
 export function startNextRound(state: MasterySessionState): MasterySessionState {
   if (state.status !== "round-complete") return state;
@@ -450,7 +488,8 @@ export function startNextRound(state: MasterySessionState): MasterySessionState 
     return state;
   }
 
-  // Merge failures into retry queue, preserving order and skipping any mastered cards.
+  // Merge pending cards into the retry queue, preserving order and skipping
+  // anything that has already been mastered.
   const mergedRetrySet = new Set<string>();
   const mergedRetry: string[] = [];
   const pushRetry = (id: string) => {

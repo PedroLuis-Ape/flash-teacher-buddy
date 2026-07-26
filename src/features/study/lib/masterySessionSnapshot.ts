@@ -31,8 +31,23 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
 function isResultRecord(value: unknown): value is Record<string, StudyCardResult> {
   if (!value || typeof value !== "object") return false;
   return Object.values(value as Record<string, unknown>).every((result) =>
-    result === "correct" || result === "incorrect" || result === "skipped" || result === "revealed"
+    result === "correct"
+    || result === "correct-repeat"
+    || result === "incorrect"
+    || result === "skipped"
+    || result === "revealed"
   );
+}
+
+function isCorrectResult(result: StudyCardResult | undefined): boolean {
+  return result === "correct" || result === "correct-repeat";
+}
+
+function mustReturnNextRound(result: StudyCardResult | undefined): boolean {
+  return result === "correct-repeat"
+    || result === "incorrect"
+    || result === "skipped"
+    || result === "revealed";
 }
 
 export function sanitizeMasterySnapshot(
@@ -77,7 +92,7 @@ export function sanitizeMasterySnapshot(
   // unseen/retry queues. That made a recovered card look permanently pending
   // and could offer endless next rounds. Repair the queues into disjoint sets.
   // A current card is allowed to remain in masteredIds only when this snapshot
-  // proves it was answered correctly in the current round.
+  // proves it was answered correctly without a manual repeat request.
   const masteredIds = dedupeIds([
     ...filterIds(row.masteredIds),
     ...currentRoundIds.filter((id) => currentRoundResults[id] === "correct"),
@@ -99,14 +114,11 @@ export function sanitizeMasterySnapshot(
     : [];
   const failedThisRoundIds = dedupeIds([
     ...filterIds(row.failedThisRoundIds),
-    ...currentRoundIds.filter((id) => {
-      const result = currentRoundResults[id];
-      return result === "incorrect" || result === "skipped" || result === "revealed";
-    }),
+    ...currentRoundIds.filter((id) => mustReturnNextRound(currentRoundResults[id])),
     ...unresolvedCurrentIds,
   ]).filter((id) => currentRoundSet.has(id) && !masteredSet.has(id));
   const correctThisRoundIds = currentRoundIds.filter(
-    (id) => currentRoundResults[id] === "correct",
+    (id) => isCorrectResult(currentRoundResults[id]),
   );
 
   const union = new Set<string>([
