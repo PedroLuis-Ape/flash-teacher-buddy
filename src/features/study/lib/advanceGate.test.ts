@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   decideAdvance,
@@ -76,5 +77,14 @@ describe("advanceGate.decideAdvance", () => {
     expect(skipDialogCopyFor("continuous").cancelLabel).toBe("Voltar e responder");
     expect(skipDialogCopyFor("mastery_rounds").knownLabel).toBe("Eu sabia");
     expect(skipDialogCopyFor("mastery_rounds").unknownLabel).toBe("Eu não sabia");
+  });
+
+  it("uses green for known and red for unknown classification", () => {
+    const dialog = readFileSync("src/features/study/components/SkipCardConfirmDialog.tsx", "utf8");
+    const knownButton = dialog.match(/onClick=\{\(\) => handleClassify\("known"\)[\s\S]*?<\/button>/)?.[0];
+    const unknownButton = dialog.match(/onClick=\{\(\) => handleClassify\("unknown"\)[\s\S]*?<\/button>/)?.[0];
+
+    expect(knownButton).toContain("bg-emerald-600");
+    expect(unknownButton).toContain("bg-destructive");
   });
 });
