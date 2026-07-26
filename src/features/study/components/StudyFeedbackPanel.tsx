@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, Pencil, Volume2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Pencil, RotateCcw, Volume2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { playNext } from "@/lib/sfx";
+import {
+  requestMasteryRepeatNextRound,
+  useMasteryRepeatEnabled,
+} from "@/features/study/lib/masteryRepeatRequest";
 import pitecoHappy from "@/assets/piteco-happy.png";
 import pitecoSad from "@/assets/piteco-sad.png";
 
@@ -99,10 +103,19 @@ export function StudyFeedbackPanel({
   const config = STATUS_CONFIG[status];
   const StatusIcon = config.icon;
   const showAnswers = Boolean(userAnswer || correctAnswer);
+  const masteryRepeatEnabled = useMasteryRepeatEnabled();
+  const canRequestRepeat = masteryRepeatEnabled
+    && (status === "correct" || status === "almost")
+    && Boolean(actionLabel && onAction);
 
   const handleAction = () => {
     playNext();
     onAction?.();
+  };
+
+  const handleRepeatNextRound = () => {
+    if (!requestMasteryRepeatNextRound()) return;
+    handleAction();
   };
 
   return (
@@ -229,7 +242,7 @@ export function StudyFeedbackPanel({
         )}
 
         {actionLabel && onAction && (
-          <div className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             {secondaryActionLabel && onSecondaryAction && (
               <Button
                 type="button"
@@ -242,6 +255,19 @@ export function StudyFeedbackPanel({
                 {secondaryActionLabel}
               </Button>
             )}
+            {canRequestRepeat && (
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={handleRepeatNextRound}
+                className="h-11 w-full gap-2 rounded-xl border-amber-500/40 font-semibold text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:w-auto"
+                title="Acertou, mas quer confirmar este card mais uma vez"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Repetir na próxima
+              </Button>
+            )}
             <Button
               type="button"
               size="lg"
@@ -252,7 +278,7 @@ export function StudyFeedbackPanel({
               <ArrowRight className="h-4 w-4" />
             </Button>
             {actionHint && (
-              <p className="text-center text-[10px] leading-tight text-muted-foreground sm:text-right" aria-live="polite">
+              <p className="w-full text-center text-[10px] leading-tight text-muted-foreground sm:text-right" aria-live="polite">
                 {actionHint}
               </p>
             )}
