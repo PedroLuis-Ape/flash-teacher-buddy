@@ -2433,30 +2433,102 @@ export type Database = {
         Row: {
           ativo: boolean
           id: string
+          initiated_by: string | null
           joined_at: string
           role: Database["public"]["Enums"]["turma_role"]
+          invited_at: string | null
+          requested_at: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
           turma_id: string
+          updated_at: string
           user_id: string
         }
         Insert: {
           ativo?: boolean
           id?: string
+          initiated_by?: string | null
           joined_at?: string
           role?: Database["public"]["Enums"]["turma_role"]
+          invited_at?: string | null
+          requested_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
           turma_id: string
+          updated_at?: string
           user_id: string
         }
         Update: {
           ativo?: boolean
           id?: string
+          initiated_by?: string | null
           joined_at?: string
           role?: Database["public"]["Enums"]["turma_role"]
+          invited_at?: string | null
+          requested_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
           turma_id?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "turma_membros_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turma_membership_events: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          from_status: string | null
+          id: string
+          membership_id: string | null
+          to_status: string
+          turma_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          membership_id?: string | null
+          to_status: string
+          turma_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          membership_id?: string | null
+          to_status?: string
+          turma_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turma_membership_events_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "turma_membros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_membership_events_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "turmas"
@@ -3530,12 +3602,42 @@ export type Database = {
         Args: { _days?: number; _turma_id: string }
         Returns: Json
       }
+      get_turma_access_v1: {
+        Args: { p_turma_id: string }
+        Returns: {
+          is_public: boolean
+          membership_status: string
+          nome: string
+          owner_teacher_id: string
+          turma_id: string
+        }[]
+      }
+      list_my_turma_memberships_v1: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          descricao: string | null
+          is_public: boolean
+          membership_id: string
+          nome: string
+          status: string
+          turma_id: string
+          updated_at: string
+        }[]
+      }
+      add_students_to_turma_by_public_id_v1: {
+        Args: { p_public_ids: string[]; p_turma_id: string }
+        Returns: Json
+      }
       get_user_card_counts: {
         Args: { _institution_id?: string; _user_id: string }
         Returns: {
           card_count: number
           list_id: string
         }[]
+      }
+      add_students_to_turma_v1: {
+        Args: { p_student_ids: string[]; p_turma_id: string }
+        Returns: Json
       }
       global_import_json_has_forbidden_key: {
         Args: { _value: Json }
@@ -3644,6 +3746,35 @@ export type Database = {
       is_turma_owner: {
         Args: { _turma_id: string; _user_id: string }
         Returns: boolean
+      }
+      search_turma_people_v1: {
+        Args: {
+          p_kind: string
+          p_limit?: number
+          p_offset?: number
+          p_query?: string
+          p_turma_id?: string
+        }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          is_teacher: boolean
+          membership_status: string
+          public_id: string
+          username: string
+        }[]
+      }
+      transition_turma_membership_public_v1: {
+        Args: { p_action: string; p_target_public_id: string; p_turma_id: string }
+        Returns: Json
+      }
+      transition_turma_membership_v1: {
+        Args: {
+          p_action: string
+          p_target_user_id?: string
+          p_turma_id: string
+        }
+        Returns: Json
       }
       merge_cards_into_layers: {
         Args: { _card_ids: string[]; _list_id: string; _title: string }

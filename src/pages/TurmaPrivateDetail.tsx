@@ -17,13 +17,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useUpdateTurma, useDeleteTurma, useEnrollAluno, useRemoveTurmaMember } from '@/features/classroom/hooks/useTurmas';
+import { useUpdateTurma, useDeleteTurma } from '@/features/classroom/hooks/useTurmas';
+import { useSearchTurmaPeople, useTransitionTurmaMembership } from '@/features/classroom/hooks/useClassroomMembership';
 import { useCreateAnnouncement } from '@/hooks/useAnnouncements';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
 import { TurmaActivityPanel } from '@/features/classroom/components/TurmaActivityPanel';
 import { ClassGoalsTab } from '@/components/ClassGoalsTab';
+import { isActiveMembership, isPendingMembership } from '@/features/classroom/lib/membershipState';
 
 export default function TurmaDetail() {
   const { turmaId } = useParams<{ turmaId: string }>();
@@ -47,6 +50,7 @@ export default function TurmaDetail() {
   
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [enrollApeId, setEnrollApeId] = useState('');
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
 
   const [atribDialogOpen, setAtribDialogOpen] = useState(false);
   const [atribTitulo, setAtribTitulo] = useState('');
@@ -76,11 +80,11 @@ export default function TurmaDetail() {
   
   const updateTurma = useUpdateTurma();
   const deleteTurma = useDeleteTurma();
-  const enrollAluno = useEnrollAluno();
   const createAtribuicao = useCreateAtribuicao();
   const deleteAtribuicao = useDeleteAtribuicao();
   const updateAtribuicao = useUpdateAtribuicao();
-  const removeMember = useRemoveTurmaMember();
+  const membershipTransition = useTransitionTurmaMembership();
+  const { userId } = useAuthUser();
   const createAnnouncement = useCreateAnnouncement();
   const reorderAtribuicao = useReorderAtribuicao();
 
@@ -137,14 +141,6 @@ export default function TurmaDetail() {
 
   const { data: atribuicoesData } = useAtribuicoesByTurma(turmaId || null);
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['current-user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
-
   // Buscar pastas e listas compartilhadas do professor
   const { data: fontesData } = useQuery({
     queryKey: ['fontes-atribuicao', turmaData?.turma?.owner_teacher_id],
@@ -175,32 +171,11 @@ export default function TurmaDetail() {
     enabled: !!turmaData?.turma?.owner_teacher_id,
   });
 
-  // Buscar alunos inscritos no professor
-  const { data: meusAlunosData } = useQuery({
-    queryKey: ['meus-alunos-inscritos', currentUser?.id, turmaId, turmaData?.turma?.turma_membros],
-    queryFn: async () => {
-      if (!currentUser?.id || !turmaData?.turma) return [];
-
-      const { data: subscriptions } = await supabase
-        .from('subscriptions')
-        .select('student_id')
-        .eq('teacher_id', currentUser.id);
-
-      if (!subscriptions || subscriptions.length === 0) return [];
-
-      const studentIds = subscriptions.map(s => s.student_id);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, first_name, ape_id, avatar_skin_id')
-        .in('id', studentIds)
-        .order('first_name', { ascending: true });
-
-      // Filtrar alunos que já estão na turma
-      const membros = turmaData.turma.turma_membros || [];
-      const alunosNaTurma = new Set(membros.map((m: any) => m.user_id));
-      return (profiles || []).filter(p => !alunosNaTurma.has(p.id));
-    },
-    enabled: !!currentUser?.id && !!turmaData?.isOwner && !!turmaId,
+  const memberSearch = useSearchTurmaPeople({
+    kind: 'student',
+    turmaId,
+    query: memberSearchQuery,
+    enabled: Boolean(turmaData?.isOwner),
   });
 
   if (turmaLoading) {
@@ -229,6 +204,8 @@ export default function TurmaDetail() {
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
   const membros = turma.turma_membros || [];
+  const activeMembros = membros.filter((member: any) => isActiveMembership(member.status, member.ativo));
+  const pendingMembros = membros.filter((member: any) => isPendingMembership(member.status));
 
   const handleMoveAtrib = async (atribId: string, direction: 'up' | 'down') => {
     const idx = atribuicoes.findIndex((a: any) => a.id === atribId);
@@ -323,9 +300,10 @@ export default function TurmaDetail() {
     }
 
     try {
-      await enrollAluno.mutateAsync({
-        turma_id: turmaId,
-        ape_id: idToUse,
+      await membershipTransition.mutateAsync({
+        turmaId,
+        action: 'add_direct',
+        targetPublicId: idToUse,
       });
       toast.success('✅ Aluno matriculado!');
       setEnrollDialogOpen(false);
@@ -595,7 +573,7 @@ export default function TurmaDetail() {
               <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <UsersIcon className="h-4 w-4" />
-                  Este aviso será enviado para <strong>todos os {membros.length} alunos</strong> da turma.
+                  Este aviso será enviado para <strong>todos os {activeMembros.length} alunos</strong> da turma.
                 </p>
               </div>
             ) : (
@@ -603,10 +581,10 @@ export default function TurmaDetail() {
                 {/* Student selection */}
                 <div>
                   <Label className="mb-2 block">Selecionar Alunos *</Label>
-                  {membros.length > 0 ? (
+                  {activeMembros.length > 0 ? (
                     <ScrollArea className="h-[150px] border rounded-lg p-2">
                       <div className="space-y-1">
-                        {membros.map((membro: any) => {
+                        {activeMembros.map((membro: any) => {
                           const profile = membro.profiles;
                           const isSelected = selectedStudentIds.includes(membro.user_id);
                           return (
@@ -771,64 +749,69 @@ export default function TurmaDetail() {
             <DialogTitle>Adicionar Aluno</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Lista de alunos inscritos */}
-            {meusAlunosData && meusAlunosData.length > 0 && (
-              <div>
-                <Label className="mb-2 block">Meus Alunos Inscritos</Label>
-                <ScrollArea className="h-[200px] border rounded-lg p-2">
+            <div>
+              <Label htmlFor="member-search">Pesquisar aluno nesta turma</Label>
+              <Input
+                id="member-search"
+                value={memberSearchQuery}
+                onChange={(event) => setMemberSearchQuery(event.target.value)}
+                placeholder="Nome ou APE ID (mínimo de 2 caracteres)"
+                maxLength={80}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                A busca é limitada a alunos autorizados e só retorna dados mínimos.
+              </p>
+              {memberSearchQuery.trim().length >= 2 && memberSearch.isLoading && (
+                <p className="mt-2 text-sm text-muted-foreground">Pesquisando alunos...</p>
+              )}
+              {memberSearch.isError && (
+                <p className="mt-2 text-sm text-destructive">
+                  Não foi possível pesquisar alunos agora. Tente novamente.
+                </p>
+              )}
+              {memberSearchQuery.trim().length >= 2 && !memberSearch.isLoading && !memberSearch.isError && (
+                <ScrollArea className="mt-2 max-h-[200px] border rounded-lg p-2">
                   <div className="space-y-1">
-                    {meusAlunosData.map((aluno: any) => (
-                      <div
-                        key={aluno.id}
-                        className="flex items-center justify-between p-3 rounded hover:bg-muted cursor-pointer transition-colors"
-                        onClick={() => handleEnrollAluno(aluno.ape_id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-lg font-semibold text-primary">
-                              {aluno.first_name?.[0] || '?'}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium">{aluno.first_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              APE: {aluno.ape_id}
-                            </p>
-                          </div>
+                    {(memberSearch.data || []).map((person) => (
+                      <div key={person.public_id} className="flex items-center justify-between gap-3 rounded p-3 hover:bg-muted">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{person.display_name || person.username || person.public_id}</p>
+                          <p className="text-xs text-muted-foreground">APE: {person.public_id}</p>
+                          {person.membership_status && person.membership_status !== 'removed' && (
+                            <p className="text-xs text-muted-foreground">Status: {person.membership_status}</p>
+                          )}
                         </div>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEnrollAluno(aluno.ape_id);
-                          }}
+                          disabled={membershipTransition.isPending || person.membership_status === 'active' || person.membership_status === 'invited'}
+                          onClick={() => membershipTransition.mutateAsync({
+                            turmaId: turmaId!,
+                            action: 'invite',
+                            targetPublicId: person.public_id,
+                          }).then(() => toast.success('Convite enviado.')).catch((error: any) => toast.error(error.message || 'Não foi possível enviar o convite.'))}
                         >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Adicionar
+                          {person.membership_status === 'active' ? 'Já está na turma' : person.membership_status === 'invited' ? 'Convite pendente' : 'Convidar'}
                         </Button>
                       </div>
                     ))}
+                    {(memberSearch.data || []).length === 0 && (
+                      <p className="p-3 text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+                    )}
                   </div>
                 </ScrollArea>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Separador */}
-            {meusAlunosData && meusAlunosData.length > 0 && (
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Ou digite o APE ID
-                  </span>
-                </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
               </div>
-            )}
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Ou digite o APE ID</span>
+              </div>
+            </div>
 
-            {/* Input manual */}
             <div>
               <Label htmlFor="enroll-ape-id">APE ID do Aluno</Label>
               <Input
@@ -848,8 +831,8 @@ export default function TurmaDetail() {
             <Button variant="outline" onClick={() => setEnrollDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => handleEnrollAluno()} disabled={enrollAluno.isPending || !enrollApeId.trim()}>
-              {enrollAluno.isPending ? 'Adicionando...' : 'Adicionar'}
+            <Button onClick={() => handleEnrollAluno()} disabled={membershipTransition.isPending || !enrollApeId.trim()}>
+              {membershipTransition.isPending ? 'Adicionando...' : 'Adicionar'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1136,7 +1119,7 @@ export default function TurmaDetail() {
           </TabsContent>
 
           <TabsContent value="metas" className="mt-4">
-            <ClassGoalsTab turmaId={turmaId || ''} isOwner={isOwner} membros={membros} />
+            <ClassGoalsTab turmaId={turmaId || ''} isOwner={isOwner} membros={activeMembros} />
           </TabsContent>
 
           <TabsContent value="avisos" className="mt-4">
@@ -1146,7 +1129,7 @@ export default function TurmaDetail() {
           <TabsContent value="pessoas" className="space-y-4 mt-4">
             {/* Activity Panel - Only for owner */}
             {isOwner && turmaId && (
-              <TurmaActivityPanel turmaId={turmaId} membros={membros} />
+              <TurmaActivityPanel turmaId={turmaId} membros={activeMembros} />
             )}
 
             {isOwner && (
@@ -1155,13 +1138,43 @@ export default function TurmaDetail() {
                 Adicionar Aluno
               </Button>
             )}
+            {isOwner && pendingMembros.length > 0 && (
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3">Solicitações e convites pendentes ({pendingMembros.length})</h3>
+                <div className="space-y-2">
+                  {pendingMembros.map((membro: any) => {
+                    const isRequest = membro.status === 'requested';
+                    const displayName = membro.profiles?.first_name || membro.profiles?.ape_id || 'Aluno';
+                    return (
+                      <div key={membro.id} className="flex flex-col gap-3 rounded border p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-medium">{displayName}</p>
+                          <p className="text-xs text-muted-foreground">APE ID: {membro.profiles?.ape_id || 'N/A'}</p>
+                          <Badge variant="outline" className="mt-1">{isRequest ? 'Solicitou entrada' : 'Convite enviado'}</Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {isRequest ? (
+                            <>
+                              <Button size="sm" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'approve_request', targetUserId: membro.user_id }).then(() => toast.success('Solicitação aprovada.')).catch((error: any) => toast.error(error.message || 'Não foi possível aprovar a solicitação.'))}>Aprovar</Button>
+                              <Button size="sm" variant="outline" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'reject_request', targetUserId: membro.user_id }).then(() => toast.success('Solicitação recusada.')).catch((error: any) => toast.error(error.message || 'Não foi possível recusar a solicitação.'))}>Recusar</Button>
+                            </>
+                          ) : (
+                            <Button size="sm" variant="outline" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'cancel_invite', targetUserId: membro.user_id }).then(() => toast.success('Convite cancelado.')).catch((error: any) => toast.error(error.message || 'Não foi possível cancelar o convite.'))}>Cancelar convite</Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
             <Card className="p-4">
-              <h3 className="font-semibold mb-3">Membros ({membros.length})</h3>
+              <h3 className="font-semibold mb-3">Membros ativos ({activeMembros.length})</h3>
               <div className="space-y-2">
-                {membros.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">Nenhum membro ainda.</p>
+                {activeMembros.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Nenhum membro ativo ainda.</p>
                 ) : (
-                  membros.map((membro: any) => (
+                  activeMembros.map((membro: any) => (
                     <div key={membro.id} className="flex items-center justify-between p-2 rounded hover:bg-muted">
                       <div>
                         <p className="font-medium">{membro.profiles?.first_name || 'Sem nome'}</p>
@@ -1204,21 +1217,14 @@ export default function TurmaDetail() {
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction 
                                   onClick={async () => {
-                                    // OPTIMISTIC UPDATE: Remove from UI immediately
-                                    const previousMembros = turma.turma_membros;
-                                    turma.turma_membros = turma.turma_membros.filter(
-                                      (m: any) => m.user_id !== membro.user_id
-                                    );
-                                    
                                     try {
-                                      await removeMember.mutateAsync({
-                                        turma_id: turmaId!,
-                                        user_id: membro.user_id
+                                      await membershipTransition.mutateAsync({
+                                        turmaId: turmaId!,
+                                        action: 'remove_member',
+                                        targetUserId: membro.user_id,
                                       });
                                       toast.success('✅ Aluno removido!');
                                     } catch (error) {
-                                      // Rollback on error
-                                      turma.turma_membros = previousMembros;
                                       toast.error('❌ Erro ao remover aluno');
                                     }
                                   }}
@@ -1229,6 +1235,19 @@ export default function TurmaDetail() {
                             </AlertDialogContent>
                           </AlertDialog>
                           </>
+                        )}
+                        {!isOwner && membro.user_id === userId && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={membershipTransition.isPending}
+                            onClick={() => membershipTransition.mutateAsync({
+                              turmaId: turmaId!,
+                              action: 'leave',
+                            }).then(() => toast.success('Você saiu da turma.')).catch((error: any) => toast.error(error.message || 'Não foi possível sair da turma.'))}
+                          >
+                            Sair
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -1242,7 +1261,7 @@ export default function TurmaDetail() {
             <DMList 
               turmaId={turmaId || ''} 
               isOwner={isOwner} 
-              membros={membros}
+              membros={activeMembros}
               teacherId={turma.owner_teacher_id}
               teacherName={turmaData?.teacherName || 'Professor'}
               autoOpenRecipientId={senderFromUrl || undefined}

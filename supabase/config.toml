@@ -72,3 +72,15 @@ verify_jwt = true
 
 [functions.turmas-remove-member]
 verify_jwt = true
+
+[functions.turma-membership-transition]
+verify_jwt = true
+
+[functions.professor-students-add-to-class]
+verify_jwt = true
+
+[functions.professor-students-assign]
+verify_jwt = true
+
+[functions.professor-students-overview]
+verify_jwt = true

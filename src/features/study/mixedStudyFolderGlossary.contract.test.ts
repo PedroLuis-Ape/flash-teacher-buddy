@@ -37,12 +37,13 @@ describe("folder glossary consistency across audit and games", () => {
   });
 
   it("resolves missing hints from the current private or portal list", () => {
-    expect(resolver).toContain("useListGlossary(listId)");
-    expect(resolver).toContain("(?:portal\\/)?list");
-    expect(resolver).toContain('input.front,\n      "A"');
-    expect(resolver).toContain('input.back,\n      "B"');
-    expect(resolver).toContain("input.mergedHintsA ?? computedA");
-    expect(resolver).toContain("input.mergedHintsB ?? computedB");
+    const normalizedResolver = resolver.replace(/\r\n/g, "\n");
+    expect(normalizedResolver).toContain("useListGlossary(listId)");
+    expect(normalizedResolver).toContain("(?:portal\\/)?list");
+    expect(normalizedResolver).toContain('input.front,\n      "A"');
+    expect(normalizedResolver).toContain('input.back,\n      "B"');
+    expect(normalizedResolver).toContain("input.mergedHintsA ?? computedA");
+    expect(normalizedResolver).toContain("input.mergedHintsB ?? computedB");
   });
 
   it("does not accept a partially loaded glossary as complete", () => {

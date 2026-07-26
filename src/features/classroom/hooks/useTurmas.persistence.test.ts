@@ -20,7 +20,7 @@ describe('turma public visibility persistence', () => {
   });
 
   it('updates the cached teacher classroom list with the persisted row', () => {
-    expect(updateSource).toContain("queryClient.setQueryData(['turmas', 'mine']");
+    expect(updateSource).toContain("queryClient.setQueriesData({ queryKey: ['turmas', 'mine'] }");
     expect(updateSource).toContain('item.id === turma.id');
     expect(updateSource).toContain("queryKey: ['public-teacher-turmas']");
   });

@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 export default function TurmasProfessor() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data, isLoading } = useTurmasMine();
+  const { data, isLoading, isError, refetch } = useTurmasMine();
   const createTurma = useCreateTurma();
   const enrollAluno = useEnrollAluno();
   const updateTurma = useUpdateTurma();
@@ -139,6 +139,17 @@ export default function TurmasProfessor() {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <Card className="w-full max-w-md space-y-4 p-6 text-center">
+          <p className="text-sm text-destructive">Não foi possível carregar suas turmas agora.</p>
+          <Button onClick={() => void refetch()}>Tentar novamente</Button>
+        </Card>
       </div>
     );
   }

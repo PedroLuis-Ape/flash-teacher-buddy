@@ -4,10 +4,13 @@ import { FEATURE_FLAGS } from '@/lib/featureFlags';
 import { getFreshSession } from '@/lib/freshSession';
 import { readTurmaCreateFunctionError } from '@/features/classroom/lib/turmaCreateErrors';
 import { readTurmaUpdateFunctionError } from '@/features/classroom/lib/turmaUpdateErrors';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 export function useTurmasMine() {
+  const { userId, isLoading: authLoading } = useAuthUser();
+
   return useQuery({
-    queryKey: ['turmas', 'mine'],
+    queryKey: ['turmas', 'mine', userId],
     queryFn: async () => {
       if (!FEATURE_FLAGS.classes_enabled) return { turmas: [] };
       const session = await getFreshSession();
@@ -21,18 +24,19 @@ export function useTurmasMine() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('[useTurmasMine] read failed; keeping the rest of the app available', error);
-        return { turmas: [] };
+        throw error;
       }
       return { turmas: data ?? [] };
     },
-    enabled: FEATURE_FLAGS.classes_enabled,
+    enabled: FEATURE_FLAGS.classes_enabled && !authLoading && !!userId,
   });
 }
 
 export function useTurmasAsAluno() {
+  const { userId, isLoading: authLoading } = useAuthUser();
+
   return useQuery({
-    queryKey: ['turmas', 'as-aluno'],
+    queryKey: ['turmas', 'as-aluno', userId],
     queryFn: async () => {
       if (!FEATURE_FLAGS.classes_enabled) return { turmas: [] };
       const session = await getFreshSession();
@@ -45,8 +49,7 @@ export function useTurmasAsAluno() {
         .eq('ativo', true);
 
       if (membershipsError) {
-        console.error('[useTurmasAsAluno] membership read failed; keeping the rest of the app available', membershipsError);
-        return { turmas: [] };
+        throw membershipsError;
       }
       const turmaIds = Array.from(new Set((memberships ?? []).map((item) => item.turma_id)));
       if (turmaIds.length === 0) return { turmas: [] };
@@ -59,12 +62,11 @@ export function useTurmasAsAluno() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('[useTurmasAsAluno] class read failed; keeping the rest of the app available', error);
-        return { turmas: [] };
+        throw error;
       }
       return { turmas: data ?? [] };
     },
-    enabled: FEATURE_FLAGS.classes_enabled,
+    enabled: FEATURE_FLAGS.classes_enabled && !authLoading && !!userId,
   });
 }
 
@@ -151,7 +153,7 @@ export function useUpdateTurma() {
       return { turma: updated };
     },
     onSuccess: ({ turma }) => {
-      queryClient.setQueryData(['turmas', 'mine'], (current: any) => {
+      queryClient.setQueriesData({ queryKey: ['turmas', 'mine'] }, (current: any) => {
         if (!current?.turmas || !turma?.id) return current;
         return {
           ...current,
@@ -220,7 +222,7 @@ export function useReorderPublicTurmas() {
     },
     onSuccess: (_data, variables) => {
       const positionById = new Map(variables.ordered_ids.map((id, index) => [id, index + 1]));
-      queryClient.setQueryData(['turmas', 'mine'], (current: any) => {
+      queryClient.setQueriesData({ queryKey: ['turmas', 'mine'] }, (current: any) => {
         if (!current?.turmas) return current;
         return {
           ...current,

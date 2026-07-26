@@ -9,6 +9,10 @@ const STRICT_FUNCTIONS = [
   "turmas-update",
   "turmas-delete",
   "turmas-remove-member",
+  "turma-membership-transition",
+  "professor-students-add-to-class",
+  "professor-students-assign",
+  "professor-students-overview",
 ] as const;
 const GUARDED_GATEWAY_EXCEPTIONS = ["turmas-mine", "turmas-as-aluno"] as const;
 

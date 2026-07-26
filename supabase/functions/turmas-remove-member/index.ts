@@ -57,22 +57,20 @@ serve(async (req) => {
       return json({ error: "Não é possível remover o professor da turma" }, 400);
     }
 
-    const { data: removed, error: removeError } = await client
-      .from("turma_membros")
-      .delete()
-      .eq("turma_id", turmaId)
-      .eq("user_id", targetUserId)
-      .eq("ativo", true)
-      .select("id")
-      .maybeSingle();
+    const { data: result, error: removeError } = await client.rpc(
+      "transition_turma_membership_v1",
+      {
+        p_turma_id: turmaId,
+        p_action: "remove_member",
+        p_target_user_id: targetUserId,
+      },
+    );
 
     if (removeError) {
       console.error("Error removing member:", removeError);
       return json({ error: "Erro ao remover membro" }, 500);
     }
-    if (!removed) return json({ error: "Membro ativo não encontrado nesta turma" }, 404);
-
-    return json({ success: true }, 200);
+    return json({ success: true, membership: result }, 200);
   } catch (error) {
     console.error("Unexpected member removal error:", error);
     return json({ error: "Requisição inválida" }, 400);

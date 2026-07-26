@@ -43,32 +43,23 @@ serve(async (req) => {
       );
     }
 
-    // 3. Security Check: Verify Relationship using Admin Client
-    // We check if the requester (teacher) has a subscription to this student
-    const { data: subscription } = await supabaseAdmin
-      .from('subscriptions')
-      .select('id')
-      .eq('teacher_id', user.id)
-      .eq('student_id', aluno_id)
-      .maybeSingle();
+    // 3. Security Check: only an active member of a teacher-owned turma
+    // grants the teacher access. Legacy subscriptions are not classroom
+    // membership and must not authorize private student analytics.
+    const { data: commonClass } = await supabaseAdmin
+      .from('turma_membros')
+      .select('turma_id, turmas!inner(owner_teacher_id)')
+      .eq('user_id', aluno_id)
+      .eq('ativo', true)
+      .eq('turmas.owner_teacher_id', user.id)
+      .limit(1);
 
-    // Also check if they share a class where the user is the owner (Owner Access)
-    let isOwner = false;
-    if (!subscription) {
-      const { data: commonClass } = await supabaseAdmin
-        .from('turma_membros')
-        .select('turma_id, turmas!inner(owner_teacher_id)')
-        .eq('user_id', aluno_id)
-        .eq('turmas.owner_teacher_id', user.id)
-        .limit(1);
-
-      if (commonClass && commonClass.length > 0) isOwner = true;
-    }
+    const isOwner = Boolean(commonClass && commonClass.length > 0);
 
     const isSelf = user.id === aluno_id;
 
     // If not Teacher, not Owner, and not Self -> Block access
-    if (!subscription && !isOwner && !isSelf) {
+    if (!isOwner && !isSelf) {
       console.log(`[professor-students-overview] Access denied: user ${user.id} trying to access ${aluno_id}`);
       return new Response(
         JSON.stringify({ error: 'Permission denied: You are not authorized to view this student data' }),
@@ -111,7 +102,7 @@ serve(async (req) => {
       hasProfile: !!studentProfile,
       dailyActivityCount: dailyActivity?.length || 0,
       sessionsCount: recentSessions?.length || 0,
-      accessBy: subscription ? 'subscription' : isOwner ? 'class_owner' : 'self'
+      accessBy: isOwner ? 'class_owner' : 'self'
     });
 
     return new Response(
