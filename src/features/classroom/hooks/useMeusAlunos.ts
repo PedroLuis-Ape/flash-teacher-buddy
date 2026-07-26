@@ -2,63 +2,37 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FEATURE_FLAGS } from '@/lib/featureFlags';
 
-export function useStudentsList(q?: string) {
+export function useStudentsList(q?: string, turmaId?: string) {
+  const normalizedQuery = (q ?? '').trim().replace(/\s+/g, ' ');
   return useQuery({
-    queryKey: ['professor-students', q],
+    queryKey: ['professor-students', turmaId ?? null, normalizedQuery],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
-
-      // Buscar inscrições onde o usuário atual é o professor
-      const { data: subs, error: subsError } = await supabase
-        .from('subscriptions')
-        .select('student_id, created_at')
-        .eq('teacher_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (subsError) throw subsError;
-      if (!subs || subs.length === 0) {
+      if (!turmaId || normalizedQuery.length < 2) {
         return { students: [], nextCursor: null, hasMore: false };
       }
 
-      const studentIds = subs.map((s: any) => s.student_id).filter(Boolean);
-      if (studentIds.length === 0) {
-        return { students: [], nextCursor: null, hasMore: false };
-      }
+      const { data, error } = await supabase.rpc('search_turma_people_v1', {
+        p_kind: 'student',
+        p_turma_id: turmaId,
+        p_query: normalizedQuery,
+        p_limit: 20,
+        p_offset: 0,
+      });
+      if (error) throw error;
 
-      const { data: profiles, error: profError } = await supabase
-        .from('profiles')
-        .select('id, first_name, ape_id, avatar_skin_id, last_active_at')
-        .in('id', studentIds);
-
-      if (profError) throw profError;
-
-      const profilesById: Record<string, any> = {};
-      (profiles || []).forEach((p: any) => { profilesById[p.id] = p; });
-
-      let students = subs.map((sub: any) => ({
-        aluno_id: sub.student_id,
-        nome: profilesById[sub.student_id]?.first_name || 'Sem nome',
-        ape_id: profilesById[sub.student_id]?.ape_id || '',
-        avatar_skin_id: profilesById[sub.student_id]?.avatar_skin_id,
-        last_active_at: profilesById[sub.student_id]?.last_active_at,
-        desde_em: sub.created_at,
-        status: 'ativo',
-        origem: 'follow',
+      const students = (data ?? []).map((person) => ({
+        // The UI uses the public identifier; the gateway resolves it server-side.
+        aluno_id: person.public_id,
+        nome: person.display_name,
+        ape_id: person.public_id,
+        avatar_url: person.avatar_url,
+        status: person.membership_status ?? 'disponível',
+        origem: 'classroom-directory',
       }));
-
-      if (q && q.trim()) {
-        const qLower = q.toLowerCase();
-        students = students.filter((s: any) =>
-          (s.nome || '').toLowerCase().includes(qLower) ||
-          (s.ape_id || '').toLowerCase().includes(qLower)
-        );
-      }
 
       return { students, nextCursor: null, hasMore: false };
     },
-    enabled: FEATURE_FLAGS.meus_alunos_enabled,
+    enabled: FEATURE_FLAGS.meus_alunos_enabled && Boolean(turmaId) && normalizedQuery.length >= 2,
   });
 }
 

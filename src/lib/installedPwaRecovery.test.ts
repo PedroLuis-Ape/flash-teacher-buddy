@@ -53,10 +53,10 @@ describe("installed PWA recovery", () => {
   });
 
   it("serves the app shell, manifest and reset workers without persistent caching", () => {
-    expect(headers).toMatch(/\/\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
-    expect(headers).toMatch(/\/manifest\.webmanifest\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
-    expect(headers).toMatch(/\/sw\.js\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
-    expect(headers).toMatch(/\/service-worker\.js\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
+    expect(headers).toMatch(/\/\r?\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
+    expect(headers).toMatch(/\/manifest\.webmanifest\r?\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
+    expect(headers).toMatch(/\/sw\.js\r?\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
+    expect(headers).toMatch(/\/service-worker\.js\r?\n\s+Cache-Control: no-cache, no-store, must-revalidate/);
   });
 
   it("runs a cleanup cycle while keeping the backend that contains existing accounts", () => {

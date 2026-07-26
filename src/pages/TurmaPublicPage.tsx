@@ -18,6 +18,7 @@ import {
   sortAssignmentsByOrder,
 } from '@/features/classroom/lib/assignmentOrder';
 import { buildPublicTurmaSearchParams } from '@/features/classroom/lib/turmaAccess';
+import { useTurmaMembership, useTransitionTurmaMembership } from '@/features/classroom/hooks/useClassroomMembership';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -135,6 +136,8 @@ export default function TurmaPublicPage() {
   const guest = !user;
   const selectedAssignmentId = searchParams.get('atribuicao');
   const publicPreview = searchParams.get('publicPreview') === 'true';
+  const membershipQuery = useTurmaMembership(turmaId);
+  const membershipMutation = useTransitionTurmaMembership();
 
   const updatePublicSearchParams = (assignmentId?: string) => {
     setSearchParams(buildPublicTurmaSearchParams({ publicPreview, assignmentId }));
@@ -194,6 +197,38 @@ export default function TurmaPublicPage() {
   }
 
   const { turma, atribuicoes } = turmaQuery.data;
+  const membershipStatus = membershipQuery.data?.status ?? null;
+  const showMembershipAction = Boolean(user && !publicPreview && !membershipQuery.isError && membershipStatus !== 'active');
+  const membershipAction = membershipStatus === 'invited'
+    ? 'accept_invite'
+    : membershipStatus === 'requested'
+      ? 'cancel_request'
+      : 'request_join';
+  const membershipActionLabel = membershipStatus === 'invited'
+    ? 'Aceitar convite'
+    : membershipStatus === 'requested'
+      ? 'Cancelar solicitação'
+      : 'Solicitar entrada';
+
+  const handleMembershipAction = async () => {
+    if (!turmaId) return;
+    try {
+      await membershipMutation.mutateAsync({ turmaId, action: membershipAction });
+    } catch (error: any) {
+      // The server remains the source of truth; the button simply exposes the
+      // confirmed error without silently changing the public view.
+      console.error('[TurmaPublicPage] membership transition failed', error);
+    }
+  };
+
+  const handleRejectInvite = async () => {
+    if (!turmaId) return;
+    try {
+      await membershipMutation.mutateAsync({ turmaId, action: 'reject_invite' });
+    } catch (error) {
+      console.error('[TurmaPublicPage] invite rejection failed', error);
+    }
+  };
   const selected = selectedAssignmentId ? assignmentQuery.data : null;
   const selectedPosition = selectedAssignmentId
     ? atribuicoes.findIndex((assignment) => assignment.id === selectedAssignmentId)
@@ -275,6 +310,40 @@ export default function TurmaPublicPage() {
           </div>
         </div>
       </header>
+
+      {showMembershipAction && (
+        <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-4">
+          <Card className="border-primary/20 bg-card/95 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold">
+                  {membershipStatus === 'requested' ? 'Solicitação pendente' : membershipStatus === 'invited' ? 'Você recebeu um convite' : 'Quer acompanhar esta turma?'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {membershipStatus === 'requested'
+                    ? 'O professor ainda precisa aprovar sua entrada.'
+                    : membershipStatus === 'invited'
+                      ? 'Aceite o convite para liberar o acesso privado e as atividades da turma.'
+                      : 'A solicitação será enviada ao professor sem liberar conteúdo privado antes da aprovação.'}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button onClick={() => void handleMembershipAction()} disabled={membershipMutation.isPending}>
+                  {membershipMutation.isPending ? 'Processando...' : membershipActionLabel}
+                </Button>
+                {membershipStatus === 'invited' && (
+                  <Button variant="outline" onClick={() => void handleRejectInvite()} disabled={membershipMutation.isPending}>
+                    Recusar convite
+                  </Button>
+                )}
+              </div>
+            </div>
+            {membershipMutation.isError && (
+              <p className="mt-2 text-sm text-destructive">Não foi possível atualizar seu vínculo. Tente novamente.</p>
+            )}
+          </Card>
+        </div>
+      )}
 
       <main className="mx-auto max-w-6xl space-y-4 px-3 py-3 sm:px-4 sm:py-4">
         {!selected ? (

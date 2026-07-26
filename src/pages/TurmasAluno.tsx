@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTurmasAsAluno } from '@/features/classroom/hooks/useTurmas';
+import { useMyPendingTurmaMemberships, useTransitionTurmaMembership } from '@/features/classroom/hooks/useClassroomMembership';
 import { useAtribuicoesMinhas } from '@/features/classroom/hooks/useAtribuicoes';
 import { markPendingClassGlossaryContext } from '@/features/classroom/lib/classGlossary';
 
 export default function TurmasAluno() {
   const navigate = useNavigate();
-  const { data: turmasData, isLoading: turmasLoading } = useTurmasAsAluno();
-  const { data: atribuicoesData, isLoading: atribuicoesLoading } = useAtribuicoesMinhas();
+  const { data: turmasData, isLoading: turmasLoading, isError: turmasError, refetch: refetchTurmas } = useTurmasAsAluno();
+  const { data: atribuicoesData, isLoading: atribuicoesLoading, isError: atribuicoesError } = useAtribuicoesMinhas();
+  const pendingMemberships = useMyPendingTurmaMemberships();
+  const membershipTransition = useTransitionTurmaMembership();
   const atribuicoes = useMemo(() => {
     const raw = atribuicoesData?.atribuicoes || [];
     return [...raw].sort((a: any, b: any) => {
@@ -25,6 +28,17 @@ export default function TurmasAluno() {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  if (turmasError || atribuicoesError) {
+    return (
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <Card className="w-full max-w-md space-y-4 p-6 text-center">
+          <p className="text-sm text-destructive">Não foi possível carregar suas turmas agora.</p>
+          <Button onClick={() => void refetchTurmas()}>Tentar novamente</Button>
+        </Card>
       </div>
     );
   }
@@ -76,6 +90,53 @@ export default function TurmasAluno() {
         </div>
 
         <div className="space-y-4">
+          {(pendingMemberships.data?.length ?? 0) > 0 && (
+            <Card className="space-y-3 border-primary/20 p-4">
+              <div>
+                <h2 className="font-semibold">Solicitações e convites</h2>
+                <p className="text-sm text-muted-foreground">Acompanhe vínculos que ainda aguardam aprovação ou aceitação.</p>
+              </div>
+              {pendingMemberships.data?.map((membership) => (
+                <div key={membership.membership_id} className="flex flex-col gap-3 rounded border p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">{membership.nome}</p>
+                    <p className="text-xs text-muted-foreground">{membership.status === 'invited' ? 'Convite recebido' : 'Solicitação pendente'}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {membership.status === 'invited' ? (
+                      <>
+                        <Button
+                          size="sm"
+                          disabled={membershipTransition.isPending}
+                          onClick={() => void membershipTransition.mutateAsync({ turmaId: membership.turma_id, action: 'accept_invite' })}
+                        >
+                          Aceitar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={membershipTransition.isPending}
+                          onClick={() => void membershipTransition.mutateAsync({ turmaId: membership.turma_id, action: 'reject_invite' })}
+                        >
+                          Recusar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={membershipTransition.isPending}
+                        onClick={() => void membershipTransition.mutateAsync({ turmaId: membership.turma_id, action: 'cancel_request' })}
+                      >
+                        Cancelar solicitação
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => navigate(`/turmas/${membership.turma_id}`)}>Abrir</Button>
+                  </div>
+                </div>
+              ))}
+            </Card>
+          )}
           <h2 className="text-lg font-semibold">Turmas Matriculadas</h2>
           {turmas.length === 0 ? (
             <Card className="p-8 text-center">
