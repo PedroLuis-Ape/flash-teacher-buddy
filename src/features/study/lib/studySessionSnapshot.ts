@@ -1,3 +1,5 @@
+import { setMasteryRepeatEnabled } from "./masteryRepeatRequest";
+
 export interface PersistedStudyResult {
   flashcardId: string;
   correct: boolean;
@@ -221,6 +223,10 @@ export function readStudySnapshot(
 }
 
 export function writeStudySnapshot(key: string, snapshot: StudySessionSnapshot): void {
+  // The generic snapshot is written in every study flow. Mastery writes its
+  // dedicated snapshot immediately afterwards, which re-enables the optional
+  // repeat action. Continuous sessions stop here and therefore keep it hidden.
+  setMasteryRepeatEnabled(false);
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(key, JSON.stringify(snapshot));
@@ -230,6 +236,7 @@ export function writeStudySnapshot(key: string, snapshot: StudySessionSnapshot):
 }
 
 export function clearStudySnapshot(key: string): void {
+  setMasteryRepeatEnabled(false);
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(key);
