@@ -8,6 +8,7 @@ import { hashToBool, normalizeDirection, type Direction } from "@/features/study
 import { scoreCard, type CardProgressLike } from "@/features/study/lib/intelligenceScoring";
 import { useAdaptiveMixedSession } from "@/features/study/hooks/useAdaptiveMixedSession";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
+import { SkipCardConfirmDialog } from "@/features/study/components/SkipCardConfirmDialog";
 import {
   STUDY_RECOVERY_WATCHDOG_MS,
   STUDY_REMOTE_RESTORE_TIMEOUT_MS,
@@ -69,6 +70,9 @@ export default function MixedStudy() {
   const [remoteState, setRemoteState] = useState<unknown>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
   const [studySessionId, setStudySessionId] = useState<string | null>(null);
+  const [showSkipDialog, setShowSkipDialog] = useState(false);
+  const skipCardKeyRef = useRef<string | null>(null);
+  const answeredCardKeyRef = useRef<string | null>(null);
   const studySessionIdRef = useRef<string | null>(null);
   const sessionCreationRef = useRef<Promise<string | null> | null>(null);
   useEffect(() => {
@@ -261,26 +265,32 @@ export default function MixedStudy() {
 
     const existingSessionId = studySessionIdRef.current;
     if (existingSessionId) {
+      const controller = new AbortController();
       await withStudyRuntimeTimeout(
         (supabase as any)
           .from("study_sessions")
           .update(payload)
-          .eq("id", existingSessionId),
+          .eq("id", existingSessionId)
+          .abortSignal(controller.signal),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         "mixed-session-persist",
+        () => controller.abort(),
       ).catch(() => undefined);
       return;
     }
 
     if (!sessionCreationRef.current) {
+      const controller = new AbortController();
       sessionCreationRef.current = withStudyRuntimeTimeout(
         (supabase as any)
           .from("study_sessions")
           .insert(payload)
           .select("id")
+          .abortSignal(controller.signal)
           .single(),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         "mixed-session-create",
+        () => controller.abort(),
       ).then(({ data }) => data?.id ?? null)
         .catch(() => null)
         .finally(() => {
@@ -304,6 +314,10 @@ export default function MixedStudy() {
     weightByCardId,
     onPersist: persistRemoteState,
   });
+  const currentAnswerKey = `${mixed.state?.roundNumber ?? 0}:${mixed.state?.currentIndex ?? 0}:${mixed.currentCardId ?? "none"}`;
+  useEffect(() => {
+    answeredCardKeyRef.current = null;
+  }, [currentAnswerKey]);
   const [showRuntimeRecovery, setShowRuntimeRecovery] = useState(false);
   useEffect(() => {
     if (mixed.state || loading || cards.length === 0 || !remoteLoaded) {
@@ -326,37 +340,79 @@ export default function MixedStudy() {
   const recordAttempt = useCallback(async (cardId: string, correct: boolean, skipped: boolean) => {
     if (!userId || !listId || skipped) return;
     const client = supabase as any;
-    const { data: existing } = await client
-      .from("flashcard_progress")
-      .select("id, correct_count, incorrect_count")
-      .eq("user_id", userId)
-      .eq("flashcard_id", cardId)
-      .maybeSingle();
+    const controller = new AbortController();
+    const { data: existing, error: readError } = await withStudyRuntimeTimeout(
+      client
+        .from("flashcard_progress")
+        .select("id, correct_count, incorrect_count")
+        .eq("user_id", userId)
+        .eq("flashcard_id", cardId)
+        .abortSignal(controller.signal)
+        .maybeSingle(),
+      STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+      "mixed-answer-progress-read",
+      () => controller.abort(),
+    );
+    if (readError) throw readError;
 
     if (existing) {
-      await client.from("flashcard_progress").update({
-        correct_count: (existing.correct_count ?? 0) + (correct ? 1 : 0),
-        incorrect_count: (existing.incorrect_count ?? 0) + (correct ? 0 : 1),
-        last_reviewed: new Date().toISOString(),
-        list_id: listId,
-      }).eq("id", existing.id);
+      const { error } = await withStudyRuntimeTimeout(
+        client.from("flashcard_progress").update({
+          correct_count: (existing.correct_count ?? 0) + (correct ? 1 : 0),
+          incorrect_count: (existing.incorrect_count ?? 0) + (correct ? 0 : 1),
+          last_reviewed: new Date().toISOString(),
+          list_id: listId,
+        }).eq("id", existing.id).abortSignal(controller.signal),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "mixed-answer-progress-update",
+        () => controller.abort(),
+      );
+      if (error) throw error;
     } else {
-      await client.from("flashcard_progress").insert({
-        user_id: userId,
-        flashcard_id: cardId,
-        list_id: listId,
-        correct_count: correct ? 1 : 0,
-        incorrect_count: correct ? 0 : 1,
-        last_reviewed: new Date().toISOString(),
-      });
+      const { error } = await withStudyRuntimeTimeout(
+        client.from("flashcard_progress").insert({
+          user_id: userId,
+          flashcard_id: cardId,
+          list_id: listId,
+          correct_count: correct ? 1 : 0,
+          incorrect_count: correct ? 0 : 1,
+          last_reviewed: new Date().toISOString(),
+        }).abortSignal(controller.signal),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "mixed-answer-progress-insert",
+        () => controller.abort(),
+      );
+      if (error) throw error;
     }
   }, [listId, userId]);
 
   const handleAnswer = useCallback((correct: boolean, skipped = false) => {
     if (!mixed.currentCardId) return;
-    void recordAttempt(mixed.currentCardId, correct, skipped);
+    if (answeredCardKeyRef.current === currentAnswerKey) return;
+    answeredCardKeyRef.current = currentAnswerKey;
+    void recordAttempt(mixed.currentCardId, correct, skipped).catch((error) => {
+      console.warn("[MixedStudy] Progresso do card pendente:", error);
+    });
     mixed.answer(correct, skipped);
-  }, [mixed, recordAttempt]);
+  }, [currentAnswerKey, mixed, recordAttempt]);
+
+  const requestSkip = useCallback(() => {
+    if (!mixed.currentCardId || showSkipDialog) return;
+    skipCardKeyRef.current = currentAnswerKey;
+    setShowSkipDialog(true);
+  }, [currentAnswerKey, mixed.currentCardId, showSkipDialog]);
+
+  const classifySkip = useCallback((classification: "known" | "unknown") => {
+    if (!showSkipDialog || skipCardKeyRef.current !== currentAnswerKey) {
+      skipCardKeyRef.current = null;
+      setShowSkipDialog(false);
+      toast.info("O card mudou; nenhum pulo foi registrado.");
+      return;
+    }
+    skipCardKeyRef.current = null;
+    setShowSkipDialog(false);
+    handleAnswer(classification === "known", classification === "unknown");
+  }, [currentAnswerKey, handleAnswer, showSkipDialog]);
 
   const exit = () => {
     if (window.history.state?.idx > 0) {
@@ -516,7 +572,7 @@ export default function MixedStudy() {
     langB: labels.langB,
     onCorrect: () => handleAnswer(true),
     onIncorrect: () => handleAnswer(false),
-    onSkip: () => handleAnswer(false, true),
+    onSkip: requestSkip,
     onRestartRound: restartRoundManually,
     onRestartJourney: restartJourneyManually,
   };
@@ -566,6 +622,7 @@ export default function MixedStudy() {
               langB={labels.langB}
               onCorrect={() => handleAnswer(true)}
               onIncorrect={() => handleAnswer(false)}
+              onSkip={requestSkip}
               onRestartRound={restartRoundManually}
               onRestartJourney={restartJourneyManually}
             />
@@ -574,12 +631,23 @@ export default function MixedStudy() {
           {(mixed.activityMode === "write" || !mixed.activityMode) && (
             <WriteStudyView
               {...sharedProps}
+              onSkip={() => handleAnswer(false, true)}
               acceptedAnswersEn={currentCard.accepted_answers_en}
               acceptedAnswersPt={currentCard.accepted_answers_pt}
             />
           )}
         </div>
       </div>
+      <SkipCardConfirmDialog
+        open={showSkipDialog}
+        flowMode="mastery_rounds"
+        onCancel={() => {
+          skipCardKeyRef.current = null;
+          setShowSkipDialog(false);
+        }}
+        onKnown={() => classifySkip("known")}
+        onUnknown={() => classifySkip("unknown")}
+      />
     </div>
   );
 }

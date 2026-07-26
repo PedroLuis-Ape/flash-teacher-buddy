@@ -53,4 +53,43 @@ describe("sanitizeMasterySnapshot", () => {
     expect(restored?.retryIds).toEqual([]);
     expect(restored?.status).toBe("journey-complete");
   });
+
+  it("removes a stale mastered flag when the current result is a failure", () => {
+    const snapshot = baseSnapshot();
+    snapshot.currentRoundResults.c1 = "incorrect";
+
+    const restored = sanitizeMasterySnapshot(snapshot, new Set(ids(28)));
+
+    expect(restored).not.toBeNull();
+    expect(restored?.masteredIds).not.toContain("c1");
+    expect(restored?.correctThisRoundIds).not.toContain("c1");
+    expect(restored?.failedThisRoundIds).toContain("c1");
+    expect(restored?.status).toBe("round-complete");
+  });
+
+  it("repairs duplicate queue entries while keeping the eligible union intact", () => {
+    const snapshot = baseSnapshot();
+    snapshot.unseenIds = [...snapshot.unseenIds, "c28"];
+    snapshot.masteredIds = snapshot.masteredIds.filter((id) => id !== "c1");
+
+    const restored = sanitizeMasterySnapshot(snapshot, new Set(ids(28)));
+
+    expect(restored).not.toBeNull();
+    expect(new Set(restored?.unseenIds).size).toBe(restored?.unseenIds.length);
+    expect(new Set(restored?.masteredIds).size).toBe(restored?.masteredIds.length);
+    expect(restored?.masteredIds).toContain("c1");
+  });
+
+  it("turns an unanswered completed-round card into pending work", () => {
+    const snapshot = baseSnapshot();
+    delete snapshot.currentRoundResults.c14;
+    snapshot.correctThisRoundIds = snapshot.correctThisRoundIds.filter((id) => id !== "c14");
+
+    const restored = sanitizeMasterySnapshot(snapshot, new Set(ids(28)));
+
+    expect(restored).not.toBeNull();
+    expect(restored?.failedThisRoundIds).toContain("c14");
+    expect(restored?.masteredIds).not.toContain("c14");
+    expect(restored?.status).toBe("round-complete");
+  });
 });

@@ -174,6 +174,8 @@ export function useStudyEngine(
   const authUserIdRef = useRef<string | null>(userScope ?? null);
   const completionInFlightRef = useRef(false);
   const pitecoinWritesRef = useRef<Set<Promise<unknown>>>(new Set());
+  const masteryAnswerGuardRef = useRef<{ session: MasterySessionState; key: string } | null>(null);
+  const masteryRoundStartGuardRef = useRef<MasterySessionState | null>(null);
 
   // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -906,15 +908,23 @@ export function useStudyEngine(
       if (!sessionId || !listId || !authUserIdRef.current) return;
 
       try {
-        await supabase
-          .from('study_sessions')
-          .update({
-            current_index: currentIndex,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', sessionId);
+        const controller = new AbortController();
+        const { error } = await withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .update({
+              current_index: currentIndex,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', sessionId)
+            .abortSignal(controller.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          'debounced-save-progress',
+          () => controller.abort(),
+        );
+        if (error) throw error;
       } catch (error) {
-        console.error('Erro ao salvar progresso:', error);
+        console.warn('[StudyEngine] Salvamento remoto pendente:', error);
       }
     }, 500);
   }, [sessionId, currentIndex, listId]);
@@ -924,21 +934,32 @@ export function useStudyEngine(
     if (progressBufferRef.current.size === 0) return;
     if (!listId) return;
 
-    try {
-      const userId = authUserIdRef.current;
-      if (!userId) return;
+    const userId = authUserIdRef.current;
+    if (!userId) return;
 
-      const entries = Array.from(progressBufferRef.current.entries());
-      progressBufferRef.current.clear();
+    const entries = Array.from(progressBufferRef.current.entries());
+    // Release the buffer for new answers while this batch is in flight. The
+    // entries are requeued below unless the remote write confirms success.
+    progressBufferRef.current.clear();
+
+    try {
       lastFlushRef.current = Date.now();
 
       // Fetch existing progress for all cards in batch
       const flashcardIds = entries.map(([id]) => id);
-      const { data: existingProgress } = await supabase
-        .from('flashcard_progress')
-        .select('id, flashcard_id, correct_count, incorrect_count')
-        .eq('user_id', userId)
-        .in('flashcard_id', flashcardIds);
+      const readController = new AbortController();
+      const { data: existingProgress, error: readError } = await withStudyRuntimeTimeout(
+        supabase
+          .from('flashcard_progress')
+          .select('id, flashcard_id, correct_count, incorrect_count')
+          .eq('user_id', userId)
+          .in('flashcard_id', flashcardIds)
+          .abortSignal(readController.signal),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        'progress-flush-read',
+        () => readController.abort(),
+      );
+      if (readError) throw readError;
 
       const existingMap = new Map(
         (existingProgress || []).map(p => [p.flashcard_id, p])
@@ -973,19 +994,39 @@ export function useStudyEngine(
 
       if (upsertRecords.length > 0) {
         try {
-          const { error } = await supabase
-            .from('flashcard_progress')
-            .upsert(upsertRecords, { onConflict: 'id' });
-          if (error) console.warn('[StudyEngine] Erro no banco durante flush:', error.message);
+          const writeController = new AbortController();
+          const { error } = await withStudyRuntimeTimeout(
+            supabase
+              .from('flashcard_progress')
+              .upsert(upsertRecords, { onConflict: 'id' })
+              .abortSignal(writeController.signal),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            'progress-flush-write',
+            () => writeController.abort(),
+          );
+          if (error) throw error;
         } catch (err) {
-          // Se a internet cair bem aqui, nós seguramos o erro para não quebrar o React
-          console.warn('[StudyEngine] Falha de conexão no flush interceptada:', err);
+          for (const [cardId, entry] of entries) {
+            const current = progressBufferRef.current.get(cardId);
+            if (!current || current.timestamp < entry.timestamp) {
+              progressBufferRef.current.set(cardId, entry);
+            }
+          }
+          console.warn('[StudyEngine] Progresso remoto pendente após falha:', err);
         }
       }
 
       // (inserts already included in upsert above)
     } catch (error) {
-      console.error('Erro ao salvar progresso em batch:', error);
+      // A failed/timeout batch remains pending. Newer entries for the same
+      // card win, so a late failure can never overwrite a newer local answer.
+      for (const [cardId, entry] of entries) {
+        const current = progressBufferRef.current.get(cardId);
+        if (!current || current.timestamp < entry.timestamp) {
+          progressBufferRef.current.set(cardId, entry);
+        }
+      }
+      console.warn('[StudyEngine] Progresso remoto pendente após falha:', error);
     }
   }, [listId]);
 
@@ -1021,6 +1062,13 @@ export function useStudyEngine(
     // Mastery rounds: drive the dedicated flow engine so round boundaries and
     // repetition logic stay centralized in studySessionFlow.ts.
     if (isMasteryMode) {
+      const currentMasteryCardId = masterySession ? getCurrentCardId(masterySession) : null;
+      if (!currentMasteryCardId || currentMasteryCardId !== engineCardId || !masterySession) return;
+      const masteryAnswerKey = `${masterySession.roundNumber}:${masterySession.currentRoundIndex}:${engineCardId}`;
+      const lastAnswer = masteryAnswerGuardRef.current;
+      if (lastAnswer?.session === masterySession && lastAnswer.key === masteryAnswerKey) return;
+      masteryAnswerGuardRef.current = { session: masterySession, key: masteryAnswerKey };
+
       const resultType: StudyCardResult = skipped ? "skipped" : correct ? "correct" : "incorrect";
       setMasterySession((prev) => {
         if (!prev) return prev;
@@ -1121,7 +1169,7 @@ export function useStudyEngine(
       totalCards: cardsOrder.length,
       currentIndex
     });
-  }, [listId, isAuthenticated, sessionId, isMasteryMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
+  }, [listId, isAuthenticated, sessionId, isMasteryMode, masterySession, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
     if (isMasteryMode) {
@@ -1163,19 +1211,27 @@ export function useStudyEngine(
   const startNextRound = useCallback(() => {
     if (isMasteryMode) {
       if (!masterySession || masterySession.status !== "round-complete") return;
+      if (masteryRoundStartGuardRef.current === masterySession) return;
+      masteryRoundStartGuardRef.current = masterySession;
+
+      const sessionAtStart = masterySession;
+      const nextRoundState = startNextMasteryRound({
+        ...sessionAtStart,
+        currentRoundIds: [...sessionAtStart.currentRoundIds],
+        unseenIds: [...sessionAtStart.unseenIds],
+        retryIds: [...sessionAtStart.retryIds],
+        masteredIds: [...sessionAtStart.masteredIds],
+      });
+
       setMasterySession((prev) => {
-        if (!prev || prev.status !== "round-complete") return prev;
-        return startNextMasteryRound({
-          ...prev,
-          currentRoundIds: [...prev.currentRoundIds],
-          unseenIds: [...prev.unseenIds],
-          retryIds: [...prev.retryIds],
-          masteredIds: [...prev.masteredIds],
-        });
+        if (!prev || prev !== sessionAtStart || prev.status !== "round-complete") return prev;
+        return nextRoundState;
       });
       setRoundResults([]);
-      setIsFinished(false);
-      toast.info(`Rodada ${masterySession.roundNumber + 1} iniciada!`);
+      setIsFinished(nextRoundState.status !== "active");
+      if (nextRoundState.status === "active") {
+        toast.info(`Rodada ${nextRoundState.roundNumber} iniciada!`);
+      }
       return;
     }
     if (isGameComplete) {
@@ -1199,6 +1255,10 @@ export function useStudyEngine(
 
     try {
       await flushProgressBuffer();
+      if (progressBufferRef.current.size > 0) {
+        toast.error('O progresso ainda não foi sincronizado. Tente concluir novamente quando a conexão voltar.');
+        return false;
+      }
       const userId = authUserIdRef.current;
 
       if (isAuthenticated && sessionId) {
@@ -1206,8 +1266,27 @@ export function useStudyEngine(
         // session is hidden from the active-session pool. Flush every answer
         // write first so the final card is never lost in a race.
         if (FEATURE_FLAGS.economy_enabled) {
-          await Promise.allSettled(Array.from(pitecoinWritesRef.current));
-          const reward = await settleStudySession(sessionId, true);
+          await withStudyRuntimeTimeout(
+            Promise.allSettled(Array.from(pitecoinWritesRef.current)),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            'answer-writes-before-settlement',
+          ).catch((error) => {
+            console.warn('[StudyEngine] Algumas respostas ainda estão sincronizando:', error);
+          });
+          const reward = await withStudyRuntimeTimeout(
+            settleStudySession(sessionId, true),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            'settle-study-session',
+          ).catch((error) => {
+            console.warn('[StudyEngine] Recompensa pendente; a sessão continuará sendo concluída:', error);
+            return {
+              success: false,
+              ptsAwarded: 0,
+              xpAwarded: 0,
+              pitecoinAwarded: 0,
+              error: 'SETTLEMENT_TIMEOUT',
+            };
+          });
 
           if (reward.success && !reward.alreadyProcessed) {
             const pieces = [
@@ -1230,17 +1309,28 @@ export function useStudyEngine(
 
         // Harmless fallback for environments where the reward RPC only
         // calculates values but does not mark the session itself.
-        const { error: completionError } = await supabase
-          .from('study_sessions')
-          .update({ completed: true, updated_at: new Date().toISOString() })
-          .eq('id', sessionId);
+        const completionController = new AbortController();
+        const { error: completionError } = await withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .update({ completed: true, updated_at: new Date().toISOString() })
+            .eq('id', sessionId)
+            .abortSignal(completionController.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          'complete-study-session',
+          () => completionController.abort(),
+        );
         if (completionError) throw completionError;
 
         if (userId && listId) {
           try {
             const urlParams = new URLSearchParams(window.location.search);
             const fromStepId = urlParams.get('from_step');
-            const result = await updateGoalProgress(userId, sessionId, listId, mode, fromStepId);
+            const result = await withStudyRuntimeTimeout(
+              updateGoalProgress(userId, sessionId, listId, mode, fromStepId),
+              STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+              'update-goal-progress',
+            );
             if (result.updated) {
               if (result.goalCompleted) toast.success("🎯 Meta concluída! Parabéns!");
               else if (result.stepInfo) toast.info(`Meta atualizada: Etapa (${result.stepInfo})`);
@@ -1252,20 +1342,48 @@ export function useStudyEngine(
       }
 
       if (isAuthenticated && listId) {
-        await supabase
-          .from('lists')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', listId);
-        const { data: listData } = await supabase
-          .from('lists')
-          .select('folder_id')
-          .eq('id', listId)
-          .maybeSingle();
-        if (listData?.folder_id) {
-          await supabase
-            .from('folders')
+        try {
+        const listController = new AbortController();
+        await withStudyRuntimeTimeout(
+          supabase
+            .from('lists')
             .update({ updated_at: new Date().toISOString() })
-            .eq('id', listData.folder_id);
+            .eq('id', listId)
+            .abortSignal(listController.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          'touch-study-list',
+          () => listController.abort(),
+        );
+        const listReadController = new AbortController();
+        const { data: listData } = await withStudyRuntimeTimeout(
+          supabase
+            .from('lists')
+            .select('folder_id')
+            .eq('id', listId)
+            .maybeSingle()
+            .abortSignal(listReadController.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          'read-study-folder',
+          () => listReadController.abort(),
+        );
+        if (listData?.folder_id) {
+          const folderController = new AbortController();
+          await withStudyRuntimeTimeout(
+            supabase
+              .from('folders')
+              .update({ updated_at: new Date().toISOString() })
+              .eq('id', listData.folder_id)
+              .abortSignal(folderController.signal),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            'touch-study-folder',
+            () => folderController.abort(),
+          );
+        }
+        } catch (metadataError) {
+          // Folder/list timestamps are secondary metadata. Never turn a
+          // completed study session into a stuck completion screen because
+          // this optional refresh is unavailable.
+          console.warn('[StudyEngine] Metadados da lista não atualizados:', metadataError);
         }
       }
 
@@ -1295,10 +1413,18 @@ export function useStudyEngine(
     setSessionId(null);
     if (!currentSessionId || !isAuthenticated) return;
     try {
-      await supabase
-        .from('study_sessions')
-        .update({ completed: true, updated_at: new Date().toISOString() })
-        .eq('id', currentSessionId);
+      const controller = new AbortController();
+      const { error } = await withStudyRuntimeTimeout(
+        supabase
+          .from('study_sessions')
+          .update({ completed: true, updated_at: new Date().toISOString() })
+          .eq('id', currentSessionId)
+          .abortSignal(controller.signal),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        'discard-study-session',
+        () => controller.abort(),
+      );
+      if (error) throw error;
     } catch (error) {
       console.error('[StudyEngine] Falha ao descartar sessão restaurada:', error);
     }
@@ -1350,23 +1476,38 @@ export function useStudyEngine(
       const userId = authUserIdRef.current;
       if (isAuthenticated && userId && listId) {
         if (previousSessionId) {
-          await supabase
-            .from('study_sessions')
-            .update({ completed: true, updated_at: new Date().toISOString() })
-            .eq('id', previousSessionId);
+          const previousController = new AbortController();
+          const { error: previousError } = await withStudyRuntimeTimeout(
+            supabase
+              .from('study_sessions')
+              .update({ completed: true, updated_at: new Date().toISOString() })
+              .eq('id', previousSessionId)
+              .abortSignal(previousController.signal),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            'restart-close-previous-session',
+            () => previousController.abort(),
+          );
+          if (previousError) throw previousError;
         }
-        const { data: newSession, error } = await supabase
-          .from('study_sessions')
-          .insert({
-            user_id: userId,
-            list_id: listId,
-            mode,
-            current_index: 0,
-            cards_order: cardIds,
-            completed: false,
-          })
-          .select()
-          .single();
+        const createController = new AbortController();
+        const { data: newSession, error } = await withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .insert({
+              user_id: userId,
+              list_id: listId,
+              mode,
+              current_index: 0,
+              cards_order: cardIds,
+              completed: false,
+            })
+            .select()
+            .abortSignal(createController.signal)
+            .single(),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          'restart-create-session',
+          () => createController.abort(),
+        );
         if (error) throw error;
         setSessionId(newSession.id);
       }
@@ -1464,19 +1605,30 @@ export function useStudyEngine(
         timestamp: Date.now(),
       });
     }
+    if (isMasteryMode && masterySession) {
+      writeMasterySnapshot(masterySnapshotKey, masterySession);
+    }
     if (!sessionId || !listId || !authUserIdRef.current) return;
     try {
-      await supabase
-        .from('study_sessions')
-        .update({
-          current_index: currentIndex,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', sessionId);
+      const controller = new AbortController();
+      const { error } = await withStudyRuntimeTimeout(
+        supabase
+          .from('study_sessions')
+          .update({
+            current_index: currentIndex,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', sessionId)
+          .abortSignal(controller.signal),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        'save-progress',
+        () => controller.abort(),
+      );
+      if (error) throw error;
     } catch (error) {
-      console.error('[StudyEngine] saveProgressNow falhou:', error);
+      console.warn('[StudyEngine] saveProgressNow remoto pendente:', error);
     }
-  }, [sessionId, currentIndex, listId, cardsOrder, results, isFinished, studySnapshotKey]);
+  }, [sessionId, currentIndex, listId, cardsOrder, results, isFinished, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey]);
 
   useEffect(() => {
     const flushBeforeLeave = () => { void saveProgressNow(); };
@@ -1493,13 +1645,17 @@ export function useStudyEngine(
 
   // Cleanup: flush progress buffer and turma activity on unmount
   useEffect(() => {
+    const pendingProgress = progressBufferRef.current;
     return () => {
       // Clear scheduled flush
       if (flushProgressTimeoutRef.current) {
         clearTimeout(flushProgressTimeoutRef.current);
       }
+      if (saveProgressTimeoutRef.current) {
+        clearTimeout(saveProgressTimeoutRef.current);
+      }
       // Flush any remaining buffered progress
-      if (progressBufferRef.current.size > 0) {
+      if (pendingProgress.size > 0) {
         flushProgressBuffer();
       }
       // Flush turma activity
@@ -1571,7 +1727,7 @@ export function useStudyEngine(
     masteryStatus: masterySession?.status ?? null,
     masteryRoundSummary: masterySummary,
     masteryTotalEligible: masterySession?.totalEligible ?? flashcards.length,
-    masteryMasteredCount: masterySession?.masteredIds.length ?? 0,
+    masteryMasteredCount: masterySession ? new Set(masterySession.masteredIds).size : 0,
     // Manual session completion export
     completeSession,
     // Scope helpers — used by Study.tsx to switch scopes without resetting

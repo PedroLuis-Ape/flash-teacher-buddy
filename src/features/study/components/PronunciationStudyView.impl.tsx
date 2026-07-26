@@ -34,6 +34,9 @@ interface PronunciationStudyViewProps {
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
   onNext: () => void;
+  onCorrect?: () => void;
+  onIncorrect?: () => void;
+  onSkip?: () => void;
 }
 
 export function PronunciationStudyView({
@@ -53,6 +56,9 @@ export function PronunciationStudyView({
   isSpecial = false,
   onToggleSpecial,
   onNext,
+  onCorrect,
+  onIncorrect,
+  onSkip,
 }: PronunciationStudyViewProps) {
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
@@ -81,7 +87,18 @@ export function PronunciationStudyView({
   const handleNext = () => {
     stopListening();
     stopTTS();
-    onNext();
+    if (!evaluation || !transcript) {
+      onSkip?.();
+      if (!onSkip) onNext();
+      return;
+    }
+    if (evaluation.result === "correct") {
+      onCorrect?.();
+      if (!onCorrect) onNext();
+      return;
+    }
+    onIncorrect?.();
+    if (!onIncorrect) onNext();
   };
 
   useEffect(() => {
@@ -101,7 +118,7 @@ export function PronunciationStudyView({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [shortcuts, onNext]);
+  }, [shortcuts, onNext, onCorrect, onIncorrect, onSkip, evaluation, transcript]);
 
   const handlePlayPronunciation = () => {
     stopTTS();
@@ -140,7 +157,7 @@ export function PronunciationStudyView({
         <p className="mt-2 text-sm text-muted-foreground sm:text-base">
           Este navegador não oferece acesso compatível ao microfone nem reconhecimento de voz.
         </p>
-        <Button onClick={onNext} className="mt-4 sm:mt-6">Pular exercício</Button>
+        <Button onClick={onSkip ?? onNext} className="mt-4 sm:mt-6">Pular exercício</Button>
       </div>
     );
   }

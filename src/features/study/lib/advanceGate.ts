@@ -79,7 +79,8 @@ export interface SkipDialogCopy {
   title: string;
   description: string;
   cancelLabel: string;
-  confirmLabel: string;
+  knownLabel: string;
+  unknownLabel: string;
 }
 
 export function skipDialogCopyFor(flowMode: StudyFlowMode): SkipDialogCopy {
@@ -87,9 +88,10 @@ export function skipDialogCopyFor(flowMode: StudyFlowMode): SkipDialogCopy {
     title: "Você ainda não respondeu este card",
     description:
       flowMode === "continuous"
-        ? "Avançar agora contará como pulo e este card não voltará automaticamente nesta sessão."
-        : "Avançar agora contará como pulo. Nas Rodadas de Domínio, este card voltará em uma próxima rodada.",
+        ? "Confirme o motivo do pulo para que o progresso fique correto. Se você já sabia, o card não será repetido; se não sabia, ele não voltará automaticamente."
+        : "Confirme o motivo do pulo para que o progresso fique correto nas Rodadas de Domínio. Se você não sabia, o card voltará em uma próxima rodada.",
     cancelLabel: "Voltar e responder",
-    confirmLabel: "Pular mesmo assim",
+    knownLabel: "Eu sabia",
+    unknownLabel: "Eu não sabia",
   };
 }

@@ -486,7 +486,8 @@ export const WriteStudyView = ({
         open={advance.dialog.open}
         flowMode={advance.dialog.flowMode}
         onCancel={advance.dialog.cancel}
-        onConfirm={advance.dialog.confirm}
+        onKnown={() => advance.dialog.classify("known")}
+        onUnknown={() => advance.dialog.classify("unknown")}
       />
     </div>
   );
