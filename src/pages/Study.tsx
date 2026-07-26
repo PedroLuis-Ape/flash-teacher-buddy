@@ -44,7 +44,16 @@ import { GameSettingsModal, GameSettings } from "@/features/study/components/Gam
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
+import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
 import { resolveStudyProgressMetrics } from "@/features/study/lib/studyProgressMetrics";
+import {
+  resolveStudyAnswerIdentity,
+  resolveStudySessionReadiness,
+  STUDY_RECOVERY_WATCHDOG_MS,
+  STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+  STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+  withStudyRuntimeTimeout,
+} from "@/features/study/lib/studySessionRuntime";
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
@@ -174,6 +183,10 @@ const Study = () => {
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const loadGenerationRef = useRef(0);
+  const loadAbortRef = useRef<AbortController | null>(null);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [listTitle, setListTitle] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
@@ -187,6 +200,7 @@ const Study = () => {
   // effect below; consumed by handleNext / favorites toggles so they target
   // the visible layer rather than the deck entry-point.
   const displayedCardIdRef = useRef<string | null>(null);
+  const answeredCardKeyRef = useRef<string | null>(null);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
@@ -300,6 +314,7 @@ const Study = () => {
     results,
     isFinished,
     isLoading: studyLoading,
+    initializationState,
     isCompleting,
     isRestarting,
     totalCards,
@@ -318,6 +333,8 @@ const Study = () => {
     isGameComplete,
     startNextRound,
     resetSession,
+    retryInitialization,
+    startFreshSession,
     restartSession,
     gameSettings,
     setGameSettings,
@@ -420,10 +437,21 @@ const Study = () => {
     const isPortalRoute = typeof window !== "undefined"
       && window.location.pathname.startsWith("/portal/");
     const access = resolveStudyAccess({ authStatus, isPortalRoute, userId: authUserId });
-    if (access === "wait") return;
-    loadFlashcards();
+    if (access === "wait") {
+      setLoading(true);
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+        setLoadFailure("auth-timeout");
+      }, STUDY_RECOVERY_WATCHDOG_MS);
+      return () => clearTimeout(timeoutId);
+    }
+    void loadFlashcards();
+    return () => {
+      loadAbortRef.current?.abort();
+      loadGenerationRef.current += 1;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedId, authStatus, authUserId]);
+  }, [resolvedId, authStatus, authUserId, loadAttempt]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -467,7 +495,13 @@ const Study = () => {
   const loadFlashcards = async () => {
     if (!resolvedId) return;
 
+    loadAbortRef.current?.abort();
+    const abortController = new AbortController();
+    loadAbortRef.current = abortController;
+    const generation = ++loadGenerationRef.current;
+    const isCurrent = () => loadGenerationRef.current === generation;
     setLoading(true);
+    setLoadFailure(null);
 
     // isPublicRoute derived from pathname here (no router match available without
     // declaring a route prefix), but isListRoute is the SSOT from useParams above.
@@ -482,7 +516,12 @@ const Study = () => {
     // Offline fallback
     if (!navigator.onLine && isListRoute) {
       try {
-        const offlineData = await getOfflineList(resolvedId);
+        const offlineData = await withStudyRuntimeTimeout(
+          getOfflineList(resolvedId),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          "offline-list",
+        );
+        if (!isCurrent()) return;
         if (offlineData) {
           const grouped = prepareLayeredStudyDeck(offlineData.flashcards as any[]);
           const orderedData = order === "random" ? shuffleArray([...grouped]) : grouped;
@@ -513,11 +552,18 @@ const Study = () => {
     const session = authSession;
 
     if (isListRoute && !session) {
-      const data = await fetchAllSupabaseRows<Flashcard>((from, to) =>
-        (supabase as any)
-          .rpc('get_portal_flashcards', { _list_id: resolvedId })
-          .range(from, to),
+      const data = await withStudyRuntimeTimeout(
+        fetchAllSupabaseRows<Flashcard>((from, to) =>
+          (supabase as any)
+            .rpc('get_portal_flashcards', { _list_id: resolvedId })
+            .abortSignal(abortController.signal)
+            .range(from, to),
+        ),
+        STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+        "portal-cards",
+        () => abortController.abort(),
       );
+      if (!isCurrent()) return;
 
       if (data.length === 0) {
         toast.error("Esta lista não possui flashcards");
@@ -541,9 +587,10 @@ const Study = () => {
         .select("*")
         .eq(queryColumn, resolvedId)
         .is("deleted_at", null)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to),
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .abortSignal(abortController.signal)
+          .range(from, to),
     );
 
     const listPromise = isListRoute
@@ -551,10 +598,17 @@ const Study = () => {
           .from("lists")
           .select("title, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
           .eq("id", resolvedId)
+          .abortSignal(abortController.signal)
           .maybeSingle()
       : Promise.resolve({ data: null });
 
-    const [cardsData, listResult] = await Promise.all([cardsPromise, listPromise]);
+    const cardsData = await withStudyRuntimeTimeout(
+      cardsPromise,
+      STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+      "study-cards",
+      () => abortController.abort(),
+    );
+    if (!isCurrent()) return;
 
     if (cardsData.length === 0) {
       toast.error(isListRoute ? "Esta lista não tem flashcards ainda" : "Esta coleção não tem flashcards ainda");
@@ -583,7 +637,19 @@ const Study = () => {
       }
       return base;
     });
-    
+
+    // Cards are the only required dependency for the first playable render.
+    // Metadata may continue loading within its own bounded window.
+    setFlashcards(orderedData);
+    setLoading(false);
+
+    const listResult = await withStudyRuntimeTimeout(
+      listPromise,
+      STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+      "list-metadata",
+      () => abortController.abort(),
+    ).catch(() => ({ data: null }));
+    if (!isCurrent()) return;
     const listData = listResult.data as any;
 
     if (isListRoute && listData) {
@@ -595,6 +661,7 @@ const Study = () => {
             .from("folders")
             .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
             .eq("id", listData.folder_id)
+            .abortSignal(abortController.signal)
             .maybeSingle()
         : Promise.resolve({ data: null });
 
@@ -606,10 +673,17 @@ const Study = () => {
             .eq("is_published", true)
             .order("order_index", { ascending: true })
             .limit(1)
+            .abortSignal(abortController.signal)
             .maybeSingle()
         : Promise.resolve({ data: null });
 
-      const [folderResult, videoResult] = await Promise.all([folderPromise, videoPromise]);
+      const [folderResult, videoResult] = await withStudyRuntimeTimeout(
+        Promise.all([folderPromise, videoPromise]),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "study-metadata",
+        () => abortController.abort(),
+      ).catch(() => [{ data: null }, { data: null }] as const);
+      if (!isCurrent()) return;
 
       const resolved = resolveEffectiveListSettings(listData, folderResult.data);
       
@@ -631,13 +705,12 @@ const Study = () => {
       }
     }
 
-    // Set flashcards last (triggers engine init)
-    setFlashcards(orderedData);
     } catch (err) {
-      console.error("[Study] Falha ao carregar flashcards:", err);
-      toast.error("Erro ao carregar dados. Verifique sua conexão.");
+      if (!isCurrent()) return;
+      setLoadFailure(err instanceof Error ? err.name : "cards-load-failed");
+      toast.error("Não foi possível carregar os cards. Você pode tentar novamente.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   };
 
@@ -651,13 +724,24 @@ const Study = () => {
   };
 
   const handleNext = (correct: boolean, skipped: boolean = false) => {
-    // For layered cards, progress is recorded against the visible layer's id
-    // (each layer is a real flashcard row). For normal cards the engine's
-    // cardsOrder id is the same as the displayed card.
-    const cardId = displayedCardIdRef.current ?? cardsOrder[currentIndex];
-    if (cardId) {
-      recordResult(cardId, correct, skipped);
-    }
+    const identity = resolveStudyAnswerIdentity(
+      displayedCardIdRef.current,
+      cardsOrder[currentIndex],
+    );
+    if (!identity) return;
+
+    // One answer per rendered queue position. This blocks double Enter/click
+    // without preventing a legitimate repeated card at a later index/round.
+    const answerKey = `${roundNumber}:${currentIndex}:${identity.engineCardId}`;
+    if (answeredCardKeyRef.current === answerKey) return;
+    answeredCardKeyRef.current = answerKey;
+
+    void recordResult(
+      identity.progressCardId,
+      correct,
+      skipped,
+      identity.engineCardId,
+    );
     goToNext();
   };
 
@@ -1135,7 +1219,117 @@ const Study = () => {
     },
   );
 
-  if (loading || studyLoading || (favoritesOnly && favoritesLoading)) {
+  const [favoritesWaitExpired, setFavoritesWaitExpired] = useState(false);
+  useEffect(() => {
+    if (!favoritesOnly || !favoritesLoading) {
+      setFavoritesWaitExpired(false);
+      return;
+    }
+    const timeoutId = setTimeout(
+      () => setFavoritesWaitExpired(true),
+      STUDY_RECOVERY_WATCHDOG_MS,
+    );
+    return () => clearTimeout(timeoutId);
+  }, [favoritesLoading, favoritesOnly]);
+
+  const sessionReadiness = useMemo(() => resolveStudySessionReadiness({
+    pageLoading: loading,
+    engineLoading: studyLoading,
+    auxiliaryLoading: favoritesOnly && favoritesLoading && !favoritesWaitExpired,
+    eligibleCardIds: stableFlashcards.map((card) => card.id),
+    cardsOrder,
+    currentIndex,
+    isFinished,
+    masteryStatus,
+    recoveryFailed: initializationState === "failed",
+  }), [
+    cardsOrder,
+    currentIndex,
+    favoritesLoading,
+    favoritesOnly,
+    favoritesWaitExpired,
+    initializationState,
+    isFinished,
+    loading,
+    masteryStatus,
+    stableFlashcards,
+    studyLoading,
+  ]);
+
+  const [automaticRecoveryAttempted, setAutomaticRecoveryAttempted] = useState(false);
+  const [showSessionRecovery, setShowSessionRecovery] = useState(false);
+  useEffect(() => {
+    if (
+      sessionReadiness.phase === "ready" ||
+      sessionReadiness.phase === "completed" ||
+      sessionReadiness.phase === "empty"
+    ) {
+      if (automaticRecoveryAttempted) setAutomaticRecoveryAttempted(false);
+      if (showSessionRecovery) setShowSessionRecovery(false);
+      return;
+    }
+    if (flashcards.length === 0 || loadFailure) return;
+
+    const timeoutId = setTimeout(() => {
+      if (!automaticRecoveryAttempted) {
+        setAutomaticRecoveryAttempted(true);
+        retryInitialization();
+      } else {
+        setShowSessionRecovery(true);
+      }
+    }, STUDY_RECOVERY_WATCHDOG_MS);
+    return () => clearTimeout(timeoutId);
+  }, [
+    automaticRecoveryAttempted,
+    flashcards.length,
+    loadFailure,
+    retryInitialization,
+    sessionReadiness.phase,
+    showSessionRecovery,
+  ]);
+
+  const handleRecoveryRetry = () => {
+    const shouldReloadCards = Boolean(loadFailure) || flashcards.length === 0;
+    setLoadFailure(null);
+    setShowSessionRecovery(false);
+    setAutomaticRecoveryAttempted(false);
+    if (shouldReloadCards) {
+      setLoadAttempt((attempt) => attempt + 1);
+      return;
+    }
+    retryInitialization();
+  };
+
+  const handleRecoveryFresh = () => {
+    const shouldReloadCards = Boolean(loadFailure) || flashcards.length === 0;
+    setLoadFailure(null);
+    setShowSessionRecovery(false);
+    setAutomaticRecoveryAttempted(false);
+    if (shouldReloadCards) {
+      setLoadAttempt((attempt) => attempt + 1);
+      return;
+    }
+    startFreshSession();
+  };
+
+  if (
+    loadFailure ||
+    showSessionRecovery ||
+    initializationState === "failed" ||
+    sessionReadiness.phase === "failed"
+  ) {
+    return (
+      <StudySessionRecovery
+        onRetry={handleRecoveryRetry}
+        onStartFresh={handleRecoveryFresh}
+        onBack={() => void handleExit()}
+        isRetrying={loading || studyLoading}
+        technicalId={`ST-${sessionReadiness.reason}`}
+      />
+    );
+  }
+
+  if (sessionReadiness.phase === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Carregando...</p>
@@ -1146,7 +1340,7 @@ const Study = () => {
   // Engine still building cardsOrder (window between setFlashcards and engine init).
   // Show a discreet spinner instead of the alarming "Não foi possível iniciar" screen.
   // The real "no cards" case is handled inside loadFlashcards() with a toast + redirect.
-  if (!currentCard && flashcards.length > 0) {
+  if (sessionReadiness.phase === "recovering") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Preparando sua sessão...</p>
@@ -1157,7 +1351,7 @@ const Study = () => {
   // True empty state: no cards at all (e.g. after errors, or favorites filter
   // somehow still produced 0 — shouldn't happen given the fallback, but kept as
   // a last-resort safety net with a recovery action).
-  if (!currentCard) {
+  if (!currentCard && !isFinished) {
     // Friendly empty state when redFocus produces zero cards
     if (redFocusActive) {
       return (

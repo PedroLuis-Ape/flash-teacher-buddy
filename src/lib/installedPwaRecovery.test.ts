@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) =>
+  readFileSync(join(root, path), "utf8").replace(/\r\n?/g, "\n");
 
 const manifest = JSON.parse(read("public/manifest.webmanifest")) as {
   id: string;

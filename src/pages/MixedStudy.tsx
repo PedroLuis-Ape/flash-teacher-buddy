@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Heart, RefreshCcw, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,13 @@ import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
 import { hashToBool, normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { scoreCard, type CardProgressLike } from "@/features/study/lib/intelligenceScoring";
 import { useAdaptiveMixedSession } from "@/features/study/hooks/useAdaptiveMixedSession";
+import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
+import {
+  STUDY_RECOVERY_WATCHDOG_MS,
+  STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+  STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+  withStudyRuntimeTimeout,
+} from "@/features/study/lib/studySessionRuntime";
 import { useAuth } from "@/contexts/AuthContext";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
@@ -55,11 +62,18 @@ export default function MixedStudy() {
 
   const [cards, setCards] = useState<MixedFlashcard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [labels, setLabels] = useState(DEFAULT_LABELS);
   const [weightByCardId, setWeightByCardId] = useState<Record<string, number>>({});
   const [remoteState, setRemoteState] = useState<unknown>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
   const [studySessionId, setStudySessionId] = useState<string | null>(null);
+  const studySessionIdRef = useRef<string | null>(null);
+  const sessionCreationRef = useRef<Promise<string | null> | null>(null);
+  useEffect(() => {
+    studySessionIdRef.current = studySessionId;
+  }, [studySessionId]);
 
   const directionParam = searchParams.get("dir") || searchParams.get("direction") || "any";
   const baseDirection: Direction = normalizeDirection(directionParam);
@@ -73,49 +87,129 @@ export default function MixedStudy() {
 
   useEffect(() => {
     if (!resolvedId) return;
-    if (authStatus === "initializing") return;
+    if (authStatus === "initializing") {
+      setLoading(true);
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+        setLoadFailure("auth-timeout");
+      }, STUDY_RECOVERY_WATCHDOG_MS);
+      return () => clearTimeout(timeoutId);
+    }
 
     let cancelled = false;
+    const abortController = new AbortController();
     const load = async () => {
       setLoading(true);
+      setLoadFailure(null);
+      setRemoteLoaded(false);
       try {
         let rawCards: MixedFlashcard[] = [];
         if (isListRoute && !session) {
-          rawCards = await fetchAllSupabaseRows<MixedFlashcard>((from, to) =>
-            (supabase as any)
-              .rpc("get_portal_flashcards", { _list_id: resolvedId })
-              .range(from, to),
+          rawCards = await withStudyRuntimeTimeout(
+            fetchAllSupabaseRows<MixedFlashcard>((from, to) =>
+              (supabase as any)
+                .rpc("get_portal_flashcards", { _list_id: resolvedId })
+                .abortSignal(abortController.signal)
+                .range(from, to),
+            ),
+            STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+            "mixed-portal-cards",
+            () => abortController.abort(),
           );
         } else {
           const queryColumn = isListRoute ? "list_id" : "collection_id";
-          rawCards = await fetchAllSupabaseRows<MixedFlashcard>((from, to) =>
-            (supabase as any)
-              .from("flashcards")
-              .select("*")
-              .eq(queryColumn, resolvedId)
-              .is("deleted_at", null)
-              .order("created_at", { ascending: true })
-              .order("id", { ascending: true })
-              .range(from, to),
+          rawCards = await withStudyRuntimeTimeout(
+            fetchAllSupabaseRows<MixedFlashcard>((from, to) =>
+              (supabase as any)
+                .from("flashcards")
+                .select("*")
+                .eq(queryColumn, resolvedId)
+                .is("deleted_at", null)
+                .order("created_at", { ascending: true })
+                .order("id", { ascending: true })
+                .abortSignal(abortController.signal)
+                .range(from, to),
+            ),
+            STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+            "mixed-cards",
+            () => abortController.abort(),
           );
         }
 
         const prepared = prepareLayeredStudyDeck(rawCards as any[]) as MixedFlashcard[];
+        if (prepared.length === 0) throw new Error("empty-mixed-deck");
         if (!cancelled) setCards(prepared);
 
+        if (userId && listId) {
+          const [progressResult, sessionResult] = await withStudyRuntimeTimeout(
+            Promise.all([
+              (supabase as any)
+                .from("flashcard_progress")
+                .select("flashcard_id, correct_count, incorrect_count, last_reviewed")
+                .eq("user_id", userId)
+                .eq("list_id", listId)
+                .abortSignal(abortController.signal),
+              (supabase as any)
+                .from("study_sessions")
+                .select("id, cards_order")
+                .eq("user_id", userId)
+                .eq("list_id", listId)
+                .eq("mode", "mixed-adaptive")
+                .eq("completed", false)
+                .order("updated_at", { ascending: false })
+                .limit(1)
+                .abortSignal(abortController.signal)
+                .maybeSingle(),
+            ]),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            "mixed-session-restore",
+            () => abortController.abort(),
+          ).catch(() => [{ data: [] }, { data: null }] as const);
+          if (cancelled) return;
+
+          const weights: Record<string, number> = {};
+          (progressResult.data ?? []).forEach((progress: CardProgressLike) => {
+            weights[progress.flashcard_id] = 1 + Math.max(0, scoreCard({
+              id: progress.flashcard_id,
+              progress,
+            })) * 10;
+          });
+          setWeightByCardId(weights);
+          studySessionIdRef.current = sessionResult.data?.id ?? null;
+          setStudySessionId(studySessionIdRef.current);
+          setRemoteState(sessionResult.data?.cards_order ?? null);
+        }
+
+        if (!cancelled) {
+          setRemoteLoaded(true);
+          setLoading(false);
+        }
+
         if (isListRoute) {
-          const { data: listRow } = await (supabase as any)
-            .from("lists")
-            .select("folder_id, lang_a, lang_b, labels_a, labels_b")
-            .eq("id", resolvedId)
-            .maybeSingle();
+          const { data: listRow } = await withStudyRuntimeTimeout(
+            (supabase as any)
+              .from("lists")
+              .select("folder_id, lang_a, lang_b, labels_a, labels_b")
+              .eq("id", resolvedId)
+              .abortSignal(abortController.signal)
+              .maybeSingle(),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            "mixed-list-metadata",
+            () => abortController.abort(),
+          ).catch(() => ({ data: null }));
           let folderRow: any = null;
           if (listRow?.folder_id) {
-            const folderResult = await (supabase as any)
-              .from("folders")
-              .select("lang_a, lang_b, labels_a, labels_b")
-              .eq("id", listRow.folder_id)
-              .maybeSingle();
+            const folderResult = await withStudyRuntimeTimeout(
+              (supabase as any)
+                .from("folders")
+                .select("lang_a, lang_b, labels_a, labels_b")
+                .eq("id", listRow.folder_id)
+                .abortSignal(abortController.signal)
+                .maybeSingle(),
+              STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+              "mixed-folder-metadata",
+              () => abortController.abort(),
+            ).catch(() => ({ data: null }));
             folderRow = folderResult.data;
           }
           if (!cancelled && (listRow || folderRow)) {
@@ -128,39 +222,11 @@ export default function MixedStudy() {
           }
         }
 
-        if (userId && listId) {
-          const { data: progressRows } = await (supabase as any)
-            .from("flashcard_progress")
-            .select("flashcard_id, correct_count, incorrect_count, last_reviewed")
-            .eq("user_id", userId)
-            .eq("list_id", listId);
-          const weights: Record<string, number> = {};
-          (progressRows ?? []).forEach((progress: CardProgressLike) => {
-            weights[progress.flashcard_id] = 1 + Math.max(0, scoreCard({
-              id: progress.flashcard_id,
-              progress,
-            })) * 10;
-          });
-          if (!cancelled) setWeightByCardId(weights);
-
-          const { data: openSession } = await (supabase as any)
-            .from("study_sessions")
-            .select("id, cards_order")
-            .eq("user_id", userId)
-            .eq("list_id", listId)
-            .eq("mode", "mixed-adaptive")
-            .eq("completed", false)
-            .order("updated_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (!cancelled) {
-            setStudySessionId(openSession?.id ?? null);
-            setRemoteState(openSession?.cards_order ?? null);
-          }
-        }
       } catch (error) {
-        console.error("[MixedStudy] Falha ao preparar sessão", error);
-        toast.error("Não foi possível preparar a Prática Mista.");
+        if (!cancelled) {
+          setLoadFailure(error instanceof Error ? error.name : "mixed-load-failed");
+          toast.error("Não foi possível preparar a Prática Mista.");
+        }
       } finally {
         if (!cancelled) {
           setRemoteLoaded(true);
@@ -170,8 +236,11 @@ export default function MixedStudy() {
     };
 
     void load();
-    return () => { cancelled = true; };
-  }, [authStatus, isListRoute, listId, resolvedId, session, userId]);
+    return () => {
+      cancelled = true;
+      abortController.abort();
+    };
+  }, [authStatus, isListRoute, listId, resolvedId, session, userId, loadAttempt]);
 
   const persistRemoteState = useCallback(async (state: any) => {
     if (!userId || !listId) return;
@@ -190,18 +259,41 @@ export default function MixedStudy() {
       completed_at: state.status === "journey-complete" ? new Date().toISOString() : null,
     };
 
-    if (studySessionId) {
-      await (supabase as any).from("study_sessions").update(payload).eq("id", studySessionId);
+    const existingSessionId = studySessionIdRef.current;
+    if (existingSessionId) {
+      await withStudyRuntimeTimeout(
+        (supabase as any)
+          .from("study_sessions")
+          .update(payload)
+          .eq("id", existingSessionId),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "mixed-session-persist",
+      ).catch(() => undefined);
       return;
     }
 
-    const { data } = await (supabase as any)
-      .from("study_sessions")
-      .insert(payload)
-      .select("id")
-      .single();
-    if (data?.id) setStudySessionId(data.id);
-  }, [listId, studySessionId, userId]);
+    if (!sessionCreationRef.current) {
+      sessionCreationRef.current = withStudyRuntimeTimeout(
+        (supabase as any)
+          .from("study_sessions")
+          .insert(payload)
+          .select("id")
+          .single(),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "mixed-session-create",
+      ).then(({ data }) => data?.id ?? null)
+        .catch(() => null)
+        .finally(() => {
+          sessionCreationRef.current = null;
+        });
+    }
+
+    const createdSessionId = await sessionCreationRef.current;
+    if (createdSessionId) {
+      studySessionIdRef.current = createdSessionId;
+      setStudySessionId(createdSessionId);
+    }
+  }, [listId, userId]);
 
   const cardIds = useMemo(() => cards.map((card) => card.id), [cards]);
   const mixed = useAdaptiveMixedSession({
@@ -212,6 +304,18 @@ export default function MixedStudy() {
     weightByCardId,
     onPersist: persistRemoteState,
   });
+  const [showRuntimeRecovery, setShowRuntimeRecovery] = useState(false);
+  useEffect(() => {
+    if (mixed.state || loading || cards.length === 0 || !remoteLoaded) {
+      if (mixed.state && showRuntimeRecovery) setShowRuntimeRecovery(false);
+      return;
+    }
+    const timeoutId = setTimeout(
+      () => setShowRuntimeRecovery(true),
+      STUDY_RECOVERY_WATCHDOG_MS,
+    );
+    return () => clearTimeout(timeoutId);
+  }, [cards.length, loading, mixed.state, remoteLoaded, showRuntimeRecovery]);
 
   const cardById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const currentCard = mixed.currentCardId ? cardById.get(mixed.currentCardId) : undefined;
@@ -287,6 +391,31 @@ export default function MixedStudy() {
       mixed.restartJourney();
     }
   };
+
+  if (loadFailure || showRuntimeRecovery) {
+    return (
+      <StudySessionRecovery
+        onRetry={() => {
+          setLoadFailure(null);
+          setShowRuntimeRecovery(false);
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+        onStartFresh={() => {
+          const shouldReloadCards = Boolean(loadFailure) || cards.length === 0;
+          setLoadFailure(null);
+          setShowRuntimeRecovery(false);
+          if (shouldReloadCards) {
+            setLoadAttempt((attempt) => attempt + 1);
+          } else {
+            mixed.clearPersistedJourney();
+          }
+        }}
+        onBack={exit}
+        isRetrying={loading}
+        technicalId={loadFailure ? "MX-load" : "MX-session"}
+      />
+    );
+  }
 
   if (loading || !mixed.state || !mixed.progress) {
     return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Preparando Prática Mista...</div>;
