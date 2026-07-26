@@ -42,6 +42,11 @@ import {
   type StudyCardResult,
   type StudyFlowMode,
 } from "@/features/study/lib/studySessionFlow";
+import {
+  logStudyRuntime,
+  STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+  withStudyRuntimeTimeout,
+} from "@/features/study/lib/studySessionRuntime";
 
 export interface StudyResult {
   flashcardId: string;
@@ -144,6 +149,9 @@ export function useStudyEngine(
   const [isCompleting, setIsCompleting] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [masterySession, setMasterySession] = useState<MasterySessionState | null>(null);
+  const [initializationState, setInitializationState] = useState<
+    "loading" | "ready" | "failed"
+  >("loading");
 
   const isMasteryMode = useMemo(
     () => studyFlowMode === "mastery_rounds" && (
@@ -155,7 +163,10 @@ export function useStudyEngine(
 
   
   // Refs for preventing duplicate init, debouncing saves, and batching progress
-  const lastInitSignatureRef = useRef<string>("");
+  const completedInitSignatureRef = useRef<string>("");
+  const initializationGenerationRef = useRef(0);
+  const initializationAbortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
   const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const progressBufferRef = useRef<Map<string, { correct: boolean; timestamp: number }>>(new Map());
   const flushProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -179,10 +190,6 @@ export function useStudyEngine(
   const [roundResults, setRoundResults] = useState<StudyResult[]>([]);
 
   const isFlipMode = mode === "flip";
-  // All standard modes are straight-through (no batching/repetition)
-  // Only explicitly unlimited or flip uses all cards via the old flag
-  const isStraightThrough = true; // all modes now run straight-through
-  const useAllCards = true; // always use all cards in one run
 
   // List activity tracking
   const { trackListOpened, trackListStudied } = useListActivity();
@@ -312,29 +319,126 @@ export function useStudyEngine(
     }
   }, [listId, isFlipMode, currentIndex, results, flipProgressKey]);
 
-  // Initialize session - guards against duplicate calls
-  const initializeSession = useCallback(async () => {
+  const getPrioritizedFlashcards = useCallback(async (
+    userId: string,
+    targetListId: string,
+    cards: { id: string }[],
+    useAll: boolean,
+    signal: AbortSignal,
+  ): Promise<string[]> => {
+    try {
+      if (FEATURE_FLAGS.intelligent_study_engine) {
+        const { data: progressData } = await supabase
+          .from('flashcard_progress')
+          .select('flashcard_id, correct_count, incorrect_count, last_reviewed')
+          .eq('user_id', userId)
+          .eq('list_id', targetListId)
+          .abortSignal(signal);
+
+        const progressMap = new Map<string, CardProgressLike>(
+          (progressData ?? []).map((progress) => [
+            progress.flashcard_id,
+            progress as CardProgressLike,
+          ]),
+        );
+        const ordered = orderByIntelligence(
+          cards,
+          progressMap,
+          new Set(effectiveRedPlayableIds),
+        );
+        return useAll ? ordered : ordered.slice(0, BATCH_SIZE);
+      }
+
+      const { data: progressData } = await supabase
+        .from('flashcard_progress')
+        .select('flashcard_id, incorrect_count')
+        .eq('user_id', userId)
+        .eq('list_id', targetListId)
+        .abortSignal(signal);
+      const progressMap = new Map(
+        progressData?.map((progress) => [
+          progress.flashcard_id,
+          progress.incorrect_count,
+        ]) || [],
+      );
+      const ordered = cards
+        .map((card) => ({
+          id: card.id,
+          incorrectCount: progressMap.get(card.id) || 0,
+        }))
+        .sort((left, right) =>
+          right.incorrectCount !== left.incorrectCount
+            ? right.incorrectCount - left.incorrectCount
+            : Math.random() - 0.5,
+        )
+        .map((card) => card.id);
+      return useAll ? ordered : ordered.slice(0, BATCH_SIZE);
+    } catch {
+      const fallback = cards.map((card) => card.id).sort(() => Math.random() - 0.5);
+      return useAll ? fallback : fallback.slice(0, BATCH_SIZE);
+    }
+  }, [effectiveRedPlayableIds]);
+
+  // Initialization is idempotent and generation-scoped. A signature is only
+  // considered complete after a playable queue (or a legitimate empty deck)
+  // has been committed.
+  const initializeSession = useCallback(async (force = false) => {
     const __t0 = performance.now();
+    initializationAbortRef.current?.abort();
+    const abortController = new AbortController();
+    initializationAbortRef.current = abortController;
+    const generation = ++initializationGenerationRef.current;
+    const isCurrent = () =>
+      mountedRef.current && initializationGenerationRef.current === generation;
     // Skip if already initialized with same signature.
     // IMPORTANT: include sessionScopeKey so switching between "all"/"favorites"
     // (or toggling redFocus / order) re-initializes the engine and loads the
     // saved session for that scope instead of reusing the previous one.
-    const initKey = `${listId}|${mode}|${cardsSignature}|${sessionScopeKey}`;
-    if (lastInitSignatureRef.current === initKey) {
-      // Init já foi feita para esta combinação — destrava o loading se há cards
-      if (flashcards.length > 0) {
-        setIsLoading(false);
+    const initKey = [
+      userScope || "anon",
+      listId || "no-list",
+      mode,
+      studyFlowMode,
+      cardsSignature,
+      sessionScopeKey,
+    ].join("|");
+    if (!force && completedInitSignatureRef.current === initKey) {
+      return;
+    }
+
+    const markReady = () => {
+      if (!isCurrent()) return;
+      completedInitSignatureRef.current = initKey;
+      setInitializationState("ready");
+      setIsLoading(false);
+      logStudyRuntime("initialization-ready", {
+        generation,
+        mode,
+        flow: studyFlowMode,
+        cards: flashcards.length,
+        durationMs: Math.round(performance.now() - __t0),
+      });
+    };
+
+    completedInitSignatureRef.current = "";
+    setInitializationState("loading");
+    setIsLoading(true);
+    logStudyRuntime("initialization-start", {
+      generation,
+      mode,
+      flow: studyFlowMode,
+      cards: flashcards.length,
+      forced: force,
+    });
+    
+    if (flashcards.length === 0) {
+      if (isCurrent()) {
+        setCardsOrder([]);
+        setCurrentIndex(0);
+        markReady();
       }
       return;
     }
-    
-    if (flashcards.length === 0) {
-      setIsLoading(false);
-      return;
-    }
-    
-    // Mark as initializing with this signature
-    lastInitSignatureRef.current = initKey;
 
     // Mastery rounds: use the dedicated round engine for write/mixed modes.
     // This bypasses the legacy continuous/batching path so the new flow engine
@@ -354,17 +458,20 @@ export function useStudyEngine(
       setRoundResults([]);
       setMissedCards([]);
       setUnseenCards([]);
-      setIsLoading(false);
+      setIsFinished(session.status !== "active");
+      markReady();
       return;
     }
 
+    let fallbackLocalSnapshot: ReturnType<typeof readStudySnapshot> = null;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      authUserIdRef.current = user?.id ?? userScope ?? null;
+      const user = userScope ? { id: userScope } : null;
+      authUserIdRef.current = userScope ?? null;
       const snapshotCardIds = new Set(flashcards.map((card) => card.id));
       const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds, {
         enforceUniqueOrder: !!gameSettings.redFocus,
       });
+      fallbackLocalSnapshot = localSnapshot;
 
       if (!user) {
         if (localSnapshot) {
@@ -372,7 +479,7 @@ export function useStudyEngine(
           setCurrentIndex(localSnapshot.currentIndex);
           setResults(localSnapshot.results);
           toast.success("Continuando de onde você parou!");
-          setIsLoading(false);
+          markReady();
           return;
         }
         setIsAuthenticated(false);
@@ -382,7 +489,7 @@ export function useStudyEngine(
           const orderedIds = flashcards.map(f => f.id);
           setCardsOrder(orderedIds);
           setCurrentIndex(0);
-          setIsLoading(false);
+          markReady();
           return;
         }
 
@@ -395,7 +502,7 @@ export function useStudyEngine(
 
         setCardsOrder(orderedIds);
         setCurrentIndex(0);
-        setIsLoading(false);
+        markReady();
         return;
       }
 
@@ -410,7 +517,7 @@ export function useStudyEngine(
           : baseIds;
         setCardsOrder(cardIds);
         setCurrentIndex(0);
-        setIsLoading(false);
+        markReady();
         return;
       }
 
@@ -432,23 +539,34 @@ export function useStudyEngine(
       // Track that the user opened this list
       trackListOpened(listId);
 
-      // Initialize turma activity tracking (discovers turma_id from list)
-      await initTurmaTracking(listId);
+      // Classroom tracking is useful but not required to render the first card.
+      void withStudyRuntimeTimeout(
+        initTurmaTracking(listId),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "turma-tracking",
+      ).catch(() => undefined);
 
       // For flip mode: use EXACT order from flashcards (Study.tsx already applied random/sequential)
       if (isFlipMode) {
         // Try to restore from database first (for session continuity).
         // We fetch the recent open sessions and pick the one whose card-set
         // matches the current scope, so "all" and "favorites" stay isolated.
-        const { data: openSessions } = await supabase
-          .from('study_sessions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('list_id', listId)
-          .eq('mode', mode)
-          .eq('completed', false)
-          .order('updated_at', { ascending: false })
-          .limit(10);
+        const { data: openSessions } = await withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('list_id', listId)
+            .eq('mode', mode)
+            .eq('completed', false)
+            .order('updated_at', { ascending: false })
+            .limit(10)
+            .abortSignal(abortController.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          "flip-session-restore",
+          () => abortController.abort(),
+        );
+        if (!isCurrent()) return;
 
         const matchingSession = (openSessions ?? []).find(s =>
           sessionMatchesCurrentScope(s.cards_order)
@@ -467,17 +585,19 @@ export function useStudyEngine(
 
             if (restoredSession.repaired) {
               setResults([]);
-              const { error: repairError } = await supabase
-                .from('study_sessions')
-                .update({
-                  cards_order: restoredSession.cardsOrder,
-                  current_index: 0,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', matchingSession.id);
-              if (repairError) {
-                console.warn('[StudyEngine] Falha ao persistir reparo da fila vermelha:', repairError.message);
-              }
+              void withStudyRuntimeTimeout(
+                supabase
+                  .from('study_sessions')
+                  .update({
+                    cards_order: restoredSession.cardsOrder,
+                    current_index: 0,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', matchingSession.id)
+                  .abortSignal(abortController.signal),
+                STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+                "flip-session-repair",
+              ).catch(() => undefined);
               toast.info("Fila do Foco Vermelho corrigida. Recomeçando do primeiro card.");
             } else {
               if (localSnapshot?.sessionId === matchingSession.id) {
@@ -486,7 +606,7 @@ export function useStudyEngine(
               toast.success("Continuando de onde você parou!");
             }
 
-            setIsLoading(false);
+            markReady();
             return;
           }
         }
@@ -498,24 +618,6 @@ export function useStudyEngine(
         // Study.tsx already applied random/sequential ordering before passing here
         const orderedCards = localSnapshot?.cardsOrder ?? flashcards.map(f => f.id);
         const restoredIndex = localSnapshot?.currentIndex ?? savedProgress?.index ?? 0;
-        
-        // Create new session in database for flip mode
-        const { data: newSession, error } = await supabase
-          .from('study_sessions')
-          .insert({
-            user_id: user.id,
-            list_id: listId,
-            mode,
-            current_index: restoredIndex,
-            cards_order: orderedCards,
-            completed: false
-          })
-          .select()
-          .single();
-
-        if (!error && newSession) {
-          setSessionId(newSession.id);
-        }
         
         setCardsOrder(orderedCards);
         
@@ -536,7 +638,27 @@ export function useStudyEngine(
         } else {
           setCurrentIndex(0);
         }
-        setIsLoading(false);
+        markReady();
+
+        void withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .insert({
+              user_id: user.id,
+              list_id: listId,
+              mode,
+              current_index: restoredIndex,
+              cards_order: orderedCards,
+              completed: false
+            })
+            .select()
+            .abortSignal(abortController.signal)
+            .single(),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          "flip-session-create",
+        ).then(({ data, error }) => {
+          if (!error && data && isCurrent()) setSessionId(data.id);
+        }).catch(() => undefined);
         return;
       }
 
@@ -544,15 +666,22 @@ export function useStudyEngine(
       // current scope. This keeps "all" and "favorites" (and redFocus) on
       // separate persisted rows so toggling between them never zeroes the
       // other trail.
-      const { data: openSessions } = await supabase
-        .from('study_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('list_id', listId)
-        .eq('mode', mode)
-        .eq('completed', false)
-        .order('updated_at', { ascending: false })
-        .limit(10);
+      const { data: openSessions } = await withStudyRuntimeTimeout(
+        supabase
+          .from('study_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('list_id', listId)
+          .eq('mode', mode)
+          .eq('completed', false)
+          .order('updated_at', { ascending: false })
+          .limit(10)
+          .abortSignal(abortController.signal),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "quiz-session-restore",
+        () => abortController.abort(),
+      );
+      if (!isCurrent()) return;
 
       const matchingSession = (openSessions ?? []).find(s =>
         sessionMatchesCurrentScope(s.cards_order)
@@ -571,17 +700,19 @@ export function useStudyEngine(
 
           if (restoredSession.repaired) {
             setResults([]);
-            const { error: repairError } = await supabase
-              .from('study_sessions')
-              .update({
-                cards_order: restoredSession.cardsOrder,
-                current_index: 0,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', matchingSession.id);
-            if (repairError) {
-              console.warn('[StudyEngine] Falha ao persistir reparo da fila vermelha:', repairError.message);
-            }
+            void withStudyRuntimeTimeout(
+              supabase
+                .from('study_sessions')
+                .update({
+                  cards_order: restoredSession.cardsOrder,
+                  current_index: 0,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', matchingSession.id)
+                .abortSignal(abortController.signal),
+              STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+              "quiz-session-repair",
+            ).catch(() => undefined);
             toast.info("Fila do Foco Vermelho corrigida. Recomeçando do primeiro card.");
           } else {
             if (localSnapshot?.sessionId === matchingSession.id) {
@@ -590,7 +721,7 @@ export function useStudyEngine(
             toast.success("Continuando de onde você parou!");
           }
 
-          setIsLoading(false);
+          markReady();
           return;
         }
       }
@@ -598,7 +729,18 @@ export function useStudyEngine(
       // Create new session with ALL flashcards (straight-through, no batching)
       let orderedCards = localSnapshot?.cardsOrder
         ?? (mode === "mixed" && !gameSettings.redFocus
-          ? await getPrioritizedFlashcards(user.id, listId, flashcards, true)
+          ? await withStudyRuntimeTimeout(
+              getPrioritizedFlashcards(
+                user.id,
+                listId,
+                flashcards,
+                true,
+                abortController.signal,
+              ),
+              STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+              "progress-prioritization",
+              () => abortController.abort(),
+            )
           : gameSettings.mode === "sequential"
             ? flashcards.map(card => card.id)
             : flashcards.map(card => card.id).sort(() => Math.random() - 0.5));
@@ -611,118 +753,146 @@ export function useStudyEngine(
         );
       }
       
-      const { data: newSession, error } = await supabase
-        .from('study_sessions')
-        .insert({
-          user_id: user.id,
-          list_id: listId,
-          mode,
-          current_index: localSnapshot?.currentIndex ?? 0,
-          cards_order: orderedCards,
-          completed: false
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setSessionId(newSession.id);
       setCardsOrder(orderedCards);
       setCurrentIndex(localSnapshot?.currentIndex ?? 0);
       if (localSnapshot) {
         setResults(localSnapshot.results);
         toast.success("Continuando de onde você parou!");
       }
+      markReady();
+
+      void withStudyRuntimeTimeout(
+        supabase
+          .from('study_sessions')
+          .insert({
+            user_id: user.id,
+            list_id: listId,
+            mode,
+            current_index: localSnapshot?.currentIndex ?? 0,
+            cards_order: orderedCards,
+            completed: false
+          })
+          .select()
+          .abortSignal(abortController.signal)
+          .single(),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "quiz-session-create",
+      ).then(({ data, error }) => {
+        if (!error && data && isCurrent()) setSessionId(data.id);
+      }).catch(() => undefined);
     } catch (error) {
-      console.error('Erro ao inicializar sessão:', error);
+      if (!isCurrent()) return;
+      logStudyRuntime("initialization-fallback", {
+        generation,
+        mode,
+        reason: error instanceof Error ? error.name : "unknown",
+      });
       const baseIds = flashcards.map(f => f.id);
-      const fallbackIds = !gameSettings.redFocus && (mode === "mixed" || gameSettings.mode === "random")
-        ? [...baseIds].sort(() => Math.random() - 0.5)
-        : baseIds;
+      const fallbackIds = fallbackLocalSnapshot?.cardsOrder
+        ?? (!gameSettings.redFocus && (mode === "mixed" || gameSettings.mode === "random")
+          ? [...baseIds].sort(() => Math.random() - 0.5)
+          : baseIds);
       
       setCardsOrder(fallbackIds);
-      setCurrentIndex(0);
+      setCurrentIndex(fallbackLocalSnapshot?.currentIndex ?? 0);
+      setResults(fallbackLocalSnapshot?.results ?? []);
     } finally {
-      setIsLoading(false);
+      markReady();
       perfLog("useStudyEngine.initializeSession", __t0, { listId, mode, cards: flashcards.length });
     }
     // Includes gameSettings.subset and redListIds because they materially affect
     // the cardsOrder shape (favorites scope + red-list spaced repetition injection).
-  }, [listId, cardsSignature, mode, useAllCards, isFlipMode, loadFlipProgress, gameSettings.mode, gameSettings.subset, effectiveRedPlayableIds, sessionScopeKey, studySnapshotKey, userScope]);
+  }, [
+    cardsSignature,
+    effectiveRedPlayableIds,
+    flashcards,
+    gameSettings,
+    getPrioritizedFlashcards,
+    initTurmaTracking,
+    isFlipMode,
+    isMasteryMode,
+    listId,
+    loadFlipProgress,
+    masterySnapshotKey,
+    mode,
+    sessionScopeKey,
+    studyFlowMode,
+    studySnapshotKey,
+    trackListOpened,
+    userScope,
+  ]);
+
+  const retryInitialization = useCallback(() => {
+    completedInitSignatureRef.current = "";
+    void initializeSession(true);
+  }, [initializeSession]);
+
+  const startFreshSession = useCallback(() => {
+    initializationAbortRef.current?.abort();
+    initializationGenerationRef.current += 1;
+    completedInitSignatureRef.current = "";
+    clearStudySnapshot(studySnapshotKey);
+    clearMasterySnapshot(masterySnapshotKey);
+    clearStudyLayerSnapshot(studySnapshotKey);
+    if (listId && isFlipMode) {
+      try { localStorage.removeItem(flipProgressKey); } catch {}
+    }
+
+    setSessionId(null);
+    setResults([]);
+    setRoundResults([]);
+    setMissedCards([]);
+    setUnseenCards([]);
+    setRoundNumber(1);
+    setIsFinished(false);
+
+    const eligibleIds = flashcards.map((card) => card.id);
+    if (isMasteryMode) {
+      const freshMastery = createMasterySession(eligibleIds, {
+        shuffle: gameSettings.mode === "random",
+      });
+      setMasterySession(freshMastery);
+      setCardsOrder(freshMastery.currentRoundIds);
+      setCurrentIndex(freshMastery.currentRoundIndex);
+    } else {
+      const baseOrder =
+        gameSettings.mode === "random" && !gameSettings.redFocus
+          ? [...eligibleIds].sort(() => Math.random() - 0.5)
+          : eligibleIds;
+      setMasterySession(null);
+      setCardsOrder(injectRedListRepetitions(
+        baseOrder,
+        effectiveRedPlayableIds,
+        shouldInjectRedPriority(gameSettings),
+      ));
+      setCurrentIndex(0);
+    }
+    setInitializationState(eligibleIds.length > 0 ? "ready" : "failed");
+    setIsLoading(false);
+    logStudyRuntime("fresh-session-recovery", {
+      mode,
+      flow: studyFlowMode,
+      cards: eligibleIds.length,
+    });
+  }, [
+    effectiveRedPlayableIds,
+    flashcards,
+    flipProgressKey,
+    gameSettings,
+    isFlipMode,
+    isMasteryMode,
+    listId,
+    masterySnapshotKey,
+    mode,
+    studyFlowMode,
+    studySnapshotKey,
+  ]);
   
   // Store flashcards in a ref for stable access
   const flashcardsRef = useRef(flashcards);
   useEffect(() => {
     flashcardsRef.current = flashcards;
   }, [flashcards]);
-
-  // Prioritize flashcards with more errors
-  const getPrioritizedFlashcards = async (
-    userId: string,
-    listId: string,
-    cards: { id: string }[],
-    useAll: boolean
-  ): Promise<string[]> => {
-    try {
-      // V2 path — full progress fields (correct, incorrect, last_reviewed)
-      // for the weighted intelligence scorer.
-      if (FEATURE_FLAGS.intelligent_study_engine) {
-        const { data: progressData } = await supabase
-          .from('flashcard_progress')
-          .select('flashcard_id, correct_count, incorrect_count, last_reviewed')
-          .eq('user_id', userId)
-          .eq('list_id', listId);
-
-        const progressMap = new Map<string, CardProgressLike>(
-          (progressData ?? []).map(p => [p.flashcard_id, p as CardProgressLike])
-        );
-        // Score with the playable ids the engine actually orders — see
-        // canonicalToPlayable above. Canonical group ids would never match
-        // cards[i].id for layered entries.
-        const redSet = new Set(effectiveRedPlayableIds);
-        const ordered = orderByIntelligence(cards, progressMap, redSet);
-        return useAll ? ordered : ordered.slice(0, BATCH_SIZE);
-      }
-
-      // Legacy path — incorrect_count only
-      const { data: progressData } = await supabase
-        .from('flashcard_progress')
-        .select('flashcard_id, incorrect_count')
-        .eq('user_id', userId)
-        .eq('list_id', listId);
-
-      const progressMap = new Map(
-        progressData?.map(p => [p.flashcard_id, p.incorrect_count]) || []
-      );
-
-      const cardsWithProgress = cards.map(card => ({
-        id: card.id,
-        incorrectCount: progressMap.get(card.id) || 0
-      }));
-
-      cardsWithProgress.sort((a, b) => {
-        if (b.incorrectCount !== a.incorrectCount) {
-          return b.incorrectCount - a.incorrectCount;
-        }
-        return Math.random() - 0.5;
-      });
-
-      if (useAll) {
-        return cardsWithProgress.map(c => c.id);
-      }
-      return cardsWithProgress.slice(0, BATCH_SIZE).map(c => c.id);
-    } catch (error) {
-      console.error('Erro ao priorizar flashcards:', error);
-      let ids = cards
-        .map(c => c.id)
-        .sort(() => Math.random() - 0.5);
-      
-      if (!useAll) {
-        ids = ids.slice(0, BATCH_SIZE);
-      }
-      return ids;
-    }
-  };
 
   // Save progress with debounce to reduce DB writes
   const saveProgress = useCallback(async () => {
@@ -842,7 +1012,12 @@ export function useStudyEngine(
   }, [flushProgressBuffer]);
 
   // Record result and buffer flashcard progress for batch save
-  const recordResult = useCallback(async (flashcardId: string, correct: boolean, skipped: boolean = false) => {
+  const recordResult = useCallback(async (
+    flashcardId: string,
+    correct: boolean,
+    skipped: boolean = false,
+    engineCardId: string = flashcardId,
+  ) => {
     // Mastery rounds: drive the dedicated flow engine so round boundaries and
     // repetition logic stay centralized in studySessionFlow.ts.
     if (isMasteryMode) {
@@ -852,7 +1027,7 @@ export function useStudyEngine(
         const currentCardId = getCurrentCardId(prev);
         // Use the submitted identity as an advance gate. A repeated click or
         // duplicated keyboard event must never answer the following card.
-        if (!currentCardId || currentCardId !== flashcardId) return prev;
+        if (!currentCardId || currentCardId !== engineCardId) return prev;
         return recordMasteryResult({
           ...prev,
           currentRoundIds: [...prev.currentRoundIds],
@@ -865,7 +1040,7 @@ export function useStudyEngine(
           failedThisRoundIds: [...prev.failedThisRoundIds],
           reviewSourceThisRound: [...prev.reviewSourceThisRound],
           currentRoundResults: { ...prev.currentRoundResults },
-        }, flashcardId, resultType);
+        }, engineCardId, resultType);
       });
     }
 
@@ -946,7 +1121,7 @@ export function useStudyEngine(
       totalCards: cardsOrder.length,
       currentIndex
     });
-  }, [listId, isAuthenticated, sessionId, isFlipMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
+  }, [listId, isAuthenticated, sessionId, isMasteryMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
     if (isMasteryMode) {
@@ -960,7 +1135,7 @@ export function useStudyEngine(
       // NO AUTO-COMPLETE: Just set isFinished, let user click "Concluir" manually
       setIsFinished(true);
     }
-  }, [currentIndex, cardsOrder.length, isMasteryMode, masterySession]);
+  }, [currentIndex, cardsOrder.length, isMasteryMode]);
 
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
@@ -1131,17 +1306,8 @@ export function useStudyEngine(
 
   // Reset session (start fresh)
   const resetSession = useCallback(() => {
-    if (listId && isFlipMode) {
-      localStorage.removeItem(flipProgressKey);
-    }
-    setResults([]);
-    setRoundResults([]);
-    setMissedCards([]);
-    setUnseenCards([]);
-    setRoundNumber(1);
-    setIsFinished(false);
-    initializeSession();
-  }, [listId, isFlipMode, flashcards, initializeSession, flipProgressKey]);
+    startFreshSession();
+  }, [startFreshSession]);
 
   // Restart session with new settings
   const restartSession = useCallback(async (newSettings?: Partial<GameSettings>) => {
@@ -1211,12 +1377,21 @@ export function useStudyEngine(
     } finally {
       setIsRestarting(false);
     }
-  }, [isRestarting, gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, isAuthenticated, mode]);
+  }, [isRestarting, gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, masterySnapshotKey, isAuthenticated, mode]);
 
   // Initialize session on mount
   useEffect(() => {
-    initializeSession();
-  }, [listId, cardsSignature, mode, sessionScopeKey]); // Only reinit on meaningful changes (scope included)
+    void initializeSession();
+  }, [initializeSession]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      initializationAbortRef.current?.abort();
+      initializationGenerationRef.current += 1;
+    };
+  }, []);
 
   // Mastery rounds: keep the legacy cardsOrder/currentIndex in sync with the
   // dedicated flow engine so the rest of the UI (progress bar, card display,
@@ -1362,6 +1537,7 @@ export function useStudyEngine(
     results,
     isFinished,
     isLoading,
+    initializationState,
     isCompleting,
     isRestarting,
     currentCard,
@@ -1385,6 +1561,8 @@ export function useStudyEngine(
     startNextRound,
     discardSession,
     resetSession,
+    retryInitialization,
+    startFreshSession,
     restartSession,
     gameSettings,
     setGameSettings,

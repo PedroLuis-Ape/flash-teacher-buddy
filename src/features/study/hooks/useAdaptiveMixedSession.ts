@@ -40,13 +40,19 @@ export function useAdaptiveMixedSession({
   onPersist,
 }: UseAdaptiveMixedSessionOptions) {
   const deckSignature = useMemo(() => [...new Set(cardIds)].sort().join("|"), [cardIds]);
+  const initializationSignature = `${storageKey}|${deckSignature}`;
   const [state, setState] = useState<AdaptiveMixedSessionState | null>(null);
   const initializedSignatureRef = useRef("");
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!remoteLoaded || cardIds.length === 0) return;
-    if (initializedSignatureRef.current === deckSignature) return;
+    if (cardIds.length === 0) {
+      initializedSignatureRef.current = "";
+      setState(null);
+      return;
+    }
+    if (!remoteLoaded) return;
+    if (initializedSignatureRef.current === initializationSignature) return;
 
     const local = readLocalState(storageKey, cardIds);
     const remote = isAdaptiveMixedStateCompatible(remoteState, cardIds)
@@ -54,9 +60,9 @@ export function useAdaptiveMixedSession({
       : null;
     const next = local ?? remote ?? createAdaptiveMixedSession(cardIds, { random, weightByCardId });
 
-    initializedSignatureRef.current = deckSignature;
+    initializedSignatureRef.current = initializationSignature;
     setState(next);
-  }, [cardIds, deckSignature, remoteLoaded, remoteState, storageKey, random, weightByCardId]);
+  }, [cardIds, initializationSignature, remoteLoaded, remoteState, storageKey, random, weightByCardId]);
 
   useEffect(() => {
     if (!state) return;

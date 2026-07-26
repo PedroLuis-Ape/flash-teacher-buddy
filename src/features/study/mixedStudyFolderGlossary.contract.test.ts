@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+const read = (path: string) =>
+  readFileSync(join(root, path), "utf8").replace(/\r\n?/g, "\n");
 
 const mixedStudy = read("src/pages/MixedStudy.tsx");
 const resolver = read("src/features/study/hooks/useResolvedStudyGlossaryHints.ts");
