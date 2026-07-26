@@ -144,12 +144,21 @@ const Study = () => {
   }, [resolvedId]);
 
   // ── Persistent study preferences ──
-  // Clara Master P0 — single source of truth for auth. Local userId/authUserId
-  // state previously caused a cold-restart race: useFavorites was disabled
-  // while auth resolved, returned [], and a fallback effect persisted
-  // `favoritesOnly:false` to localStorage. See docs/COLD_RESTART_FAVORITES_P0.md.
+  // The URL identifies the game being opened. The saved preset configures that
+  // mode, but can never silently replace it with another mode from stale state.
   const { status: authStatus, userId: authUserId, session: authSession } = useAuth();
-  const { prefs, updatePrefs, effectivePreset } = useStudyPreferences(authUserId);
+  const requestedMode: StudyMode = normalizeStudyMode(searchParams.get("mode") ?? "flip");
+  const {
+    prefs,
+    updatePrefs,
+    effectivePreset,
+    isHydrating: preferencesHydrating,
+  } = useStudyPreferences(authUserId, {
+    listId: isListRoute ? resolvedId : undefined,
+    gameMode: requestedMode,
+    persistScope: isListRoute ? "list" : "global",
+    canPersistList: isListRoute,
+  });
   // URL overrides are applied at load time inside useStudyPreferences,
   // but the URL is ALSO read directly here as the canonical SSOT for the
   // session. This prevents stale prefs (e.g. anon storage from a previous
@@ -160,9 +169,7 @@ const Study = () => {
     : null;
 
   // Single canonical mode token for the entire engine + view chain.
-  // normalizeStudyMode() handles aliases ("multiple" → "multiple-choice") and
-  // unknown values (falls back to "flip"). No more inline Set + cast.
-  const normalizedMode: StudyMode = normalizeStudyMode(prefs.mode);
+  const normalizedMode: StudyMode = requestedMode;
 
   // SSOT for direction: URL wins over prefs. This guarantees that whatever
   // GamesHub sent in the URL is what the session uses, even if prefs are
@@ -311,6 +318,14 @@ const Study = () => {
     return effectiveFlashcards;
   }, [effectiveFlashcards]);
 
+  // A session may only receive cards after the complete preset for this exact
+  // account/list/mode context has been applied to the engine. This prevents a
+  // default preset from winning a race against the saved account preset.
+  const presetContextKey = `${authUserId ?? "anon"}:${resolvedId}:${normalizedMode}`;
+  const [appliedPresetContext, setAppliedPresetContext] = useState<string | null>(null);
+  const sessionPresetReady = !preferencesHydrating && appliedPresetContext === presetContextKey;
+  const engineFlashcards = sessionPresetReady ? stableFlashcards : [];
+
   const {
     currentIndex,
     correctCount,
@@ -354,7 +369,7 @@ const Study = () => {
     cardsOrder,
     saveProgressNow,
     studySnapshotKey,
-  } = useStudyEngine(listId, stableFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
+  } = useStudyEngine(listId, engineFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
 
   // A new queue reference represents a new answerable session/round. Resetting
   // this guard prevents a restarted session with the same first card from
@@ -378,21 +393,17 @@ const Study = () => {
     currentRoundTotal: totalCards,
   });
 
-  // ── Sync flipDirection: URL wins, then prefs (handles late-arriving auth) ──
-  // The URL is set by GamesHub at startGame() and is the user's most recent
-  // explicit choice. Only fall back to prefs.direction if the URL is missing.
+  // ── Sync flipDirection only after the preset source has settled ──
   useEffect(() => {
+    if (preferencesHydrating) return;
     setFlipDirection(urlDirection ?? prefs.direction);
-  }, [urlDirection, prefs.direction]);
+  }, [preferencesHydrating, urlDirection, prefs.direction]);
 
-  // ── Sync engine gameSettings with prefs APENAS UMA VEZ no mount ──
-  // Após esse sync inicial, mudanças vêm via handleSettingsChange (caminho controlado).
-  // Usar uma ref impede que mudanças posteriores em prefs reescrevam settings já em uso.
-  const initialSyncDoneRef = useRef(false);
+  // Apply one immutable starting preset for each account/list/mode context.
+  // Later changes come only through the controlled settings handlers.
   useEffect(() => {
-    if (initialSyncDoneRef.current) return;
-    if (loading) return; // espera flashcards carregarem para ter contexto válido
-    initialSyncDoneRef.current = true;
+    if (preferencesHydrating || authStatus === "initializing") return;
+    if (appliedPresetContext === presetContextKey) return;
     setGameSettings({
       mode: prefs.order === "sequential" ? "sequential" : "random",
       subset: prefs.favoritesOnly ? "favorites" : "all",
@@ -401,15 +412,31 @@ const Study = () => {
     });
     setDeckSubset(prefs.favoritesOnly ? "favorites" : "all");
     setRedFocusActiveForDeck(false);
+    setAppliedPresetContext(presetContextKey);
     if (import.meta.env.DEV) {
-      console.debug("[Study] Initial gameSettings sync", {
+      console.debug("[Study] Restored starting preset", {
+        context: presetContextKey,
         mode: normalizedMode,
         order: prefs.order,
         favoritesOnly: prefs.favoritesOnly,
         fastMode: prefs.fastMode,
+        direction: prefs.direction,
+        studyFlowMode: effectivePreset.studyFlowMode,
       });
     }
-  }, [loading, prefs.order, prefs.favoritesOnly, prefs.fastMode, normalizedMode, setGameSettings]);
+  }, [
+    appliedPresetContext,
+    authStatus,
+    effectivePreset.studyFlowMode,
+    normalizedMode,
+    preferencesHydrating,
+    prefs.direction,
+    prefs.fastMode,
+    prefs.favoritesOnly,
+    prefs.order,
+    presetContextKey,
+    setGameSettings,
+  ]);
 
   // Direção estável por card
   const decideDirection = (idx: number): Direction => {
@@ -441,10 +468,6 @@ const Study = () => {
   // Order/direction/favorites are applied locally (in effectiveFlashcards or by
   // shuffling) — they must NOT trigger a fresh DB query, which would reset the
   // session and re-init the engine for free.
-  // Clara Master P0 — we ALSO wait for auth to resolve before loading. On a
-  // private route, loadFlashcards needs the session to either (a) hit the
-  // authenticated table query or (b) fall back to the portal RPC. Firing
-  // before AuthContext resolves caused the cold-restart favorites race.
   useEffect(() => {
     const isPortalRoute = typeof window !== "undefined"
       && window.location.pathname.startsWith("/portal/");
@@ -457,13 +480,17 @@ const Study = () => {
       }, STUDY_RECOVERY_WATCHDOG_MS);
       return () => clearTimeout(timeoutId);
     }
+    if (preferencesHydrating) {
+      setLoading(true);
+      return;
+    }
     void loadFlashcards();
     return () => {
       loadAbortRef.current?.abort();
       loadGenerationRef.current += 1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedId, authStatus, authUserId, loadAttempt]);
+  }, [resolvedId, authStatus, authUserId, loadAttempt, preferencesHydrating]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -494,7 +521,7 @@ const Study = () => {
 
   // On mount: check if this session was already completed and show restart prompt
   useEffect(() => {
-    if (!completionKey || loading || studyLoading) return;
+    if (!completionKey || loading || studyLoading || !sessionPresetReady) return;
     try {
       const saved = localStorage.getItem(completionKey);
       if (saved) {
@@ -502,7 +529,7 @@ const Study = () => {
         setShowCompletionModal(true);
       }
     } catch {}
-  }, [completionKey, loading, studyLoading]);
+  }, [completionKey, loading, sessionPresetReady, studyLoading]);
 
   const loadFlashcards = async () => {
     if (!resolvedId) return;
@@ -536,7 +563,7 @@ const Study = () => {
         if (!isCurrent()) return;
         if (offlineData) {
           const grouped = prepareLayeredStudyDeck(offlineData.flashcards as any[]);
-          const orderedData = order === "random" ? shuffleArray([...grouped]) : grouped;
+          const orderedData = initialOrder === "random" ? shuffleArray([...grouped]) : grouped;
           setFlashcards(orderedData as Flashcard[]);
           setListTitle(offlineData.listMeta.title);
           setListSettings({
@@ -584,7 +611,7 @@ const Study = () => {
       }
 
       const grouped = prepareLayeredStudyDeck(data as any[]);
-      const shuffled = order === "random" ? shuffleArray([...grouped]) : grouped;
+      const shuffled = initialOrder === "random" ? shuffleArray([...grouped]) : grouped;
       setFlashcards(shuffled as Flashcard[]);
       setLoading(false);
       return;
@@ -633,7 +660,7 @@ const Study = () => {
     // view then lets the user navigate "Camada anterior/Próxima camada"
     // INSIDE the same deck position. Principals/aggregators never play.
     const studyableCards = prepareLayeredStudyDeck(cardsData as any[]);
-    const rawData = order === "random" ? shuffleArray([...studyableCards]) : studyableCards;
+    const rawData = initialOrder === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
     // Also pre-parse hints inside __layers, since the visible card may be
@@ -1307,10 +1334,10 @@ const Study = () => {
   }, [favoritesLoading, favoritesOnly]);
 
   const sessionReadiness = useMemo(() => resolveStudySessionReadiness({
-    pageLoading: loading,
+    pageLoading: loading || preferencesHydrating || !sessionPresetReady,
     engineLoading: studyLoading,
     auxiliaryLoading: favoritesOnly && favoritesLoading && !favoritesWaitExpired,
-    eligibleCardIds: stableFlashcards.map((card) => card.id),
+    eligibleCardIds: engineFlashcards.map((card) => card.id),
     cardsOrder,
     currentIndex,
     isFinished,
@@ -1319,6 +1346,7 @@ const Study = () => {
   }), [
     cardsOrder,
     currentIndex,
+    engineFlashcards,
     favoritesLoading,
     favoritesOnly,
     favoritesWaitExpired,
@@ -1326,7 +1354,8 @@ const Study = () => {
     isFinished,
     loading,
     masteryStatus,
-    stableFlashcards,
+    preferencesHydrating,
+    sessionPresetReady,
     studyLoading,
   ]);
 
@@ -1342,7 +1371,7 @@ const Study = () => {
       if (showSessionRecovery) setShowSessionRecovery(false);
       return;
     }
-    if (flashcards.length === 0 || loadFailure) return;
+    if (flashcards.length === 0 || loadFailure || preferencesHydrating || !sessionPresetReady) return;
 
     const timeoutId = setTimeout(() => {
       if (!automaticRecoveryAttempted) {
@@ -1357,7 +1386,9 @@ const Study = () => {
     automaticRecoveryAttempted,
     flashcards.length,
     loadFailure,
+    preferencesHydrating,
     retryInitialization,
+    sessionPresetReady,
     sessionReadiness.phase,
     showSessionRecovery,
   ]);
@@ -1397,7 +1428,7 @@ const Study = () => {
         onRetry={handleRecoveryRetry}
         onStartFresh={handleRecoveryFresh}
         onBack={() => void handleExit()}
-        isRetrying={loading || studyLoading}
+        isRetrying={loading || studyLoading || preferencesHydrating || !sessionPresetReady}
         technicalId={`ST-${sessionReadiness.reason}`}
       />
     );
