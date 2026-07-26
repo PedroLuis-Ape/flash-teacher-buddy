@@ -174,6 +174,8 @@ export function useStudyEngine(
   const authUserIdRef = useRef<string | null>(userScope ?? null);
   const completionInFlightRef = useRef(false);
   const pitecoinWritesRef = useRef<Set<Promise<unknown>>>(new Set());
+  const masteryAnswerGuardRef = useRef<{ session: MasterySessionState; key: string } | null>(null);
+  const masteryRoundStartGuardRef = useRef<MasterySessionState | null>(null);
 
   // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -1060,6 +1062,13 @@ export function useStudyEngine(
     // Mastery rounds: drive the dedicated flow engine so round boundaries and
     // repetition logic stay centralized in studySessionFlow.ts.
     if (isMasteryMode) {
+      const currentMasteryCardId = masterySession ? getCurrentCardId(masterySession) : null;
+      if (!currentMasteryCardId || currentMasteryCardId !== engineCardId || !masterySession) return;
+      const masteryAnswerKey = `${masterySession.roundNumber}:${masterySession.currentRoundIndex}:${engineCardId}`;
+      const lastAnswer = masteryAnswerGuardRef.current;
+      if (lastAnswer?.session === masterySession && lastAnswer.key === masteryAnswerKey) return;
+      masteryAnswerGuardRef.current = { session: masterySession, key: masteryAnswerKey };
+
       const resultType: StudyCardResult = skipped ? "skipped" : correct ? "correct" : "incorrect";
       setMasterySession((prev) => {
         if (!prev) return prev;
@@ -1160,7 +1169,7 @@ export function useStudyEngine(
       totalCards: cardsOrder.length,
       currentIndex
     });
-  }, [listId, isAuthenticated, sessionId, isMasteryMode, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
+  }, [listId, isAuthenticated, sessionId, isMasteryMode, masterySession, trackListStudied, scheduleFlush, updateTurmaActivity, trackAnswer, mode, cardsOrder.length, currentIndex, gameSettings.redFocus]);
 
   const goToNext = useCallback(() => {
     if (isMasteryMode) {
@@ -1202,19 +1211,27 @@ export function useStudyEngine(
   const startNextRound = useCallback(() => {
     if (isMasteryMode) {
       if (!masterySession || masterySession.status !== "round-complete") return;
+      if (masteryRoundStartGuardRef.current === masterySession) return;
+      masteryRoundStartGuardRef.current = masterySession;
+
+      const sessionAtStart = masterySession;
+      const nextRoundState = startNextMasteryRound({
+        ...sessionAtStart,
+        currentRoundIds: [...sessionAtStart.currentRoundIds],
+        unseenIds: [...sessionAtStart.unseenIds],
+        retryIds: [...sessionAtStart.retryIds],
+        masteredIds: [...sessionAtStart.masteredIds],
+      });
+
       setMasterySession((prev) => {
-        if (!prev || prev.status !== "round-complete") return prev;
-        return startNextMasteryRound({
-          ...prev,
-          currentRoundIds: [...prev.currentRoundIds],
-          unseenIds: [...prev.unseenIds],
-          retryIds: [...prev.retryIds],
-          masteredIds: [...prev.masteredIds],
-        });
+        if (!prev || prev !== sessionAtStart || prev.status !== "round-complete") return prev;
+        return nextRoundState;
       });
       setRoundResults([]);
-      setIsFinished(false);
-      toast.info(`Rodada ${masterySession.roundNumber + 1} iniciada!`);
+      setIsFinished(nextRoundState.status !== "active");
+      if (nextRoundState.status === "active") {
+        toast.info(`Rodada ${nextRoundState.roundNumber} iniciada!`);
+      }
       return;
     }
     if (isGameComplete) {
