@@ -58,6 +58,7 @@ export const STUDY_RED_FOCUS_TRANSITION_EVENT = "piteco:study-red-focus-transiti
 
 const repository = createStudyPreferenceRepository();
 const WRITE_DEBOUNCE_MS = 300;
+const PREFERENCE_HYDRATION_TIMEOUT_MS = 5_000;
 
 type ScheduledPreferenceWrite = {
   timer: ReturnType<typeof setTimeout>;
@@ -70,6 +71,58 @@ function userScope(userId: string | undefined): string {
 
 function scopedDefault(gameMode: StudyPreset["mode"]): StudyPreset {
   return normalizeStudyPreset({ ...DEFAULT_STUDY_PRESET, mode: gameMode });
+}
+
+export function buildStudyPreferenceContextKey(input: {
+  scope: string;
+  gameMode: StudyPreset["mode"];
+  listId?: string;
+  sessionOverrides?: StudySessionOverrides;
+}): string {
+  const normalizedOverrides = normalizeStudyPresetOverride(input.sessionOverrides);
+  const overrideEntries = Object.entries(normalizedOverrides)
+    .sort(([left], [right]) => left.localeCompare(right));
+  return JSON.stringify([
+    input.scope,
+    input.gameMode,
+    input.listId ?? "global",
+    overrideEntries,
+  ]);
+}
+
+export function selectStudyPreferenceContextValue<T>(input: {
+  stateContextKey: string;
+  currentContextKey: string;
+  stateValue: T;
+  cachedValue: T;
+}): T {
+  return input.stateContextKey === input.currentContextKey
+    ? input.stateValue
+    : input.cachedValue;
+}
+
+function withPreferenceHydrationTimeout<T>(
+  promise: Promise<T>,
+  label: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const error = new Error(`Study preference hydration timed out: ${label}`);
+      error.name = "StudyPreferenceHydrationTimeoutError";
+      reject(error);
+    }, PREFERENCE_HYDRATION_TIMEOUT_MS);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function derivePrivateListId(pathname?: string): string | undefined {
@@ -259,7 +312,14 @@ export function useStudyPreferences(
     ...options.sessionOverrides,
     mode: activeMode,
   });
+  const preferenceContextKey = buildStudyPreferenceContextKey({
+    scope,
+    gameMode: activeMode,
+    listId,
+    sessionOverrides: initialSessionOverrides,
+  });
 
+  const [stateContextKey, setStateContextKey] = useState(preferenceContextKey);
   const [globalPreset, setGlobalPreset] = useState<StudyPreset>(initialGlobal);
   const [listOverride, setListOverride] = useState<StudyPresetOverride | null>(initialListOverride);
   const [sessionOverrides, setSessionOverridesState] = useState<StudySessionOverrides>(initialSessionOverrides);
@@ -269,18 +329,49 @@ export function useStudyPreferences(
   const manualRevisionRef = useRef(0);
   const redFocusTransitionRef = useRef(false);
 
+  const renderGlobalPreset = selectStudyPreferenceContextValue({
+    stateContextKey,
+    currentContextKey: preferenceContextKey,
+    stateValue: globalPreset,
+    cachedValue: initialGlobal,
+  });
+  const renderListOverride = selectStudyPreferenceContextValue({
+    stateContextKey,
+    currentContextKey: preferenceContextKey,
+    stateValue: listOverride,
+    cachedValue: initialListOverride,
+  });
+  const renderSessionOverrides = selectStudyPreferenceContextValue({
+    stateContextKey,
+    currentContextKey: preferenceContextKey,
+    stateValue: sessionOverrides,
+    cachedValue: initialSessionOverrides,
+  });
+  const renderHasPersistedGlobal = selectStudyPreferenceContextValue({
+    stateContextKey,
+    currentContextKey: preferenceContextKey,
+    stateValue: hasPersistedGlobal,
+    cachedValue: Boolean(readGlobalCache(scope, activeMode)),
+  });
+  const renderIsHydrating = selectStudyPreferenceContextValue({
+    stateContextKey,
+    currentContextKey: preferenceContextKey,
+    stateValue: isHydrating,
+    cachedValue: Boolean(userId),
+  });
+
   const effectivePreset = useMemo(() => normalizeStudyPreset({
     ...resolveStudyPreset({
-      globalPreset,
-      listOverride,
-      sessionOverrides,
+      globalPreset: renderGlobalPreset,
+      listOverride: renderListOverride,
+      sessionOverrides: renderSessionOverrides,
     }),
     mode: activeMode,
-  }), [activeMode, globalPreset, listOverride, sessionOverrides]);
+  }), [activeMode, renderGlobalPreset, renderListOverride, renderSessionOverrides]);
 
-  const source: StudyPreferenceSource = listOverride && !isEmptyStudyPresetOverride(listOverride)
+  const source: StudyPreferenceSource = renderListOverride && !isEmptyStudyPresetOverride(renderListOverride)
     ? "list"
-    : hasPersistedGlobal
+    : renderHasPersistedGlobal
       ? "global"
       : "defaults";
 
@@ -340,6 +431,7 @@ export function useStudyPreferences(
       mode: activeMode,
     });
 
+    setStateContextKey(preferenceContextKey);
     setGlobalPreset(cachedGlobal);
     setListOverride(cachedList);
     setSessionOverridesState(nextSession);
@@ -356,10 +448,18 @@ export function useStudyPreferences(
 
     void (async () => {
       try {
-        await flushPending();
+        await withPreferenceHydrationTimeout(flushPending(), "pending-writes");
         const [serverGlobalResult, serverListResult] = await Promise.allSettled([
-          repository.readGlobal(userId, activeMode),
-          listId ? repository.readListOverride(userId, listId, activeMode) : Promise.resolve(null),
+          withPreferenceHydrationTimeout(
+            repository.readGlobal(userId, activeMode),
+            `global:${activeMode}`,
+          ),
+          listId
+            ? withPreferenceHydrationTimeout(
+                repository.readListOverride(userId, listId, activeMode),
+                `list:${listId}:${activeMode}`,
+              )
+            : Promise.resolve(null),
         ]);
         if (cancelled || revisionAtStart !== manualRevisionRef.current) return;
 
@@ -391,6 +491,10 @@ export function useStudyPreferences(
           && !isMissingStudyPreferenceSchemaError(serverListResult.reason)) {
           console.warn("[StudyPreferences] Falha ao hidratar preset da lista", serverListResult.reason);
         }
+      } catch (error) {
+        if (!isMissingStudyPreferenceSchemaError(error)) {
+          console.warn("[StudyPreferences] Hidratação limitada ao cache local", error);
+        }
       } finally {
         if (!cancelled) setIsHydrating(false);
       }
@@ -405,6 +509,7 @@ export function useStudyPreferences(
     listId,
     options.sessionOverrides,
     persistenceEnabled,
+    preferenceContextKey,
     runWrite,
     userId,
   ]);
@@ -421,8 +526,13 @@ export function useStudyPreferences(
     if (typeof window === "undefined") return;
 
     const syncFromCache = () => {
+      // Every same-tab cache update is a manual revision from the perspective
+      // of sibling hook instances. Invalidate any older server hydration before
+      // it can overwrite the user's newest choice.
+      manualRevisionRef.current += 1;
       const nextGlobal = readGlobalCache(scope, activeMode) ?? scopedDefault(activeMode);
       const nextList = listId ? readListOverrideCache(scope, activeMode, listId) : null;
+      setStateContextKey(preferenceContextKey);
       setGlobalPreset(nextGlobal);
       setListOverride(nextList);
       setHasPersistedGlobal(Boolean(readGlobalCache(scope, activeMode)));
@@ -446,7 +556,7 @@ export function useStudyPreferences(
       window.removeEventListener(STUDY_PREFERENCE_CACHE_CHANGED_EVENT, handleCacheChanged);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [activeMode, listId, scope]);
+  }, [activeMode, listId, preferenceContextKey, scope]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !userId || !persistenceEnabled) return;
@@ -492,7 +602,10 @@ export function useStudyPreferences(
 
     if (persistenceScope === "list" && listId) {
       const persistedEffective = normalizeStudyPreset({
-        ...resolveStudyPreset({ globalPreset, listOverride }),
+        ...resolveStudyPreset({
+          globalPreset: renderGlobalPreset,
+          listOverride: renderListOverride,
+        }),
         mode: activeMode,
       });
       const nextEffective = normalizeStudyPreset({
@@ -500,7 +613,7 @@ export function useStudyPreferences(
         ...normalizedPartial,
         mode: activeMode,
       });
-      const nextOverride = diffStudyPreset(nextEffective, globalPreset);
+      const nextOverride = diffStudyPreset(nextEffective, renderGlobalPreset);
       delete nextOverride.mode;
       if (isEmptyStudyPresetOverride(nextOverride)) {
         setListOverride(null);
@@ -521,7 +634,7 @@ export function useStudyPreferences(
     }
 
     const nextGlobal = normalizeStudyPreset({
-      ...globalPreset,
+      ...renderGlobalPreset,
       ...normalizedPartial,
       mode: activeMode,
     });
@@ -537,11 +650,11 @@ export function useStudyPreferences(
   }, [
     activeMode,
     clearSessionKeys,
-    globalPreset,
     listId,
-    listOverride,
     persistenceEnabled,
     persistenceScope,
+    renderGlobalPreset,
+    renderListOverride,
     scheduleWrite,
     scope,
   ]);
@@ -624,11 +737,11 @@ export function useStudyPreferences(
 
   return {
     effectivePreset,
-    globalPreset,
-    listOverride,
-    sessionOverrides,
+    globalPreset: renderGlobalPreset,
+    listOverride: renderListOverride,
+    sessionOverrides: renderSessionOverrides,
     source,
-    isHydrating,
+    isHydrating: renderIsHydrating,
     updateForCurrentScope,
     saveAsGlobal,
     resetListOverride,
