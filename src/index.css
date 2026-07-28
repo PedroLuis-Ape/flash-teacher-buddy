@@ -281,7 +281,7 @@ All colors MUST be HSL.
    * APE PALETTES — applied via html[data-palette="..."]
    * Specificity (0,1,1) beats `.dark` / `:root` so palette wins.
    * Palette is independent of light/dark — but each palette has
-   * an intended base that bootPalette() syncs with the .dark class.
+   * an intended base that bootVisualPreferences() syncs with the .dark class.
    * ──────────────────────────────────────────────────────────── */
 
   /* APE Classic — current dark purple identity (default).

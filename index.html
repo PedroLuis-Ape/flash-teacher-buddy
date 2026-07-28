@@ -53,14 +53,87 @@
     <meta http-equiv="Expires" content="0" />
     <script>
       (function() {
+        var root = document.documentElement;
+        var defaults = {
+          version: 1,
+          appearance: 'dark',
+          visualStyle: 'classic',
+          palette: 'black'
+        };
+
         try {
-          var theme = localStorage.getItem('theme') || 'dark';
-          document.documentElement.classList.add(theme);
-          document.documentElement.style.backgroundColor =
-            theme === 'dark' ? 'hsl(224 71% 4%)' : 'hsl(0 0% 100%)';
+          var stored = null;
+          var raw = localStorage.getItem('ape:visual-preferences:v1');
+          if (raw) {
+            try {
+              var parsed = JSON.parse(raw);
+              if (parsed && parsed.version === 1) stored = parsed;
+            } catch (parseError) {
+              stored = null;
+            }
+          }
+
+          var legacyPalette = localStorage.getItem('ape:palette') || 'black';
+          var legacyMap = { classic: 'black', fresh: 'green', ocean: 'black' };
+          var validPalettes = ['black', 'green', 'white', 'galaxy'];
+          var paletteCandidate = stored && stored.palette || legacyMap[legacyPalette] || legacyPalette;
+          var palette = validPalettes.indexOf(paletteCandidate) >= 0
+            ? paletteCandidate
+            : defaults.palette;
+
+          var validStyles = ['classic', 'galaxy', 'playful'];
+          var styleCandidate = stored && stored.visualStyle;
+          var visualStyle = validStyles.indexOf(styleCandidate) >= 0
+            ? styleCandidate
+            : palette === 'galaxy' ? 'galaxy' : defaults.visualStyle;
+
+          var validAppearances = ['light', 'dark', 'system'];
+          var legacyTheme = localStorage.getItem('theme');
+          var appearanceCandidate = stored && stored.appearance || legacyTheme;
+          var appearance = validAppearances.indexOf(appearanceCandidate) >= 0
+            ? appearanceCandidate
+            : palette === 'green' || palette === 'white' ? 'light' : 'dark';
+
+          if (palette === 'galaxy' || visualStyle === 'galaxy') {
+            palette = 'galaxy';
+            visualStyle = 'galaxy';
+            appearance = 'dark';
+          }
+
+          var resolvedAppearance = appearance === 'system'
+            ? window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+            : appearance;
+          var preferences = {
+            version: 1,
+            appearance: appearance,
+            visualStyle: visualStyle,
+            palette: palette
+          };
+
+          root.setAttribute('data-visual-preferences-version', '1');
+          root.setAttribute('data-appearance', appearance);
+          root.setAttribute('data-resolved-appearance', resolvedAppearance);
+          root.setAttribute('data-visual-style', visualStyle);
+          root.setAttribute('data-palette', palette);
+          if (visualStyle === 'galaxy') root.setAttribute('data-layout-special', '');
+          root.classList.remove('light', 'dark');
+          root.classList.add(resolvedAppearance);
+          root.style.colorScheme = resolvedAppearance;
+          root.style.backgroundColor =
+            resolvedAppearance === 'dark' ? 'hsl(224 71% 4%)' : 'hsl(0 0% 100%)';
+
+          localStorage.setItem('ape:visual-preferences:v1', JSON.stringify(preferences));
+          localStorage.setItem('ape:palette', palette);
+          localStorage.setItem('theme', resolvedAppearance);
         } catch (e) {
-          document.documentElement.classList.add('dark');
-          document.documentElement.style.backgroundColor = 'hsl(224 71% 4%)';
+          root.setAttribute('data-visual-preferences-version', '1');
+          root.setAttribute('data-appearance', defaults.appearance);
+          root.setAttribute('data-resolved-appearance', defaults.appearance);
+          root.setAttribute('data-visual-style', defaults.visualStyle);
+          root.setAttribute('data-palette', defaults.palette);
+          root.classList.add('dark');
+          root.style.colorScheme = 'dark';
+          root.style.backgroundColor = 'hsl(224 71% 4%)';
         }
       })();
     </script>

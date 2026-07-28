@@ -12,7 +12,7 @@ import "./lib/errorCapture";
 import "./i18n/config";
 import { SafeMode } from "./components/SafeMode";
 import { HelmetProvider } from "react-helmet-async";
-import { bootPalette } from "./lib/palettes";
+import { bootVisualPreferences } from "./lib/visualPreferences";
 import { isPreviewContext, runBootStability } from "./lib/bootStability";
 
 async function attemptAutomaticRecovery() {
@@ -25,7 +25,7 @@ async function attemptAutomaticRecovery() {
 
 void attemptAutomaticRecovery;
 
-try { bootPalette(); } catch { /* noop */ }
+try { bootVisualPreferences(); } catch { /* noop */ }
 try { runBootStability(); } catch { /* noop */ }
 
 const reportBoot = (value: number, label?: string) => {
