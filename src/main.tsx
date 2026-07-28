@@ -6,6 +6,7 @@
 import "./lib/bootWatchdog";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "./styles/piteco-play.css";
 import "./styles/store-package-avatar.css";
 import "./lib/versionManager";
 import "./lib/errorCapture";
