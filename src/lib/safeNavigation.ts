@@ -1,4 +1,5 @@
 import { NavigateFunction } from "react-router-dom";
+import { isPublicPath } from "@/lib/sessionRouteAccess";
 
 /**
  * Navegação segura que verifica se há histórico válido
@@ -35,7 +36,7 @@ export function buildPath(
  * Verifica se a rota é pública
  */
 export function isPublicRoute(pathname: string): boolean {
-  return pathname.startsWith("/portal") || pathname.startsWith("/auth");
+  return isPublicPath(pathname);
 }
 
 /**

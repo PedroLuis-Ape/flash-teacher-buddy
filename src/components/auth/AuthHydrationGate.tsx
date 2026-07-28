@@ -1,22 +1,7 @@
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-
-const PUBLIC_PREFIXES = [
-  "/auth",
-  "/portal",
-  "/about",
-  "/ingles-para-iniciantes",
-  "/atividades-de-ingles",
-  "/flashcards-de-ingles",
-  "/para-professores",
-] as const;
-
-const PUBLIC_EXACT = new Set(["/", "/landing"]);
-
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_EXACT.has(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
+import { isPublicPath } from "@/lib/sessionRouteAccess";
 
 export function AuthHydrationGate({ children }: { children: ReactNode }) {
   const location = useLocation();
