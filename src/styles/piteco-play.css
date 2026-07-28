@@ -1,0 +1,437 @@
+/*
+ * Piteco Play semantic visual system.
+ *
+ * This file is intentionally scoped to data-visual-style="playful". Classic
+ * and Galaxy keep their existing cascade while product surfaces migrate in
+ * small, reversible waves.
+ */
+
+:root {
+  --ape-text-primary: var(--foreground);
+  --ape-text-secondary: var(--muted-foreground);
+  --ape-text-supporting: var(--muted-foreground);
+  --ape-text-disabled: var(--muted-foreground);
+
+  --ape-surface-canvas: var(--background);
+  --ape-surface-base: var(--card);
+  --ape-surface-raised: var(--popover);
+  --ape-surface-sunken: var(--muted);
+  --ape-surface-overlay: var(--popover);
+
+  --ape-action-primary: var(--primary);
+  --ape-action-primary-foreground: var(--primary-foreground);
+  --ape-action-secondary: var(--secondary);
+  --ape-action-secondary-foreground: var(--secondary-foreground);
+  --ape-action-danger: var(--destructive);
+  --ape-action-danger-foreground: var(--destructive-foreground);
+  --ape-action-disabled: var(--muted);
+  --ape-action-disabled-foreground: var(--muted-foreground);
+
+  --ape-feedback-success: var(--success);
+  --ape-feedback-success-foreground: var(--success-foreground);
+  --ape-feedback-error: var(--destructive);
+  --ape-feedback-error-foreground: var(--destructive-foreground);
+  --ape-feedback-warning: var(--warning);
+  --ape-feedback-warning-foreground: var(--warning-foreground);
+  --ape-feedback-info: var(--secondary);
+  --ape-feedback-info-foreground: var(--secondary-foreground);
+
+  --ape-product-progress: var(--primary);
+  --ape-product-xp: var(--accent);
+  --ape-product-pitecoin: var(--warning);
+  --ape-product-favorite: var(--warning);
+  --ape-product-red-focus: var(--destructive);
+
+  --ape-border-subtle: var(--border);
+  --ape-border-control: var(--border);
+  --ape-border-strong: var(--foreground);
+  --ape-focus-ring: var(--ring);
+
+  --ape-radius-control: 0.75rem;
+  --ape-radius-surface: 1rem;
+  --ape-radius-feature: 1.25rem;
+  --ape-radius-pill: 999px;
+
+  --ape-shadow-control: 0 3px 0 hsl(var(--ape-border-strong) / 0.3);
+  --ape-shadow-raised: 0 5px 0 hsl(var(--ape-border-strong) / 0.18);
+  --ape-shadow-overlay: 0 18px 50px -24px hsl(0 0% 0% / 0.55);
+
+  --ape-motion-instant: 80ms;
+  --ape-motion-fast: 140ms;
+  --ape-motion-standard: 220ms;
+  --ape-motion-celebration: 420ms;
+  --ape-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ape-ease-pressed: cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+html[data-visual-style="playful"][data-resolved-appearance="light"] {
+  --ape-text-primary: 250 25% 13%;
+  --ape-text-secondary: 252 18% 25%;
+  --ape-text-supporting: 250 14% 30%;
+  --ape-text-disabled: 250 9% 43%;
+
+  --ape-surface-canvas: 42 40% 96%;
+  --ape-surface-base: 45 55% 99%;
+  --ape-surface-raised: 0 0% 100%;
+  --ape-surface-sunken: 43 30% 91%;
+  --ape-surface-overlay: 45 55% 99%;
+
+  --ape-action-primary: 264 70% 38%;
+  --ape-action-primary-foreground: 0 0% 100%;
+  --ape-action-secondary: 218 67% 37%;
+  --ape-action-secondary-foreground: 0 0% 100%;
+  --ape-action-danger: 356 72% 38%;
+  --ape-action-danger-foreground: 0 0% 100%;
+  --ape-action-disabled: 42 15% 84%;
+  --ape-action-disabled-foreground: 250 9% 34%;
+
+  --ape-feedback-success: 153 65% 23%;
+  --ape-feedback-success-foreground: 0 0% 100%;
+  --ape-feedback-error: 356 72% 38%;
+  --ape-feedback-error-foreground: 0 0% 100%;
+  --ape-feedback-warning: 42 90% 58%;
+  --ape-feedback-warning-foreground: 250 25% 13%;
+  --ape-feedback-info: 218 67% 37%;
+  --ape-feedback-info-foreground: 0 0% 100%;
+
+  --ape-product-progress: 264 70% 38%;
+  --ape-product-xp: 310 62% 36%;
+  --ape-product-pitecoin: 36 90% 50%;
+  --ape-product-favorite: 28 88% 44%;
+  --ape-product-red-focus: 356 72% 38%;
+
+  --ape-border-subtle: 41 20% 78%;
+  --ape-border-control: 250 14% 35%;
+  --ape-border-strong: 250 25% 13%;
+  --ape-focus-ring: 202 92% 34%;
+
+  /* Compatibility bridge for surfaces that have not migrated yet. */
+  --background: var(--ape-surface-canvas);
+  --foreground: var(--ape-text-primary);
+  --card: var(--ape-surface-base);
+  --card-foreground: var(--ape-text-primary);
+  --popover: var(--ape-surface-overlay);
+  --popover-foreground: var(--ape-text-primary);
+  --primary: var(--ape-action-primary);
+  --primary-foreground: var(--ape-action-primary-foreground);
+  --secondary: var(--ape-action-secondary);
+  --secondary-foreground: var(--ape-action-secondary-foreground);
+  --muted: var(--ape-surface-sunken);
+  --muted-foreground: var(--ape-text-secondary);
+  --accent: 310 62% 36%;
+  --accent-foreground: 0 0% 100%;
+  --primary-glow: 310 62% 50%;
+  --destructive: var(--ape-feedback-error);
+  --destructive-foreground: var(--ape-feedback-error-foreground);
+  --success: var(--ape-feedback-success);
+  --success-foreground: var(--ape-feedback-success-foreground);
+  --warning: var(--ape-feedback-warning);
+  --warning-foreground: var(--ape-feedback-warning-foreground);
+  --border: var(--ape-border-subtle);
+  --input: var(--ape-border-subtle);
+  --ring: var(--ape-focus-ring);
+  --radius: var(--ape-radius-surface);
+}
+
+html[data-visual-style="playful"][data-resolved-appearance="dark"] {
+  --ape-text-primary: 45 45% 96%;
+  --ape-text-secondary: 45 22% 84%;
+  --ape-text-supporting: 45 15% 74%;
+  --ape-text-disabled: 45 9% 59%;
+
+  --ape-surface-canvas: 249 25% 8%;
+  --ape-surface-base: 250 23% 12%;
+  --ape-surface-raised: 252 23% 16%;
+  --ape-surface-sunken: 249 19% 7%;
+  --ape-surface-overlay: 251 24% 13%;
+
+  --ape-action-primary: 268 90% 78%;
+  --ape-action-primary-foreground: 249 25% 8%;
+  --ape-action-secondary: 208 90% 72%;
+  --ape-action-secondary-foreground: 249 25% 8%;
+  --ape-action-danger: 7 85% 72%;
+  --ape-action-danger-foreground: 249 25% 8%;
+  --ape-action-disabled: 250 10% 26%;
+  --ape-action-disabled-foreground: 45 10% 72%;
+
+  --ape-feedback-success: 150 66% 67%;
+  --ape-feedback-success-foreground: 249 25% 8%;
+  --ape-feedback-error: 7 85% 72%;
+  --ape-feedback-error-foreground: 249 25% 8%;
+  --ape-feedback-warning: 42 90% 70%;
+  --ape-feedback-warning-foreground: 249 25% 8%;
+  --ape-feedback-info: 208 90% 72%;
+  --ape-feedback-info-foreground: 249 25% 8%;
+
+  --ape-product-progress: 268 90% 78%;
+  --ape-product-xp: 315 84% 76%;
+  --ape-product-pitecoin: 42 90% 70%;
+  --ape-product-favorite: 28 92% 72%;
+  --ape-product-red-focus: 7 85% 72%;
+
+  --ape-border-subtle: 250 16% 30%;
+  --ape-border-control: 45 20% 72%;
+  --ape-border-strong: 45 45% 96%;
+  --ape-focus-ring: 194 92% 70%;
+
+  /* Compatibility bridge for surfaces that have not migrated yet. */
+  --background: var(--ape-surface-canvas);
+  --foreground: var(--ape-text-primary);
+  --card: var(--ape-surface-base);
+  --card-foreground: var(--ape-text-primary);
+  --popover: var(--ape-surface-overlay);
+  --popover-foreground: var(--ape-text-primary);
+  --primary: var(--ape-action-primary);
+  --primary-foreground: var(--ape-action-primary-foreground);
+  --secondary: var(--ape-action-secondary);
+  --secondary-foreground: var(--ape-action-secondary-foreground);
+  --muted: 250 18% 21%;
+  --muted-foreground: var(--ape-text-secondary);
+  --accent: 315 84% 76%;
+  --accent-foreground: 249 25% 8%;
+  --primary-glow: 315 84% 76%;
+  --destructive: var(--ape-feedback-error);
+  --destructive-foreground: var(--ape-feedback-error-foreground);
+  --success: var(--ape-feedback-success);
+  --success-foreground: var(--ape-feedback-success-foreground);
+  --warning: var(--ape-feedback-warning);
+  --warning-foreground: var(--ape-feedback-warning-foreground);
+  --border: var(--ape-border-subtle);
+  --input: var(--ape-border-subtle);
+  --ring: var(--ape-focus-ring);
+  --radius: var(--ape-radius-surface);
+}
+
+html[data-visual-style="playful"] body {
+  background-color: hsl(var(--ape-surface-canvas));
+  background-image: none;
+}
+
+html[data-visual-style="playful"] .ape-button-primitive {
+  min-height: 44px;
+  min-width: 44px;
+  border: 2px solid hsl(var(--ape-border-control));
+  border-radius: var(--ape-radius-control);
+  background-image: none;
+  font-weight: 800;
+  letter-spacing: 0.005em;
+  opacity: 1;
+  box-shadow: var(--ape-shadow-control);
+  transform: translateY(0);
+  transition:
+    transform var(--ape-motion-instant) var(--ape-ease-pressed),
+    box-shadow var(--ape-motion-instant) var(--ape-ease-pressed),
+    background-color var(--ape-motion-fast) var(--ape-ease-standard),
+    border-color var(--ape-motion-fast) var(--ape-ease-standard),
+    color var(--ape-motion-fast) var(--ape-ease-standard);
+}
+
+html[data-visual-style="playful"] .ape-button-primitive[data-ape-variant="default"],
+html[data-visual-style="playful"] .ape-button-primitive[data-ape-variant="hero"] {
+  color: hsl(var(--ape-action-primary-foreground));
+  background-color: hsl(var(--ape-action-primary));
+  border-color: hsl(var(--ape-border-strong));
+}
+
+html[data-visual-style="playful"] .ape-button-primitive[data-ape-variant="secondary"] {
+  color: hsl(var(--ape-action-secondary-foreground));
+  background-color: hsl(var(--ape-action-secondary));
+  border-color: hsl(var(--ape-border-strong));
+}
+
+html[data-visual-style="playful"] .ape-button-primitive[data-ape-variant="destructive"] {
+  color: hsl(var(--ape-action-danger-foreground));
+  background-color: hsl(var(--ape-action-danger));
+  border-color: hsl(var(--ape-border-strong));
+}
+
+html[data-visual-style="playful"] .ape-button-primitive[data-ape-variant="outline"] {
+  color: hsl(var(--ape-text-primary));
+  background-color: hsl(var(--ape-surface-raised));
+  border-color: hsl(var(--ape-border-control));
+}
+
+html[data-visual-style="playful"] .ape-button-primitive[data-ape-variant="ghost"],
+html[data-visual-style="playful"] .ape-button-primitive[data-ape-variant="link"] {
+  color: hsl(var(--ape-text-primary));
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-visual-style="playful"] .ape-button-primitive:hover:not(:disabled) {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+}
+
+html[data-visual-style="playful"] .ape-button-primitive:active:not(:disabled) {
+  box-shadow: 0 1px 0 hsl(var(--ape-border-strong) / 0.32);
+  transform: translateY(2px) scale(0.99);
+}
+
+html[data-visual-style="playful"] .ape-button-primitive:focus-visible,
+html[data-visual-style="playful"] .ape-card-primitive[data-ape-interactive="true"]:focus-visible,
+html[data-visual-style="playful"] .ape-badge-primitive:focus-visible {
+  outline: 3px solid hsl(var(--ape-focus-ring));
+  outline-offset: 3px;
+}
+
+html[data-visual-style="playful"] .ape-button-primitive:disabled {
+  color: hsl(var(--ape-action-disabled-foreground));
+  background-color: hsl(var(--ape-action-disabled));
+  border-color: hsl(var(--ape-border-subtle));
+  box-shadow: none;
+  opacity: 1;
+  transform: none;
+}
+
+html[data-visual-style="playful"] .ape-card-primitive,
+html[data-visual-style="playful"] .ape-surface-primitive {
+  color: hsl(var(--ape-text-primary));
+  border: 2px solid hsl(var(--ape-border-subtle));
+  border-radius: var(--ape-radius-surface);
+  background-color: hsl(var(--ape-surface-base));
+  background-image: none;
+  box-shadow: none;
+}
+
+html[data-visual-style="playful"] .ape-card-primitive[data-ape-surface="raised"],
+html[data-visual-style="playful"] .ape-surface-primitive[data-ape-surface="raised"] {
+  border-color: hsl(var(--ape-border-control));
+  background-color: hsl(var(--ape-surface-raised));
+  box-shadow: var(--ape-shadow-raised);
+}
+
+html[data-visual-style="playful"] .ape-card-primitive[data-ape-surface="sunken"],
+html[data-visual-style="playful"] .ape-surface-primitive[data-ape-surface="sunken"] {
+  background-color: hsl(var(--ape-surface-sunken));
+  border-color: hsl(var(--ape-border-subtle));
+  box-shadow: inset 0 2px 0 hsl(var(--ape-border-strong) / 0.08);
+}
+
+html[data-visual-style="playful"] .ape-surface-primitive[data-ape-surface="overlay"] {
+  background-color: hsl(var(--ape-surface-overlay));
+  box-shadow: var(--ape-shadow-overlay);
+}
+
+html[data-visual-style="playful"] .ape-card-primitive[data-ape-surface="interactive"] {
+  border-color: hsl(var(--ape-border-control));
+  background-color: hsl(var(--ape-surface-raised));
+  box-shadow: var(--ape-shadow-control);
+  transition:
+    transform var(--ape-motion-fast) var(--ape-ease-standard),
+    box-shadow var(--ape-motion-fast) var(--ape-ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-visual-style="playful"] .ape-card-primitive[data-ape-surface="interactive"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ape-shadow-raised);
+  }
+}
+
+html[data-visual-style="playful"] .ape-card-primitive[data-ape-density="play"] .ape-card-header,
+html[data-visual-style="playful"] .ape-card-primitive[data-ape-density="play"] .ape-card-content,
+html[data-visual-style="playful"] .ape-card-primitive[data-ape-density="play"] .ape-card-footer {
+  padding-inline: clamp(1rem, 4vw, 1.5rem);
+}
+
+html[data-visual-style="playful"] .ape-card-title {
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+html[data-visual-style="playful"] .ape-card-description {
+  color: hsl(var(--ape-text-secondary));
+  opacity: 1;
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive {
+  min-height: 1.75rem;
+  border-width: 2px;
+  border-radius: var(--ape-radius-pill);
+  padding-inline: 0.625rem;
+  color: hsl(var(--ape-action-primary-foreground));
+  background-color: hsl(var(--ape-action-primary));
+  font-weight: 800;
+  line-height: 1.2;
+  opacity: 1;
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="secondary"] {
+  color: hsl(var(--ape-action-secondary-foreground));
+  background-color: hsl(var(--ape-action-secondary));
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="outline"] {
+  color: hsl(var(--ape-text-primary));
+  background-color: hsl(var(--ape-surface-raised));
+  border-color: hsl(var(--ape-border-control));
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="destructive"],
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="error"] {
+  color: hsl(var(--ape-feedback-error-foreground));
+  background-color: hsl(var(--ape-feedback-error));
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="success"] {
+  color: hsl(var(--ape-feedback-success-foreground));
+  background-color: hsl(var(--ape-feedback-success));
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="warning"] {
+  color: hsl(var(--ape-feedback-warning-foreground));
+  background-color: hsl(var(--ape-feedback-warning));
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="info"] {
+  color: hsl(var(--ape-feedback-info-foreground));
+  background-color: hsl(var(--ape-feedback-info));
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="xp"] {
+  color: hsl(var(--ape-action-primary-foreground));
+  background-color: hsl(var(--ape-product-xp));
+}
+
+html[data-visual-style="playful"] .ape-badge-primitive[data-ape-variant="pitecoin"] {
+  color: hsl(var(--ape-feedback-warning-foreground));
+  background-color: hsl(var(--ape-product-pitecoin));
+}
+
+html[data-visual-style="playful"] .ape-text-primitive {
+  color: hsl(var(--ape-text-primary));
+  opacity: 1;
+}
+
+html[data-visual-style="playful"] .ape-text-primitive[data-ape-tone="secondary"] {
+  color: hsl(var(--ape-text-secondary));
+}
+
+html[data-visual-style="playful"] .ape-text-primitive[data-ape-tone="supporting"] {
+  color: hsl(var(--ape-text-supporting));
+}
+
+html[data-visual-style="playful"] .ape-text-primitive[data-ape-tone="disabled"] {
+  color: hsl(var(--ape-text-disabled));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ape-motion-instant: 1ms;
+    --ape-motion-fast: 1ms;
+    --ape-motion-standard: 1ms;
+    --ape-motion-celebration: 1ms;
+  }
+
+  html[data-visual-style="playful"] .ape-button-primitive,
+  html[data-visual-style="playful"] .ape-card-primitive,
+  html[data-visual-style="playful"] .ape-surface-primitive {
+    scroll-behavior: auto;
+    transition-duration: 1ms;
+  }
+}
