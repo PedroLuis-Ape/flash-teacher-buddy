@@ -53,19 +53,33 @@ export function useAdvanceController(options: AdvanceControllerOptions): Advance
     return () => window.removeEventListener(STUDY_FLOW_MODE_CHANGED_EVENT, handler);
   }, []);
 
+  useEffect(() => {
+    if (flowModeProp === "mastery_rounds" || flowModeProp === "continuous") {
+      setFlowMode(flowModeProp);
+    }
+  }, [flowModeProp]);
+
   const consumedRef = useRef<string | null>(null);
   const attemptIdRef = useRef<string>("");
 
-  useEffect(() => {
+  const resetAttempt = useCallback(() => {
     consumedRef.current = null;
-    attemptIdRef.current = `${cardId ?? "none"}#${Date.now()}`;
-    setStatusState("unanswered");
+    attemptIdRef.current = `${cardId ?? "none"}#${Date.now()}#${Math.random()}`;
     setDialogOpen(false);
   }, [cardId]);
 
+  useEffect(() => {
+    resetAttempt();
+    setStatusState("unanswered");
+  }, [cardId, resetAttempt]);
+
   const setStatus = useCallback((next: CardCompletionStatus) => {
+    // "Tentar corrigir" starts a fresh attempt on the same card. Without
+    // resetting the consumed token, the controller keeps treating the retry as
+    // an already-finished attempt and blocks the next-card action.
+    if (next === "unanswered") resetAttempt();
     setStatusState(next);
-  }, []);
+  }, [resetAttempt]);
 
   const emitAdvance = useCallback(
     (final: CardCompletionStatus) => {
