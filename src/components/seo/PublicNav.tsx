@@ -22,8 +22,8 @@ export function PublicNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-3 sm:px-4 lg:px-6">
+    <header className="ape-public-nav sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="ape-public-nav-inner mx-auto flex h-14 w-full max-w-7xl items-center gap-2 px-3 sm:px-4 lg:px-6">
         <Link to="/" className="flex min-w-0 shrink-0 items-center gap-1.5 text-base font-bold sm:gap-2 sm:text-lg">
           <PitecoLogo className="h-8 w-8 shrink-0" />
           <span className="truncate">APE</span>
@@ -34,7 +34,7 @@ export function PublicNav() {
             <Link
               key={link.to}
               to={link.to}
-              className="nav-link-animated whitespace-nowrap rounded-md px-2 py-2 text-muted-foreground hover:text-foreground 2xl:px-3"
+              className="ape-public-nav-link nav-link-animated whitespace-nowrap rounded-md px-2 py-2 text-muted-foreground hover:text-foreground 2xl:px-3"
             >
               {link.label}
             </Link>
@@ -68,7 +68,7 @@ export function PublicNav() {
                     key={link.to}
                     to={link.to}
                     onClick={() => setOpen(false)}
-                    className="nav-link-animated rounded-md px-3 py-3 text-foreground"
+                    className="ape-public-nav-link nav-link-animated rounded-md px-3 py-3 text-foreground"
                   >
                     {link.label}
                   </Link>
@@ -91,7 +91,7 @@ export function PublicNav() {
 
 export function PublicFooter() {
   return (
-    <footer className="mt-16 border-t border-border/50 py-8 text-sm text-muted-foreground">
+    <footer className="ape-public-footer mt-16 border-t border-border/50 py-8 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 md:flex-row md:px-6">
         <p>© {new Date().getFullYear()} APE — Apprentice Practice & Enhancement</p>
         <nav className="flex flex-wrap gap-4">

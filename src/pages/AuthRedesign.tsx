@@ -44,19 +44,19 @@ export default function AuthRedesign() {
   const handleSuccess = (route = "/dashboard") => navigate(route, { replace: true });
 
   return (
-    <main className="relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/10 to-transparent" />
+    <main className="ape-auth-page relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6">
+      <div aria-hidden="true" className="ape-auth-aura pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/10 to-transparent" />
 
       <Link
         to="/"
-        className="absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground sm:left-6 sm:top-6"
+        className="ape-auth-back absolute left-4 top-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground sm:left-6 sm:top-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Voltar
       </Link>
 
       <div className="relative z-10 w-full max-w-md">
-        <Card className="border-border bg-card p-5 shadow-xl sm:p-7">
+        <Card surface="raised" density="play" className="ape-auth-card border-border bg-card p-5 shadow-xl sm:p-7">
           <div className="mb-4 flex justify-center">
             <PitecoLogo className="h-14 w-14" />
           </div>

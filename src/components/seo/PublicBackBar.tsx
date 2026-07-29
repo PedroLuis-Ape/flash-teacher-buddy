@@ -25,8 +25,8 @@ export function PublicBackBar({ showPortal = true }: PublicBackBarProps) {
   const onPortal = location.pathname.startsWith("/portal");
 
   return (
-    <div className="max-w-6xl mx-auto w-full px-4 md:px-6 pt-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="ape-public-backbar max-w-6xl mx-auto w-full px-4 md:px-6 pt-4">
+      <div className="ape-public-backbar-actions flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Voltar

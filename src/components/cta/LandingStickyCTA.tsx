@@ -29,7 +29,7 @@ export function LandingStickyCTA() {
     <div
       aria-hidden={!visible}
       className={[
-        "fixed inset-x-0 bottom-0 z-40 md:hidden",
+        "ape-landing-sticky-cta fixed inset-x-0 bottom-0 z-40 md:hidden",
         "border-t border-border bg-background/95 backdrop-blur",
         "px-4 pt-3",
         "pb-[calc(env(safe-area-inset-bottom,0px)+12px)]",
