@@ -53,6 +53,8 @@ function diagnosticCode(value: unknown): CapabilityDiagnosticCode {
 }
 
 function statusValue(value: unknown): CapabilityStatus {
+  if (value === true) return "ready";
+  if (value === false) return "missing";
   return value === "ready" || value === "missing" || value === "unknown" ? value : "unknown";
 }
 

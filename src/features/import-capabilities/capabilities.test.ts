@@ -100,6 +100,39 @@ describe("import capability preflight", () => {
     expect(evaluation.missing).toEqual(expect.arrayContaining(BASE_IMPORT_CAPABILITIES));
   });
 
+  it("normalizes boolean capabilities returned by the database RPC", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: {
+        contract_version: "1",
+        engine_version: "2.0",
+        migration_revision: "20260729175633",
+        project_ref: null,
+        capabilities: {
+          safe_import: true,
+          basic_import: true,
+          layered_cards: true,
+          enriched_fields: false,
+        },
+        checks: [],
+        diagnostic_codes: ["schema"],
+      },
+      error: null,
+    });
+
+    const result = await fetchImportCapabilities();
+
+    expect(result.source).toBe("rpc");
+    expect(result.engineVersion).toBe("2.0");
+    expect(result.capabilities).toEqual({
+      safe_import: "ready",
+      basic_import: "ready",
+      layered_cards: "ready",
+      enriched_fields: "missing",
+    });
+    expect(evaluateImportCapabilities(result, BASE_IMPORT_CAPABILITIES).ready).toBe(true);
+    expect(evaluateImportCapabilities(result, [...BASE_IMPORT_CAPABILITIES, "enriched_fields"]).ready).toBe(false);
+  });
+
   it("enables only the production basic contract when the capabilities RPC is absent", async () => {
     mocks.rpc.mockResolvedValue({
       data: null,
