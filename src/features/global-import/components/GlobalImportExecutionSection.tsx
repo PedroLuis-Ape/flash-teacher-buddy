@@ -165,6 +165,11 @@ export function GlobalImportExecutionSection(props: Props) {
           <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
             Processo finalizado. Os dados já foram gravados e não existe outra etapa pendente de confirmação.
           </p>
+          {props.report.glossary_warning && (
+            <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-100" role="status">
+              {props.report.glossary_warning}
+            </p>
+          )}
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {props.report.assignments_created !== undefined && (
               <Metric value={props.report.assignments_created} label="Atribuições criadas" />

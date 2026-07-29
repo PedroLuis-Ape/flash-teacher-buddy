@@ -366,7 +366,7 @@ export default function SuperGlobalImportScreenV2() {
               Voltar à turma
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => navigate("/import")}>Importador simples</Button>
+            <Button variant="outline" onClick={() => navigate("/folders")}>Abrir biblioteca</Button>
           )}
         </header>
 
