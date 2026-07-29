@@ -1,0 +1,209 @@
+/*
+ * Piteco Play composition for authenticated shell, dashboard and library.
+ *
+ * The legacy .space-ui boundary stays mounted for every visual style. These
+ * rules are additive, static and limited to Playful so providers, session,
+ * queries and Classic/Galaxy never take a separate render path.
+ */
+
+html[data-visual-style="playful"] .ape-private-shell {
+  min-width: 0;
+  color: hsl(var(--ape-text-primary));
+  background-color: hsl(var(--ape-surface-canvas));
+}
+
+html[data-visual-style="playful"] .ape-private-shell .space-ui-header,
+html[data-visual-style="playful"] .ape-private-shell .space-ui-pagebar {
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+  border-radius: 0 0 var(--ape-radius-surface) var(--ape-radius-surface);
+}
+
+html[data-visual-style="playful"] .ape-private-shell .space-ui-brand-title,
+html[data-visual-style="playful"] .ape-private-shell .space-ui-pagebar h1 {
+  color: hsl(var(--ape-text-primary));
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .space-ui-tabbar {
+  border-top-width: 2px;
+  border-top-style: solid;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .space-ui-tab {
+  min-height: 44px;
+  border-width: 2px;
+  border-radius: var(--ape-radius-control);
+  font-weight: 800;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .space-ui-tab:focus-visible,
+html[data-visual-style="playful"] .ape-private-shell .space-ui-pagebar button:focus-visible,
+html[data-visual-style="playful"] .ape-private-shell .ape-private-home button:focus-visible,
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library button:focus-visible,
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library [role="button"]:focus-visible {
+  outline: 3px solid hsl(var(--ape-focus-ring));
+  outline-offset: 3px;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-home,
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library {
+  min-width: 0;
+  color: hsl(var(--ape-text-primary));
+  background-color: hsl(var(--ape-surface-canvas));
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-home-content {
+  padding-top: 0.75rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-home-content > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.875rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-welcome {
+  min-height: 0;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: var(--ape-radius-hero);
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-welcome > div {
+  padding: 1rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-welcome h2 {
+  color: hsl(var(--ape-text-primary));
+  font-size: clamp(1.35rem, 7vw, 2.25rem);
+  font-weight: 900;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-welcome p {
+  color: hsl(var(--ape-text-secondary));
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-stats {
+  gap: 0.625rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-stat {
+  min-width: 0;
+  padding: 0.75rem;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: var(--ape-radius-surface);
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-stat p {
+  overflow-wrap: anywhere;
+  color: hsl(var(--ape-text-primary));
+  font-size: clamp(1.45rem, 7vw, 2rem);
+  font-weight: 900;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-stat .icon-tile {
+  border: 2px solid hsl(var(--ape-border-subtle));
+  border-radius: var(--ape-radius-control);
+  background-color: hsl(var(--ape-surface-sunken));
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-feature-grid,
+html[data-visual-style="playful"] .ape-private-shell .ape-home-quick-actions > div:last-child {
+  gap: 0.625rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-feature-card,
+html[data-visual-style="playful"] .ape-private-shell .ape-home-quick-card {
+  border-width: 2px;
+  border-style: solid;
+  border-radius: var(--ape-radius-surface);
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-feature-card {
+  padding: 0;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-feature-card > div {
+  padding: 1rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-quick-card {
+  min-height: 8.5rem;
+  padding: 0.875rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-home-quick-card h3,
+html[data-visual-style="playful"] .ape-private-shell .ape-home-feature-card h3 {
+  color: hsl(var(--ape-text-primary));
+  font-weight: 900;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library-content {
+  min-width: 0;
+  padding-inline: 0.75rem;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library .ape-tabs-shell > div:first-child {
+  border-bottom-width: 2px;
+  border-radius: 0 0 var(--ape-radius-surface) var(--ape-radius-surface);
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library [role="tab"] {
+  min-height: 44px;
+  border-bottom-width: 3px;
+  color: hsl(var(--ape-text-secondary));
+  font-weight: 800;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library [role="tab"][data-state="active"] {
+  color: hsl(var(--ape-text-primary));
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-library-tab {
+  padding: 0.75rem 0;
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-library-toolbar {
+  padding: 0.5rem;
+  border: 2px solid hsl(var(--ape-border-subtle));
+  border-radius: var(--ape-radius-surface);
+  background-color: hsl(var(--ape-surface-base));
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library .space-ui-folder-card,
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library .space-ui-list-card {
+  min-height: 4.5rem;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: var(--ape-radius-surface);
+}
+
+html[data-visual-style="playful"] .ape-private-shell .ape-private-library .space-ui-card-icon {
+  border-width: 2px;
+  border-radius: var(--ape-radius-control);
+}
+
+@media (min-width: 768px) {
+  html[data-visual-style="playful"] .ape-private-shell .ape-private-home-content {
+    padding-top: 1rem;
+  }
+
+  html[data-visual-style="playful"] .ape-private-shell .ape-private-home-content > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1rem;
+  }
+
+  html[data-visual-style="playful"] .ape-private-shell .ape-private-library-content {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-visual-style="playful"] .ape-private-shell .ape-private-home *,
+  html[data-visual-style="playful"] .ape-private-shell .ape-private-library * {
+    scroll-behavior: auto;
+    transition-duration: 1ms;
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+  }
+}

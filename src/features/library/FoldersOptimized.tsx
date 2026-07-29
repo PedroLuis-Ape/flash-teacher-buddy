@@ -340,8 +340,8 @@ export default function FoldersOptimized() {
   );
 
   const foldersTab = (
-    <div className="space-y-3 p-4">
-      <div className="flex items-center justify-between gap-2 py-1">
+    <div className="ape-library-tab space-y-3 p-4">
+      <div className="ape-library-toolbar flex items-center justify-between gap-2 py-1">
         <div className="flex items-center gap-2">
           {folders.length > 0 && (
             <Button size="sm" variant={selectMode ? "secondary" : "outline"} className="min-h-[40px]" onClick={() => { setSelectMode((value) => !value); if (selectMode) setSelectedFolders(new Set()); }}>
@@ -368,7 +368,7 @@ export default function FoldersOptimized() {
   );
 
   const favoritesTab = (
-    <div className="space-y-6 p-4">
+    <div className="ape-library-tab space-y-6 p-4">
       {loading ? <div className="py-4 text-center text-sm text-muted-foreground">Carregando...</div> : totalFavorites === 0 ? <div className="py-8 text-center text-muted-foreground"><Star className="mx-auto mb-3 h-12 w-12 opacity-30" /><p className="text-sm">Nenhum favorito ainda</p></div> : <>
         {favoritedFolders.length > 0 && <div className="space-y-3"><h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Pastas favoritas</h3><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{favoritedFolders.map((folder) => <div key={folder.id} className="flex items-center gap-2"><div className="min-w-0 flex-1"><ApeCardFolder title={folder.title} listCount={folder.list_count} cardCount={folder.card_count} onClick={() => navigate(`/folder/${folder.id}`)} /></div><Button variant="ghost" size="icon" className="h-11 w-11 text-yellow-500" onClick={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite: true })}><Star className="h-4 w-4 fill-current" /></Button></div>)}</div></div>}
         {favoritedLists.length > 0 && <div className="space-y-3"><h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Listas favoritas</h3><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{favoritedLists.map((list) => <div key={list.id} className="flex items-center gap-2"><div className="min-w-0 flex-1"><ApeCardList title={list.title} subtitle={list.folder_title ?? undefined} cardCount={list.card_count} onClick={() => navigate(`/list/${list.id}`)} onPlayClick={() => navigate(`/list/${list.id}/games`)} /></div><Button variant="ghost" size="icon" className="h-11 w-11 text-yellow-500" onClick={() => toggleFavorite.mutate({ resourceId: list.id, resourceType: "list", isFavorite: true })}><Star className="h-4 w-4 fill-current" /></Button></div>)}</div></div>}
@@ -377,7 +377,7 @@ export default function FoldersOptimized() {
   );
 
   const teachersTab = (
-    <div className="space-y-3 p-4">
+    <div className="ape-library-tab space-y-3 p-4">
       <div className="flex items-center justify-between py-1"><h2 className="text-lg font-semibold">Meus professores</h2><Button size="sm" variant="outline" onClick={() => navigate("/my-teachers")}>Gerenciar</Button></div>
       {teachersQuery.isPending && !teachersQuery.data ? <div className="py-4 text-center text-sm text-muted-foreground">Carregando...</div> : teachers.length === 0 ? <div className="py-8 text-center text-muted-foreground"><p className="text-sm">Você ainda não segue nenhum professor</p><Button size="sm" variant="outline" className="mt-3" onClick={() => navigate("/my-teachers")}>Buscar Professores</Button></div> : <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{teachers.map((teacher) => <ApeCardProfessor key={teacher.id} name={teacher.first_name || "Professor"} email="" folderCount={teacher.folder_count} listCount={teacher.list_count} cardCount={teacher.card_count} onClick={() => navigate(`/teacher/${teacher.id}/folders`)} />)}</div>}
     </div>
@@ -390,9 +390,9 @@ export default function FoldersOptimized() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="ape-private-library min-h-screen bg-background">
       <ApeAppBar title="Biblioteca" variant="home" />
-      <div className="mx-auto max-w-6xl px-4 lg:px-8"><ApeTabs tabs={tabs} defaultValue="folders" /></div>
+      <div className="ape-private-library-content mx-auto max-w-6xl px-4 lg:px-8"><ApeTabs tabs={tabs} defaultValue="folders" /></div>
 
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
         <DialogContent><DialogHeader><DialogTitle>Mover {foldersToMove.length > 1 ? `${foldersToMove.length} pastas` : "pasta"}</DialogTitle><DialogDescription>Selecione o destino</DialogDescription></DialogHeader><div className="py-4"><Label htmlFor="destination">Destino</Label><Select value={moveDestination} onValueChange={setMoveDestination}><SelectTrigger id="destination" className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="general">📚 Biblioteca Geral</SelectItem>{institutions.map((institution) => <SelectItem key={institution.id} value={institution.id}>🏫 {institution.name}</SelectItem>)}</SelectContent></Select></div><DialogFooter><Button variant="outline" onClick={() => setMoveDialogOpen(false)} disabled={isMoving}>Cancelar</Button><Button onClick={handleMoveFolders} disabled={isMoving}>{isMoving ? "Movendo..." : "Mover"}</Button></DialogFooter></DialogContent>

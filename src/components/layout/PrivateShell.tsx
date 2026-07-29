@@ -39,6 +39,7 @@ import "@/styles/space-ui-components.css";
 import "@/styles/space-ui-widgets.css";
 import "@/styles/space-ui-reference-match.css";
 import "@/styles/space-ui-performance.css";
+import "@/styles/piteco-play-private.css";
 
 const NotificationBell = lazy(() => import("@/components/NotificationBell").then(m => ({ default: m.NotificationBell })));
 const PresentBoxBadge = lazy(() => import("@/features/gamification/components/PresentBoxBadge").then(m => ({ default: m.PresentBoxBadge })));
@@ -98,7 +99,7 @@ function PrivateShellInner({ children }: PrivateShellProps) {
   return (
     <div
       className={cn(
-        "space-ui space-ui-shell min-h-screen flex flex-col",
+        "ape-private-shell space-ui space-ui-shell min-h-screen flex flex-col",
         isHome && "space-ui-home-route",
       )}
     >

@@ -119,7 +119,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="ape-private-home min-h-screen bg-background pb-24">
       {/*
         Home AppBar (Linha 3 — título): mantém apenas o título e a busca.
         Economia, presente e tema são acessíveis pela top bar global / card de perfil
@@ -131,10 +131,10 @@ const Index = () => {
         showSearch
       />
 
-      <div className="max-w-[1600px] mx-auto space-y-6 px-4 lg:px-8 xl:px-12 pt-4">
+      <div className="ape-private-home-content max-w-[1600px] mx-auto space-y-6 px-4 lg:px-8 xl:px-12 pt-4">
         {/* Profile Header — premium welcome banner */}
         <Card
-          className="welcome-banner cursor-pointer border-0"
+          className="ape-home-welcome welcome-banner cursor-pointer border-0"
           onClick={() => navigate("/profile")}
         >
           <CardContent className="relative p-5 sm:p-6">
@@ -216,8 +216,8 @@ const Index = () => {
         </Card>
 
         {/* Statistics Cards — premium stat tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 xl:gap-4">
-          <Card className="stat-tile p-4 border-0">
+        <div className="ape-home-stats grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 xl:gap-4">
+          <Card className="ape-home-stat stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><TrendingUp className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">PTS Semanais</span>
@@ -230,7 +230,7 @@ const Index = () => {
           </Card>
 
           <Card
-            className="stat-tile cursor-pointer p-4 border-0"
+            className="ape-home-stat stat-tile cursor-pointer p-4 border-0"
             onClick={() => navigate('/store')}
           >
             <div className="flex items-center gap-2 mb-2">
@@ -244,7 +244,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="stat-tile p-4 border-0">
+          <Card className="ape-home-stat stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><Crown className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">Nível</span>
@@ -256,7 +256,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="stat-tile p-4 border-0">
+          <Card className="ape-home-stat stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><Play className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">Sequência</span>
@@ -268,7 +268,7 @@ const Index = () => {
             )}
           </Card>
 
-          <Card className="stat-tile p-4 border-0">
+          <Card className="ape-home-stat stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><BookOpen className="h-4 w-4 text-primary" /></span>
               <span className="text-xs text-muted-foreground">Listas</span>
@@ -288,10 +288,10 @@ const Index = () => {
           Feature cards grid — empilhado no mobile, 2 colunas em desktop
           para aproveitar melhor a largura sem mexer na lógica de cada card.
         */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 xl:gap-4">
+        <div className="ape-home-feature-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 xl:gap-4">
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
+            className="ape-home-feature-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
             onClick={() => navigate('/painel-professor')}
           >
             <div className="flex items-center gap-4">
@@ -313,7 +313,7 @@ const Index = () => {
         {/* NEW: Meus Professores Card (apenas para alunos) */}
         {!isTeacher && (
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
+            className="ape-home-feature-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"
             onClick={() => navigate('/my-teachers')}
           >
             <div className="flex items-center gap-4">
@@ -333,7 +333,7 @@ const Index = () => {
 
         {/* Continue Studying Card */}
         {safeLast && (
-          <Card className="overflow-hidden border-border h-full">
+          <Card className="ape-home-feature-card overflow-hidden border-border h-full">
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -366,7 +366,7 @@ const Index = () => {
 
         {/* Fallback primary CTA quando ainda não há histórico de estudo */}
         {!safeLast && !loading && (
-          <Card className="overflow-hidden border-border h-full">
+          <Card className="ape-home-feature-card overflow-hidden border-border h-full">
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -401,7 +401,7 @@ const Index = () => {
 
         {/* Modo Reino Coming Soon */}
         <Card
-          className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative h-full"
+          className="ape-home-feature-card overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 relative h-full"
         >
           <div
             aria-hidden="true"
@@ -429,7 +429,7 @@ const Index = () => {
 
         {/* Pastas recentes (filtradas por instituição/hub) */}
         {(loading || myFolders.length > 0) && (
-        <div className="space-y-4">
+        <div className="ape-home-quick-actions space-y-4">
           <div className="flex items-center justify-between">
             <ApeSectionTitle>
               {selectedInstitution
@@ -515,7 +515,7 @@ const Index = () => {
           <ApeSectionTitle>Atalhos</ApeSectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-home-quick-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/folders")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -532,7 +532,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-home-quick-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/folders?action=new-list")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -549,7 +549,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-home-quick-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/goals")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -566,7 +566,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-home-quick-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/notes")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -583,7 +583,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-home-quick-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/store")}
             >
               <div className="flex flex-col items-center text-center gap-3">
@@ -600,7 +600,7 @@ const Index = () => {
             </Card>
 
             <Card
-              className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
+              className="ape-home-quick-card p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
               onClick={() => navigate("/search")}
             >
               <div className="flex flex-col items-center text-center gap-3">
