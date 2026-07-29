@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useInstitution } from "@/contexts/InstitutionContext";
+import { BulkGlossaryImportPanel } from "./components/BulkGlossaryImportPanel";
 import { DestinationMappingCard } from "./components/DestinationMappingCard";
 import { GlobalImportDestinationSection } from "./components/GlobalImportDestinationSection";
+import { GlobalImportDestinationSummary } from "./components/GlobalImportDestinationSummary";
 import { GlobalImportExecutionSection } from "./components/GlobalImportExecutionSection";
 import { GlobalImportJsonSection } from "./components/GlobalImportJsonSection";
 import { GlobalImportValidationPreview } from "./components/GlobalImportValidationPreview";
@@ -22,13 +26,13 @@ import {
   validateDestinationPlan,
   type GlobalImportDestinationPlan,
   type ImportDestinationCatalog,
+  type ImportDestinationContext,
 } from "./destination";
 import {
-  buildCreateAllDestinationPlan,
   prepareGlobalImportDestination,
-  type ExistingListConflictPolicy,
   type GlobalImportDestinationMode,
 } from "./destinationModes";
+import { summarizeDestinationPlan } from "./destinationSummary";
 import { updateGlobalImportManifestStatus } from "./manifest";
 import {
   executeMappedGlobalImport,
@@ -56,14 +60,25 @@ export default function SuperGlobalImportScreenV2() {
   const navigate = useNavigate();
   const { turmaId } = useParams<{ turmaId?: string }>();
   const classroomMode = Boolean(turmaId);
+  const { userId } = useAuth();
+  const { selectedInstitution } = useInstitution();
+  const institutionId = classroomMode ? null : selectedInstitution?.id ?? null;
+  const destinationContext = useMemo<ImportDestinationContext>(
+    () => classroomMode && turmaId
+      ? { scope: "classroom", turmaId }
+      : { scope: "personal", institutionId },
+    [classroomMode, institutionId, turmaId],
+  );
   const source = useGlobalImportSource();
   const capabilities = useImportCapabilities(true);
   const [destinationMode, setDestinationMode] = useState<GlobalImportDestinationMode>("from-file");
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
-  const [listConflictPolicy, setListConflictPolicy] = useState<ExistingListConflictPolicy>("append");
   const [catalog, setCatalog] = useState<ImportDestinationCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [destinationPlan, setDestinationPlan] = useState<GlobalImportDestinationPlan | null>(null);
+  const [replacementConfirmed, setReplacementConfirmed] = useState(false);
   const [cardConflict, setCardConflict] = useState<CardConflictPolicy>("skip");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -71,19 +86,27 @@ export default function SuperGlobalImportScreenV2() {
   const [report, setReport] = useState<GlobalImportExecutionReport | null>(null);
   const [undoing, setUndoing] = useState(false);
 
-  useEffect(() => {
+  const reloadCatalog = useCallback(async () => {
+    setCatalogLoading(true);
+    setCatalogError(null);
     setCatalog(null);
     setSelectedFolderId("");
-    loadImportDestinationCatalog(turmaId)
-      .then(setCatalog)
-      .catch((error) => toast.error(error?.message || "Não foi possível carregar as pastas disponíveis."));
-  }, [turmaId]);
+    setDestinationPlan(null);
+    setReplacementConfirmed(false);
+    try {
+      setCatalog(await loadImportDestinationCatalog(destinationContext));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro desconhecido.";
+      setCatalogError(message);
+      toast.error("Não foi possível carregar as pastas disponíveis.");
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [destinationContext]);
 
   useEffect(() => {
-    if (destinationMode === "from-file" && source.validation?.valid && source.validation.package) {
-      setDestinationPlan(buildCreateAllDestinationPlan(source.validation.package));
-    }
-  }, [destinationMode, source.validation]);
+    void reloadCatalog();
+  }, [reloadCatalog, userId]);
 
   const selectedFolder = catalog?.folders.find((folder) => folder.id === selectedFolderId);
   const destinationFolderName = destinationMode === "existing-folder"
@@ -98,16 +121,33 @@ export default function SuperGlobalImportScreenV2() {
       mode: destinationMode,
       existingFolderId: selectedFolderId,
       newFolderName,
-      listConflictPolicy,
     });
-  }, [source.validation, catalog, destinationMode, selectedFolderId, newFolderName, listConflictPolicy]);
+  }, [source.validation, catalog, destinationMode, selectedFolderId, newFolderName]);
 
-  const packageToPreview = destinationMode === "from-file"
-    ? source.validation?.package ?? null
-    : prepared?.packageValue ?? source.validation?.package ?? null;
+  useEffect(() => {
+    setDestinationPlan(prepared?.plan ?? null);
+    setReplacementConfirmed(false);
+  }, [prepared]);
+
+  const packageToPreview = prepared?.packageValue ?? source.validation?.package ?? null;
   const counts = packageCounts(packageToPreview);
-  const destinationErrors = destinationMode === "from-file" ? [] : prepared?.errors ?? [];
-  const destinationWarnings = destinationMode === "from-file" ? [] : prepared?.warnings ?? [];
+  const planErrors = useMemo(
+    () => packageToPreview && catalog && destinationPlan
+      ? validateDestinationPlan(packageToPreview, catalog, destinationPlan)
+      : [],
+    [catalog, destinationPlan, packageToPreview],
+  );
+  const destinationErrors = Array.from(new Set([
+    ...(prepared?.errors ?? []),
+    ...planErrors,
+  ]));
+  const destinationWarnings = prepared?.warnings ?? [];
+  const destinationSummary = useMemo(
+    () => packageToPreview && catalog && destinationPlan
+      ? summarizeDestinationPlan(packageToPreview, catalog, destinationPlan)
+      : null,
+    [catalog, destinationPlan, packageToPreview],
+  );
   const capabilityRequirements = requirementsForPackage(source.validation?.smartPackage);
   const capabilityEvaluation = evaluateImportCapabilities(capabilities.data, capabilityRequirements);
 
@@ -119,9 +159,8 @@ export default function SuperGlobalImportScreenV2() {
       return;
     }
     if (validation.requestId) updateGlobalImportManifestStatus(validation.requestId, "validated");
-    const nextCatalog = catalog ?? await loadImportDestinationCatalog(turmaId);
+    const nextCatalog = catalog ?? await loadImportDestinationCatalog(destinationContext);
     setCatalog(nextCatalog);
-    setDestinationPlan(buildCreateAllDestinationPlan(validation.package));
     toast.success("Pacote válido. Revise o destino e a prévia antes de importar.");
   };
 
@@ -157,6 +196,7 @@ export default function SuperGlobalImportScreenV2() {
     setReport(null);
     setProgress(0);
     setProgressText("");
+    setReplacementConfirmed(false);
   };
 
   const handleImport = async () => {
@@ -164,29 +204,45 @@ export default function SuperGlobalImportScreenV2() {
     if (!validation?.valid || !validation.package || !catalog) return;
     if (classroomMode && !turmaId) return;
 
-    const effectivePackage = destinationMode === "from-file" ? validation.package : prepared?.packageValue;
-    const effectivePlan = destinationMode === "from-file" ? destinationPlan : prepared?.plan;
+    const effectivePackage = packageToPreview;
+    const effectivePlan = destinationPlan;
 
-    if (prepared?.errors.length && destinationMode !== "from-file") {
-      toast.error(prepared.errors[0]);
+    if (destinationErrors.length) {
+      toast.error(destinationErrors[0]);
       return;
     }
     if (!effectivePackage || !effectivePlan) {
       toast.error("Defina um destino válido antes de importar.");
       return;
     }
-    const latestCapabilities = await fetchImportCapabilities();
-    const latestEvaluation = evaluateImportCapabilities(
-      latestCapabilities,
-      requirementsForPackage(validation.smartPackage),
-    );
-    if (!latestEvaluation.ready) {
-      toast.error("O ambiente mudou e não suporta todos os dados deste pacote. A importação foi bloqueada.");
+    if ((destinationSummary?.replacementListNames.length ?? 0) > 0 && !replacementConfirmed) {
+      toast.error("Confirme explicitamente as substituições antes de importar.");
       return;
     }
-    const planErrors = validateDestinationPlan(effectivePackage, catalog, effectivePlan);
-    if (planErrors.length) {
-      toast.error(planErrors[0]);
+
+    let latestCatalog: ImportDestinationCatalog;
+    try {
+      const latestCapabilities = await fetchImportCapabilities();
+      const latestEvaluation = evaluateImportCapabilities(
+        latestCapabilities,
+        requirementsForPackage(validation.smartPackage),
+      );
+      if (!latestEvaluation.ready) {
+        toast.error("O ambiente mudou e não suporta todos os dados deste pacote. A importação foi bloqueada.");
+        return;
+      }
+
+      latestCatalog = await loadImportDestinationCatalog(destinationContext);
+      const latestPlanErrors = validateDestinationPlan(effectivePackage, latestCatalog, effectivePlan);
+      if (latestPlanErrors.length) {
+        setCatalog(latestCatalog);
+        toast.error(`O destino mudou desde a análise: ${latestPlanErrors[0]}`);
+        return;
+      }
+    } catch (error: unknown) {
+      toast.error(error instanceof Error
+        ? `Não foi possível revalidar o destino: ${error.message}`
+        : "Não foi possível revalidar o destino.");
       return;
     }
 
@@ -200,9 +256,9 @@ export default function SuperGlobalImportScreenV2() {
         canonicalPackage: validation.canonicalPackage,
         smartPackage: validation.smartPackage,
         destinationPlan: effectivePlan,
-        catalog,
+        catalog: latestCatalog,
         cardConflict,
-        institutionId: null,
+        institutionId,
         turmaId: turmaId ?? null,
         onProgress: (completed, total, label) => {
           setProgress(total > 0 ? (completed / total) * 100 : 0);
@@ -297,12 +353,14 @@ export default function SuperGlobalImportScreenV2() {
           mode={destinationMode}
           onModeChange={setDestinationMode}
           catalog={catalog}
+          catalogLoading={catalogLoading}
+          catalogError={catalogError}
+          onRetryCatalog={() => void reloadCatalog()}
+          contextLabel={classroomMode ? "Turma atual" : selectedInstitution?.name ?? "Biblioteca Geral"}
           selectedFolderId={selectedFolderId}
           onSelectedFolderChange={setSelectedFolderId}
           newFolderName={newFolderName}
           onNewFolderNameChange={setNewFolderName}
-          listConflictPolicy={listConflictPolicy}
-          onListConflictPolicyChange={setListConflictPolicy}
         />
 
         <PromptBuilderCard mode={destinationMode} destinationFolderName={destinationFolderName} />
@@ -319,15 +377,39 @@ export default function SuperGlobalImportScreenV2() {
           />
         )}
 
-        {source.validation?.valid && source.validation.package && catalog && destinationMode === "from-file" && destinationPlan && !report && (
-          <DestinationMappingCard packageValue={source.validation.package} catalog={catalog} plan={destinationPlan} onChange={setDestinationPlan} />
+        {source.validation?.valid && packageToPreview && catalog && destinationPlan && !report && (
+          <DestinationMappingCard
+            packageValue={packageToPreview}
+            catalog={catalog}
+            plan={destinationPlan}
+            mode={destinationMode}
+            onChange={(nextPlan) => {
+              setDestinationPlan(nextPlan);
+              setReplacementConfirmed(false);
+            }}
+          />
         )}
 
+        {destinationSummary && !report && (
+          <GlobalImportDestinationSummary summary={destinationSummary} />
+        )}
+
+        <BulkGlossaryImportPanel catalog={catalog} />
+
         <GlobalImportExecutionSection
-          enabled={Boolean(capabilityEvaluation.ready && source.validation?.valid && source.validation.package && catalog)}
-          count={counts.cards}
+          enabled={Boolean(
+            capabilityEvaluation.ready
+            && source.validation?.valid
+            && packageToPreview
+            && catalog
+            && destinationPlan
+            && !catalogLoading
+          )}
+          count={destinationSummary?.cardsImported ?? counts.cards}
           mode={destinationMode}
-          listConflictPolicy={listConflictPolicy}
+          replacementListNames={destinationSummary?.replacementListNames ?? []}
+          replacementConfirmed={replacementConfirmed}
+          onReplacementConfirmedChange={setReplacementConfirmed}
           cardConflict={cardConflict}
           onCardConflictChange={setCardConflict}
           busy={busy}

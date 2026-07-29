@@ -101,6 +101,19 @@ describe("modos de destino do Super Importador", () => {
     });
   });
 
+  it("sem atalho global inicia cada lista como nova para decisão individual", () => {
+    const result = prepareGlobalImportDestination(packageWithFolders(), catalog, {
+      mode: "existing-folder",
+      existingFolderId: "folder-1",
+    });
+
+    expect(result.plan?.folders[0].lists[0]).toEqual({
+      mode: "create",
+      name: "Lista A",
+    });
+    expect(result.packageValue?.package.folders[0].lists).toHaveLength(2);
+  });
+
   it("permite substituir uma lista somente após escolha explícita", () => {
     const result = prepare("replace");
     expect(result.plan?.folders[0].lists[0]).toEqual({

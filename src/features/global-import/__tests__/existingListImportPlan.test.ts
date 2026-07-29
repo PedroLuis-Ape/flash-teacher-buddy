@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SmartImportPackage } from "@/features/smart-import/schema";
 import {
   buildExistingListImportPlan,
+  existingListTargetFromCatalog,
   reconcileExistingListCards,
 } from "../existingListImportPlan";
 import { buildQuickListDestinationPlan } from "../quickListDestination";
@@ -37,11 +38,34 @@ const source = {
 
 const target = {
   listId: "target-list", folderId: "target-folder", listName: "Target", folderName: "Folder",
+  institutionId: null, turmaId: null,
   frontLanguage: "en-US", backLanguage: "pt-BR", labelA: "English", labelB: "Portuguese",
   primarySide: "a" as const, studyType: "language" as const, ttsEnabled: false,
 };
 
 describe("existing list import plans", () => {
+  it("deriva instituição e turma da pasta travada", () => {
+    const derived = existingListTargetFromCatalog({
+      folders: [{
+        id: "target-folder",
+        title: "Folder",
+        institution_id: "institution-1",
+        class_id: "class-1",
+      }],
+      lists: [{
+        id: "target-list",
+        title: "Target",
+        folder_id: "target-folder",
+        class_id: "class-1",
+      }],
+    }, "target-list");
+
+    expect(derived).toMatchObject({
+      institutionId: "institution-1",
+      turmaId: "class-1",
+    });
+  });
+
   it("keeps every card and deduplicates glossary entries", () => {
     const result = buildExistingListImportPlan(source, target);
     expect(result.summary.sourceLists).toBe(2);

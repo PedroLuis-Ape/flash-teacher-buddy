@@ -19,6 +19,8 @@ export type ExistingListImportStrategy = "append" | "replace";
 export interface ExistingListImportTarget {
   listId: string;
   folderId: string;
+  institutionId: string | null;
+  turmaId: string | null;
   listName: string;
   folderName: string;
   frontLanguage: string;
@@ -139,6 +141,8 @@ export function existingListTargetFromCatalog(
   return {
     listId: list.id,
     folderId: folder.id,
+    institutionId: folder.institution_id ?? null,
+    turmaId: folder.class_id ?? null,
     listName: list.title,
     folderName: folder.title,
     frontLanguage: effective.langA,

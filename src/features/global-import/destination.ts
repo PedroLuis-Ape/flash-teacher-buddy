@@ -4,6 +4,8 @@ import type { GlobalImportList, GlobalImportPackage } from "./schema";
 export interface ExistingImportFolder {
   id: string;
   title: string;
+  institution_id?: string | null;
+  class_id?: string | null;
   lang_a?: string | null;
   lang_b?: string | null;
   labels_a?: string | null;
@@ -16,6 +18,7 @@ export interface ExistingImportList {
   id: string;
   title: string;
   folder_id: string;
+  class_id?: string | null;
   lang_a?: string | null;
   lang_b?: string | null;
   labels_a?: string | null;
@@ -46,6 +49,10 @@ export interface ImportDestinationCatalog {
   folders: ExistingImportFolder[];
   lists: ExistingImportList[];
 }
+
+export type ImportDestinationContext =
+  | { scope: "personal"; institutionId: string | null }
+  | { scope: "classroom"; turmaId: string };
 
 function normalize(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -85,10 +92,10 @@ function listDirection(
 }
 
 export async function loadImportDestinationCatalog(
-  turmaId?: string | null,
+  context: ImportDestinationContext,
 ): Promise<ImportDestinationCatalog> {
   const module = await import("./destinationCatalog");
-  return module.loadImportDestinationCatalog(turmaId);
+  return module.loadImportDestinationCatalog(context);
 }
 
 export function buildDefaultDestinationPlan(
@@ -140,6 +147,7 @@ export function validateDestinationPlan(
   const folderById = new Map(catalog.folders.map((folder) => [folder.id, folder]));
   const listById = new Map(catalog.lists.map((list) => [list.id, list]));
   const targetedExistingLists = new Map<string, boolean>();
+  let importableLists = 0;
 
   packageValue.package.folders.forEach((folder, folderIndex) => {
     const folderPlan = plan.folders[folderIndex];
@@ -162,10 +170,14 @@ export function validateDestinationPlan(
         return;
       }
       if (listPlan.mode === "skip") return;
+      importableLists += 1;
       if (listPlan.mode === "create" && !listPlan.name.trim()) {
         errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: nome da nova lista vazio.`);
       }
       if (listPlan.mode === "existing") {
+        if (listPlan.strategy !== undefined && listPlan.strategy !== "append" && listPlan.strategy !== "replace") {
+          errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: ação da lista existente inválida.`);
+        }
         const list = listById.get(listPlan.listId);
         if (!list) {
           errors.push(`package.folders[${folderIndex}].lists[${listIndex}]: lista existente inválida.`);
@@ -196,6 +208,8 @@ export function validateDestinationPlan(
       }
     });
   });
+
+  if (importableLists === 0) errors.push("Escolha pelo menos uma lista para importar.");
 
   return Array.from(new Set(errors));
 }

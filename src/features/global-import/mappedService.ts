@@ -11,6 +11,7 @@ import type {
 } from "./destination";
 import type { CanonicalGlobalImportPackage } from "./schema/globalImportSchema";
 import type { AppPitecoSuperImportPackage } from "./schema/appPitecoSuperImportSchema";
+import { glossaryPackageForDestinationPlan } from "./destinationGlossary";
 import { smartImportToOfficialV1Package } from "./liveBackendCompatibility";
 import { updateGlobalImportManifestStatus } from "./manifest";
 import { richImportRequirements } from "./richImportRequirements";
@@ -275,6 +276,10 @@ export async function executeMappedGlobalImport(
     );
   }
   const cardPackage = stripGlossariesForFolderImport(smartPackage);
+  const glossaryPackage = glossaryPackageForDestinationPlan(
+    smartPackage,
+    options.destinationPlan,
+  );
   const request = getOrCreateRequestId(packageValue, smartPackage, options);
 
   if (
@@ -370,7 +375,7 @@ export async function executeMappedGlobalImport(
     FOLDER_GLOSSARY_RPC,
     {
       _batch_id: baseReport.batch_id,
-      _payload: smartPackage,
+      _payload: glossaryPackage,
     },
   );
 
@@ -382,7 +387,7 @@ export async function executeMappedGlobalImport(
         glossary_scope: "folder",
         glossary_created: 0,
         glossary_updated: 0,
-        glossary_skipped: countGlossaryEntries(smartPackage),
+        glossary_skipped: countGlossaryEntries(glossaryPackage),
       };
       if (options.canonicalPackage) {
         updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");

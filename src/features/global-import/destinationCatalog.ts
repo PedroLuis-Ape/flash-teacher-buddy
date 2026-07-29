@@ -1,12 +1,34 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { ImportDestinationCatalog } from "./destination";
+import type {
+  ImportDestinationCatalog,
+  ImportDestinationContext,
+} from "./destination";
 
 const db = supabase as any;
-const FOLDER_FIELDS = "id, title, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
-const LIST_FIELDS = "id, title, folder_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
+const FOLDER_FIELDS = "id, title, institution_id, class_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
+const LIST_FIELDS = "id, title, folder_id, class_id, lang_a, lang_b, labels_a, labels_b, study_type, tts_enabled";
+
+function uniqueById<T extends { id: string }>(rows: T[] | null | undefined): T[] {
+  const unique = new Map<string, T>();
+  for (const row of rows ?? []) {
+    if (row?.id && !unique.has(row.id)) unique.set(row.id, row);
+  }
+  return Array.from(unique.values());
+}
+
+export function normalizeImportDestinationCatalog(
+  input: ImportDestinationCatalog,
+): ImportDestinationCatalog {
+  const folders = uniqueById(input.folders);
+  const validFolderIds = new Set(folders.map((folder) => folder.id));
+  return {
+    folders,
+    lists: uniqueById(input.lists).filter((list) => validFolderIds.has(list.folder_id)),
+  };
+}
 
 export async function loadImportDestinationCatalog(
-  turmaId?: string | null,
+  context: ImportDestinationContext,
 ): Promise<ImportDestinationCatalog> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Você precisa estar logado.");
@@ -18,44 +40,46 @@ export async function loadImportDestinationCatalog(
     .is("deleted_at", null)
     .order("title", { ascending: true });
 
-  let listsQuery = db
-    .from("lists")
-    .select(LIST_FIELDS)
-    .eq("owner_id", user.id)
-    .is("deleted_at", null)
-    .order("title", { ascending: true });
-
-  if (turmaId) {
+  if (context.scope === "classroom") {
     const { data: turma, error: turmaError } = await db
       .from("turmas")
       .select("id, owner_teacher_id")
-      .eq("id", turmaId)
+      .eq("id", context.turmaId)
       .eq("owner_teacher_id", user.id)
       .eq("ativo", true)
       .maybeSingle();
 
     if (turmaError) throw turmaError;
     if (!turma) throw new Error("Turma inválida ou sem permissão.");
-
-    foldersQuery = foldersQuery.eq("class_id", turmaId);
-    listsQuery = listsQuery.eq("class_id", turmaId);
+    foldersQuery = foldersQuery.eq("class_id", context.turmaId);
   } else {
     foldersQuery = foldersQuery.is("class_id", null);
-    listsQuery = listsQuery.is("class_id", null);
+    foldersQuery = context.institutionId
+      ? foldersQuery.eq("institution_id", context.institutionId)
+      : foldersQuery.is("institution_id", null);
   }
 
-  const [{ data: folders, error: foldersError }, { data: lists, error: listsError }] = await Promise.all([
-    foldersQuery,
-    listsQuery,
-  ]);
-
+  const { data: folderRows, error: foldersError } = await foldersQuery;
   if (foldersError) throw foldersError;
+  const folders = uniqueById(folderRows);
+  if (!folders.length) return { folders: [], lists: [] };
+
+  let listsQuery = db
+    .from("lists")
+    .select(LIST_FIELDS)
+    .eq("owner_id", user.id)
+    .is("deleted_at", null)
+    .in("folder_id", folders.map((folder) => folder.id))
+    .order("title", { ascending: true });
+
+  listsQuery = context.scope === "classroom"
+    ? listsQuery.eq("class_id", context.turmaId)
+    : listsQuery.is("class_id", null);
+
+  const { data: listRows, error: listsError } = await listsQuery;
   if (listsError) throw listsError;
 
-  return {
-    folders: folders ?? [],
-    lists: lists ?? [],
-  };
+  return normalizeImportDestinationCatalog({ folders, lists: listRows ?? [] });
 }
 
 export async function loadExistingListDestinationCatalog(
