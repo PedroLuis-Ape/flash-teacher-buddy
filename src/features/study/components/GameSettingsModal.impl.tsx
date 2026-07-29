@@ -87,7 +87,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const urlMode = new URLSearchParams(location.search).get("mode");
   const isWriteMode = urlMode === "write";
   const isMixedMode = urlMode === "mixed";
-  const supportsFlowModes = isWriteMode || isMixedMode;
+  // Every playable quiz mode supports the same two session formats. Flip is
+  // already a straight-through viewer and therefore does not need this option.
+  const supportsFlowModes = Boolean(urlMode) && urlMode !== "flip";
   const supportsWriteCorrection = isWriteMode || isMixedMode;
   const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
     () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
@@ -202,10 +204,10 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     redFocusActive ? "Sequencial (Foco Vermelho)" : settings.mode === "random" ? "Aleatória" : "Sequencial"
   } · ${favoritesActive ? "Apenas favoritos" : "Todos os cards"}`;
   const flowSummary = redFocusActive
-    ? "Fluxo contínuo (Foco Vermelho)"
+    ? "Modo extenso (Foco Vermelho)"
     : currentFlowMode === "mastery_rounds"
-      ? "Rodadas de Domínio"
-      : "Fluxo Contínuo";
+      ? "Modo gamificado"
+      : "Modo extenso · todos os cards";
 
   const CategoryRow: React.FC<{
     icon: React.ReactNode;
@@ -361,7 +363,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 aria-pressed={currentFlowMode === "mastery_rounds"}
               >
                 <span className="flex items-center gap-2 font-semibold">
-                  <ListChecks className="h-4 w-4" /> Rodadas de Domínio
+                  <ListChecks className="h-4 w-4" /> Modo gamificado
                 </span>
                 <span className="text-sm text-muted-foreground">
                   Estude em rodadas de até 15 cards. Cards errados ou pulados voltam nas próximas rodadas até você acertar.
@@ -381,7 +383,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 aria-pressed={currentFlowMode === "continuous"}
               >
                 <span className="flex items-center gap-2 font-semibold">
-                  <Shuffle className="h-4 w-4" /> Fluxo Contínuo
+                  <Shuffle className="h-4 w-4" /> Modo extenso
                 </span>
                 <span className="text-sm text-muted-foreground">
                   Percorra todos os cards uma vez, do início ao fim, sem repetir automaticamente os erros.

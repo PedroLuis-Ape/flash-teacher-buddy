@@ -154,6 +154,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
 
     if (button.textContent?.toLocaleLowerCase().includes("tentar corrigir")) {
       submitLockedRef.current = false;
+      navigationLockedRef.current = false;
       return;
     }
 
@@ -162,7 +163,10 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       ?.value.trim();
     if (!value) return;
     if (!submitLockedRef.current) {
+      // A fresh submission is a new attempt, even when the engine immediately
+      // presents the same card again after an error in mastery mode.
       submitLockedRef.current = true;
+      navigationLockedRef.current = false;
       return;
     }
 
