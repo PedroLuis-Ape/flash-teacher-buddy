@@ -32,7 +32,8 @@ jobs:
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Last version proven to replay this repository's historical migrations.
+          version: 2.109.1
 
       - name: Rebuild local database
         shell: bash
