@@ -85,6 +85,19 @@ describe("global import destination mapping", () => {
     );
   });
 
+  it("rejects a plan that skips every received list", () => {
+    const plan = buildDefaultDestinationPlan(packageValue, catalog);
+    for (const folderPlan of Object.values(plan.folders)) {
+      for (const listIndex of Object.keys(folderPlan.lists)) {
+        folderPlan.lists[Number(listIndex)] = { mode: "skip" };
+      }
+    }
+
+    expect(validateDestinationPlan(packageValue, catalog, plan)).toContain(
+      "Escolha pelo menos uma lista para importar.",
+    );
+  });
+
   it("checks the language direction of each list during consolidation", () => {
     const mixed: GlobalImportPackage = {
       schema: "appteco-global-import",

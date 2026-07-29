@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { AiPromptPresetSelector } from "./components/AiPromptPresetSelector";
 import { BulkGlossaryImportPanel } from "./components/BulkGlossaryImportPanel";
 import { DestinationMappingCard } from "./components/DestinationMappingCard";
@@ -22,6 +23,7 @@ import {
   validateDestinationPlan,
   type GlobalImportDestinationPlan,
   type ImportDestinationCatalog,
+  type ImportDestinationContext,
 } from "./destination";
 import {
   buildCreateAllDestinationPlan,
@@ -73,6 +75,14 @@ export default function OwnerGuidedImportWizard() {
   const navigate = useNavigate();
   const { turmaId } = useParams<{ turmaId?: string }>();
   const classroomMode = Boolean(turmaId);
+  const { selectedInstitution } = useInstitution();
+  const institutionId = classroomMode ? null : selectedInstitution?.id ?? null;
+  const destinationContext = useMemo<ImportDestinationContext>(
+    () => classroomMode && turmaId
+      ? { scope: "classroom", turmaId }
+      : { scope: "personal", institutionId },
+    [classroomMode, institutionId, turmaId],
+  );
   const source = useGlobalImportSource({ repairSmartJson: true });
   const cancelRequestedRef = useRef(false);
 
@@ -101,7 +111,7 @@ export default function OwnerGuidedImportWizard() {
     setCatalogLoading(true);
     setCatalogError(null);
     try {
-      const nextCatalog = await loadImportDestinationCatalog(turmaId);
+      const nextCatalog = await loadImportDestinationCatalog(destinationContext);
       setCatalog(nextCatalog);
       return nextCatalog;
     } catch (error: any) {
@@ -113,7 +123,7 @@ export default function OwnerGuidedImportWizard() {
     } finally {
       setCatalogLoading(false);
     }
-  }, [turmaId]);
+  }, [destinationContext]);
 
   useEffect(() => {
     setCatalog(null);
@@ -321,7 +331,7 @@ export default function OwnerGuidedImportWizard() {
         destinationPlan: effectivePlan,
         catalog,
         cardConflict,
-        institutionId: null,
+        institutionId,
         turmaId: turmaId ?? null,
         onProgress: (completed, total, label) => {
           setProgress(total > 0 ? (completed / total) * 100 : 0);
@@ -537,7 +547,7 @@ export default function OwnerGuidedImportWizard() {
               </div>
               <GlobalImportValidationPreview validation={source.validation} packageValue={packageToPreview} counts={counts} notes={source.notes} destinationErrors={destinationErrors} destinationWarnings={destinationWarnings} />
               {flow === "structured" && source.validation.valid && source.validation.package && catalog && destinationMode === "from-file" && destinationPlan && (
-                <DestinationMappingCard packageValue={source.validation.package} catalog={catalog} plan={destinationPlan} onChange={setDestinationPlan} />
+                <DestinationMappingCard packageValue={source.validation.package} catalog={catalog} plan={destinationPlan} mode={destinationMode} onChange={setDestinationPlan} />
               )}
               {source.validation.valid && packageToPreview && catalog && effectivePlan && (
                 <ImportSimulationTree packageValue={packageToPreview} smartPackage={source.validation.smartPackage} catalog={catalog} plan={effectivePlan} />

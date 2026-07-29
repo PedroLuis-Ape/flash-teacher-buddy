@@ -393,6 +393,8 @@ export function ContentIngestDialog({
         destinationPlan: prepared.plan,
         catalog,
         cardConflict: policy,
+        institutionId: prepared.target.institutionId,
+        turmaId: prepared.target.turmaId,
         onProgress: (done, total, currentLabel) => {
           setProgress(total ? (done / total) * 100 : 0);
           setProgressLabel(`${currentLabel} — ${done}/${total}`);

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { AiPromptPresetSelector } from "./components/AiPromptPresetSelector";
 import { BulkGlossaryImportPanel } from "./components/BulkGlossaryImportPanel";
 import { DestinationMappingCard } from "./components/DestinationMappingCard";
@@ -20,6 +21,7 @@ import {
   validateDestinationPlan,
   type GlobalImportDestinationPlan,
   type ImportDestinationCatalog,
+  type ImportDestinationContext,
 } from "./destination";
 import {
   buildCreateAllDestinationPlan,
@@ -62,6 +64,14 @@ export default function GuidedGlobalImportScreen() {
   const navigate = useNavigate();
   const { turmaId } = useParams<{ turmaId?: string }>();
   const classroomMode = Boolean(turmaId);
+  const { selectedInstitution } = useInstitution();
+  const institutionId = classroomMode ? null : selectedInstitution?.id ?? null;
+  const destinationContext = useMemo<ImportDestinationContext>(
+    () => classroomMode && turmaId
+      ? { scope: "classroom", turmaId }
+      : { scope: "personal", institutionId },
+    [classroomMode, institutionId, turmaId],
+  );
   const source = useGlobalImportSource();
   const [flow, setFlow] = useState<V3FlowKind>("quick");
   const [destinationMode, setDestinationMode] = useState<GlobalImportDestinationMode>("from-file");
@@ -85,10 +95,10 @@ export default function GuidedGlobalImportScreen() {
     setSelectedFolderId("");
     setQuickFolderId("");
     setQuickListId("");
-    loadImportDestinationCatalog(turmaId)
+    loadImportDestinationCatalog(destinationContext)
       .then(setCatalog)
       .catch((error) => toast.error(error?.message || "Não foi possível carregar as pastas disponíveis."));
-  }, [turmaId]);
+  }, [destinationContext]);
 
   useEffect(() => {
     if (flow === "structured" && destinationMode === "from-file" && source.validation?.valid && source.validation.package) {
@@ -159,7 +169,7 @@ export default function GuidedGlobalImportScreen() {
       return;
     }
     if (validation.requestId) updateGlobalImportManifestStatus(validation.requestId, "validated");
-    const nextCatalog = catalog ?? await loadImportDestinationCatalog(turmaId);
+    const nextCatalog = catalog ?? await loadImportDestinationCatalog(destinationContext);
     setCatalog(nextCatalog);
     setDestinationPlan(flow === "structured" && destinationMode === "from-file"
       ? buildCreateAllDestinationPlan(validation.package)
@@ -228,7 +238,7 @@ export default function GuidedGlobalImportScreen() {
         destinationPlan: effectivePlan,
         catalog,
         cardConflict,
-        institutionId: null,
+        institutionId,
         turmaId: turmaId ?? null,
         onProgress: (completed, total, label) => {
           setProgress(total > 0 ? (completed / total) * 100 : 0);
@@ -308,7 +318,7 @@ export default function GuidedGlobalImportScreen() {
 
         {source.validation && <section className="space-y-3"><div><h2 className="text-xl font-semibold">3. Revise antes de importar</h2><p className="text-sm text-muted-foreground">A análise não altera o banco. Confira estrutura, cards em camadas e avisos.</p></div><GlobalImportValidationPreview validation={source.validation} packageValue={packageToPreview} counts={counts} notes={source.notes} destinationErrors={destinationErrors} destinationWarnings={destinationWarnings} /></section>}
 
-        {flow === "structured" && source.validation?.valid && source.validation.package && catalog && destinationMode === "from-file" && destinationPlan && !report && <DestinationMappingCard packageValue={source.validation.package} catalog={catalog} plan={destinationPlan} onChange={setDestinationPlan} />}
+        {flow === "structured" && source.validation?.valid && source.validation.package && catalog && destinationMode === "from-file" && destinationPlan && !report && <DestinationMappingCard packageValue={source.validation.package} catalog={catalog} plan={destinationPlan} mode={destinationMode} onChange={setDestinationPlan} />}
 
         <section className="space-y-3">
           <div><h2 className="text-xl font-semibold">4. Confirme a importação</h2><p className="text-sm text-muted-foreground">Somente o botão abaixo grava dados. O desfazer continua disponível.</p></div>

@@ -1,6 +1,7 @@
 import { CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +12,10 @@ interface Props {
   enabled: boolean;
   count: number;
   mode: GlobalImportDestinationMode;
-  listConflictPolicy: ExistingListConflictPolicy;
+  listConflictPolicy?: ExistingListConflictPolicy;
+  replacementListNames?: string[];
+  replacementConfirmed?: boolean;
+  onReplacementConfirmedChange?: (confirmed: boolean) => void;
   cardConflict: CardConflictPolicy;
   onCardConflictChange: (policy: CardConflictPolicy) => void;
   busy: boolean;
@@ -27,6 +31,7 @@ interface Props {
 }
 
 export function GlobalImportExecutionSection(props: Props) {
+  const requiresReplacementConfirmation = (props.replacementListNames?.length ?? 0) > 0;
   return (
     <div
       data-super-import-status={props.report ? "success" : props.busy ? "running" : "ready"}
@@ -56,13 +61,38 @@ export function GlobalImportExecutionSection(props: Props) {
               A opção substituir remove os cards atuais das listas conflitantes dentro da mesma transação. O botão de desfazer restaura o conteúdo anterior.
             </p>
           )}
+          {requiresReplacementConfirmation && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+              <label className="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                  checked={props.replacementConfirmed}
+                  onCheckedChange={(checked) => props.onReplacementConfirmedChange?.(checked === true)}
+                  aria-describedby="replace-confirmation-description"
+                />
+                <span id="replace-confirmation-description">
+                  Confirmo que desejo substituir o conteúdo de{" "}
+                  {props.replacementListNames?.map((name) => `“${name}”`).join(", ")}.
+                  Poderei desfazer o lote após a importação.
+                </span>
+              </label>
+            </div>
+          )}
           {props.busy && (
             <div className="space-y-2">
               <p className="text-sm">{props.progressText}</p>
               <Progress value={props.progress} />
             </div>
           )}
-          <Button type="button" className="h-12 w-full pointer-events-auto" onClick={props.onImport} disabled={props.busy || props.destinationErrors.length > 0}>
+          <Button
+            type="button"
+            className="h-12 w-full pointer-events-auto"
+            onClick={props.onImport}
+            disabled={
+              props.busy
+              || props.destinationErrors.length > 0
+              || (requiresReplacementConfirmation && !props.replacementConfirmed)
+            }
+          >
             {props.busy
               ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Importando...</>
               : `Importar ${props.count} cards`}

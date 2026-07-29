@@ -79,7 +79,10 @@ export function prepareGlobalImportDestination(
     "Os nomes de pasta presentes no conteúdo serão ignorados porque uma pasta única foi escolhida na interface.",
   ];
   const errors: string[] = [];
-  const conflictPolicy = config.listConflictPolicy ?? "rename";
+  // A política global é mantida apenas como atalho de compatibilidade.
+  // Sem ela, cada lista começa como nova e o destinationPlan individual
+  // passa a ser a única fonte de verdade da interface e da execução.
+  const conflictPolicy = config.listConflictPolicy;
   const incomingLists = packageValue.package.folders.flatMap((folder) => folder.lists);
 
   let folderName = "";
