@@ -77,7 +77,8 @@ describe("catálogo de destinos de flashcards", () => {
     expect(hasCall("folders", "is", "class_id", null)).toBe(true);
     expect(hasCall("folders", "is", "institution_id", null)).toBe(true);
     expect(hasCall("lists", "in", "folder_id", ["folder-1"])).toBe(true);
-    expect(hasCall("lists", "is", "class_id", null)).toBe(true);
+    expect(hasCall("lists", "eq", "owner_id", "user-1")).toBe(false);
+    expect(hasCall("lists", "is", "class_id", null)).toBe(false);
   });
 
   it("limita a Biblioteca institucional à instituição selecionada", async () => {
@@ -94,21 +95,33 @@ describe("catálogo de destinos de flashcards", () => {
     expect(hasCall("folders", "is", "class_id", null)).toBe(true);
   });
 
-  it("mantém o catálogo da turma isolado por class_id", async () => {
+  it("mantém o catálogo da turma isolado pela pasta validada", async () => {
     mocks.results.turmas.data = { id: "class-1", owner_teacher_id: "user-1" };
     mocks.results.folders.data = [
       { id: "folder-class", title: "Turma", institution_id: null, class_id: "class-1" },
     ];
+    mocks.results.lists.data = [
+      {
+        id: "legacy-list",
+        title: "Lista legada",
+        folder_id: "folder-class",
+        owner_id: null,
+        class_id: null,
+      },
+    ];
 
-    await loadImportDestinationCatalog({
+    const catalog = await loadImportDestinationCatalog({
       scope: "classroom",
       turmaId: "class-1",
     });
 
+    expect(catalog.lists.map((list) => list.id)).toEqual(["legacy-list"]);
     expect(hasCall("turmas", "eq", "id", "class-1")).toBe(true);
     expect(hasCall("turmas", "eq", "owner_teacher_id", "user-1")).toBe(true);
     expect(hasCall("folders", "eq", "class_id", "class-1")).toBe(true);
-    expect(hasCall("lists", "eq", "class_id", "class-1")).toBe(true);
+    expect(hasCall("lists", "in", "folder_id", ["folder-class"])).toBe(true);
+    expect(hasCall("lists", "eq", "owner_id", "user-1")).toBe(false);
+    expect(hasCall("lists", "eq", "class_id", "class-1")).toBe(false);
   });
 
   it("remove duplicatas e listas que não pertencem às pastas válidas", () => {

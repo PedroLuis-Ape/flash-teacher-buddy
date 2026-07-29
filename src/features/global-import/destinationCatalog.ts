@@ -64,17 +64,15 @@ export async function loadImportDestinationCatalog(
   const folders = uniqueById(folderRows);
   if (!folders.length) return { folders: [], lists: [] };
 
-  let listsQuery = db
+  // A pasta já foi validada por owner, instituição/turma e exclusão lógica.
+  // Assim como a Biblioteca e a tela da pasta, ela é a autoridade do escopo:
+  // listas legadas podem não repetir owner_id/class_id corretamente.
+  const listsQuery = db
     .from("lists")
     .select(LIST_FIELDS)
-    .eq("owner_id", user.id)
     .is("deleted_at", null)
     .in("folder_id", folders.map((folder) => folder.id))
     .order("title", { ascending: true });
-
-  listsQuery = context.scope === "classroom"
-    ? listsQuery.eq("class_id", context.turmaId)
-    : listsQuery.is("class_id", null);
 
   const { data: listRows, error: listsError } = await listsQuery;
   if (listsError) throw listsError;
