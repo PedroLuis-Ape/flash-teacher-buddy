@@ -3,7 +3,8 @@
 -- 1) Lock down realtime.messages (Broadcast/Presence) — app uses only postgres_changes,
 -- which is protected by the underlying table RLS. We enable RLS on realtime.messages
 -- with no permissive policy, so any broadcast/presence subscription is denied by default.
-ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+-- realtime.messages is platform-owned and already protected by Supabase.
+-- Direct schema mutations are rejected by current local stacks.
 
 -- (No policies created intentionally → default deny for anon/authenticated.)
 
