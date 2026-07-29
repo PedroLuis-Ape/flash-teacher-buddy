@@ -249,7 +249,7 @@ export function capabilityLabel(key: ImportCapabilityKey): string {
   return {
     safe_import: "Importação segura e reversível",
     layered_cards: "Cards em camadas",
-    enriched_fields: "Campos enriquecidos e glossário",
+    enriched_fields: "Campos enriquecidos",
     basic_import: "Importação básica",
   }[key];
 }

@@ -87,6 +87,7 @@ export interface GlobalImportExecutionReport {
   glossary_created?: number;
   glossary_updated?: number;
   glossary_skipped?: number;
+  glossary_warning?: string;
   glossary_scope?: "folder";
   assignments_created?: number;
   target_scope?: ImportTargetScope;
@@ -365,6 +366,23 @@ export async function executeMappedGlobalImport(
 
   const baseReport = data as GlobalImportExecutionReport;
 
+  const glossaryEntryCount = countGlossaryEntries(glossaryPackage);
+  if (glossaryEntryCount === 0) {
+    const finalReport: GlobalImportExecutionReport = {
+      ...baseReport,
+      glossary_scope: "folder",
+      glossary_created: 0,
+      glossary_updated: 0,
+      glossary_skipped: 0,
+    };
+    if (options.canonicalPackage) {
+      updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");
+    }
+    clearRequestId(request.storageKey);
+    options.onProgress?.(totalCards, totalCards, "Importação concluída; nenhum glossário preenchido");
+    return finalReport;
+  }
+
   options.onProgress?.(
     totalCards,
     totalCards,
@@ -397,11 +415,20 @@ export async function executeMappedGlobalImport(
       return compatibilityReport;
     }
 
-    await rollbackImportedBatch(
-      baseReport.batch_id,
-      options.turmaId ? "classroom" : "personal",
-    );
-    throw importDatabaseError(glossaryError);
+    const finalReport: GlobalImportExecutionReport = {
+      ...baseReport,
+      glossary_scope: "folder",
+      glossary_created: 0,
+      glossary_updated: 0,
+      glossary_skipped: glossaryEntryCount,
+      glossary_warning: "Os flashcards foram importados, mas o glossário incorporado não pôde ser salvo neste destino.",
+    };
+    if (options.canonicalPackage) {
+      updateGlobalImportManifestStatus(options.canonicalPackage.request_id, "imported");
+    }
+    clearRequestId(request.storageKey);
+    options.onProgress?.(totalCards, totalCards, "Cards importados; glossário não disponível neste destino");
+    return finalReport;
   }
 
   const glossaryReport = (glossaryData ?? {}) as {

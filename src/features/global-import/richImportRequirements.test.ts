@@ -35,7 +35,7 @@ function packageWith(cards: any[], glossary: any[] = []): SmartImportPackage {
 describe("richImportRequirements", () => {
   it("allows legacy fallback only for plain A/B cards", () => {
     expect(richImportRequirements(packageWith([
-      { type: "normal", front: "Hello", back: "Olá" },
+      { type: "normal", front: "Hello", back: "Ola" },
     ]))).toEqual([]);
   });
 
@@ -50,10 +50,19 @@ describe("richImportRequirements", () => {
     }]))).toContain("cards em camadas");
   });
 
-  it("blocks legacy fallback for glossary and enriched card data", () => {
+  it("does not require a glossary capability for empty or invalid entries", () => {
+    expect(richImportRequirements(packageWith([
+      { type: "normal", front: "Hello", back: "Ola" },
+    ], []))).toEqual([]);
+    expect(richImportRequirements(packageWith([
+      { type: "normal", front: "Hello", back: "Ola" },
+    ], [{ term: "", translation: "" }]))).toEqual([]);
+  });
+
+  it("requires the rich gateway for real glossary and enriched card data", () => {
     expect(richImportRequirements(packageWith(
-      [{ type: "normal", front: "Hello", back: "Olá", word_hints: [{ text: "Hello", translation: "Olá", side: "A", occurrence: "all" }] }],
-      [{ term: "Hello", translation: "Olá", side: "A", active: true }],
-    )).sort()).toEqual(["campos enriquecidos", "glossário"].sort());
+      [{ type: "normal", front: "Hello", back: "Ola", word_hints: [{ text: "Hello", translation: "Ola", side: "A", occurrence: "all" }] }],
+      [{ term: "Hello", translation: "Ola", side: "A", active: true }],
+    ))).toEqual(["campos enriquecidos"]);
   });
 });
