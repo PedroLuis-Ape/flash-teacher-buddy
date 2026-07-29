@@ -1,4 +1,4 @@
-import { AlertCircle, FolderOpen, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, AlertTriangle, FolderOpen, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,9 +24,15 @@ interface Props {
   contextLabel: string;
   selectedFolderId: string;
   onSelectedFolderChange: (id: string) => void;
+  selectedListId: string;
+  onSelectedListChange: (id: string) => void;
+  selectedListStrategy: "append" | "replace";
+  onSelectedListStrategyChange: (strategy: "append" | "replace") => void;
   newFolderName: string;
   onNewFolderNameChange: (name: string) => void;
 }
+
+const CREATE_NEW_LISTS = "__create_new_lists__";
 
 export function GlobalImportDestinationSection(props: Props) {
   const selectedFolder = props.catalog?.folders.find(
@@ -123,12 +129,62 @@ export function GlobalImportDestinationSection(props: Props) {
               <div className="mt-1 text-muted-foreground">
                 {selectedLists.length} lista(s) disponível(is) nesta pasta
               </div>
-              {selectedLists.length > 0 && (
-                <ul className="mt-2 space-y-1 text-muted-foreground">
-                  {selectedLists.slice(0, 5).map((list) => <li key={list.id}>• {list.title}</li>)}
-                  {selectedLists.length > 5 && <li>• e mais {selectedLists.length - 5}</li>}
-                </ul>
-              )}
+
+              <div className="mt-4 space-y-3 border-t pt-3">
+                <div>
+                  <Label htmlFor="existing-import-list">Destino inicial dos novos cards</Label>
+                  <Select
+                    value={props.selectedListId || CREATE_NEW_LISTS}
+                    onValueChange={(value) => props.onSelectedListChange(
+                      value === CREATE_NEW_LISTS ? "" : value,
+                    )}
+                  >
+                    <SelectTrigger id="existing-import-list">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={CREATE_NEW_LISTS}>
+                        Criar novas listas com os nomes recebidos
+                      </SelectItem>
+                      {selectedLists.map((list) => (
+                        <SelectItem key={list.id} value={list.id}>{list.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Depois da análise, você poderá ajustar separadamente o destino de cada lista recebida.
+                  </p>
+                </div>
+
+                {props.selectedListId && (
+                  <div>
+                    <Label htmlFor="existing-import-list-strategy">Ação inicial</Label>
+                    <Select
+                      value={props.selectedListStrategy}
+                      onValueChange={(value) => props.onSelectedListStrategyChange(
+                        value as "append" | "replace",
+                      )}
+                    >
+                      <SelectTrigger id="existing-import-list-strategy">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="append">Adicionar os novos cards</SelectItem>
+                        <SelectItem value="replace">Substituir os cards existentes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {props.selectedListId && props.selectedListStrategy === "replace" && (
+                  <p className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      A substituição continuará bloqueada até a confirmação explícita no resumo final.
+                    </span>
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

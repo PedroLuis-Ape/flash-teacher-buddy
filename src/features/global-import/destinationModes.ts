@@ -11,6 +11,8 @@ export type ExistingListConflictPolicy = "append" | "replace" | "rename" | "skip
 export interface DestinationModeConfig {
   mode: GlobalImportDestinationMode;
   existingFolderId?: string;
+  existingListId?: string;
+  existingListStrategy?: "append" | "replace";
   newFolderName?: string;
   listConflictPolicy?: ExistingListConflictPolicy;
 }
@@ -88,6 +90,7 @@ export function prepareGlobalImportDestination(
   let folderName = "";
   let folderTarget: GlobalImportDestinationPlan["folders"][number]["folder"];
   let existingLists: ImportDestinationCatalog["lists"] = [];
+  let selectedExistingList: ImportDestinationCatalog["lists"][number] | null = null;
 
   if (config.mode === "existing-folder") {
     const selectedFolder = catalog.folders.find((folder) => folder.id === config.existingFolderId);
@@ -98,6 +101,13 @@ export function prepareGlobalImportDestination(
     folderName = selectedFolder.title;
     folderTarget = { mode: "existing", folderId: selectedFolder.id };
     existingLists = catalog.lists.filter((list) => list.folder_id === selectedFolder.id);
+    if (config.existingListId) {
+      selectedExistingList = existingLists.find((list) => list.id === config.existingListId) ?? null;
+      if (!selectedExistingList) {
+        errors.push("Selecione uma lista válida dentro da pasta escolhida.");
+        return { packageValue: null, plan: null, warnings, errors, skippedLists: 0 };
+      }
+    }
   } else {
     folderName = config.newFolderName?.trim() ?? "";
     if (!folderName) {
@@ -113,6 +123,7 @@ export function prepareGlobalImportDestination(
   const preparedLists: GlobalImportList[] = [];
   const listPlan: Record<number, ListDestination> = {};
   let skippedLists = 0;
+  let selectedExistingListAssigned = false;
 
   incomingLists.forEach((incomingList) => {
     const key = normalize(incomingList.name);
@@ -133,7 +144,17 @@ export function prepareGlobalImportDestination(
     }
 
     const nextIndex = preparedLists.length;
-    if (existingList && conflictPolicy === "append") {
+    if (selectedExistingList) {
+      listPlan[nextIndex] = {
+        mode: "existing",
+        listId: selectedExistingList.id,
+        strategy: config.existingListStrategy === "replace" && !selectedExistingListAssigned
+          ? "replace"
+          : "append",
+        consolidate: true,
+      };
+      selectedExistingListAssigned = true;
+    } else if (existingList && conflictPolicy === "append") {
       listPlan[nextIndex] = { mode: "existing", listId: existingList.id, strategy: "append" };
     } else if (existingList && conflictPolicy === "replace") {
       listPlan[nextIndex] = { mode: "existing", listId: existingList.id, strategy: "replace" };
@@ -158,9 +179,9 @@ export function prepareGlobalImportDestination(
   const destinations = Object.values(listPlan);
   const listsToCreate = destinations.filter((destination) => destination.mode === "create").length;
   const listsToReuse = destinations.filter((destination) => destination.mode === "existing").length;
-  warnings.unshift(
-    `Resumo do destino: ${incomingLists.length} lista(s) recebidas; ${preparedLists.length} serão importadas separadamente em “${folderName}” (${listsToCreate} nova(s) e ${listsToReuse} existente(s)).`,
-  );
+  warnings.unshift(selectedExistingList
+    ? `Resumo do destino: ${preparedLists.length} lista(s) recebidas serão consolidadas na lista existente “${selectedExistingList.title}”, dentro de “${folderName}”.`
+    : `Resumo do destino: ${incomingLists.length} lista(s) recebidas; ${preparedLists.length} serão importadas separadamente em “${folderName}” (${listsToCreate} nova(s) e ${listsToReuse} existente(s)).`);
 
   const totalCards = preparedLists.reduce((sum, list) => sum + list.cards.length, 0);
   const preparedPackage: GlobalImportPackage = {
