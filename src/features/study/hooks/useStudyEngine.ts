@@ -153,15 +153,6 @@ export function useStudyEngine(
     "loading" | "ready" | "failed"
   >("loading");
 
-  const isMasteryMode = useMemo(
-    () => studyFlowMode === "mastery_rounds" && (
-      mode === "write" || mode === "mixed" || mode === "multiple-choice"
-      || mode === "unscramble" || mode === "pronunciation"
-    ),
-    [studyFlowMode, mode],
-  );
-
-  
   // Refs for preventing duplicate init, debouncing saves, and batching progress
   const completedInitSignatureRef = useRef<string>("");
   const initializationGenerationRef = useRef(0);
@@ -184,6 +175,10 @@ export function useStudyEngine(
     fastMode: initialSettings?.fastMode,
     redFocus: initialSettings?.redFocus,
   });
+  const effectiveStudyFlowMode: StudyFlowMode = gameSettings.redFocus
+    ? "continuous"
+    : studyFlowMode;
+  const isMasteryMode = effectiveStudyFlowMode === "mastery_rounds";
 
   // Spaced Repetition Lite state
   const [unseenCards, setUnseenCards] = useState<string[]>([]);
@@ -230,8 +225,8 @@ export function useStudyEngine(
     const sub = gameSettings.subset ?? 'all';
     const order = gameSettings.mode ?? 'random';
     const red = gameSettings.redFocus ? 'red' : 'normal';
-    return `${sub}:${order}:${red}`;
-  }, [gameSettings.subset, gameSettings.mode, gameSettings.redFocus]);
+    return `${sub}:${order}:${red}:${effectiveStudyFlowMode}`;
+  }, [effectiveStudyFlowMode, gameSettings.subset, gameSettings.mode, gameSettings.redFocus]);
 
   const studySnapshotKey = useMemo(() => buildStudySnapshotKey({
     userScope: userScope || 'anon',
@@ -442,10 +437,22 @@ export function useStudyEngine(
       return;
     }
 
-    // Mastery rounds: use the dedicated round engine for write/mixed modes.
+    const user = userScope ? { id: userScope } : null;
+    authUserIdRef.current = userScope ?? null;
+    setIsAuthenticated(Boolean(user));
+
+    // Mastery rounds: use the dedicated round engine for every activity.
     // This bypasses the legacy continuous/batching path so the new flow engine
     // owns the queue, round boundaries, and repetition logic.
     if (isMasteryMode) {
+      if (user && listId) {
+        trackListOpened(listId);
+        void withStudyRuntimeTimeout(
+          initTurmaTracking(listId),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          "turma-tracking",
+        ).catch(() => undefined);
+      }
       const eligibleIds = flashcards.map((card) => card.id);
       const availableSet = new Set(eligibleIds);
       const restored = readMasterySnapshot(masterySnapshotKey, availableSet);
@@ -464,11 +471,10 @@ export function useStudyEngine(
       markReady();
       return;
     }
+    setMasterySession(null);
 
     let fallbackLocalSnapshot: ReturnType<typeof readStudySnapshot> = null;
     try {
-      const user = userScope ? { id: userScope } : null;
-      authUserIdRef.current = userScope ?? null;
       const snapshotCardIds = new Set(flashcards.map((card) => card.id));
       const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds, {
         enforceUniqueOrder: !!gameSettings.redFocus,
@@ -484,8 +490,6 @@ export function useStudyEngine(
           markReady();
           return;
         }
-        setIsAuthenticated(false);
-
         // For flip mode without auth: use EXACT order from flashcards (already ordered by Study.tsx)
         if (isFlipMode) {
           const orderedIds = flashcards.map(f => f.id);
@@ -507,9 +511,6 @@ export function useStudyEngine(
         markReady();
         return;
       }
-
-      setIsAuthenticated(true);
-
       if (!listId) {
         // No listId (e.g. collection or portal route) — standard modes
         // respect the order already prepared by Study.tsx.
@@ -1448,13 +1449,16 @@ export function useStudyEngine(
       return;
     }
 
+    const restartIsMastery = studyFlowMode === "mastery_rounds" && !settings.redFocus;
     let cardIds = flashcards.map(f => f.id);
-    if (!settings.redFocus && settings.mode === 'random') cardIds = cardIds.sort(() => Math.random() - 0.5);
-    cardIds = injectRedListRepetitions(
-      cardIds,
-      effectiveRedPlayableIds,
-      shouldInjectRedPriority(settings),
-    );
+    if (!restartIsMastery) {
+      if (!settings.redFocus && settings.mode === 'random') cardIds = cardIds.sort(() => Math.random() - 0.5);
+      cardIds = injectRedListRepetitions(
+        cardIds,
+        effectiveRedPlayableIds,
+        shouldInjectRedPriority(settings),
+      );
+    }
 
     const previousSessionId = sessionId;
     clearStudySnapshot(studySnapshotKey);
@@ -1463,8 +1467,18 @@ export function useStudyEngine(
     if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
 
     setSessionId(null);
-    setCardsOrder(cardIds);
-    setCurrentIndex(0);
+    if (restartIsMastery) {
+      const restartedMastery = createMasterySession(cardIds, {
+        shuffle: settings.mode === "random",
+      });
+      setMasterySession(restartedMastery);
+      setCardsOrder(restartedMastery.currentRoundIds);
+      setCurrentIndex(restartedMastery.currentRoundIndex);
+    } else {
+      setMasterySession(null);
+      setCardsOrder(cardIds);
+      setCurrentIndex(0);
+    }
     setResults([]);
     setRoundResults([]);
     setMissedCards([]);
@@ -1474,7 +1488,7 @@ export function useStudyEngine(
 
     try {
       const userId = authUserIdRef.current;
-      if (isAuthenticated && userId && listId) {
+      if (isAuthenticated && userId && listId && !restartIsMastery) {
         if (previousSessionId) {
           const previousController = new AbortController();
           const { error: previousError } = await withStudyRuntimeTimeout(
@@ -1518,7 +1532,7 @@ export function useStudyEngine(
     } finally {
       setIsRestarting(false);
     }
-  }, [isRestarting, gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, masterySnapshotKey, isAuthenticated, mode]);
+  }, [isRestarting, gameSettings, studyFlowMode, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, masterySnapshotKey, isAuthenticated, mode]);
 
   // Initialize session on mount
   useEffect(() => {
@@ -1724,7 +1738,7 @@ export function useStudyEngine(
     setGameSettings,
     unseenCardsCount: masterySummary?.unseenRemaining ?? unseenCards.length,
     missedCardsCount: masterySummary?.pendingReview ?? missedCards.length,
-    masteryStatus: masterySession?.status ?? null,
+    masteryStatus: isMasteryMode ? masterySession?.status ?? null : null,
     masteryRoundSummary: masterySummary,
     masteryTotalEligible: masterySession?.totalEligible ?? flashcards.length,
     masteryMasteredCount: masterySession ? new Set(masterySession.masteredIds).size : 0,

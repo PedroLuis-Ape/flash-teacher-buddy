@@ -15,6 +15,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { normalizeDirection, type Direction } from '@/features/study/lib/gameCore';
 import { normalizeStudyMode, studyModeToUrlParam, type StudyMode } from '@/features/study/lib/studyMode';
+import { resolveStudyLaunchRoute } from '@/features/study/lib/studyLaunchParams';
+import { StudyFlowModeSelector } from '@/features/study/components/StudyFlowModeSelector';
+import type { StudyFlowModePreset } from '@/features/study/preferences/studyPreset';
 import {
   GAME_MODE_VISUALS,
   type GameModeVisualKey,
@@ -83,6 +86,7 @@ export default function PublicClassGamesHub() {
   const assignmentId = searchParams.get('atribuicao');
   const [direction, setDirection] = useState<Direction>('any');
   const [order, setOrder] = useState<StudyOrder>('random');
+  const [flowMode, setFlowMode] = useState<StudyFlowModePreset>('mastery_rounds');
 
   const validContext = Boolean(id && turmaId && assignmentId);
 
@@ -117,9 +121,11 @@ export default function PublicClassGamesHub() {
     if (!id || !turmaId || !assignmentId) return;
     const mode = normalizeStudyMode(rawMode);
 
-    if (mode === 'mixed') {
+    const route = resolveStudyLaunchRoute(mode, flowMode);
+    if (route === 'mixed-study') {
       const mixedParams = new URLSearchParams({
         dir: direction,
+        flow: flowMode,
         guest: 'true',
         turma: turmaId,
         atribuicao: assignmentId,
@@ -132,6 +138,7 @@ export default function PublicClassGamesHub() {
       mode: studyModeToUrlParam(mode),
       dir: direction,
       order,
+      flow: flowMode,
       guest: 'true',
       turma: turmaId,
       atribuicao: assignmentId,
@@ -210,6 +217,10 @@ export default function PublicClassGamesHub() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card/95 p-3 shadow-sm sm:p-5">
+            <StudyFlowModeSelector value={flowMode} onChange={setFlowMode} />
           </div>
 
           <div>

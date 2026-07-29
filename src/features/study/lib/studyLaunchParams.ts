@@ -3,8 +3,19 @@ import {
   studyModeToUrlParam,
   type StudyMode,
 } from "@/features/study/lib/studyMode";
+import type { StudyFlowModePreset } from "@/features/study/preferences/studyPreset";
 
 export type StudyLaunchMode = StudyMode | "multiple";
+
+export function resolveStudyLaunchRoute(
+  rawMode: StudyLaunchMode,
+  flowMode: StudyFlowModePreset,
+): "study" | "mixed-study" {
+  const mode = normalizeStudyMode(rawMode);
+  return mode === "mixed" && flowMode === "mastery_rounds"
+    ? "mixed-study"
+    : "study";
+}
 
 /**
  * Builds the URL for a new study session without copying saved preferences into
@@ -18,11 +29,13 @@ export type StudyLaunchMode = StudyMode | "multiple";
 export function buildStudyLaunchSearchParams(
   rawMode: StudyLaunchMode,
   turmaId?: string | null,
+  flowMode?: StudyFlowModePreset,
 ): URLSearchParams {
   const mode = normalizeStudyMode(rawMode);
   const params = new URLSearchParams({ mode: studyModeToUrlParam(mode) });
 
   if (turmaId) params.set("turma", turmaId);
+  if (flowMode) params.set("flow", flowMode);
 
   return params;
 }

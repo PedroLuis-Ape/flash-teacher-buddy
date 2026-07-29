@@ -12,6 +12,8 @@ describe("study completion flow", () => {
     expect(study).toContain("buildStudyReturnRoute");
     expect(study).toContain("CONCLUINDO...");
     expect(study).toContain("Reiniciando...");
+    expect(study).toContain("Percurso completo concluído!");
+    expect(study).toContain('masteryProgressActive ? "Total desta rodada" : "Total do percurso"');
   });
 
   it("uses the 3D trophy emoji in both completion views", () => {
@@ -28,7 +30,19 @@ describe("study completion flow", () => {
     expect(engine).toContain("pagehide");
     expect(engine).toContain("visibilitychange");
     expect(engine).toContain("const restartSession = useCallback(async");
+    expect(engine).toContain("setMasterySession(restartedMastery)");
     expect(engine).toContain("discardSession");
     expect(engine).not.toContain("if (!isAuthenticated) return;");
+  });
+
+  it("keeps completion and round boundaries scoped by the selected flow", () => {
+    const study = read("src/pages/Study.tsx");
+    const engine = read("src/features/study/hooks/useStudyEngine.ts");
+    expect(study).toContain("sessionStudyFlowMode");
+    expect(study).toContain('urlFlowMode === "mastery_rounds" || urlFlowMode === "continuous"');
+    expect(study).toContain("normalizedMode}:${sessionStudyFlowMode}");
+    expect(study).toContain("masteryProgressActive && hasMoreRounds && !isGameComplete");
+    expect(engine).toContain('return `${sub}:${order}:${red}:${effectiveStudyFlowMode}`');
+    expect(engine).toContain('const isMasteryMode = effectiveStudyFlowMode === "mastery_rounds"');
   });
 });

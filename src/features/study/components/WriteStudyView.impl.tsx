@@ -29,6 +29,7 @@ import {
 } from "@/features/study/lib/writeCorrectionMode";
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
 import { useAdvanceController } from "@/features/study/hooks/useAdvanceController";
+import type { StudyFlowMode } from "@/features/study/lib/advanceGate";
 import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
 import { LayeredCardHintButton } from "./LayeredCardHintButton";
 import { setWriteAnswerLocked } from "@/features/study/lib/writeAnswerLock";
@@ -57,6 +58,7 @@ interface WriteStudyViewProps {
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
+  flowMode?: StudyFlowMode;
   layerCount?: number;
   layersVisitedCount?: number;
   onOpenLayers?: () => void;
@@ -86,6 +88,7 @@ export const WriteStudyView = ({
   onCorrect,
   onIncorrect,
   onSkip,
+  flowMode,
   layerCount = 1,
   layersVisitedCount = 0,
   onOpenLayers,
@@ -140,7 +143,7 @@ export const WriteStudyView = ({
   const advance = useAdvanceController({
     cardId: flashcardId ?? `${front}|${back}`,
     mode: "write",
-    flowMode: "mastery_rounds",
+    flowMode,
     onAdvance: (final) => {
       if (final === "correct" || final === "accepted_with_corrections") onCorrect();
       else if (final === "incorrect") onIncorrect();

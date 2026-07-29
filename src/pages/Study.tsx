@@ -177,6 +177,10 @@ const Study = () => {
   const initialDir: Direction = urlDirection ?? prefs.direction;
   const initialOrder = prefs.order;
   const urlFavoritesOnly = prefs.favoritesOnly;
+  const urlFlowMode = searchParams.get("flow") || searchParams.get("studyFlowMode");
+  const sessionStudyFlowMode = urlFlowMode === "mastery_rounds" || urlFlowMode === "continuous"
+    ? urlFlowMode
+    : effectivePreset.studyFlowMode;
   
   // Derive initial game settings from persistent prefs
   // NOTE: only used as initialSettings on first engine init; live updates flow via setGameSettings effect below
@@ -229,8 +233,25 @@ const Study = () => {
   const completionKey = useMemo(() => {
     if (!resolvedId) return null;
     const scope = authUserId || "anon";
-    return `study-completed:${scope}:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
-  }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly, authUserId]);
+    return [
+      "study-completed",
+      scope,
+      resolvedId,
+      normalizedMode,
+      sessionStudyFlowMode,
+      initialDir,
+      initialOrder,
+      String(urlFavoritesOnly),
+    ].join(":");
+  }, [
+    resolvedId,
+    normalizedMode,
+    sessionStudyFlowMode,
+    initialDir,
+    initialOrder,
+    urlFavoritesOnly,
+    authUserId,
+  ]);
 
   const returnRoute = useMemo(() => buildStudyReturnRoute({
     pathname: window.location.pathname,
@@ -321,7 +342,7 @@ const Study = () => {
   // A session may only receive cards after the complete preset for this exact
   // account/list/mode context has been applied to the engine. This prevents a
   // default preset from winning a race against the saved account preset.
-  const presetContextKey = `${authUserId ?? "anon"}:${resolvedId}:${normalizedMode}`;
+  const presetContextKey = `${authUserId ?? "anon"}:${resolvedId}:${normalizedMode}:${sessionStudyFlowMode}`;
   const [appliedPresetContext, setAppliedPresetContext] = useState<string | null>(null);
   const sessionPresetReady = !preferencesHydrating && appliedPresetContext === presetContextKey;
   const engineFlashcards = sessionPresetReady ? stableFlashcards : [];
@@ -369,7 +390,17 @@ const Study = () => {
     cardsOrder,
     saveProgressNow,
     studySnapshotKey,
-  } = useStudyEngine(listId, engineFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
+  } = useStudyEngine(
+    listId,
+    engineFlashcards,
+    normalizedMode,
+    false,
+    favorites,
+    initialGameSettings,
+    redListIds,
+    authUserId,
+    sessionStudyFlowMode,
+  );
 
   // A new queue reference represents a new answerable session/round. Resetting
   // this guard prevents a restarted session with the same first card from
@@ -384,6 +415,7 @@ const Study = () => {
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
   const masteryProgressActive = masteryStatus !== null;
+  const activeStudyFlowMode = masteryProgressActive ? "mastery_rounds" : "continuous";
   const overallTotalCards = masteryProgressActive ? masteryTotalEligible : totalCards;
   const studyProgressMetrics = resolveStudyProgressMetrics({
     mode: masteryProgressActive ? "mastery" : "continuous",
@@ -421,13 +453,13 @@ const Study = () => {
         favoritesOnly: prefs.favoritesOnly,
         fastMode: prefs.fastMode,
         direction: prefs.direction,
-        studyFlowMode: effectivePreset.studyFlowMode,
+        studyFlowMode: sessionStudyFlowMode,
       });
     }
   }, [
     appliedPresetContext,
     authStatus,
-    effectivePreset.studyFlowMode,
+    sessionStudyFlowMode,
     normalizedMode,
     preferencesHydrating,
     prefs.direction,
@@ -1500,7 +1532,7 @@ const Study = () => {
 
   if (isFinished) {
     const isFlipMode = normalizedMode === "flip";
-    const showNextRound = !isFlipMode && hasMoreRounds && !isGameComplete;
+    const showNextRound = masteryProgressActive && hasMoreRounds && !isGameComplete;
 
     return (
       <div className="min-h-screen bg-background py-12 px-4 pb-32 md:pb-12">
@@ -1519,8 +1551,10 @@ const Study = () => {
             <h1 className="text-3xl font-bold">
               {showNextRound
                 ? `Rodada ${roundNumber} concluída`
-                : isGameComplete && errorCount === 0 && skippedCount === 0
+                : masteryProgressActive && isGameComplete && errorCount === 0 && skippedCount === 0
                 ? "Parabéns! Todos os cards dominados! 🎉"
+                : !masteryProgressActive && isGameComplete && errorCount === 0 && skippedCount === 0
+                ? "Percurso completo concluído! 🎉"
                 : "Sessão finalizada!"}
             </h1>
 
@@ -1568,7 +1602,7 @@ const Study = () => {
             )}
 
             <div className="text-muted-foreground">
-              Total desta rodada: {totalCards} cards
+              {masteryProgressActive ? "Total desta rodada" : "Total do percurso"}: {totalCards} cards
             </div>
 
             {showNextRound && (
@@ -1849,10 +1883,12 @@ const Study = () => {
               onToggleSpecial={handleToggleSpecial}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
-              onNext={navigateNext}
-              onPrevious={navigatePrevious}
-              canGoPrevious={canGoPrevious}
-              canGoNext={canGoNext}
+              onSkip={requestSkip}
+              flowMode={activeStudyFlowMode}
+              onNext={masteryProgressActive ? undefined : navigateNext}
+              onPrevious={masteryProgressActive ? undefined : navigatePrevious}
+              canGoPrevious={!masteryProgressActive && canGoPrevious}
+              canGoNext={!masteryProgressActive && canGoNext}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
               onOpenLayers={hasLayers ? goToNextLayer : undefined}
@@ -1882,6 +1918,7 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
+              flowMode={activeStudyFlowMode}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
               onOpenLayers={hasLayers ? goToNextLayer : undefined}
@@ -2002,7 +2039,7 @@ const Study = () => {
 
       <SkipCardConfirmDialog
         open={showSkipDialog}
-        flowMode={effectivePreset.studyFlowMode}
+        flowMode={activeStudyFlowMode}
         onCancel={() => {
           skipCardKeyRef.current = null;
           setShowSkipDialog(false);

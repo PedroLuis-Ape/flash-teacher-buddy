@@ -573,6 +573,7 @@ export default function MixedStudy() {
     onCorrect: () => handleAnswer(true),
     onIncorrect: () => handleAnswer(false),
     onSkip: requestSkip,
+    flowMode: "mastery_rounds" as const,
     onRestartRound: restartRoundManually,
     onRestartJourney: restartJourneyManually,
   };

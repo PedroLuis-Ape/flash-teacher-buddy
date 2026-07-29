@@ -84,12 +84,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const playRuntime = usePlayPresetRuntime();
   const listSession = location.pathname.includes("/list/")
     && (location.pathname.endsWith("/study") || location.pathname.endsWith("/mixed-study"));
-  const urlMode = new URLSearchParams(location.search).get("mode");
+  const currentSearchParams = new URLSearchParams(location.search);
+  const urlMode = currentSearchParams.get("mode");
   const isWriteMode = urlMode === "write";
   const isMixedMode = urlMode === "mixed";
-  // Every playable quiz mode supports the same two session formats. Flip is
-  // already a straight-through viewer and therefore does not need this option.
-  const supportsFlowModes = Boolean(urlMode) && urlMode !== "flip";
+  // Session format is independent from the activity. Flip also participates:
+  // "Eu sabia" masters the card and "Eu não sabia" schedules a later review.
+  const supportsFlowModes = Boolean(urlMode);
   const supportsWriteCorrection = isWriteMode || isMixedMode;
   const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
     () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
@@ -111,10 +112,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     writeWriteCorrectionMode(next);
   };
 
-  const currentFlowMode: StudyFlowModePreset = effectivePreset.studyFlowMode;
+  const urlFlowMode = currentSearchParams.get("flow") || currentSearchParams.get("studyFlowMode");
+  const currentFlowMode: StudyFlowModePreset =
+    urlFlowMode === "mastery_rounds" || urlFlowMode === "continuous"
+      ? urlFlowMode
+      : effectivePreset.studyFlowMode;
   const handleFlowModeChange = (next: StudyFlowModePreset) => {
     if (next === currentFlowMode) return;
     updateForCurrentScope({ studyFlowMode: next });
+    const params = new URLSearchParams(location.search);
+    params.set("flow", next);
+    params.delete("studyFlowMode");
+    navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     emitStudyFlowModeChanged(next);
   };
 

@@ -88,6 +88,8 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
         onToggleSpecial={props.onToggleSpecial}
         onCorrect={props.onKnew}
         onIncorrect={props.onDidntKnow}
+        onSkip={props.onSkip}
+        flowMode={props.flowMode}
         layerCount={props.layerCount}
         layersVisitedCount={props.layersVisitedCount}
         onOpenLayers={props.onOpenLayers}

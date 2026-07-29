@@ -248,6 +248,11 @@ export function parseStudySessionOverrides(params: URLSearchParams): StudySessio
   const fastMode = params.get("fastMode") || params.get("fast");
   if (fastMode === "true" || fastMode === "false") result.fastMode = fastMode === "true";
 
+  const flowMode = params.get("flow") || params.get("studyFlowMode");
+  if (flowMode === "mastery_rounds" || flowMode === "continuous") {
+    result.studyFlowMode = flowMode;
+  }
+
   return normalizeStudyPresetOverride(result);
 }
 

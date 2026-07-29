@@ -84,6 +84,11 @@ export function PronunciationStudyView({
   const shortcuts = useShortcutMap();
   const lastSoundPlayedForRef = useRef("");
 
+  const evaluation = useMemo(() => {
+    if (!transcript || alternatives.length === 0) return null;
+    return evaluatePronunciation(alternatives, speakSide.text);
+  }, [speakSide.text, transcript, alternatives]);
+
   const handleNext = () => {
     stopListening();
     stopTTS();
@@ -135,11 +140,6 @@ export function PronunciationStudyView({
     if (isListening) stopListening();
     else void startListening();
   };
-
-  const evaluation = useMemo(() => {
-    if (!transcript || alternatives.length === 0) return null;
-    return evaluatePronunciation(alternatives, speakSide.text);
-  }, [speakSide.text, transcript, alternatives]);
 
   useEffect(() => {
     if (!evaluation || !transcript || lastSoundPlayedForRef.current === transcript) return;

@@ -7,6 +7,7 @@ import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { normalizeKey, isTypingTarget } from "@/features/study/lib/keyboardShortcuts";
+import type { StudyFlowMode } from "@/features/study/lib/advanceGate";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47 } from "@/features/study/lib/resolveStudySides";
 import {
@@ -134,6 +135,8 @@ interface FlipStudyViewProps {
   mergedHintsB?: MergedHint[];
   onKnew: () => void;
   onDidntKnow: () => void;
+  onSkip?: () => void;
+  flowMode?: StudyFlowMode;
   onNext?: () => void;
   onPrevious?: () => void;
   canGoPrevious?: boolean;
@@ -169,6 +172,7 @@ export const FlipStudyView = ({
   mergedHintsB,
   onKnew,
   onDidntKnow,
+  flowMode,
   onNext,
   onPrevious,
   canGoPrevious = true,
@@ -200,6 +204,7 @@ export const FlipStudyView = ({
   const suppressNextCardClickRef = useRef(false);
   const { speak, stop } = useTTS();
   const pureFlipSession = isPureFlipSession();
+  const usesManualFlipAnswer = pureFlipSession && flowMode !== "mastery_rounds";
 
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
@@ -301,7 +306,7 @@ export const FlipStudyView = ({
   const handleKnew = () => {
     pauseAutoPlay();
     playCorrect();
-    if (pureFlipSession) {
+    if (usesManualFlipAnswer) {
       setManualAnswer("knew");
       return;
     }
@@ -311,7 +316,7 @@ export const FlipStudyView = ({
   const handleDidntKnow = () => {
     pauseAutoPlay();
     playWrong();
-    if (pureFlipSession) {
+    if (usesManualFlipAnswer) {
       setManualAnswer("didntKnow");
       return;
     }
@@ -469,7 +474,7 @@ export const FlipStudyView = ({
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled, pureFlipSession]);
+  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled, usesManualFlipAnswer]);
 
   const autoPlayControls = (
     <div className="flip-autoplay-controls w-full rounded-xl border bg-card/80 p-2 shadow-sm sm:rounded-2xl sm:p-3" data-no-card-swipe="true">

@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CreateFlashcardForm } from "@/components/CreateFlashcardForm";
 import { FlashcardList } from "@/features/study/components/FlashcardList";
-import { PracticeMode } from "@/components/PracticeMode";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
-import { ArrowLeft, Play, Pencil } from "lucide-react";
+import { ArrowLeft, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Flashcard {
@@ -26,7 +24,6 @@ interface Collection {
 const Collection = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [practiceMode, setPracticeMode] = useState<"write_pt_en" | "write_en_pt" | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile"],
@@ -102,18 +99,6 @@ const Collection = () => {
     }
   };
 
-  if (practiceMode) {
-    return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <PracticeMode
-          flashcards={flashcards}
-          mode={practiceMode}
-          onExit={() => setPracticeMode(null)}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -155,18 +140,10 @@ const Collection = () => {
             <Button
               variant="secondary"
               size="lg"
-              onClick={() => setPracticeMode("write_pt_en")}
+              onClick={() => navigate(`/collection/${id}/games`)}
             >
-              <Pencil className="mr-2 h-5 w-5" />
-              Praticar: PT → EN
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => setPracticeMode("write_en_pt")}
-            >
-              <Pencil className="mr-2 h-5 w-5" />
-              Praticar: EN → PT
+              <Gamepad2 className="mr-2 h-5 w-5" />
+              Escolher atividade e formato
             </Button>
           </div>
         )}
