@@ -77,7 +77,7 @@ function EditorialAuthorCard({ page }: { page: EditorialPageDefinition }) {
     : editorialMeta.preply.stableLessonClaim;
 
   return (
-    <Card className="border-primary/25 bg-primary/5">
+    <Card surface="raised" density="work" className="ape-editorial-author-card border-primary/25 bg-primary/5">
       <CardContent className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="flex gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -116,12 +116,17 @@ function EditorialHighlights({ page }: { page: EditorialPageDefinition }) {
   if (page.highlights.length === 0) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="ape-editorial-highlights space-y-4">
       {page.highlights.map((highlight) => {
         const parts = splitEditorialHighlight(highlight.text);
         return (
-          <Card key={`${highlight.label}:${highlight.text}`} className="overflow-hidden border-primary/30 bg-primary/5">
-            <CardContent className="p-5 sm:p-7">
+          <Card
+            key={`${highlight.label}:${highlight.text}`}
+            surface="raised"
+            density="play"
+            className="ape-editorial-highlight overflow-hidden border-primary/30 bg-primary/5"
+          >
+            <CardContent className="ape-editorial-highlight-content p-5 sm:p-7">
               <div className="flex items-start gap-3">
                 <Quote className="mt-1 h-6 w-6 shrink-0 text-primary" />
                 <div className="min-w-0 flex-1">
@@ -129,7 +134,7 @@ function EditorialHighlights({ page }: { page: EditorialPageDefinition }) {
                   {parts.length > 1 ? (
                     <ol className="mt-4 grid gap-3 sm:grid-cols-2">
                       {parts.map((part, index) => (
-                        <li key={`${index}:${part}`} className="flex gap-3 rounded-xl border border-primary/15 bg-background/75 p-4 text-sm leading-7">
+                        <li key={`${index}:${part}`} className="ape-editorial-highlight-item flex gap-3 rounded-xl border border-primary/15 bg-background/75 p-4 text-sm leading-7">
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-black text-primary-foreground">
                             {index + 1}
                           </span>
@@ -138,7 +143,7 @@ function EditorialHighlights({ page }: { page: EditorialPageDefinition }) {
                       ))}
                     </ol>
                   ) : (
-                    <p className="mt-3 text-[1.02rem] leading-8 text-muted-foreground">{highlight.text}</p>
+                    <p className="ape-editorial-copy mt-3 text-[1.02rem] leading-8 text-muted-foreground">{highlight.text}</p>
                   )}
                 </div>
               </div>
@@ -152,11 +157,11 @@ function EditorialHighlights({ page }: { page: EditorialPageDefinition }) {
 
 function EditorialSections({ page }: { page: EditorialPageDefinition }) {
   return (
-    <div className="space-y-8 sm:space-y-10">
+    <div className="ape-editorial-sections space-y-8 sm:space-y-10">
       {page.sections.map((section, sectionIndex) => (
         <section key={`${sectionIndex}:${section.heading}`} className="scroll-mt-24">
-          <Card className="overflow-hidden border-border/80 shadow-sm">
-            <CardContent className="p-5 sm:p-7 lg:p-9">
+          <Card density="play" className="ape-editorial-section-card overflow-hidden border-border/80 shadow-sm">
+            <CardContent className="ape-editorial-section-content p-5 sm:p-7 lg:p-9">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <BookOpenCheck className="h-5 w-5" />
@@ -172,9 +177,9 @@ function EditorialSections({ page }: { page: EditorialPageDefinition }) {
               </div>
 
               {section.paragraphs.length > 0 && (
-                <div className="mt-5 space-y-4">
+                <div className="ape-editorial-paragraphs mt-5 space-y-4">
                   {section.paragraphs.map((paragraph) => (
-                    <p key={paragraph} className="max-w-4xl text-[1.02rem] leading-8 text-muted-foreground">
+                    <p key={paragraph} className="ape-editorial-copy max-w-4xl text-[1.02rem] leading-8 text-muted-foreground">
                       {paragraph}
                     </p>
                   ))}
@@ -184,7 +189,7 @@ function EditorialSections({ page }: { page: EditorialPageDefinition }) {
               {section.items.length > 0 && (
                 <ul className="mt-5 grid gap-3 sm:grid-cols-2">
                   {section.items.map((item) => (
-                    <li key={item} className="flex gap-3 rounded-xl border border-border/80 bg-muted/20 p-4 text-sm leading-7 sm:text-base">
+                    <li key={item} className="ape-editorial-list-item flex gap-3 rounded-xl border border-border/80 bg-muted/20 p-4 text-sm leading-7 sm:text-base">
                       <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-primary" />
                       <span>{item}</span>
                     </li>
@@ -204,7 +209,7 @@ function EditorialFaq({ page }: { page: EditorialPageDefinition }) {
   const english = page.locale === "en";
 
   return (
-    <section className="border-y border-border/60 bg-muted/15 py-12 sm:py-16" aria-labelledby={`faq-${page.path}`}>
+    <section className="ape-editorial-faq border-y border-border/60 bg-muted/15 py-12 sm:py-16" aria-labelledby={`faq-${page.path}`}>
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
         <div className="mx-auto mb-7 max-w-3xl text-center">
           <p className="text-xs font-extrabold uppercase tracking-wider text-primary">FAQ</p>
@@ -219,7 +224,7 @@ function EditorialFaq({ page }: { page: EditorialPageDefinition }) {
         </div>
         <div className="space-y-3">
           {page.faq.map((faq) => (
-            <details key={faq.question} className="group rounded-xl border border-border bg-card px-4 py-4 open:border-primary/40 sm:px-5">
+            <details key={faq.question} className="ape-editorial-faq-item group rounded-xl border border-border bg-card px-4 py-4 open:border-primary/40 sm:px-5">
               <summary className="cursor-pointer list-none pr-6 font-bold marker:hidden">
                 {faq.question}
               </summary>
@@ -239,7 +244,7 @@ function EditorialReferences({ page }: { page: EditorialPageDefinition }) {
   const english = page.locale === "en";
 
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16" aria-labelledby={`references-${page.path}`}>
+    <section className="ape-editorial-references mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16" aria-labelledby={`references-${page.path}`}>
       <div className="flex items-start gap-3">
         <Scale className="mt-1 h-7 w-7 shrink-0 text-primary" />
         <div>
@@ -255,7 +260,7 @@ function EditorialReferences({ page }: { page: EditorialPageDefinition }) {
       </div>
       <ol className="mt-7 space-y-4">
         {page.references.map((reference) => (
-          <li key={reference.id} id={reference.id} className="rounded-xl border border-border bg-card p-5">
+          <li key={reference.id} id={reference.id} className="ape-editorial-reference rounded-xl border border-border bg-card p-5">
             <p className="font-bold">{reference.authors} ({reference.year}).</p>
             <p className="mt-1 italic">{reference.title}.</p>
             <p className="mt-1 text-sm text-muted-foreground">{reference.publication}.</p>
@@ -280,8 +285,8 @@ function EditorialRelatedLinks({ page }: { page: EditorialPageDefinition }) {
   const english = page.locale === "en";
 
   return (
-    <nav className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6" aria-label={english ? "Related pages" : "Páginas relacionadas"}>
-      <Card>
+    <nav className="ape-editorial-related mx-auto w-full max-w-5xl px-4 py-12 sm:px-6" aria-label={english ? "Related pages" : "Páginas relacionadas"}>
+      <Card surface="raised" density="work">
         <CardContent className="p-5 sm:p-7">
           <h2 className="text-2xl font-black">{english ? "Continue exploring" : "Continue explorando"}</h2>
           <p className="mt-2 text-sm leading-7 text-muted-foreground">
@@ -300,7 +305,7 @@ function EditorialRelatedLinks({ page }: { page: EditorialPageDefinition }) {
                       ? <ExternalLink className="h-4 w-4 shrink-0" />
                       : <ArrowRight className="h-4 w-4 shrink-0" />}
                   </>,
-                  "flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 font-bold transition hover:border-primary/50 hover:text-primary",
+                  "ape-editorial-related-link flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 font-bold transition hover:border-primary/50 hover:text-primary",
                 )}
               </li>
             ))}
@@ -314,7 +319,7 @@ function EditorialRelatedLinks({ page }: { page: EditorialPageDefinition }) {
 export function EditorialContent({ page, compact = false, includeAuthor = true }: EditorialContentProps) {
   return (
     <>
-      <section className={compact ? "mx-auto w-full max-w-5xl px-4 py-10 sm:px-6" : "mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16"}>
+      <section className={compact ? "ape-editorial-content mx-auto w-full max-w-5xl px-4 py-10 sm:px-6" : "ape-editorial-content mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16"}>
         <EditorialHighlights page={page} />
         <div className={page.highlights.length > 0 ? "mt-8" : ""}>
           <EditorialSections page={page} />
@@ -353,7 +358,7 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
       : [];
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="ape-editorial-page flex min-h-screen flex-col bg-background text-foreground">
       <SEOHead
         title={page.title}
         description={page.description}
@@ -369,16 +374,16 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
       {page.path !== "/" && <PublicBackBar />}
 
       <main>
-        <section className="relative overflow-hidden border-b border-border/50">
+        <section className="ape-editorial-hero relative overflow-hidden border-b border-border/50">
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -left-32 -top-32 h-[380px] w-[380px] rounded-full bg-primary/20 blur-3xl"
+            className="ape-editorial-hero-aura ape-editorial-hero-aura-start pointer-events-none absolute -left-32 -top-32 h-[380px] w-[380px] rounded-full bg-primary/20 blur-3xl"
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -bottom-40 -right-32 h-[430px] w-[430px] rounded-full bg-accent/15 blur-3xl"
+            className="ape-editorial-hero-aura ape-editorial-hero-aura-end pointer-events-none absolute -bottom-40 -right-32 h-[430px] w-[430px] rounded-full bg-accent/15 blur-3xl"
           />
-          <div className="relative mx-auto max-w-6xl px-4 py-12 text-center sm:px-6 sm:py-16 lg:py-20">
+          <div className="ape-editorial-hero-inner relative mx-auto max-w-6xl px-4 py-12 text-center sm:px-6 sm:py-16 lg:py-20">
             <div className="mx-auto max-w-4xl">
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <Badge variant="outline" className="border-primary/30 bg-primary/10 px-3 py-1 text-primary">
@@ -389,17 +394,17 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
                   {page.audience}
                 </Badge>
               </div>
-              <h1 className="mt-5 text-balance text-4xl font-black leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              <h1 className="ape-editorial-title mt-5 text-balance text-4xl font-black leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
                 {page.h1}
               </h1>
-              <div className="mx-auto mt-6 max-w-4xl space-y-4">
+              <div className="ape-editorial-intro mx-auto mt-6 max-w-4xl space-y-4">
                 {page.intro.map((paragraph) => (
-                  <p key={paragraph} className="text-[1.05rem] leading-8 text-muted-foreground sm:text-xl sm:leading-9">
+                  <p key={paragraph} className="ape-editorial-copy text-[1.05rem] leading-8 text-muted-foreground sm:text-xl sm:leading-9">
                     {paragraph}
                   </p>
                 ))}
               </div>
-              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <div className="ape-editorial-actions mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <AuthAwareCTA guestMode="signup" size="lg" className="min-h-12 gap-2 px-6 text-base font-bold">
                   {page.cta.primary}
                   <ArrowRight className="h-4 w-4" />
@@ -416,7 +421,7 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
                   </Button>
                 )}
               </div>
-              <p className="mt-5 text-xs leading-6 text-muted-foreground">
+              <p className="ape-editorial-publication mt-5 text-xs leading-6 text-muted-foreground">
                 {english ? "Published" : "Publicada em"} {formatDate(page.datePublished, page.locale)} · {english ? "last reviewed" : "última revisão"} {formatDate(page.dateModified, page.locale)}
               </p>
             </div>
