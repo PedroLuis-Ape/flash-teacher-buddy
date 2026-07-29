@@ -16,30 +16,16 @@ function actionLabel(item: Summary["items"][number]): string {
 export function GlobalImportDestinationSummary({ summary }: Props) {
   return (
     <Card className="space-y-4 p-5">
-      <div>
-        <h2 className="font-semibold">3. Revise o resumo do destino</h2>
-        <p className="text-sm text-muted-foreground">
-          Este resumo é calculado diretamente do plano que será enviado ao banco.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        {summary.items.map((item) => (
-          <div key={item.key} className="rounded-lg border p-3 text-sm">
-            <div className="font-medium">{item.sourceListName}</div>
-            <div className="mt-1 flex items-start gap-2 text-muted-foreground">
-              <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="break-words">
-                {item.action === "skip"
-                  ? actionLabel(item)
-                  : `${item.destinationFolderName} · ${actionLabel(item)}`}
-              </span>
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {item.action === "skip" ? `${item.cards} card(s) ignorados` : `${item.cards} card(s) importados`}
-            </div>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">3. Revise o resumo do destino</h2>
+          <p className="text-sm text-muted-foreground">
+            Este resumo é calculado diretamente do plano que será enviado ao banco.
+          </p>
+        </div>
+        <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-900 dark:text-amber-100">
+          Simulação — nada foi gravado
+        </span>
       </div>
 
       <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -60,6 +46,35 @@ export function GlobalImportDestinationSummary({ summary }: Props) {
           </div>
         </div>
       )}
+
+      <details
+        className="rounded-lg border"
+        open={summary.replacementListNames.length > 0 ? true : undefined}
+      >
+        <summary className="cursor-pointer select-none px-3 py-3 text-sm font-medium">
+          Ver destinos das {summary.items.length} listas
+        </summary>
+        <div className="divide-y border-t px-3">
+          {summary.items.map((item) => (
+            <div key={item.key} className="py-3 text-sm">
+              <div className="font-medium">{item.sourceListName}</div>
+              <div className="mt-1 flex items-start gap-2 text-muted-foreground">
+                <ArrowRight className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="break-words">
+                  {item.action === "skip"
+                    ? actionLabel(item)
+                    : `${item.destinationFolderName} · ${actionLabel(item)}`}
+                </span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {item.action === "skip"
+                  ? `${item.cards} card(s) programados para ignorar`
+                  : `${item.cards} card(s) preparados para importar`}
+              </div>
+            </div>
+          ))}
+        </div>
+      </details>
     </Card>
   );
 }

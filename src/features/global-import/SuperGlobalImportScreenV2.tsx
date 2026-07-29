@@ -15,6 +15,7 @@ import { GlobalImportJsonSection } from "./components/GlobalImportJsonSection";
 import { GlobalImportValidationPreview } from "./components/GlobalImportValidationPreview";
 import { PromptBuilderCard } from "./components/PromptBuilderCard";
 import {
+  capabilityLabel,
   evaluateImportCapabilities,
   fetchImportCapabilities,
   requirementsForPackage,
@@ -167,6 +168,22 @@ export default function SuperGlobalImportScreenV2() {
   );
   const capabilityRequirements = requirementsForPackage(source.validation?.smartPackage);
   const capabilityEvaluation = evaluateImportCapabilities(capabilities.data, capabilityRequirements);
+  const executionEnabled = Boolean(
+    capabilityEvaluation.ready
+    && source.validation?.valid
+    && packageToPreview
+    && catalog
+    && destinationPlan
+    && !catalogLoading
+  );
+  const executionDisabledReason = !capabilityEvaluation.ready
+    ? capabilityEvaluation.failedChecks[0]?.detail
+      ?? (capabilityEvaluation.missing.length > 0
+        ? `Recurso indisponível: ${capabilityEvaluation.missing.map(capabilityLabel).join(", ")}.`
+        : "O diagnóstico do banco ainda não liberou esta importação.")
+    : catalogLoading
+      ? "Revalidando as pastas e listas de destino."
+      : destinationErrors[0] ?? null;
 
   const prepareValidPackage = async (validation: GlobalImportV2ValidationResult) => {
     setReport(null);
@@ -428,38 +445,42 @@ export default function SuperGlobalImportScreenV2() {
           <GlobalImportDestinationSummary summary={destinationSummary} />
         )}
 
-        <BulkGlossaryImportPanel catalog={catalog} />
+        {(destinationSummary || report) && (
+          <GlobalImportExecutionSection
+            enabled={executionEnabled}
+            count={destinationSummary?.cardsImported ?? counts.cards}
+            mode={destinationMode}
+            replacementListNames={destinationSummary?.replacementListNames ?? []}
+            replacementConfirmed={replacementConfirmed}
+            onReplacementConfirmedChange={setReplacementConfirmed}
+            cardConflict={cardConflict}
+            onCardConflictChange={setCardConflict}
+            busy={busy}
+            progress={progress}
+            progressText={progressText}
+            destinationErrors={destinationErrors}
+            disabledReason={executionDisabledReason}
+            stickyAction={!report}
+            onImport={handleImport}
+            report={report}
+            undoing={undoing}
+            onUndo={handleUndo}
+            openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}
+            onOpenFolders={() => {
+              if (classroomMode && turmaId) navigate(`/turmas/${turmaId}`);
+              else navigate("/folders");
+            }}
+          />
+        )}
 
-        <GlobalImportExecutionSection
-          enabled={Boolean(
-            capabilityEvaluation.ready
-            && source.validation?.valid
-            && packageToPreview
-            && catalog
-            && destinationPlan
-            && !catalogLoading
-          )}
-          count={destinationSummary?.cardsImported ?? counts.cards}
-          mode={destinationMode}
-          replacementListNames={destinationSummary?.replacementListNames ?? []}
-          replacementConfirmed={replacementConfirmed}
-          onReplacementConfirmedChange={setReplacementConfirmed}
-          cardConflict={cardConflict}
-          onCardConflictChange={setCardConflict}
-          busy={busy}
-          progress={progress}
-          progressText={progressText}
-          destinationErrors={destinationErrors}
-          onImport={handleImport}
-          report={report}
-          undoing={undoing}
-          onUndo={handleUndo}
-          openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}
-          onOpenFolders={() => {
-            if (classroomMode && turmaId) navigate(`/turmas/${turmaId}`);
-            else navigate("/folders");
-          }}
-        />
+        <details className="rounded-xl border bg-card">
+          <summary className="cursor-pointer select-none p-4 font-medium">
+            Ferramentas adicionais de glossário
+          </summary>
+          <div className="border-t p-3">
+            <BulkGlossaryImportPanel catalog={catalog} />
+          </div>
+        </details>
       </div>
     </div>
   );

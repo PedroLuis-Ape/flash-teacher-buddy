@@ -133,41 +133,50 @@ export function DestinationMappingCard({
             : [];
 
           return (
-            <section key={`${folder.name}-${folderIndex}`} className="rounded-xl border p-4">
-              <div className="mb-4 flex min-w-0 items-center gap-2 font-medium">
-                {folderTarget.mode === "existing"
-                  ? <FolderInput className="h-4 w-4 shrink-0" />
-                  : <FolderPlus className="h-4 w-4 shrink-0" />}
-                <span className="break-words">
+            <details
+              key={`${folder.name}-${folderIndex}`}
+              className="rounded-xl border"
+            >
+              <summary className="cursor-pointer select-none p-4">
+                <span className="flex min-w-0 items-center gap-2 font-medium">
                   {folderTarget.mode === "existing"
-                    ? `Pasta: ${selectedFolder?.title ?? "Pasta selecionada"}`
-                    : `Nova pasta: ${folderTarget.name}`}
+                    ? <FolderInput className="h-4 w-4 shrink-0" />
+                    : <FolderPlus className="h-4 w-4 shrink-0" />}
+                  <span className="break-words">
+                    {folderTarget.mode === "existing"
+                      ? `Pasta: ${selectedFolder?.title ?? "Pasta selecionada"}`
+                      : `Nova pasta: ${folderTarget.name}`}
+                  </span>
                 </span>
-              </div>
+                <span className="mt-1 block pl-6 text-sm font-normal text-muted-foreground">
+                  {folder.lists.length} lista(s),{" "}
+                  {folder.lists.reduce((total, list) => total + list.cards.length, 0)} card(s) — clique para editar os destinos
+                </span>
+              </summary>
 
-              {mode === "from-file" && (
-                <div className="mb-4">
-                  <Label htmlFor={`folder-destination-${folderIndex}`}>Destino da pasta</Label>
-                  <Select
-                    value={selectedFolderId}
-                    onValueChange={(value) => updateFolder(folderIndex, value)}
-                  >
-                    <SelectTrigger id={`folder-destination-${folderIndex}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={CREATE_FOLDER}>Criar nova pasta “{folder.name}”</SelectItem>
-                      {catalog.folders.map((existingFolder) => (
-                        <SelectItem key={existingFolder.id} value={existingFolder.id}>
-                          Usar pasta existente: {existingFolder.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="space-y-4 border-t p-4">
+                {mode === "from-file" && (
+                  <div>
+                    <Label htmlFor={`folder-destination-${folderIndex}`}>Destino da pasta</Label>
+                    <Select
+                      value={selectedFolderId}
+                      onValueChange={(value) => updateFolder(folderIndex, value)}
+                    >
+                      <SelectTrigger id={`folder-destination-${folderIndex}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={CREATE_FOLDER}>Criar nova pasta “{folder.name}”</SelectItem>
+                        {catalog.folders.map((existingFolder) => (
+                          <SelectItem key={existingFolder.id} value={existingFolder.id}>
+                            Usar pasta existente: {existingFolder.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-              <div className="space-y-4">
                 {folder.lists.map((list, listIndex) => {
                   const listPlan = folderPlan.lists[listIndex];
                   if (!listPlan) return null;
@@ -285,7 +294,7 @@ export function DestinationMappingCard({
                   );
                 })}
               </div>
-            </section>
+            </details>
           );
         })}
       </div>
