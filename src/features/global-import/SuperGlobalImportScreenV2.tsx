@@ -73,6 +73,8 @@ export default function SuperGlobalImportScreenV2() {
   const capabilities = useImportCapabilities(true);
   const [destinationMode, setDestinationMode] = useState<GlobalImportDestinationMode>("from-file");
   const [selectedFolderId, setSelectedFolderId] = useState("");
+  const [selectedListId, setSelectedListId] = useState("");
+  const [selectedListStrategy, setSelectedListStrategy] = useState<"append" | "replace">("append");
   const [newFolderName, setNewFolderName] = useState("");
   const [catalog, setCatalog] = useState<ImportDestinationCatalog | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -91,6 +93,8 @@ export default function SuperGlobalImportScreenV2() {
     setCatalogError(null);
     setCatalog(null);
     setSelectedFolderId("");
+    setSelectedListId("");
+    setSelectedListStrategy("append");
     setDestinationPlan(null);
     setReplacementConfirmed(false);
     try {
@@ -109,6 +113,9 @@ export default function SuperGlobalImportScreenV2() {
   }, [reloadCatalog, userId]);
 
   const selectedFolder = catalog?.folders.find((folder) => folder.id === selectedFolderId);
+  const selectedList = catalog?.lists.find(
+    (list) => list.id === selectedListId && list.folder_id === selectedFolderId,
+  );
   const destinationFolderName = destinationMode === "existing-folder"
     ? selectedFolder?.title
     : destinationMode === "new-folder"
@@ -120,9 +127,19 @@ export default function SuperGlobalImportScreenV2() {
     return prepareGlobalImportDestination(source.validation.package, catalog, {
       mode: destinationMode,
       existingFolderId: selectedFolderId,
+      existingListId: selectedList?.id,
+      existingListStrategy: selectedListStrategy,
       newFolderName,
     });
-  }, [source.validation, catalog, destinationMode, selectedFolderId, newFolderName]);
+  }, [
+    source.validation,
+    catalog,
+    destinationMode,
+    selectedFolderId,
+    selectedList,
+    selectedListStrategy,
+    newFolderName,
+  ]);
 
   useEffect(() => {
     setDestinationPlan(prepared?.plan ?? null);
@@ -351,14 +368,31 @@ export default function SuperGlobalImportScreenV2() {
 
         <GlobalImportDestinationSection
           mode={destinationMode}
-          onModeChange={setDestinationMode}
+          onModeChange={(nextMode) => {
+            setDestinationMode(nextMode);
+            if (nextMode !== "existing-folder") {
+              setSelectedListId("");
+              setSelectedListStrategy("append");
+            }
+          }}
           catalog={catalog}
           catalogLoading={catalogLoading}
           catalogError={catalogError}
           onRetryCatalog={() => void reloadCatalog()}
           contextLabel={classroomMode ? "Turma atual" : selectedInstitution?.name ?? "Biblioteca Geral"}
           selectedFolderId={selectedFolderId}
-          onSelectedFolderChange={setSelectedFolderId}
+          onSelectedFolderChange={(folderId) => {
+            setSelectedFolderId(folderId);
+            setSelectedListId("");
+            setSelectedListStrategy("append");
+          }}
+          selectedListId={selectedListId}
+          onSelectedListChange={(listId) => {
+            setSelectedListId(listId);
+            setSelectedListStrategy("append");
+          }}
+          selectedListStrategy={selectedListStrategy}
+          onSelectedListStrategyChange={setSelectedListStrategy}
           newFolderName={newFolderName}
           onNewFolderNameChange={setNewFolderName}
         />
