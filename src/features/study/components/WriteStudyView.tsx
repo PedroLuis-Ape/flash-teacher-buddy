@@ -4,6 +4,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type ComponentProps,
   type KeyboardEvent,
   type MouseEvent,
@@ -13,6 +14,15 @@ import { getBalancedDirection, type RuntimeDirection } from "@/features/study/li
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { useResolvedStudyGlossaryHints } from "@/features/study/hooks/useResolvedStudyGlossaryHints";
+import {
+  DEFAULT_WRITE_ACTIVITY_PREFERENCE,
+  WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT,
+  readWriteActivityPreference,
+  resolveRewriteSideForCard,
+  resolveWriteActivityGameMode,
+  type WriteActivityPreference,
+  type WriteActivityPreferenceChangedDetail,
+} from "@/features/study/lib/writeActivityMode";
 
 const LazyWriteStudyView = lazy(() =>
   import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
@@ -34,13 +44,30 @@ function clearStyle(element: HTMLElement | null, properties: string[]) {
   properties.forEach((property) => element?.style.removeProperty(property));
 }
 
+function findPromptRow(root: HTMLElement): HTMLElement | null {
+  const writeViewRoot = root.firstElementChild as HTMLElement | null;
+  const promptCard = writeViewRoot?.firstElementChild as HTMLElement | null;
+  const promptContent = promptCard?.children.item(1) as HTMLElement | null;
+  return promptContent?.children.item(1) as HTMLElement | null;
+}
+
 export const WriteStudyView = (props: WriteStudyViewProps) => {
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
+  const rewriteCardKey = props.flashcardId || `${props.front}|${props.back}`;
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const boundaryRef = useRef<HTMLDivElement>(null);
   const submitLockedRef = useRef(false);
   const navigationLockedRef = useRef(false);
   const shortcuts = useShortcutMap();
+  const writeActivityGameMode = resolveWriteActivityGameMode();
+  const [writeActivity, setWriteActivity] = useState<WriteActivityPreference>(
+    () => (typeof window === "undefined"
+      ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
+      : readWriteActivityPreference(writeActivityGameMode)),
+  );
+  const resolvedRewriteSide = resolveRewriteSideForCard(rewriteCardKey, writeActivity.rewriteSide);
+  const isRewriteActivity = writeActivityGameMode === "write" && writeActivity.mode === "rewrite";
+  const rewriteTranslationText = resolvedRewriteSide === "a" ? props.back : props.front;
   const glossaryHints = useResolvedStudyGlossaryHints({
     front: props.front,
     back: props.back,
@@ -56,13 +83,56 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     navigationLockedRef.current = false;
   }, [cardKey, direction]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<WriteActivityPreferenceChangedDetail>).detail;
+      if (detail?.gameMode === writeActivityGameMode) setWriteActivity(detail.preference);
+    };
+    window.addEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
+    return () => window.removeEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
+  }, [writeActivityGameMode]);
+
   useLayoutEffect(() => {
     const root = boundaryRef.current;
     if (!root) return;
 
     const media = window.matchMedia("(max-width: 639px)");
 
+    const syncRewriteTranslation = () => {
+      const promptRow = findPromptRow(root);
+      const existing = root.querySelector<HTMLElement>("[data-write-rewrite-translation]");
+
+      if (!promptRow) return;
+
+      if (!isRewriteActivity || !rewriteTranslationText?.trim()) {
+        existing?.remove();
+        clearStyle(promptRow, ["margin-bottom"]);
+        return;
+      }
+
+      const promptContent = promptRow.parentElement;
+      if (!promptContent) return;
+
+      const compact = promptRow.classList.contains("mb-0");
+      setStyle(promptRow, "margin-bottom", compact ? ".25rem" : ".5rem");
+
+      const preview = existing ?? document.createElement("p");
+      if (!existing) {
+        preview.dataset.writeRewriteTranslation = "true";
+        preview.className = "mx-auto mb-3 max-w-[92%] break-words px-2 text-xs italic leading-relaxed text-muted-foreground/60 sm:mb-5 sm:text-sm";
+        preview.setAttribute("dir", "auto");
+        preview.setAttribute("aria-label", "Tradução do texto para reescrita");
+        promptRow.insertAdjacentElement("afterend", preview);
+      }
+
+      const renderedTranslation = `“${rewriteTranslationText}”`;
+      if (preview.textContent !== renderedTranslation) preview.textContent = renderedTranslation;
+    };
+
     const applyLayout = () => {
+      syncRewriteTranslation();
+
       const skipButton = findActionButton(root, "pular");
       const hintButton = findActionButton(root, "dica");
       const correctButton = findActionButton(root, "corrigir");
@@ -116,15 +186,22 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     };
 
     const observer = new MutationObserver(applyLayout);
-    observer.observe(root, { childList: true, subtree: true });
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
     media.addEventListener("change", applyLayout);
     applyLayout();
 
     return () => {
       observer.disconnect();
       media.removeEventListener("change", applyLayout);
+      root.querySelector<HTMLElement>("[data-write-rewrite-translation]")?.remove();
+      clearStyle(findPromptRow(root), ["margin-bottom"]);
     };
-  }, [cardKey, direction]);
+  }, [cardKey, direction, isRewriteActivity, rewriteTranslationText]);
 
   const runOnce = (action: () => void) => {
     if (navigationLockedRef.current) return;
