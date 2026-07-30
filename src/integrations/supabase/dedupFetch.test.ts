@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { createDedupingFetch } from "./dedupFetch";
 
+const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), {
+  status: 200,
+  headers: { "content-type": "application/json; charset=utf-8" },
+});
+
 describe("createDedupingFetch", () => {
   it("coalesces concurrent GET requests", async () => {
     let resolveFetch!: (response: Response) => void;
@@ -82,5 +87,43 @@ describe("createDedupingFetch", () => {
     expect(await (await oldRead).text()).toBe("stale");
     expect(await (await wrapped("https://example.test/items")).text()).toBe("fresh");
     expect(baseFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("recovers automatically when the first flashcard read is transiently empty", async () => {
+    let calls = 0;
+    const baseFetch = vi.fn(async () => {
+      calls += 1;
+      return calls === 1 ? jsonResponse([]) : jsonResponse([{ id: "card-1" }]);
+    }) as unknown as typeof fetch;
+    const wrapped = createDedupingFetch(baseFetch, 1_000, () => 0, [0]);
+
+    const response = await wrapped("https://project.supabase.co/rest/v1/flashcards?list_id=eq.list-1");
+
+    expect(await response.json()).toEqual([{ id: "card-1" }]);
+    expect(baseFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("also recovers transient empty portal flashcard RPC reads", async () => {
+    let calls = 0;
+    const baseFetch = vi.fn(async () => {
+      calls += 1;
+      return calls === 1 ? jsonResponse([]) : jsonResponse([{ id: "portal-card" }]);
+    }) as unknown as typeof fetch;
+    const wrapped = createDedupingFetch(baseFetch, 1_000, () => 0, [0]);
+
+    const response = await wrapped("https://project.supabase.co/rest/v1/rpc/get_portal_flashcards");
+
+    expect(await response.json()).toEqual([{ id: "portal-card" }]);
+    expect(baseFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not cache a confirmed empty flashcard response", async () => {
+    const baseFetch = vi.fn(async () => jsonResponse([])) as unknown as typeof fetch;
+    const wrapped = createDedupingFetch(baseFetch, 1_000, () => 0, []);
+    const url = "https://project.supabase.co/rest/v1/flashcards?list_id=eq.empty-list";
+
+    expect(await (await wrapped(url)).json()).toEqual([]);
+    expect(await (await wrapped(url)).json()).toEqual([]);
+    expect(baseFetch).toHaveBeenCalledTimes(2);
   });
 });

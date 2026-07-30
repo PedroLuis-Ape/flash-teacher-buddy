@@ -85,20 +85,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        // INITIAL_SESSION can expose the persisted session before Supabase has
+        // finished validating or refreshing its access token. Keep the identity
+        // available for a stable shell, but do not let protected queries run yet.
+        // getSession() below is the confirmation boundary that moves the app to
+        // authenticated. Treating this event as authenticated caused RLS reads to
+        // occasionally return a successful empty array during cold start.
+        if (event === "INITIAL_SESSION") {
+          const candidate = nextSession ?? optimistic.current;
+          if (candidate) {
+            optimistic.current = candidate;
+            setSession(candidate);
+            setStatus("initializing");
+            setError(null);
+            return;
+          }
+        }
+
         if (nextSession) {
           optimistic.current = nextSession;
           setSession(nextSession);
           setStatus("authenticated");
           setError(null);
           syncQueryCache(nextSession);
-          return;
-        }
-
-        // INITIAL_SESSION may arrive before the persisted refresh finishes.
-        // Keep the optimistic identity until getSession() confirms the result.
-        if (event === "INITIAL_SESSION" && optimistic.current) {
-          setSession(optimistic.current);
-          setStatus("initializing");
           return;
         }
 
