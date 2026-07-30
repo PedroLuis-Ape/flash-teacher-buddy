@@ -43,7 +43,7 @@ describe("write rewrite activity UI", () => {
     expect(writeBoundarySource).toContain("key={rewriteLayerKey}");
     expect(writeBoundarySource).toContain("REWRITE_TRANSLATION_RETRY_DELAYS");
     expect(writeBoundarySource).toContain("characterData: true");
-    expect(writeBoundarySource).toContain("data-write-rewrite-translation-key");
+    expect(writeBoundarySource).toContain("preview.dataset.writeRewriteTranslationKey = rewriteLayerKey");
     expect(writeBoundarySource).toContain("window.requestAnimationFrame(applyLayout)");
   });
 });
