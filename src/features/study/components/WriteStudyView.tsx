@@ -28,6 +28,8 @@ const LazyWriteStudyView = lazy(() =>
   import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
 );
 
+const REWRITE_TRANSLATION_RETRY_DELAYS = [0, 50, 150, 350] as const;
+
 type WriteStudyViewProps = ComponentProps<typeof LazyWriteStudyView>;
 
 function findActionButton(root: HTMLElement, label: string): HTMLButtonElement | null {
@@ -53,6 +55,7 @@ function findRewriteInstruction(root: HTMLElement): HTMLElement | null {
 export const WriteStudyView = (props: WriteStudyViewProps) => {
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
   const rewriteCardKey = props.flashcardId || `${props.front}|${props.back}`;
+  const rewriteLayerKey = `${props.flashcardId ?? "card"}|${props.front}|${props.back}`;
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const boundaryRef = useRef<HTMLDivElement>(null);
   const submitLockedRef = useRef(false);
@@ -97,8 +100,13 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     if (!root) return;
 
     const media = window.matchMedia("(max-width: 639px)");
+    const retryTimers: number[] = [];
+    let animationFrame = 0;
+    let disposed = false;
 
     const syncRewriteTranslation = () => {
+      if (disposed) return;
+
       const instruction = findRewriteInstruction(root);
       const existing = root.querySelector<HTMLElement>("[data-write-rewrite-translation]");
 
@@ -117,6 +125,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
         preview.setAttribute("aria-label", "Tradução do texto para reescrita");
       }
 
+      preview.dataset.writeRewriteTranslationKey = rewriteLayerKey;
       const renderedTranslation = `“${rewriteTranslationText}”`;
       if (preview.textContent !== renderedTranslation) preview.textContent = renderedTranslation;
 
@@ -180,22 +189,35 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       labels.forEach((label) => clearStyle(label, ["display", "margin-left", "font-size"]));
     };
 
-    const observer = new MutationObserver(applyLayout);
+    const scheduleLayoutSync = () => {
+      if (disposed) return;
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(applyLayout);
+      REWRITE_TRANSLATION_RETRY_DELAYS.forEach((delay) => {
+        retryTimers.push(window.setTimeout(applyLayout, delay));
+      });
+    };
+
+    const observer = new MutationObserver(scheduleLayoutSync);
     observer.observe(root, {
       childList: true,
       subtree: true,
       attributes: true,
+      characterData: true,
       attributeFilter: ["class"],
     });
-    media.addEventListener("change", applyLayout);
-    applyLayout();
+    media.addEventListener("change", scheduleLayoutSync);
+    scheduleLayoutSync();
 
     return () => {
+      disposed = true;
       observer.disconnect();
-      media.removeEventListener("change", applyLayout);
+      media.removeEventListener("change", scheduleLayoutSync);
+      window.cancelAnimationFrame(animationFrame);
+      retryTimers.forEach((timer) => window.clearTimeout(timer));
       root.querySelector<HTMLElement>("[data-write-rewrite-translation]")?.remove();
     };
-  }, [cardKey, direction, isRewriteActivity, rewriteTranslationText]);
+  }, [rewriteLayerKey, direction, isRewriteActivity, rewriteTranslationText]);
 
   const runOnce = (action: () => void) => {
     if (navigationLockedRef.current) return;
@@ -265,6 +287,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       >
         <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando modo Escrita...</div>}>
           <LazyWriteStudyView
+            key={rewriteLayerKey}
             {...props}
             mergedHintsA={glossaryHints.mergedHintsA}
             mergedHintsB={glossaryHints.mergedHintsB}
