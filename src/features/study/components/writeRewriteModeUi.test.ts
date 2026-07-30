@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const settingsSource = readFileSync(new URL("./WriteActivitySettings.tsx", import.meta.url), "utf8");
 const writeSource = readFileSync(new URL("./WriteStudyView.impl.tsx", import.meta.url), "utf8");
+const writeBoundarySource = readFileSync(new URL("./WriteStudyView.tsx", import.meta.url), "utf8");
 const modalSource = readFileSync(new URL("./GameSettingsModal.impl.tsx", import.meta.url), "utf8");
 
 describe("write rewrite activity UI", () => {
@@ -20,5 +21,13 @@ describe("write rewrite activity UI", () => {
     expect(writeSource).toContain("evaluateRewriteAnswer");
     expect(writeSource).toContain("Reescreva exatamente como aparece acima");
     expect(writeSource).toContain('effectiveCorrectionMode: WriteCorrectionMode = isRewriteActivity ? "hard"');
+  });
+
+  it("shows the opposite side as a smaller translation inside the rewrite card", () => {
+    expect(writeBoundarySource).toContain("rewriteTranslationText");
+    expect(writeBoundarySource).toContain("data-write-rewrite-translation");
+    expect(writeBoundarySource).toContain("text-xs italic");
+    expect(writeBoundarySource).toContain("Tradução do texto para reescrita");
+    expect(writeBoundarySource).toContain('resolvedRewriteSide === "a" ? props.back : props.front');
   });
 });
