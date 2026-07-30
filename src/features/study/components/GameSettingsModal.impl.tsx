@@ -39,6 +39,7 @@ import {
 } from "@/features/study/lib/writeCorrectionMode";
 import { cn } from "@/lib/utils";
 import { emitStudyFlowModeChanged } from "@/features/study/lib/studyFlowModePreference";
+import { WriteActivitySettings } from "./WriteActivitySettings";
 
 export interface GameSettings {
   mode: "sequential" | "random";
@@ -281,6 +282,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   onClick={() => setPage("flow")}
                 />
               )}
+              <WriteActivitySettings />
               {listSession && (
                 <CategoryRow
                   icon={<ArrowLeftRight className="h-4 w-4" />}

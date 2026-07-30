@@ -27,6 +27,16 @@ import {
   readWriteCorrectionMode,
   type WriteCorrectionMode,
 } from "@/features/study/lib/writeCorrectionMode";
+import {
+  DEFAULT_WRITE_ACTIVITY_PREFERENCE,
+  WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT,
+  readWriteActivityPreference,
+  resolveRewriteSideForCard,
+  resolveWriteActivityGameMode,
+  type WriteActivityPreference,
+  type WriteActivityPreferenceChangedDetail,
+} from "@/features/study/lib/writeActivityMode";
+import { evaluateRewriteAnswer } from "@/features/study/lib/writeRewriteEvaluation";
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
 import { useAdvanceController } from "@/features/study/hooks/useAdvanceController";
 import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
@@ -96,6 +106,12 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
+  const writeActivityGameMode = resolveWriteActivityGameMode();
+  const [writeActivity, setWriteActivity] = useState<WriteActivityPreference>(
+    () => (typeof window === "undefined"
+      ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
+      : readWriteActivityPreference(writeActivityGameMode)),
+  );
   const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
     () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
   );
@@ -109,6 +125,15 @@ export const WriteStudyView = ({
     return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
   }, []);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<WriteActivityPreferenceChangedDetail>).detail;
+      if (detail?.gameMode === writeActivityGameMode) setWriteActivity(detail.preference);
+    };
+    window.addEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
+    return () => window.removeEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
+  }, [writeActivityGameMode]);
+
   // Lock global "next / skip / next-layer" shortcuts while this Write view
   // has no evaluation yet — the user must submit first. Once feedback is
   // shown (right/wrong screen), shortcuts unlock automatically.
@@ -119,15 +144,24 @@ export const WriteStudyView = ({
 
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
-  const { promptSide, answerSide, isAFirst } = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const translatedSides = resolveStudySides(sideA, sideB, direction, flashcardId || front);
+  const isRewriteActivity = writeActivityGameMode === "write" && writeActivity.mode === "rewrite";
+  const cardIdentity = flashcardId ?? `${front}|${back}`;
+  const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeActivity.rewriteSide);
+  const rewriteTargetSide = resolvedRewriteSide === "a" ? sideA : sideB;
+  const promptSide = isRewriteActivity ? rewriteTargetSide : translatedSides.promptSide;
+  const answerSide = isRewriteActivity ? rewriteTargetSide : translatedSides.answerSide;
+  const isAFirst = isRewriteActivity ? resolvedRewriteSide === "a" : translatedSides.isAFirst;
 
-  const promptWordHints = wordHintsA;
+  const promptWordHints = isAFirst ? wordHintsA : undefined;
   const promptMergedHints = isAFirst ? mergedHintsA : mergedHintsB;
   const prompt = promptSide.text;
   const correctAnswer = answerSide.text;
   const promptLabel = promptSide.label;
   const answerLabel = answerSide.label;
   const promptLang = toBCP47(promptSide.lang);
+  const effectiveCorrectionMode: WriteCorrectionMode = isRewriteActivity ? "hard" : correctionMode;
+  const attemptCardId = `${cardIdentity}:${isRewriteActivity ? `rewrite-${resolvedRewriteSide}` : "translate"}`;
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
@@ -138,7 +172,7 @@ export const WriteStudyView = ({
   // controller so we can (a) demand a finalized status before advancing and
   // (b) prevent duplicate onAdvance calls for the same attempt.
   const advance = useAdvanceController({
-    cardId: flashcardId ?? `${front}|${back}`,
+    cardId: attemptCardId,
     mode: "write",
     flowMode: "mastery_rounds",
     onAdvance: (final) => {
@@ -149,7 +183,9 @@ export const WriteStudyView = ({
     onCancelSkip: () => window.setTimeout(() => inputRef.current?.focus(), 30),
   });
 
-  const acceptedAnswers = [correctAnswer, ...(answerSide.acceptedAnswers || [])];
+  const acceptedAnswers = isRewriteActivity
+    ? [correctAnswer]
+    : [correctAnswer, ...(answerSide.acceptedAnswers || [])];
   const alternativeAnswers = acceptedAnswers.slice(1).filter((item, index, values) => values.indexOf(item) === index);
   const promptLength = prompt.trim().length;
   const promptSizeClass = promptLength <= 32
@@ -166,7 +202,7 @@ export const WriteStudyView = ({
     setRevealed(false);
     setShake(false);
     window.setTimeout(() => inputRef.current?.focus(), 100);
-  }, [front, back]);
+  }, [front, back, isRewriteActivity, resolvedRewriteSide]);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -186,12 +222,14 @@ export const WriteStudyView = ({
       return;
     }
 
-    const result = evaluateWriteAnswer({
-      userAnswer: userOriginalAnswer,
-      correctAnswer,
-      alternatives: alternativeAnswers,
-      mode: correctionMode,
-    });
+    const result = isRewriteActivity
+      ? evaluateRewriteAnswer({ userAnswer: userOriginalAnswer, correctAnswer })
+      : evaluateWriteAnswer({
+          userAnswer: userOriginalAnswer,
+          correctAnswer,
+          alternatives: alternativeAnswers,
+          mode: correctionMode,
+        });
     setEvaluation(result);
     if (result.accepted) playCorrect();
     else playWrong();
@@ -205,6 +243,7 @@ export const WriteStudyView = ({
   };
 
   const handleHint = () => {
+    if (isRewriteActivity) return;
     if (hintLevel < 2) {
       const newLevel = hintLevel + 1;
       setHintLevel(newLevel);
@@ -227,7 +266,7 @@ export const WriteStudyView = ({
       event.preventDefault();
       if (!evaluation) handleSubmit();
       else if (evaluation.accepted) advance.requestAdvance({ source: "keyboard" });
-      else if (correctionMode === "hard") handleRetry();
+      else if (effectiveCorrectionMode === "hard") handleRetry();
       else advance.requestAdvance({ source: "keyboard" });
       return;
     }
@@ -335,7 +374,9 @@ export const WriteStudyView = ({
             </Button>
           </div>
           {!hasFeedback && (
-            <p className="text-sm text-muted-foreground sm:text-sm">Traduza para {answerLabel}:</p>
+            <p className="text-sm text-muted-foreground sm:text-sm">
+              {isRewriteActivity ? "Reescreva exatamente como aparece acima:" : `Traduza para ${answerLabel}:`}
+            </p>
           )}
         </div>
       </Card>
@@ -355,14 +396,14 @@ export const WriteStudyView = ({
           value={answer}
           onChange={(event) => setAnswer(event.target.value)}
           onKeyDown={handleKeyPress}
-          placeholder="Digite sua resposta..."
+          placeholder={isRewriteActivity ? "Reescreva o texto acima..." : "Digite sua resposta..."}
           disabled={evaluation !== null}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
           enterKeyHint="done"
-          aria-label="Digite sua resposta"
+          aria-label={isRewriteActivity ? "Reescreva o texto acima" : "Digite sua resposta"}
           className={cn(
             "min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
             shake && "animate-[shake_0.5s_ease-in-out]",
@@ -377,8 +418,8 @@ export const WriteStudyView = ({
         {feedbackStatus === "correct" && (
           <StudyFeedbackPanel
             status="correct"
-            title="Muito bem!"
-            message="Sua resposta está correta."
+            title={isRewriteActivity ? "Reescrita correta!" : "Muito bem!"}
+            message={isRewriteActivity ? "Você escreveu exatamente o texto apresentado." : "Sua resposta está correta."}
             correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
@@ -412,7 +453,7 @@ export const WriteStudyView = ({
         {feedbackStatus === "incorrect" && evaluation && (
           <StudyFeedbackPanel
             status="incorrect"
-            title={correctionMode === "hard" ? "Corrija para continuar." : "Vamos corrigir."}
+            title={effectiveCorrectionMode === "hard" ? "Corrija para continuar." : "Vamos corrigir."}
             message={evaluation.summary}
             accuracyPercent={accuracyPercent}
             userAnswer={answer.trim()}
@@ -420,14 +461,14 @@ export const WriteStudyView = ({
             extraContent={<WriteAnswerDiff differences={evaluation.differences} />}
             correctionMessages={correctionMessages}
             hiddenCorrectionCount={hiddenCorrectionCount}
-            actionLabel={correctionMode === "hard" ? "Tentar corrigir" : "Continuar"}
+            actionLabel={effectiveCorrectionMode === "hard" ? "Tentar corrigir" : "Continuar"}
             onAction={
-              correctionMode === "hard"
+              effectiveCorrectionMode === "hard"
                 ? handleRetry
                 : () => advance.requestAdvance({ source: "next_button" })
             }
-            secondaryActionLabel={correctionMode === "hard" ? undefined : "Tentar corrigir"}
-            onSecondaryAction={correctionMode === "hard" ? undefined : handleRetry}
+            secondaryActionLabel={effectiveCorrectionMode === "hard" ? undefined : "Tentar corrigir"}
+            onSecondaryAction={effectiveCorrectionMode === "hard" ? undefined : handleRetry}
             onPlayAnswer={() => { void speak(referenceAnswer, { langOverride: answerSide.lang }); }}
             playAnswerAriaLabel={`Ouvir resposta em ${answerLabel}`}
           />
@@ -469,9 +510,9 @@ export const WriteStudyView = ({
               variant="ghost"
               size="sm"
               onClick={handleHint}
-              disabled={revealed}
+              disabled={revealed || isRewriteActivity}
               className="h-11 shrink-0 px-3 text-muted-foreground"
-              title="Dica"
+              title={isRewriteActivity ? "O texto já está visível" : "Dica"}
             >
               <Lightbulb className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Dica</span>
