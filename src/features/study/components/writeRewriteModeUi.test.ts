@@ -37,4 +37,13 @@ describe("write rewrite activity UI", () => {
     expect(writeBoundarySource).toContain('instruction.insertAdjacentElement("beforebegin", preview)');
     expect(writeBoundarySource).not.toContain("findPromptRow");
   });
+
+  it("re-synchronizes the translation when a layered card changes under the same flashcard id", () => {
+    expect(writeBoundarySource).toContain('const rewriteLayerKey = `${props.flashcardId ?? "card"}|${props.front}|${props.back}`');
+    expect(writeBoundarySource).toContain("key={rewriteLayerKey}");
+    expect(writeBoundarySource).toContain("REWRITE_TRANSLATION_RETRY_DELAYS");
+    expect(writeBoundarySource).toContain("characterData: true");
+    expect(writeBoundarySource).toContain("data-write-rewrite-translation-key");
+    expect(writeBoundarySource).toContain("window.requestAnimationFrame(applyLayout)");
+  });
 });
