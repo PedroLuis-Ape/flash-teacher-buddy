@@ -1,65 +1,48 @@
 import {
   evaluateWriteAnswer,
+  normalizeForCompare,
   type WriteAnswerEvaluation,
 } from "@/features/study/lib/writeAnswerEvaluation";
-
-const TYPOGRAPHIC_APOSTROPHES = /[’‘ʼ`´\u02bc\uff07]/g;
-const TYPOGRAPHIC_DOUBLE_QUOTES = /[“”«»]/g;
-const UNUSUAL_SPACES = /[\u00a0\u2000-\u200b\u202f\u205f\u3000]/g;
+import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
 
 /**
- * Exact-copy comparison used by the Reescrever activity.
- *
- * It preserves letters, casing, accents and punctuation. Only harmless input
- * differences created by browsers/mobile keyboards are normalized:
- * - Unicode composition (NFC)
- * - straight/typographic apostrophes and quotation marks
- * - line endings and repeated whitespace
+ * Reuses the same neutral normalization already applied by the regular Write
+ * activity. This keeps both writing activities consistent for harmless
+ * differences such as terminal punctuation, accents, casing, apostrophes and
+ * repeated spaces.
  */
 export function normalizeForRewriteCompare(input: string): string {
-  if (!input || typeof input !== "string") return "";
-  return input
-    .normalize("NFC")
-    .replace(/\r\n?/g, "\n")
-    .replace(TYPOGRAPHIC_APOSTROPHES, "'")
-    .replace(TYPOGRAPHIC_DOUBLE_QUOTES, '"')
-    .replace(UNUSUAL_SPACES, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeForCompare(input);
 }
 
 export function evaluateRewriteAnswer(input: {
   userAnswer: string;
   correctAnswer: string;
+  mode?: WriteCorrectionMode;
 }): WriteAnswerEvaluation {
-  const strictUser = normalizeForRewriteCompare(input.userAnswer);
-  const strictReference = normalizeForRewriteCompare(input.correctAnswer);
-  const base = evaluateWriteAnswer({
+  const result = evaluateWriteAnswer({
     userAnswer: input.userAnswer,
     correctAnswer: input.correctAnswer,
     alternatives: [],
-    mode: "hard",
+    mode: input.mode ?? "hard",
   });
 
-  if (strictUser.length > 0 && strictUser === strictReference) {
+  if (result.status === "exact") {
     return {
-      ...base,
-      status: "exact",
-      accepted: true,
-      accuracy: 1,
-      characterSimilarity: 1,
-      wordAccuracy: 1,
+      ...result,
       summary: "Você reescreveu o texto corretamente.",
     };
   }
 
-  const formattingOnly = base.status === "exact";
+  if (result.status === "accepted_with_corrections") {
+    return {
+      ...result,
+      summary: "Sua reescrita foi aceita com pequenos ajustes.",
+    };
+  }
+
   return {
-    ...base,
-    status: "incorrect",
-    accepted: false,
-    summary: formattingOnly
-      ? "O texto está quase igual. Confira maiúsculas, acentos e pontuação."
-      : "Reescreva o texto exatamente como ele aparece acima.",
+    ...result,
+    summary: "Reescreva o texto mantendo as mesmas palavras e a mesma ordem.",
   };
 }

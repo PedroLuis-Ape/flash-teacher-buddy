@@ -87,7 +87,7 @@ export function WriteActivitySettings() {
           <div>
             <p className="font-medium">Como você quer praticar?</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Traduza o card ou reescreva exatamente o texto que está vendo.
+              Traduza o card ou reescreva o texto que está vendo no mesmo idioma.
             </p>
           </div>
 
@@ -126,7 +126,7 @@ export function WriteActivitySettings() {
                 <Copy className="h-4 w-4" /> Reescrever
               </span>
               <span className="text-sm text-muted-foreground">
-                Veja o texto e escreva exatamente a mesma coisa no mesmo idioma.
+                Veja o texto e escreva a mesma frase no mesmo idioma.
               </span>
             </button>
           </div>
@@ -170,7 +170,7 @@ export function WriteActivitySettings() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                A reescrita sempre exige correspondência exata. Maiúsculas, acentos e pontuação contam.
+                Palavras e ordem continuam sendo cobradas. Pontuação final, acentos, maiúsculas e pequenas variações de teclado seguem as tolerâncias do modo Escrita.
               </p>
             </div>
           )}
