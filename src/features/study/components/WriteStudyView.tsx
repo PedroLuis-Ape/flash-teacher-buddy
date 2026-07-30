@@ -44,11 +44,10 @@ function clearStyle(element: HTMLElement | null, properties: string[]) {
   properties.forEach((property) => element?.style.removeProperty(property));
 }
 
-function findPromptRow(root: HTMLElement): HTMLElement | null {
-  const writeViewRoot = root.firstElementChild as HTMLElement | null;
-  const promptCard = writeViewRoot?.firstElementChild as HTMLElement | null;
-  const promptContent = promptCard?.children.item(1) as HTMLElement | null;
-  return promptContent?.children.item(1) as HTMLElement | null;
+function findRewriteInstruction(root: HTMLElement): HTMLElement | null {
+  return Array.from(root.querySelectorAll<HTMLElement>("p")).find((node) =>
+    node.textContent?.trim().startsWith("Reescreva exatamente como aparece acima"),
+  ) ?? null;
 }
 
 export const WriteStudyView = (props: WriteStudyViewProps) => {
@@ -100,34 +99,30 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     const media = window.matchMedia("(max-width: 639px)");
 
     const syncRewriteTranslation = () => {
-      const promptRow = findPromptRow(root);
+      const instruction = findRewriteInstruction(root);
       const existing = root.querySelector<HTMLElement>("[data-write-rewrite-translation]");
-
-      if (!promptRow) return;
 
       if (!isRewriteActivity || !rewriteTranslationText?.trim()) {
         existing?.remove();
-        clearStyle(promptRow, ["margin-bottom"]);
         return;
       }
 
-      const promptContent = promptRow.parentElement;
-      if (!promptContent) return;
-
-      const compact = promptRow.classList.contains("mb-0");
-      setStyle(promptRow, "margin-bottom", compact ? ".25rem" : ".5rem");
+      if (!instruction) return;
 
       const preview = existing ?? document.createElement("p");
       if (!existing) {
         preview.dataset.writeRewriteTranslation = "true";
-        preview.className = "mx-auto mb-3 max-w-[92%] break-words px-2 text-xs italic leading-relaxed text-muted-foreground/60 sm:mb-5 sm:text-sm";
+        preview.className = "mx-auto mb-3 mt-2 max-w-[92%] break-words px-2 text-xs italic leading-relaxed text-muted-foreground/60 sm:mb-4 sm:mt-3 sm:text-sm";
         preview.setAttribute("dir", "auto");
         preview.setAttribute("aria-label", "Tradução do texto para reescrita");
-        promptRow.insertAdjacentElement("afterend", preview);
       }
 
       const renderedTranslation = `“${rewriteTranslationText}”`;
       if (preview.textContent !== renderedTranslation) preview.textContent = renderedTranslation;
+
+      if (preview.parentElement !== instruction.parentElement || preview.nextElementSibling !== instruction) {
+        instruction.insertAdjacentElement("beforebegin", preview);
+      }
     };
 
     const applyLayout = () => {
@@ -199,7 +194,6 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       observer.disconnect();
       media.removeEventListener("change", applyLayout);
       root.querySelector<HTMLElement>("[data-write-rewrite-translation]")?.remove();
-      clearStyle(findPromptRow(root), ["margin-bottom"]);
     };
   }, [cardKey, direction, isRewriteActivity, rewriteTranslationText]);
 

@@ -30,4 +30,11 @@ describe("write rewrite activity UI", () => {
     expect(writeBoundarySource).toContain("Tradução do texto para reescrita");
     expect(writeBoundarySource).toContain('resolvedRewriteSide === "a" ? props.back : props.front');
   });
+
+  it("anchors the translation immediately before the rewrite instruction inside the card", () => {
+    expect(writeBoundarySource).toContain("findRewriteInstruction");
+    expect(writeBoundarySource).toContain('startsWith("Reescreva exatamente como aparece acima")');
+    expect(writeBoundarySource).toContain('instruction.insertAdjacentElement("beforebegin", preview)');
+    expect(writeBoundarySource).not.toContain("findPromptRow");
+  });
 });
