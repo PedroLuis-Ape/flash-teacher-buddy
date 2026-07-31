@@ -1,9 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDedupingFetch } from "./dedupFetch";
 
 const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), {
   status: 200,
   headers: { "content-type": "application/json; charset=utf-8" },
+});
+
+function requestFrom(input: RequestInfo | URL, init?: RequestInit): Request {
+  return input instanceof Request ? input : new Request(input, init);
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("createDedupingFetch", () => {
@@ -103,17 +112,88 @@ describe("createDedupingFetch", () => {
     expect(baseFetch).toHaveBeenCalledTimes(2);
   });
 
-  it("also recovers transient empty portal flashcard RPC reads", async () => {
+  it("recovers the real POST-based portal flashcard RPC and preserves its body", async () => {
     let calls = 0;
-    const baseFetch = vi.fn(async () => {
+    const seenMethods: string[] = [];
+    const seenBodies: string[] = [];
+    const baseFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = requestFrom(input, init);
+      seenMethods.push(request.method);
+      seenBodies.push(await request.clone().text());
       calls += 1;
       return calls === 1 ? jsonResponse([]) : jsonResponse([{ id: "portal-card" }]);
     }) as unknown as typeof fetch;
     const wrapped = createDedupingFetch(baseFetch, 1_000, () => 0, [0]);
 
-    const response = await wrapped("https://project.supabase.co/rest/v1/rpc/get_portal_flashcards");
+    const response = await wrapped(
+      "https://project.supabase.co/rest/v1/rpc/get_portal_flashcards",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ _list_id: "list-1" }),
+      },
+    );
 
     expect(await response.json()).toEqual([{ id: "portal-card" }]);
+    expect(baseFetch).toHaveBeenCalledTimes(2);
+    expect(seenMethods).toEqual(["POST", "POST"]);
+    expect(seenBodies).toEqual([
+      JSON.stringify({ _list_id: "list-1" }),
+      JSON.stringify({ _list_id: "list-1" }),
+    ]);
+  });
+
+  it("rebuilds a retry with the newest persisted access token", async () => {
+    const storage = new Map<string, string>();
+    const storageApi = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+      clear: () => storage.clear(),
+      key: (index: number) => Array.from(storage.keys())[index] ?? null,
+      get length() { return storage.size; },
+    };
+    vi.stubGlobal("localStorage", storageApi);
+    vi.spyOn(Date, "now").mockReturnValue(1_000);
+
+    storage.set("sb-project-auth-token", JSON.stringify({
+      access_token: "token-one",
+      expires_at: 10_000,
+    }));
+
+    const seenAuthorization: Array<string | null> = [];
+    let calls = 0;
+    const baseFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = requestFrom(input, init);
+      seenAuthorization.push(request.headers.get("authorization"));
+      calls += 1;
+      if (calls === 1) {
+        storage.set("sb-project-auth-token", JSON.stringify({
+          access_token: "token-two",
+          expires_at: 10_000,
+        }));
+        return jsonResponse([]);
+      }
+      return jsonResponse([{ id: "card-after-refresh" }]);
+    }) as unknown as typeof fetch;
+    const wrapped = createDedupingFetch(baseFetch, 1_000, () => 0, [0]);
+
+    const response = await wrapped(
+      "https://project.supabase.co/rest/v1/flashcards?list_id=eq.list-1",
+      { headers: { authorization: "Bearer token-one" } },
+    );
+
+    expect(await response.json()).toEqual([{ id: "card-after-refresh" }]);
+    expect(seenAuthorization).toEqual(["Bearer token-one", "Bearer token-two"]);
+  });
+
+  it("does not share in-flight flashcard reads between separate study launches", async () => {
+    const baseFetch = vi.fn(async () => jsonResponse([{ id: "card" }])) as unknown as typeof fetch;
+    const wrapped = createDedupingFetch(baseFetch, 1_000, () => 0, []);
+    const url = "https://project.supabase.co/rest/v1/flashcards?list_id=eq.list-1";
+
+    await Promise.all([wrapped(url), wrapped(url)]);
+
     expect(baseFetch).toHaveBeenCalledTimes(2);
   });
 

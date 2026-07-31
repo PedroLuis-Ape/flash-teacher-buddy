@@ -1,5 +1,5 @@
 const DEFAULT_TTL_MS = 900;
-const DEFAULT_EMPTY_FLASHCARD_RETRY_DELAYS_MS = [120, 360] as const;
+const DEFAULT_EMPTY_FLASHCARD_RETRY_DELAYS_MS = [150, 450, 1_000, 2_000] as const;
 
 interface CachedResponse {
   expiresAt: number;
@@ -9,6 +9,11 @@ interface CachedResponse {
 interface FetchResult {
   response: Response;
   emptyFlashcardResponse: boolean;
+}
+
+interface PersistedSessionShape {
+  access_token?: unknown;
+  expires_at?: unknown;
 }
 
 function headerEntries(headers: Headers): string {
@@ -25,14 +30,36 @@ function buildRequestKey(request: Request): string | null {
   return `${method}|${request.url}|${headerEntries(request.headers)}`;
 }
 
-function isFlashcardReadRequest(request: Request): boolean {
+function flashcardRequestKind(request: Request): "table" | "portal-rpc" | null {
   try {
     const pathname = new URL(request.url).pathname;
-    return pathname.endsWith("/rest/v1/flashcards")
-      || pathname.endsWith("/rest/v1/rpc/get_portal_flashcards");
+    const method = request.method.toUpperCase();
+
+    if (
+      pathname.endsWith("/rest/v1/flashcards")
+      && (method === "GET" || method === "HEAD")
+    ) {
+      return "table";
+    }
+
+    // Supabase RPC calls with arguments are POST requests. The previous
+    // recovery only exercised a synthetic GET in tests, so the real public
+    // study request bypassed the retry path entirely.
+    if (
+      pathname.endsWith("/rest/v1/rpc/get_portal_flashcards")
+      && (method === "GET" || method === "POST")
+    ) {
+      return "portal-rpc";
+    }
+
+    return null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isFlashcardReadRequest(request: Request): boolean {
+  return flashcardRequestKind(request) !== null;
 }
 
 async function isEmptyJsonArrayResponse(response: Response): Promise<boolean> {
@@ -69,21 +96,78 @@ function waitForRetry(delayMs: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+function readPersistedSessionForRequest(request: Request): PersistedSessionShape | null {
+  if (typeof localStorage === "undefined") return null;
+
+  try {
+    const projectRef = new URL(request.url).hostname.split(".")[0];
+    if (!projectRef) return null;
+
+    const raw = localStorage.getItem(`sb-${projectRef}-auth-token`);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    const candidate = parsed?.currentSession ?? parsed?.session ?? parsed;
+    if (!candidate || typeof candidate !== "object") return null;
+    return candidate as PersistedSessionShape;
+  } catch {
+    return null;
+  }
+}
+
+function withLatestPersistedAuth(request: Request): Request {
+  const session = readPersistedSessionForRequest(request);
+  const accessToken = typeof session?.access_token === "string"
+    ? session.access_token.trim()
+    : "";
+  const expiresAt = typeof session?.expires_at === "number"
+    ? session.expires_at * 1_000
+    : null;
+
+  // Never replace a request with a token that is already known to be expired.
+  // Supabase may refresh it during the backoff; every attempt re-reads storage.
+  if (!accessToken || (expiresAt !== null && expiresAt <= Date.now())) {
+    return request.clone();
+  }
+
+  const headers = new Headers(request.headers);
+  const nextAuthorization = `Bearer ${accessToken}`;
+  if (headers.get("authorization") === nextAuthorization) {
+    return request.clone();
+  }
+
+  headers.set("authorization", nextAuthorization);
+  return new Request(request.clone(), {
+    headers,
+    cache: "no-store",
+  });
+}
+
+async function performFlashcardAttempt(
+  baseFetch: typeof fetch,
+  request: Request,
+): Promise<Response> {
+  if (request.signal.aborted) throw abortError();
+
+  // The first request can be created while auth is still attaching/refeshing.
+  // Rebuild every attempt from the immutable original request and inject the
+  // newest persisted access token instead of cloning stale headers forever.
+  const attempt = withLatestPersistedAuth(request);
+  return baseFetch(attempt);
+}
+
 async function fetchReadWithFlashcardRecovery(
   baseFetch: typeof fetch,
   request: Request,
   retryDelaysMs: readonly number[],
 ): Promise<FetchResult> {
-  let response = await baseFetch(request.clone());
-  if (!isFlashcardReadRequest(request)) {
-    return { response, emptyFlashcardResponse: false };
-  }
-
+  let response = await performFlashcardAttempt(baseFetch, request);
   let emptyFlashcardResponse = await isEmptyJsonArrayResponse(response);
+
   for (const delayMs of retryDelaysMs) {
     if (!emptyFlashcardResponse) break;
     await waitForRetry(delayMs, request.signal);
-    response = await baseFetch(request.clone());
+    response = await performFlashcardAttempt(baseFetch, request);
     emptyFlashcardResponse = await isEmptyJsonArrayResponse(response);
   }
 
@@ -104,6 +188,19 @@ export function createDedupingFetch(
     const request = new Request(input, init);
     const method = request.method.toUpperCase();
 
+    // Flashcard reads are intentionally isolated from the generic short cache
+    // and in-flight sharing. A study launch must perform its own current read;
+    // it must never inherit an empty/stale response started by another screen.
+    // This branch also covers the real POST-based public RPC.
+    if (isFlashcardReadRequest(request)) {
+      const { response } = await fetchReadWithFlashcardRecovery(
+        baseFetch,
+        request,
+        emptyFlashcardRetryDelaysMs,
+      );
+      return response;
+    }
+
     if (method !== "GET" && method !== "HEAD") {
       mutationGeneration += 1;
       cache.clear();
@@ -123,15 +220,10 @@ export function createDedupingFetch(
 
     const requestGeneration = mutationGeneration;
     let requestPromise: Promise<Response>;
-    requestPromise = fetchReadWithFlashcardRecovery(
-      baseFetch,
-      request,
-      emptyFlashcardRetryDelaysMs,
-    )
-      .then(({ response, emptyFlashcardResponse }) => {
+    requestPromise = baseFetch(request.clone())
+      .then((response) => {
         if (
           response.ok
-          && !emptyFlashcardResponse
           && ttlMs > 0
           && requestGeneration === mutationGeneration
         ) {
