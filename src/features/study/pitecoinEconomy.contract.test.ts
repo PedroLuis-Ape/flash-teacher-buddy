@@ -8,7 +8,7 @@ describe("PiteCOIN frontend integration", () => {
     const engine = read("src/features/study/hooks/useStudyEngine.ts");
     const recordIndex = engine.indexOf("recordStudyAnswer(sessionId, flashcardId, correct, skipped)");
     const settleIndex = engine.indexOf("settleStudySession(sessionId, true)");
-    const completeIndex = engine.indexOf(".update({ completed: true");
+    const completeIndex = engine.indexOf("complete-study-session");
 
     expect(recordIndex).toBeGreaterThan(-1);
     expect(settleIndex).toBeGreaterThan(recordIndex);

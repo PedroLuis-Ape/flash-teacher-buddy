@@ -16,6 +16,9 @@ type GlobalPreferenceRow = {
   play_mode?: unknown;
   play_side?: unknown;
   study_flow_mode?: unknown;
+  write_activity_mode?: unknown;
+  write_rewrite_side?: unknown;
+  write_correction_mode?: unknown;
 };
 
 type ListPreferenceRow = GlobalPreferenceRow;
@@ -43,6 +46,9 @@ export function mapGlobalPreferenceRow(
     playMode: row.play_mode,
     playSide: row.play_side,
     studyFlowMode: row.study_flow_mode,
+    writeActivityMode: row.write_activity_mode,
+    writeRewriteSide: row.write_rewrite_side,
+    writeCorrectionMode: row.write_correction_mode,
   });
 }
 
@@ -60,6 +66,9 @@ export function mapListPreferenceRow(
     playMode: row.play_mode,
     playSide: row.play_side,
     studyFlowMode: row.study_flow_mode,
+    writeActivityMode: row.write_activity_mode,
+    writeRewriteSide: row.write_rewrite_side,
+    writeCorrectionMode: row.write_correction_mode,
   });
   return Object.keys(override).length > 0 ? override : null;
 }
@@ -82,6 +91,9 @@ export function toGlobalPreferenceRow(
     play_mode: normalized.playMode,
     play_side: normalized.playSide,
     study_flow_mode: normalized.studyFlowMode,
+    write_activity_mode: normalized.writeActivityMode,
+    write_rewrite_side: normalized.writeRewriteSide,
+    write_correction_mode: normalized.writeCorrectionMode,
   };
 }
 
@@ -105,6 +117,9 @@ export function toListPreferenceRow(
     play_mode: normalized.playMode ?? null,
     play_side: normalized.playSide ?? null,
     study_flow_mode: normalized.studyFlowMode ?? null,
+    write_activity_mode: normalized.writeActivityMode ?? null,
+    write_rewrite_side: normalized.writeRewriteSide ?? null,
+    write_correction_mode: normalized.writeCorrectionMode ?? null,
   };
 }
 
@@ -119,11 +134,23 @@ export function isMissingStudyPreferenceSchemaError(error: unknown): boolean {
     || message.includes("game_mode") && message.includes("column")
     || message.includes("play_mode") && message.includes("column")
     || message.includes("play_side") && message.includes("column")
-    || message.includes("study_flow_mode") && message.includes("column");
+    || message.includes("study_flow_mode") && message.includes("column")
+    || message.includes("write_activity_mode") && message.includes("column")
+    || message.includes("write_rewrite_side") && message.includes("column")
+    || message.includes("write_correction_mode") && message.includes("column");
+}
+
+export function isUnacknowledgedPreferenceWrite(error: unknown): boolean {
+  return Boolean(
+    error
+    && typeof error === "object"
+    && (error as { name?: unknown }).name === "UnacknowledgedPreferenceWriteError",
+  );
 }
 
 export function isRetryableStudyPreferenceError(error: unknown): boolean {
   if (isMissingStudyPreferenceSchemaError(error)) return true;
+  if (isUnacknowledgedPreferenceWrite(error)) return true;
   if (!error || typeof error !== "object") return false;
   const input = error as { status?: unknown; message?: unknown; code?: unknown };
   const status = typeof input.status === "number" ? input.status : 0;
@@ -143,7 +170,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
         .eq("user_id", userId)
         .eq("game_mode", identityMode)
         .maybeSingle();
@@ -157,12 +184,19 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       preset: StudyPreset,
     ): Promise<void> {
       const identityMode = normalizeGameMode(gameMode);
-      const { error } = await client
+      const { data, error } = await client
         .from("user_study_preferences")
         .upsert(toGlobalPreferenceRow(userId, preset, identityMode), {
           onConflict: "user_id,game_mode",
-        });
+        })
+        .select("user_id")
+        .maybeSingle();
       if (error) throw error;
+      if (!data) {
+        const unacknowledged = new Error("O banco não confirmou a preferência global salva");
+        unacknowledged.name = "UnacknowledgedPreferenceWriteError";
+        throw unacknowledged;
+      }
     },
 
     async readListOverride(
@@ -173,7 +207,7 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       const identityMode = normalizeGameMode(gameMode);
       const { data, error } = await client
         .from("user_list_study_preferences")
-        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode")
+        .select("game_mode,mode,direction,card_order,scope,fast_mode,play_mode,play_side,study_flow_mode,write_activity_mode,write_rewrite_side,write_correction_mode")
         .eq("user_id", userId)
         .eq("list_id", listId)
         .eq("game_mode", identityMode)
@@ -189,12 +223,19 @@ export function createStudyPreferenceRepository(client: SupabaseLike = supabase 
       override: StudyPresetOverride,
     ): Promise<void> {
       const identityMode = normalizeGameMode(gameMode);
-      const { error } = await client
+      const { data, error } = await client
         .from("user_list_study_preferences")
         .upsert(toListPreferenceRow(userId, listId, override, identityMode), {
           onConflict: "user_id,list_id,game_mode",
-        });
+        })
+        .select("user_id")
+        .maybeSingle();
       if (error) throw error;
+      if (!data) {
+        const unacknowledged = new Error("O banco não confirmou a preferência da lista salva");
+        unacknowledged.name = "UnacknowledgedPreferenceWriteError";
+        throw unacknowledged;
+      }
     },
 
     async deleteListOverride(

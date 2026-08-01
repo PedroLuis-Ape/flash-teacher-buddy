@@ -52,6 +52,9 @@ describe("studyPreferenceCache", () => {
       playMode: "both" as const,
       playSide: "a" as const,
       studyFlowMode: "mastery_rounds" as const,
+      writeActivityMode: "translate" as const,
+      writeRewriteSide: "alternating" as const,
+      writeCorrectionMode: "flexible" as const,
     };
 
     expect(migrateLegacyStudyPreferences("user-1", "mixed")).toEqual(expected);

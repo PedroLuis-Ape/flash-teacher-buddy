@@ -13,6 +13,9 @@ export const STUDY_PRESET_SCOPES = ["all", "favorites"] as const;
 export const STUDY_PRESET_PLAY_MODES = ["both", "single"] as const;
 export const STUDY_PRESET_PLAY_SIDES = ["a", "b"] as const;
 export const STUDY_PRESET_FLOW_MODES = ["mastery_rounds", "continuous"] as const;
+export const STUDY_PRESET_WRITE_ACTIVITY_MODES = ["translate", "rewrite"] as const;
+export const STUDY_PRESET_WRITE_REWRITE_SIDES = ["a", "b", "alternating"] as const;
+export const STUDY_PRESET_WRITE_CORRECTION_MODES = ["flexible", "hard"] as const;
 
 export type StudyModePreset = (typeof STUDY_PRESET_MODES)[number];
 export type StudyDirectionPreset = (typeof STUDY_PRESET_DIRECTIONS)[number];
@@ -21,6 +24,9 @@ export type StudyScopePreset = (typeof STUDY_PRESET_SCOPES)[number];
 export type StudyPlayModePreset = (typeof STUDY_PRESET_PLAY_MODES)[number];
 export type StudyPlaySidePreset = (typeof STUDY_PRESET_PLAY_SIDES)[number];
 export type StudyFlowModePreset = (typeof STUDY_PRESET_FLOW_MODES)[number];
+export type StudyWriteActivityModePreset = (typeof STUDY_PRESET_WRITE_ACTIVITY_MODES)[number];
+export type StudyWriteRewriteSidePreset = (typeof STUDY_PRESET_WRITE_REWRITE_SIDES)[number];
+export type StudyWriteCorrectionModePreset = (typeof STUDY_PRESET_WRITE_CORRECTION_MODES)[number];
 
 export type StudyPreset = {
   mode: StudyModePreset;
@@ -31,6 +37,9 @@ export type StudyPreset = {
   playMode: StudyPlayModePreset;
   playSide: StudyPlaySidePreset;
   studyFlowMode: StudyFlowModePreset;
+  writeActivityMode: StudyWriteActivityModePreset;
+  writeRewriteSide: StudyWriteRewriteSidePreset;
+  writeCorrectionMode: StudyWriteCorrectionModePreset;
 };
 
 export type StudyPresetOverride = Partial<StudyPreset>;
@@ -45,6 +54,9 @@ export const DEFAULT_STUDY_PRESET: StudyPreset = Object.freeze({
   playMode: "both",
   playSide: "a",
   studyFlowMode: "mastery_rounds",
+  writeActivityMode: "translate",
+  writeRewriteSide: "alternating",
+  writeCorrectionMode: "flexible",
 });
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -74,6 +86,15 @@ export function normalizeStudyPreset(value: unknown): StudyPreset {
     studyFlowMode: isOneOf(input.studyFlowMode, STUDY_PRESET_FLOW_MODES)
       ? input.studyFlowMode
       : DEFAULT_STUDY_PRESET.studyFlowMode,
+    writeActivityMode: isOneOf(input.writeActivityMode, STUDY_PRESET_WRITE_ACTIVITY_MODES)
+      ? input.writeActivityMode
+      : DEFAULT_STUDY_PRESET.writeActivityMode,
+    writeRewriteSide: isOneOf(input.writeRewriteSide, STUDY_PRESET_WRITE_REWRITE_SIDES)
+      ? input.writeRewriteSide
+      : DEFAULT_STUDY_PRESET.writeRewriteSide,
+    writeCorrectionMode: isOneOf(input.writeCorrectionMode, STUDY_PRESET_WRITE_CORRECTION_MODES)
+      ? input.writeCorrectionMode
+      : DEFAULT_STUDY_PRESET.writeCorrectionMode,
   };
 }
 
@@ -89,6 +110,9 @@ export function normalizeStudyPresetOverride(value: unknown): StudyPresetOverrid
   if (isOneOf(value.playMode, STUDY_PRESET_PLAY_MODES)) result.playMode = value.playMode;
   if (isOneOf(value.playSide, STUDY_PRESET_PLAY_SIDES)) result.playSide = value.playSide;
   if (isOneOf(value.studyFlowMode, STUDY_PRESET_FLOW_MODES)) result.studyFlowMode = value.studyFlowMode;
+  if (isOneOf(value.writeActivityMode, STUDY_PRESET_WRITE_ACTIVITY_MODES)) result.writeActivityMode = value.writeActivityMode;
+  if (isOneOf(value.writeRewriteSide, STUDY_PRESET_WRITE_REWRITE_SIDES)) result.writeRewriteSide = value.writeRewriteSide;
+  if (isOneOf(value.writeCorrectionMode, STUDY_PRESET_WRITE_CORRECTION_MODES)) result.writeCorrectionMode = value.writeCorrectionMode;
 
   return result;
 }

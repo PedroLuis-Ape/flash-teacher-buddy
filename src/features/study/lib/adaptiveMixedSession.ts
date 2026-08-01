@@ -38,6 +38,24 @@ export interface CreateAdaptiveMixedSessionOptions {
   flowMode?: MixedFlowMode;
 }
 
+/**
+ * Persist the newest immutable session snapshot when a write overlaps with a
+ * state transition. The caller owns the remote write; this helper only makes
+ * the ordering guarantee testable and prevents an older response from being
+ * the last state sent to the server.
+ */
+export async function persistLatestAdaptiveState<T>(
+  getLatest: () => T | null,
+  persist: (state: T) => PromiseLike<void> | void,
+): Promise<void> {
+  for (;;) {
+    const state = getLatest();
+    if (state === null) return;
+    await persist(state);
+    if (getLatest() === state) return;
+  }
+}
+
 const MAX_HEARTS = 3;
 const ACTIVITY_PATTERN: readonly MixedActivityMode[] = [
   "write",
@@ -54,6 +72,19 @@ function unique(values: readonly string[]): string[] {
 
 function signature(cardIds: readonly string[]): string {
   return [...unique(cardIds)].sort().join("|");
+}
+
+/**
+ * The flow format is part of the in-memory initialization identity. A mixed
+ * session cannot be reused across mastery rounds and continuous play, even
+ * when the list and storage key stay the same.
+ */
+export function buildAdaptiveMixedInitializationSignature(
+  storageKey: string,
+  cardIds: readonly string[],
+  flowMode: MixedFlowMode,
+): string {
+  return `${storageKey}|${flowMode}|${signature(cardIds)}`;
 }
 
 export function shuffleMixedCards<T>(values: readonly T[], random: () => number = Math.random): T[] {
@@ -338,6 +369,95 @@ export function isAdaptiveMixedStateCompatible(
     && typeof candidate.status === "string"
     && (candidate.status !== "active"
       || candidate.currentIndex < candidate.currentRoundCardIds.length);
+}
+
+/**
+ * Repairs a valid session when cards were added/removed since its last save.
+ * The strict compatibility predicate remains available for callers that need
+ * an exact deck; gameplay uses this repair path to avoid silently discarding
+ * progress just because one card changed.
+ */
+export function repairAdaptiveMixedState(
+  value: unknown,
+  cardIds: readonly string[],
+  flowMode: MixedFlowMode = "mastery_rounds",
+): AdaptiveMixedSessionState | null {
+  if (isAdaptiveMixedStateCompatible(value, cardIds, flowMode)) return value;
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<AdaptiveMixedSessionState>;
+  if (candidate.version !== 2 || candidate.flowMode !== flowMode) return null;
+  if (!Array.isArray(candidate.currentRoundCardIds) || !Array.isArray(candidate.allCardIds)) return null;
+
+  const available = unique(cardIds);
+  if (available.length === 0) return null;
+  const availableSet = new Set(available);
+  const filter = (ids: unknown): string[] => Array.isArray(ids)
+    ? unique(ids.filter((id): id is string => typeof id === "string" && availableSet.has(id)))
+    : [];
+  const currentRoundCardIds = filter(candidate.currentRoundCardIds);
+
+  const currentSet = new Set(currentRoundCardIds);
+  const completedRound = candidate.status === "round-complete" || candidate.status === "journey-complete";
+  const currentRoundErrors = new Set(filter(candidate.currentRoundErrors));
+  const masteredCardIds = filter([
+    ...filter(candidate.masteredCardIds),
+    ...(completedRound
+      ? currentRoundCardIds.filter((id) => !currentRoundErrors.has(id))
+      : []),
+  ]).filter((id) => completedRound || !currentSet.has(id));
+  const masteredSet = new Set(masteredCardIds);
+  const pendingCardIds = filter(candidate.pendingCardIds).filter((id) => !currentSet.has(id) && !masteredSet.has(id));
+  const pendingSet = new Set(pendingCardIds);
+  const known = new Set([...currentRoundCardIds, ...masteredCardIds, ...pendingCardIds]);
+  const unseenCardIds = unique([
+    ...filter(candidate.unseenCardIds),
+    ...available.filter((id) => !known.has(id)),
+  ]).filter((id) => !currentSet.has(id) && !masteredSet.has(id) && !pendingSet.has(id));
+  const currentIndex = Math.min(
+    Math.max(Math.floor(Number(candidate.currentIndex) || 0), 0),
+    Math.max(0, currentRoundCardIds.length - 1),
+  );
+  const filterRecord = <T>(valueToFilter: unknown): Record<string, T> =>
+    Object.fromEntries(Object.entries(valueToFilter && typeof valueToFilter === "object" ? valueToFilter : {})
+      .filter(([id]) => availableSet.has(id))) as Record<string, T>;
+  const hasRemainingCards = unseenCardIds.length > 0 || pendingCardIds.length > 0;
+  const candidateStatus = candidate.status;
+  const status: MixedSessionStatus = currentRoundCardIds.length === 0
+    ? (hasRemainingCards ? "round-complete" : "journey-complete")
+    : candidateStatus === "round-failed"
+      ? "round-failed"
+      : candidateStatus === "active" && currentIndex < currentRoundCardIds.length
+        ? "active"
+        : candidateStatus === "journey-complete" && !hasRemainingCards
+          ? "journey-complete"
+          : "round-complete";
+  const repaired: AdaptiveMixedSessionState = {
+    ...(candidate as AdaptiveMixedSessionState),
+    deckSignature: signature(available),
+    allCardIds: available,
+    unseenCardIds,
+    pendingCardIds,
+    masteredCardIds,
+    currentRoundCardIds,
+    currentRoundOrigins: filterRecord(candidate.currentRoundOrigins) as Record<string, "pending" | "new">,
+    currentRoundErrors: filter(candidate.currentRoundErrors),
+    currentRoundAnswered: filter(candidate.currentRoundAnswered),
+    activityByCardId: filterRecord(candidate.activityByCardId) as Record<string, MixedActivityMode>,
+    lastActivityByCardId: filterRecord(candidate.lastActivityByCardId) as Record<string, MixedActivityMode>,
+    currentIndex,
+    roundSize: flowMode === "continuous" ? available.length : getAdaptiveRoundSize(available.length),
+    status,
+    updatedAt: typeof candidate.updatedAt === "number" ? candidate.updatedAt : Date.now(),
+  };
+
+  // If the saved current round disappeared because cards were deleted, or a
+  // completed journey gained new cards, compose a valid next round instead of
+  // discarding the whole session and silently resetting every card.
+  if (repaired.currentRoundCardIds.length === 0 && hasRemainingCards) {
+    return mountRound(repaired, Math.random, true);
+  }
+
+  return repaired;
 }
 
 export function getAdaptiveMixedProgress(state: AdaptiveMixedSessionState) {

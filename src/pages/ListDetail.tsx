@@ -889,7 +889,7 @@ const ListDetail = () => {
       // Drop offline copy if any — it's no longer accurate
       try {
         const { removeOfflineList } = await import("@/lib/offlineStore");
-        await removeOfflineList(id).catch(() => {});
+        await removeOfflineList(id, userId).catch(() => {});
       } catch {
         // offlineStore not available — safe to ignore
       }

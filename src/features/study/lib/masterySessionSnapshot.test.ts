@@ -92,4 +92,12 @@ describe("sanitizeMasterySnapshot", () => {
     expect(restored?.masteredIds).not.toContain("c14");
     expect(restored?.status).toBe("round-complete");
   });
+
+  it("places a newly added card in unseen work", () => {
+    const snapshot = baseSnapshot();
+    const restored = sanitizeMasterySnapshot(snapshot, new Set([...ids(28), "c29"]));
+
+    expect(restored?.unseenIds).toContain("c29");
+    expect(restored?.totalEligible).toBe(29);
+  });
 });

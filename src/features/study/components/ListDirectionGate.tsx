@@ -17,10 +17,12 @@ export function ListDirectionGate({ children }: { children: ReactNode }) {
   const params = new URLSearchParams(location.search);
   const explicit = params.get("dir") || params.get("direction");
 
-  if (validDirection(explicit)) return <>{children}</>;
+  if (!validDirection(explicit)) return <>{children}</>;
+
+  if (params.get("dir") === explicit) return <>{children}</>;
 
   params.delete("direction");
-  params.set("dir", "any");
+  params.set("dir", explicit);
 
   return <Navigate replace to={{ pathname: location.pathname, search: params.toString() }} />;
 }

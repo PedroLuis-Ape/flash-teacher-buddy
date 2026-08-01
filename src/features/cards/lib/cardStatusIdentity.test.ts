@@ -12,6 +12,7 @@ describe('resolveCardStatusIdentity', () => {
     expect(r.canonicalGroupId).toBe('A');
     expect(r.playableEntryId).toBe('A');
     expect(r.visibleLayerId).toBe('A');
+    expect(r.stableGroupId).toBeNull();
     expect(r.legacyIds).toEqual(['A']);
   });
 
@@ -31,6 +32,22 @@ describe('resolveCardStatusIdentity', () => {
     expect(r.playableEntryId).toBe('L1');
     expect(r.visibleLayerId).toBe('L1');
     expect(r.legacyIds).toEqual(['P', 'L1', 'L2', 'L3']);
+  });
+
+  it('prefers the database stable group identity over parent_card_id', () => {
+    const layers = [
+      { id: 'L1', parent_card_id: 'P', status_group_uid: 'SG' },
+      { id: 'L2', parent_card_id: 'P', status_group_uid: 'SG' },
+    ];
+    const r = resolveCardStatusIdentity({
+      displayedCard: layers[1],
+      engineCard: { ...layers[0], __parentCardId: 'P', __statusGroupUid: 'SG' },
+      layers,
+    });
+
+    expect(r.stableGroupId).toBe('SG');
+    expect(r.canonicalGroupId).toBe('P');
+    expect(r.legacyIds).not.toContain('SG');
   });
 
   it('layered card on layer 2: visible flips, canonical/playable stay the same', () => {
@@ -69,6 +86,7 @@ describe('resolveCardStatusIdentity', () => {
 
   it('safe defaults when nothing is passed', () => {
     const r = resolveCardStatusIdentity({});
+    expect(r.stableGroupId).toBeNull();
     expect(r.canonicalGroupId).toBeNull();
     expect(r.playableEntryId).toBeNull();
     expect(r.visibleLayerId).toBeNull();
@@ -86,6 +104,14 @@ describe('buildCanonicalToPlayableMap', () => {
     expect(m.get('P')).toBe('L1');
     expect(m.get('N1')).toBe('N1');
     expect(m.size).toBe(2);
+  });
+
+  it('also maps a stable status group uid to the playable entry', () => {
+    const m = buildCanonicalToPlayableMap([
+      { id: 'L1', parent_card_id: 'P', status_group_uid: 'SG' },
+    ]);
+    expect(m.get('SG')).toBe('L1');
+    expect(m.get('P')).toBe('L1');
   });
 });
 

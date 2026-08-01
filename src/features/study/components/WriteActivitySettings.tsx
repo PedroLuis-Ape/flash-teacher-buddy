@@ -1,53 +1,29 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp, Copy, Languages, Shuffle } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
-import {
-  DEFAULT_WRITE_ACTIVITY_PREFERENCE,
-  WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT,
-  readWriteActivityPreference,
-  writeWriteActivityPreference,
-  type WriteActivityMode,
-  type WriteActivityPreference,
-  type WriteActivityPreferenceChangedDetail,
-  type WriteRewriteSide,
-} from "@/features/study/lib/writeActivityMode";
+import type { WriteActivityMode, WriteRewriteSide } from "@/features/study/lib/writeActivityMode";
+import { useWriteStudyPreferences } from "@/features/study/hooks/useWriteStudyPreferences";
 
 export function WriteActivitySettings() {
   const location = useLocation();
   const mode = new URLSearchParams(location.search).get("mode");
   const playRuntime = usePlayPresetRuntime();
+  const { preference, updatePreference } = useWriteStudyPreferences();
   const [expanded, setExpanded] = useState(false);
-  const [preference, setPreference] = useState<WriteActivityPreference>(() =>
-    typeof window === "undefined"
-      ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
-      : readWriteActivityPreference("write"),
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<WriteActivityPreferenceChangedDetail>).detail;
-      if (detail?.gameMode === "write") setPreference(detail.preference);
-    };
-    window.addEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
-    return () => window.removeEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
-  }, []);
 
   if (mode !== "write") return null;
 
   const updateMode = (nextMode: WriteActivityMode) => {
     const next = { ...preference, mode: nextMode };
-    setPreference(next);
-    writeWriteActivityPreference(next, "write");
+    updatePreference(next);
   };
 
   const updateSide = (rewriteSide: WriteRewriteSide) => {
     const next = { ...preference, rewriteSide };
-    setPreference(next);
-    writeWriteActivityPreference(next, "write");
+    updatePreference(next);
   };
 
   const sideSummary = preference.rewriteSide === "a"

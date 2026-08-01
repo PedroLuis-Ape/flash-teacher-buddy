@@ -22,19 +22,9 @@ import {
   summarizeDifferences,
   type WriteAnswerEvaluation,
 } from "@/features/study/lib/writeAnswerEvaluation";
+import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
 import {
-  DEFAULT_WRITE_CORRECTION_MODE,
-  readWriteCorrectionMode,
-  type WriteCorrectionMode,
-} from "@/features/study/lib/writeCorrectionMode";
-import {
-  DEFAULT_WRITE_ACTIVITY_PREFERENCE,
-  WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT,
-  readWriteActivityPreference,
   resolveRewriteSideForCard,
-  resolveWriteActivityGameMode,
-  type WriteActivityPreference,
-  type WriteActivityPreferenceChangedDetail,
 } from "@/features/study/lib/writeActivityMode";
 import { evaluateRewriteAnswer } from "@/features/study/lib/writeRewriteEvaluation";
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
@@ -42,6 +32,7 @@ import { useAdvanceController } from "@/features/study/hooks/useAdvanceControlle
 import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
 import { LayeredCardHintButton } from "./LayeredCardHintButton";
 import { setWriteAnswerLocked } from "@/features/study/lib/writeAnswerLock";
+import { useWriteStudyPreferences } from "@/features/study/hooks/useWriteStudyPreferences";
 
 interface WriteStudyViewProps {
   front: string;
@@ -106,33 +97,12 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
-  const writeActivityGameMode = resolveWriteActivityGameMode();
-  const [writeActivity, setWriteActivity] = useState<WriteActivityPreference>(
-    () => (typeof window === "undefined"
-      ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
-      : readWriteActivityPreference(writeActivityGameMode)),
-  );
-  const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
-    () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
-  );
-
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<WriteCorrectionMode>).detail;
-      if (detail === "flexible" || detail === "hard") setCorrectionMode(detail);
-    };
-    window.addEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
-    return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
-  }, []);
-
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<WriteActivityPreferenceChangedDetail>).detail;
-      if (detail?.gameMode === writeActivityGameMode) setWriteActivity(detail.preference);
-    };
-    window.addEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
-    return () => window.removeEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
-  }, [writeActivityGameMode]);
+  const {
+    gameMode: writeActivityGameMode,
+    preference: writeActivity,
+    correctionMode,
+    studyFlowMode,
+  } = useWriteStudyPreferences();
 
   // Lock global "next / skip / next-layer" shortcuts while this Write view
   // has no evaluation yet — the user must submit first. Once feedback is
@@ -145,7 +115,8 @@ export const WriteStudyView = ({
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
   const translatedSides = resolveStudySides(sideA, sideB, direction, flashcardId || front);
-  const isRewriteActivity = writeActivityGameMode === "write" && writeActivity.mode === "rewrite";
+  const isRewriteActivity = (writeActivityGameMode === "write" || writeActivityGameMode === "mixed")
+    && writeActivity.mode === "rewrite";
   const cardIdentity = flashcardId ?? `${front}|${back}`;
   const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeActivity.rewriteSide);
   const rewriteTargetSide = resolvedRewriteSide === "a" ? sideA : sideB;
@@ -174,7 +145,7 @@ export const WriteStudyView = ({
   const advance = useAdvanceController({
     cardId: attemptCardId,
     mode: "write",
-    flowMode: "mastery_rounds",
+    flowMode: studyFlowMode,
     onAdvance: (final) => {
       if (final === "correct" || final === "accepted_with_corrections") onCorrect();
       else if (final === "incorrect") onIncorrect();

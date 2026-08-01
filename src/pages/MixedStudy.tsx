@@ -17,14 +17,28 @@ import {
   STUDY_RECOVERY_WATCHDOG_MS,
   STUDY_REMOTE_RESTORE_TIMEOUT_MS,
   STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+  resolveStudySessionReadiness,
   withStudyRuntimeTimeout,
 } from "@/features/study/lib/studySessionRuntime";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { useFavorites } from "@/hooks/useFavorites";
-import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
+import {
+  filterCardsForStudyScope,
+  resolvePersonalStudySubset,
+} from "@/features/study/lib/studyScopePolicy";
 import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import {
+  buildLegacyStudySessionScopeKey,
+  buildStudySessionScopeKey,
+  buildStudySessionSettingsSnapshot,
+  isStudySessionSettingsSnapshot,
+  type StudySessionSettingsSnapshot,
+} from "@/features/study/lib/studySessionContext";
+import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
+import { recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
+import { claimStudySession } from "@/features/study/lib/studySessionRepository";
 import type { MixedFlowMode } from "@/features/study/lib/adaptiveMixedSession";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
@@ -43,6 +57,7 @@ interface MixedFlashcard {
   accepted_answers_pt?: string[];
   word_hints?: unknown;
   parent_card_id?: string | null;
+  status_group_uid?: string | null;
   created_at?: string;
 }
 
@@ -86,32 +101,91 @@ export default function MixedStudy() {
   const answeredCardKeyRef = useRef<string | null>(null);
   const studySessionIdRef = useRef<string | null>(null);
   const sessionCreationRef = useRef<Promise<string | null> | null>(null);
+  const progressWritesRef = useRef<Set<Promise<unknown>>>(new Set());
   useEffect(() => {
     studySessionIdRef.current = studySessionId;
   }, [studySessionId]);
 
-  const directionParam = searchParams.get("dir") || searchParams.get("direction") || "any";
-  const baseDirection: Direction = normalizeDirection(directionParam);
-  const favoritesOnly = searchParams.get("favorites") === "true";
-  const { effectivePreset } = useStudyPreferences(userId, {
+  const directionParam = searchParams.get("dir") || searchParams.get("direction");
+  const explicitFavorites = searchParams.get("favorites");
+  const { effectivePreset, updateForCurrentScope, setSessionOverrides } = useStudyPreferences(userId, {
     listId: isListRoute ? resolvedId : undefined,
     gameMode: "mixed",
     persistScope: isListRoute ? "list" : "global",
     canPersistList: isListRoute,
   });
+  const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(userId);
+  const restoredSessionDirectionRef = useRef<Direction | null>(null);
+  const restoredSessionSubsetRef = useRef<"all" | "favorites" | null>(null);
+  const baseDirection: Direction = restoredSessionDirectionRef.current
+    ?? (directionParam ? normalizeDirection(directionParam) : effectivePreset.direction);
+  const requestedFavoritesOnly = restoredSessionSubsetRef.current
+    ? restoredSessionSubsetRef.current === "favorites"
+    : explicitFavorites === "true"
+      ? true
+      : explicitFavorites === "false"
+        ? false
+        : effectivePreset.scope === "favorites";
+  const favoritesOnly = resolvePersonalStudySubset(
+    requestedFavoritesOnly ? "favorites" : "all",
+    canUsePersonalFavorites,
+  ).subset === "favorites";
   const [selectedFlowMode, setSelectedFlowMode] = useState<MixedFlowMode>(effectivePreset.studyFlowMode);
   const [gameSettings, setGameSettings] = useState<GameSettings>({
-    mode: "random",
+    mode: effectivePreset.order,
     subset: favoritesOnly ? "favorites" : "all",
-    fastMode: false,
+    fastMode: effectivePreset.fastMode,
     redFocus: false,
   });
+  const restoredSessionSettingsRef = useRef<string | null>(null);
+  const handleSessionSettingsRestored = useCallback((settings: StudySessionSettingsSnapshot) => {
+    const identity = JSON.stringify(settings);
+    if (restoredSessionSettingsRef.current === identity) return;
+    restoredSessionSettingsRef.current = identity;
+    const subset = resolvePersonalStudySubset(settings.subset, canUsePersonalFavorites).subset;
+    restoredSessionDirectionRef.current = settings.direction;
+    restoredSessionSubsetRef.current = subset;
+    setSelectedFlowMode(settings.studyFlowMode);
+    setGameSettings({
+      mode: settings.order,
+      subset,
+      fastMode: settings.fastMode,
+      redFocus: settings.redFocus,
+    });
+    setSessionOverrides({
+      direction: settings.direction,
+      order: settings.order,
+      scope: subset,
+      fastMode: settings.fastMode,
+      studyFlowMode: settings.studyFlowMode,
+      ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
+      ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
+      ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),
+    });
+  }, [canUsePersonalFavorites, setSessionOverrides]);
+  useEffect(() => {
+    restoredSessionDirectionRef.current = null;
+    restoredSessionSubsetRef.current = null;
+    restoredSessionSettingsRef.current = null;
+  }, [resolvedId, userId]);
   const lastPresetFlowModeRef = useRef(effectivePreset.studyFlowMode);
   useEffect(() => {
     if (effectivePreset.studyFlowMode === lastPresetFlowModeRef.current) return;
     lastPresetFlowModeRef.current = effectivePreset.studyFlowMode;
     setSelectedFlowMode(effectivePreset.studyFlowMode);
   }, [effectivePreset.studyFlowMode]);
+  useEffect(() => {
+    if (directionParam || explicitFavorites !== null) return;
+    setGameSettings((current) => ({
+      ...current,
+      mode: effectivePreset.order,
+      subset: resolvePersonalStudySubset(
+        effectivePreset.scope,
+        canUsePersonalFavorites,
+      ).subset,
+      fastMode: effectivePreset.fastMode,
+    }));
+  }, [canUsePersonalFavorites, directionParam, effectivePreset.fastMode, effectivePreset.order, effectivePreset.scope, explicitFavorites]);
   useEffect(() => {
     const handleFlowChange = (event: Event) => {
       const next = (event as CustomEvent<MixedFlowMode>).detail;
@@ -126,17 +200,33 @@ export default function MixedStudy() {
   );
   const favoritesQuery = useFavorites(userId, "flashcard", favoritesScope);
   const favoriteIds = useMemo(() => favoritesQuery.data ?? [], [favoritesQuery.data]);
+  const favoritesConfirmedZero = favoritesOnly
+    && Boolean(userId)
+    && favoritesQuery.isSuccess
+    && favoritesQuery.fetchStatus !== "fetching"
+    && !favoritesQuery.isPlaceholderData
+    && favoriteIds.length === 0;
   const favoritesReady = !favoritesOnly
     || !userId
     || (favoritesQuery.isSuccess && favoritesQuery.fetchStatus !== "fetching" && !favoritesQuery.isPlaceholderData);
-  const scopeKey = [
-    "adaptive-mixed-v2",
-    userId || "anon",
-    isListRoute ? "list" : "collection",
-    resolvedId,
-    favoritesOnly ? "favorites" : "all",
-    selectedFlowMode,
-  ].join(":");
+  const scopeKey = buildStudySessionScopeKey({
+    mode: "mixed",
+    subset: favoritesOnly ? "favorites" : "all",
+    order: gameSettings.mode,
+    redFocus: gameSettings.redFocus,
+    fastMode: gameSettings.fastMode,
+    direction: baseDirection,
+    studyFlowMode: selectedFlowMode,
+  });
+  const legacyScopeKey = buildLegacyStudySessionScopeKey({
+    mode: "mixed",
+    subset: favoritesOnly ? "favorites" : "all",
+    order: gameSettings.mode,
+    redFocus: gameSettings.redFocus,
+    fastMode: gameSettings.fastMode,
+    direction: baseDirection,
+    studyFlowMode: selectedFlowMode,
+  });
 
   useEffect(() => {
     if (!resolvedId) return;
@@ -218,7 +308,8 @@ export default function MixedStudy() {
           redListIds: [],
           settings: { subset: favoritesOnly ? "favorites" : "all" },
         });
-        if (scopedCards.length === 0) {
+        const safeScopedCards = favoritesConfirmedZero && prepared.length > 0 ? prepared : scopedCards;
+        if (safeScopedCards.length === 0) {
           if (!cancelled) {
             setCards([]);
             setConfirmedEmpty(true);
@@ -227,7 +318,7 @@ export default function MixedStudy() {
           }
           return;
         }
-        if (!cancelled) setCards(scopedCards);
+        if (!cancelled) setCards(safeScopedCards);
         if (!cancelled) setConfirmedEmpty(false);
 
         if (userId && listId) {
@@ -237,19 +328,20 @@ export default function MixedStudy() {
                 .from("flashcard_progress")
                 .select("flashcard_id, correct_count, incorrect_count, last_reviewed")
                 .eq("user_id", userId)
-                .eq("list_id", listId)
+                // Progress is globally keyed by (user_id, flashcard_id) in
+                // the existing schema. Filtering by list_id here could hide
+                // valid history after the same card is used in another list.
                 .abortSignal(abortController.signal),
               (supabase as any)
                 .from("study_sessions")
-                .select("id, cards_order")
+                .select("id, cards_order, session_scope_key, settings_snapshot, session_snapshot, updated_at")
                 .eq("user_id", userId)
                 .eq("list_id", listId)
                 .eq("mode", "mixed-adaptive")
                 .eq("completed", false)
                 .order("updated_at", { ascending: false })
-                .limit(1)
-                .abortSignal(abortController.signal)
-                .maybeSingle(),
+                .limit(10)
+                .abortSignal(abortController.signal),
             ]),
             STUDY_REMOTE_RESTORE_TIMEOUT_MS,
             "mixed-session-restore",
@@ -265,9 +357,30 @@ export default function MixedStudy() {
             })) * 10;
           });
           setWeightByCardId(weights);
-          studySessionIdRef.current = sessionResult.data?.id ?? null;
+          // This query intentionally returns a bounded array: older accounts
+          // can have more than one open row for the same scope. `maybeSingle()`
+          // would turn that valid legacy state into an error and the old code
+          // then indexed an object as if it were an array, silently dropping
+          // the remote snapshot. Always choose the newest row explicitly.
+          const matchingSessions = Array.isArray(sessionResult.data)
+            ? sessionResult.data
+            : sessionResult.data
+              ? [sessionResult.data]
+              : [];
+          const matchingSession = matchingSessions
+            .filter((candidate) => candidate.session_scope_key === scopeKey || candidate.session_scope_key?.startsWith("study-session-v1:"))
+            .sort((left, right) => {
+              const leftIsCurrent = left.session_scope_key === scopeKey;
+              const rightIsCurrent = right.session_scope_key === scopeKey;
+              if (leftIsCurrent !== rightIsCurrent) return leftIsCurrent ? -1 : 1;
+              return Date.parse(String(right.updated_at ?? "")) - Date.parse(String(left.updated_at ?? ""));
+            })[0] ?? null;
+          if (matchingSession && isStudySessionSettingsSnapshot(matchingSession.settings_snapshot)) {
+            handleSessionSettingsRestored(matchingSession.settings_snapshot);
+          }
+          studySessionIdRef.current = matchingSession?.id ?? null;
           setStudySessionId(studySessionIdRef.current);
-          setRemoteState(sessionResult.data?.cards_order ?? null);
+          setRemoteState(matchingSession?.session_snapshot ?? matchingSession?.cards_order ?? null);
         }
 
         if (!cancelled) {
@@ -330,7 +443,7 @@ export default function MixedStudy() {
       cancelled = true;
       abortController.abort();
     };
-  }, [authStatus, favoriteIds, favoritesOnly, favoritesReady, isListRoute, listId, location.pathname, resolvedId, session, userId, loadAttempt]);
+  }, [authStatus, baseDirection, canUsePersonalFavorites, favoriteIds, favoritesConfirmedZero, favoritesOnly, favoritesReady, handleSessionSettingsRestored, isListRoute, listId, location.pathname, resolvedId, scopeKey, session, userId, loadAttempt]);
 
   const persistRemoteState = useCallback(async (state: any) => {
     if (!userId || !listId) return;
@@ -338,8 +451,22 @@ export default function MixedStudy() {
       user_id: userId,
       list_id: listId,
       mode: "mixed-adaptive",
+      schema_version: 1,
+      session_scope_key: scopeKey,
+      settings_snapshot: buildStudySessionSettingsSnapshot({
+        mode: "mixed",
+        subset: favoritesOnly ? "favorites" : "all",
+        order: gameSettings.mode,
+        redFocus: gameSettings.redFocus,
+        fastMode: gameSettings.fastMode,
+        direction: baseDirection,
+        studyFlowMode: selectedFlowMode,
+      }),
       current_index: state.currentIndex,
-      cards_order: state,
+      // Keep the legacy column a valid playable order. The rich adaptive
+      // state belongs in session_snapshot and is the source of truth.
+      cards_order: state.allCardIds,
+      session_snapshot: state,
       completed: state.status === "journey-complete",
       updated_at: new Date().toISOString(),
     };
@@ -347,32 +474,46 @@ export default function MixedStudy() {
     const existingSessionId = studySessionIdRef.current;
     if (existingSessionId) {
       const controller = new AbortController();
-      await withStudyRuntimeTimeout(
+      const { data: updated, error } = await withStudyRuntimeTimeout(
         (supabase as any)
           .from("study_sessions")
           .update(payload)
           .eq("id", existingSessionId)
+          .eq("user_id", userId)
+          .eq("list_id", listId)
+          .eq("mode", "mixed-adaptive")
+          .select("id")
+          .maybeSingle()
           .abortSignal(controller.signal),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         "mixed-session-persist",
         () => controller.abort(),
-      ).catch(() => undefined);
-      return;
+      );
+      if (error) throw error;
+      if (updated?.id) return;
+      // A stale session id can survive a reload or a second tab. Do not
+      // report success for a zero-row update and never create a duplicate in
+      // the same write. A later state change can create a session only after
+      // this stale id has been cleared.
+      studySessionIdRef.current = null;
+      setStudySessionId(null);
+      throw new Error("A sessão do Misto não foi confirmada pelo banco");
     }
 
     if (!sessionCreationRef.current) {
       const controller = new AbortController();
-      sessionCreationRef.current = withStudyRuntimeTimeout(
-        (supabase as any)
-          .from("study_sessions")
-          .insert(payload)
-          .select("id")
-          .abortSignal(controller.signal)
-          .single(),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "mixed-session-create",
-        () => controller.abort(),
-      ).then(({ data }) => data?.id ?? null)
+      sessionCreationRef.current = claimStudySession({
+        userId,
+        listId,
+        mode: "mixed-adaptive",
+        currentIndex: state.currentIndex,
+        cardsOrder: state.allCardIds,
+        sessionScopeKey: scopeKey,
+        settingsSnapshot: payload.settings_snapshot,
+        sessionSnapshot: state,
+        signal: controller.signal,
+        stage: "mixed-session-create",
+      }).then(({ id }) => id)
         .catch(() => null)
         .finally(() => {
           sessionCreationRef.current = null;
@@ -384,12 +525,28 @@ export default function MixedStudy() {
       studySessionIdRef.current = createdSessionId;
       setStudySessionId(createdSessionId);
     }
-  }, [listId, userId]);
+  }, [baseDirection, favoritesOnly, gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, listId, scopeKey, selectedFlowMode, userId]);
 
   const cardIds = useMemo(() => cards.map((card) => card.id), [cards]);
   const mixed = useAdaptiveMixedSession({
     cardIds,
-    storageKey: scopeKey,
+    // Never reuse a mixed session between users/lists. The old key contained
+    // only settings and could make a second list inherit the first list's
+    // local journey on the same browser.
+    storageKey: buildStudySnapshotKey({
+      userScope: userId,
+      listId: isListRoute ? resolvedId : undefined,
+      mode: "mixed",
+      sessionScopeKey: scopeKey,
+      cardsSignature: cardIds.join("|"),
+    }),
+    legacyStorageKey: buildStudySnapshotKey({
+      userScope: userId,
+      listId: isListRoute ? resolvedId : undefined,
+      mode: "mixed",
+      sessionScopeKey: legacyScopeKey,
+      cardsSignature: cardIds.join("|"),
+    }),
     flowMode: selectedFlowMode,
     remoteState,
     remoteLoaded,
@@ -397,14 +554,30 @@ export default function MixedStudy() {
     onPersist: persistRemoteState,
   });
   const handleSettingsChange = useCallback((next: GameSettings) => {
-    setGameSettings(next);
-    const nextFavorites = next.subset === "favorites";
+    const requestedSubset = next.subset;
+    const resolvedSubset = resolvePersonalStudySubset(
+      requestedSubset,
+      canUsePersonalFavorites,
+    ).subset;
+    if (requestedSubset === "favorites" && resolvedSubset === "all") {
+      toast.info("Favoritos exigem uma conta autenticada. Mostrando todos os cards.");
+    }
+    const resolvedSettings = { ...next, subset: resolvedSubset };
+    setGameSettings(resolvedSettings);
+    updateForCurrentScope({
+      order: resolvedSettings.mode,
+      ...(requestedSubset === "favorites" && resolvedSubset === "all"
+        ? {}
+        : { scope: resolvedSettings.subset }),
+      fastMode: resolvedSettings.fastMode ?? false,
+    });
+    const nextFavorites = resolvedSettings.subset === "favorites";
     if (nextFavorites !== favoritesOnly) {
       const params = new URLSearchParams(searchParams);
       params.set("favorites", String(nextFavorites));
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     }
-  }, [favoritesOnly, location.pathname, navigate, searchParams]);
+  }, [canUsePersonalFavorites, favoritesOnly, location.pathname, navigate, searchParams, updateForCurrentScope]);
   const currentAnswerKey = `${mixed.state?.roundNumber ?? 0}:${mixed.state?.currentIndex ?? 0}:${mixed.currentCardId ?? "none"}`;
   useEffect(() => {
     answeredCardKeyRef.current = null;
@@ -422,6 +595,27 @@ export default function MixedStudy() {
     return () => clearTimeout(timeoutId);
   }, [cards.length, loading, mixed.state, remoteLoaded, showRuntimeRecovery]);
 
+  // Mixed has its own activity scheduler, but it must expose the same
+  // readiness contract as every other study surface. In particular, an
+  // empty adaptive state while the deck/session is still hydrating is not a
+  // legitimate empty list, and a retry must be visible as its own phase.
+  const sessionReadiness = useMemo(() => {
+    const mixedStatus = mixed.state?.status ?? null;
+    return resolveStudySessionReadiness({
+      pageLoading: loading || !remoteLoaded,
+      engineLoading: !mixed.state || !mixed.progress,
+      retrying: loadAttempt > 0 && loading,
+      eligibleCardIds: cards.map((card) => card.id),
+      cardsOrder: mixed.state?.currentRoundCardIds ?? [],
+      currentIndex: mixed.state?.currentIndex ?? 0,
+      isFinished: mixedStatus === "journey-complete",
+      masteryStatus: mixedStatus === "round-complete" || mixedStatus === "journey-complete"
+        ? mixedStatus
+        : null,
+      recoveryFailed: Boolean(loadFailure || showRuntimeRecovery),
+    });
+  }, [cards, loadAttempt, loading, loadFailure, mixed.progress, mixed.state, remoteLoaded, showRuntimeRecovery]);
+
   const cardById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const currentCard = mixed.currentCardId ? cardById.get(mixed.currentCardId) : undefined;
   const resolvedDirection: Direction = baseDirection === "any"
@@ -430,50 +624,17 @@ export default function MixedStudy() {
 
   const recordAttempt = useCallback(async (cardId: string, correct: boolean, skipped: boolean) => {
     if (!userId || !listId || skipped) return;
-    const client = supabase as any;
-    const controller = new AbortController();
-    const { data: existing, error: readError } = await withStudyRuntimeTimeout(
-      client
-        .from("flashcard_progress")
-        .select("id, correct_count, incorrect_count")
-        .eq("user_id", userId)
-        .eq("flashcard_id", cardId)
-        .abortSignal(controller.signal)
-        .maybeSingle(),
-      STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-      "mixed-answer-progress-read",
-      () => controller.abort(),
-    );
-    if (readError) throw readError;
-
-    if (existing) {
-      const { error } = await withStudyRuntimeTimeout(
-        client.from("flashcard_progress").update({
-          correct_count: (existing.correct_count ?? 0) + (correct ? 1 : 0),
-          incorrect_count: (existing.incorrect_count ?? 0) + (correct ? 0 : 1),
-          last_reviewed: new Date().toISOString(),
-          list_id: listId,
-        }).eq("id", existing.id).abortSignal(controller.signal),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "mixed-answer-progress-update",
-        () => controller.abort(),
-      );
-      if (error) throw error;
-    } else {
-      const { error } = await withStudyRuntimeTimeout(
-        client.from("flashcard_progress").insert({
-          user_id: userId,
-          flashcard_id: cardId,
-          list_id: listId,
-          correct_count: correct ? 1 : 0,
-          incorrect_count: correct ? 0 : 1,
-          last_reviewed: new Date().toISOString(),
-        }).abortSignal(controller.signal),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "mixed-answer-progress-insert",
-        () => controller.abort(),
-      );
-      if (error) throw error;
+    const write = recordStudyProgressAttempt({
+      userId,
+      flashcardId: cardId,
+      listId,
+      correct,
+    });
+    progressWritesRef.current.add(write);
+    try {
+      await write;
+    } finally {
+      progressWritesRef.current.delete(write);
     }
   }, [listId, userId]);
 
@@ -505,7 +666,22 @@ export default function MixedStudy() {
     handleAnswer(classification === "known", classification === "unknown");
   }, [currentAnswerKey, handleAnswer, showSkipDialog]);
 
-  const exit = () => {
+  const exit = async () => {
+    const pendingProgressWrites = Array.from(progressWritesRef.current);
+    if (pendingProgressWrites.length > 0) {
+      await withStudyRuntimeTimeout(
+        Promise.allSettled(pendingProgressWrites),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "mixed-progress-before-exit",
+      ).catch((error) => {
+        console.warn("[MixedStudy] Saída com progresso remoto pendente:", error);
+      });
+    }
+    await mixed.persistNow().catch((error) => {
+      // The local snapshot is already durable; navigation must remain
+      // available when the optional remote confirmation is unavailable.
+      console.warn("[MixedStudy] Saída com sincronização remota pendente:", error);
+    });
     if (window.history.state?.idx > 0) {
       navigate(-1);
       return;
@@ -539,7 +715,7 @@ export default function MixedStudy() {
     }
   };
 
-  if (loadFailure || showRuntimeRecovery) {
+  if (loadFailure || showRuntimeRecovery || sessionReadiness.phase === "failed") {
     return (
       <StudySessionRecovery
         onRetry={() => {
@@ -566,7 +742,7 @@ export default function MixedStudy() {
     );
   }
 
-  if (confirmedEmpty) {
+  if (confirmedEmpty || sessionReadiness.phase === "empty") {
     return (
       <StudyDeckEmptyState
         onRetry={() => {
@@ -580,7 +756,15 @@ export default function MixedStudy() {
     );
   }
 
-  if (loading || !mixed.state || !mixed.progress) {
+  if (sessionReadiness.phase === "retrying") {
+    return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Tentando preparar sua sessão novamente...</div>;
+  }
+
+  if (sessionReadiness.phase === "loading") {
+    return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Preparando Prática Mista...</div>;
+  }
+
+  if (sessionReadiness.phase === "recovering") {
     return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Preparando Prática Mista...</div>;
   }
 

@@ -5,6 +5,11 @@ export interface PersistedStudyResult {
   attempts: number;
 }
 
+export interface StudySessionLayerSnapshot {
+  cardId: string;
+  layerIdx: number;
+}
+
 export interface StudySessionSnapshot {
   version: 2;
   sessionId: string | null;
@@ -12,6 +17,8 @@ export interface StudySessionSnapshot {
   cardsOrder: string[];
   results: PersistedStudyResult[];
   timestamp: number;
+  /** Visible layer inside the current playable group, when applicable. */
+  layer?: StudySessionLayerSnapshot;
 }
 
 export interface SanitizedPersistedStudyOrder {
@@ -45,6 +52,22 @@ export function buildStudySnapshotKey(input: {
   cardsSignature: string;
 }): string {
   return [
+    "study-progress-v3",
+    safeScope(input.userScope),
+    safeScope(input.listId || "no-list"),
+    safeScope(input.mode),
+    safeScope(input.sessionScopeKey),
+  ].join(":");
+}
+
+export function buildLegacyStudySnapshotKey(input: {
+  userScope?: string | null;
+  listId?: string | null;
+  mode: string;
+  sessionScopeKey: string;
+  cardsSignature: string;
+}): string {
+  return [
     "study-progress-v2",
     safeScope(input.userScope),
     safeScope(input.listId || "no-list"),
@@ -61,6 +84,23 @@ function isResult(value: unknown): value is PersistedStudyResult {
     && typeof row.correct === "boolean"
     && typeof row.skipped === "boolean"
     && Number.isFinite(Number(row.attempts));
+}
+
+export function sanitizeStudyLayerSnapshot(value: unknown): StudySessionLayerSnapshot | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Partial<StudySessionLayerSnapshot>;
+  if (
+    typeof row.cardId !== "string"
+    || row.cardId.length === 0
+    || !Number.isFinite(Number(row.layerIdx))
+    || Number(row.layerIdx) < 0
+  ) {
+    return undefined;
+  }
+  return {
+    cardId: row.cardId,
+    layerIdx: Math.floor(Number(row.layerIdx)),
+  };
 }
 
 /**
@@ -91,35 +131,33 @@ export function sanitizePersistedStudyOrder({
   if (filteredOrder.length === 0) return null;
 
   const savedUnique = new Set(filteredOrder);
-  if (savedUnique.size !== availableCardIds.size) return null;
-  for (const id of availableCardIds) {
-    if (!savedUnique.has(id)) return null;
-  }
+  const missingIds = Array.from(availableCardIds).filter((id) => !savedUnique.has(id));
+  const repairedOrder = [...filteredOrder, ...missingIds];
 
   const rawIndex = Math.min(
     Math.max(Number(currentIndex) || 0, 0),
-    filteredOrder.length - 1,
+    repairedOrder.length - 1,
   );
 
   if (!enforceUniqueOrder) {
     return {
-      cardsOrder: filteredOrder,
+      cardsOrder: repairedOrder,
       currentIndex: rawIndex,
-      repaired: false,
+      repaired: missingIds.length > 0,
     };
   }
 
   const canonicalOrder = Array.from(availableCardIds);
   const isCanonicalOrder =
-    filteredOrder.length === canonicalOrder.length
-    && filteredOrder.every((id, index) => id === canonicalOrder[index]);
+    repairedOrder.length === canonicalOrder.length
+    && repairedOrder.every((id, index) => id === canonicalOrder[index]);
 
   return {
     cardsOrder: canonicalOrder,
     currentIndex: isCanonicalOrder
       ? Math.min(rawIndex, canonicalOrder.length - 1)
       : 0,
-    repaired: !isCanonicalOrder,
+    repaired: !isCanonicalOrder || missingIds.length > 0,
   };
 }
 
@@ -149,6 +187,7 @@ export function sanitizeStudySnapshot(
         ? row.results.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId))
         : [];
 
+    const layer = sanitizeStudyLayerSnapshot(row.layer);
     return {
       version: 2,
       sessionId: typeof row.sessionId === "string" ? row.sessionId : null,
@@ -156,6 +195,7 @@ export function sanitizeStudySnapshot(
       cardsOrder: restored.cardsOrder,
       results,
       timestamp: Number.isFinite(Number(row.timestamp)) ? Number(row.timestamp) : 0,
+      ...(layer ? { layer } : {}),
     };
   }
 
@@ -165,10 +205,8 @@ export function sanitizeStudySnapshot(
   if (rawCardsOrder.length === 0) return null;
 
   const savedUnique = new Set(rawCardsOrder);
-  if (savedUnique.size !== availableCardIds.size) return null;
-  for (const id of availableCardIds) {
-    if (!savedUnique.has(id)) return null;
-  }
+  const missingIds = Array.from(availableCardIds).filter((id) => !savedUnique.has(id));
+  rawCardsOrder.push(...missingIds);
 
   // Legacy red-focus sessions injected three extra copies of every red card.
   // When every card in the deck is repeated, this is the dedicated all-red
@@ -196,6 +234,7 @@ export function sanitizeStudySnapshot(
     ? row.results.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId))
     : [];
 
+  const layer = sanitizeStudyLayerSnapshot(row.layer);
   return {
     version: 2,
     sessionId: typeof row.sessionId === "string" ? row.sessionId : null,
@@ -203,6 +242,7 @@ export function sanitizeStudySnapshot(
     cardsOrder,
     results,
     timestamp: Number.isFinite(Number(row.timestamp)) ? Number(row.timestamp) : 0,
+    ...(layer ? { layer } : {}),
   };
 }
 
