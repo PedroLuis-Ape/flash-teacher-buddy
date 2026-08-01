@@ -128,3 +128,11 @@ O preview apresentou ações de entrada no jogo como botões, e não como links 
 - O build regenerou o bundle automático de `supabase/functions/mcp/index.ts`; ele foi restaurado ao conteúdo rastreado e permanece fora do diff.
 - Nenhuma migration, consulta de escrita, troca de projeto, alteração de Auth/RLS ou publicação foi executada.
 - `claimStudySession` replaces the six direct session inserts in `Study` and `MixedStudy`; it uses the transactional RPC when available, requires a confirmed id, and retains a compatibility fallback until the migration is installed.
+## Live environment verification - 2026-08-01
+
+| Environment | Evidence | Result |
+|---|---|---|
+| `xrnfhhoxmmstagmelvyi` | read-only project, migration, schema, function and RLS queries | healthy; persistence migrations and claim/progress RPCs are absent |
+| `ymahldldyxvwjeruaxpr` | project/migration metadata request | denied by connector permissions; production state remains unverified |
+
+This is an explicit limitation, not a passing runtime test. The real authenticated continuity, RLS isolation, retry/rollback and two-tab checks still require an authorized isolated environment or an operator with access to the correct project. No remote write was performed.

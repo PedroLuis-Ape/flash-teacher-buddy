@@ -80,3 +80,10 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 - A migration é aditiva e não exclui dados. Em regressão, reverta o frontend/feature flag e mantenha as colunas novas; não faça rollback destrutivo de schema.
 - Não fazer merge, deploy, publicação ou migration remota automaticamente; o próximo passo é revisão do PR e execução dos checks do provedor.
 - Atomic RPC `claim_study_session_v1` serializes concurrent session creation by user/list/mode/scope, reuses the newest open row, and never removes legacy rows. Its guarantee starts only after controlled migration application.
+## Live environment evidence - 2026-08-01
+
+- Read-only Supabase metadata confirms `xrnfhhoxmmstagmelvyi` is `ACTIVE_HEALTHY` on PostgreSQL 17.6.
+- Its migration history currently ends at `20260719150442`; persistence migrations `20260801120000`, `20260801143000`, `20260801153500`, and `20260801160000` are not applied there.
+- The administrative `study_sessions` table has additional reward columns, all with defaults, and owner-only RLS policies. The proposed claim RPC is not present; neither is `record_flashcard_progress_v1`.
+- Read-only metadata for production `ymahldldyxvwjeruaxpr` was rejected for lack of connector permission. No production schema or migration status is claimed.
+- The administrative project has no usable study rows for a real continuity test. Creating synthetic accounts/data or applying migrations would be an external operation and was not authorized by the repository safety rules.
