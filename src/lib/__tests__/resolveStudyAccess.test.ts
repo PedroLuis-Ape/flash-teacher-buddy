@@ -2,13 +2,19 @@ import { describe, it, expect } from "vitest";
 import { resolveStudyAccess } from "../resolveStudyAccess";
 
 describe("resolveStudyAccess", () => {
-  it("returns wait while auth is initializing", () => {
+  it("returns wait while auth is initializing on a protected route", () => {
     expect(
       resolveStudyAccess({ authStatus: "initializing", isPortalRoute: false, userId: undefined }),
     ).toBe("wait");
+  });
+
+  it("keeps portal routes public while auth is initializing or authenticated", () => {
     expect(
       resolveStudyAccess({ authStatus: "initializing", isPortalRoute: true, userId: "u1" }),
-    ).toBe("wait");
+    ).toBe("public");
+    expect(
+      resolveStudyAccess({ authStatus: "authenticated", isPortalRoute: true, userId: "u1" }),
+    ).toBe("public");
   });
 
   it("does not release protected reads for a persisted but unconfirmed session", () => {
@@ -17,7 +23,7 @@ describe("resolveStudyAccess", () => {
     ).toBe("wait");
     expect(
       resolveStudyAccess({ authStatus: "stale", isPortalRoute: true, userId: "u1" }),
-    ).toBe("wait");
+    ).toBe("public");
   });
 
   it("returns authenticated only when authStatus is authenticated AND userId is present", () => {

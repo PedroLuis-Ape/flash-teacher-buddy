@@ -16,6 +16,10 @@ interface PersistedSessionShape {
   expires_at?: unknown;
 }
 
+interface DedupingFetchOptions {
+  useLatestPersistedAuth?: boolean;
+}
+
 function headerEntries(headers: Headers): string {
   return Array.from(headers.entries())
     .sort(([left], [right]) => left.localeCompare(right))
@@ -146,13 +150,16 @@ function withLatestPersistedAuth(request: Request): Request {
 async function performFlashcardAttempt(
   baseFetch: typeof fetch,
   request: Request,
+  useLatestPersistedAuth: boolean,
 ): Promise<Response> {
   if (request.signal.aborted) throw abortError();
 
   // The first request can be created while auth is still attaching/refeshing.
   // Rebuild every attempt from the immutable original request and inject the
   // newest persisted access token instead of cloning stale headers forever.
-  const attempt = withLatestPersistedAuth(request);
+  const attempt = useLatestPersistedAuth
+    ? withLatestPersistedAuth(request)
+    : request.clone();
   return baseFetch(attempt);
 }
 
@@ -160,14 +167,15 @@ async function fetchReadWithFlashcardRecovery(
   baseFetch: typeof fetch,
   request: Request,
   retryDelaysMs: readonly number[],
+  useLatestPersistedAuth: boolean,
 ): Promise<FetchResult> {
-  let response = await performFlashcardAttempt(baseFetch, request);
+  let response = await performFlashcardAttempt(baseFetch, request, useLatestPersistedAuth);
   let emptyFlashcardResponse = await isEmptyJsonArrayResponse(response);
 
   for (const delayMs of retryDelaysMs) {
     if (!emptyFlashcardResponse) break;
     await waitForRetry(delayMs, request.signal);
-    response = await performFlashcardAttempt(baseFetch, request);
+    response = await performFlashcardAttempt(baseFetch, request, useLatestPersistedAuth);
     emptyFlashcardResponse = await isEmptyJsonArrayResponse(response);
   }
 
@@ -179,6 +187,7 @@ export function createDedupingFetch(
   ttlMs = DEFAULT_TTL_MS,
   now: () => number = Date.now,
   emptyFlashcardRetryDelaysMs: readonly number[] = DEFAULT_EMPTY_FLASHCARD_RETRY_DELAYS_MS,
+  options: DedupingFetchOptions = {},
 ): typeof fetch {
   const inflight = new Map<string, Promise<Response>>();
   const cache = new Map<string, CachedResponse>();
@@ -197,6 +206,7 @@ export function createDedupingFetch(
         baseFetch,
         request,
         emptyFlashcardRetryDelaysMs,
+        options.useLatestPersistedAuth !== false,
       );
       return response;
     }
@@ -238,4 +248,17 @@ export function createDedupingFetch(
     inflight.set(key, requestPromise);
     return (await requestPromise).clone();
   }) as typeof fetch;
+}
+
+/** Public routes retain bounded empty-read recovery without attaching a private session. */
+export function createSessionFreeDedupingFetch(
+  baseFetch: typeof fetch = fetch,
+): typeof fetch {
+  return createDedupingFetch(
+    baseFetch,
+    DEFAULT_TTL_MS,
+    Date.now,
+    DEFAULT_EMPTY_FLASHCARD_RETRY_DELAYS_MS,
+    { useLatestPersistedAuth: false },
+  );
 }

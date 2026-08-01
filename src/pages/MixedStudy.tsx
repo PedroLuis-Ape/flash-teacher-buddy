@@ -2,20 +2,33 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Heart, RefreshCcw, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
 import {
   createStudyDeckRequestId,
   loadStudyDeck,
 } from "@/features/study/lib/studyDeckLoader";
+import {
+  fetchStudyDeckPage,
+  probeStudyDeckAvailability,
+} from "@/features/study/lib/studyDeckSupabaseGateway";
+import { resolveStudyResourceContext } from "@/features/study/lib/studyResourceContext";
+import {
+  buildStudyDeckRequestContextKey,
+  isStudyDeckRequestCurrent,
+} from "@/features/study/lib/studyDeckRequestIdentity";
+import {
+  isStudyDeckLoading,
+  studyDeckRecoveryReason,
+  studyDeckTechnicalId,
+  type StudyDeckLoadState,
+} from "@/features/study/lib/studyDeckLoadState";
 import { hashToBool, normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { scoreCard, type CardProgressLike } from "@/features/study/lib/intelligenceScoring";
 import { useAdaptiveMixedSession } from "@/features/study/hooks/useAdaptiveMixedSession";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
 import { StudyDeckEmptyState } from "@/features/study/components/StudyDeckEmptyState";
-import {
-  createStudyDeckCountReader,
-  resolveStudyDeckEmptyState,
-} from "@/features/study/lib/studyDeckEmptyVerification";
+import { StudyScopeEmptyState } from "@/features/study/components/StudyScopeEmptyState";
 import { SkipCardConfirmDialog } from "@/features/study/components/SkipCardConfirmDialog";
 import {
   STUDY_RECOVERY_WATCHDOG_MS,
@@ -81,20 +94,27 @@ function getActivityLabel(mode: string | null): string {
 
 export default function MixedStudy() {
   const { id, collectionId } = useParams();
-  const resolvedId = (id as string) || (collectionId as string) || "";
   const location = useLocation();
+  const resourceContext = useMemo(
+    () => resolveStudyResourceContext({ pathname: location.pathname, id, collectionId }),
+    [collectionId, id, location.pathname],
+  );
+  const resolvedId = resourceContext.resourceId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { status: authStatus, userId, session } = useAuth();
-  const isCollectionRoute = location.pathname.includes("/collection/");
-  const isListRoute = !isCollectionRoute;
+  const isListRoute = resourceContext.resourceKind === "list";
   const listId = isListRoute ? resolvedId : undefined;
 
-  const [cards, setCards] = useState<MixedFlashcard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [confirmedEmpty, setConfirmedEmpty] = useState(false);
-  const [loadFailure, setLoadFailure] = useState<string | null>(null);
+  const [deckCards, setDeckCards] = useState<MixedFlashcard[]>([]);
+  const [deckLoadState, setDeckLoadState] = useState<StudyDeckLoadState>({ phase: "idle" });
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const loadGenerationRef = useRef(0);
+  const loadAbortRef = useRef<AbortController | null>(null);
+  const loadContextRef = useRef("");
+  const loading = isStudyDeckLoading(deckLoadState);
+  const confirmedEmpty = deckLoadState.phase === "confirmed-empty";
+  const loadFailure = studyDeckRecoveryReason(deckLoadState);
   const [labels, setLabels] = useState(DEFAULT_LABELS);
   const [weightByCardId, setWeightByCardId] = useState<Record<string, number>>({});
   const [remoteState, setRemoteState] = useState<unknown>(null);
@@ -112,11 +132,12 @@ export default function MixedStudy() {
 
   const directionParam = searchParams.get("dir") || searchParams.get("direction");
   const explicitFavorites = searchParams.get("favorites");
+  const isPrivateListRoute = isListRoute && !resourceContext.isPublic;
   const { effectivePreset, updateForCurrentScope, setSessionOverrides } = useStudyPreferences(userId, {
-    listId: isListRoute ? resolvedId : undefined,
+    listId: isPrivateListRoute ? resolvedId : undefined,
     gameMode: "mixed",
-    persistScope: isListRoute ? "list" : "global",
-    canPersistList: isListRoute,
+    persistScope: isPrivateListRoute ? "list" : "global",
+    canPersistList: isPrivateListRoute,
   });
   const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(userId);
   const restoredSessionDirectionRef = useRef<Direction | null>(null);
@@ -204,15 +225,34 @@ export default function MixedStudy() {
   );
   const favoritesQuery = useFavorites(userId, "flashcard", favoritesScope);
   const favoriteIds = useMemo(() => favoritesQuery.data ?? [], [favoritesQuery.data]);
-  const favoritesConfirmedZero = favoritesOnly
-    && Boolean(userId)
-    && favoritesQuery.isSuccess
-    && favoritesQuery.fetchStatus !== "fetching"
-    && !favoritesQuery.isPlaceholderData
-    && favoriteIds.length === 0;
   const favoritesReady = !favoritesOnly
     || !userId
     || (favoritesQuery.isSuccess && favoritesQuery.fetchStatus !== "fetching" && !favoritesQuery.isPlaceholderData);
+  const [scopeWaitExpired, setScopeWaitExpired] = useState(false);
+  useEffect(() => {
+    if (favoritesReady) {
+      setScopeWaitExpired(false);
+      return;
+    }
+    const timeoutId = setTimeout(
+      () => setScopeWaitExpired(true),
+      STUDY_RECOVERY_WATCHDOG_MS,
+    );
+    return () => clearTimeout(timeoutId);
+  }, [favoritesReady]);
+  const cards = useMemo(() => filterCardsForStudyScope({
+    cards: deckCards,
+    favoriteIds,
+    redListIds: [],
+    settings: { subset: favoritesOnly ? "favorites" : "all" },
+  }), [deckCards, favoriteIds, favoritesOnly]);
+  const emptyStudyScope = deckLoadState.phase === "ready"
+    && favoritesReady
+    && deckCards.length > 0
+    && cards.length === 0
+    && favoritesOnly
+    ? "favorites" as const
+    : null;
   const scopeKey = buildStudySessionScopeKey({
     mode: "mixed",
     subset: favoritesOnly ? "favorites" : "all",
@@ -234,128 +274,124 @@ export default function MixedStudy() {
 
   useEffect(() => {
     if (!resolvedId) return;
-    const isPortalRoute = location.pathname.startsWith("/portal/");
-    const access = resolveStudyAccess({ authStatus, isPortalRoute, userId });
-    setCards([]);
-    setConfirmedEmpty(false);
-    setLoadFailure(null);
+    const access = resolveStudyAccess({
+      authStatus,
+      isPortalRoute: resourceContext.isPublic,
+      userId,
+    });
+    setDeckCards([]);
+    setRemoteLoaded(false);
     if (access === "denied") {
-      setLoading(false);
-      setLoadFailure("auth-required");
+      setDeckLoadState({ phase: "recoverable-error", reason: "auth-required" });
       return;
     }
     if (access === "wait") {
-      setLoading(true);
+      setDeckLoadState({ phase: "waiting-auth", reason: "auth" });
       const timeoutId = setTimeout(() => {
-        setLoading(false);
-        setLoadFailure("auth-timeout");
+        setDeckLoadState({ phase: "recoverable-error", reason: "auth-timeout" });
       }, STUDY_RECOVERY_WATCHDOG_MS);
       return () => clearTimeout(timeoutId);
     }
-    if (!favoritesReady) {
-      setLoading(true);
-      setRemoteLoaded(false);
-      return;
+    if (!resourceContext.isPublic && !session) {
+      setDeckLoadState({ phase: "waiting-auth", reason: "auth" });
+      const timeoutId = setTimeout(() => {
+        setDeckLoadState({ phase: "recoverable-error", reason: "session-timeout" });
+      }, STUDY_RECOVERY_WATCHDOG_MS);
+      return () => clearTimeout(timeoutId);
     }
 
-    let cancelled = false;
+    loadAbortRef.current?.abort();
     const abortController = new AbortController();
+    loadAbortRef.current = abortController;
+    const generation = ++loadGenerationRef.current;
+    const requestId = createStudyDeckRequestId();
+    const requestContextKey = buildStudyDeckRequestContextKey({
+      ...resourceContext,
+      userId,
+    });
+    loadContextRef.current = requestContextKey;
+    const isGenerationCurrent = () => loadGenerationRef.current === generation;
+    const isCurrent = () => isStudyDeckRequestCurrent({
+      activeGeneration: loadGenerationRef.current,
+      generation,
+      activeContextKey: loadContextRef.current,
+      contextKey: requestContextKey,
+      signal: abortController.signal,
+    });
     const load = async () => {
-      setLoading(true);
-      setLoadFailure(null);
-      setRemoteLoaded(false);
+      setDeckLoadState({
+        phase: loadAttempt > 0 ? "retrying" : "loading",
+        attempt: loadAttempt,
+        requestId,
+      });
+      if (import.meta.env.DEV) {
+        console.debug("[MixedStudy] Loading flashcards", {
+          requestId,
+          generation,
+          resourceId: resolvedId,
+          resourceKind: resourceContext.resourceKind,
+          source: resourceContext.source,
+          public: resourceContext.isPublic,
+          authStatus,
+        });
+      }
       try {
-        const isPublicList = isListRoute && isPortalRoute;
-        const queryColumn = isListRoute ? "list_id" : "collection_id";
-        const resourceKind = isListRoute ? "list" : "collection";
-        const readDeck = (requestId: string) => withStudyRuntimeTimeout(
+        const deckResult = await withStudyRuntimeTimeout(
           loadStudyDeck<MixedFlashcard>({
             requestId,
-            resourceKind,
+            resourceKind: resourceContext.resourceKind,
             resourceId: resolvedId,
-            isPublicList,
+            source: resourceContext.source,
             hasConfirmedSession: Boolean(session),
             signal: abortController.signal,
-            fetchPage: (from, to) => isPublicList
-              ? (supabase as any)
-                  .rpc("get_portal_flashcards", { _list_id: resolvedId })
-                  .abortSignal(abortController.signal)
-                  .range(from, to)
-              : (supabase as any)
-                  .from("flashcards")
-                  .select("*")
-                  .eq(queryColumn, resolvedId)
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: true })
-                  .order("id", { ascending: true })
-                  .abortSignal(abortController.signal)
-                  .range(from, to),
+            fetchPage: (from, to) => fetchStudyDeckPage<MixedFlashcard>({
+              ...resourceContext,
+              signal: abortController.signal,
+              from,
+              to,
+            }),
+            verifyAvailability: () => probeStudyDeckAvailability({
+              ...resourceContext,
+              signal: abortController.signal,
+            }),
             prepare: (rawCards) => prepareLayeredStudyDeck(rawCards),
           }),
           STUDY_REQUIRED_LOAD_TIMEOUT_MS,
-          isPublicList ? "mixed-portal-cards" : "mixed-cards",
+          resourceContext.isPublic ? "mixed-portal-cards" : "mixed-cards",
           () => abortController.abort(),
         );
-
-        const requestId = createStudyDeckRequestId();
-        let deckResult = await readDeck(requestId);
-        if (deckResult.status === "empty") {
-          // Never trust a single empty read: confirm with an authoritative
-          // count in the same context before showing the destructive state.
-          const resolution = await resolveStudyDeckEmptyState<MixedFlashcard>({
-            requestId,
-            resourceKind,
+        if (!isCurrent()) return;
+        if (deckResult.status === "confirmed-empty") {
+          setDeckCards([]);
+          setRemoteLoaded(true);
+          setDeckLoadState({
+            phase: "confirmed-empty",
+            requestId: deckResult.requestId,
             source: deckResult.source,
-            hasConfirmedSession: Boolean(session),
-            signal: abortController.signal,
-            isCurrentGeneration: () => !cancelled,
-            countCards: createStudyDeckCountReader({
-              client: supabase as any,
-              isPublicList,
-              resourceId: resolvedId,
-              queryColumn,
-              signal: abortController.signal,
-            }),
-            rereadDeck: () => readDeck(createStudyDeckRequestId()),
           });
-          if (cancelled || resolution.state === "cancelled") return;
-          if (resolution.state === "confirmed-empty") {
-            setCards([]);
-            setConfirmedEmpty(true);
-            setRemoteLoaded(true);
-            setLoading(false);
-            return;
-          }
-          if (resolution.state === "empty-unconfirmed") {
-            setCards([]);
-            setConfirmedEmpty(false);
-            setRemoteLoaded(true);
-            setLoadFailure(resolution.technicalId);
-            setLoading(false);
-            return;
-          }
-          deckResult = resolution.deck;
+          return;
+        }
+        if (deckResult.status === "unconfirmed") {
+          setDeckCards([]);
+          setRemoteLoaded(true);
+          setDeckLoadState({
+            phase: "empty-unconfirmed",
+            requestId: deckResult.requestId,
+            source: deckResult.source,
+            reason: deckResult.reason,
+          });
+          return;
         }
 
         const prepared = deckResult.playableCards as MixedFlashcard[];
-        const scopedCards = filterCardsForStudyScope({
-          cards: prepared,
-          favoriteIds,
-          redListIds: [],
-          settings: { subset: favoritesOnly ? "favorites" : "all" },
+        setDeckCards(prepared);
+        setDeckLoadState({
+          phase: "ready",
+          requestId: deckResult.requestId,
+          source: deckResult.source,
+          rawCount: deckResult.rawCards.length,
+          playableCount: prepared.length,
         });
-        const safeScopedCards = favoritesConfirmedZero && prepared.length > 0 ? prepared : scopedCards;
-        if (safeScopedCards.length === 0) {
-          if (!cancelled) {
-            setCards([]);
-            setConfirmedEmpty(true);
-            setRemoteLoaded(true);
-            setLoading(false);
-          }
-          return;
-        }
-        if (!cancelled) setCards(safeScopedCards);
-        if (!cancelled) setConfirmedEmpty(false);
 
         if (userId && listId) {
           const [progressResult, sessionResult] = await withStudyRuntimeTimeout(
@@ -383,7 +419,7 @@ export default function MixedStudy() {
             "mixed-session-restore",
             () => abortController.abort(),
           ).catch(() => [{ data: [] }, { data: null }] as const);
-          if (cancelled) return;
+          if (!isCurrent()) return;
 
           const weights: Record<string, number> = {};
           (progressResult.data ?? []).forEach((progress: CardProgressLike) => {
@@ -419,14 +455,13 @@ export default function MixedStudy() {
           setRemoteState(matchingSession?.session_snapshot ?? matchingSession?.cards_order ?? null);
         }
 
-        if (!cancelled) {
-          setRemoteLoaded(true);
-          setLoading(false);
-        }
+        if (!isCurrent()) return;
+        setRemoteLoaded(true);
 
         if (isListRoute) {
+          const metadataClient = resourceContext.isPublic ? publicSupabase : supabase;
           const { data: listRow } = await withStudyRuntimeTimeout(
-            (supabase as any)
+            (metadataClient as any)
               .from("lists")
               .select("folder_id, lang_a, lang_b, labels_a, labels_b")
               .eq("id", resolvedId)
@@ -439,7 +474,7 @@ export default function MixedStudy() {
           let folderRow: any = null;
           if (listRow?.folder_id) {
             const folderResult = await withStudyRuntimeTimeout(
-              (supabase as any)
+              (metadataClient as any)
                 .from("folders")
                 .select("lang_a, lang_b, labels_a, labels_b")
                 .eq("id", listRow.folder_id)
@@ -451,7 +486,7 @@ export default function MixedStudy() {
             ).catch(() => ({ data: null }));
             folderRow = folderResult.data;
           }
-          if (!cancelled && (listRow || folderRow)) {
+          if (isCurrent() && (listRow || folderRow)) {
             setLabels({
               langA: listRow?.lang_a || folderRow?.lang_a || "en",
               langB: listRow?.lang_b || folderRow?.lang_b || "pt",
@@ -462,24 +497,22 @@ export default function MixedStudy() {
         }
 
       } catch (error) {
-        if (!cancelled) {
-          setLoadFailure(error instanceof Error ? error.name : "mixed-load-failed");
-          toast.error("Não foi possível preparar a Prática Mista.");
-        }
-      } finally {
-        if (!cancelled) {
-          setRemoteLoaded(true);
-          setLoading(false);
-        }
+        if (!isGenerationCurrent()) return;
+        const reason = error instanceof Error
+          ? error.name === "AbortError" ? "request-aborted" : error.name
+          : "mixed-load-failed";
+        setRemoteLoaded(true);
+        setDeckLoadState({ phase: "recoverable-error", reason, requestId });
+        toast.error("Não foi possível preparar a Prática Mista.");
       }
     };
 
     void load();
     return () => {
-      cancelled = true;
+      if (loadGenerationRef.current === generation) loadGenerationRef.current += 1;
       abortController.abort();
     };
-  }, [authStatus, baseDirection, canUsePersonalFavorites, favoriteIds, favoritesConfirmedZero, favoritesOnly, favoritesReady, handleSessionSettingsRestored, isListRoute, listId, location.pathname, resolvedId, scopeKey, session, userId, loadAttempt]);
+  }, [authStatus, baseDirection, handleSessionSettingsRestored, isListRoute, listId, loadAttempt, resolvedId, resourceContext, scopeKey, session, userId]);
 
   const persistRemoteState = useCallback(async (state: any) => {
     if (!userId || !listId) return;
@@ -571,14 +604,14 @@ export default function MixedStudy() {
     // local journey on the same browser.
     storageKey: buildStudySnapshotKey({
       userScope: userId,
-      listId: isListRoute ? resolvedId : undefined,
+      listId: resolvedId,
       mode: "mixed",
       sessionScopeKey: scopeKey,
       cardsSignature: cardIds.join("|"),
     }),
     legacyStorageKey: buildStudySnapshotKey({
       userScope: userId,
-      listId: isListRoute ? resolvedId : undefined,
+      listId: resolvedId,
       mode: "mixed",
       sessionScopeKey: legacyScopeKey,
       cardsSignature: cardIds.join("|"),
@@ -638,7 +671,7 @@ export default function MixedStudy() {
   const sessionReadiness = useMemo(() => {
     const mixedStatus = mixed.state?.status ?? null;
     return resolveStudySessionReadiness({
-      pageLoading: loading || !remoteLoaded,
+      pageLoading: loading || !remoteLoaded || (favoritesOnly && !favoritesReady && !scopeWaitExpired),
       engineLoading: !mixed.state || !mixed.progress,
       retrying: loadAttempt > 0 && loading,
       eligibleCardIds: cards.map((card) => card.id),
@@ -650,7 +683,7 @@ export default function MixedStudy() {
         : null,
       recoveryFailed: Boolean(loadFailure || showRuntimeRecovery),
     });
-  }, [cards, loadAttempt, loading, loadFailure, mixed.progress, mixed.state, remoteLoaded, showRuntimeRecovery]);
+  }, [cards, favoritesOnly, favoritesReady, loadAttempt, loading, loadFailure, mixed.progress, mixed.state, remoteLoaded, scopeWaitExpired, showRuntimeRecovery]);
 
   const cardById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const currentCard = mixed.currentCardId ? cardById.get(mixed.currentCardId) : undefined;
@@ -751,21 +784,34 @@ export default function MixedStudy() {
     }
   };
 
+  if (scopeWaitExpired) {
+    return (
+      <StudySessionRecovery
+        onRetry={() => {
+          setScopeWaitExpired(false);
+          void favoritesQuery.refetch();
+        }}
+        onStartFresh={() => undefined}
+        onBack={exit}
+        technicalId="MX-filter-data-timeout"
+        allowStartFresh={false}
+      />
+    );
+  }
+
   if (loadFailure || showRuntimeRecovery || sessionReadiness.phase === "failed") {
     return (
       <StudySessionRecovery
         onRetry={() => {
-          setLoadFailure(null);
-          setConfirmedEmpty(false);
+          setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
           setShowRuntimeRecovery(false);
           setLoadAttempt((attempt) => attempt + 1);
         }}
         onStartFresh={() => {
           const shouldReloadCards = Boolean(loadFailure) || cards.length === 0;
-          setLoadFailure(null);
-          setConfirmedEmpty(false);
           setShowRuntimeRecovery(false);
           if (shouldReloadCards) {
+            setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
             setLoadAttempt((attempt) => attempt + 1);
           } else {
             mixed.clearPersistedJourney();
@@ -773,25 +819,50 @@ export default function MixedStudy() {
         }}
         onBack={exit}
         isRetrying={loading}
-        technicalId={
-          loadFailure?.startsWith("ST-EMPTY/")
-            ? loadFailure
-            : loadFailure ? "MX-load" : "MX-session"
-        }
+        technicalId={loadFailure
+          ? studyDeckTechnicalId("MX", deckLoadState)
+          : `MX-${sessionReadiness.reason}`}
+        allowStartFresh={!loadFailure && cards.length > 0}
       />
     );
   }
 
-  if (confirmedEmpty || sessionReadiness.phase === "empty") {
+  if (confirmedEmpty) {
     return (
       <StudyDeckEmptyState
         onRetry={() => {
-          setConfirmedEmpty(false);
+          setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
           setLoadAttempt((attempt) => attempt + 1);
         }}
         onBack={exit}
         isRetrying={loading}
         resourceLabel={isListRoute ? "lista" : "coleção"}
+      />
+    );
+  }
+
+  if (emptyStudyScope) {
+    return (
+      <StudyScopeEmptyState
+        scope={emptyStudyScope}
+        onStudyAll={() => handleSettingsChange({ ...gameSettings, subset: "all" })}
+        onBack={exit}
+      />
+    );
+  }
+
+  if (sessionReadiness.phase === "empty") {
+    return (
+      <StudySessionRecovery
+        onRetry={() => {
+          setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+        onStartFresh={() => undefined}
+        onBack={exit}
+        isRetrying={loading}
+        technicalId="MX-empty-unclassified"
+        allowStartFresh={false}
       />
     );
   }
@@ -889,7 +960,19 @@ export default function MixedStudy() {
   }
 
   if (!currentCard) {
-    return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Card indisponível.</div>;
+    return (
+      <StudySessionRecovery
+        onRetry={() => {
+          setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+        onStartFresh={() => undefined}
+        onBack={exit}
+        isRetrying={loading}
+        technicalId="MX-current-card-missing"
+        allowStartFresh={false}
+      />
+    );
   }
 
   const sharedProps = {

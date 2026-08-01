@@ -1,7 +1,16 @@
 import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { prepareLayeredStudyDeck, type RawLayeredCard } from "@/lib/studyDeck";
+import {
+  verifyStudyDeckAvailability,
+  type StudyDeckAvailabilityProbe,
+  type StudyDeckUnconfirmedReason,
+} from "./studyDeckAvailability";
 
 export type StudyDeckResourceKind = "list" | "collection";
+export type StudyDeckSource =
+  | "portal-list-rpc"
+  | "portal-collection-rest"
+  | "private-rest";
 
 export interface StudyDeckPage<T> {
   data: T[] | null;
@@ -12,24 +21,39 @@ export interface StudyDeckLoaderOptions<T extends RawLayeredCard> {
   requestId: string;
   resourceKind: StudyDeckResourceKind;
   resourceId: string;
-  isPublicList: boolean;
+  source: StudyDeckSource;
   hasConfirmedSession: boolean;
   signal: AbortSignal;
   fetchPage: (from: number, to: number) => PromiseLike<StudyDeckPage<T>>;
+  verifyAvailability?: () => Promise<StudyDeckAvailabilityProbe>;
   prepare?: (rawCards: T[]) => T[];
   /** Additional empty confirmations, not retries for non-empty or failed reads. */
   emptyRetryDelaysMs?: readonly number[];
 }
 
-export type StudyDeckLoadStatus = "ready" | "empty";
-
-export interface StudyDeckLoadResult<T extends RawLayeredCard> {
-  status: StudyDeckLoadStatus;
-  requestId: string;
-  source: "portal-rpc" | "private-rest";
-  rawCards: T[];
-  playableCards: T[];
-}
+export type StudyDeckLoadResult<T extends RawLayeredCard> =
+  | {
+      status: "ready";
+      requestId: string;
+      source: StudyDeckSource;
+      rawCards: T[];
+      playableCards: T[];
+    }
+  | {
+      status: "confirmed-empty";
+      requestId: string;
+      source: StudyDeckSource;
+      rawCards: [];
+      playableCards: [];
+    }
+  | {
+      status: "unconfirmed";
+      requestId: string;
+      source: StudyDeckSource;
+      reason: StudyDeckUnconfirmedReason;
+      rawCards: T[];
+      playableCards: T[];
+    };
 
 export type StudyDeckLoadErrorCode = "auth-required" | "invalid-deck";
 
@@ -86,10 +110,12 @@ function logDeckLoad(stage: string, details: Record<string, string | number | bo
 /**
  * Shared, generation-friendly loader for every study entry point.
  *
- * A single empty response is not evidence that the user has no cards. The
- * first empty read is confirmed with bounded, abortable follow-up reads. The
- * caller still owns the request generation and must ignore a result after its
- * route/account context changes.
+ * A single empty response is not evidence that the user has no cards. Empty
+ * reads receive bounded follow-ups and an independent authority probe. If the
+ * probe is missing, inaccessible or inconsistent, the result remains
+ * `unconfirmed` and the UI must offer recovery instead of claiming zero cards.
+ * The caller owns request generation and ignores results after route/account
+ * context changes.
  */
 export async function loadStudyDeck<T extends RawLayeredCard>(
   options: StudyDeckLoaderOptions<T>,
@@ -98,10 +124,11 @@ export async function loadStudyDeck<T extends RawLayeredCard>(
     requestId,
     resourceKind,
     resourceId,
-    isPublicList,
+    source,
     hasConfirmedSession,
     signal,
     fetchPage,
+    verifyAvailability,
     prepare = (rawCards) => prepareLayeredStudyDeck(rawCards),
   // dedupFetch already performs timed recovery for the actual HTTP request;
   // one immediate service-level confirmation covers clients/tests that bypass
@@ -112,7 +139,7 @@ export async function loadStudyDeck<T extends RawLayeredCard>(
   if (!resourceId) {
     throw new StudyDeckLoadError("invalid-deck", "Study resource id is missing", requestId);
   }
-  if (!hasConfirmedSession && !isPublicList) {
+  if (!hasConfirmedSession && source === "private-rest") {
     throw new StudyDeckLoadError(
       "auth-required",
       "A confirmed session is required for a private study resource",
@@ -120,8 +147,13 @@ export async function loadStudyDeck<T extends RawLayeredCard>(
     );
   }
 
-  const source = isPublicList ? "portal-rpc" : "private-rest";
-  logDeckLoad("start", { requestId, resourceKind, source });
+  logDeckLoad("start", {
+    requestId,
+    resourceId,
+    resourceKind,
+    source,
+    hasConfirmedSession,
+  });
 
   const read = async (): Promise<T[]> => {
     throwIfAborted(signal);
@@ -140,24 +172,63 @@ export async function loadStudyDeck<T extends RawLayeredCard>(
     rawCards = await read();
   }
 
-  if (rawCards.length === 0) {
-    logDeckLoad("empty-confirmed", { requestId, confirmations });
+  let playableCards = rawCards.length > 0 ? prepare(rawCards) : [];
+  let availability = await verifyStudyDeckAvailability({
+    source,
+    rawCount: rawCards.length,
+    playableCount: playableCards.length,
+    probe: verifyAvailability,
+  });
+
+  // The authority can see cards while the paginated read still returned an
+  // empty payload. Perform one final clean read; never loop indefinitely.
+  if (rawCards.length === 0 && availability.status === "has-cards") {
+    logDeckLoad("authority-found-cards", { requestId, rawCards: availability.rawCount });
+    rawCards = await read();
+    playableCards = rawCards.length > 0 ? prepare(rawCards) : [];
+    availability = rawCards.length > 0
+      ? await verifyStudyDeckAvailability({
+          source,
+          rawCount: rawCards.length,
+          playableCount: playableCards.length,
+        })
+      : {
+          status: "unconfirmed",
+          reason: "cards-present-but-unavailable",
+          source,
+        };
+  }
+
+  if (availability.status === "confirmed-empty") {
+    logDeckLoad("empty-confirmed", {
+      requestId,
+      confirmations,
+      rawCards: 0,
+      playableCards: 0,
+    });
     return {
-      status: "empty",
+      status: "confirmed-empty",
       requestId,
       source,
-      rawCards,
+      rawCards: [],
       playableCards: [],
     };
   }
 
-  const playableCards = prepare(rawCards);
-  if (playableCards.length === 0) {
-    throw new StudyDeckLoadError(
-      "invalid-deck",
-      "The study response contained rows but no playable cards",
+  if (availability.status === "unconfirmed") {
+    logDeckLoad("availability-unconfirmed", {
       requestId,
-    );
+      rawCards: rawCards.length,
+      playableCards: playableCards.length,
+    });
+    return {
+      status: "unconfirmed",
+      requestId,
+      source,
+      reason: availability.reason,
+      rawCards,
+      playableCards,
+    };
   }
 
   logDeckLoad("ready", {

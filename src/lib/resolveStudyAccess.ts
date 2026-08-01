@@ -28,7 +28,8 @@ export interface StudyAccessInput {
  *
  *   authStatus      | isPortalRoute | userId | result
  *   ----------------|---------------|--------|-----------------
- *   initializing/stale | *          | *      | wait
+ *   *               | true          | *      | public
+ *   initializing/stale | false      | *      | wait
  *   error           | true          | *      | public
  *   error           | false         | *      | denied
  *   anonymous       | true          | *      | public
@@ -39,6 +40,11 @@ export interface StudyAccessInput {
 export function resolveStudyAccess(input: StudyAccessInput): StudyAccess {
   const { authStatus, isPortalRoute, userId } = input;
 
+  // Portal routes have an anonymous, session-free read contract. A private
+  // session that is initializing, stale or authenticated must never switch
+  // these routes to the private Data API path.
+  if (isPortalRoute) return "public";
+
   if (authStatus === "initializing" || authStatus === "stale") return "wait";
 
   if (authStatus === "authenticated") {
@@ -46,6 +52,6 @@ export function resolveStudyAccess(input: StudyAccessInput): StudyAccess {
     return "authenticated";
   }
 
-  // anonymous OR error
-  return isPortalRoute ? "public" : "denied";
+  // anonymous OR error on a protected route
+  return "denied";
 }

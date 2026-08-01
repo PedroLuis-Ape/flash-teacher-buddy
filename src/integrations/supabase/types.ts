@@ -3356,6 +3356,14 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_portal_playable_card_count: {
+        Args: { _list_id: string }
+        Returns: {
+          playable_count: number
+          raw_count: number
+          resource_exists: boolean
+        }[]
+      }
       get_portal_folder: {
         Args: { _id: string }
         Returns: {

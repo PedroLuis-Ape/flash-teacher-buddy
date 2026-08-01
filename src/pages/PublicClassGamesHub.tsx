@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Gamepad2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { publicSupabase as supabase } from '@/integrations/supabase/publicClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {

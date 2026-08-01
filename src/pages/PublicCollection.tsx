@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Gamepad2 } from "lucide-react";
@@ -13,47 +13,61 @@ interface Collection {
 }
 
 export default function PublicCollection() {
-  const { collectionId } = useParams<{ collectionId: string }>();
+  const { id, collectionId } = useParams<{ id?: string; collectionId?: string }>();
+  const resolvedCollectionId = id || collectionId || "";
   const navigate = useNavigate();
   const [collection, setCollection] = useState<Collection | null>(null);
   const [flashcardCount, setFlashcardCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    loadCollection();
-  }, [collectionId]);
+    const controller = new AbortController();
+    void loadCollection(controller.signal);
+    return () => controller.abort();
+    // The route id is the complete load identity; the callback is intentionally
+    // recreated by this page and guarded by the AbortSignal above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedCollectionId]);
 
-  const loadCollection = async () => {
+  const loadCollection = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
+      setLoadError(false);
+      if (!resolvedCollectionId) throw new Error("Missing public collection id");
 
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from("collections")
         .select("*")
-        .eq("id", collectionId)
+        .eq("id", resolvedCollectionId)
+        .abortSignal(signal ?? new AbortController().signal)
         .single();
 
       if (error) throw error;
 
       setCollection(data);
 
-      const { count } = await supabase
+      const { count, error: countError } = await publicSupabase
         .from("flashcards")
-        .select("*", { count: "exact", head: true })
-        .eq("collection_id", collectionId!);
+        .select("id", { count: "exact", head: true })
+        .eq("collection_id", resolvedCollectionId)
+        .is("deleted_at", null)
+        .abortSignal(signal ?? new AbortController().signal);
 
-      setFlashcardCount(count || 0);
+      if (countError || count === null) throw countError ?? new Error("Unconfirmed card count");
+      setFlashcardCount(count);
     } catch (error) {
+      if (signal?.aborted) return;
       console.error("Error loading collection:", error);
-      navigate("/portal");
+      setLoadError(true);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   const startGame = (mode: "flip" | "write" | "mixed") => {
     navigate(
-      `/portal/collection/${collectionId}/study?mode=${mode}&direction=any&order=random`
+      `/portal/collection/${resolvedCollectionId}/study?mode=${mode}&direction=any&order=random`
     );
   };
 
@@ -61,6 +75,19 @@ export default function PublicCollection() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary via-primary-glow to-primary flex items-center justify-center">
         <div className="text-primary-foreground text-xl">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Card className="w-full max-w-lg p-8 text-center space-y-4">
+          <CardTitle>Não foi possível confirmar esta coleção</CardTitle>
+          <CardDescription>Os dados continuam preservados. Tente carregar novamente.</CardDescription>
+          <Button onClick={() => void loadCollection()}>Tentar novamente</Button>
+          <Button variant="ghost" onClick={() => navigate("/portal")}>Voltar ao Portal</Button>
+        </Card>
       </div>
     );
   }

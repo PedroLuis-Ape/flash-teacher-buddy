@@ -11,7 +11,7 @@ import {
 } from "@/components/seo/publicLearningListStructuredData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 
 const PREVIEW_LIMIT = 24;
 

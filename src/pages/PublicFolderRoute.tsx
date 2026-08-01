@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { buildPublicLearningResourceStructuredData } from "@/components/seo/publicLearningResourceStructuredData";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 import Folder from "./Folder";
 
 interface PublicFolderMetadata {

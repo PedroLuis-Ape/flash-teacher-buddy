@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createDedupingFetch } from "./dedupFetch";
+import { createDedupingFetch, createSessionFreeDedupingFetch } from "./dedupFetch";
 
 const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), {
   status: 200,
@@ -185,6 +185,44 @@ describe("createDedupingFetch", () => {
 
     expect(await response.json()).toEqual([{ id: "card-after-refresh" }]);
     expect(seenAuthorization).toEqual(["Bearer token-one", "Bearer token-two"]);
+  });
+
+  it("keeps a session-free public retry on its original anonymous authorization", async () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+      clear: () => storage.clear(),
+      key: (index: number) => Array.from(storage.keys())[index] ?? null,
+      get length() { return storage.size; },
+    });
+    storage.set("sb-project-auth-token", JSON.stringify({
+      access_token: "private-token",
+      expires_at: Math.floor(Date.now() / 1_000) + 3_600,
+    }));
+
+    const seenAuthorization: Array<string | null> = [];
+    let calls = 0;
+    const baseFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = requestFrom(input, init);
+      seenAuthorization.push(request.headers.get("authorization"));
+      calls += 1;
+      return calls === 1 ? jsonResponse([]) : jsonResponse([{ id: "public-card" }]);
+    }) as unknown as typeof fetch;
+    const wrapped = createSessionFreeDedupingFetch(baseFetch);
+
+    const response = await wrapped(
+      "https://project.supabase.co/rest/v1/rpc/get_portal_flashcards",
+      {
+        method: "POST",
+        headers: { authorization: "Bearer anon-key", "content-type": "application/json" },
+        body: JSON.stringify({ _list_id: "list-public" }),
+      },
+    );
+
+    expect(await response.json()).toEqual([{ id: "public-card" }]);
+    expect(seenAuthorization).toEqual(["Bearer anon-key", "Bearer anon-key"]);
   });
 
   it("does not share in-flight flashcard reads between separate study launches", async () => {
