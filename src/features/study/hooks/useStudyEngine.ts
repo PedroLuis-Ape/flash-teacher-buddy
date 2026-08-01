@@ -42,6 +42,11 @@ import {
   buildStudySessionSettingsSnapshot,
   type StudySessionContextInput,
 } from "@/features/study/lib/studySessionContext";
+import {
+  createStudyProgressOperationId,
+  recordStudyProgressAttempt,
+  type StudyProgressAttempt,
+} from "@/features/study/lib/studyProgressRepository";
 import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
@@ -91,6 +96,10 @@ interface FlashcardWithProgress {
   incorrectCount: number;
   lastReviewed: string | null;
 }
+
+type PendingProgressEntry = Required<StudyProgressAttempt> & {
+  timestamp: number;
+};
 
 function buildStudyProgressSnapshot(input: {
   sessionId: string | null;
@@ -198,9 +207,9 @@ export function useStudyEngine(
   const initializationAbortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
   const saveProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const progressBufferRef = useRef<Map<string, { correct: boolean; timestamp: number }>>(new Map());
+  const progressBufferRef = useRef<PendingProgressEntry[]>([]);
   const flushProgressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastFlushRef = useRef<number>(0);
+  const progressFlushInFlightRef = useRef<Promise<void> | null>(null);
   const authUserIdRef = useRef<string | null>(userScope ?? null);
   const completionInFlightRef = useRef(false);
   const restartInFlightRef = useRef(false);
@@ -1242,109 +1251,54 @@ export function useStudyEngine(
 
   // Flush buffered progress to database
   const flushProgressBuffer = useCallback(async () => {
-    if (progressBufferRef.current.size === 0) return;
-    if (!listId) return;
-
+    if (progressFlushInFlightRef.current) {
+      await progressFlushInFlightRef.current;
+      return;
+    }
     const userId = authUserIdRef.current;
-    if (!userId) return;
+    if (!listId || !userId || progressBufferRef.current.length === 0) return;
 
-    const entries = Array.from(progressBufferRef.current.entries());
-    // Release the buffer for new answers while this batch is in flight. The
-    // entries are requeued below unless the remote write confirms success.
-    progressBufferRef.current.clear();
-
+    const entries = progressBufferRef.current.splice(0);
+    const flush = (async () => {
+      const groupedEntries = new Map<string, Array<{ entry: PendingProgressEntry; index: number }>>();
+      entries.forEach((entry, index) => {
+        const key = `${entry.userId}:${entry.flashcardId}`;
+        const group = groupedEntries.get(key) ?? [];
+        group.push({ entry, index });
+        groupedEntries.set(key, group);
+      });
+      const outcomes: Array<PromiseSettledResult<unknown> | undefined> = new Array(entries.length);
+      await Promise.all(Array.from(groupedEntries.values()).map(async (group) => {
+        for (const { entry, index } of group) {
+          try {
+            outcomes[index] = {
+              status: "fulfilled",
+              value: await recordStudyProgressAttempt(entry),
+            };
+          } catch (reason) {
+            outcomes[index] = { status: "rejected", reason };
+          }
+        }
+      }));
+      const failedEntries = entries.filter((_, index) => outcomes[index]?.status === "rejected");
+      if (failedEntries.length > 0) {
+        progressBufferRef.current = [...failedEntries, ...progressBufferRef.current];
+        const firstFailure = outcomes.find(
+          (outcome): outcome is PromiseRejectedResult => outcome?.status === "rejected",
+        );
+        console.warn(
+          "[StudyEngine] Progresso remoto pendente após falha:",
+          firstFailure?.reason,
+        );
+      }
+    })();
+    progressFlushInFlightRef.current = flush;
     try {
-      lastFlushRef.current = Date.now();
-
-      // Fetch existing progress for all cards in batch
-      const flashcardIds = entries.map(([id]) => id);
-      const readController = new AbortController();
-      const { data: existingProgress, error: readError } = await withStudyRuntimeTimeout(
-        supabase
-          .from('flashcard_progress')
-          .select('id, flashcard_id, correct_count, incorrect_count')
-          .eq('user_id', userId)
-          .in('flashcard_id', flashcardIds)
-          .abortSignal(readController.signal),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        'progress-flush-read',
-        () => readController.abort(),
-      );
-      if (readError) throw readError;
-
-      const existingMap = new Map(
-        (existingProgress || []).map(p => [p.flashcard_id, p])
-      );
-
-      // Build a single upsert array — no sequential loops
-      const upsertRecords: any[] = [];
-
-      for (const [flashcardId, { correct }] of entries) {
-        const existing = existingMap.get(flashcardId);
-        if (existing) {
-          upsertRecords.push({
-            id: existing.id,
-            user_id: userId,
-            flashcard_id: flashcardId,
-            list_id: listId,
-            correct_count: correct ? existing.correct_count + 1 : existing.correct_count,
-            incorrect_count: !correct ? existing.incorrect_count + 1 : existing.incorrect_count,
-            last_reviewed: new Date().toISOString(),
-          });
-        } else {
-          upsertRecords.push({
-            user_id: userId,
-            flashcard_id: flashcardId,
-            list_id: listId,
-            correct_count: correct ? 1 : 0,
-            incorrect_count: !correct ? 1 : 0,
-            last_reviewed: new Date().toISOString(),
-          });
-        }
+      await flush;
+    } finally {
+      if (progressFlushInFlightRef.current === flush) {
+        progressFlushInFlightRef.current = null;
       }
-
-      if (upsertRecords.length > 0) {
-        try {
-          const writeController = new AbortController();
-          const { data: writtenProgress, error } = await withStudyRuntimeTimeout(
-            supabase
-              .from('flashcard_progress')
-              // The schema's idempotency key is user_id + flashcard_id. The
-              // row UUID is an implementation detail and is not a safe
-              // conflict target for retries that race with another device.
-              .upsert(upsertRecords, { onConflict: 'user_id,flashcard_id' })
-              .select('id')
-              .abortSignal(writeController.signal),
-            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-            'progress-flush-write',
-            () => writeController.abort(),
-          );
-          if (error) throw error;
-          if (!writtenProgress || writtenProgress.length !== upsertRecords.length) {
-            throw new Error('progress-flush-write-unconfirmed');
-          }
-        } catch (err) {
-          for (const [cardId, entry] of entries) {
-            const current = progressBufferRef.current.get(cardId);
-            if (!current || current.timestamp < entry.timestamp) {
-              progressBufferRef.current.set(cardId, entry);
-            }
-          }
-          console.warn('[StudyEngine] Progresso remoto pendente após falha:', err);
-        }
-      }
-
-      // (inserts already included in upsert above)
-    } catch (error) {
-      // A failed/timeout batch remains pending. Newer entries for the same
-      // card win, so a late failure can never overwrite a newer local answer.
-      for (const [cardId, entry] of entries) {
-        const current = progressBufferRef.current.get(cardId);
-        if (!current || current.timestamp < entry.timestamp) {
-          progressBufferRef.current.set(cardId, entry);
-        }
-      }
-      console.warn('[StudyEngine] Progresso remoto pendente após falha:', error);
     }
   }, [listId]);
 
@@ -1359,8 +1313,8 @@ export function useStudyEngine(
     }
 
     // Flush immediately if buffer is large enough
-    if (progressBufferRef.current.size >= FLUSH_CARD_THRESHOLD) {
-      flushProgressBuffer();
+    if (progressBufferRef.current.length >= FLUSH_CARD_THRESHOLD) {
+      void flushProgressBuffer();
       return;
     }
 
@@ -1477,7 +1431,16 @@ export function useStudyEngine(
     trackListStudied(listId);
 
     // Buffer the progress update instead of writing immediately
-    progressBufferRef.current.set(flashcardId, { correct, timestamp: Date.now() });
+    const progressUserId = authUserIdRef.current;
+    if (!progressUserId) return;
+    progressBufferRef.current.push({
+      userId: progressUserId,
+      flashcardId,
+      listId,
+      correct,
+      operationId: createStudyProgressOperationId(),
+      timestamp: Date.now(),
+    });
     scheduleFlush();
 
     // Update turma activity (debounced internally)
@@ -2058,7 +2021,6 @@ export function useStudyEngine(
 
   // Cleanup: flush progress buffer and turma activity on unmount
   useEffect(() => {
-    const pendingProgress = progressBufferRef.current;
     return () => {
       // Clear scheduled flush
       if (flushProgressTimeoutRef.current) {
@@ -2068,8 +2030,8 @@ export function useStudyEngine(
         clearTimeout(saveProgressTimeoutRef.current);
       }
       // Flush any remaining buffered progress
-      if (pendingProgress.size > 0) {
-        flushProgressBuffer();
+      if (progressBufferRef.current.length > 0) {
+        void flushProgressBuffer();
       }
       // Flush turma activity
       flushActivity();

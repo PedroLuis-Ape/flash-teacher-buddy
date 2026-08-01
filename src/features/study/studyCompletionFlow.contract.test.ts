@@ -30,7 +30,10 @@ describe("study completion flow", () => {
     expect(engine).toContain("const restartSession = useCallback(async");
     expect(engine).toContain("fresh-close-previous-session");
     expect(engine).toContain("restart-close-previous-session-unconfirmed");
-    expect(engine).toContain("onConflict: 'user_id,flashcard_id'");
+    expect(engine).toContain("recordStudyProgressAttempt");
+    const progressRepository = read("src/features/study/lib/studyProgressRepository.ts");
+    expect(progressRepository).toContain("record_flashcard_progress_v1");
+    expect(progressRepository).toContain("study-progress-fallback-update-unconfirmed");
     expect(engine).toContain("discardSession");
     expect(engine).not.toContain("if (!isAuthenticated) return;");
   });

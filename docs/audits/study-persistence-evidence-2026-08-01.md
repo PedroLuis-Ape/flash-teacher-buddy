@@ -52,8 +52,8 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 | 21 | Nenhuma sessão é criada com `cards_order` vazio | Evidenciado no engine | precisa confirmação no banco autorizado. |
 | 22 | Precedência e responsabilidades estão documentadas | Evidenciado | relatório principal e este mapa. |
 | 23 | Sem retry/spinner infinito, restart silencioso ou DOM frágil | Parcial | watchdogs e recovery; teste manual mobile/slow pending. |
-| 24 | Último card/respondida não é perdido por debounce | Parcial | flush imediato/confirmado no engine; Misto ainda depende do timer + RPC. |
-| 25 | Sem duplicação paralela de persistência | Parcial | Misto permanece adapter próprio até convergência com engine comum. |
+| 24 | Último card/respondida não é perdido por debounce | Parcial | `persistNow` cancela o timer e confirma o snapshot local/remoto na saída do Misto; fluxo real em sete modos ainda pendente. |
+| 25 | Sem duplicação paralela de persistência | Parcial | writer compartilhado serializa tentativas do mesmo card e usa `operation_id`; fallback sem RPC ainda é somente compatibilidade. |
 | 26 | Desktop/mobile, offline, reload, close/reopen, auth, público/privado | Pendente | requer matriz manual autorizada. |
 | 27 | Sete modos percorrem boot, primeiro card, resposta e saída | Pendente | cobertura unitária parcial; E2E real não executado. |
 | 28 | Auditoria, causa-raiz, testes, rollback e evidências | Evidenciado | relatórios, migrations aditivas, testes e PR. |
@@ -69,6 +69,8 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 - timers de persistência do Misto têm geração e não podem disparar depois que a identidade ativa mudou.
 - novo RPC aditivo `record_flashcard_progress_v1` usa evento deduplicado e `ON CONFLICT` atômico; enquanto não aplicado, há fallback confirmado e limitado.
 - nova migration de identidade corrige o trigger e transfere o status para o UUID retornado no unmerge.
+- `recordStudyProgressAttempt` virou o writer compartilhado de progresso para `Study` e `MixedStudy`; preserva cada tentativa, serializa o mesmo card durante um flush e confirma a escrita antes de removê-la do buffer.
+- `MixedStudy.persistNow` foi exposto pelo hook adaptativo e é aguardado na saída, mantendo snapshot local durável mesmo quando a confirmação remota expira.
 
 ## Limitações e rollout seguro
 
@@ -81,10 +83,13 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 ## Evidência local desta etapa
 
 - TypeScript: passou via runtime Node empacotado (`tsc --noEmit`).
-- Testes direcionados: 4 arquivos, 23 testes passaram.
+- Testes direcionados: 3 arquivos, 26 testes passaram.
+- Suíte completa: 203 arquivos, 1.217 testes passaram.
+- ESLint: 0 erros e 68 warnings preexistentes.
+- Build Vite de produção: passou, 3.894 módulos transformados; warnings existentes de CSS/chunks grandes permanecem.
 - `git diff --check`: passou.
 - O arquivo gerado `supabase/functions/mcp/index.ts` foi restaurado ao estado rastreado e não faz parte do diff.
 
 ## Próxima etapa autorizada
 
-Executar a suíte completa local, revisar o diff e atualizar o PR. A aplicação das migrations, regeneração de tipos e testes reais de RLS/continuidade exigem revisão operacional e não devem ser automatizados por este agente.
+Revisar e publicar este PR pela Lovable após aprovação. A aplicação das migrations, regeneração de tipos e testes reais de RLS/continuidade exigem revisão operacional e não devem ser automatizados por este agente.

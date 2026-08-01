@@ -50,6 +50,8 @@ export function useAdaptiveMixedSession({
   const initializedSignatureRef = useRef("");
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistGenerationRef = useRef(0);
+  const latestStateRef = useRef<AdaptiveMixedSessionState | null>(null);
+  const persistInFlightRef = useRef<Promise<void> | null>(null);
 
   // A timer from a previous list/user/mode must not call the current remote
   // writer after navigation. The in-memory state can change immediately, but
@@ -81,8 +83,29 @@ export function useAdaptiveMixedSession({
     setState(next);
   }, [cardIds, flowMode, initializationSignature, remoteLoaded, remoteState, storageKey, random, weightByCardId]);
 
+  const persistNow = useCallback(async () => {
+    if (!onPersist || !latestStateRef.current) return;
+    if (persistTimeoutRef.current) {
+      clearTimeout(persistTimeoutRef.current);
+      persistTimeoutRef.current = null;
+    }
+    if (persistInFlightRef.current) {
+      await persistInFlightRef.current;
+      return;
+    }
+
+    const request = Promise.resolve(onPersist(latestStateRef.current));
+    persistInFlightRef.current = request;
+    try {
+      await request;
+    } finally {
+      if (persistInFlightRef.current === request) persistInFlightRef.current = null;
+    }
+  }, [onPersist]);
+
   useEffect(() => {
     if (!state) return;
+    latestStateRef.current = state;
     try {
       localStorage.setItem(storageKey, JSON.stringify(state));
     } catch {
@@ -94,7 +117,7 @@ export function useAdaptiveMixedSession({
     const generation = persistGenerationRef.current;
     persistTimeoutRef.current = setTimeout(() => {
       if (generation !== persistGenerationRef.current) return;
-      void Promise.resolve(onPersist(state)).catch((error) => {
+      void persistNow().catch((error) => {
         // Local persistence already succeeded; keep the in-memory session
         // usable while exposing the remote failure to diagnostics.
         console.warn("[MixedStudy] Falha ao sincronizar a sessão:", error);
@@ -104,7 +127,7 @@ export function useAdaptiveMixedSession({
     return () => {
       if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     };
-  }, [state, storageKey, onPersist]);
+  }, [onPersist, persistNow, state, storageKey]);
 
   const answer = useCallback((correct: boolean, skipped = false) => {
     setState((current) => current ? answerAdaptiveMixedCard(current, correct, skipped) : current);
@@ -144,6 +167,7 @@ export function useAdaptiveMixedSession({
     restartRound,
     nextRound,
     restartJourney,
+    persistNow,
     clearPersistedJourney,
   };
 }
