@@ -1,3 +1,9 @@
+import {
+  createTechnicalIncident,
+  logTechnicalIncident,
+  type TechnicalIncident,
+} from "@/lib/runtimeIncident";
+
 /**
  * Global error capture
  *
@@ -90,25 +96,24 @@ function trackFatalBurst() {
 let lastSaveAt = 0;
 const SAVE_THROTTLE_MS = 1000;
 
-function saveError(label: string, err: unknown) {
+function saveError(label: string, err: unknown): TechnicalIncident | null {
   const now = Date.now();
-  if (now - lastSaveAt < SAVE_THROTTLE_MS) return;
+  if (now - lastSaveAt < SAVE_THROTTLE_MS) return null;
   lastSaveAt = now;
+  const incident = createTechnicalIncident(err);
   try {
-    const msg = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack?.slice(0, 800) : "";
     localStorage.setItem(
       CRASH_KEY,
       JSON.stringify({
         label,
-        message: msg,
-        stack,
+        ...incident,
         time: now,
       })
     );
   } catch {
     // ignore storage failures
   }
+  return incident;
 }
 
 function classifyError(err: unknown): "chunk" | "network" | "render" {
@@ -165,8 +170,8 @@ window.addEventListener("error", (e) => {
   // Chunk/network errors são tratados por boundaries específicos — não
   // contam para o burst fatal e não viram crash persistido como fatal.
   if (kind === "chunk" || kind === "network") {
-    saveError(kind, err);
-    console.warn(`[ErrorCapture] ${kind} error (não fatal):`, err);
+    const incident = saveError(kind, err);
+    if (incident) logTechnicalIncident(`ErrorCapture:${kind}`, incident);
     return;
   }
 
@@ -176,7 +181,8 @@ window.addEventListener("error", (e) => {
     return;
   }
 
-  saveError("render", err);
+  const incident = saveError("render", err);
+  if (incident) logTechnicalIncident("ErrorCapture:render", incident);
 
   const isZombie = trackFatalBurst();
   if (isZombie) {
@@ -191,16 +197,15 @@ window.addEventListener("error", (e) => {
 // Promessas rejeitadas: NUNCA derrubam a UI. Filtramos ruído de rede.
 window.addEventListener("unhandledrejection", (e) => {
   if (isIgnorablePromiseRejection(e.reason)) {
-    console.warn("[ErrorCapture] Rejeição assíncrona ignorada (network/abort):", e.reason);
     return;
   }
   if (isDuplicate(e.reason)) return;
   const kind = classifyError(e.reason);
-  saveError(`unhandled_${kind}`, e.reason);
-  console.warn(`[ErrorCapture] Unhandled promise (${kind}):`, e.reason);
+  const incident = saveError(`unhandled_${kind}`, e.reason);
+  if (incident) logTechnicalIncident(`ErrorCapture:unhandled_${kind}`, incident);
 });
 
-export function getLastCrash(): { label: string; message: string; time: number } | null {
+export function getLastCrash(): (TechnicalIncident & { label: string; time: number }) | null {
   try {
     const raw = localStorage.getItem(CRASH_KEY);
     if (!raw) return null;

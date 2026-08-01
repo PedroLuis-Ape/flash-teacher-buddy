@@ -8,7 +8,7 @@ describe("AuthContext hydration contract", () => {
     const initialSessionBranch = authSource.indexOf('if (event === "INITIAL_SESSION")');
     const nextSessionBranch = authSource.indexOf("if (nextSession)", initialSessionBranch);
     const initializingTransition = authSource.indexOf('setStatus("initializing")', initialSessionBranch);
-    const getSessionCall = authSource.indexOf(".getSession()");
+    const getSessionCall = authSource.indexOf("getSessionWithTimeout(supabase)");
 
     expect(initialSessionBranch).toBeGreaterThan(-1);
     expect(initializingTransition).toBeGreaterThan(initialSessionBranch);

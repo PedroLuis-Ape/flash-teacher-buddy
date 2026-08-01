@@ -68,3 +68,13 @@ O agente deve parar e preparar um PR para revisão quando ocorrer qualquer uma d
 - Rejeite claims promocionais sem fonte e recursos planejados apresentados como existentes.
 - Rejeite qualquer fallback que invente professor, material, contagem ou publicação.
 - Verifique que falhas de descoberta continuem visíveis e diagnosticáveis.
+
+## Preview Safety Gate permanente
+
+- A última versão verde de `main` é a referência LKG do frontend.
+- Toda alteração de bootstrap, roteamento, configuração, autenticação ou dependência deve passar por `npm run preview:smoke` antes de publicação.
+- A rota `/__preview-health` deve continuar independente de Supabase, sessão, dados de usuário e chaves.
+- Falhas de configuração, bootstrap ou componente devem renderizar uma tela técnica recuperável com versão, build e identificador; nunca deixar o `#root` vazio.
+- Não mascarar falhas com dados fictícios, remoção silenciosa de conteúdo, limpeza automática de dados ou troca de projeto Supabase.
+- O CI deve usar instalação limpa pelo lockfile e executar o workflow `Preview Safety Gate`.
+- Publicação continua sendo responsabilidade exclusiva da Lovable; o agente prepara e valida o PR, mas não publica nem faz rollback remoto automaticamente.

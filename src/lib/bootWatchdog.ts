@@ -1,6 +1,7 @@
 const WATCHDOG_MS = 9000;
 const RECOVERY_VERSION = "2026-06-27-installed-pwa-reset-2";
 const RECOVERY_KEY = "ape_boot_recovery_version";
+const BOOT_INCIDENT_ID = `APE-BOOT-${Date.now().toString(36).toUpperCase()}`;
 
 type BootWindow = Window & {
   __apeBootComplete?: boolean;
@@ -50,8 +51,12 @@ function showStartupTimeout() {
   title.style.cssText = "font-size:20px;margin:0 0 10px";
 
   const text = document.createElement("p");
-  text.textContent = "Feche e abra o aplicativo novamente para carregar a versão mais recente.";
+  text.textContent = "O carregamento inicial não terminou. Seus dados não foram removidos.";
   text.style.cssText = "font-size:14px;line-height:1.5;color:#c9bed8;margin:0 0 18px";
+
+  const incident = document.createElement("p");
+  incident.textContent = `Identificador técnico: ${BOOT_INCIDENT_ID}`;
+  incident.style.cssText = "font-size:12px;color:#a996b9;margin:0 0 18px;word-break:break-word";
 
   const reload = document.createElement("button");
   reload.type = "button";
@@ -60,7 +65,14 @@ function showStartupTimeout() {
     "border:0;border-radius:12px;padding:12px 18px;background:#7c3aed;color:#fff;font-weight:700;cursor:pointer";
   reload.addEventListener("click", () => window.location.reload());
 
-  card.append(title, text, reload);
+  const home = document.createElement("button");
+  home.type = "button";
+  home.textContent = "Voltar ao início";
+  home.style.cssText =
+    "border:1px solid rgba(201,190,216,.35);border-radius:12px;padding:12px 18px;background:transparent;color:#fff;font-weight:700;cursor:pointer;margin-left:8px";
+  home.addEventListener("click", () => window.location.assign("/landing"));
+
+  card.append(title, text, incident, reload, home);
   container.append(card);
   root.replaceChildren(container);
 }
@@ -80,8 +92,8 @@ async function cleanLegacyRuntimeOnce() {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.allSettled(registrations.map((registration) => registration.unregister()));
     }
-  } catch (error) {
-    console.warn("[BootWatchdog] Service worker cleanup failed.", error);
+  } catch {
+    console.warn("[BootWatchdog] Service worker cleanup failed.");
   }
 
   try {
@@ -89,8 +101,8 @@ async function cleanLegacyRuntimeOnce() {
       const names = await window.caches.keys();
       await Promise.allSettled(names.map((name) => window.caches.delete(name)));
     }
-  } catch (error) {
-    console.warn("[BootWatchdog] Cache cleanup failed.", error);
+  } catch {
+    console.warn("[BootWatchdog] Cache cleanup failed.");
   }
 }
 

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getSessionWithTimeout } from "@/lib/authHydration";
 
 /**
  * Read Supabase session from localStorage synchronously.
@@ -48,14 +49,20 @@ export function useAuthUser() {
   const { data, isLoading } = useQuery({
     queryKey: ["auth-user"],
     queryFn: async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session) return { user: null, session: null };
-      return { user: session.user, session };
+      try {
+        const { data: { session }, error } = await getSessionWithTimeout(supabase);
+        if (error || !session) return { user: null, session: null };
+        return { user: session.user, session };
+      } catch {
+        // AuthProvider owns the visible hydration error. This passive cache
+        // must not retry forever or turn a transient outage into a blank UI.
+        return { user: null, session: null };
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: false,
     // Provide synchronous initial data from localStorage so isLoading starts as false
     ...(optimistic ? { initialData: optimistic } : {}),
     // When AuthProvider is mounted (status !== 'initializing'), we don't
