@@ -2193,10 +2193,6 @@ export type Database = {
           id: string
           list_id: string
           mode: string
-          schema_version: number
-          session_scope_key: string | null
-          settings_snapshot: Json | null
-          session_snapshot: Json | null
           updated_at: string
           user_id: string
         }
@@ -2208,10 +2204,6 @@ export type Database = {
           id?: string
           list_id: string
           mode: string
-          schema_version?: number
-          session_scope_key?: string | null
-          settings_snapshot?: Json | null
-          session_snapshot?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -2223,10 +2215,6 @@ export type Database = {
           id?: string
           list_id?: string
           mode?: string
-          schema_version?: number
-          session_scope_key?: string | null
-          settings_snapshot?: Json | null
-          session_snapshot?: Json | null
           updated_at?: string
           user_id?: string
         }
@@ -2445,102 +2433,30 @@ export type Database = {
         Row: {
           ativo: boolean
           id: string
-          initiated_by: string | null
           joined_at: string
           role: Database["public"]["Enums"]["turma_role"]
-          invited_at: string | null
-          requested_at: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          status: string
           turma_id: string
-          updated_at: string
           user_id: string
         }
         Insert: {
           ativo?: boolean
           id?: string
-          initiated_by?: string | null
           joined_at?: string
           role?: Database["public"]["Enums"]["turma_role"]
-          invited_at?: string | null
-          requested_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: string
           turma_id: string
-          updated_at?: string
           user_id: string
         }
         Update: {
           ativo?: boolean
           id?: string
-          initiated_by?: string | null
           joined_at?: string
           role?: Database["public"]["Enums"]["turma_role"]
-          invited_at?: string | null
-          requested_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          status?: string
           turma_id?: string
-          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "turma_membros_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      turma_membership_events: {
-        Row: {
-          action: string
-          actor_id: string
-          created_at: string
-          from_status: string | null
-          id: string
-          membership_id: string | null
-          to_status: string
-          turma_id: string
-          user_id: string
-        }
-        Insert: {
-          action: string
-          actor_id: string
-          created_at?: string
-          from_status?: string | null
-          id?: string
-          membership_id?: string | null
-          to_status: string
-          turma_id: string
-          user_id: string
-        }
-        Update: {
-          action?: string
-          actor_id?: string
-          created_at?: string
-          from_status?: string | null
-          id?: string
-          membership_id?: string | null
-          to_status?: string
-          turma_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "turma_membership_events_membership_id_fkey"
-            columns: ["membership_id"]
-            isOneToOne: false
-            referencedRelation: "turma_membros"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "turma_membership_events_turma_id_fkey"
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "turmas"
@@ -2916,9 +2832,6 @@ export type Database = {
           play_side: string | null
           scope: string | null
           study_flow_mode: string | null
-          write_activity_mode: string | null
-          write_rewrite_side: string | null
-          write_correction_mode: string | null
           updated_at: string
           user_id: string
         }
@@ -2933,9 +2846,6 @@ export type Database = {
           play_side?: string | null
           scope?: string | null
           study_flow_mode?: string | null
-          write_activity_mode?: string | null
-          write_rewrite_side?: string | null
-          write_correction_mode?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2950,9 +2860,6 @@ export type Database = {
           play_side?: string | null
           scope?: string | null
           study_flow_mode?: string | null
-          write_activity_mode?: string | null
-          write_rewrite_side?: string | null
-          write_correction_mode?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -3069,9 +2976,6 @@ export type Database = {
           play_side: string
           scope: string
           study_flow_mode: string
-          write_activity_mode: string
-          write_rewrite_side: string
-          write_correction_mode: string
           updated_at: string
           user_id: string
         }
@@ -3085,9 +2989,6 @@ export type Database = {
           play_side?: string
           scope?: string
           study_flow_mode?: string
-          write_activity_mode?: string
-          write_rewrite_side?: string
-          write_correction_mode?: string
           updated_at?: string
           user_id: string
         }
@@ -3101,9 +3002,6 @@ export type Database = {
           play_side?: string
           scope?: string
           study_flow_mode?: string
-          write_activity_mode?: string
-          write_rewrite_side?: string
-          write_correction_mode?: string
           updated_at?: string
           user_id?: string
         }
@@ -3231,6 +3129,10 @@ export type Database = {
         Args: { p_conflict_mode?: string; p_items: Json }
         Returns: Json
       }
+      apply_super_import_duplicate_replacements_v1: {
+        Args: { _batch_id: string; _payload: Json }
+        Returns: number
+      }
       bulk_soft_delete_folders: {
         Args: { p_folder_ids: string[]; p_user_id: string }
         Returns: Json
@@ -3255,19 +3157,6 @@ export type Database = {
       can_read_folder_glossary_v1: {
         Args: { _folder_id: string; _user_id?: string }
         Returns: boolean
-      }
-      claim_study_session_v1: {
-        Args: {
-          p_cards_order: Json
-          p_current_index: number
-          p_list_id: string
-          p_mode: string
-          p_schema_version: number
-          p_session_scope_key: string
-          p_session_snapshot: Json
-          p_settings_snapshot: Json
-        }
-        Returns: Json
       }
       check_message_rate_limit: {
         Args: { _thread_key: string; _user_id: string }
@@ -3369,6 +3258,7 @@ export type Database = {
           translation: string
         }[]
       }
+      get_import_capabilities_v1: { Args: never; Returns: Json }
       get_kingdom_activities: {
         Args: { _kingdom_code: string }
         Returns: {
@@ -3665,42 +3555,12 @@ export type Database = {
         Args: { _days?: number; _turma_id: string }
         Returns: Json
       }
-      get_turma_access_v1: {
-        Args: { p_turma_id: string }
-        Returns: {
-          is_public: boolean
-          membership_status: string
-          nome: string
-          owner_teacher_id: string
-          turma_id: string
-        }[]
-      }
-      list_my_turma_memberships_v1: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          descricao: string | null
-          is_public: boolean
-          membership_id: string
-          nome: string
-          status: string
-          turma_id: string
-          updated_at: string
-        }[]
-      }
-      add_students_to_turma_by_public_id_v1: {
-        Args: { p_public_ids: string[]; p_turma_id: string }
-        Returns: Json
-      }
       get_user_card_counts: {
         Args: { _institution_id?: string; _user_id: string }
         Returns: {
           card_count: number
           list_id: string
         }[]
-      }
-      add_students_to_turma_v1: {
-        Args: { p_student_ids: string[]; p_turma_id: string }
-        Returns: Json
       }
       global_import_json_has_forbidden_key: {
         Args: { _value: Json }
@@ -3717,6 +3577,16 @@ export type Database = {
         Args: { _dry_run?: boolean; _entries: Json }
         Returns: Json
       }
+      import_app_piteco_super_package_current: {
+        Args: {
+          _card_conflict?: string
+          _destination_plan: Json
+          _institution_id?: string
+          _payload: Json
+          _request_id: string
+        }
+        Returns: Json
+      }
       import_app_piteco_super_package_to_class_v1: {
         Args: {
           _card_conflict?: string
@@ -3728,6 +3598,26 @@ export type Database = {
         Returns: Json
       }
       import_app_piteco_super_package_v1: {
+        Args: {
+          _card_conflict?: string
+          _destination_plan: Json
+          _institution_id?: string
+          _payload: Json
+          _request_id: string
+        }
+        Returns: Json
+      }
+      import_app_piteco_super_package_v2: {
+        Args: {
+          _card_conflict?: string
+          _destination_plan: Json
+          _institution_id?: string
+          _payload: Json
+          _request_id: string
+        }
+        Returns: Json
+      }
+      import_app_piteco_super_package_v3: {
         Args: {
           _card_conflict?: string
           _destination_plan: Json
@@ -3788,6 +3678,17 @@ export type Database = {
         }
         Returns: Json
       }
+      import_smart_list_content_v2_legacy: {
+        Args: {
+          _batch_id?: string
+          _card_conflict?: string
+          _list: Json
+          _list_id: string
+          _list_path?: string
+          _uid: string
+        }
+        Returns: Json
+      }
       init_public_id: { Args: { p_user_id: string }; Returns: Json }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
@@ -3809,35 +3710,6 @@ export type Database = {
       is_turma_owner: {
         Args: { _turma_id: string; _user_id: string }
         Returns: boolean
-      }
-      search_turma_people_v1: {
-        Args: {
-          p_kind: string
-          p_limit?: number
-          p_offset?: number
-          p_query?: string
-          p_turma_id?: string
-        }
-        Returns: {
-          avatar_url: string
-          display_name: string
-          is_teacher: boolean
-          membership_status: string
-          public_id: string
-          username: string
-        }[]
-      }
-      transition_turma_membership_public_v1: {
-        Args: { p_action: string; p_target_public_id: string; p_turma_id: string }
-        Returns: Json
-      }
-      transition_turma_membership_v1: {
-        Args: {
-          p_action: string
-          p_target_user_id?: string
-          p_turma_id: string
-        }
-        Returns: Json
       }
       merge_cards_into_layers: {
         Args: { _card_ids: string[]; _list_id: string; _title: string }
@@ -3941,6 +3813,10 @@ export type Database = {
         Returns: Json
       }
       reorder_public_turmas: { Args: { _ordered_ids: string[] }; Returns: Json }
+      replace_super_import_skipped_card_v1: {
+        Args: { _batch_id: string; _card: Json; _item_path: string }
+        Returns: boolean
+      }
       restore_flashcard: {
         Args: { p_flashcard_id: string; p_user_id: string }
         Returns: Json
@@ -3952,6 +3828,10 @@ export type Database = {
       restore_list: {
         Args: { p_list_id: string; p_user_id: string }
         Returns: Json
+      }
+      restore_super_import_updated_cards_v1: {
+        Args: { _batch_id: string }
+        Returns: number
       }
       save_layered_card_group_v2: {
         Args: {
@@ -4015,15 +3895,6 @@ export type Database = {
         }
         Returns: Json
       }
-      record_flashcard_progress_v1: {
-        Args: {
-          p_correct: boolean
-          p_flashcard_id: string
-          p_list_id: string
-          p_operation_id: string
-        }
-        Returns: Json
-      }
       set_flashcard_group_status: {
         Args: {
           p_is_favorite: boolean
@@ -4075,6 +3946,7 @@ export type Database = {
         Returns: undefined
       }
       undo_global_import_v1: { Args: { _batch_id: string }; Returns: Json }
+      undo_global_import_v2: { Args: { _batch_id: string }; Returns: undefined }
       unmerge_flashcard_from_group: {
         Args: { p_card_id: string }
         Returns: Json
