@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 // Shared lang-label resolver for all language fallbacks
 import { getLangLabel } from "@/features/study/lib/resolveStudySides";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { useQuery } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useListAttention, useToggleListAttention } from "@/hooks/useListAttention";
 import { ListMarkerButtons } from "@/features/study/components/ListMarkerButtons";
 import { sortListsWithFavoritesFirst } from "@/features/study/lib/listMarkers";
+import { getFolderListGamesPath } from "./folderNavigation";
 
 interface ListType {
   id: string;
@@ -51,8 +52,10 @@ interface FolderType {
 }
 
 const Folder = () => {
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
+  const isPublicPortal = pathname.startsWith("/portal/");
   const [folder, setFolder] = useState<FolderType | null>(null);
   const [lists, setLists] = useState<ListType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,13 +111,13 @@ const Folder = () => {
     
     loadFolder();
     loadLists();
-  }, [id]);
+  }, [id, isPublicPortal]);
 
   const loadFolder = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (session) {
+      if (session && !isPublicPortal) {
         // First try direct query (works for owners due to RLS)
         const { data: directData, error: directError } = await supabase
           .from("folders")
@@ -216,7 +219,7 @@ const Folder = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       // Read every RPC page instead of accepting PostgREST's 1,000-row cap.
-      if (session) {
+      if (session && !isPublicPortal) {
         const data = await fetchAllSupabaseRows<ListType>((from, to) =>
           (supabase as any)
             .rpc('get_lists_with_card_counts', { _folder_id: id })
@@ -914,7 +917,7 @@ const Folder = () => {
                         if (selectionMode) {
                           toggleListSelection(list.id);
                         } else {
-                          navigate(`/list/${list.id}/games`);
+                          navigate(getFolderListGamesPath(list.id, isPublicPortal));
                         }
                       }}
                       className={`w-full text-left cursor-pointer ${isSelected ? 'ring-2 ring-primary rounded-lg' : ''}`}
