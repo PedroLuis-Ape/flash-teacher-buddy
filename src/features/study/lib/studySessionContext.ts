@@ -3,6 +3,7 @@ import type {
   StudyFlowModePreset,
   StudyModePreset,
   StudyOrderPreset,
+  StudyPresetOverride,
   StudyScopePreset,
   StudyWriteActivityModePreset,
   StudyWriteCorrectionModePreset,
@@ -85,4 +86,28 @@ export function isStudySessionSettingsSnapshot(value: unknown): value is StudySe
     && typeof row.fastMode === "boolean"
     && (row.direction === "a-b" || row.direction === "b-a" || row.direction === "any")
     && (row.studyFlowMode === "mastery_rounds" || row.studyFlowMode === "continuous");
+}
+
+/**
+ * Converts a durable session snapshot into ephemeral preference overrides.
+ *
+ * A resumed session must win over the current preset, but restoring it must
+ * not rewrite the user's saved list/global preset. Callers therefore apply
+ * this result through the preference hook's session-override channel.
+ */
+export function studySessionSettingsToPresetOverride(
+  value: unknown,
+): StudyPresetOverride | null {
+  if (!isStudySessionSettingsSnapshot(value)) return null;
+
+  return {
+    direction: value.direction,
+    order: value.order,
+    scope: value.subset,
+    fastMode: value.fastMode,
+    studyFlowMode: value.studyFlowMode,
+    ...(value.writeActivityMode ? { writeActivityMode: value.writeActivityMode } : {}),
+    ...(value.writeRewriteSide ? { writeRewriteSide: value.writeRewriteSide } : {}),
+    ...(value.writeCorrectionMode ? { writeCorrectionMode: value.writeCorrectionMode } : {}),
+  };
 }

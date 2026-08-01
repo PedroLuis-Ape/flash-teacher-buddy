@@ -41,6 +41,8 @@ import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
+  studySessionSettingsToPresetOverride,
+  type StudySessionSettingsSnapshot,
   type StudySessionContextInput,
 } from "@/features/study/lib/studySessionContext";
 import {
@@ -214,6 +216,8 @@ export function useStudyEngine(
   sessionContextOverrides: Partial<StudySessionContextInput> = {},
   /** The page has authoritatively finished loading the deck and preset. */
   deckReady: boolean = true,
+  /** Applies a restored session snapshot without mutating the saved preset. */
+  onSessionSettingsRestored?: (settings: StudySessionSettingsSnapshot) => void,
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -260,6 +264,7 @@ export function useStudyEngine(
   const masteryAnswerGuardRef = useRef<{ session: MasterySessionState; key: string } | null>(null);
   const masteryRoundStartGuardRef = useRef<MasterySessionState | null>(null);
   const sessionLayerRef = useRef<StudySessionLayerSnapshot | undefined>(undefined);
+  const restoredSettingsIdentityRef = useRef<string | null>(null);
 
   // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -328,6 +333,30 @@ export function useStudyEngine(
     () => buildStudySessionSettingsSnapshot(sessionContext),
     [sessionContext],
   );
+
+  const applyRestoredSessionSettings = useCallback((session: {
+    id?: unknown;
+    updated_at?: unknown;
+    settings_snapshot?: unknown;
+  }) => {
+    const snapshot = session.settings_snapshot;
+    const overrides = studySessionSettingsToPresetOverride(snapshot);
+    if (!overrides || typeof snapshot !== "object" || snapshot === null) return;
+
+    const identity = `${String(session.id ?? "unknown")}:${String(session.updated_at ?? "")}:${JSON.stringify(overrides)}`;
+    if (restoredSettingsIdentityRef.current === identity) return;
+    restoredSettingsIdentityRef.current = identity;
+
+    const typedSnapshot = snapshot as StudySessionSettingsSnapshot;
+    setGameSettings((current) => ({
+      ...current,
+      mode: overrides.order ?? current.mode,
+      subset: overrides.scope ?? current.subset,
+      fastMode: overrides.fastMode ?? current.fastMode,
+      redFocus: typedSnapshot.redFocus,
+    }));
+    onSessionSettingsRestored?.(typedSnapshot);
+  }, [onSessionSettingsRestored]);
 
   const sessionWriteIdentity = `${userScope ?? "anon"}:${listId ?? "no-list"}:${mode}:${sessionScopeKey}`;
   useEffect(() => {
@@ -586,7 +615,7 @@ export function useStudyEngine(
           const { data: remoteSessions } = await withStudyRuntimeTimeout(
             supabase
               .from("study_sessions")
-              .select("id,session_scope_key,session_snapshot")
+              .select("id,session_scope_key,session_snapshot,settings_snapshot,updated_at")
               .eq("user_id", userScope)
               .eq("list_id", listId)
               .eq("mode", mode)
@@ -604,10 +633,19 @@ export function useStudyEngine(
               scopeKey: candidate.session_scope_key as string | null,
               state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
               layer: sanitizeStudyLayerSnapshot(candidate.session_snapshot?.layer),
+              settingsSnapshot: candidate.settings_snapshot,
+              updatedAt: candidate.updated_at,
             }))
             .filter((candidate) => candidate.scopeKey === sessionScopeKey || candidate.scopeKey?.startsWith("study-session-v1:"))
             .sort((left, right) => Number(right.scopeKey === sessionScopeKey) - Number(left.scopeKey === sessionScopeKey))
             .find((candidate) => candidate.state);
+          if (remote) {
+            applyRestoredSessionSettings({
+              id: remote.id,
+              updated_at: remote.updatedAt,
+              settings_snapshot: remote.settingsSnapshot,
+            });
+          }
           if (remote?.layer) sessionLayerRef.current = remote.layer;
           if (!restored && remote?.state) {
             restored = remote.state;
@@ -805,6 +843,7 @@ export function useStudyEngine(
         const matchingSession = selectCurrentScopeSession(openSessions);
 
         if (matchingSession) {
+          applyRestoredSessionSettings(matchingSession);
           const remoteSnapshot = readRemoteStudySnapshot(matchingSession);
           const restoredSnapshot = chooseNewestStudySnapshot(
             localSnapshot,
@@ -1105,6 +1144,7 @@ export function useStudyEngine(
     studyFlowMode,
     studySnapshotKey,
     trackListOpened,
+    applyRestoredSessionSettings,
     userScope,
   ]);
 

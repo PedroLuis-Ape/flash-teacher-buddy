@@ -81,6 +81,16 @@ describe("resolveStudySessionReadiness", () => {
       }).phase).toBe("completed");
     }
   });
+
+  it("exposes cancellation separately from loading and failure", () => {
+    expect(resolveStudySessionReadiness({
+      ...readyInput,
+      cancelled: true,
+    })).toMatchObject({
+      phase: "cancelled",
+      reason: "request-cancelled",
+    });
+  });
 });
 
 describe("resolveStudyAnswerIdentity", () => {

@@ -39,7 +39,7 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 | 8 | Preset individual de cada modo | Evidenciado | `gameMode` no modelo e cache. |
 | 9 | Configurações específicas não contaminam outro modo | Parcial | tipagem/escopo corrigidos; matriz manual dos sete modos pendente. |
 | 10 | Nova lista usa preset do modo | Parcial | resolver implementado; prova em outro dispositivo pendente. |
-| 11 | Sessão restaura settings, rodada, filtros, resultados e camada | Parcial | snapshots v2/adaptive e camada remota; banco aplicado pendente. |
+| 11 | Sessão restaura settings, rodada, filtros, resultados e camada | Parcial | `settings_snapshot` agora é reaplicado por overrides efêmeros em Study e Misto; snapshots v2/adaptive e camada remota estão cobertos no código, mas o banco aplicado e o E2E autorizado continuam pendentes. |
 | 12 | Identidade de sessão inclui usuário e lista | Evidenciado no código | chaves e filtros; autenticação real pendente. |
 | 13 | Isolamento entre usuários | Parcial | offline v3 e queries escopadas; RLS real não foi executado. |
 | 14 | Isolamento entre listas | Evidenciado no novo storage key do Misto | E2E A/B pendente. |
@@ -76,6 +76,8 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 - O engine recebe `deckReady` para não inicializar uma sessão enquanto cards/preset ainda estão sendo carregados; o Misto aceita snapshots locais v1 como fallback compatível.
 - `createLatestWriteQueue` serializa atualizações de `study_sessions`, coalesce pendências que ainda não começaram e invalida filas quando muda usuário/lista/modo; os updates confirmam o id e o escopo de usuário/lista/modo, enquanto o payload converge a chave v2 estável.
 - Corrigido o guard de conclusão para usar `.length` no buffer de progresso e não concluir/limpar uma sessão com respostas ainda pendentes.
+- `studySessionSettingsToPresetOverride` converte o snapshot durável em overrides de sessão sem alterar o preset persistido; Study e Misto reaplicam também direção e filtro quando uma sessão legada v1 ou v2 é escolhida.
+- Readiness explicita `cancelled`/`request-cancelled` e não mistura cancelamento de rota/geração com falha de carregamento.
 
 ## Limitações e rollout seguro
 
@@ -89,7 +91,7 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 
 - TypeScript: passou via runtime Node empacotado (`tsc --noEmit`).
 - Testes direcionados desta etapa: 5 arquivos, 32 testes passaram.
-- Suíte completa desta etapa: 205 arquivos, 1.229 testes passaram.
+- Suíte completa desta etapa: 205 arquivos, 1.231 testes passaram.
 - ESLint: 0 erros e 68 warnings preexistentes.
 - Build Vite de produção: passou, 3.895 módulos transformados; warnings existentes de CSS/chunks grandes permanecem.
 - Cadeia editorial/prerender/bundle/SEO: passou; score local 100/100.
@@ -115,3 +117,11 @@ Foi executada uma inspeção no preview da própria branch, sem autenticação, 
 - após retornar ao viewport padrão, a página pública continuou em `readyState=complete` e sem erros registrados.
 
 O preview apresentou ações de entrada no jogo como botões, e não como links verificáveis. Como essas ações podem iniciar uma sessão anônima ou produzir gravação remota, elas não foram acionadas nesta etapa. Portanto esta evidência não comprova os checks 26, 27 e 29: ainda falta uma execução autorizada e controlada do fluxo de jogo, com confirmação explícita de que nenhuma escrita ocorrerá em produção ou com um ambiente de teste isolado.
+
+## Evidência da restauração de configurações e readiness — 2026-08-01
+
+- Testes focados: `studySessionContext.test.ts` e `studySessionRuntime.test.ts`; 2 arquivos e 16 testes passaram.
+- TypeScript após a implementação: passou via runtime Node empacotado.
+- Build Vite após a implementação: passou com 3.895 módulos transformados.
+- O build regenerou o bundle automático de `supabase/functions/mcp/index.ts`; ele foi restaurado ao conteúdo rastreado e permanece fora do diff.
+- Nenhuma migration, consulta de escrita, troca de projeto, alteração de Auth/RLS ou publicação foi executada.

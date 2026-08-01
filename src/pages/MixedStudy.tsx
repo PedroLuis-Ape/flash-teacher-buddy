@@ -32,6 +32,8 @@ import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
+  isStudySessionSettingsSnapshot,
+  type StudySessionSettingsSnapshot,
 } from "@/features/study/lib/studySessionContext";
 import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
 import { recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
@@ -104,21 +106,24 @@ export default function MixedStudy() {
 
   const directionParam = searchParams.get("dir") || searchParams.get("direction");
   const explicitFavorites = searchParams.get("favorites");
-  const { effectivePreset, updateForCurrentScope } = useStudyPreferences(userId, {
+  const { effectivePreset, updateForCurrentScope, setSessionOverrides } = useStudyPreferences(userId, {
     listId: isListRoute ? resolvedId : undefined,
     gameMode: "mixed",
     persistScope: isListRoute ? "list" : "global",
     canPersistList: isListRoute,
   });
   const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(userId);
-  const baseDirection: Direction = directionParam
-    ? normalizeDirection(directionParam)
-    : effectivePreset.direction;
-  const requestedFavoritesOnly = explicitFavorites === "true"
-    ? true
-    : explicitFavorites === "false"
-      ? false
-      : effectivePreset.scope === "favorites";
+  const restoredSessionDirectionRef = useRef<Direction | null>(null);
+  const restoredSessionSubsetRef = useRef<"all" | "favorites" | null>(null);
+  const baseDirection: Direction = restoredSessionDirectionRef.current
+    ?? (directionParam ? normalizeDirection(directionParam) : effectivePreset.direction);
+  const requestedFavoritesOnly = restoredSessionSubsetRef.current
+    ? restoredSessionSubsetRef.current === "favorites"
+    : explicitFavorites === "true"
+      ? true
+      : explicitFavorites === "false"
+        ? false
+        : effectivePreset.scope === "favorites";
   const favoritesOnly = resolvePersonalStudySubset(
     requestedFavoritesOnly ? "favorites" : "all",
     canUsePersonalFavorites,
@@ -130,6 +135,37 @@ export default function MixedStudy() {
     fastMode: effectivePreset.fastMode,
     redFocus: false,
   });
+  const restoredSessionSettingsRef = useRef<string | null>(null);
+  const handleSessionSettingsRestored = useCallback((settings: StudySessionSettingsSnapshot) => {
+    const identity = JSON.stringify(settings);
+    if (restoredSessionSettingsRef.current === identity) return;
+    restoredSessionSettingsRef.current = identity;
+    const subset = resolvePersonalStudySubset(settings.subset, canUsePersonalFavorites).subset;
+    restoredSessionDirectionRef.current = settings.direction;
+    restoredSessionSubsetRef.current = subset;
+    setSelectedFlowMode(settings.studyFlowMode);
+    setGameSettings({
+      mode: settings.order,
+      subset,
+      fastMode: settings.fastMode,
+      redFocus: settings.redFocus,
+    });
+    setSessionOverrides({
+      direction: settings.direction,
+      order: settings.order,
+      scope: subset,
+      fastMode: settings.fastMode,
+      studyFlowMode: settings.studyFlowMode,
+      ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
+      ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
+      ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),
+    });
+  }, [canUsePersonalFavorites, setSessionOverrides]);
+  useEffect(() => {
+    restoredSessionDirectionRef.current = null;
+    restoredSessionSubsetRef.current = null;
+    restoredSessionSettingsRef.current = null;
+  }, [resolvedId, userId]);
   const lastPresetFlowModeRef = useRef(effectivePreset.studyFlowMode);
   useEffect(() => {
     if (effectivePreset.studyFlowMode === lastPresetFlowModeRef.current) return;
@@ -337,6 +373,9 @@ export default function MixedStudy() {
               if (leftIsCurrent !== rightIsCurrent) return leftIsCurrent ? -1 : 1;
               return Date.parse(String(right.updated_at ?? "")) - Date.parse(String(left.updated_at ?? ""));
             })[0] ?? null;
+          if (matchingSession && isStudySessionSettingsSnapshot(matchingSession.settings_snapshot)) {
+            handleSessionSettingsRestored(matchingSession.settings_snapshot);
+          }
           studySessionIdRef.current = matchingSession?.id ?? null;
           setStudySessionId(studySessionIdRef.current);
           setRemoteState(matchingSession?.session_snapshot ?? matchingSession?.cards_order ?? null);
@@ -402,7 +441,7 @@ export default function MixedStudy() {
       cancelled = true;
       abortController.abort();
     };
-  }, [authStatus, baseDirection, canUsePersonalFavorites, favoriteIds, favoritesConfirmedZero, favoritesOnly, favoritesReady, isListRoute, listId, location.pathname, resolvedId, scopeKey, session, userId, loadAttempt]);
+  }, [authStatus, baseDirection, canUsePersonalFavorites, favoriteIds, favoritesConfirmedZero, favoritesOnly, favoritesReady, handleSessionSettingsRestored, isListRoute, listId, location.pathname, resolvedId, scopeKey, session, userId, loadAttempt]);
 
   const persistRemoteState = useCallback(async (state: any) => {
     if (!userId || !listId) return;

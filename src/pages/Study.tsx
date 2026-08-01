@@ -85,6 +85,7 @@ import {
   readStudyLayerSnapshot,
   writeStudyLayerSnapshot,
 } from "@/features/study/lib/studyLayerSnapshot";
+import type { StudySessionSettingsSnapshot } from "@/features/study/lib/studySessionContext";
 
 interface Flashcard {
   id: string;
@@ -162,6 +163,7 @@ const Study = () => {
   const {
     prefs,
     updatePrefs,
+    setSessionOverrides,
     effectivePreset,
     isHydrating: preferencesHydrating,
   } = useStudyPreferences(authUserId, {
@@ -171,21 +173,22 @@ const Study = () => {
     canPersistList: isListRoute,
   });
   // URL overrides are applied at load time inside useStudyPreferences,
-  // but the URL is ALSO read directly here as the canonical SSOT for the
-  // session. This prevents stale prefs (e.g. anon storage from a previous
-  // session) from overriding the user's just-clicked direction in GamesHub.
+  // but the URL is ALSO read directly here as the launch-intent SSOT. A
+  // valid resumed session is applied later and intentionally wins over both
+  // the URL intent and the current preset.
   const urlDirRaw = searchParams.get("dir") || searchParams.get("direction");
   const urlDirection: Direction | null = urlDirRaw && ["a-b", "b-a", "any"].includes(urlDirRaw)
     ? (urlDirRaw as Direction)
     : null;
+  const restoredSessionDirectionRef = useRef<Direction | null>(null);
 
   // Single canonical mode token for the entire engine + view chain.
   const normalizedMode: StudyMode = requestedMode;
 
-  // SSOT for direction: URL wins over prefs. This guarantees that whatever
-  // GamesHub sent in the URL is what the session uses, even if prefs are
-  // stale or arrive late from auth.
-  const initialDir: Direction = urlDirection ?? prefs.direction;
+  // SSOT for direction before session restoration: URL wins over prefs. A
+  // restored session direction is applied through the ref above and then
+  // supersedes this launch-time value.
+  const initialDir: Direction = restoredSessionDirectionRef.current ?? urlDirection ?? prefs.direction;
   const initialOrder = prefs.order;
   const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(authUserId);
   const favoriteSubsetResolution = resolvePersonalStudySubset(
@@ -308,6 +311,33 @@ const Study = () => {
   const [deckSubset, setDeckSubset] = useState<"all" | "favorites">(initialGameSettings.subset);
   const activeDeckSubset = canUsePersonalFavorites ? deckSubset : "all";
   const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState(false);
+  const restoredSessionSettingsRef = useRef<string | null>(null);
+
+  const handleSessionSettingsRestored = useCallback((settings: StudySessionSettingsSnapshot) => {
+    const identity = JSON.stringify(settings);
+    if (restoredSessionSettingsRef.current === identity) return;
+    restoredSessionSettingsRef.current = identity;
+    restoredSessionDirectionRef.current = settings.direction;
+    const subset = resolvePersonalStudySubset(settings.subset, canUsePersonalFavorites).subset;
+    setDeckSubset(subset);
+    setRedFocusActiveForDeck(settings.redFocus);
+    setFlipDirection(settings.direction);
+    setSessionOverrides({
+      direction: settings.direction,
+      order: settings.order,
+      scope: subset,
+      fastMode: settings.fastMode,
+      studyFlowMode: settings.studyFlowMode,
+      ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
+      ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
+      ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),
+    });
+  }, [canUsePersonalFavorites, setSessionOverrides]);
+
+  useEffect(() => {
+    restoredSessionDirectionRef.current = null;
+    restoredSessionSettingsRef.current = null;
+  }, [authUserId, normalizedMode, resolvedId]);
 
   const favoritesFilterFellBack =
     !redFocusActiveForDeck &&
@@ -405,6 +435,7 @@ const Study = () => {
     effectivePreset.studyFlowMode,
     sessionContext,
     !loading && !preferencesHydrating && sessionPresetReady,
+    handleSessionSettingsRestored,
   );
 
   // A new queue reference represents a new answerable session/round. Resetting
@@ -432,7 +463,7 @@ const Study = () => {
   // ── Sync flipDirection only after the preset source has settled ──
   useEffect(() => {
     if (preferencesHydrating) return;
-    setFlipDirection(urlDirection ?? prefs.direction);
+    setFlipDirection(restoredSessionDirectionRef.current ?? urlDirection ?? prefs.direction);
   }, [preferencesHydrating, urlDirection, prefs.direction]);
 
   // Apply one immutable starting preset for each account/list/mode context.
@@ -933,6 +964,7 @@ const Study = () => {
 
   const handleDirectionChange = (value: string) => {
     const dir = normalizeDirection(value);
+    restoredSessionDirectionRef.current = null;
     setFlipDirection(dir);
     updatePrefs({ direction: dir });
   };

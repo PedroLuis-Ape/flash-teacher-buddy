@@ -42,6 +42,7 @@ export type StudySessionReadinessPhase =
   | "completed"
   | "empty"
   | "recovering"
+  | "cancelled"
   | "failed";
 
 export interface StudySessionReadinessInput {
@@ -54,6 +55,7 @@ export interface StudySessionReadinessInput {
   isFinished: boolean;
   masteryStatus?: "active" | "round-complete" | "journey-complete" | null;
   recoveryFailed?: boolean;
+  cancelled?: boolean;
 }
 
 export interface StudySessionReadiness {
@@ -65,7 +67,8 @@ export interface StudySessionReadiness {
     | "playable-card-ready"
     | "empty-order"
     | "index-out-of-range"
-    | "current-card-missing";
+    | "current-card-missing"
+    | "request-cancelled";
   currentCardId: string | null;
 }
 
@@ -87,6 +90,14 @@ export function resolveStudySessionReadiness(
     return {
       phase: "completed",
       reason: "legitimately-completed",
+      currentCardId: null,
+    };
+  }
+
+  if (input.cancelled) {
+    return {
+      phase: "cancelled",
+      reason: "request-cancelled",
       currentCardId: null,
     };
   }

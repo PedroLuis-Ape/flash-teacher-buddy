@@ -39,12 +39,15 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 - Misto passa a comparar `updatedAt`, consumir direção/filtro/ordem/fluxo escopados e persistir contexto explícito.
 - Offline v3 user-scoped sem remoção automática dos registros legados.
 - Hub, modal e componentes de escrita deixam de compartilhar configurações entre contas/listas.
+- Ao restaurar uma sessão remota válida, `settings_snapshot` agora reaplica direção, ordem, filtro, ritmo, Foco Vermelho, fluxo e configurações de escrita por overrides efêmeros; o preset persistido não é sobrescrito.
+- Study e Prática Mista ignoram a intenção de URL quando existe uma sessão válida e compatível, preservando a precedência documentada.
+- Readiness ganhou a fase explícita `cancelled`/`request-cancelled`, separada de carregamento e falha.
 
 ## Validação executada
 
 - `tsc --noEmit`: passou.
-- `vitest run --passWithNoTests`: passou com 200 arquivos e 1.202 testes.
-- ESLint: 0 erros e 69 avisos preexistentes.
+- `vitest run --passWithNoTests`: passou com 205 arquivos e 1.231 testes.
+- ESLint: 0 erros e 68 avisos preexistentes.
 - Build Vite: passou; apenas avisos já existentes de CSS/chunks.
 - Validadores públicos, prerenderização e `seo:visibility:score`: passaram; score local 100/100.
 - Diagnóstico remoto somente leitura em `xrnfhhoxmmstagmelvyi`: projeto `ACTIVE_HEALTHY`, 31 tabelas públicas relevantes presentes, migrations existentes `20260719150435_atomic_layered_card_groups` e `20260719150442_import_capabilities_v1`; a migration nova `20260801143000_study_persistence_context_v1` ainda não foi aplicada.
@@ -66,6 +69,7 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 - Flush de progresso usa a chave real `user_id + flashcard_id` e confirma as linhas retornadas pelo upsert.
 - Reinício protege a transição contra inicialização concorrente e só aceita snapshot local quando ele pertence à sessão remota restaurada; salvamentos debounced/imediatos também exigem confirmação da linha afetada.
 - Validação direcionada após a auditoria complementar: 3 arquivos e 32 testes passaram, incluindo snapshot de camada, reparo do Misto e readiness.
+- A continuação validou o contrato de restauração de configurações e cancelamento com 2 arquivos e 16 testes focados; a suíte completa posterior passou com 205 arquivos e 1.231 testes.
 
 ## Riscos e rollback
 

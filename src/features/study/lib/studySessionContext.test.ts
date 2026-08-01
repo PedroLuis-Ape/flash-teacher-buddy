@@ -4,6 +4,7 @@ import {
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
   isStudySessionSettingsSnapshot,
+  studySessionSettingsToPresetOverride,
 } from "./studySessionContext";
 
 describe("study session context", () => {
@@ -42,5 +43,31 @@ describe("study session context", () => {
     expect(snapshot).toMatchObject({ version: 1, mode: "mixed", writeActivityMode: "rewrite" });
     expect(isStudySessionSettingsSnapshot(snapshot)).toBe(true);
     expect(isStudySessionSettingsSnapshot({ ...snapshot, version: 2 })).toBe(false);
+  });
+
+  it("maps a valid session snapshot to ephemeral preference overrides", () => {
+    const snapshot = buildStudySessionSettingsSnapshot({
+      mode: "write",
+      subset: "favorites",
+      order: "sequential",
+      direction: "b-a",
+      fastMode: true,
+      studyFlowMode: "continuous",
+      writeActivityMode: "rewrite",
+      writeRewriteSide: "alternating",
+      writeCorrectionMode: "hard",
+    });
+
+    expect(studySessionSettingsToPresetOverride(snapshot)).toEqual({
+      direction: "b-a",
+      order: "sequential",
+      scope: "favorites",
+      fastMode: true,
+      studyFlowMode: "continuous",
+      writeActivityMode: "rewrite",
+      writeRewriteSide: "alternating",
+      writeCorrectionMode: "hard",
+    });
+    expect(studySessionSettingsToPresetOverride({ version: 2 })).toBeNull();
   });
 });
