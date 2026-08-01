@@ -46,14 +46,14 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 | 15 | Isolamento entre modos | Evidenciado no contrato | allow-list/migration ainda precisa ser aplicada. |
 | 16 | Cards em camadas preservam grupo, entrada, camada e status | Parcial | `status_group_uid` participa do deck/status; migration remota pendente. |
 | 17 | Deck alterado é reparado sem zerar silenciosamente | Evidenciado no adaptive repair | casos reais de remoção/nova camada pendentes. |
-| 18 | Resposta antiga não sobrescreve deck atual | Parcial | Abort/generation em pontos críticos; teste de navegação rápida pendente. |
-| 19 | Cancelamento de rota/conta/geração é descartado | Parcial | loader e Misto possuem abort/guards; logout/login manual pendente. |
+| 18 | Resposta antiga não sobrescreve deck atual | Parcial | fila `createLatestWriteQueue` serializa snapshots e descarta pendências invalidadas; navegação autenticada rápida ainda precisa de E2E. |
+| 19 | Cancelamento de rota/conta/geração é descartado | Parcial | loader, Misto e fila de snapshots têm abort/guards/invalidação; logout/login manual pendente. |
 | 20 | Refresh de auth não exibe falso vazio | Parcial | contrato de acesso/readiness; ambiente publicado pendente. |
-| 21 | Nenhuma sessão é criada com `cards_order` vazio | Evidenciado no engine | precisa confirmação no banco autorizado. |
+| 21 | Nenhuma sessão é criada com `cards_order` vazio | Evidenciado no engine | criação só ocorre após deck elegível; confirmação no banco autorizado ainda pendente. |
 | 22 | Precedência e responsabilidades estão documentadas | Evidenciado | relatório principal e este mapa. |
 | 23 | Sem retry/spinner infinito, restart silencioso ou DOM frágil | Parcial | watchdogs e recovery; teste manual mobile/slow pending. |
-| 24 | Último card/respondida não é perdido por debounce | Parcial | `persistNow` cancela o timer e confirma o snapshot local/remoto na saída do Misto; fluxo real em sete modos ainda pendente. |
-| 25 | Sem duplicação paralela de persistência | Parcial | writer compartilhado serializa tentativas do mesmo card e usa `operation_id`; fallback sem RPC ainda é somente compatibilidade. |
+| 24 | Último card/respondida não é perdido por debounce | Parcial | `saveProgressNow` agora aguarda o buffer de respostas; Misto aguarda gravações pendentes e `persistNow`; fluxo real em sete modos ainda pendente. |
+| 25 | Sem duplicação paralela de persistência | Parcial | fila de snapshots e writer de progresso compartilhados serializam gravações; fallback sem RPC ainda é somente compatibilidade. |
 | 26 | Desktop/mobile, offline, reload, close/reopen, auth, público/privado | Pendente | requer matriz manual autorizada. |
 | 27 | Sete modos percorrem boot, primeiro card, resposta e saída | Pendente | cobertura unitária parcial; E2E real não executado. |
 | 28 | Auditoria, causa-raiz, testes, rollback e evidências | Evidenciado | relatórios, migrations aditivas, testes e PR. |
@@ -71,6 +71,8 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 - nova migration de identidade corrige o trigger e transfere o status para o UUID retornado no unmerge.
 - `recordStudyProgressAttempt` virou o writer compartilhado de progresso para `Study` e `MixedStudy`; preserva cada tentativa, serializa o mesmo card durante um flush e confirma a escrita antes de removê-la do buffer.
 - `MixedStudy.persistNow` foi exposto pelo hook adaptativo e é aguardado na saída, mantendo snapshot local durável mesmo quando a confirmação remota expira.
+- `createLatestWriteQueue` serializa atualizações de `study_sessions`, coalesce pendências que ainda não começaram e invalida filas quando muda usuário/lista/modo/escopo; os updates também confirmam usuário, lista, modo e `session_scope_key`.
+- Corrigido o guard de conclusão para usar `.length` no buffer de progresso e não concluir/limpar uma sessão com respostas ainda pendentes.
 
 ## Limitações e rollout seguro
 
@@ -83,10 +85,10 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 ## Evidência local desta etapa
 
 - TypeScript: passou via runtime Node empacotado (`tsc --noEmit`).
-- Testes direcionados: 3 arquivos, 26 testes passaram.
-- Suíte completa: 203 arquivos, 1.217 testes passaram.
+- Testes direcionados desta etapa: 3 arquivos, 19 testes passaram.
+- Suíte completa: 204 arquivos, 1.223 testes passaram.
 - ESLint: 0 erros e 68 warnings preexistentes.
-- Build Vite de produção: passou, 3.894 módulos transformados; warnings existentes de CSS/chunks grandes permanecem.
+- Build Vite de produção: passou, 3.895 módulos transformados; warnings existentes de CSS/chunks grandes permanecem.
 - `git diff --check`: passou.
 - O arquivo gerado `supabase/functions/mcp/index.ts` foi restaurado ao estado rastreado e não faz parte do diff.
 

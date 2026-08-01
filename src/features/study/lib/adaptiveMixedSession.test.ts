@@ -4,6 +4,7 @@ import {
   createAdaptiveMixedSession,
   getAdaptiveMixedProgress,
   getAdaptiveRoundSize,
+  persistLatestAdaptiveState,
   repairAdaptiveMixedState,
   restartAdaptiveMixedRound,
   startNextAdaptiveMixedRound,
@@ -17,6 +18,43 @@ function answerCurrent(state: ReturnType<typeof createAdaptiveMixedSession>, cor
 }
 
 describe("adaptive mixed session", () => {
+  it("persiste novamente o snapshot mais novo quando uma gravação se sobrepõe à resposta", async () => {
+    let latest: { id: string } | null = { id: "old" };
+    let releaseFirstWrite: (() => void) | undefined;
+    const firstWriteStarted = new Promise<void>((resolve) => {
+      releaseFirstWrite = resolve;
+    });
+    const writes: string[] = [];
+
+    const persistence = persistLatestAdaptiveState(
+      () => latest,
+      async (state) => {
+        writes.push(state.id);
+        if (state.id === "old") await firstWriteStarted;
+      },
+    );
+
+    await Promise.resolve();
+    latest = { id: "new" };
+    releaseFirstWrite?.();
+    await persistence;
+
+    expect(writes).toEqual(["old", "new"]);
+  });
+
+  it("encerra a cadeia quando a geração deixa de ser atual", async () => {
+    let latest: { id: string } | null = { id: "old" };
+    const writes: string[] = [];
+    await persistLatestAdaptiveState(
+      () => latest,
+      (state) => {
+        writes.push(state.id);
+        latest = null;
+      },
+    );
+    expect(writes).toEqual(["old"]);
+  });
+
   it("usa rodadas de até 15 cards em qualquer tamanho de lista", () => {
     expect(getAdaptiveRoundSize(8)).toBe(8);
     expect(getAdaptiveRoundSize(15)).toBe(15);

@@ -38,6 +38,24 @@ export interface CreateAdaptiveMixedSessionOptions {
   flowMode?: MixedFlowMode;
 }
 
+/**
+ * Persist the newest immutable session snapshot when a write overlaps with a
+ * state transition. The caller owns the remote write; this helper only makes
+ * the ordering guarantee testable and prevents an older response from being
+ * the last state sent to the server.
+ */
+export async function persistLatestAdaptiveState<T>(
+  getLatest: () => T | null,
+  persist: (state: T) => PromiseLike<void> | void,
+): Promise<void> {
+  for (;;) {
+    const state = getLatest();
+    if (state === null) return;
+    await persist(state);
+    if (getLatest() === state) return;
+  }
+}
+
 const MAX_HEARTS = 3;
 const ACTIVITY_PATTERN: readonly MixedActivityMode[] = [
   "write",

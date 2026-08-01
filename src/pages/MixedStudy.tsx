@@ -90,6 +90,7 @@ export default function MixedStudy() {
   const answeredCardKeyRef = useRef<string | null>(null);
   const studySessionIdRef = useRef<string | null>(null);
   const sessionCreationRef = useRef<Promise<string | null> | null>(null);
+  const progressWritesRef = useRef<Set<Promise<unknown>>>(new Set());
   useEffect(() => {
     studySessionIdRef.current = studySessionId;
   }, [studySessionId]);
@@ -510,12 +511,18 @@ export default function MixedStudy() {
 
   const recordAttempt = useCallback(async (cardId: string, correct: boolean, skipped: boolean) => {
     if (!userId || !listId || skipped) return;
-    await recordStudyProgressAttempt({
+    const write = recordStudyProgressAttempt({
       userId,
       flashcardId: cardId,
       listId,
       correct,
     });
+    progressWritesRef.current.add(write);
+    try {
+      await write;
+    } finally {
+      progressWritesRef.current.delete(write);
+    }
   }, [listId, userId]);
 
   const handleAnswer = useCallback((correct: boolean, skipped = false) => {
@@ -547,6 +554,16 @@ export default function MixedStudy() {
   }, [currentAnswerKey, handleAnswer, showSkipDialog]);
 
   const exit = async () => {
+    const pendingProgressWrites = Array.from(progressWritesRef.current);
+    if (pendingProgressWrites.length > 0) {
+      await withStudyRuntimeTimeout(
+        Promise.allSettled(pendingProgressWrites),
+        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+        "mixed-progress-before-exit",
+      ).catch((error) => {
+        console.warn("[MixedStudy] Saída com progresso remoto pendente:", error);
+      });
+    }
     await mixed.persistNow().catch((error) => {
       // The local snapshot is already durable; navigation must remain
       // available when the optional remote confirmation is unavailable.

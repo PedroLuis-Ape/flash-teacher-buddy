@@ -3,6 +3,7 @@ import {
   answerAdaptiveMixedCard,
   createAdaptiveMixedSession,
   getAdaptiveMixedProgress,
+  persistLatestAdaptiveState,
   repairAdaptiveMixedState,
   restartAdaptiveMixedJourney,
   restartAdaptiveMixedRound,
@@ -58,8 +59,10 @@ export function useAdaptiveMixedSession({
   // persistence is allowed only for the active initialization generation.
   useEffect(() => {
     persistGenerationRef.current += 1;
+    latestStateRef.current = null;
     return () => {
       persistGenerationRef.current += 1;
+      latestStateRef.current = null;
       if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     };
   }, [initializationSignature]);
@@ -94,7 +97,11 @@ export function useAdaptiveMixedSession({
       return;
     }
 
-    const request = Promise.resolve(onPersist(latestStateRef.current));
+    const generation = persistGenerationRef.current;
+    const request = persistLatestAdaptiveState(
+      () => generation === persistGenerationRef.current ? latestStateRef.current : null,
+      (state) => onPersist(state),
+    );
     persistInFlightRef.current = request;
     try {
       await request;
