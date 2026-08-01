@@ -53,6 +53,8 @@ interface FolderType {
 const Folder = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const isPublicPortalRoute =
+    typeof window !== "undefined" && window.location.pathname.startsWith("/portal/folder/");
   const [folder, setFolder] = useState<FolderType | null>(null);
   const [lists, setLists] = useState<ListType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -914,7 +916,11 @@ const Folder = () => {
                         if (selectionMode) {
                           toggleListSelection(list.id);
                         } else {
-                          navigate(`/list/${list.id}/games`);
+                          navigate(
+                            isPublicPortalRoute
+                              ? `/portal/list/${list.id}/games`
+                              : `/list/${list.id}/games`,
+                          );
                         }
                       }}
                       className={`w-full text-left cursor-pointer ${isSelected ? 'ring-2 ring-primary rounded-lg' : ''}`}

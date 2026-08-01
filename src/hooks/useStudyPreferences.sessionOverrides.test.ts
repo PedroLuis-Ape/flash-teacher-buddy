@@ -15,12 +15,14 @@ describe("study session URL overrides", () => {
       order: "sequential",
       favorites: "true",
       fast: "true",
+      flow: "continuous",
     }))).toEqual({
       mode: "multiple-choice",
       direction: "b-a",
       order: "sequential",
       scope: "favorites",
       fastMode: true,
+      studyFlowMode: "continuous",
     });
   });
 
@@ -29,6 +31,7 @@ describe("study session URL overrides", () => {
       dir: "invalid",
       order: "invalid",
       favorites: "sometimes",
+      flow: "endless",
     }))).toEqual({});
   });
 

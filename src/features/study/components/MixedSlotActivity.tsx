@@ -1,6 +1,7 @@
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { WriteStudyView } from "./WriteStudyView";
 import { PronunciationStudyView } from "./PronunciationStudyView";
+import type { StudyFlowMode } from "@/features/study/lib/advanceGate";
 
 interface MixedSlotActivityProps {
   mode: "write" | "pronunciation";
@@ -25,6 +26,7 @@ interface MixedSlotActivityProps {
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip?: () => void;
+  flowMode?: StudyFlowMode;
   layerCount?: number;
   layersVisitedCount?: number;
   onOpenLayers?: () => void;
@@ -78,6 +80,7 @@ export function MixedSlotActivity(props: MixedSlotActivityProps) {
       onCorrect={props.onCorrect}
       onIncorrect={props.onIncorrect}
       onSkip={props.onSkip ?? props.onIncorrect}
+      flowMode={props.flowMode}
       layerCount={props.layerCount}
       layersVisitedCount={props.layersVisitedCount}
       onOpenLayers={props.onOpenLayers}

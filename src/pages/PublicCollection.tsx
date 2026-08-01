@@ -5,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Gamepad2 } from "lucide-react";
 import { PitecoMascot } from "@/features/gamification/components/PitecoMascot";
+import { StudyFlowModeSelector } from "@/features/study/components/StudyFlowModeSelector";
+import { resolveStudyLaunchRoute } from "@/features/study/lib/studyLaunchParams";
+import type { StudyFlowModePreset } from "@/features/study/preferences/studyPreset";
 
 interface Collection {
   id: string;
@@ -18,6 +21,7 @@ export default function PublicCollection() {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [flashcardCount, setFlashcardCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [flowMode, setFlowMode] = useState<StudyFlowModePreset>("mastery_rounds");
 
   useEffect(() => {
     loadCollection();
@@ -52,8 +56,15 @@ export default function PublicCollection() {
   };
 
   const startGame = (mode: "flip" | "write" | "mixed") => {
+    const route = resolveStudyLaunchRoute(mode, flowMode);
+    const params = new URLSearchParams({
+      mode,
+      direction: "any",
+      order: "random",
+      flow: flowMode,
+    });
     navigate(
-      `/portal/collection/${collectionId}/study?mode=${mode}&direction=any&order=random`
+      `/portal/collection/${collectionId}/${route}?${params.toString()}`
     );
   };
 
@@ -90,6 +101,10 @@ export default function PublicCollection() {
               <p className="text-xl text-primary-foreground/90">{collection.description}</p>
             )}
             <p className="text-lg text-primary-foreground/80 mt-2">{flashcardCount} cartões</p>
+          </div>
+
+          <div className="mb-6 rounded-2xl border border-white/30 bg-white/95 p-4 shadow-lg">
+            <StudyFlowModeSelector value={flowMode} onChange={setFlowMode} />
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">

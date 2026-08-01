@@ -22,7 +22,11 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
-import { buildStudyLaunchSearchParams } from "@/features/study/lib/studyLaunchParams";
+import {
+  buildStudyLaunchSearchParams,
+  resolveStudyLaunchRoute,
+} from "@/features/study/lib/studyLaunchParams";
+import { StudyFlowModeSelector } from "@/features/study/components/StudyFlowModeSelector";
 import {
   clearPendingClassGlossaryContext,
   isListAssignedToClass,
@@ -235,12 +239,17 @@ const GamesHub = () => {
 
     const kind = isListRoute ? "list" : "collection";
     const basePath = buildBasePath(location.pathname, kind, id);
+    // The visible selector is the launch contract. Apply it to whichever
+    // activity tile the user chooses, even when that mode has older saved
+    // preferences of its own.
+    const flowMode = effectivePreset.studyFlowMode;
     const params = buildStudyLaunchSearchParams(
       mode,
       activeTurmaId && isListRoute ? activeTurmaId : undefined,
+      flowMode,
     );
 
-    const route = mode === "mixed" ? "mixed-study" : "study";
+    const route = resolveStudyLaunchRoute(mode, flowMode);
     navigate(`${basePath}/${route}?${params.toString()}`);
   };
 
@@ -341,6 +350,13 @@ const GamesHub = () => {
                 </div>
               )}
             </div>
+
+            <StudyFlowModeSelector
+              value={effectivePreset.studyFlowMode}
+              onChange={(studyFlowMode) => updateForCurrentScope({ studyFlowMode })}
+              disabled={isHydrating}
+              className="mb-3"
+            />
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
