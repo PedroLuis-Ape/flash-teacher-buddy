@@ -3,6 +3,7 @@ import {
   claimStudySession,
   type StudySessionClient,
 } from "./studySessionRepository";
+import { StudyRuntimeTimeoutError } from "./studySessionRuntime";
 
 function createRequest<T>(response: { data: T | null; error: { code?: string; message?: string } | null }) {
   const request = Promise.resolve(response) as PromiseLike<typeof response> & {
@@ -88,5 +89,34 @@ describe("studySessionRepository", () => {
     await expect(claimStudySession(baseInput, client)).rejects.toMatchObject({
       code: "42501",
     });
+  });
+
+  it("aborts the underlying request when the claim timeout fires", async () => {
+    vi.useFakeTimers();
+    try {
+      let capturedSignal: AbortSignal | undefined;
+      const pending = new Promise<never>(() => undefined) as PromiseLike<{
+        data: unknown;
+        error: null;
+      }> & { abortSignal(signal: AbortSignal): typeof pending };
+      pending.abortSignal = vi.fn((signal: AbortSignal) => {
+        capturedSignal = signal;
+        return pending;
+      });
+      const client: StudySessionClient = {
+        rpc: vi.fn(() => pending),
+        from: vi.fn(() => {
+          throw new Error("fallback should not run after timeout");
+        }),
+      };
+
+      const claim = claimStudySession(baseInput, client);
+      const timeoutAssertion = expect(claim).rejects.toBeInstanceOf(StudyRuntimeTimeoutError);
+      await vi.advanceTimersByTimeAsync(2_500);
+      await timeoutAssertion;
+      expect(capturedSignal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
