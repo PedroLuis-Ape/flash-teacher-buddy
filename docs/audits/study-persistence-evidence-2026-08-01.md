@@ -95,3 +95,19 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 ## Próxima etapa autorizada
 
 Revisar e publicar este PR pela Lovable após aprovação. A aplicação das migrations, regeneração de tipos e testes reais de RLS/continuidade exigem revisão operacional e não devem ser automatizados por este agente.
+
+## Evidência E2E somente leitura no preview — 2026-08-01
+
+O inventário completo de controles e escopos está em `docs/audits/study-persistence-inventory-2026-08-01.md`; o submodo Reescrever permanece explicitamente dentro do modo Escrita.
+
+Validação desta continuação: typecheck passou; contrato de modos, conclusão e fila de gravação — 3 arquivos, 10 testes passaram.
+
+Foi executada uma inspeção no preview da própria branch, sem autenticação, sem submissão de formulário e sem clique em ações que possam criar sessão ou gravar progresso:
+
+- home pública: `readyState=complete`, título/cabeçalhos esperados e nenhum warning/error de console;
+- `/portal`: portal público carregado, sem alertas, sem overflow horizontal e sem warning/error de console;
+- página pública de professor: carregou turmas e materiais públicos reais, com botões de entrada e contagens coerentes; nenhum warning/error de console;
+- viewport móvel de 390x844 em `/portal`: conteúdo dentro da largura disponível e `horizontalOverflow=false`;
+- após retornar ao viewport padrão, a página pública continuou em `readyState=complete` e sem erros registrados.
+
+O preview apresentou ações de entrada no jogo como botões, e não como links verificáveis. Como essas ações podem iniciar uma sessão anônima ou produzir gravação remota, elas não foram acionadas nesta etapa. Portanto esta evidência não comprova os checks 26, 27 e 29: ainda falta uma execução autorizada e controlada do fluxo de jogo, com confirmação explícita de que nenhuma escrita ocorrerá em produção ou com um ambiente de teste isolado.
