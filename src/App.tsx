@@ -19,6 +19,7 @@ import { LazyErrorBoundary } from "@/components/LazyErrorBoundary";
 import { PageTransition } from "@/components/PageTransition";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteSuspense } from "@/components/RouteSuspense";
+import { AuthHydrationGate } from "@/components/auth/AuthHydrationGate";
 import { ListDirectionGate } from "@/features/study/components/ListDirectionGate";
 
 const Index = lazy(() => import("./pages/Index"));
@@ -137,10 +138,11 @@ const App = () => {
               <BrowserRouter>
                 <SessionWatcher />
                 <GlobalLayout>
-                  <RouteErrorBoundary>
-                    <RouteSuspense>
-                      <PageTransition>
-                        <Routes>
+                  <AuthHydrationGate>
+                    <RouteErrorBoundary>
+                      <RouteSuspense>
+                        <PageTransition>
+                          <Routes>
                           <Route path="/" element={<RootEntry />} />
                           <Route path="/landing" element={<LandingPage />} />
                           <Route path="/dashboard" element={<Index />} />
@@ -228,10 +230,11 @@ const App = () => {
                           <Route path="/system-status" element={<SystemStatus />} />
                           <Route path="/reportar-problema" element={<BugReport />} />
                           <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </PageTransition>
-                    </RouteSuspense>
-                  </RouteErrorBoundary>
+                          </Routes>
+                        </PageTransition>
+                      </RouteSuspense>
+                    </RouteErrorBoundary>
+                  </AuthHydrationGate>
                 </GlobalLayout>
               </BrowserRouter>
             </LazyErrorBoundary>

@@ -1,8 +1,6 @@
-import { Component, ReactNode, ErrorInfo } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 import { clearErrorBurst } from "@/lib/errorCapture";
-
-const CRASH_KEY = "ape_last_crash";
-const CRASH_COUNT_KEY = "ape_crash_count";
+import { createTechnicalIncident, logTechnicalIncident, type TechnicalIncident } from "@/lib/runtimeIncident";
 
 interface ZombieDetail {
   reason?: string;
@@ -13,34 +11,31 @@ interface ZombieDetail {
 interface SafeModeState {
   hasError: boolean;
   error: Error | null;
-  errorInfo: string;
+  incident: TechnicalIncident | null;
   zombieDetected: boolean;
+  copied: boolean;
 }
+
+const CRASH_KEY = "ape_last_crash";
+const CRASH_COUNT_KEY = "ape_crash_count";
 
 export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> {
   state: SafeModeState = {
     hasError: false,
     error: null,
-    errorInfo: "",
+    incident: null,
     zombieDetected: false,
+    copied: false,
   };
 
   private zombieHandler = ((event: Event) => {
-    const e = event as CustomEvent<ZombieDetail>;
-    const detail = e.detail;
+    const detail = (event as CustomEvent<ZombieDetail>).detail;
+    if (detail?.severity !== "fatal-sync") return;
 
-    // Só aceita eventos explicitamente fatais
-    if (detail?.severity !== "fatal-sync") {
-      console.warn("[SafeMode] Ignored non-fatal zombie event:", detail);
-      return;
-    }
-
-    this.setState({
-      hasError: true,
-      zombieDetected: true,
-      error: new Error(detail?.reason || "App entered recovery mode"),
-      errorInfo: "SafeMode detected repeated fatal synchronous errors.",
-    });
+    const error = new Error(detail.reason || "Repeated synchronous runtime errors");
+    const incident = createTechnicalIncident(error, detail.source || "safe-mode");
+    logTechnicalIncident("SafeMode", incident);
+    this.setState({ hasError: true, error, incident, zombieDetected: true, copied: false });
   }) as EventListener;
 
   componentDidMount() {
@@ -52,40 +47,38 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
   }
 
   static getDerivedStateFromError(error: Error): Partial<SafeModeState> {
-    return { hasError: true, error };
+    return { hasError: true, error, copied: false };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    const msg = `${error?.message || "Unknown error"}\n${info?.componentStack?.slice(0, 500) || ""}`;
-    this.setState({ errorInfo: msg });
+    const incident = createTechnicalIncident(error, info?.componentStack || "");
+    logTechnicalIncident("SafeMode", incident);
 
     try {
       localStorage.setItem(
         CRASH_KEY,
         JSON.stringify({
-          message: error?.message,
-          stack: error?.stack?.slice(0, 800),
+          incidentId: incident.id,
+          route: incident.route,
+          version: incident.version,
+          buildId: incident.buildId,
+          errorName: incident.errorName,
+          domain: incident.domain,
           time: Date.now(),
-        })
+        }),
       );
-
-      const count = parseInt(localStorage.getItem(CRASH_COUNT_KEY) || "0", 10);
-      localStorage.setItem(CRASH_COUNT_KEY, String(count + 1));
+      const count = Number.parseInt(localStorage.getItem(CRASH_COUNT_KEY) || "0", 10);
+      localStorage.setItem(CRASH_COUNT_KEY, String(Number.isFinite(count) ? count + 1 : 1));
     } catch {
-      // ignore
+      // Local diagnostics are best effort and never block recovery.
     }
 
-    console.error("[SafeMode] Fatal React error caught:", error, info);
+    this.setState({ incident });
   }
 
   handleRetry = () => {
     clearErrorBurst();
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: "",
-      zombieDetected: false,
-    });
+    this.setState({ hasError: false, error: null, incident: null, zombieDetected: false, copied: false });
   };
 
   handleReload = () => {
@@ -93,155 +86,86 @@ export class SafeMode extends Component<{ children: ReactNode }, SafeModeState> 
     window.location.reload();
   };
 
-  handleClearAndReload = async () => {
+  handleHome = () => {
+    window.location.href = "/";
+  };
+
+  handleCopyIncident = async () => {
+    const id = this.state.incident?.id;
+    if (!id) return;
     try {
-      // Namespace-scoped cleanup. We intentionally do NOT call
-      // localStorage.clear() — that would wipe Supabase auth tokens
-      // (sb-*) and the offline outbox (ape_outbox_*) that the user
-      // needs to recover gracefully.
-      //
-      // Preserved prefixes:
-      //   - sb-*           → Supabase auth session
-      //   - ape_outbox_*   → pending offline mutations (Phase 5)
-      //   - ape_pref_*     → user preferences that survive recovery
-      const PRESERVE_PREFIXES = ["sb-", "ape_outbox_", "ape_pref_"];
-      const shouldPreserve = (key: string) =>
-        PRESERVE_PREFIXES.some((p) => key.startsWith(p));
-
-      const toRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && !shouldPreserve(k)) toRemove.push(k);
-      }
-      toRemove.forEach((k) => {
-        try { localStorage.removeItem(k); } catch { /* ignore */ }
-      });
-
-      // Service workers and HTTP caches are safe to wipe — they are
-      // owned by the build, not by the user's data.
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.allSettled(regs.map((r) => r.unregister()));
-      }
-
-      if ("caches" in window) {
-        const names = await caches.keys();
-        await Promise.allSettled(names.map((n) => caches.delete(n)));
-      }
-
-      // sessionStorage is per-tab and transient — safe to clear fully.
-      sessionStorage.clear();
-    } catch (error) {
-      console.warn("[SafeMode] Falha ao limpar cache:", error);
+      await navigator.clipboard.writeText(id);
+      this.setState({ copied: true });
+    } catch {
+      this.setState({ copied: false });
     }
-
-    window.location.href = `${window.location.origin}/?t=${Date.now()}`;
   };
 
   render() {
     if (!this.state.hasError) return this.props.children;
 
-    const isZombie = this.state.zombieDetected;
+    const incidentId = this.state.incident?.id || "APE-RECOVERY-PENDING";
+    const buttonStyle = {
+      padding: "12px 16px",
+      borderRadius: 10,
+      border: "1px solid rgba(181,91,255,.55)",
+      background: "transparent",
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: "pointer",
+    } as const;
 
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        background: "#1a1a2e",
-        color: "#e0e0e0",
-      }}>
-        <div style={{
-          maxWidth: 420,
-          width: "100%",
-          textAlign: "center",
-          background: "#16213e",
-          borderRadius: 16,
-          padding: "32px 24px",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🛠️</div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, color: "#FFD700" }}>
-            Modo Recuperação
-          </h1>
-          <p style={{ fontSize: 14, color: "#aaa", marginBottom: 20 }}>
-            {isZombie
-              ? "A interface detectou um erro fatal repetido e entrou em recuperação."
-              : "Ocorreu um erro fatal ao renderizar o aplicativo."}
+      <main
+        role="alert"
+        aria-live="assertive"
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: 24,
+          fontFamily: "Nunito, system-ui, sans-serif",
+          background: "#09001f",
+          color: "#fff",
+        }}
+      >
+        <section
+          style={{
+            maxWidth: 520,
+            width: "100%",
+            textAlign: "center",
+            background: "#100526",
+            border: "1px solid rgba(181,91,255,.45)",
+            borderRadius: 18,
+            padding: "32px 24px",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+          }}
+        >
+          <p style={{ color: "#ffca70", fontWeight: 800, margin: 0 }}>Modo de recuperação</p>
+          <h1 style={{ fontSize: 24, margin: "10px 0" }}>Não foi possível carregar esta tela.</h1>
+          <p style={{ color: "#d8cfe2", lineHeight: 1.55, margin: "0 0 18px" }}>
+            O erro foi isolado para proteger o restante do preview. Nenhum dado de conta ou card é exibido nesta tela.
           </p>
-
-          {this.state.error && (
-            <pre style={{
-              background: "#0f0f23",
-              color: "#ff6b6b",
-              padding: 12,
-              borderRadius: 8,
-              fontSize: 11,
-              textAlign: "left",
-              maxHeight: 120,
-              overflow: "auto",
-              marginBottom: 20,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}>
-              {this.state.error.message}
-            </pre>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <button
-              onClick={this.handleRetry}
-              style={{
-                padding: "12px 20px",
-                borderRadius: 8,
-                border: "none",
-                background: "#4CAF50",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: 15,
-                cursor: "pointer",
-              }}
-            >
-              ⚡ Tentar recuperar
+          <p style={{ color: "#c9bed8", fontSize: 13, margin: "0 0 20px", wordBreak: "break-word" }}>
+            Identificador técnico: <code>{incidentId}</code>
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10 }}>
+            <button type="button" onClick={this.handleRetry} style={{ ...buttonStyle, border: 0, background: "#7c3aed" }}>
+              Tentar novamente
             </button>
-
-            <button
-              onClick={this.handleReload}
-              style={{
-                padding: "12px 20px",
-                borderRadius: 8,
-                border: "none",
-                background: "#FFD700",
-                color: "#1a1a2e",
-                fontWeight: 600,
-                fontSize: 15,
-                cursor: "pointer",
-              }}
-            >
-              🔄 Recarregar
+            <button type="button" onClick={this.handleReload} style={buttonStyle}>
+              Recarregar o aplicativo
             </button>
-
-            <button
-              onClick={this.handleClearAndReload}
-              style={{
-                padding: "12px 20px",
-                borderRadius: 8,
-                border: "1px solid #555",
-                background: "transparent",
-                color: "#e0e0e0",
-                fontWeight: 500,
-                fontSize: 14,
-                cursor: "pointer",
-              }}
-            >
-              🧹 Limpar cache e reiniciar
+            <button type="button" onClick={this.handleHome} style={buttonStyle}>
+              Voltar ao início
+            </button>
+            <button type="button" onClick={() => void this.handleCopyIncident()} style={buttonStyle}>
+              {this.state.copied ? "Identificador copiado" : "Copiar identificador técnico"}
             </button>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     );
   }
 }

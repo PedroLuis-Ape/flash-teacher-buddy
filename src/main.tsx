@@ -11,9 +11,14 @@ import "./lib/versionManager";
 import "./lib/errorCapture";
 import "./i18n/config";
 import { SafeMode } from "./components/SafeMode";
+import { BootstrapDiagnostics } from "./components/BootstrapDiagnostics";
+import PreviewHealth from "./components/PreviewHealth";
+import { PreviewSmokeComponentError } from "./components/PreviewSmokeScenarios";
 import { HelmetProvider } from "react-helmet-async";
 import { bootPalette } from "./lib/palettes";
 import { isPreviewContext, runBootStability } from "./lib/bootStability";
+import { diagnoseRuntimeConfig } from "./lib/runtimeDiagnostics";
+import { createTechnicalIncident, logTechnicalIncident } from "./lib/runtimeIncident";
 
 async function attemptAutomaticRecovery() {
   if (isPreviewContext()) return false;
@@ -35,6 +40,15 @@ const reportBoot = (value: number, label?: string) => {
 const splashLog = (...args: unknown[]) => {
   if (import.meta.env.DEV) console.debug("[StartupSplash]", ...args);
 };
+
+const currentPath = window.location.pathname;
+const isPreviewHealthRoute = currentPath === "/__preview-health";
+const isPreviewSmokeMode = import.meta.env.MODE === "preview-smoke";
+const runtimeDiagnostic = diagnoseRuntimeConfig({
+  projectId: import.meta.env.VITE_SUPABASE_PROJECT_ID,
+  url: import.meta.env.VITE_SUPABASE_URL,
+  publicValue: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+});
 
 splashLog("mounted");
 reportBoot(20, "Carregando módulos…");
@@ -94,7 +108,8 @@ function finishAndHide() {
 }
 
 function renderBootstrapFailure(error: unknown) {
-  console.error("[Bootstrap]", error);
+  const incident = createTechnicalIncident(error, "bootstrap");
+  logTechnicalIncident("Bootstrap", incident);
   const root = document.getElementById("root");
   if (!root) return;
 
@@ -111,7 +126,7 @@ function renderBootstrapFailure(error: unknown) {
   title.style.cssText = "font-size:20px;margin:0 0 10px";
 
   const detail = document.createElement("p");
-  detail.textContent = error instanceof Error ? error.message : "Falha de inicialização desconhecida.";
+  detail.textContent = `O módulo principal não montou. Identificador técnico: ${incident.id}`;
   detail.style.cssText = "font-size:14px;line-height:1.5;color:#c9bed8;margin:0 0 18px;word-break:break-word";
 
   const reload = document.createElement("button");
@@ -121,7 +136,21 @@ function renderBootstrapFailure(error: unknown) {
     "border:0;border-radius:12px;padding:12px 18px;background:#7c3aed;color:#fff;font-weight:700;cursor:pointer";
   reload.addEventListener("click", () => window.location.reload());
 
-  card.append(title, detail, reload);
+  const home = document.createElement("button");
+  home.type = "button";
+  home.textContent = "Voltar ao início";
+  home.style.cssText =
+    "border:1px solid rgba(181,91,255,.55);border-radius:12px;padding:12px 18px;background:transparent;color:#fff;font-weight:700;cursor:pointer;margin-left:8px";
+  home.addEventListener("click", () => { window.location.href = "/"; });
+
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.textContent = "Copiar identificador";
+  copy.style.cssText =
+    "border:1px solid rgba(181,91,255,.55);border-radius:12px;padding:12px 18px;background:transparent;color:#fff;font-weight:700;cursor:pointer;margin:8px 0 0";
+  copy.addEventListener("click", () => { void navigator.clipboard?.writeText(incident.id); });
+
+  card.append(title, detail, reload, home, copy);
   container.append(card);
   root.replaceChildren(container);
 
@@ -149,9 +178,58 @@ window.setTimeout(() => {
 async function mountApplication() {
   try {
     reportBoot(70, "Inicializando interface…");
+    const root = document.getElementById("root");
+    if (!root) throw new Error("Root element not found");
+
+    if (isPreviewHealthRoute) {
+      createRoot(root).render(<PreviewHealth />);
+      appReady = true;
+      minTimePassed = true;
+      tryDismiss();
+      return;
+    }
+
+    if (isPreviewSmokeMode && currentPath === "/__preview-smoke/config-missing") {
+      createRoot(root).render(
+        <BootstrapDiagnostics
+          diagnostic={{
+            status: "error",
+            code: "CONFIG_INCOMPLETE",
+            message: "A configuração simulada do preview está incompleta.",
+            action: "Corrija as variáveis públicas antes de publicar.",
+            source: "injected",
+          }}
+        />,
+      );
+      appReady = true;
+      minTimePassed = true;
+      tryDismiss();
+      return;
+    }
+
+    if (isPreviewSmokeMode && currentPath === "/__preview-smoke/component-error") {
+      createRoot(root).render(
+        <SafeMode>
+          <PreviewSmokeComponentError />
+        </SafeMode>,
+      );
+      appReady = true;
+      minTimePassed = true;
+      tryDismiss();
+      return;
+    }
+
+    if (runtimeDiagnostic.status === "error") {
+      createRoot(root).render(<BootstrapDiagnostics diagnostic={runtimeDiagnostic} />);
+      appReady = true;
+      minTimePassed = true;
+      tryDismiss();
+      return;
+    }
+
     const { default: App } = await import("./App.tsx");
 
-    createRoot(document.getElementById("root")!).render(
+    createRoot(root).render(
       <SafeMode>
         <HelmetProvider>
           <App />

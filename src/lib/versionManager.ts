@@ -1,5 +1,6 @@
 // Build identity injected by Vite at build time
 declare const __BUILD_TIMESTAMP__: string;
+declare const __BUILD_COMMIT__: string;
 
 const BUILD_ID: string =
   typeof __BUILD_TIMESTAMP__ !== "undefined"
@@ -17,6 +18,10 @@ export const APP_VERSION = "1.5";
 
 /** Full build fingerprint (timestamp injected at build time, or "dev" locally). */
 export const APP_BUILD_ID = BUILD_ID;
+
+/** Commit that produced the bundle, when the build environment provides it. */
+export const APP_BUILD_COMMIT =
+  typeof __BUILD_COMMIT__ !== "undefined" ? __BUILD_COMMIT__ : "local";
 
 /** Short build fingerprint suitable for compact UI badges (last 6 chars). */
 export const APP_BUILD_SHORT = String(BUILD_ID).slice(-6);

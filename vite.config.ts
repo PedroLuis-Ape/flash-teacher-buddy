@@ -13,6 +13,7 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 export default defineConfig(({ mode }) => ({
   define: {
     '__BUILD_TIMESTAMP__': JSON.stringify(Date.now().toString()),
+    '__BUILD_COMMIT__': JSON.stringify(process.env.GITHUB_SHA || process.env.VITE_GIT_COMMIT_SHA || "local"),
   },
   server: {
     host: "::",

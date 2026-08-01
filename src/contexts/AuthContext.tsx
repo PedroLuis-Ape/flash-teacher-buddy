@@ -4,6 +4,7 @@
  */
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -15,6 +16,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCTION_DATA_URL } from "@/integrations/supabase/platformRuntime";
+import { getSessionWithTimeout } from "@/lib/authHydration";
 
 export type AuthStatus =
   | "initializing"
@@ -31,6 +33,7 @@ interface AuthContextValue {
   accessToken: string | undefined;
   initializing: boolean;
   error: Error | null;
+  retryHydration: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -62,16 +65,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(optimistic.current);
   const [status, setStatus] = useState<AuthStatus>("initializing");
   const [error, setError] = useState<Error | null>(null);
+  const [hydrationAttempt, setHydrationAttempt] = useState(0);
+
+  const syncQueryCache = useCallback((nextSession: Session | null) => {
+    queryClient.setQueryData(["auth-user"], {
+      user: nextSession?.user ?? null,
+      session: nextSession,
+    });
+  }, [queryClient]);
+
+  const retryHydration = useCallback(() => {
+    setError(null);
+    setStatus("initializing");
+    setHydrationAttempt((attempt) => attempt + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-
-    const syncQueryCache = (nextSession: Session | null) => {
-      queryClient.setQueryData(["auth-user"], {
-        user: nextSession?.user ?? null,
-        session: nextSession,
-      });
-    };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
@@ -119,13 +129,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     );
 
-    supabase.auth
-      .getSession()
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+    // queryClient is stable; mount the subscription exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncQueryCache]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getSessionWithTimeout(supabase)
       .then(({ data, error: hydrationError }) => {
         if (cancelled) return;
 
         if (hydrationError) {
-          setError(hydrationError);
+          const normalized = new Error(hydrationError.message || "Falha ao validar a sessão.");
+          setError(normalized);
           if (optimistic.current) {
             // Network or refresh outages must not masquerade as logout, but a
             // persisted token is not confirmation for protected RLS reads.
@@ -163,11 +184,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
     };
-    // queryClient is stable; mount exactly once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hydrationAttempt, syncQueryCache]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -178,8 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken: session?.access_token,
       initializing: status === "initializing" || status === "stale",
       error,
+      retryHydration,
     }),
-    [status, session, error],
+    [status, session, error, retryHydration],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -196,6 +215,7 @@ export function useAuth(): AuthContextValue {
       accessToken: undefined,
       initializing: true,
       error: null,
+      retryHydration: () => undefined,
     };
   }
   return context;
