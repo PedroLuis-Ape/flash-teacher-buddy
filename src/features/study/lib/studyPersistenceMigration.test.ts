@@ -5,6 +5,14 @@ const stableIdentitySql = readFileSync(
   new URL("../../../../supabase/migrations/20260801153000_preserve_stable_status_identity_v1.sql", import.meta.url),
   "utf8",
 );
+const mixedModeSql = readFileSync(
+  new URL("../../../../supabase/migrations/20260801120000_allow_mixed_adaptive_study_sessions.sql", import.meta.url),
+  "utf8",
+);
+const persistenceContextSql = readFileSync(
+  new URL("../../../../supabase/migrations/20260801143000_study_persistence_context_v1.sql", import.meta.url),
+  "utf8",
+);
 const progressSql = readFileSync(
   new URL("../../../../supabase/migrations/20260801153500_atomic_flashcard_progress_v1.sql", import.meta.url),
   "utf8",
@@ -25,5 +33,18 @@ describe("study persistence migrations", () => {
     expect(progressSql).toContain("ON CONFLICT (user_id, operation_id) DO NOTHING");
     expect(progressSql).toContain("ON CONFLICT (user_id, flashcard_id) DO UPDATE");
     expect(progressSql).toContain("REVOKE ALL ON TABLE public.study_progress_events FROM anon, authenticated");
+    expect(progressSql).toContain("study_access_denied");
+    expect(progressSql).toContain("f.list_id = p_list_id");
+    expect(progressSql).toContain("public.is_turma_member");
+  });
+
+  it("only replaces the known study-session mode constraint", () => {
+    for (const migration of [mixedModeSql, persistenceContextSql]) {
+      expect(migration).toContain("DROP CONSTRAINT IF EXISTS study_sessions_mode_check");
+      expect(migration).not.toContain("pg_get_constraintdef");
+      expect(migration).not.toContain("FOR existing_constraint");
+      expect(migration).not.toContain("EXECUTE format(");
+    }
+    expect(persistenceContextSql).toContain("study_sessions_mode_check_v1");
   });
 });

@@ -47,26 +47,15 @@ ALTER TABLE public.study_sessions
   ADD COLUMN IF NOT EXISTS session_snapshot jsonb,
   ADD COLUMN IF NOT EXISTS schema_version integer NOT NULL DEFAULT 1;
 
-DO $$
-DECLARE
-  existing_constraint record;
-BEGIN
-  -- Replace only an old mode allow-list; all other constraints are preserved.
-  FOR existing_constraint IN
-    SELECT c.conname
-    FROM pg_constraint AS c
-    JOIN pg_class AS t ON t.oid = c.conrelid
-    JOIN pg_namespace AS n ON n.oid = t.relnamespace
-    WHERE n.nspname = 'public'
-      AND t.relname = 'study_sessions'
-      AND c.contype = 'c'
-      AND pg_get_constraintdef(c.oid) ILIKE '%mode%'
-      AND pg_get_constraintdef(c.oid) ILIKE '%flip%'
-      AND pg_get_constraintdef(c.oid) ILIKE '%write%'
-  LOOP
-    EXECUTE format('ALTER TABLE public.study_sessions DROP CONSTRAINT %I', existing_constraint.conname);
-  END LOOP;
+-- The legacy table migration and the preceding additive migration both use
+-- this known constraint name. Never discover/drop constraints from their
+-- definitions: a divergent environment must fail explicitly rather than
+-- losing an unrelated check constraint. All other constraints are preserved.
+ALTER TABLE public.study_sessions
+  DROP CONSTRAINT IF EXISTS study_sessions_mode_check;
 
+DO $$
+BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'study_sessions_mode_check_v1') THEN
     ALTER TABLE public.study_sessions ADD CONSTRAINT study_sessions_mode_check_v1
       CHECK (mode IN ('flip', 'multiple-choice', 'write', 'mixed', 'mixed-adaptive', 'unscramble', 'pronunciation'));

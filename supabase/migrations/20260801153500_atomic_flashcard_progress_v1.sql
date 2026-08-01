@@ -58,6 +58,44 @@ BEGIN
     RAISE EXCEPTION 'invalid_arguments' USING ERRCODE = '22023';
   END IF;
 
+  -- This function is SECURITY DEFINER, so RLS does not protect the lookup
+  -- below. Mirror the study read boundary before writing any progress: own
+  -- cards, public lists, accessible class lists, and lists in public or
+  -- authorized class folders are valid; a mismatched card/list is rejected.
+  IF NOT EXISTS (
+    SELECT 1
+      FROM public.flashcards AS f
+      JOIN public.lists AS l ON l.id = f.list_id
+      LEFT JOIN public.folders AS folder ON folder.id = l.folder_id
+     WHERE f.id = p_flashcard_id
+       AND f.list_id = p_list_id
+       AND f.deleted_at IS NULL
+       AND l.deleted_at IS NULL
+       AND (
+         f.user_id = v_user_id
+         OR l.visibility = 'public'
+         OR (
+           l.visibility = 'class'
+           AND l.class_id IS NOT NULL
+           AND (
+             public.is_turma_owner(l.class_id, v_user_id)
+             OR public.is_turma_member(l.class_id, v_user_id)
+           )
+         )
+         OR folder.visibility = 'public'
+         OR (
+           folder.visibility = 'class'
+           AND folder.class_id IS NOT NULL
+           AND (
+             public.is_turma_owner(folder.class_id, v_user_id)
+             OR public.is_turma_member(folder.class_id, v_user_id)
+           )
+         )
+       )
+  ) THEN
+    RAISE EXCEPTION 'study_access_denied' USING ERRCODE = '42501';
+  END IF;
+
   INSERT INTO public.study_progress_events
     (user_id, operation_id, flashcard_id, list_id, correct)
   VALUES

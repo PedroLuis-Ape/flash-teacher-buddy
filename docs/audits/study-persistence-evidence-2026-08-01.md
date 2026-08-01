@@ -68,7 +68,9 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 - `MixedStudy` passou a usar chave local com usuário/lista/modo/escopo, confirma updates de `study_sessions` e guarda `cards_order` como ordem jogável, deixando o snapshot rico em `session_snapshot`.
 - timers de persistência do Misto têm geração e não podem disparar depois que a identidade ativa mudou.
 - novo RPC aditivo `record_flashcard_progress_v1` usa evento deduplicado e `ON CONFLICT` atômico; enquanto não aplicado, há fallback confirmado e limitado.
+- o RPC de progresso valida, antes de qualquer escrita `SECURITY DEFINER`, a correspondência card/lista e o mesmo limite de acesso usado no estudo: proprietário, lista pública, turma autorizada ou pasta pública/turma autorizada.
 - nova migration de identidade corrige o trigger e transfere o status para o UUID retornado no unmerge.
+- as migrations de sessão removem apenas a constraint conhecida `study_sessions_mode_check`; não há mais descoberta dinâmica por definição SQL, evitando apagar uma constraint não relacionada em schema divergente.
 - `recordStudyProgressAttempt` virou o writer compartilhado de progresso para `Study` e `MixedStudy`; preserva cada tentativa, serializa o mesmo card durante um flush e confirma a escrita antes de removê-la do buffer.
 - `MixedStudy.persistNow` foi exposto pelo hook adaptativo e é aguardado na saída, mantendo snapshot local durável mesmo quando a confirmação remota expira.
 - Favoritos agora são tratados como capacidade privada: rotas públicas/anônimas degradam explicitamente para todos os cards, sem converter a ausência de favoritos em deck vazio.
@@ -91,7 +93,7 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 
 - TypeScript: passou via runtime Node empacotado (`tsc --noEmit`).
 - Testes direcionados desta etapa: 5 arquivos, 32 testes passaram.
-- Suíte completa desta etapa: 205 arquivos, 1.231 testes passaram.
+- Suíte completa desta etapa: 205 arquivos, 1.232 testes passaram.
 - ESLint: 0 erros e 68 warnings preexistentes.
 - Build Vite de produção: passou, 3.895 módulos transformados; warnings existentes de CSS/chunks grandes permanecem.
 - Cadeia editorial/prerender/bundle/SEO: passou; score local 100/100.

@@ -42,11 +42,13 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 - Ao restaurar uma sessão remota válida, `settings_snapshot` agora reaplica direção, ordem, filtro, ritmo, Foco Vermelho, fluxo e configurações de escrita por overrides efêmeros; o preset persistido não é sobrescrito.
 - Study e Prática Mista ignoram a intenção de URL quando existe uma sessão válida e compatível, preservando a precedência documentada.
 - Readiness ganhou a fase explícita `cancelled`/`request-cancelled`, separada de carregamento e falha.
+- O writer atômico de progresso passou a validar autorização do usuário e o vínculo card/lista antes da escrita; a função `SECURITY DEFINER` não depende de RLS implicitamente.
+- A substituição da allow-list de modos usa somente o nome conhecido da constraint legada; ambientes divergentes falham explicitamente e não removem constraints por inspeção dinâmica.
 
 ## Validação executada
 
 - `tsc --noEmit`: passou.
-- `vitest run --passWithNoTests`: passou com 205 arquivos e 1.231 testes.
+- `vitest run --passWithNoTests`: passou com 205 arquivos e 1.232 testes.
 - ESLint: 0 erros e 68 avisos preexistentes.
 - Build Vite: passou; apenas avisos já existentes de CSS/chunks.
 - Validadores públicos, prerenderização e `seo:visibility:score`: passaram; score local 100/100.
@@ -69,7 +71,7 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 - Flush de progresso usa a chave real `user_id + flashcard_id` e confirma as linhas retornadas pelo upsert.
 - Reinício protege a transição contra inicialização concorrente e só aceita snapshot local quando ele pertence à sessão remota restaurada; salvamentos debounced/imediatos também exigem confirmação da linha afetada.
 - Validação direcionada após a auditoria complementar: 3 arquivos e 32 testes passaram, incluindo snapshot de camada, reparo do Misto e readiness.
-- A continuação validou o contrato de restauração de configurações e cancelamento com 2 arquivos e 16 testes focados; a suíte completa posterior passou com 205 arquivos e 1.231 testes.
+- A continuação validou o contrato de restauração de configurações e cancelamento com 2 arquivos e 16 testes focados; a suíte completa posterior passou com 205 arquivos e 1.232 testes.
 
 ## Riscos e rollback
 
