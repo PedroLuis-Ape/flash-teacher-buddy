@@ -274,8 +274,7 @@ export default function MixedStudy() {
                 .order("updated_at", { ascending: false })
                 .eq("session_scope_key", scopeKey)
                 .limit(10)
-                .abortSignal(abortController.signal)
-                .maybeSingle(),
+                .abortSignal(abortController.signal),
             ]),
             STUDY_REMOTE_RESTORE_TIMEOUT_MS,
             "mixed-session-restore",
@@ -291,8 +290,14 @@ export default function MixedStudy() {
             })) * 10;
           });
           setWeightByCardId(weights);
-          studySessionIdRef.current = sessionResult.data?.id ?? null;
-          const matchingSession = (sessionResult.data ?? [])[0] ?? null;
+          // This query intentionally returns a bounded array: older accounts
+          // can have more than one open row for the same scope. `maybeSingle()`
+          // would turn that valid legacy state into an error and the old code
+          // then indexed an object as if it were an array, silently dropping
+          // the remote snapshot. Always choose the newest row explicitly.
+          const matchingSession = Array.isArray(sessionResult.data)
+            ? sessionResult.data[0] ?? null
+            : sessionResult.data ?? null;
           studySessionIdRef.current = matchingSession?.id ?? null;
           setStudySessionId(studySessionIdRef.current);
           setRemoteState(matchingSession?.session_snapshot ?? matchingSession?.cards_order ?? null);

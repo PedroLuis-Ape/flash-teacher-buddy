@@ -5,6 +5,11 @@ export interface PersistedStudyResult {
   attempts: number;
 }
 
+export interface StudySessionLayerSnapshot {
+  cardId: string;
+  layerIdx: number;
+}
+
 export interface StudySessionSnapshot {
   version: 2;
   sessionId: string | null;
@@ -12,6 +17,8 @@ export interface StudySessionSnapshot {
   cardsOrder: string[];
   results: PersistedStudyResult[];
   timestamp: number;
+  /** Visible layer inside the current playable group, when applicable. */
+  layer?: StudySessionLayerSnapshot;
 }
 
 export interface SanitizedPersistedStudyOrder {
@@ -77,6 +84,23 @@ function isResult(value: unknown): value is PersistedStudyResult {
     && typeof row.correct === "boolean"
     && typeof row.skipped === "boolean"
     && Number.isFinite(Number(row.attempts));
+}
+
+export function sanitizeStudyLayerSnapshot(value: unknown): StudySessionLayerSnapshot | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Partial<StudySessionLayerSnapshot>;
+  if (
+    typeof row.cardId !== "string"
+    || row.cardId.length === 0
+    || !Number.isFinite(Number(row.layerIdx))
+    || Number(row.layerIdx) < 0
+  ) {
+    return undefined;
+  }
+  return {
+    cardId: row.cardId,
+    layerIdx: Math.floor(Number(row.layerIdx)),
+  };
 }
 
 /**
@@ -163,6 +187,7 @@ export function sanitizeStudySnapshot(
         ? row.results.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId))
         : [];
 
+    const layer = sanitizeStudyLayerSnapshot(row.layer);
     return {
       version: 2,
       sessionId: typeof row.sessionId === "string" ? row.sessionId : null,
@@ -170,6 +195,7 @@ export function sanitizeStudySnapshot(
       cardsOrder: restored.cardsOrder,
       results,
       timestamp: Number.isFinite(Number(row.timestamp)) ? Number(row.timestamp) : 0,
+      ...(layer ? { layer } : {}),
     };
   }
 
@@ -208,6 +234,7 @@ export function sanitizeStudySnapshot(
     ? row.results.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId))
     : [];
 
+  const layer = sanitizeStudyLayerSnapshot(row.layer);
   return {
     version: 2,
     sessionId: typeof row.sessionId === "string" ? row.sessionId : null,
@@ -215,6 +242,7 @@ export function sanitizeStudySnapshot(
     cardsOrder,
     results,
     timestamp: Number.isFinite(Number(row.timestamp)) ? Number(row.timestamp) : 0,
+    ...(layer ? { layer } : {}),
   };
 }
 

@@ -24,7 +24,11 @@ import {
   clearStudySnapshot,
   readStudySnapshot,
   sanitizePersistedStudyOrder,
+  sanitizeStudyLayerSnapshot,
+  sanitizeStudySnapshot,
   writeStudySnapshot,
+  type StudySessionLayerSnapshot,
+  type StudySessionSnapshot,
 } from "@/features/study/lib/studySessionSnapshot";
 import {
   buildMasterySnapshotKey,
@@ -86,6 +90,24 @@ interface FlashcardWithProgress {
   translation: string;
   incorrectCount: number;
   lastReviewed: string | null;
+}
+
+function buildStudyProgressSnapshot(input: {
+  sessionId: string | null;
+  currentIndex: number;
+  cardsOrder: string[];
+  results: StudyResult[];
+  layer?: StudySessionLayerSnapshot;
+}): StudySessionSnapshot {
+  return {
+    version: 2,
+    sessionId: input.sessionId,
+    currentIndex: input.currentIndex,
+    cardsOrder: [...input.cardsOrder],
+    results: input.results.map((result) => ({ ...result })),
+    timestamp: Date.now(),
+    ...(input.layer ? { layer: { ...input.layer } } : {}),
+  };
 }
 
 // Batch size — only used by mixed mode (straight-through modes use all cards)
@@ -181,9 +203,11 @@ export function useStudyEngine(
   const lastFlushRef = useRef<number>(0);
   const authUserIdRef = useRef<string | null>(userScope ?? null);
   const completionInFlightRef = useRef(false);
+  const restartInFlightRef = useRef(false);
   const pitecoinWritesRef = useRef<Set<Promise<unknown>>>(new Set());
   const masteryAnswerGuardRef = useRef<{ session: MasterySessionState; key: string } | null>(null);
   const masteryRoundStartGuardRef = useRef<MasterySessionState | null>(null);
+  const sessionLayerRef = useRef<StudySessionLayerSnapshot | undefined>(undefined);
 
   // Game settings state — initialized from URL params passed by Study.tsx
   const [gameSettings, setGameSettings] = useState<GameSettings>({
@@ -411,6 +435,7 @@ export function useStudyEngine(
   // considered complete after a playable queue (or a legitimate empty deck)
   // has been committed.
   const initializeSession = useCallback(async (force = false) => {
+    if (restartInFlightRef.current) return;
     const __t0 = performance.now();
     initializationAbortRef.current?.abort();
     const abortController = new AbortController();
@@ -478,6 +503,7 @@ export function useStudyEngine(
       const availableSet = new Set(eligibleIds);
       let restored = readMasterySnapshot(masterySnapshotKey, availableSet);
       let restoredRemoteSessionId: string | null = null;
+      sessionLayerRef.current = undefined;
 
       if (userScope && listId) {
         try {
@@ -501,8 +527,10 @@ export function useStudyEngine(
             .map((candidate) => ({
               id: candidate.id as string,
               state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
+              layer: sanitizeStudyLayerSnapshot(candidate.session_snapshot?.layer),
             }))
             .find((candidate) => candidate.state);
+          if (remote?.layer) sessionLayerRef.current = remote.layer;
           if (!restored && remote?.state) {
             restored = remote.state;
             restoredRemoteSessionId = remote.id;
@@ -564,6 +592,7 @@ export function useStudyEngine(
       }) ?? readStudySnapshot(legacyStudySnapshotKey, snapshotCardIds, {
         enforceUniqueOrder: !!gameSettings.redFocus,
       });
+      sessionLayerRef.current = localSnapshot?.layer;
       fallbackLocalSnapshot = localSnapshot;
 
       if (!user) {
@@ -629,6 +658,29 @@ export function useStudyEngine(
       const sessionMatchesCurrentScope = (sessionOrder: unknown): boolean =>
         sanitizeSessionOrder(sessionOrder, 0) !== null;
 
+      const chooseNewestStudySnapshot = (
+        local: ReturnType<typeof readStudySnapshot>,
+        remote: StudySessionSnapshot | null,
+        remoteSessionId: string,
+        remoteUpdatedAt: unknown,
+      ): StudySessionSnapshot | null => {
+        if (!remote) return local;
+        if (!local) return remote;
+        const localBelongsToRemote = local.sessionId === null || local.sessionId === remoteSessionId;
+        if (!localBelongsToRemote) return remote;
+        const remoteTimestamp = Date.parse(String(remoteUpdatedAt ?? ""));
+        return local.timestamp > (Number.isFinite(remoteTimestamp) ? remoteTimestamp : 0)
+          ? local
+          : remote;
+      };
+
+      const readRemoteStudySnapshot = (session: any): StudySessionSnapshot | null =>
+        sanitizeStudySnapshot(
+          session?.session_snapshot,
+          availableCardIds,
+          { enforceUniqueOrder: !!gameSettings.redFocus },
+        );
+
       // Track that the user opened this list
       trackListOpened(listId);
 
@@ -667,10 +719,21 @@ export function useStudyEngine(
         );
 
         if (matchingSession) {
-          const restoredSession = sanitizeSessionOrder(
-            matchingSession.cards_order,
-            matchingSession.current_index,
+          const remoteSnapshot = readRemoteStudySnapshot(matchingSession);
+          const restoredSnapshot = chooseNewestStudySnapshot(
+            localSnapshot,
+            remoteSnapshot,
+            matchingSession.id,
+            matchingSession.updated_at,
           );
+          sessionLayerRef.current = restoredSnapshot?.layer;
+          const restoredSession = restoredSnapshot
+            ? {
+              cardsOrder: restoredSnapshot.cardsOrder,
+              currentIndex: restoredSnapshot.currentIndex,
+              repaired: false,
+            }
+            : sanitizeSessionOrder(matchingSession.cards_order, matchingSession.current_index);
 
           if (restoredSession) {
             setSessionId(matchingSession.id);
@@ -697,9 +760,7 @@ export function useStudyEngine(
               ).catch(() => undefined);
               toast.info("Fila do Foco Vermelho corrigida. Recomeçando do primeiro card.");
             } else {
-              if (localSnapshot?.sessionId === matchingSession.id) {
-                setResults(localSnapshot.results);
-              }
+              setResults(restoredSnapshot?.results ?? []);
               toast.success("Continuando de onde você parou!");
             }
 
@@ -746,6 +807,13 @@ export function useStudyEngine(
               mode,
               current_index: restoredIndex,
               cards_order: orderedCards,
+              session_snapshot: buildStudyProgressSnapshot({
+                sessionId: null,
+                currentIndex: restoredIndex,
+                cardsOrder: orderedCards,
+                results: localSnapshot?.results ?? [],
+                layer: sessionLayerRef.current,
+              }),
               session_scope_key: sessionScopeKey,
               settings_snapshot: sessionSettingsSnapshot,
               schema_version: 1,
@@ -789,10 +857,21 @@ export function useStudyEngine(
       );
 
       if (matchingSession) {
-        const restoredSession = sanitizeSessionOrder(
-          matchingSession.cards_order,
-          matchingSession.current_index,
+        const remoteSnapshot = readRemoteStudySnapshot(matchingSession);
+        const restoredSnapshot = chooseNewestStudySnapshot(
+          localSnapshot,
+          remoteSnapshot,
+          matchingSession.id,
+          matchingSession.updated_at,
         );
+        sessionLayerRef.current = restoredSnapshot?.layer;
+        const restoredSession = restoredSnapshot
+          ? {
+            cardsOrder: restoredSnapshot.cardsOrder,
+            currentIndex: restoredSnapshot.currentIndex,
+            repaired: false,
+          }
+          : sanitizeSessionOrder(matchingSession.cards_order, matchingSession.current_index);
 
         if (restoredSession) {
           setSessionId(matchingSession.id);
@@ -805,12 +884,12 @@ export function useStudyEngine(
               supabase
                 .from('study_sessions')
                 .update({
-                    cards_order: restoredSession.cardsOrder,
-                    current_index: 0,
-                    session_scope_key: sessionScopeKey,
-                    settings_snapshot: sessionSettingsSnapshot,
-                    schema_version: 1,
-                    updated_at: new Date().toISOString(),
+                  cards_order: restoredSession.cardsOrder,
+                  current_index: 0,
+                  session_scope_key: sessionScopeKey,
+                  settings_snapshot: sessionSettingsSnapshot,
+                  schema_version: 1,
+                  updated_at: new Date().toISOString(),
                 })
                 .eq('id', matchingSession.id)
                 .abortSignal(abortController.signal),
@@ -819,9 +898,7 @@ export function useStudyEngine(
             ).catch(() => undefined);
             toast.info("Fila do Foco Vermelho corrigida. Recomeçando do primeiro card.");
           } else {
-            if (localSnapshot?.sessionId === matchingSession.id) {
-              setResults(localSnapshot.results);
-            }
+            setResults(restoredSnapshot?.results ?? []);
             toast.success("Continuando de onde você parou!");
           }
 
@@ -874,6 +951,13 @@ export function useStudyEngine(
             mode,
             current_index: localSnapshot?.currentIndex ?? 0,
             cards_order: orderedCards,
+            session_snapshot: buildStudyProgressSnapshot({
+              sessionId: null,
+              currentIndex: localSnapshot?.currentIndex ?? 0,
+              cardsOrder: orderedCards,
+              results: localSnapshot?.results ?? [],
+              layer: sessionLayerRef.current,
+            }),
             session_scope_key: sessionScopeKey,
             settings_snapshot: sessionSettingsSnapshot,
             schema_version: 1,
@@ -903,8 +987,17 @@ export function useStudyEngine(
       setCardsOrder(fallbackIds);
       setCurrentIndex(fallbackLocalSnapshot?.currentIndex ?? 0);
       setResults(fallbackLocalSnapshot?.results ?? []);
+      if (fallbackIds.length > 0) {
+        // A remote restore failure is recoverable when the already-loaded deck
+        // can still form a valid queue. Do not confuse that fallback with a
+        // failed initialization, but also never report ready with an empty
+        // order: the readiness layer would otherwise hide a real failure.
+        markReady();
+      } else {
+        setInitializationState("failed");
+        setIsLoading(false);
+      }
     } finally {
-      markReady();
       perfLog("useStudyEngine.initializeSession", __t0, { listId, mode, cards: flashcards.length });
     }
     // Includes gameSettings.subset and redListIds because they materially affect
@@ -936,10 +1029,52 @@ export function useStudyEngine(
     void initializeSession(true);
   }, [initializeSession]);
 
-  const startFreshSession = useCallback(() => {
+  const startFreshSession = useCallback(async () => {
+    if (isRestarting || restartInFlightRef.current) return;
+    restartInFlightRef.current = true;
+
+    const previousSessionId = sessionId;
+    const remoteUserId = authUserIdRef.current;
+
+    // Invalidate every in-flight initializer before touching local state. A
+    // late insert from the old generation must never resurrect the discarded
+    // session after the user explicitly chose "começar do zero".
     initializationAbortRef.current?.abort();
     initializationGenerationRef.current += 1;
     completedInitSignatureRef.current = "";
+    sessionLayerRef.current = undefined;
+    setIsRestarting(true);
+
+    // Closing the old row is a safety boundary: if it cannot be confirmed,
+    // keep the current session intact rather than creating two resumable rows.
+    if (previousSessionId && isAuthenticated && remoteUserId && listId) {
+      try {
+        const controller = new AbortController();
+        const { data: closedSession, error } = await withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .update({ completed: true, updated_at: new Date().toISOString() })
+            .eq('id', previousSessionId)
+            .eq('user_id', remoteUserId)
+            .eq('list_id', listId)
+            .select('id')
+            .maybeSingle()
+            .abortSignal(controller.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          'fresh-close-previous-session',
+          () => controller.abort(),
+        );
+        if (error) throw error;
+        if (!closedSession?.id) throw new Error('fresh-close-previous-session-unconfirmed');
+      } catch (error) {
+        console.error('[StudyEngine] Não foi possível fechar a sessão anterior:', error);
+        toast.error('Não foi possível iniciar uma sessão nova com segurança. Tente novamente.');
+        setIsRestarting(false);
+        restartInFlightRef.current = false;
+        return;
+      }
+    }
+
     clearStudySnapshot(studySnapshotKey);
     clearMasterySnapshot(masterySnapshotKey);
     clearStudyLayerSnapshot(studySnapshotKey);
@@ -956,12 +1091,15 @@ export function useStudyEngine(
     setIsFinished(false);
 
     const eligibleIds = flashcards.map((card) => card.id);
+    let freshMastery: MasterySessionState | null = null;
+    let freshCardsOrder = eligibleIds;
     if (isMasteryMode) {
-      const freshMastery = createMasterySession(eligibleIds, {
+      freshMastery = createMasterySession(eligibleIds, {
         shuffle: gameSettings.mode === "random",
       });
       setMasterySession(freshMastery);
-      setCardsOrder(freshMastery.currentRoundIds);
+      freshCardsOrder = freshMastery.currentRoundIds;
+      setCardsOrder(freshCardsOrder);
       setCurrentIndex(freshMastery.currentRoundIndex);
     } else {
       const baseOrder =
@@ -969,15 +1107,62 @@ export function useStudyEngine(
           ? [...eligibleIds].sort(() => Math.random() - 0.5)
           : eligibleIds;
       setMasterySession(null);
-      setCardsOrder(injectRedListRepetitions(
+      freshCardsOrder = injectRedListRepetitions(
         baseOrder,
         effectiveRedPlayableIds,
         shouldInjectRedPriority(gameSettings),
-      ));
+      );
+      setCardsOrder(freshCardsOrder);
       setCurrentIndex(0);
     }
     setInitializationState(eligibleIds.length > 0 ? "ready" : "failed");
     setIsLoading(false);
+
+    // A new row is created only after the previous row was confirmed closed.
+    // If this best-effort creation is unavailable, the local session remains
+    // usable and the user gets an explicit warning instead of a false resume.
+    if (isAuthenticated && remoteUserId && listId && eligibleIds.length > 0) {
+      try {
+        const controller = new AbortController();
+        const { data: newSession, error } = await withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .insert({
+              user_id: remoteUserId,
+              list_id: listId,
+              mode,
+              current_index: 0,
+              cards_order: freshCardsOrder,
+              session_snapshot: freshMastery ?? buildStudyProgressSnapshot({
+                sessionId: null,
+                currentIndex: 0,
+                cardsOrder: freshCardsOrder,
+                results: [],
+                layer: sessionLayerRef.current,
+              }),
+              session_scope_key: sessionScopeKey,
+              settings_snapshot: sessionSettingsSnapshot,
+              schema_version: 1,
+              completed: false,
+            })
+            .select('id')
+            .single()
+            .abortSignal(controller.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          'fresh-create-session',
+          () => controller.abort(),
+        );
+        if (error) throw error;
+        if (!newSession?.id) throw new Error('fresh-create-session-unconfirmed');
+        if (mountedRef.current) setSessionId(newSession.id);
+      } catch (error) {
+        console.warn('[StudyEngine] Sessão nova ficou apenas local:', error);
+        toast.warning('O jogo reiniciou neste aparelho, mas a sincronização online falhou.');
+      }
+    }
+
+    setIsRestarting(false);
+    restartInFlightRef.current = false;
     logStudyRuntime("fresh-session-recovery", {
       mode,
       flow: studyFlowMode,
@@ -988,11 +1173,16 @@ export function useStudyEngine(
     flashcards,
     flipProgressKey,
     gameSettings,
+    isAuthenticated,
+    isRestarting,
     isFlipMode,
     isMasteryMode,
     listId,
     masterySnapshotKey,
     mode,
+    sessionId,
+    sessionScopeKey,
+    sessionSettingsSnapshot,
     studyFlowMode,
     studySnapshotKey,
   ]);
@@ -1016,25 +1206,39 @@ export function useStudyEngine(
 
       try {
         const controller = new AbortController();
-        const { error } = await withStudyRuntimeTimeout(
+        const { data: savedSession, error } = await withStudyRuntimeTimeout(
           supabase
             .from('study_sessions')
             .update({
               current_index: currentIndex,
+              ...(!isMasteryMode
+                ? {
+                  session_snapshot: buildStudyProgressSnapshot({
+                    sessionId,
+                    currentIndex,
+                    cardsOrder,
+                    results,
+                    layer: sessionLayerRef.current,
+                  }),
+                }
+                : {}),
               updated_at: new Date().toISOString()
             })
             .eq('id', sessionId)
+            .select('id')
+            .maybeSingle()
             .abortSignal(controller.signal),
           STUDY_REMOTE_RESTORE_TIMEOUT_MS,
           'debounced-save-progress',
           () => controller.abort(),
         );
         if (error) throw error;
+        if (!savedSession?.id) throw new Error('debounced-save-progress-unconfirmed');
       } catch (error) {
         console.warn('[StudyEngine] Salvamento remoto pendente:', error);
       }
     }, 500);
-  }, [sessionId, currentIndex, listId]);
+  }, [cardsOrder, currentIndex, isMasteryMode, listId, results, sessionId]);
 
   // Flush buffered progress to database
   const flushProgressBuffer = useCallback(async () => {
@@ -1102,16 +1306,23 @@ export function useStudyEngine(
       if (upsertRecords.length > 0) {
         try {
           const writeController = new AbortController();
-          const { error } = await withStudyRuntimeTimeout(
+          const { data: writtenProgress, error } = await withStudyRuntimeTimeout(
             supabase
               .from('flashcard_progress')
-              .upsert(upsertRecords, { onConflict: 'id' })
+              // The schema's idempotency key is user_id + flashcard_id. The
+              // row UUID is an implementation detail and is not a safe
+              // conflict target for retries that race with another device.
+              .upsert(upsertRecords, { onConflict: 'user_id,flashcard_id' })
+              .select('id')
               .abortSignal(writeController.signal),
             STUDY_REMOTE_RESTORE_TIMEOUT_MS,
             'progress-flush-write',
             () => writeController.abort(),
           );
           if (error) throw error;
+          if (!writtenProgress || writtenProgress.length !== upsertRecords.length) {
+            throw new Error('progress-flush-write-unconfirmed');
+          }
         } catch (err) {
           for (const [cardId, entry] of entries) {
             const current = progressBufferRef.current.get(cardId);
@@ -1417,17 +1628,20 @@ export function useStudyEngine(
         // Harmless fallback for environments where the reward RPC only
         // calculates values but does not mark the session itself.
         const completionController = new AbortController();
-        const { error: completionError } = await withStudyRuntimeTimeout(
+        const { data: completedSession, error: completionError } = await withStudyRuntimeTimeout(
           supabase
             .from('study_sessions')
             .update({ completed: true, updated_at: new Date().toISOString() })
             .eq('id', sessionId)
+            .select('id')
+            .maybeSingle()
             .abortSignal(completionController.signal),
           STUDY_REMOTE_RESTORE_TIMEOUT_MS,
           'complete-study-session',
           () => completionController.abort(),
         );
         if (completionError) throw completionError;
+        if (!completedSession?.id) throw new Error('complete-study-session-unconfirmed');
 
         if (userId && listId) {
           try {
@@ -1512,26 +1726,36 @@ export function useStudyEngine(
   }, [isAuthenticated, flushProgressBuffer, sessionId, listId, isFlipMode, mode, flipProgressKey, studySnapshotKey, masterySnapshotKey]);
 
   const discardSession = useCallback(async () => {
-    clearStudySnapshot(studySnapshotKey);
-    clearMasterySnapshot(masterySnapshotKey);
-    clearStudyLayerSnapshot(studySnapshotKey);
-    if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
     const currentSessionId = sessionId;
-    setSessionId(null);
-    if (!currentSessionId || !isAuthenticated) return;
+    if (!currentSessionId || !isAuthenticated) {
+      clearStudySnapshot(studySnapshotKey);
+      clearMasterySnapshot(masterySnapshotKey);
+      clearStudyLayerSnapshot(studySnapshotKey);
+      if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
+      setSessionId(null);
+      return;
+    }
     try {
       const controller = new AbortController();
-      const { error } = await withStudyRuntimeTimeout(
+      const { data: discardedSession, error } = await withStudyRuntimeTimeout(
         supabase
           .from('study_sessions')
           .update({ completed: true, updated_at: new Date().toISOString() })
           .eq('id', currentSessionId)
+          .select('id')
+          .maybeSingle()
           .abortSignal(controller.signal),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         'discard-study-session',
         () => controller.abort(),
       );
       if (error) throw error;
+      if (!discardedSession?.id) throw new Error('discard-study-session-unconfirmed');
+      clearStudySnapshot(studySnapshotKey);
+      clearMasterySnapshot(masterySnapshotKey);
+      clearStudyLayerSnapshot(studySnapshotKey);
+      if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
+      setSessionId(null);
     } catch (error) {
       console.error('[StudyEngine] Falha ao descartar sessão restaurada:', error);
     }
@@ -1544,7 +1768,8 @@ export function useStudyEngine(
 
   // Restart session with new settings
   const restartSession = useCallback(async (newSettings?: Partial<GameSettings>) => {
-    if (isRestarting) return;
+    if (isRestarting || restartInFlightRef.current) return;
+    restartInFlightRef.current = true;
     setIsRestarting(true);
     const settings = { ...gameSettings, ...newSettings };
     setGameSettings(settings);
@@ -1552,6 +1777,7 @@ export function useStudyEngine(
     if (flashcards.length === 0) {
       toast.error('Nenhum card encontrado com os filtros selecionados');
       setIsRestarting(false);
+      restartInFlightRef.current = false;
       return;
     }
 
@@ -1564,38 +1790,43 @@ export function useStudyEngine(
     );
 
     const previousSessionId = sessionId;
-    clearStudySnapshot(studySnapshotKey);
-    clearMasterySnapshot(masterySnapshotKey);
-    clearStudyLayerSnapshot(studySnapshotKey);
-    if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
-
-    setSessionId(null);
-    setCardsOrder(cardIds);
-    setCurrentIndex(0);
-    setResults([]);
-    setRoundResults([]);
-    setMissedCards([]);
-    setUnseenCards([]);
-    setRoundNumber(1);
-    setIsFinished(false);
 
     try {
       const userId = authUserIdRef.current;
       if (isAuthenticated && userId && listId) {
         if (previousSessionId) {
           const previousController = new AbortController();
-          const { error: previousError } = await withStudyRuntimeTimeout(
+          const { data: closedSession, error: previousError } = await withStudyRuntimeTimeout(
             supabase
               .from('study_sessions')
               .update({ completed: true, updated_at: new Date().toISOString() })
               .eq('id', previousSessionId)
+              .select('id')
+              .maybeSingle()
               .abortSignal(previousController.signal),
             STUDY_REMOTE_RESTORE_TIMEOUT_MS,
             'restart-close-previous-session',
             () => previousController.abort(),
           );
           if (previousError) throw previousError;
+          if (!closedSession?.id) throw new Error('restart-close-previous-session-unconfirmed');
         }
+
+        clearStudySnapshot(studySnapshotKey);
+        clearMasterySnapshot(masterySnapshotKey);
+        clearStudyLayerSnapshot(studySnapshotKey);
+        sessionLayerRef.current = undefined;
+        if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
+        setSessionId(null);
+        setCardsOrder(cardIds);
+        setCurrentIndex(0);
+        setResults([]);
+        setRoundResults([]);
+        setMissedCards([]);
+        setUnseenCards([]);
+        setRoundNumber(1);
+        setIsFinished(false);
+
         const createController = new AbortController();
         const { data: newSession, error } = await withStudyRuntimeTimeout(
           supabase
@@ -1606,12 +1837,19 @@ export function useStudyEngine(
               mode,
               current_index: 0,
               cards_order: cardIds,
+              session_snapshot: buildStudyProgressSnapshot({
+                sessionId: null,
+                currentIndex: 0,
+                cardsOrder: cardIds,
+                results: [],
+                layer: sessionLayerRef.current,
+              }),
               session_scope_key: sessionScopeKey,
               settings_snapshot: sessionSettingsSnapshot,
               schema_version: 1,
               completed: false,
             })
-            .select()
+            .select('id')
             .abortSignal(createController.signal)
             .single(),
           STUDY_REMOTE_RESTORE_TIMEOUT_MS,
@@ -1620,6 +1858,21 @@ export function useStudyEngine(
         );
         if (error) throw error;
         setSessionId(newSession.id);
+      } else {
+        clearStudySnapshot(studySnapshotKey);
+        clearMasterySnapshot(masterySnapshotKey);
+        clearStudyLayerSnapshot(studySnapshotKey);
+        sessionLayerRef.current = undefined;
+        if (listId && isFlipMode) localStorage.removeItem(flipProgressKey);
+        setSessionId(null);
+        setCardsOrder(cardIds);
+        setCurrentIndex(0);
+        setResults([]);
+        setRoundResults([]);
+        setMissedCards([]);
+        setUnseenCards([]);
+        setRoundNumber(1);
+        setIsFinished(false);
       }
       toast.success('Jogo reiniciado!');
     } catch (error) {
@@ -1627,6 +1880,7 @@ export function useStudyEngine(
       toast.warning('O jogo reiniciou neste aparelho, mas a sincronização online falhou.');
     } finally {
       setIsRestarting(false);
+      restartInFlightRef.current = false;
     }
   }, [isRestarting, gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, masterySnapshotKey, isAuthenticated, mode, sessionScopeKey, sessionSettingsSnapshot]);
 
@@ -1689,6 +1943,7 @@ export function useStudyEngine(
       cardsOrder,
       results,
       timestamp: Date.now(),
+      ...(sessionLayerRef.current ? { layer: { ...sessionLayerRef.current } } : {}),
     });
   }, [studySnapshotKey, sessionId, currentIndex, cardsOrder, results, isLoading, isFinished]);
 
@@ -1706,13 +1961,18 @@ export function useStudyEngine(
         .update({
           current_index: masterySession.currentRoundIndex,
           cards_order: masterySession.currentRoundIds,
-          session_snapshot: masterySession,
+          session_snapshot: {
+            ...masterySession,
+            ...(sessionLayerRef.current ? { layer: { ...sessionLayerRef.current } } : {}),
+          },
           session_scope_key: sessionScopeKey,
           settings_snapshot: sessionSettingsSnapshot,
           completed: masterySession.status === "journey-complete",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", sessionId),
+        .eq("id", sessionId)
+        .select("id")
+        .maybeSingle(),
       STUDY_REMOTE_RESTORE_TIMEOUT_MS,
       "mastery-session-persist",
     ).catch(() => undefined);
@@ -1721,7 +1981,8 @@ export function useStudyEngine(
   // Force-save current index immediately (no debounce). Used when switching
   // study scope so the previous trail's index isn't lost while waiting for
   // the debounced save to fire.
-  const saveProgressNow = useCallback(async () => {
+  const saveProgressNow = useCallback(async (layer?: StudySessionLayerSnapshot) => {
+    if (layer) sessionLayerRef.current = { ...layer };
     if (cardsOrder.length > 0 && !isFinished) {
       writeStudySnapshot(studySnapshotKey, {
         version: 2,
@@ -1730,6 +1991,7 @@ export function useStudyEngine(
         cardsOrder,
         results,
         timestamp: Date.now(),
+        ...(sessionLayerRef.current ? { layer: { ...sessionLayerRef.current } } : {}),
       });
     }
     if (isMasteryMode && masterySession) {
@@ -1738,7 +2000,7 @@ export function useStudyEngine(
     if (!sessionId || !listId || !authUserIdRef.current) return;
     try {
       const controller = new AbortController();
-      const { error } = await withStudyRuntimeTimeout(
+      const { data: savedSession, error } = await withStudyRuntimeTimeout(
         supabase
           .from('study_sessions')
           .update({
@@ -1746,20 +2008,36 @@ export function useStudyEngine(
             ...(isMasteryMode && masterySession
               ? {
                 cards_order: masterySession.currentRoundIds,
-                session_snapshot: masterySession,
+                session_snapshot: {
+                  ...masterySession,
+                  ...(sessionLayerRef.current ? { layer: { ...sessionLayerRef.current } } : {}),
+                },
                 session_scope_key: sessionScopeKey,
                 settings_snapshot: sessionSettingsSnapshot,
               }
-              : {}),
+              : {
+                session_snapshot: buildStudyProgressSnapshot({
+                  sessionId,
+                  currentIndex,
+                  cardsOrder,
+                  results,
+                  layer: sessionLayerRef.current,
+                }),
+                session_scope_key: sessionScopeKey,
+                settings_snapshot: sessionSettingsSnapshot,
+              }),
             updated_at: new Date().toISOString(),
           })
           .eq('id', sessionId)
+          .select('id')
+          .maybeSingle()
           .abortSignal(controller.signal),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         'save-progress',
         () => controller.abort(),
       );
       if (error) throw error;
+      if (!savedSession?.id) throw new Error('save-progress-unconfirmed');
     } catch (error) {
       console.warn('[StudyEngine] saveProgressNow remoto pendente:', error);
     }

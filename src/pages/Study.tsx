@@ -1075,7 +1075,11 @@ const Study = () => {
     if (!studySnapshotKey || !engineCurrentCardId) return;
     if (!hasLayers) return;
     writeStudyLayerSnapshot(studySnapshotKey, engineCurrentCardId, safeLayerIdx);
-  }, [studySnapshotKey, engineCurrentCardId, safeLayerIdx, hasLayers]);
+    // The local layer snapshot is a fast fallback; the study engine also
+    // mirrors the same position into the authenticated session snapshot so a
+    // device/browser change does not reopen the group on layer zero.
+    void saveProgressNow({ cardId: engineCurrentCardId, layerIdx: safeLayerIdx });
+  }, [studySnapshotKey, engineCurrentCardId, safeLayerIdx, hasLayers, saveProgressNow]);
 
   // Centralized status-target resolution lives further below (after
   // `displayedCard` is defined) — see `currentStatusTargets`.

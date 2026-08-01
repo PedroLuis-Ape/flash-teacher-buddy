@@ -58,6 +58,15 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 - Manual: duas contas no mesmo navegador, reload/pagehide, duas abas, offline→online, mobile, todos os modos e troca de cards durante uma sessão.
 - Confirmar que o frontend publicado pela Lovable aponta para o backend `ymahldldyxvwjeruaxpr`; não usar `xrnf` como substituto de dados de produção.
 
+## Auditoria complementar
+
+- A restauração normal agora escolhe o snapshot local/remoto mais novo e carrega também a camada visível do grupo.
+- Misto repara uma rodada removida ou uma jornada concluída que recebeu cards novos sem reiniciar silenciosamente o percurso.
+- Começar do zero e reinício fecham a sessão anterior com confirmação antes de criar outra; falha nessa confirmação bloqueia a troca segura.
+- Flush de progresso usa a chave real `user_id + flashcard_id` e confirma as linhas retornadas pelo upsert.
+- Reinício protege a transição contra inicialização concorrente e só aceita snapshot local quando ele pertence à sessão remota restaurada; salvamentos debounced/imediatos também exigem confirmação da linha afetada.
+- Validação direcionada após a auditoria complementar: 3 arquivos e 32 testes passaram, incluindo snapshot de camada, reparo do Misto e readiness.
+
 ## Riscos e rollback
 
 - Rows antigas de `study_sessions` sem `session_scope_key` não são restauradas pelo novo caminho; continuam preservadas e uma nova sessão contextual é criada.

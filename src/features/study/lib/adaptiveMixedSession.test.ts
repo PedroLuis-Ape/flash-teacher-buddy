@@ -4,6 +4,7 @@ import {
   createAdaptiveMixedSession,
   getAdaptiveMixedProgress,
   getAdaptiveRoundSize,
+  repairAdaptiveMixedState,
   restartAdaptiveMixedRound,
   startNextAdaptiveMixedRound,
 } from "./adaptiveMixedSession";
@@ -142,5 +143,32 @@ describe("adaptive mixed session", () => {
     expect(state.status).toBe("journey-complete");
     expect(state.pendingCardIds).toEqual([]);
     expect(state.masteredCardIds).toHaveLength(20);
+  });
+
+  it("não reinicia o percurso quando cards novos aparecem após a conclusão", () => {
+    let state = createAdaptiveMixedSession(["card-1", "card-2"], {
+      random: fixedRandom,
+      flowMode: "continuous",
+    });
+    state.currentRoundCardIds.forEach(() => {
+      state = answerCurrent(state, true);
+    });
+    expect(state.status).toBe("journey-complete");
+
+    const repaired = repairAdaptiveMixedState(state, ["card-1", "card-2", "card-3"], "continuous");
+    expect(repaired).not.toBeNull();
+    expect(repaired?.masteredCardIds).toEqual(expect.arrayContaining(["card-1", "card-2"]));
+    expect(repaired?.unseenCardIds).toContain("card-3");
+    expect(repaired?.status).toBe("round-complete");
+  });
+
+  it("compõe uma nova rodada quando os cards da rodada salva foram removidos", () => {
+    const state = createAdaptiveMixedSession(ids(16), { random: fixedRandom });
+    const remainingCard = state.unseenCardIds[0];
+    const repaired = repairAdaptiveMixedState(state, [remainingCard], "mastery_rounds");
+
+    expect(repaired).not.toBeNull();
+    expect(repaired?.status).toBe("active");
+    expect(repaired?.currentRoundCardIds).toEqual([remainingCard]);
   });
 });

@@ -162,6 +162,29 @@ describe("study snapshots", () => {
     expect(snapshot?.currentIndex).toBe(1);
   });
 
+  it("preserves a valid layered-card position and drops an invalid one", () => {
+    const restored = sanitizeStudySnapshot({
+      version: 2,
+      sessionId: "layered-session",
+      currentIndex: 0,
+      cardsOrder: ["entry-card"],
+      results: [],
+      timestamp: 123,
+      layer: { cardId: "entry-card", layerIdx: 2 },
+    }, new Set(["entry-card"]));
+
+    expect(restored?.layer).toEqual({ cardId: "entry-card", layerIdx: 2 });
+    expect(sanitizeStudySnapshot({
+      version: 2,
+      sessionId: "layered-session",
+      currentIndex: 0,
+      cardsOrder: ["entry-card"],
+      results: [],
+      timestamp: 123,
+      layer: { cardId: "entry-card", layerIdx: -1 },
+    }, new Set(["entry-card"]))?.layer).toBeUndefined();
+  });
+
   it("isolates keys by user", () => {
     const base = {
       listId: "list-1",
