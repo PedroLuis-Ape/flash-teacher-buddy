@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useKeyboardShortcuts as useStudyShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { hashToBool } from "@/features/study/lib/gameCore";
@@ -12,6 +13,21 @@ import {
   createStudyDeckRequestId,
   loadStudyDeck,
 } from "@/features/study/lib/studyDeckLoader";
+import {
+  fetchStudyDeckPage,
+  probeStudyDeckAvailability,
+} from "@/features/study/lib/studyDeckSupabaseGateway";
+import { resolveStudyResourceContext } from "@/features/study/lib/studyResourceContext";
+import {
+  buildStudyDeckRequestContextKey,
+  isStudyDeckRequestCurrent,
+} from "@/features/study/lib/studyDeckRequestIdentity";
+import {
+  isStudyDeckLoading,
+  studyDeckRecoveryReason,
+  studyDeckTechnicalId,
+  type StudyDeckLoadState,
+} from "@/features/study/lib/studyDeckLoadState";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
@@ -49,6 +65,7 @@ import { StudyCompletionModal } from "@/features/study/components/StudyCompletio
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
 import { StudyDeckEmptyState } from "@/features/study/components/StudyDeckEmptyState";
+import { StudyScopeEmptyState } from "@/features/study/components/StudyScopeEmptyState";
 import { SkipCardConfirmDialog } from "@/features/study/components/SkipCardConfirmDialog";
 import { resolveStudyProgressMetrics } from "@/features/study/lib/studyProgressMetrics";
 import {
@@ -77,7 +94,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
-import { ArrowLeft, RefreshCcw, RotateCcw, Star, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { buildStudyReturnRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
@@ -143,10 +160,13 @@ const getDefaultListSettings = (): ListSettings => ({
 
 const Study = () => {
   const { id, collectionId } = useParams();
-  const resolvedId = (id as string) || (collectionId as string) || "";
-  // Route distinction comes from useParams (declarative router-defined keys),
-  // not pathname matching. Keeps things robust against future route additions.
-  const isListRoute = Boolean(id);
+  const location = useLocation();
+  const resourceContext = useMemo(
+    () => resolveStudyResourceContext({ pathname: location.pathname, id, collectionId }),
+    [collectionId, id, location.pathname],
+  );
+  const resolvedId = resourceContext.resourceId;
+  const isListRoute = resourceContext.resourceKind === "list";
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -160,6 +180,7 @@ const Study = () => {
   // mode, but can never silently replace it with another mode from stale state.
   const { status: authStatus, userId: authUserId, session: authSession } = useAuth();
   const requestedMode: StudyMode = normalizeStudyMode(searchParams.get("mode") ?? "flip");
+  const isPrivateListRoute = isListRoute && !resourceContext.isPublic;
   const {
     prefs,
     updatePrefs,
@@ -167,10 +188,10 @@ const Study = () => {
     effectivePreset,
     isHydrating: preferencesHydrating,
   } = useStudyPreferences(authUserId, {
-    listId: isListRoute ? resolvedId : undefined,
+    listId: isPrivateListRoute ? resolvedId : undefined,
     gameMode: requestedMode,
-    persistScope: isListRoute ? "list" : "global",
-    canPersistList: isListRoute,
+    persistScope: isPrivateListRoute ? "list" : "global",
+    canPersistList: isPrivateListRoute,
   });
   // URL overrides are applied at load time inside useStudyPreferences,
   // but the URL is ALSO read directly here as the launch-intent SSOT. A
@@ -216,12 +237,14 @@ const Study = () => {
   const fromStepId = searchParams.get("from_step");
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [confirmedEmpty, setConfirmedEmpty] = useState(false);
-  const [loadFailure, setLoadFailure] = useState<string | null>(null);
+  const [deckLoadState, setDeckLoadState] = useState<StudyDeckLoadState>({ phase: "idle" });
   const [loadAttempt, setLoadAttempt] = useState(0);
   const loadGenerationRef = useRef(0);
   const loadAbortRef = useRef<AbortController | null>(null);
+  const loadContextRef = useRef("");
+  const loading = isStudyDeckLoading(deckLoadState);
+  const confirmedEmpty = deckLoadState.phase === "confirmed-empty";
+  const loadFailure = studyDeckRecoveryReason(deckLoadState);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
   const [listTitle, setListTitle] = useState<string | null>(null);
@@ -273,24 +296,14 @@ const Study = () => {
   }, [resolvedId, isListRoute]);
   const favoritesQuery = useFavorites(userId, 'flashcard', favoritesScope);
   const favorites = favoritesQuery.data ?? [];
-  const favoritesLoading = favoritesQuery.isLoading;
-  // Confirmed-zero requires success for the CURRENT user, no in-flight fetch,
-  // and no placeholder data. `data.length === 0` alone is NOT evidence —
-  // disabled queries also produce [].
-  const favoritesConfirmedZero =
-    authStatus === "authenticated" &&
-    !!userId &&
-    favoritesQuery.isSuccess &&
-    favoritesQuery.fetchStatus !== "fetching" &&
-    !favoritesQuery.isPlaceholderData &&
-    favorites.length === 0;
   // `toggleFavorite` (per-id, legacy) still used outside the study flow.
   // Study itself now uses the atomic group-aware mutation below.
   const toggleFavorite = useToggleFavorite();
   const setFavoriteGroup = useSetFavoriteGroup();
 
   // Red list state (scoped to current list)
-  const { data: redListIds = [] } = useRedList(userId, isListRoute ? resolvedId : undefined);
+  const redListQuery = useRedList(userId, isListRoute ? resolvedId : undefined);
+  const redListIds = redListQuery.data ?? [];
   const toggleRedList = useToggleRedList();
   const setRedListGroup = useSetRedListGroup();
 
@@ -311,6 +324,17 @@ const Study = () => {
   const [deckSubset, setDeckSubset] = useState<"all" | "favorites">(initialGameSettings.subset);
   const activeDeckSubset = canUsePersonalFavorites ? deckSubset : "all";
   const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState(false);
+  const favoritesScopeReady = activeDeckSubset !== "favorites"
+    || !userId
+    || (favoritesQuery.isSuccess
+      && favoritesQuery.fetchStatus !== "fetching"
+      && !favoritesQuery.isPlaceholderData);
+  const redFocusScopeReady = !redFocusActiveForDeck
+    || !userId
+    || (redListQuery.isSuccess
+      && redListQuery.fetchStatus !== "fetching"
+      && !redListQuery.isPlaceholderData);
+  const selectedScopeReady = favoritesScopeReady && redFocusScopeReady;
   const restoredSessionSettingsRef = useRef<string | null>(null);
 
   const handleSessionSettingsRestored = useCallback((settings: StudySessionSettingsSnapshot) => {
@@ -339,12 +363,6 @@ const Study = () => {
     restoredSessionSettingsRef.current = null;
   }, [authUserId, normalizedMode, resolvedId]);
 
-  const favoritesFilterFellBack =
-    !redFocusActiveForDeck &&
-    activeDeckSubset === "favorites" &&
-    favoritesConfirmedZero &&
-    flashcards.length > 0;
-
   const effectiveFlashcards = useMemo(() => {
     const scoped = filterCardsForStudyScope({
       cards: flashcards,
@@ -353,15 +371,18 @@ const Study = () => {
       settings: { subset: activeDeckSubset, redFocus: redFocusActiveForDeck },
     });
 
-    // Favorites keeps the historical safe fallback. Red focus intentionally
-    // stays empty when the user has no red cards; mixing normal cards would
-    // violate the selected scope.
-    if (!redFocusActiveForDeck && activeDeckSubset === "favorites" && favoritesConfirmedZero) {
-      return flashcards;
-    }
-
     return scoped;
-  }, [activeDeckSubset, favoritesConfirmedZero, flashcards, favorites, redListIds, redFocusActiveForDeck]);
+  }, [activeDeckSubset, flashcards, favorites, redListIds, redFocusActiveForDeck]);
+  const emptyStudyScope = deckLoadState.phase === "ready"
+    && selectedScopeReady
+    && flashcards.length > 0
+    && effectiveFlashcards.length === 0
+    ? redFocusActiveForDeck
+      ? "red-focus" as const
+      : activeDeckSubset === "favorites"
+        ? "favorites" as const
+        : null
+    : null;
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
@@ -378,7 +399,10 @@ const Study = () => {
   const presetContextKey = `${authUserId ?? "anon"}:${resolvedId}:${normalizedMode}`;
   const [appliedPresetContext, setAppliedPresetContext] = useState<string | null>(null);
   const sessionPresetReady = !preferencesHydrating && appliedPresetContext === presetContextKey;
-  const engineFlashcards = sessionPresetReady ? stableFlashcards : [];
+  const deckReadyForEngine = deckLoadState.phase === "ready"
+    && sessionPresetReady
+    && selectedScopeReady;
+  const engineFlashcards = deckReadyForEngine ? stableFlashcards : [];
 
   const {
     currentIndex,
@@ -434,8 +458,9 @@ const Study = () => {
     authUserId,
     effectivePreset.studyFlowMode,
     sessionContext,
-    !loading && !preferencesHydrating && sessionPresetReady,
+    deckReadyForEngine,
     handleSessionSettingsRestored,
+    resolvedId,
   );
 
   // A new queue reference represents a new answerable session/round. Resetting
@@ -543,30 +568,31 @@ const Study = () => {
   // shuffling) — they must NOT trigger a fresh DB query, which would reset the
   // session and re-init the engine for free.
   useEffect(() => {
-    const isPortalRoute = typeof window !== "undefined"
-      && window.location.pathname.startsWith("/portal/");
-    const access = resolveStudyAccess({ authStatus, isPortalRoute, userId: authUserId });
+    const access = resolveStudyAccess({
+      authStatus,
+      isPortalRoute: resourceContext.isPublic,
+      userId: authUserId,
+    });
     setFlashcards([]);
-    setConfirmedEmpty(false);
-    setLoadFailure(null);
     setListTitle(null);
     setVideoInfo(null);
     if (access === "denied") {
-      setLoading(false);
-      setLoadFailure("auth-required");
+      setDeckLoadState({ phase: "recoverable-error", reason: "auth-required" });
       return;
     }
     if (access === "wait") {
-      setLoading(true);
+      setDeckLoadState({ phase: "waiting-auth", reason: "auth" });
       const timeoutId = setTimeout(() => {
-        setLoading(false);
-        setLoadFailure("auth-timeout");
+        setDeckLoadState({ phase: "recoverable-error", reason: "auth-timeout" });
       }, STUDY_RECOVERY_WATCHDOG_MS);
       return () => clearTimeout(timeoutId);
     }
-    if (preferencesHydrating) {
-      setLoading(true);
-      return;
+    if (!resourceContext.isPublic && !authSession) {
+      setDeckLoadState({ phase: "waiting-auth", reason: "auth" });
+      const timeoutId = setTimeout(() => {
+        setDeckLoadState({ phase: "recoverable-error", reason: "session-timeout" });
+      }, STUDY_RECOVERY_WATCHDOG_MS);
+      return () => clearTimeout(timeoutId);
     }
     void loadFlashcards();
     return () => {
@@ -574,7 +600,16 @@ const Study = () => {
       loadGenerationRef.current += 1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedId, authStatus, authUserId, loadAttempt, preferencesHydrating]);
+  }, [
+    resolvedId,
+    authSession,
+    authStatus,
+    authUserId,
+    loadAttempt,
+    resourceContext.isPublic,
+    resourceContext.resourceKind,
+    resourceContext.source,
+  ]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -622,17 +657,37 @@ const Study = () => {
     const abortController = new AbortController();
     loadAbortRef.current = abortController;
     const generation = ++loadGenerationRef.current;
-    const isCurrent = () => loadGenerationRef.current === generation;
-    setLoading(true);
-    setLoadFailure(null);
-
-    // Portal list routes have a public RPC contract even when the browser also
-    // has a session. This keeps the same shared link stable before/after login.
-    const isPortalRoute = window.location.pathname.startsWith("/portal/");
-    const isPublicList = isListRoute && isPortalRoute;
+    const requestContextKey = buildStudyDeckRequestContextKey({
+      ...resourceContext,
+      userId: authUserId,
+    });
+    loadContextRef.current = requestContextKey;
+    const isGenerationCurrent = () => loadGenerationRef.current === generation
+      && loadContextRef.current === requestContextKey;
+    const isCurrent = () => isStudyDeckRequestCurrent({
+      activeGeneration: loadGenerationRef.current,
+      generation,
+      activeContextKey: loadContextRef.current,
+      contextKey: requestContextKey,
+      signal: abortController.signal,
+    });
+    const requestId = createStudyDeckRequestId();
+    setDeckLoadState({
+      phase: loadAttempt > 0 ? "retrying" : "loading",
+      attempt: loadAttempt,
+      requestId,
+    });
 
     if (import.meta.env.DEV) {
-      console.debug("[Study] Loading flashcards", { resolvedId, isListRoute, isPublicList });
+      console.debug("[Study] Loading flashcards", {
+        requestId,
+        generation,
+        resourceId: resolvedId,
+        resourceKind: resourceContext.resourceKind,
+        source: resourceContext.source,
+        public: resourceContext.isPublic,
+        authStatus,
+      });
     }
 
     try {
@@ -654,12 +709,22 @@ const Study = () => {
           // contain metadata without the deck; never show the destructive
           // empty state or create a session from that ambiguous result.
           if (orderedData.length === 0) {
-            setLoadFailure("offline-empty-unconfirmed");
-            setLoading(false);
+            setDeckLoadState({
+              phase: "empty-unconfirmed",
+              reason: "offline-empty",
+              requestId,
+              source: resourceContext.source,
+            });
             return;
           }
           setFlashcards(orderedData as Flashcard[]);
-          setConfirmedEmpty(false);
+          setDeckLoadState({
+            phase: "ready",
+            requestId,
+            source: resourceContext.source,
+            rawCount: offlineData.flashcards.length,
+            playableCount: orderedData.length,
+          });
           setListTitle(offlineData.listMeta.title);
           setListSettings({
             studyType: (offlineData.listMeta.study_type === "general" ? "general" : "language") as "language" | "general",
@@ -669,15 +734,13 @@ const Study = () => {
             labelsB: offlineData.listMeta.labels_b,
             ttsEnabled: offlineData.listMeta.tts_enabled,
           });
-          setLoading(false);
           toast.info("Usando dados offline");
           return;
         }
       } catch {
         // fall through
       }
-      setLoadFailure("offline-unavailable");
-      setLoading(false);
+      setDeckLoadState({ phase: "recoverable-error", reason: "offline-unavailable", requestId });
       return;
     }
     
@@ -685,49 +748,56 @@ const Study = () => {
     // `authSession` from useAuth() is the single source of truth.
     const session = authSession;
 
-    const queryColumn = isListRoute ? "list_id" : "collection_id";
-    
     // ── PERF: Fetch flashcards + list metadata in parallel ──
-    const requestId = createStudyDeckRequestId();
     const deckResult = await withStudyRuntimeTimeout(
       loadStudyDeck<Flashcard>({
         requestId,
-        resourceKind: isListRoute ? "list" : "collection",
+        resourceKind: resourceContext.resourceKind,
         resourceId: resolvedId,
-        isPublicList,
+        source: resourceContext.source,
         hasConfirmedSession: Boolean(session),
         signal: abortController.signal,
-        fetchPage: (from, to) => isPublicList
-          ? (supabase as any)
-              .rpc("get_portal_flashcards", { _list_id: resolvedId })
-              .abortSignal(abortController.signal)
-              .range(from, to)
-          : (supabase as any)
-              .from("flashcards")
-              .select("*")
-              .eq(queryColumn, resolvedId)
-              .is("deleted_at", null)
-              .order("created_at", { ascending: true })
-              .order("id", { ascending: true })
-              .abortSignal(abortController.signal)
-              .range(from, to),
+        fetchPage: (from, to) => fetchStudyDeckPage<Flashcard>({
+          ...resourceContext,
+          signal: abortController.signal,
+          from,
+          to,
+        }),
+        verifyAvailability: () => probeStudyDeckAvailability({
+          ...resourceContext,
+          signal: abortController.signal,
+        }),
         prepare: (rawCards) => prepareLayeredStudyDeck(rawCards),
       }),
       STUDY_REQUIRED_LOAD_TIMEOUT_MS,
-      isPublicList ? "portal-cards" : "study-cards",
+      resourceContext.isPublic ? "portal-cards" : "study-cards",
       () => abortController.abort(),
     );
 
     if (!isCurrent()) return;
-    if (deckResult.status === "empty") {
+    if (deckResult.status === "confirmed-empty") {
       setFlashcards([]);
-      setConfirmedEmpty(true);
-      setLoading(false);
+      setDeckLoadState({
+        phase: "confirmed-empty",
+        requestId: deckResult.requestId,
+        source: deckResult.source,
+      });
+      return;
+    }
+    if (deckResult.status === "unconfirmed") {
+      setFlashcards([]);
+      setDeckLoadState({
+        phase: "empty-unconfirmed",
+        requestId: deckResult.requestId,
+        source: deckResult.source,
+        reason: deckResult.reason,
+      });
       return;
     }
 
+    const metadataClient = resourceContext.isPublic ? publicSupabase : supabase;
     const listPromise = isListRoute
-      ? supabase
+      ? metadataClient
           .from("lists")
           .select("title, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
           .eq("id", resolvedId)
@@ -760,8 +830,13 @@ const Study = () => {
     // Cards are the only required dependency for the first playable render.
     // Metadata may continue loading within its own bounded window.
     setFlashcards(orderedData);
-    setConfirmedEmpty(false);
-    setLoading(false);
+    setDeckLoadState({
+      phase: "ready",
+      requestId: deckResult.requestId,
+      source: deckResult.source,
+      rawCount: deckResult.rawCards.length,
+      playableCount: deckResult.playableCards.length,
+    });
 
     const listResult = await withStudyRuntimeTimeout(
       listPromise,
@@ -777,7 +852,7 @@ const Study = () => {
 
       // ── PERF: Fetch folder + video in parallel ──
       const folderPromise = listData.folder_id
-        ? supabase
+        ? metadataClient
             .from("folders")
             .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
             .eq("id", listData.folder_id)
@@ -786,7 +861,7 @@ const Study = () => {
         : Promise.resolve({ data: null });
 
       const videoPromise = listData.folder_id
-        ? supabase
+        ? metadataClient
             .from("videos")
             .select("video_id, title")
             .eq("folder_id", listData.folder_id)
@@ -826,11 +901,17 @@ const Study = () => {
     }
 
     } catch (err) {
-      if (!isCurrent()) return;
-      setLoadFailure(err instanceof Error ? err.name : "cards-load-failed");
+      if (!isGenerationCurrent()) return;
+      if (err instanceof Error && err.name === "AbortError") {
+        setDeckLoadState({ phase: "cancelled", requestId });
+        return;
+      }
+      setDeckLoadState({
+        phase: "recoverable-error",
+        reason: err instanceof Error ? err.name : "cards-load-failed",
+        requestId,
+      });
       toast.error("Não foi possível carregar os cards. Você pode tentar novamente.");
-    } finally {
-      if (isCurrent()) setLoading(false);
     }
   };
 
@@ -1395,17 +1476,6 @@ const Study = () => {
   // authenticated user), we surface a one-shot toast and rely on the
   // existing "Estudar todos" button (handleDisableFavoritesFilter) for the
   // explicit user action. Persistent prefs only change on explicit action.
-  const fallbackToastShownRef = useRef(false);
-  useEffect(() => {
-    if (favoritesFilterFellBack && !fallbackToastShownRef.current) {
-      fallbackToastShownRef.current = true;
-      toast.info("Nenhum favorito nesta lista. Estudando todos os cards.");
-    }
-    if (!favoritesFilterFellBack) {
-      fallbackToastShownRef.current = false;
-    }
-  }, [favoritesFilterFellBack]);
-
   // Helper to disable favorites filter and restart with all cards
   const handleDisableFavoritesFilter = () => {
     updatePrefs({ favoritesOnly: false });
@@ -1456,23 +1526,23 @@ const Study = () => {
     },
   );
 
-  const [favoritesWaitExpired, setFavoritesWaitExpired] = useState(false);
+  const [scopeWaitExpired, setScopeWaitExpired] = useState(false);
   useEffect(() => {
-    if (!favoritesOnly || !favoritesLoading) {
-      setFavoritesWaitExpired(false);
+    if (selectedScopeReady) {
+      setScopeWaitExpired(false);
       return;
     }
     const timeoutId = setTimeout(
-      () => setFavoritesWaitExpired(true),
+      () => setScopeWaitExpired(true),
       STUDY_RECOVERY_WATCHDOG_MS,
     );
     return () => clearTimeout(timeoutId);
-  }, [favoritesLoading, favoritesOnly]);
+  }, [selectedScopeReady]);
 
   const sessionReadiness = useMemo(() => resolveStudySessionReadiness({
     pageLoading: loading || preferencesHydrating || !sessionPresetReady,
     engineLoading: studyLoading,
-    auxiliaryLoading: favoritesOnly && favoritesLoading && !favoritesWaitExpired,
+    auxiliaryLoading: !selectedScopeReady && !scopeWaitExpired,
     eligibleCardIds: engineFlashcards.map((card) => card.id),
     cardsOrder,
     currentIndex,
@@ -1483,15 +1553,14 @@ const Study = () => {
     cardsOrder,
     currentIndex,
     engineFlashcards,
-    favoritesLoading,
-    favoritesOnly,
-    favoritesWaitExpired,
     initializationState,
     isFinished,
     loading,
     masteryStatus,
     preferencesHydrating,
     sessionPresetReady,
+    scopeWaitExpired,
+    selectedScopeReady,
     studyLoading,
   ]);
 
@@ -1531,11 +1600,10 @@ const Study = () => {
 
   const handleRecoveryRetry = () => {
     const shouldReloadCards = Boolean(loadFailure) || flashcards.length === 0;
-    setLoadFailure(null);
-    setConfirmedEmpty(false);
     setShowSessionRecovery(false);
     setAutomaticRecoveryAttempted(false);
     if (shouldReloadCards) {
+      setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
       setLoadAttempt((attempt) => attempt + 1);
       return;
     }
@@ -1544,19 +1612,35 @@ const Study = () => {
 
   const handleRecoveryFresh = () => {
     const shouldReloadCards = Boolean(loadFailure) || flashcards.length === 0;
-    setLoadFailure(null);
-    setConfirmedEmpty(false);
     setShowSessionRecovery(false);
     setAutomaticRecoveryAttempted(false);
     if (shouldReloadCards) {
+      setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
       setLoadAttempt((attempt) => attempt + 1);
       return;
     }
     startFreshSession();
   };
 
+  if (scopeWaitExpired) {
+    return (
+      <StudySessionRecovery
+        onRetry={() => {
+          setScopeWaitExpired(false);
+          if (activeDeckSubset === "favorites") void favoritesQuery.refetch();
+          if (redFocusActiveForDeck) void redListQuery.refetch();
+        }}
+        onStartFresh={() => undefined}
+        onBack={() => void handleExit()}
+        technicalId="ST-filter-data-timeout"
+        allowStartFresh={false}
+      />
+    );
+  }
+
   if (
     loadFailure ||
+    deckLoadState.phase === "cancelled" ||
     showSessionRecovery ||
     initializationState === "failed" ||
     sessionReadiness.phase === "failed"
@@ -1567,7 +1651,10 @@ const Study = () => {
         onStartFresh={handleRecoveryFresh}
         onBack={() => void handleExit()}
         isRetrying={loading || studyLoading || preferencesHydrating || !sessionPresetReady}
-        technicalId={`ST-${sessionReadiness.reason}`}
+        technicalId={loadFailure || deckLoadState.phase === "cancelled"
+          ? studyDeckTechnicalId("ST", deckLoadState)
+          : `ST-${sessionReadiness.reason}`}
+        allowStartFresh={!loadFailure && flashcards.length > 0}
       />
     );
   }
@@ -1591,14 +1678,12 @@ const Study = () => {
     );
   }
 
-  // True empty state: no cards at all (e.g. after errors, or favorites filter
-  // somehow still produced 0 — shouldn't happen given the fallback, but kept as
-  // a last-resort safety net with a recovery action).
+  // Only the independent authority probe can produce this business state.
   if (confirmedEmpty) {
     return (
       <StudyDeckEmptyState
         onRetry={() => {
-          setConfirmedEmpty(false);
+          setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
           setLoadAttempt((attempt) => attempt + 1);
         }}
         onBack={() => void handleExit()}
@@ -1608,45 +1693,29 @@ const Study = () => {
     );
   }
 
-  if (!currentCard && !isFinished) {
-    // Friendly empty state when redFocus produces zero cards
-    if (redFocusActive) {
-      return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
-          <Flame className="h-12 w-12 text-red-500" />
-          <p className="text-foreground text-center text-lg font-medium">
-            Nenhum card em Foco Vermelho nesta lista.
-          </p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Button
-              variant="default"
-              onClick={() => handleSettingsChange({ ...gameSettings, redFocus: false })}
-            >
-              Estudar favoritos
-            </Button>
-            <Button variant="outline" onClick={handleDisableFavoritesFilter}>
-              Estudar todos
-            </Button>
-            <Button variant="ghost" onClick={handleExit}>Voltar</Button>
-          </div>
-        </div>
-      );
-    }
+  if (emptyStudyScope) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
-        <Star className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground text-center text-lg font-medium">
-          Esta lista não tem cards disponíveis no momento.
-        </p>
-        <div className="flex gap-3">
-          {favoritesOnly && (
-            <Button variant="default" onClick={handleDisableFavoritesFilter}>
-              Estudar todos os cards
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleExit}>Voltar</Button>
-        </div>
-      </div>
+      <StudyScopeEmptyState
+        scope={emptyStudyScope}
+        onStudyAll={handleDisableFavoritesFilter}
+        onStudyFavorites={emptyStudyScope === "red-focus"
+          ? () => handleSettingsChange({ ...gameSettings, redFocus: false, subset: "favorites" })
+          : undefined}
+        onBack={() => void handleExit()}
+      />
+    );
+  }
+
+  if (!currentCard && !isFinished) {
+    return (
+      <StudySessionRecovery
+        onRetry={handleRecoveryRetry}
+        onStartFresh={handleRecoveryFresh}
+        onBack={() => void handleExit()}
+        isRetrying={loading || studyLoading}
+        technicalId="ST-current-card-missing"
+        allowStartFresh={false}
+      />
     );
   }
 

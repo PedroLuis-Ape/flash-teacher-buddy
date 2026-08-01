@@ -8,6 +8,7 @@ interface StudySessionRecoveryProps {
   onBack: () => void;
   isRetrying?: boolean;
   technicalId?: string;
+  allowStartFresh?: boolean;
 }
 
 export function StudySessionRecovery({
@@ -16,6 +17,7 @@ export function StudySessionRecovery({
   onBack,
   isRetrying = false,
   technicalId,
+  allowStartFresh = true,
 }: StudySessionRecoveryProps) {
   return (
     <div className="min-h-screen bg-background px-4 py-10">
@@ -24,19 +26,20 @@ export function StudySessionRecovery({
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">Não foi possível preparar esta sessão</h1>
           <p className="text-muted-foreground">
-            Seus cards e preferências continuam preservados. Você pode tentar recuperar
-            a sessão ou começar uma nova neste modo.
+            {allowStartFresh
+              ? "Seus cards e preferências continuam preservados. Você pode tentar recuperar a sessão ou começar uma nova neste modo."
+              : "Não conseguimos carregar os cards desta vez. Seus dados continuam preservados; tente novamente ou volte para a lista."}
           </p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className={`grid gap-2 ${allowStartFresh ? "sm:grid-cols-2" : ""}`}>
           <Button onClick={onRetry} disabled={isRetrying}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             {isRetrying ? "Tentando..." : "Tentar novamente"}
           </Button>
-          <Button variant="outline" onClick={onStartFresh}>
+          {allowStartFresh && <Button variant="outline" onClick={onStartFresh}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Iniciar sessão nova
-          </Button>
+          </Button>}
         </div>
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />

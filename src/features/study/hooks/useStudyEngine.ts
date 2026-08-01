@@ -219,6 +219,8 @@ export function useStudyEngine(
   deckReady: boolean = true,
   /** Applies a restored session snapshot without mutating the saved preset. */
   onSessionSettingsRestored?: (settings: StudySessionSettingsSnapshot) => void,
+  /** Stable local-storage scope for non-list resources such as collections. */
+  storageResourceId?: string,
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -242,6 +244,7 @@ export function useStudyEngine(
     ),
     [studyFlowMode, mode],
   );
+  const localResourceId = storageResourceId || listId;
 
   
   // Refs for preventing duplicate init, debouncing saves, and batching progress
@@ -369,18 +372,18 @@ export function useStudyEngine(
 
   const studySnapshotKey = useMemo(() => buildStudySnapshotKey({
     userScope: userScope || 'anon',
-    listId,
+    listId: localResourceId,
     mode,
     sessionScopeKey,
     cardsSignature,
-  }), [userScope, listId, mode, sessionScopeKey, cardsSignature]);
+  }), [userScope, localResourceId, mode, sessionScopeKey, cardsSignature]);
   const legacyStudySnapshotKey = useMemo(() => buildLegacyStudySnapshotKey({
     userScope: userScope || 'anon',
-    listId,
+    listId: localResourceId,
     mode,
     sessionScopeKey: legacySessionScopeKey,
     cardsSignature,
-  }), [userScope, listId, mode, legacySessionScopeKey, cardsSignature]);
+  }), [userScope, localResourceId, mode, legacySessionScopeKey, cardsSignature]);
 
   const masterySnapshotKey = useMemo(
     () => buildMasterySnapshotKey(studySnapshotKey),
@@ -432,16 +435,16 @@ export function useStudyEngine(
   // the stable user/list/mode key.
   const flipProgressKey = useMemo(() => {
     const uid = userScope || 'anon';
-    return `flip-progress-${uid}-${listId ?? 'no-list'}-${mode}-${sessionScopeKey}`;
-  }, [userScope, listId, mode, sessionScopeKey]);
+    return `flip-progress-${uid}-${localResourceId ?? 'no-resource'}-${mode}-${sessionScopeKey}`;
+  }, [userScope, localResourceId, mode, sessionScopeKey]);
   const legacyFlipProgressKey = useMemo(() => {
     const uid = userScope || 'anon';
-    return `flip-progress-${uid}-${listId ?? 'no-list'}-${mode}-${legacySessionScopeKey}`;
-  }, [userScope, listId, mode, legacySessionScopeKey]);
+    return `flip-progress-${uid}-${localResourceId ?? 'no-resource'}-${mode}-${legacySessionScopeKey}`;
+  }, [userScope, localResourceId, mode, legacySessionScopeKey]);
 
   // Load flip mode progress from localStorage (scoped)
   const loadFlipProgress = useCallback(() => {
-    if (!listId) return null;
+    if (!localResourceId) return null;
     try {
       const saved = localStorage.getItem(flipProgressKey)
         ?? localStorage.getItem(legacyFlipProgressKey);
@@ -452,11 +455,11 @@ export function useStudyEngine(
       console.error('Error loading flip progress:', e);
     }
     return null;
-  }, [listId, flipProgressKey, legacyFlipProgressKey]);
+  }, [localResourceId, flipProgressKey, legacyFlipProgressKey]);
 
   // Save flip mode progress to localStorage (scoped)
   const saveFlipProgress = useCallback(() => {
-    if (!listId || !isFlipMode) return;
+    if (!localResourceId || !isFlipMode) return;
     try {
       localStorage.setItem(flipProgressKey, JSON.stringify({
         index: currentIndex,
@@ -466,7 +469,7 @@ export function useStudyEngine(
     } catch (e) {
       console.error('Error saving flip progress:', e);
     }
-  }, [listId, isFlipMode, currentIndex, results, flipProgressKey]);
+  }, [localResourceId, isFlipMode, currentIndex, results, flipProgressKey]);
 
   const getPrioritizedFlashcards = useCallback(async (
     userId: string,
@@ -546,7 +549,7 @@ export function useStudyEngine(
     // saved session for that scope instead of reusing the previous one.
     const initKey = [
       userScope || "anon",
-      listId || "no-list",
+      localResourceId || "no-resource",
       mode,
       studyFlowMode,
       cardsSignature,
@@ -1109,6 +1112,7 @@ export function useStudyEngine(
     isFlipMode,
     isMasteryMode,
     listId,
+    localResourceId,
     legacyStudySnapshotKey,
     loadFlipProgress,
     masterySnapshotKey,

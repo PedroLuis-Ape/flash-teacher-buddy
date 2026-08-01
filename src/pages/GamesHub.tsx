@@ -3,6 +3,7 @@ import { useLocation, useMatch, useNavigate, useParams } from "react-router-dom"
 import { useIsMutating, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, RotateCcw, Save, Star, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection } from "@/features/study/lib/gameCore";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,8 @@ const GamesHub = () => {
   const [configuredMode, setConfiguredMode] = useState<StudyMode>("flip");
 
   const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
+  const onPortal = isPortalPath(location.pathname);
+  const readClient = onPortal ? publicSupabase : supabase;
   const isPrivateList = isListRoute && !isPortalPath(location.pathname);
   const explicitTurmaId = useMemo(
     () => new URLSearchParams(location.search).get("turma"),
@@ -138,9 +141,9 @@ const GamesHub = () => {
   };
 
   const { data: list, isLoading: listLoading } = useQuery({
-    queryKey: ["gameshub-list", id],
+    queryKey: ["gameshub-list", onPortal ? "public" : "private", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await readClient
         .from("lists")
         .select("id, title, description, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
         .eq("id", id!)
@@ -168,10 +171,10 @@ const GamesHub = () => {
   }, [classContextQuery.isLoading, pendingTurmaId]);
 
   const { data: folderRow } = useQuery({
-    queryKey: ["gameshub-folder", list?.folder_id],
+    queryKey: ["gameshub-folder", onPortal ? "public" : "private", list?.folder_id],
     queryFn: async () => {
       if (!list?.folder_id) return null;
-      const { data } = await supabase
+      const { data } = await readClient
         .from("folders")
         .select("study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
         .eq("id", list.folder_id)
@@ -183,9 +186,9 @@ const GamesHub = () => {
   });
 
   const { data: collection, isLoading: collectionLoading } = useQuery({
-    queryKey: ["gameshub-collection", id],
+    queryKey: ["gameshub-collection", onPortal ? "public" : "private", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await readClient
         .from("collections")
         .select("*")
         .eq("id", id!)
@@ -253,7 +256,6 @@ const GamesHub = () => {
   };
 
   const handleBack = () => {
-    const onPortal = isPortalPath(location.pathname);
     if (window.history.state?.idx > 0) {
       navigate(-1);
     } else if (collection) {
