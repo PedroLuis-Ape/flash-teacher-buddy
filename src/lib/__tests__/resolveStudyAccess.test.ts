@@ -11,6 +11,15 @@ describe("resolveStudyAccess", () => {
     ).toBe("wait");
   });
 
+  it("does not release protected reads for a persisted but unconfirmed session", () => {
+    expect(
+      resolveStudyAccess({ authStatus: "stale", isPortalRoute: false, userId: "u1" }),
+    ).toBe("wait");
+    expect(
+      resolveStudyAccess({ authStatus: "stale", isPortalRoute: true, userId: "u1" }),
+    ).toBe("wait");
+  });
+
   it("returns authenticated only when authStatus is authenticated AND userId is present", () => {
     expect(
       resolveStudyAccess({ authStatus: "authenticated", isPortalRoute: false, userId: "u1" }),

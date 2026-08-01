@@ -6,8 +6,11 @@ export type MixedSessionStatus =
   | "round-complete"
   | "journey-complete";
 
+export type MixedFlowMode = "mastery_rounds" | "continuous";
+
 export interface AdaptiveMixedSessionState {
   version: 2;
+  flowMode: MixedFlowMode;
   deckSignature: string;
   allCardIds: string[];
   unseenCardIds: string[];
@@ -32,6 +35,7 @@ export interface AdaptiveMixedSessionState {
 export interface CreateAdaptiveMixedSessionOptions {
   random?: () => number;
   weightByCardId?: Readonly<Record<string, number>>;
+  flowMode?: MixedFlowMode;
 }
 
 const MAX_HEARTS = 3;
@@ -149,11 +153,15 @@ export function createAdaptiveMixedSession(
   options: CreateAdaptiveMixedSessionOptions = {},
 ): AdaptiveMixedSessionState {
   const random = options.random ?? Math.random;
+  const flowMode = options.flowMode ?? "mastery_rounds";
   const allCardIds = unique(cardIds);
-  const roundSize = getAdaptiveRoundSize(allCardIds.length);
+  const roundSize = flowMode === "continuous"
+    ? allCardIds.length
+    : getAdaptiveRoundSize(allCardIds.length);
   const unseenCardIds = weightedShuffleMixedCards(allCardIds, options.weightByCardId, random);
   const emptyState: AdaptiveMixedSessionState = {
     version: 2,
+    flowMode,
     deckSignature: signature(allCardIds),
     allCardIds,
     unseenCardIds,
@@ -193,6 +201,23 @@ export function answerAdaptiveMixedCard(
     ? unique([...state.currentRoundErrors, cardId])
     : state.currentRoundErrors.filter((id) => id !== cardId);
   const hearts = failed ? Math.max(0, state.hearts - 1) : state.hearts;
+
+  if (state.flowMode === "continuous") {
+    const isLastCard = state.currentIndex >= state.currentRoundCardIds.length - 1;
+    return {
+      ...state,
+      currentRoundAnswered,
+      currentRoundErrors,
+      hearts,
+      currentIndex: isLastCard ? state.currentIndex : state.currentIndex + 1,
+      pendingCardIds: [],
+      masteredCardIds: isLastCard
+        ? unique([...state.masteredCardIds, ...state.currentRoundCardIds])
+        : state.masteredCardIds,
+      status: isLastCard ? "journey-complete" : "active",
+      updatedAt: Date.now(),
+    };
+  }
 
   if (hearts === 0) {
     return {
@@ -299,10 +324,12 @@ export function restartAdaptiveMixedJourney(
 export function isAdaptiveMixedStateCompatible(
   value: unknown,
   cardIds: readonly string[],
+  flowMode: MixedFlowMode = "mastery_rounds",
 ): value is AdaptiveMixedSessionState {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<AdaptiveMixedSessionState>;
   return candidate.version === 2
+    && (candidate.flowMode ?? "mastery_rounds") === flowMode
     && candidate.deckSignature === signature(cardIds)
     && Array.isArray(candidate.allCardIds)
     && Array.isArray(candidate.currentRoundCardIds)

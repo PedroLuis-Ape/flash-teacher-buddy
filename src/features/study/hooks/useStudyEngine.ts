@@ -155,7 +155,7 @@ export function useStudyEngine(
 
   const isMasteryMode = useMemo(
     () => studyFlowMode === "mastery_rounds" && (
-      mode === "write" || mode === "mixed" || mode === "multiple-choice"
+      mode === "flip" || mode === "write" || mode === "mixed" || mode === "multiple-choice"
       || mode === "unscramble" || mode === "pronunciation"
     ),
     [studyFlowMode, mode],
@@ -446,6 +446,7 @@ export function useStudyEngine(
     // This bypasses the legacy continuous/batching path so the new flow engine
     // owns the queue, round boundaries, and repetition logic.
     if (isMasteryMode) {
+      setIsAuthenticated(Boolean(userScope));
       const eligibleIds = flashcards.map((card) => card.id);
       const availableSet = new Set(eligibleIds);
       const restored = readMasterySnapshot(masterySnapshotKey, availableSet);

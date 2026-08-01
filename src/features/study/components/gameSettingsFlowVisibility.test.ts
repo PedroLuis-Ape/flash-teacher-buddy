@@ -7,9 +7,9 @@ const settingsSource = readFileSync(
 );
 
 describe("game settings session format", () => {
-  it("shows the flow selector in every playable mode except flip", () => {
+  it("shows the flow selector in every playable mode, including flip", () => {
     expect(settingsSource).toContain(
-      'const supportsFlowModes = Boolean(urlMode) && urlMode !== "flip"',
+      "const supportsFlowModes = Boolean(urlMode)",
     );
     expect(settingsSource).toContain('title="Formato da sessão"');
   });

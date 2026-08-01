@@ -68,7 +68,7 @@ export function useAuthUser() {
     return {
       user: ctx.user,
       session: ctx.session,
-      isLoading: ctx.status === "initializing",
+      isLoading: ctx.status === "initializing" || ctx.status === "stale",
       userId: ctx.userId,
       accessToken: ctx.accessToken,
     };
