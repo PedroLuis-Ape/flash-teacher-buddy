@@ -15,6 +15,7 @@ import {
 interface UseAdaptiveMixedSessionOptions extends CreateAdaptiveMixedSessionOptions {
   cardIds: string[];
   storageKey: string;
+  legacyStorageKey?: string;
   remoteState?: unknown;
   remoteLoaded?: boolean;
   onPersist?: (state: AdaptiveMixedSessionState) => void | Promise<void>;
@@ -38,6 +39,7 @@ function readLocalState(
 export function useAdaptiveMixedSession({
   cardIds,
   storageKey,
+  legacyStorageKey,
   remoteState,
   remoteLoaded = true,
   flowMode = "mastery_rounds",
@@ -76,15 +78,18 @@ export function useAdaptiveMixedSession({
     if (!remoteLoaded) return;
     if (initializedSignatureRef.current === initializationSignature) return;
 
-    const local = readLocalState(storageKey, cardIds, flowMode);
+    const localCandidates = [storageKey, legacyStorageKey]
+      .filter((key, index, keys): key is string => Boolean(key) && keys.indexOf(key) === index)
+      .map((key) => readLocalState(key, cardIds, flowMode))
+      .filter((candidate): candidate is AdaptiveMixedSessionState => Boolean(candidate));
     const remote = repairAdaptiveMixedState(remoteState, cardIds, flowMode);
-    const candidates = [local, remote].filter((candidate): candidate is AdaptiveMixedSessionState => Boolean(candidate));
+    const candidates = [...localCandidates, remote].filter((candidate): candidate is AdaptiveMixedSessionState => Boolean(candidate));
     const next = candidates.sort((left, right) => right.updatedAt - left.updatedAt)[0]
       ?? createAdaptiveMixedSession(cardIds, { random, weightByCardId, flowMode });
 
     initializedSignatureRef.current = initializationSignature;
     setState(next);
-  }, [cardIds, flowMode, initializationSignature, remoteLoaded, remoteState, storageKey, random, weightByCardId]);
+  }, [cardIds, flowMode, initializationSignature, legacyStorageKey, remoteLoaded, remoteState, storageKey, random, weightByCardId]);
 
   const persistNow = useCallback(async () => {
     if (!onPersist || !latestStateRef.current) return;
@@ -156,10 +161,13 @@ export function useAdaptiveMixedSession({
 
   const clearPersistedJourney = useCallback(() => {
     persistGenerationRef.current += 1;
-    try { localStorage.removeItem(storageKey); } catch {}
+    try {
+      localStorage.removeItem(storageKey);
+      if (legacyStorageKey) localStorage.removeItem(legacyStorageKey);
+    } catch {}
     initializedSignatureRef.current = "";
     setState(createAdaptiveMixedSession(cardIds, { random, weightByCardId, flowMode }));
-  }, [cardIds, flowMode, random, storageKey, weightByCardId]);
+  }, [cardIds, flowMode, legacyStorageKey, random, storageKey, weightByCardId]);
 
   const progress = state ? getAdaptiveMixedProgress(state) : null;
   const currentCardId = state?.currentRoundCardIds[state.currentIndex] ?? null;

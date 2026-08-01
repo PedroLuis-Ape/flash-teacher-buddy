@@ -70,7 +70,10 @@ import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
 import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
 import { useGroupStatusGate } from "@/features/cards/hooks/useGroupStatusGate";
 import { useSetFlashcardGroupStatus } from "@/features/cards/hooks/useFlashcardGroupStatus";
-import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
+import {
+  filterCardsForStudyScope,
+  resolvePersonalStudySubset,
+} from "@/features/study/lib/studyScopePolicy";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
@@ -184,7 +187,12 @@ const Study = () => {
   // stale or arrive late from auth.
   const initialDir: Direction = urlDirection ?? prefs.direction;
   const initialOrder = prefs.order;
-  const urlFavoritesOnly = prefs.favoritesOnly;
+  const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(authUserId);
+  const favoriteSubsetResolution = resolvePersonalStudySubset(
+    prefs.favoritesOnly ? "favorites" : "all",
+    canUsePersonalFavorites,
+  );
+  const urlFavoritesOnly = favoriteSubsetResolution.subset === "favorites";
   
   // Derive initial game settings from persistent prefs
   // NOTE: only used as initialSettings on first engine init; live updates flow via setGameSettings effect below
@@ -298,11 +306,12 @@ const Study = () => {
   // The visible deck follows a local session scope immediately. Preferences
   // remain persistence only; they are not used as a delayed live filter.
   const [deckSubset, setDeckSubset] = useState<"all" | "favorites">(initialGameSettings.subset);
+  const activeDeckSubset = canUsePersonalFavorites ? deckSubset : "all";
   const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState(false);
 
   const favoritesFilterFellBack =
     !redFocusActiveForDeck &&
-    deckSubset === "favorites" &&
+    activeDeckSubset === "favorites" &&
     favoritesConfirmedZero &&
     flashcards.length > 0;
 
@@ -311,18 +320,18 @@ const Study = () => {
       cards: flashcards,
       favoriteIds: favorites,
       redListIds,
-      settings: { subset: deckSubset, redFocus: redFocusActiveForDeck },
+      settings: { subset: activeDeckSubset, redFocus: redFocusActiveForDeck },
     });
 
     // Favorites keeps the historical safe fallback. Red focus intentionally
     // stays empty when the user has no red cards; mixing normal cards would
     // violate the selected scope.
-    if (!redFocusActiveForDeck && deckSubset === "favorites" && favoritesConfirmedZero) {
+    if (!redFocusActiveForDeck && activeDeckSubset === "favorites" && favoritesConfirmedZero) {
       return flashcards;
     }
 
     return scoped;
-  }, [favoritesConfirmedZero, flashcards, favorites, redListIds, deckSubset, redFocusActiveForDeck]);
+  }, [activeDeckSubset, favoritesConfirmedZero, flashcards, favorites, redListIds, redFocusActiveForDeck]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
@@ -384,7 +393,19 @@ const Study = () => {
     cardsOrder,
     saveProgressNow,
     studySnapshotKey,
-  } = useStudyEngine(listId, engineFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode, sessionContext);
+  } = useStudyEngine(
+    listId,
+    engineFlashcards,
+    normalizedMode,
+    false,
+    favorites,
+    initialGameSettings,
+    redListIds,
+    authUserId,
+    effectivePreset.studyFlowMode,
+    sessionContext,
+    !loading && !preferencesHydrating && sessionPresetReady,
+  );
 
   // A new queue reference represents a new answerable session/round. Resetting
   // this guard prevents a restarted session with the same first card from
@@ -394,7 +415,7 @@ const Study = () => {
   }, [cardsOrder]);
 
   // Derive favoritesOnly from the unified gameSettings (single source of truth for UI display)
-  const favoritesOnly = gameSettings.subset === 'favorites';
+  const favoritesOnly = canUsePersonalFavorites && gameSettings.subset === 'favorites';
   const redFocusActive = !!gameSettings.redFocus;
   // Derive order from unified gameSettings
   const order = gameSettings.mode === 'sequential' ? 'asc' : 'random';
@@ -421,11 +442,17 @@ const Study = () => {
     if (appliedPresetContext === presetContextKey) return;
     setGameSettings({
       mode: prefs.order === "sequential" ? "sequential" : "random",
-      subset: prefs.favoritesOnly ? "favorites" : "all",
+      subset: resolvePersonalStudySubset(
+        prefs.favoritesOnly ? "favorites" : "all",
+        canUsePersonalFavorites,
+      ).subset,
       fastMode: prefs.fastMode,
       redFocus: false,
     });
-    setDeckSubset(prefs.favoritesOnly ? "favorites" : "all");
+    setDeckSubset(resolvePersonalStudySubset(
+      prefs.favoritesOnly ? "favorites" : "all",
+      canUsePersonalFavorites,
+    ).subset);
     setRedFocusActiveForDeck(false);
     setAppliedPresetContext(presetContextKey);
     if (import.meta.env.DEV) {
@@ -442,6 +469,7 @@ const Study = () => {
   }, [
     appliedPresetContext,
     authStatus,
+    canUsePersonalFavorites,
     effectivePreset.studyFlowMode,
     normalizedMode,
     preferencesHydrating,
@@ -590,8 +618,17 @@ const Study = () => {
         if (offlineData) {
           const grouped = prepareLayeredStudyDeck(offlineData.flashcards as any[]);
           const orderedData = initialOrder === "random" ? shuffleArray([...grouped]) : grouped;
+          // An offline cache is a recovery source, not authoritative evidence
+          // that the list is empty. Older/partial caches can legitimately
+          // contain metadata without the deck; never show the destructive
+          // empty state or create a session from that ambiguous result.
+          if (orderedData.length === 0) {
+            setLoadFailure("offline-empty-unconfirmed");
+            setLoading(false);
+            return;
+          }
           setFlashcards(orderedData as Flashcard[]);
-          setConfirmedEmpty(orderedData.length === 0);
+          setConfirmedEmpty(false);
           setListTitle(offlineData.listMeta.title);
           setListSettings({
             studyType: (offlineData.listMeta.study_type === "general" ? "general" : "language") as "language" | "general",
@@ -608,7 +645,7 @@ const Study = () => {
       } catch {
         // fall through
       }
-      toast.error("Esta lista não está disponível offline");
+      setLoadFailure("offline-unavailable");
       setLoading(false);
       return;
     }
@@ -901,8 +938,17 @@ const Study = () => {
   };
 
   const handleSettingsChange = (newSettings: GameSettings) => {
+    const requestedSubset = newSettings.subset;
+    const resolvedSubset = resolvePersonalStudySubset(
+      requestedSubset,
+      canUsePersonalFavorites,
+    ).subset;
+    if (requestedSubset === "favorites" && resolvedSubset === "all") {
+      toast.info("Favoritos exigem uma conta autenticada. Mostrando todos os cards.");
+    }
     const coerced: GameSettings = {
       ...newSettings,
+      subset: resolvedSubset,
       mode: newSettings.redFocus ? "sequential" : newSettings.mode,
       redFocus: !!newSettings.redFocus,
     };
@@ -919,7 +965,9 @@ const Study = () => {
     setGameSettings(coerced);
     updatePrefs({
       order: coerced.mode === "sequential" ? "sequential" : "random",
-      favoritesOnly: coerced.subset === "favorites",
+      ...(requestedSubset === "favorites" && resolvedSubset === "all"
+        ? {}
+        : { favoritesOnly: coerced.subset === "favorites" }),
       fastMode: coerced.fastMode ?? false,
     });
   };

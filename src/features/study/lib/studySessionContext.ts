@@ -54,8 +54,23 @@ export function buildStudySessionSettingsSnapshot(
   };
 }
 
-/** Stable identity for the queue and answer semantics of an open session. */
+/**
+ * Stable identity for an open session.
+ *
+ * Settings belong in `settings_snapshot`, not in the session identity. This
+ * keeps a direction/filter/flow change attached to the same user + list +
+ * mode session instead of silently creating a second resumable trail.
+ */
 export function buildStudySessionScopeKey(input: StudySessionContextInput): string {
+  return `study-session-v2:${encodeURIComponent(input.mode)}`;
+}
+
+/**
+ * Compatibility key for rows written before the stable session identity was
+ * introduced. Callers may read it during a bounded migration window, but all
+ * new writes use `buildStudySessionScopeKey`.
+ */
+export function buildLegacyStudySessionScopeKey(input: StudySessionContextInput): string {
   return `study-session-v1:${encodeURIComponent(JSON.stringify(buildStudySessionSettingsSnapshot(input)))}`;
 }
 

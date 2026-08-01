@@ -1,5 +1,11 @@
 export type StudyScope = "all" | "favorites" | "red";
 
+export interface PersonalStudySubsetResolution {
+  subset: "all" | "favorites";
+  requestedSubset: "all" | "favorites";
+  degraded: boolean;
+}
+
 export interface StudyScopeSettings {
   subset: "all" | "favorites";
   redFocus?: boolean;
@@ -23,6 +29,23 @@ export interface StudyScopeCard {
 export function resolveStudyScope(settings: StudyScopeSettings): StudyScope {
   if (settings.redFocus) return "red";
   return settings.subset === "favorites" ? "favorites" : "all";
+}
+
+/**
+ * Favorites are private user data. A public/anonymous study route must never
+ * interpret the absence of that private capability as an empty deck.
+ * Returning the degradation explicitly lets the screen explain the fallback
+ * without persisting a false preference or hiding playable public cards.
+ */
+export function resolvePersonalStudySubset(
+  requestedSubset: "all" | "favorites",
+  canUsePersonalFavorites: boolean,
+): PersonalStudySubsetResolution {
+  return {
+    subset: requestedSubset === "favorites" && canUsePersonalFavorites ? "favorites" : "all",
+    requestedSubset,
+    degraded: requestedSubset === "favorites" && !canUsePersonalFavorites,
+  };
 }
 
 export function shouldInjectRedPriority(settings: StudyScopeSettings): boolean {

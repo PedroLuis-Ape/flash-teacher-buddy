@@ -22,10 +22,17 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { useFavorites } from "@/hooks/useFavorites";
-import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
+import {
+  filterCardsForStudyScope,
+  resolvePersonalStudySubset,
+} from "@/features/study/lib/studyScopePolicy";
 import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
-import { buildStudySessionScopeKey, buildStudySessionSettingsSnapshot } from "@/features/study/lib/studySessionContext";
+import {
+  buildLegacyStudySessionScopeKey,
+  buildStudySessionScopeKey,
+  buildStudySessionSettingsSnapshot,
+} from "@/features/study/lib/studySessionContext";
 import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
 import { recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
 import type { MixedFlowMode } from "@/features/study/lib/adaptiveMixedSession";
@@ -103,14 +110,19 @@ export default function MixedStudy() {
     persistScope: isListRoute ? "list" : "global",
     canPersistList: isListRoute,
   });
+  const canUsePersonalFavorites = authStatus === "authenticated" && Boolean(userId);
   const baseDirection: Direction = directionParam
     ? normalizeDirection(directionParam)
     : effectivePreset.direction;
-  const favoritesOnly = explicitFavorites === "true"
+  const requestedFavoritesOnly = explicitFavorites === "true"
     ? true
     : explicitFavorites === "false"
       ? false
       : effectivePreset.scope === "favorites";
+  const favoritesOnly = resolvePersonalStudySubset(
+    requestedFavoritesOnly ? "favorites" : "all",
+    canUsePersonalFavorites,
+  ).subset === "favorites";
   const [selectedFlowMode, setSelectedFlowMode] = useState<MixedFlowMode>(effectivePreset.studyFlowMode);
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     mode: effectivePreset.order,
@@ -129,10 +141,13 @@ export default function MixedStudy() {
     setGameSettings((current) => ({
       ...current,
       mode: effectivePreset.order,
-      subset: effectivePreset.scope,
+      subset: resolvePersonalStudySubset(
+        effectivePreset.scope,
+        canUsePersonalFavorites,
+      ).subset,
       fastMode: effectivePreset.fastMode,
     }));
-  }, [directionParam, effectivePreset.fastMode, effectivePreset.order, effectivePreset.scope, explicitFavorites]);
+  }, [canUsePersonalFavorites, directionParam, effectivePreset.fastMode, effectivePreset.order, effectivePreset.scope, explicitFavorites]);
   useEffect(() => {
     const handleFlowChange = (event: Event) => {
       const next = (event as CustomEvent<MixedFlowMode>).detail;
@@ -157,6 +172,15 @@ export default function MixedStudy() {
     || !userId
     || (favoritesQuery.isSuccess && favoritesQuery.fetchStatus !== "fetching" && !favoritesQuery.isPlaceholderData);
   const scopeKey = buildStudySessionScopeKey({
+    mode: "mixed",
+    subset: favoritesOnly ? "favorites" : "all",
+    order: gameSettings.mode,
+    redFocus: gameSettings.redFocus,
+    fastMode: gameSettings.fastMode,
+    direction: baseDirection,
+    studyFlowMode: selectedFlowMode,
+  });
+  const legacyScopeKey = buildLegacyStudySessionScopeKey({
     mode: "mixed",
     subset: favoritesOnly ? "favorites" : "all",
     order: gameSettings.mode,
@@ -278,7 +302,6 @@ export default function MixedStudy() {
                 .eq("mode", "mixed-adaptive")
                 .eq("completed", false)
                 .order("updated_at", { ascending: false })
-                .eq("session_scope_key", scopeKey)
                 .limit(10)
                 .abortSignal(abortController.signal),
             ]),
@@ -301,9 +324,19 @@ export default function MixedStudy() {
           // would turn that valid legacy state into an error and the old code
           // then indexed an object as if it were an array, silently dropping
           // the remote snapshot. Always choose the newest row explicitly.
-          const matchingSession = Array.isArray(sessionResult.data)
-            ? sessionResult.data[0] ?? null
-            : sessionResult.data ?? null;
+          const matchingSessions = Array.isArray(sessionResult.data)
+            ? sessionResult.data
+            : sessionResult.data
+              ? [sessionResult.data]
+              : [];
+          const matchingSession = matchingSessions
+            .filter((candidate) => candidate.session_scope_key === scopeKey || candidate.session_scope_key?.startsWith("study-session-v1:"))
+            .sort((left, right) => {
+              const leftIsCurrent = left.session_scope_key === scopeKey;
+              const rightIsCurrent = right.session_scope_key === scopeKey;
+              if (leftIsCurrent !== rightIsCurrent) return leftIsCurrent ? -1 : 1;
+              return Date.parse(String(right.updated_at ?? "")) - Date.parse(String(left.updated_at ?? ""));
+            })[0] ?? null;
           studySessionIdRef.current = matchingSession?.id ?? null;
           setStudySessionId(studySessionIdRef.current);
           setRemoteState(matchingSession?.session_snapshot ?? matchingSession?.cards_order ?? null);
@@ -369,7 +402,7 @@ export default function MixedStudy() {
       cancelled = true;
       abortController.abort();
     };
-  }, [authStatus, baseDirection, favoriteIds, favoritesConfirmedZero, favoritesOnly, favoritesReady, isListRoute, listId, location.pathname, resolvedId, scopeKey, session, userId, loadAttempt]);
+  }, [authStatus, baseDirection, canUsePersonalFavorites, favoriteIds, favoritesConfirmedZero, favoritesOnly, favoritesReady, isListRoute, listId, location.pathname, resolvedId, scopeKey, session, userId, loadAttempt]);
 
   const persistRemoteState = useCallback(async (state: any) => {
     if (!userId || !listId) return;
@@ -408,7 +441,6 @@ export default function MixedStudy() {
           .eq("user_id", userId)
           .eq("list_id", listId)
           .eq("mode", "mixed-adaptive")
-          .eq("session_scope_key", scopeKey)
           .select("id")
           .maybeSingle()
           .abortSignal(controller.signal),
@@ -466,6 +498,13 @@ export default function MixedStudy() {
       sessionScopeKey: scopeKey,
       cardsSignature: cardIds.join("|"),
     }),
+    legacyStorageKey: buildStudySnapshotKey({
+      userScope: userId,
+      listId: isListRoute ? resolvedId : undefined,
+      mode: "mixed",
+      sessionScopeKey: legacyScopeKey,
+      cardsSignature: cardIds.join("|"),
+    }),
     flowMode: selectedFlowMode,
     remoteState,
     remoteLoaded,
@@ -473,19 +512,30 @@ export default function MixedStudy() {
     onPersist: persistRemoteState,
   });
   const handleSettingsChange = useCallback((next: GameSettings) => {
-    setGameSettings(next);
+    const requestedSubset = next.subset;
+    const resolvedSubset = resolvePersonalStudySubset(
+      requestedSubset,
+      canUsePersonalFavorites,
+    ).subset;
+    if (requestedSubset === "favorites" && resolvedSubset === "all") {
+      toast.info("Favoritos exigem uma conta autenticada. Mostrando todos os cards.");
+    }
+    const resolvedSettings = { ...next, subset: resolvedSubset };
+    setGameSettings(resolvedSettings);
     updateForCurrentScope({
-      order: next.mode,
-      scope: next.subset,
-      fastMode: next.fastMode ?? false,
+      order: resolvedSettings.mode,
+      ...(requestedSubset === "favorites" && resolvedSubset === "all"
+        ? {}
+        : { scope: resolvedSettings.subset }),
+      fastMode: resolvedSettings.fastMode ?? false,
     });
-    const nextFavorites = next.subset === "favorites";
+    const nextFavorites = resolvedSettings.subset === "favorites";
     if (nextFavorites !== favoritesOnly) {
       const params = new URLSearchParams(searchParams);
       params.set("favorites", String(nextFavorites));
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     }
-  }, [favoritesOnly, location.pathname, navigate, searchParams, updateForCurrentScope]);
+  }, [canUsePersonalFavorites, favoritesOnly, location.pathname, navigate, searchParams, updateForCurrentScope]);
   const currentAnswerKey = `${mixed.state?.roundNumber ?? 0}:${mixed.state?.currentIndex ?? 0}:${mixed.currentCardId ?? "none"}`;
   useEffect(() => {
     answeredCardKeyRef.current = null;

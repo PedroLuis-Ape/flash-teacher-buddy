@@ -16,7 +16,7 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 | Dado | Fonte durável | Fallback imediato | Escopo obrigatório | Evidência |
 |---|---|---|---|---|
 | Preset do modo | `user_study_preferences` / override de lista | cache de preferência versionado | usuário + modo (+ lista no override) | `studyPreset.ts`, `studyPreferenceRepository.ts` |
-| Sessão | `study_sessions.session_snapshot` | snapshot local v3 | usuário + lista/escopo + modo + `session_scope_key` | `useStudyEngine.ts`, `MixedStudy.tsx` |
+| Sessão | `study_sessions.session_snapshot` | snapshot local v3 | usuário + lista/escopo + modo; `session_scope_key` estável e snapshot de configurações separado | `useStudyEngine.ts`, `MixedStudy.tsx` |
 | Fila/posição | snapshot da sessão | localStorage | mesma sessão e deck atual | `studySessionSnapshot.ts` |
 | Camada visível | snapshot `layer` | `studyLayerSnapshot` | mesmo card jogável e sessão | `useStudyEngine.ts`, `Study.tsx` |
 | Favorito/Foco Vermelho | legado por compatibilidade; pipeline estável por flag | cache/query/outbox | usuário + grupo | `useGroupStatusGate.ts`, `cardStatusIdentity.ts` |
@@ -31,7 +31,7 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 |---:|---|---|---|
 | 1 | Responsabilidade única entre URL, React, local e banco | Parcial | Contrato documentado; ainda há superfícies legadas fora do engine comum. |
 | 2 | Preset isolado por usuário e modo | Evidenciado | Migration/repositório e testes de preferência. |
-| 3 | Sessão isolada por usuário, lista, escopo e modo | Parcial | `session_scope_key` e filtros estão no código; aplicação remota ainda pendente. |
+| 3 | Sessão isolada por usuário, lista, escopo e modo | Parcial | identidade estável por usuário/lista/modo, leitura compatível de chaves v1 e RLS; aplicação remota ainda pendente. |
 | 4 | Restauração do card/ordem/índice exatos | Parcial | Sanitização e escolha de snapshot mais novo; E2E real pendente. |
 | 5 | Sem entrada/requisição repetida concorrente | Parcial | geração/abort no engine e generation guard no Misto; duas abas reais pendentes. |
 | 6 | Estados loading/auth/retry/ready/empty/failure/cancelled distintos | Evidenciado no loader | Testes de contrato; runtime por rota ainda pendente. |
@@ -71,7 +71,10 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 - nova migration de identidade corrige o trigger e transfere o status para o UUID retornado no unmerge.
 - `recordStudyProgressAttempt` virou o writer compartilhado de progresso para `Study` e `MixedStudy`; preserva cada tentativa, serializa o mesmo card durante um flush e confirma a escrita antes de removê-la do buffer.
 - `MixedStudy.persistNow` foi exposto pelo hook adaptativo e é aguardado na saída, mantendo snapshot local durável mesmo quando a confirmação remota expira.
-- `createLatestWriteQueue` serializa atualizações de `study_sessions`, coalesce pendências que ainda não começaram e invalida filas quando muda usuário/lista/modo/escopo; os updates também confirmam usuário, lista, modo e `session_scope_key`.
+- Favoritos agora são tratados como capacidade privada: rotas públicas/anônimas degradam explicitamente para todos os cards, sem converter a ausência de favoritos em deck vazio.
+- Cache offline vazio deixou de ser considerado confirmação de lista vazia; entra em recuperação sem criar sessão ou emitir toast de falso vazio.
+- O engine recebe `deckReady` para não inicializar uma sessão enquanto cards/preset ainda estão sendo carregados; o Misto aceita snapshots locais v1 como fallback compatível.
+- `createLatestWriteQueue` serializa atualizações de `study_sessions`, coalesce pendências que ainda não começaram e invalida filas quando muda usuário/lista/modo; os updates confirmam o id e o escopo de usuário/lista/modo, enquanto o payload converge a chave v2 estável.
 - Corrigido o guard de conclusão para usar `.length` no buffer de progresso e não concluir/limpar uma sessão com respostas ainda pendentes.
 
 ## Limitações e rollout seguro
@@ -85,10 +88,11 @@ Este documento complementa `study-persistence-audit-2026-08-01.md`. Ele separa o
 ## Evidência local desta etapa
 
 - TypeScript: passou via runtime Node empacotado (`tsc --noEmit`).
-- Testes direcionados desta etapa: 3 arquivos, 19 testes passaram.
-- Suíte completa: 204 arquivos, 1.223 testes passaram.
+- Testes direcionados desta etapa: 5 arquivos, 32 testes passaram.
+- Suíte completa desta etapa: 205 arquivos, 1.229 testes passaram.
 - ESLint: 0 erros e 68 warnings preexistentes.
 - Build Vite de produção: passou, 3.895 módulos transformados; warnings existentes de CSS/chunks grandes permanecem.
+- Cadeia editorial/prerender/bundle/SEO: passou; score local 100/100.
 - `git diff --check`: passou.
 - O arquivo gerado `supabase/functions/mcp/index.ts` foi restaurado ao estado rastreado e não faz parte do diff.
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   filterCardsForStudyScope,
+  resolvePersonalStudySubset,
   resolveStudyScope,
   shouldInjectRedPriority,
 } from "./studyScopePolicy";
@@ -95,5 +96,23 @@ describe("filterCardsForStudyScope", () => {
       settings: { subset: "favorites" },
     });
     expect(result.map((card) => card.id)).toEqual(["SL1"]);
+  });
+});
+
+describe("resolvePersonalStudySubset", () => {
+  it("does not turn an anonymous public favorites request into an empty deck", () => {
+    expect(resolvePersonalStudySubset("favorites", false)).toEqual({
+      subset: "all",
+      requestedSubset: "favorites",
+      degraded: true,
+    });
+  });
+
+  it("keeps favorites scoped when the authenticated user can load them", () => {
+    expect(resolvePersonalStudySubset("favorites", true)).toEqual({
+      subset: "favorites",
+      requestedSubset: "favorites",
+      degraded: false,
+    });
   });
 });

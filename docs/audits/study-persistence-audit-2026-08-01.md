@@ -11,7 +11,7 @@
 ## Mapa final de fontes de verdade
 
 1. Preset persistido: `user_study_preferences` por `user_id + game_mode`, com override de lista por `user_id + list_id + game_mode`.
-2. Sessão em andamento: `study_sessions` por `user_id + list_id + mode + session_scope_key`, com `settings_snapshot` e `session_snapshot`.
+2. Sessão em andamento: `study_sessions` por `user_id + list_id + mode`, com `session_scope_key` estável por modo e `settings_snapshot`/`session_snapshot` separados.
 3. Fallback local: snapshots versionados no navegador, sempre escopados por conta/lista/modo/escopo; o snapshot v3 não depende da assinatura exata do deck.
 4. Offline: IndexedDB v3 por `userId + listId`; registros v1/v2 sem proprietário comprovável não são lidos.
 5. URL: apenas intenção explícita de lançamento/override. Ausência de direção não cria `dir=any` e permite que o preset escopado prevaleça.
@@ -30,7 +30,7 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 
 ## Correções implementadas nesta alteração
 
-- Contrato compartilhado de `session_scope_key` e snapshots de contexto.
+- Contrato compartilhado de `session_scope_key` estável por modo, leitura compatível de chaves v1 e snapshots de contexto.
 - Migration aditiva `20260801143000_study_persistence_context_v1.sql`, com campos de contexto, estado rico, allow-list completa e índice parcial de sessões abertas.
 - Campos persistidos para atividade de escrita, lado de reescrita e correção.
 - Confirmação da resposta do banco após upsert de preferências; falha sem confirmação entra no retry seguro.

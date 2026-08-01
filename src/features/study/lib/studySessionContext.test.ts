@@ -1,18 +1,32 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
   isStudySessionSettingsSnapshot,
 } from "./studySessionContext";
 
 describe("study session context", () => {
-  it("changes identity when a queue-affecting setting changes", () => {
+  it("keeps one identity when settings change during the same mode session", () => {
     const base = { mode: "write" as const, subset: "all" as const, order: "random" as const };
-    expect(buildStudySessionScopeKey(base)).not.toBe(
+    expect(buildStudySessionScopeKey(base)).toBe(
       buildStudySessionScopeKey({ ...base, direction: "b-a" }),
     );
-    expect(buildStudySessionScopeKey(base)).not.toBe(
+    expect(buildStudySessionScopeKey(base)).toBe(
       buildStudySessionScopeKey({ ...base, studyFlowMode: "mastery_rounds" }),
+    );
+    expect(buildStudySessionScopeKey(base)).not.toBe(
+      buildStudySessionScopeKey({ ...base, mode: "flip" }),
+    );
+  });
+
+  it("retains the previous settings-based key only as a compatibility key", () => {
+    const base = { mode: "write" as const, subset: "all" as const, order: "random" as const };
+    expect(buildLegacyStudySessionScopeKey(base)).not.toBe(
+      buildStudySessionScopeKey(base),
+    );
+    expect(buildLegacyStudySessionScopeKey(base)).not.toBe(
+      buildLegacyStudySessionScopeKey({ ...base, direction: "b-a" }),
     );
   });
 
