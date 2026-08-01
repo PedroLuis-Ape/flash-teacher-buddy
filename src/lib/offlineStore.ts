@@ -12,9 +12,10 @@
  */
 
 const DB_NAME = "ape-offline";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = "offline_lists";
-export const OFFLINE_SCHEMA_VERSION = 2;
+const V3_STORE_NAME = "offline_lists_v3";
+export const OFFLINE_SCHEMA_VERSION = 3;
 
 export interface OfflineListData {
   listId: string;
@@ -51,6 +52,11 @@ export interface OfflineListData {
   schemaVersion?: number;
   /** Phase 6 — owner of the snapshot. Used to refuse cross-user reads. */
   userId?: string | null;
+  storageKey?: string;
+}
+
+export function buildOfflineStorageKey(userId: string, listId: string): string {
+  return `${encodeURIComponent(userId)}:${encodeURIComponent(listId)}`;
 }
 
 function openDB(): Promise<IDBDatabase> {
@@ -60,6 +66,9 @@ function openDB(): Promise<IDBDatabase> {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "listId" });
+      }
+      if (!db.objectStoreNames.contains(V3_STORE_NAME)) {
+        db.createObjectStore(V3_STORE_NAME, { keyPath: "storageKey" });
       }
       // v1 → v2: nothing to do structurally. New fields are optional and
       // back-filled lazily by migrateRecord on first read after upgrade.
@@ -97,59 +106,70 @@ export function migrateRecord(rec: OfflineListData | null): OfflineListData | nu
 }
 
 export async function saveOfflineList(data: OfflineListData): Promise<void> {
+  if (!data.userId) {
+    throw new Error("Uma conta autenticada é necessária para salvar uma lista offline");
+  }
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put({
+    const tx = db.transaction(V3_STORE_NAME, "readwrite");
+    tx.objectStore(V3_STORE_NAME).put({
       ...data,
       schemaVersion: OFFLINE_SCHEMA_VERSION,
+      storageKey: buildOfflineStorageKey(data.userId, data.listId),
     });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-export async function getOfflineList(listId: string): Promise<OfflineListData | null> {
+export async function getOfflineList(listId: string, userId?: string | null): Promise<OfflineListData | null> {
+  if (!userId) return null;
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const req = tx.objectStore(STORE_NAME).get(listId);
+    const tx = db.transaction(V3_STORE_NAME, "readonly");
+    const req = tx.objectStore(V3_STORE_NAME).get(buildOfflineStorageKey(userId, listId));
     req.onsuccess = () => resolve(migrateRecord(req.result ?? null));
     req.onerror = () => reject(req.error);
   });
 }
 
-export async function removeOfflineList(listId: string): Promise<void> {
+export async function removeOfflineList(listId: string, userId?: string | null): Promise<void> {
+  if (!userId) return;
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).delete(listId);
+    const tx = db.transaction(V3_STORE_NAME, "readwrite");
+    tx.objectStore(V3_STORE_NAME).delete(buildOfflineStorageKey(userId, listId));
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-export async function isListAvailableOffline(listId: string): Promise<boolean> {
-  const data = await getOfflineList(listId);
+export async function isListAvailableOffline(listId: string, userId?: string | null): Promise<boolean> {
+  const data = await getOfflineList(listId, userId);
   return data !== null;
 }
 
-export async function getAllOfflineListIds(): Promise<string[]> {
+export async function getAllOfflineListIds(userId?: string | null): Promise<string[]> {
+  if (!userId) return [];
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const req = tx.objectStore(STORE_NAME).getAllKeys();
-    req.onsuccess = () => resolve((req.result as string[]) ?? []);
+    const tx = db.transaction(V3_STORE_NAME, "readonly");
+    const req = tx.objectStore(V3_STORE_NAME).getAll();
+    req.onsuccess = () => resolve(
+      ((req.result as OfflineListData[]) ?? [])
+        .filter((item) => item.userId === userId)
+        .map((item) => item.listId),
+    );
     req.onerror = () => reject(req.error);
   });
 }
 
-export async function getOfflineStatus(listId: string): Promise<{
+export async function getOfflineStatus(listId: string, userId?: string | null): Promise<{
   available: boolean;
   lastSync: string | null;
   cardCount: number;
 }> {
-  const data = await getOfflineList(listId);
+  const data = await getOfflineList(listId, userId);
   if (!data) return { available: false, lastSync: null, cardCount: 0 };
   return {
     available: true,

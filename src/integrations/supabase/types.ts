@@ -2193,6 +2193,10 @@ export type Database = {
           id: string
           list_id: string
           mode: string
+          schema_version: number
+          session_scope_key: string | null
+          settings_snapshot: Json | null
+          session_snapshot: Json | null
           updated_at: string
           user_id: string
         }
@@ -2204,6 +2208,10 @@ export type Database = {
           id?: string
           list_id: string
           mode: string
+          schema_version?: number
+          session_scope_key?: string | null
+          settings_snapshot?: Json | null
+          session_snapshot?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -2215,6 +2223,10 @@ export type Database = {
           id?: string
           list_id?: string
           mode?: string
+          schema_version?: number
+          session_scope_key?: string | null
+          settings_snapshot?: Json | null
+          session_snapshot?: Json | null
           updated_at?: string
           user_id?: string
         }
@@ -2897,11 +2909,16 @@ export type Database = {
           card_order: string | null
           direction: string | null
           fast_mode: boolean | null
+          game_mode: string
           list_id: string
           mode: string | null
           play_mode: string | null
           play_side: string | null
           scope: string | null
+          study_flow_mode: string | null
+          write_activity_mode: string | null
+          write_rewrite_side: string | null
+          write_correction_mode: string | null
           updated_at: string
           user_id: string
         }
@@ -2909,11 +2926,16 @@ export type Database = {
           card_order?: string | null
           direction?: string | null
           fast_mode?: boolean | null
+          game_mode?: string
           list_id: string
           mode?: string | null
           play_mode?: string | null
           play_side?: string | null
           scope?: string | null
+          study_flow_mode?: string | null
+          write_activity_mode?: string | null
+          write_rewrite_side?: string | null
+          write_correction_mode?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2921,11 +2943,16 @@ export type Database = {
           card_order?: string | null
           direction?: string | null
           fast_mode?: boolean | null
+          game_mode?: string
           list_id?: string
           mode?: string | null
           play_mode?: string | null
           play_side?: string | null
           scope?: string | null
+          study_flow_mode?: string | null
+          write_activity_mode?: string | null
+          write_rewrite_side?: string | null
+          write_correction_mode?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -3036,10 +3063,15 @@ export type Database = {
           card_order: string
           direction: string
           fast_mode: boolean
+          game_mode: string
           mode: string
           play_mode: string
           play_side: string
           scope: string
+          study_flow_mode: string
+          write_activity_mode: string
+          write_rewrite_side: string
+          write_correction_mode: string
           updated_at: string
           user_id: string
         }
@@ -3047,10 +3079,15 @@ export type Database = {
           card_order?: string
           direction?: string
           fast_mode?: boolean
+          game_mode?: string
           mode?: string
           play_mode?: string
           play_side?: string
           scope?: string
+          study_flow_mode?: string
+          write_activity_mode?: string
+          write_rewrite_side?: string
+          write_correction_mode?: string
           updated_at?: string
           user_id: string
         }
@@ -3058,10 +3095,15 @@ export type Database = {
           card_order?: string
           direction?: string
           fast_mode?: boolean
+          game_mode?: string
           mode?: string
           play_mode?: string
           play_side?: string
           scope?: string
+          study_flow_mode?: string
+          write_activity_mode?: string
+          write_rewrite_side?: string
+          write_correction_mode?: string
           updated_at?: string
           user_id?: string
         }

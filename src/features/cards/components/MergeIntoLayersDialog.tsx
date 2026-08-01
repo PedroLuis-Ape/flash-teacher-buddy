@@ -109,7 +109,7 @@ export const MergeIntoLayersDialog = ({
       qc.invalidateQueries({ queryKey: ["study-flashcards", listId] });
       try {
         const { removeOfflineList } = await import("@/lib/offlineStore");
-        await removeOfflineList(listId).catch(() => {});
+        await removeOfflineList(listId, user.id).catch(() => {});
       } catch {
         // Offline cache is best-effort only.
       }

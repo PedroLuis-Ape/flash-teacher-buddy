@@ -29,6 +29,9 @@ describe("studyPreferenceRepository", () => {
       playMode: "single",
       playSide: "b",
       studyFlowMode: "continuous",
+      writeActivityMode: "translate",
+      writeRewriteSide: "alternating",
+      writeCorrectionMode: "flexible",
     });
   });
 

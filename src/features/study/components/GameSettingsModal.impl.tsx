@@ -21,22 +21,19 @@ import {
   Volume2,
   ListChecks,
 } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Direction } from "@/features/study/lib/gameCore";
 import type {
   StudyFlowModePreset,
   StudyPlayModePreset,
   StudyPlaySidePreset,
+  StudyModePreset,
 } from "@/features/study/preferences/studyPreset";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import { normalizeStudyMode } from "@/features/study/lib/studyMode";
 import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
-import {
-  DEFAULT_WRITE_CORRECTION_MODE,
-  readWriteCorrectionMode,
-  writeWriteCorrectionMode,
-  type WriteCorrectionMode,
-} from "@/features/study/lib/writeCorrectionMode";
+import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
 import { cn } from "@/lib/utils";
 import { emitStudyFlowModeChanged } from "@/features/study/lib/studyFlowModePreference";
 import { WriteActivitySettings } from "./WriteActivitySettings";
@@ -81,20 +78,30 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { userId } = useAuth();
-  const { effectivePreset, updateForCurrentScope } = useStudyPreferences(userId);
   const playRuntime = usePlayPresetRuntime();
   const listSession = location.pathname.includes("/list/")
     && (location.pathname.endsWith("/study") || location.pathname.endsWith("/mixed-study"));
   const urlMode = new URLSearchParams(location.search).get("mode");
+  const { id } = useParams<{ id?: string }>();
+  const studyMode = normalizeStudyMode(urlMode ?? "flip") as StudyModePreset;
+  const isPrivateList = listSession && !location.pathname.startsWith("/portal/");
+  const { effectivePreset, updateForCurrentScope } = useStudyPreferences(userId, {
+    listId: isPrivateList ? id : undefined,
+    gameMode: studyMode,
+    persistScope: isPrivateList ? "list" : "global",
+    canPersistList: isPrivateList,
+  });
   const isWriteMode = urlMode === "write";
   const isMixedMode = urlMode === "mixed";
   // Every playable mode supports both a gamified round flow and a continuous
   // run. Flip answers use the same engine gate as the other modes.
   const supportsFlowModes = Boolean(urlMode);
   const supportsWriteCorrection = isWriteMode || isMixedMode;
-  const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
-    () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),
-  );
+  const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(effectivePreset.writeCorrectionMode);
+
+  useEffect(() => {
+    setCorrectionMode(effectivePreset.writeCorrectionMode);
+  }, [effectivePreset.writeCorrectionMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -109,7 +116,10 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const handleCorrectionModeChange = (next: WriteCorrectionMode) => {
     if (next === correctionMode) return;
     setCorrectionMode(next);
-    writeWriteCorrectionMode(next);
+    updateForCurrentScope({ writeCorrectionMode: next });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("ape:writeCorrectionModeChanged", { detail: next }));
+    }
   };
 
   const currentFlowMode: StudyFlowModePreset = effectivePreset.studyFlowMode;

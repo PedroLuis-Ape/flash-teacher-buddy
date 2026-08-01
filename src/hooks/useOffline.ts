@@ -11,6 +11,7 @@ import {
   type OfflineListData,
 } from "@/lib/offlineStore";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 /** Detect online/offline */
 export function useOnlineStatus() {
@@ -32,16 +33,17 @@ export function useOnlineStatus() {
 
 /** Status of a single list's offline availability */
 export function useOfflineStatus(listId: string | undefined) {
+  const { userId } = useAuth();
   const [isAvailable, setIsAvailable] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!listId) return;
-    const data = await getOfflineList(listId);
+    const data = await getOfflineList(listId, userId);
     setIsAvailable(!!data);
     setLastSync(data?.downloadedAt ?? null);
-  }, [listId]);
+  }, [listId, userId]);
 
   useEffect(() => {
     refresh();
@@ -51,6 +53,8 @@ export function useOfflineStatus(listId: string | undefined) {
     if (!listId) return;
     setIsDownloading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Faça login para disponibilizar uma lista offline");
       const { data: listData, error: listErr } = await supabase
         .from("lists")
         .select("*")
@@ -67,7 +71,6 @@ export function useOfflineStatus(listId: string | undefined) {
 
       if (cardsErr) throw new Error("Falha ao buscar flashcards");
 
-      const { data: { user } } = await supabase.auth.getUser();
       let favIds: string[] = [];
       if (user) {
         const cardIds = (cards || []).map(c => c.id);
@@ -85,6 +88,7 @@ export function useOfflineStatus(listId: string | undefined) {
       const listRow = listData as typeof listData & { primary_side?: string };
       const offlineData: OfflineListData = {
         listId,
+        userId: user.id,
         listMeta: {
           title: listRow.title,
           lang_a: listRow.lang_a || "en",
@@ -117,10 +121,10 @@ export function useOfflineStatus(listId: string | undefined) {
 
   const remove = useCallback(async () => {
     if (!listId) return;
-    await removeOfflineList(listId);
+    await removeOfflineList(listId, userId);
     toast.info("Lista removida do armazenamento offline");
     await refresh();
-  }, [listId, refresh]);
+  }, [listId, refresh, userId]);
 
   return { isAvailable, isDownloading, lastSync, download, remove };
 }

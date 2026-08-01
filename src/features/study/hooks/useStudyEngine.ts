@@ -19,6 +19,7 @@ import {
 } from "@/features/cards/lib/cardStatusIdentity";
 import { shouldInjectRedPriority } from "@/features/study/lib/studyScopePolicy";
 import {
+  buildLegacyStudySnapshotKey,
   buildStudySnapshotKey,
   clearStudySnapshot,
   readStudySnapshot,
@@ -29,8 +30,14 @@ import {
   buildMasterySnapshotKey,
   clearMasterySnapshot,
   readMasterySnapshot,
+  sanitizeMasterySnapshot,
   writeMasterySnapshot,
 } from "@/features/study/lib/masterySessionSnapshot";
+import {
+  buildStudySessionScopeKey,
+  buildStudySessionSettingsSnapshot,
+  type StudySessionContextInput,
+} from "@/features/study/lib/studySessionContext";
 import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
@@ -137,6 +144,7 @@ export function useStudyEngine(
   redListIds: string[] = [],
   userScope?: string | null,
   studyFlowMode: StudyFlowMode = "continuous",
+  sessionContextOverrides: Partial<StudySessionContextInput> = {},
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -226,14 +234,32 @@ export function useStudyEngine(
   // The full set of IDs in `flashcards` already differs between scopes, but we
   // also keep this scope label so we can match sessions back even when the
   // underlying deck composition changes (e.g. user added/removed favorites).
-  const sessionScopeKey = useMemo(() => {
-    const sub = gameSettings.subset ?? 'all';
-    const order = gameSettings.mode ?? 'random';
-    const red = gameSettings.redFocus ? 'red' : 'normal';
-    return `${sub}:${order}:${red}`;
-  }, [gameSettings.subset, gameSettings.mode, gameSettings.redFocus]);
+  const sessionContext = useMemo(() => ({
+    mode,
+    subset: gameSettings.subset ?? 'all',
+    order: gameSettings.mode ?? 'random',
+    redFocus: gameSettings.redFocus ?? false,
+    fastMode: gameSettings.fastMode ?? false,
+    studyFlowMode,
+    ...sessionContextOverrides,
+  }), [gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, gameSettings.subset, mode, sessionContextOverrides, studyFlowMode]);
+  const sessionScopeKey = useMemo(
+    () => buildStudySessionScopeKey(sessionContext),
+    [sessionContext],
+  );
+  const sessionSettingsSnapshot = useMemo(
+    () => buildStudySessionSettingsSnapshot(sessionContext),
+    [sessionContext],
+  );
 
   const studySnapshotKey = useMemo(() => buildStudySnapshotKey({
+    userScope: userScope || 'anon',
+    listId,
+    mode,
+    sessionScopeKey,
+    cardsSignature,
+  }), [userScope, listId, mode, sessionScopeKey, cardsSignature]);
+  const legacyStudySnapshotKey = useMemo(() => buildLegacyStudySnapshotKey({
     userScope: userScope || 'anon',
     listId,
     mode,
@@ -447,13 +473,50 @@ export function useStudyEngine(
     // owns the queue, round boundaries, and repetition logic.
     if (isMasteryMode) {
       setIsAuthenticated(Boolean(userScope));
+      authUserIdRef.current = userScope ?? null;
       const eligibleIds = flashcards.map((card) => card.id);
       const availableSet = new Set(eligibleIds);
-      const restored = readMasterySnapshot(masterySnapshotKey, availableSet);
+      let restored = readMasterySnapshot(masterySnapshotKey, availableSet);
+      let restoredRemoteSessionId: string | null = null;
+
+      if (userScope && listId) {
+        try {
+          const { data: remoteSessions } = await withStudyRuntimeTimeout(
+            supabase
+              .from("study_sessions")
+              .select("id,session_snapshot")
+              .eq("user_id", userScope)
+              .eq("list_id", listId)
+              .eq("mode", mode)
+              .eq("completed", false)
+              .eq("session_scope_key", sessionScopeKey)
+              .order("updated_at", { ascending: false })
+              .limit(10)
+              .abortSignal(abortController.signal),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            "mastery-session-restore",
+            () => abortController.abort(),
+          );
+          const remote = (remoteSessions ?? [])
+            .map((candidate) => ({
+              id: candidate.id as string,
+              state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
+            }))
+            .find((candidate) => candidate.state);
+          if (!restored && remote?.state) {
+            restored = remote.state;
+            restoredRemoteSessionId = remote.id;
+          }
+        } catch {
+          // Local persistence remains the safe fallback if remote restore is unavailable.
+        }
+      }
+
       const session = restored
         ?? createMasterySession(eligibleIds, {
           shuffle: gameSettings.mode === "random",
         });
+      if (restoredRemoteSessionId) setSessionId(restoredRemoteSessionId);
       setMasterySession(session);
       setCardsOrder(session.currentRoundIds);
       setCurrentIndex(session.currentRoundIndex);
@@ -463,6 +526,31 @@ export function useStudyEngine(
       setUnseenCards([]);
       setIsFinished(session.status !== "active");
       markReady();
+      if (userScope && listId && !restoredRemoteSessionId) {
+        void withStudyRuntimeTimeout(
+          supabase
+            .from("study_sessions")
+            .insert({
+              user_id: userScope,
+              list_id: listId,
+              mode,
+              current_index: session.currentRoundIndex,
+              cards_order: session.currentRoundIds,
+              session_scope_key: sessionScopeKey,
+              settings_snapshot: sessionSettingsSnapshot,
+              session_snapshot: session,
+              schema_version: 1,
+              completed: session.status === "journey-complete",
+            })
+            .select("id")
+            .single()
+            .abortSignal(abortController.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          "mastery-session-create",
+        ).then(({ data }) => {
+          if (data?.id && isCurrent()) setSessionId(data.id);
+        }).catch(() => undefined);
+      }
       return;
     }
 
@@ -472,6 +560,8 @@ export function useStudyEngine(
       authUserIdRef.current = userScope ?? null;
       const snapshotCardIds = new Set(flashcards.map((card) => card.id));
       const localSnapshot = readStudySnapshot(studySnapshotKey, snapshotCardIds, {
+        enforceUniqueOrder: !!gameSettings.redFocus,
+      }) ?? readStudySnapshot(legacyStudySnapshotKey, snapshotCardIds, {
         enforceUniqueOrder: !!gameSettings.redFocus,
       });
       fallbackLocalSnapshot = localSnapshot;
@@ -561,7 +651,8 @@ export function useStudyEngine(
             .eq('user_id', user.id)
             .eq('list_id', listId)
             .eq('mode', mode)
-            .eq('completed', false)
+             .eq('completed', false)
+             .eq('session_scope_key', sessionScopeKey)
             .order('updated_at', { ascending: false })
             .limit(10)
             .abortSignal(abortController.signal),
@@ -594,6 +685,9 @@ export function useStudyEngine(
                   .update({
                     cards_order: restoredSession.cardsOrder,
                     current_index: 0,
+                    session_scope_key: sessionScopeKey,
+                    settings_snapshot: sessionSettingsSnapshot,
+                    schema_version: 1,
                     updated_at: new Date().toISOString(),
                   })
                   .eq('id', matchingSession.id)
@@ -652,6 +746,9 @@ export function useStudyEngine(
               mode,
               current_index: restoredIndex,
               cards_order: orderedCards,
+              session_scope_key: sessionScopeKey,
+              settings_snapshot: sessionSettingsSnapshot,
+              schema_version: 1,
               completed: false
             })
             .select()
@@ -676,7 +773,8 @@ export function useStudyEngine(
           .eq('user_id', user.id)
           .eq('list_id', listId)
           .eq('mode', mode)
-          .eq('completed', false)
+           .eq('completed', false)
+           .eq('session_scope_key', sessionScopeKey)
           .order('updated_at', { ascending: false })
           .limit(10)
           .abortSignal(abortController.signal),
@@ -707,9 +805,12 @@ export function useStudyEngine(
               supabase
                 .from('study_sessions')
                 .update({
-                  cards_order: restoredSession.cardsOrder,
-                  current_index: 0,
-                  updated_at: new Date().toISOString(),
+                    cards_order: restoredSession.cardsOrder,
+                    current_index: 0,
+                    session_scope_key: sessionScopeKey,
+                    settings_snapshot: sessionSettingsSnapshot,
+                    schema_version: 1,
+                    updated_at: new Date().toISOString(),
                 })
                 .eq('id', matchingSession.id)
                 .abortSignal(abortController.signal),
@@ -773,6 +874,9 @@ export function useStudyEngine(
             mode,
             current_index: localSnapshot?.currentIndex ?? 0,
             cards_order: orderedCards,
+            session_scope_key: sessionScopeKey,
+            settings_snapshot: sessionSettingsSnapshot,
+            schema_version: 1,
             completed: false
           })
           .select()
@@ -815,10 +919,12 @@ export function useStudyEngine(
     isFlipMode,
     isMasteryMode,
     listId,
+    legacyStudySnapshotKey,
     loadFlipProgress,
     masterySnapshotKey,
     mode,
     sessionScopeKey,
+    sessionSettingsSnapshot,
     studyFlowMode,
     studySnapshotKey,
     trackListOpened,
@@ -1500,6 +1606,9 @@ export function useStudyEngine(
               mode,
               current_index: 0,
               cards_order: cardIds,
+              session_scope_key: sessionScopeKey,
+              settings_snapshot: sessionSettingsSnapshot,
+              schema_version: 1,
               completed: false,
             })
             .select()
@@ -1519,7 +1628,7 @@ export function useStudyEngine(
     } finally {
       setIsRestarting(false);
     }
-  }, [isRestarting, gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, masterySnapshotKey, isAuthenticated, mode]);
+  }, [isRestarting, gameSettings, flashcards, effectiveRedPlayableIds, listId, isFlipMode, flipProgressKey, sessionId, studySnapshotKey, masterySnapshotKey, isAuthenticated, mode, sessionScopeKey, sessionSettingsSnapshot]);
 
   // Initialize session on mount
   useEffect(() => {
@@ -1590,7 +1699,24 @@ export function useStudyEngine(
     if (!isMasteryMode) return;
     if (isLoading || !masterySession) return;
     writeMasterySnapshot(masterySnapshotKey, masterySession);
-  }, [isMasteryMode, masterySession, masterySnapshotKey, isLoading]);
+    if (!sessionId || !listId || !authUserIdRef.current) return;
+    void withStudyRuntimeTimeout(
+      supabase
+        .from("study_sessions")
+        .update({
+          current_index: masterySession.currentRoundIndex,
+          cards_order: masterySession.currentRoundIds,
+          session_snapshot: masterySession,
+          session_scope_key: sessionScopeKey,
+          settings_snapshot: sessionSettingsSnapshot,
+          completed: masterySession.status === "journey-complete",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", sessionId),
+      STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+      "mastery-session-persist",
+    ).catch(() => undefined);
+  }, [isMasteryMode, listId, masterySession, masterySnapshotKey, isLoading, sessionId, sessionScopeKey, sessionSettingsSnapshot]);
 
   // Force-save current index immediately (no debounce). Used when switching
   // study scope so the previous trail's index isn't lost while waiting for
@@ -1617,6 +1743,14 @@ export function useStudyEngine(
           .from('study_sessions')
           .update({
             current_index: currentIndex,
+            ...(isMasteryMode && masterySession
+              ? {
+                cards_order: masterySession.currentRoundIds,
+                session_snapshot: masterySession,
+                session_scope_key: sessionScopeKey,
+                settings_snapshot: sessionSettingsSnapshot,
+              }
+              : {}),
             updated_at: new Date().toISOString(),
           })
           .eq('id', sessionId)
@@ -1629,7 +1763,7 @@ export function useStudyEngine(
     } catch (error) {
       console.warn('[StudyEngine] saveProgressNow remoto pendente:', error);
     }
-  }, [sessionId, currentIndex, listId, cardsOrder, results, isFinished, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey]);
+  }, [sessionId, currentIndex, listId, cardsOrder, results, isFinished, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey, sessionScopeKey, sessionSettingsSnapshot]);
 
   useEffect(() => {
     const flushBeforeLeave = () => { void saveProgressNow(); };

@@ -2,7 +2,7 @@
  * Phase 6 — offline snapshot v1 → v2 migration (pure, no IDB).
  */
 import { describe, it, expect } from "vitest";
-import { migrateRecord, OFFLINE_SCHEMA_VERSION, type OfflineListData } from "../offlineStore";
+import { buildOfflineStorageKey, migrateRecord, OFFLINE_SCHEMA_VERSION, type OfflineListData } from "../offlineStore";
 
 function v1Snapshot(): OfflineListData {
   // Intentionally omits schemaVersion, userId, and the new flashcard fields.
@@ -28,6 +28,11 @@ function v1Snapshot(): OfflineListData {
 }
 
 describe("migrateRecord", () => {
+  it("uses a user-scoped IndexedDB key", () => {
+    expect(buildOfflineStorageKey("user/a", "list:1")).toBe("user%2Fa:list%3A1");
+    expect(buildOfflineStorageKey("user-a", "list-1")).not.toBe(buildOfflineStorageKey("user-b", "list-1"));
+  });
+
   it("returns null for null input", () => {
     expect(migrateRecord(null)).toBeNull();
   });

@@ -66,21 +66,25 @@ const gameOptions: Array<{
   { mode: "pronunciation", visualKey: "pronunciation", title: "Prática de Pronúncia", beta: true },
 ];
 
-const HUB_CONFIG_MODE_STORAGE_KEY = "piteco:games-hub-config-mode:v1";
+const HUB_CONFIG_MODE_STORAGE_KEY = "piteco:games-hub-config-mode:v2";
 
-function readConfiguredMode(): StudyMode {
+function buildConfiguredModeKey(userId?: string): string {
+  return `${HUB_CONFIG_MODE_STORAGE_KEY}:${userId || "anon"}`;
+}
+
+function readConfiguredMode(userId?: string): StudyMode {
   if (typeof window === "undefined") return "flip";
   try {
-    return normalizeStudyMode(window.localStorage.getItem(HUB_CONFIG_MODE_STORAGE_KEY) || "flip");
+    return normalizeStudyMode(window.localStorage.getItem(buildConfiguredModeKey(userId)) || "flip");
   } catch {
     return "flip";
   }
 }
 
-function rememberConfiguredMode(mode: StudyMode): void {
+function rememberConfiguredMode(mode: StudyMode, userId?: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(HUB_CONFIG_MODE_STORAGE_KEY, mode);
+    window.localStorage.setItem(buildConfiguredModeKey(userId), mode);
   } catch {
     // The mode still works for the current render when storage is unavailable.
   }
@@ -92,7 +96,7 @@ const GamesHub = () => {
   const location = useLocation();
   const [listLabels, setListLabels] = useState<ListSettings>({ labelsA: "Lado A", labelsB: "Lado B" });
   const [pendingTurmaId] = useState(() => readPendingClassGlossaryContext());
-  const [configuredMode, setConfiguredMode] = useState<StudyMode>(readConfiguredMode);
+  const [configuredMode, setConfiguredMode] = useState<StudyMode>("flip");
 
   const isListRoute = Boolean(useMatch("/list/:id/*") || useMatch("/portal/list/:id/*"));
   const isPrivateList = isListRoute && !isPortalPath(location.pathname);
@@ -104,6 +108,10 @@ const GamesHub = () => {
 
   const { user: currentUser } = useAuthUser();
   const userId = currentUser?.id;
+  useEffect(() => {
+    if (currentUser === undefined) return;
+    setConfiguredMode(readConfiguredMode(userId));
+  }, [currentUser, userId]);
   const {
     effectivePreset,
     source,
@@ -125,7 +133,7 @@ const GamesHub = () => {
 
   const handleConfiguredModeChange = (value: string) => {
     const next = normalizeStudyMode(value);
-    rememberConfiguredMode(next);
+    rememberConfiguredMode(next, userId);
     setConfiguredMode(next);
   };
 

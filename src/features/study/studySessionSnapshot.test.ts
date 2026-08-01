@@ -148,6 +148,20 @@ describe("study snapshots", () => {
     }, new Set(["new-card"]))).toBeNull();
   });
 
+  it("appends a newly available card without discarding the existing queue", () => {
+    const snapshot = sanitizeStudySnapshot({
+      version: 2,
+      sessionId: "session-1",
+      currentIndex: 1,
+      cardsOrder: ["card-1", "card-2"],
+      results: [],
+      timestamp: 123,
+    }, new Set(["card-1", "card-2", "card-3"]));
+
+    expect(snapshot?.cardsOrder).toEqual(["card-1", "card-2", "card-3"]);
+    expect(snapshot?.currentIndex).toBe(1);
+  });
+
   it("isolates keys by user", () => {
     const base = {
       listId: "list-1",

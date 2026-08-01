@@ -189,6 +189,12 @@ const Study = () => {
     subset: (urlFavoritesOnly ? "favorites" : "all") as "all" | "favorites",
     fastMode: prefs.fastMode,
   }), [initialOrder, urlFavoritesOnly, prefs.fastMode]);
+  const sessionContext = useMemo(() => ({
+    direction: initialDir,
+    writeActivityMode: effectivePreset.writeActivityMode,
+    writeRewriteSide: effectivePreset.writeRewriteSide,
+    writeCorrectionMode: effectivePreset.writeCorrectionMode,
+  }), [effectivePreset.writeActivityMode, effectivePreset.writeCorrectionMode, effectivePreset.writeRewriteSide, initialDir]);
   
   // Goal context
   const fromGoalId = searchParams.get("from_goal");
@@ -374,7 +380,7 @@ const Study = () => {
     cardsOrder,
     saveProgressNow,
     studySnapshotKey,
-  } = useStudyEngine(listId, engineFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode);
+  } = useStudyEngine(listId, engineFlashcards, normalizedMode, false, favorites, initialGameSettings, redListIds, authUserId, effectivePreset.studyFlowMode, sessionContext);
 
   // A new queue reference represents a new answerable session/round. Resetting
   // this guard prevents a restarted session with the same first card from
@@ -572,7 +578,7 @@ const Study = () => {
     if (!navigator.onLine && isListRoute) {
       try {
         const offlineData = await withStudyRuntimeTimeout(
-          getOfflineList(resolvedId),
+          getOfflineList(resolvedId, userId),
           STUDY_REMOTE_RESTORE_TIMEOUT_MS,
           "offline-list",
         );

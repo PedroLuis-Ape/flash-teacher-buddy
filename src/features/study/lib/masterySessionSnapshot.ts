@@ -100,7 +100,14 @@ export function sanitizeMasterySnapshot(
     (id) => !currentRoundSet.has(id) || currentRoundResults[id] === "correct",
   );
   const masteredSet = new Set(masteredIds);
-  const unseenIds = dedupeIds(filterIds(row.unseenIds)).filter(
+  const knownIds = new Set([
+    ...row.currentRoundIds,
+    ...row.unseenIds,
+    ...row.retryIds,
+    ...row.masteredIds,
+  ]);
+  const newlyAvailableIds = Array.from(availableCardIds).filter((id) => !knownIds.has(id));
+  const unseenIds = dedupeIds(filterIds([...row.unseenIds, ...newlyAvailableIds])).filter(
     (id) => !currentRoundSet.has(id) && !masteredSet.has(id),
   );
   const unseenSet = new Set(unseenIds);

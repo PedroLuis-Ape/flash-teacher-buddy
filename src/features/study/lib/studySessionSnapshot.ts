@@ -45,6 +45,22 @@ export function buildStudySnapshotKey(input: {
   cardsSignature: string;
 }): string {
   return [
+    "study-progress-v3",
+    safeScope(input.userScope),
+    safeScope(input.listId || "no-list"),
+    safeScope(input.mode),
+    safeScope(input.sessionScopeKey),
+  ].join(":");
+}
+
+export function buildLegacyStudySnapshotKey(input: {
+  userScope?: string | null;
+  listId?: string | null;
+  mode: string;
+  sessionScopeKey: string;
+  cardsSignature: string;
+}): string {
+  return [
     "study-progress-v2",
     safeScope(input.userScope),
     safeScope(input.listId || "no-list"),
@@ -91,35 +107,33 @@ export function sanitizePersistedStudyOrder({
   if (filteredOrder.length === 0) return null;
 
   const savedUnique = new Set(filteredOrder);
-  if (savedUnique.size !== availableCardIds.size) return null;
-  for (const id of availableCardIds) {
-    if (!savedUnique.has(id)) return null;
-  }
+  const missingIds = Array.from(availableCardIds).filter((id) => !savedUnique.has(id));
+  const repairedOrder = [...filteredOrder, ...missingIds];
 
   const rawIndex = Math.min(
     Math.max(Number(currentIndex) || 0, 0),
-    filteredOrder.length - 1,
+    repairedOrder.length - 1,
   );
 
   if (!enforceUniqueOrder) {
     return {
-      cardsOrder: filteredOrder,
+      cardsOrder: repairedOrder,
       currentIndex: rawIndex,
-      repaired: false,
+      repaired: missingIds.length > 0,
     };
   }
 
   const canonicalOrder = Array.from(availableCardIds);
   const isCanonicalOrder =
-    filteredOrder.length === canonicalOrder.length
-    && filteredOrder.every((id, index) => id === canonicalOrder[index]);
+    repairedOrder.length === canonicalOrder.length
+    && repairedOrder.every((id, index) => id === canonicalOrder[index]);
 
   return {
     cardsOrder: canonicalOrder,
     currentIndex: isCanonicalOrder
       ? Math.min(rawIndex, canonicalOrder.length - 1)
       : 0,
-    repaired: !isCanonicalOrder,
+    repaired: !isCanonicalOrder || missingIds.length > 0,
   };
 }
 
@@ -165,10 +179,8 @@ export function sanitizeStudySnapshot(
   if (rawCardsOrder.length === 0) return null;
 
   const savedUnique = new Set(rawCardsOrder);
-  if (savedUnique.size !== availableCardIds.size) return null;
-  for (const id of availableCardIds) {
-    if (!savedUnique.has(id)) return null;
-  }
+  const missingIds = Array.from(availableCardIds).filter((id) => !savedUnique.has(id));
+  rawCardsOrder.push(...missingIds);
 
   // Legacy red-focus sessions injected three extra copies of every red card.
   // When every card in the deck is repeated, this is the dedicated all-red

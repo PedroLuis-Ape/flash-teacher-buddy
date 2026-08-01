@@ -340,6 +340,70 @@ export function isAdaptiveMixedStateCompatible(
       || candidate.currentIndex < candidate.currentRoundCardIds.length);
 }
 
+/**
+ * Repairs a valid session when cards were added/removed since its last save.
+ * The strict compatibility predicate remains available for callers that need
+ * an exact deck; gameplay uses this repair path to avoid silently discarding
+ * progress just because one card changed.
+ */
+export function repairAdaptiveMixedState(
+  value: unknown,
+  cardIds: readonly string[],
+  flowMode: MixedFlowMode = "mastery_rounds",
+): AdaptiveMixedSessionState | null {
+  if (isAdaptiveMixedStateCompatible(value, cardIds, flowMode)) return value;
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<AdaptiveMixedSessionState>;
+  if (candidate.version !== 2 || candidate.flowMode !== flowMode) return null;
+  if (!Array.isArray(candidate.currentRoundCardIds) || !Array.isArray(candidate.allCardIds)) return null;
+
+  const available = unique(cardIds);
+  if (available.length === 0) return null;
+  const availableSet = new Set(available);
+  const filter = (ids: unknown): string[] => Array.isArray(ids)
+    ? unique(ids.filter((id): id is string => typeof id === "string" && availableSet.has(id)))
+    : [];
+  const currentRoundCardIds = filter(candidate.currentRoundCardIds);
+  if (currentRoundCardIds.length === 0) return null;
+
+  const currentSet = new Set(currentRoundCardIds);
+  const masteredCardIds = filter(candidate.masteredCardIds).filter((id) => !currentSet.has(id));
+  const masteredSet = new Set(masteredCardIds);
+  const pendingCardIds = filter(candidate.pendingCardIds).filter((id) => !currentSet.has(id) && !masteredSet.has(id));
+  const pendingSet = new Set(pendingCardIds);
+  const known = new Set([...currentRoundCardIds, ...masteredCardIds, ...pendingCardIds]);
+  const unseenCardIds = unique([
+    ...filter(candidate.unseenCardIds),
+    ...available.filter((id) => !known.has(id)),
+  ]).filter((id) => !currentSet.has(id) && !masteredSet.has(id) && !pendingSet.has(id));
+  const currentIndex = Math.min(
+    Math.max(Math.floor(Number(candidate.currentIndex) || 0), 0),
+    Math.max(0, currentRoundCardIds.length - 1),
+  );
+  const filterRecord = <T>(valueToFilter: unknown): Record<string, T> =>
+    Object.fromEntries(Object.entries(valueToFilter && typeof valueToFilter === "object" ? valueToFilter : {})
+      .filter(([id]) => availableSet.has(id))) as Record<string, T>;
+  const repaired: AdaptiveMixedSessionState = {
+    ...(candidate as AdaptiveMixedSessionState),
+    deckSignature: signature(available),
+    allCardIds: available,
+    unseenCardIds,
+    pendingCardIds,
+    masteredCardIds,
+    currentRoundCardIds,
+    currentRoundOrigins: filterRecord(candidate.currentRoundOrigins) as Record<string, "pending" | "new">,
+    currentRoundErrors: filter(candidate.currentRoundErrors),
+    currentRoundAnswered: filter(candidate.currentRoundAnswered),
+    activityByCardId: filterRecord(candidate.activityByCardId) as Record<string, MixedActivityMode>,
+    lastActivityByCardId: filterRecord(candidate.lastActivityByCardId) as Record<string, MixedActivityMode>,
+    currentIndex,
+    roundSize: flowMode === "continuous" ? available.length : getAdaptiveRoundSize(available.length),
+    status: candidate.status === "active" && currentIndex < currentRoundCardIds.length ? "active" : candidate.status ?? "active",
+    updatedAt: typeof candidate.updatedAt === "number" ? candidate.updatedAt : Date.now(),
+  };
+  return repaired;
+}
+
 export function getAdaptiveMixedProgress(state: AdaptiveMixedSessionState) {
   const totalCards = state.allCardIds.length;
   const masteredCards = state.masteredCardIds.length;

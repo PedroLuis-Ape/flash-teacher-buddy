@@ -3,7 +3,7 @@ import {
   answerAdaptiveMixedCard,
   createAdaptiveMixedSession,
   getAdaptiveMixedProgress,
-  isAdaptiveMixedStateCompatible,
+  repairAdaptiveMixedState,
   restartAdaptiveMixedJourney,
   restartAdaptiveMixedRound,
   startNextAdaptiveMixedRound,
@@ -28,7 +28,7 @@ function readLocalState(
     const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
-    return isAdaptiveMixedStateCompatible(parsed, cardIds, flowMode) ? parsed : null;
+    return repairAdaptiveMixedState(parsed, cardIds, flowMode);
   } catch {
     return null;
   }
@@ -60,10 +60,10 @@ export function useAdaptiveMixedSession({
     if (initializedSignatureRef.current === initializationSignature) return;
 
     const local = readLocalState(storageKey, cardIds, flowMode);
-    const remote = isAdaptiveMixedStateCompatible(remoteState, cardIds, flowMode)
-      ? remoteState
-      : null;
-    const next = local ?? remote ?? createAdaptiveMixedSession(cardIds, { random, weightByCardId, flowMode });
+    const remote = repairAdaptiveMixedState(remoteState, cardIds, flowMode);
+    const candidates = [local, remote].filter((candidate): candidate is AdaptiveMixedSessionState => Boolean(candidate));
+    const next = candidates.sort((left, right) => right.updatedAt - left.updatedAt)[0]
+      ?? createAdaptiveMixedSession(cardIds, { random, weightByCardId, flowMode });
 
     initializedSignatureRef.current = initializationSignature;
     setState(next);
