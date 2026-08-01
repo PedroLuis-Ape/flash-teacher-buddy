@@ -12,6 +12,10 @@ import {
   createStudyDeckRequestId,
   loadStudyDeck,
 } from "@/features/study/lib/studyDeckLoader";
+import {
+  createStudyDeckCountReader,
+  resolveStudyDeckEmptyState,
+} from "@/features/study/lib/studyDeckEmptyVerification";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
@@ -688,11 +692,11 @@ const Study = () => {
     const queryColumn = isListRoute ? "list_id" : "collection_id";
     
     // ── PERF: Fetch flashcards + list metadata in parallel ──
-    const requestId = createStudyDeckRequestId();
-    const deckResult = await withStudyRuntimeTimeout(
+    const resourceKind = isListRoute ? "list" : "collection";
+    const readDeck = (requestId: string) => withStudyRuntimeTimeout(
       loadStudyDeck<Flashcard>({
         requestId,
-        resourceKind: isListRoute ? "list" : "collection",
+        resourceKind,
         resourceId: resolvedId,
         isPublicList,
         hasConfirmedSession: Boolean(session),
@@ -718,12 +722,45 @@ const Study = () => {
       () => abortController.abort(),
     );
 
+    const requestId = createStudyDeckRequestId();
+    let deckResult = await readDeck(requestId);
+
     if (!isCurrent()) return;
     if (deckResult.status === "empty") {
-      setFlashcards([]);
-      setConfirmedEmpty(true);
-      setLoading(false);
-      return;
+      // An empty read is not evidence of an empty list. Only an error-free
+      // authoritative count in the current context may confirm it.
+      const resolution = await resolveStudyDeckEmptyState<Flashcard>({
+        requestId,
+        resourceKind,
+        source: deckResult.source,
+        hasConfirmedSession: Boolean(session),
+        signal: abortController.signal,
+        isCurrentGeneration: isCurrent,
+        countCards: createStudyDeckCountReader({
+          client: supabase as any,
+          isPublicList,
+          resourceId: resolvedId,
+          queryColumn,
+          signal: abortController.signal,
+        }),
+        rereadDeck: () => readDeck(createStudyDeckRequestId()),
+      });
+      if (!isCurrent()) return;
+      if (resolution.state === "cancelled") return;
+      if (resolution.state === "confirmed-empty") {
+        setFlashcards([]);
+        setConfirmedEmpty(true);
+        setLoading(false);
+        return;
+      }
+      if (resolution.state === "empty-unconfirmed") {
+        setFlashcards([]);
+        setConfirmedEmpty(false);
+        setLoadFailure(resolution.technicalId);
+        setLoading(false);
+        return;
+      }
+      deckResult = resolution.deck;
     }
 
     const listPromise = isListRoute
@@ -1567,7 +1604,11 @@ const Study = () => {
         onStartFresh={handleRecoveryFresh}
         onBack={() => void handleExit()}
         isRetrying={loading || studyLoading || preferencesHydrating || !sessionPresetReady}
-        technicalId={`ST-${sessionReadiness.reason}`}
+        technicalId={
+          loadFailure?.startsWith("ST-EMPTY/")
+            ? loadFailure
+            : `ST-${sessionReadiness.reason}`
+        }
       />
     );
   }

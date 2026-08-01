@@ -12,6 +12,10 @@ import { scoreCard, type CardProgressLike } from "@/features/study/lib/intellige
 import { useAdaptiveMixedSession } from "@/features/study/hooks/useAdaptiveMixedSession";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
 import { StudyDeckEmptyState } from "@/features/study/components/StudyDeckEmptyState";
+import {
+  createStudyDeckCountReader,
+  resolveStudyDeckEmptyState,
+} from "@/features/study/lib/studyDeckEmptyVerification";
 import { SkipCardConfirmDialog } from "@/features/study/components/SkipCardConfirmDialog";
 import {
   STUDY_RECOVERY_WATCHDOG_MS,
@@ -263,10 +267,11 @@ export default function MixedStudy() {
       try {
         const isPublicList = isListRoute && isPortalRoute;
         const queryColumn = isListRoute ? "list_id" : "collection_id";
-        const deckResult = await withStudyRuntimeTimeout(
+        const resourceKind = isListRoute ? "list" : "collection";
+        const readDeck = (requestId: string) => withStudyRuntimeTimeout(
           loadStudyDeck<MixedFlashcard>({
-            requestId: createStudyDeckRequestId(),
-            resourceKind: isListRoute ? "list" : "collection",
+            requestId,
+            resourceKind,
             resourceId: resolvedId,
             isPublicList,
             hasConfirmedSession: Boolean(session),
@@ -291,14 +296,45 @@ export default function MixedStudy() {
           isPublicList ? "mixed-portal-cards" : "mixed-cards",
           () => abortController.abort(),
         );
+
+        const requestId = createStudyDeckRequestId();
+        let deckResult = await readDeck(requestId);
         if (deckResult.status === "empty") {
-          if (!cancelled) {
+          // Never trust a single empty read: confirm with an authoritative
+          // count in the same context before showing the destructive state.
+          const resolution = await resolveStudyDeckEmptyState<MixedFlashcard>({
+            requestId,
+            resourceKind,
+            source: deckResult.source,
+            hasConfirmedSession: Boolean(session),
+            signal: abortController.signal,
+            isCurrentGeneration: () => !cancelled,
+            countCards: createStudyDeckCountReader({
+              client: supabase as any,
+              isPublicList,
+              resourceId: resolvedId,
+              queryColumn,
+              signal: abortController.signal,
+            }),
+            rereadDeck: () => readDeck(createStudyDeckRequestId()),
+          });
+          if (cancelled || resolution.state === "cancelled") return;
+          if (resolution.state === "confirmed-empty") {
             setCards([]);
             setConfirmedEmpty(true);
             setRemoteLoaded(true);
             setLoading(false);
+            return;
           }
-          return;
+          if (resolution.state === "empty-unconfirmed") {
+            setCards([]);
+            setConfirmedEmpty(false);
+            setRemoteLoaded(true);
+            setLoadFailure(resolution.technicalId);
+            setLoading(false);
+            return;
+          }
+          deckResult = resolution.deck;
         }
 
         const prepared = deckResult.playableCards as MixedFlashcard[];
@@ -737,7 +773,11 @@ export default function MixedStudy() {
         }}
         onBack={exit}
         isRetrying={loading}
-        technicalId={loadFailure ? "MX-load" : "MX-session"}
+        technicalId={
+          loadFailure?.startsWith("ST-EMPTY/")
+            ? loadFailure
+            : loadFailure ? "MX-load" : "MX-session"
+        }
       />
     );
   }
