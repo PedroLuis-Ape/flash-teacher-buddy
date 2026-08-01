@@ -54,6 +54,7 @@ import {
   recordStudyProgressAttempt,
   type StudyProgressAttempt,
 } from "@/features/study/lib/studyProgressRepository";
+import { claimStudySession } from "@/features/study/lib/studySessionRepository";
 import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
@@ -671,28 +672,19 @@ export function useStudyEngine(
       setIsFinished(session.status !== "active");
       markReady();
       if (userScope && listId && !restoredRemoteSessionId) {
-        void withStudyRuntimeTimeout(
-          supabase
-            .from("study_sessions")
-            .insert({
-              user_id: userScope,
-              list_id: listId,
-              mode,
-              current_index: session.currentRoundIndex,
-              cards_order: session.currentRoundIds,
-              session_scope_key: sessionScopeKey,
-              settings_snapshot: sessionSettingsSnapshot,
-              session_snapshot: session,
-              schema_version: 1,
-              completed: session.status === "journey-complete",
-            })
-            .select("id")
-            .single()
-            .abortSignal(abortController.signal),
-          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-          "mastery-session-create",
-        ).then(({ data }) => {
-          if (data?.id && isCurrent()) setSessionId(data.id);
+        void claimStudySession({
+          userId: userScope,
+          listId,
+          mode,
+          currentIndex: session.currentRoundIndex,
+          cardsOrder: session.currentRoundIds,
+          sessionScopeKey,
+          settingsSnapshot: sessionSettingsSnapshot,
+          sessionSnapshot: session,
+          signal: abortController.signal,
+          stage: "mastery-session-create",
+        }).then(({ id }) => {
+          if (id && isCurrent()) setSessionId(id);
         }).catch(() => undefined);
       }
       return;
@@ -923,34 +915,25 @@ export function useStudyEngine(
         }
         markReady();
 
-        void withStudyRuntimeTimeout(
-          supabase
-            .from('study_sessions')
-            .insert({
-              user_id: user.id,
-              list_id: listId,
-              mode,
-              current_index: restoredIndex,
-              cards_order: orderedCards,
-              session_snapshot: buildStudyProgressSnapshot({
-                sessionId: null,
-                currentIndex: restoredIndex,
-                cardsOrder: orderedCards,
-                results: localSnapshot?.results ?? [],
-                layer: sessionLayerRef.current,
-              }),
-              session_scope_key: sessionScopeKey,
-              settings_snapshot: sessionSettingsSnapshot,
-              schema_version: 1,
-              completed: false
-            })
-            .select()
-            .abortSignal(abortController.signal)
-            .single(),
-          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-          "flip-session-create",
-        ).then(({ data, error }) => {
-          if (!error && data && isCurrent()) setSessionId(data.id);
+        void claimStudySession({
+          userId: user.id,
+          listId,
+          mode,
+          currentIndex: restoredIndex,
+          cardsOrder: orderedCards,
+          sessionScopeKey,
+          settingsSnapshot: sessionSettingsSnapshot,
+          sessionSnapshot: buildStudyProgressSnapshot({
+            sessionId: null,
+            currentIndex: restoredIndex,
+            cardsOrder: orderedCards,
+            results: localSnapshot?.results ?? [],
+            layer: sessionLayerRef.current,
+          }),
+          signal: abortController.signal,
+          stage: "flip-session-create",
+        }).then(({ id }) => {
+          if (id && isCurrent()) setSessionId(id);
         }).catch(() => undefined);
         return;
       }
@@ -1064,34 +1047,25 @@ export function useStudyEngine(
       }
       markReady();
 
-      void withStudyRuntimeTimeout(
-        supabase
-          .from('study_sessions')
-          .insert({
-            user_id: user.id,
-            list_id: listId,
-            mode,
-            current_index: localSnapshot?.currentIndex ?? 0,
-            cards_order: orderedCards,
-            session_snapshot: buildStudyProgressSnapshot({
-              sessionId: null,
-              currentIndex: localSnapshot?.currentIndex ?? 0,
-              cardsOrder: orderedCards,
-              results: localSnapshot?.results ?? [],
-              layer: sessionLayerRef.current,
-            }),
-            session_scope_key: sessionScopeKey,
-            settings_snapshot: sessionSettingsSnapshot,
-            schema_version: 1,
-            completed: false
-          })
-          .select()
-          .abortSignal(abortController.signal)
-          .single(),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "quiz-session-create",
-      ).then(({ data, error }) => {
-        if (!error && data && isCurrent()) setSessionId(data.id);
+      void claimStudySession({
+        userId: user.id,
+        listId,
+        mode,
+        currentIndex: localSnapshot?.currentIndex ?? 0,
+        cardsOrder: orderedCards,
+        sessionScopeKey,
+        settingsSnapshot: sessionSettingsSnapshot,
+        sessionSnapshot: buildStudyProgressSnapshot({
+          sessionId: null,
+          currentIndex: localSnapshot?.currentIndex ?? 0,
+          cardsOrder: orderedCards,
+          results: localSnapshot?.results ?? [],
+          layer: sessionLayerRef.current,
+        }),
+        signal: abortController.signal,
+        stage: "quiz-session-create",
+      }).then(({ id }) => {
+        if (id && isCurrent()) setSessionId(id);
       }).catch(() => undefined);
     } catch (error) {
       if (!isCurrent()) return;
@@ -1254,37 +1228,25 @@ export function useStudyEngine(
     if (isAuthenticated && remoteUserId && listId && eligibleIds.length > 0) {
       try {
         const controller = new AbortController();
-        const { data: newSession, error } = await withStudyRuntimeTimeout(
-          supabase
-            .from('study_sessions')
-            .insert({
-              user_id: remoteUserId,
-              list_id: listId,
-              mode,
-              current_index: 0,
-              cards_order: freshCardsOrder,
-              session_snapshot: freshMastery ?? buildStudyProgressSnapshot({
-                sessionId: null,
-                currentIndex: 0,
-                cardsOrder: freshCardsOrder,
-                results: [],
-                layer: sessionLayerRef.current,
-              }),
-              session_scope_key: sessionScopeKey,
-              settings_snapshot: sessionSettingsSnapshot,
-              schema_version: 1,
-              completed: false,
-            })
-            .select('id')
-            .single()
-            .abortSignal(controller.signal),
-          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-          'fresh-create-session',
-          () => controller.abort(),
-        );
-        if (error) throw error;
-        if (!newSession?.id) throw new Error('fresh-create-session-unconfirmed');
-        if (mountedRef.current) setSessionId(newSession.id);
+        const { id: newSessionId } = await claimStudySession({
+          userId: remoteUserId,
+          listId,
+          mode,
+          currentIndex: 0,
+          cardsOrder: freshCardsOrder,
+          sessionScopeKey,
+          settingsSnapshot: sessionSettingsSnapshot,
+          sessionSnapshot: freshMastery ?? buildStudyProgressSnapshot({
+            sessionId: null,
+            currentIndex: 0,
+            cardsOrder: freshCardsOrder,
+            results: [],
+            layer: sessionLayerRef.current,
+          }),
+          signal: controller.signal,
+          stage: 'fresh-create-session',
+        });
+        if (mountedRef.current) setSessionId(newSessionId);
       } catch (error) {
         console.warn('[StudyEngine] Sessão nova ficou apenas local:', error);
         toast.warning('O jogo reiniciou neste aparelho, mas a sincronização online falhou.');
@@ -1940,36 +1902,25 @@ export function useStudyEngine(
         setIsFinished(false);
 
         const createController = new AbortController();
-        const { data: newSession, error } = await withStudyRuntimeTimeout(
-          supabase
-            .from('study_sessions')
-            .insert({
-              user_id: userId,
-              list_id: listId,
-              mode,
-              current_index: 0,
-              cards_order: cardIds,
-              session_snapshot: buildStudyProgressSnapshot({
-                sessionId: null,
-                currentIndex: 0,
-                cardsOrder: cardIds,
-                results: [],
-                layer: sessionLayerRef.current,
-              }),
-              session_scope_key: sessionScopeKey,
-              settings_snapshot: sessionSettingsSnapshot,
-              schema_version: 1,
-              completed: false,
-            })
-            .select('id')
-            .abortSignal(createController.signal)
-            .single(),
-          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-          'restart-create-session',
-          () => createController.abort(),
-        );
-        if (error) throw error;
-        setSessionId(newSession.id);
+        const { id: newSessionId } = await claimStudySession({
+          userId,
+          listId,
+          mode,
+          currentIndex: 0,
+          cardsOrder: cardIds,
+          sessionScopeKey,
+          settingsSnapshot: sessionSettingsSnapshot,
+          sessionSnapshot: buildStudyProgressSnapshot({
+            sessionId: null,
+            currentIndex: 0,
+            cardsOrder: cardIds,
+            results: [],
+            layer: sessionLayerRef.current,
+          }),
+          signal: createController.signal,
+          stage: 'restart-create-session',
+        });
+        setSessionId(newSessionId);
       } else {
         clearStudySnapshot(studySnapshotKey);
         clearMasterySnapshot(masterySnapshotKey);

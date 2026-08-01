@@ -3256,6 +3256,19 @@ export type Database = {
         Args: { _folder_id: string; _user_id?: string }
         Returns: boolean
       }
+      claim_study_session_v1: {
+        Args: {
+          p_cards_order: Json
+          p_current_index: number
+          p_list_id: string
+          p_mode: string
+          p_schema_version: number
+          p_session_scope_key: string
+          p_session_snapshot: Json
+          p_settings_snapshot: Json
+        }
+        Returns: Json
+      }
       check_message_rate_limit: {
         Args: { _thread_key: string; _user_id: string }
         Returns: boolean

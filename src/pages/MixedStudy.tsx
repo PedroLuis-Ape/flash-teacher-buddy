@@ -37,6 +37,7 @@ import {
 } from "@/features/study/lib/studySessionContext";
 import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
 import { recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
+import { claimStudySession } from "@/features/study/lib/studySessionRepository";
 import type { MixedFlowMode } from "@/features/study/lib/adaptiveMixedSession";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
@@ -500,17 +501,18 @@ export default function MixedStudy() {
 
     if (!sessionCreationRef.current) {
       const controller = new AbortController();
-      sessionCreationRef.current = withStudyRuntimeTimeout(
-        (supabase as any)
-          .from("study_sessions")
-          .insert(payload)
-          .select("id")
-          .abortSignal(controller.signal)
-          .single(),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "mixed-session-create",
-        () => controller.abort(),
-      ).then(({ data }) => data?.id ?? null)
+      sessionCreationRef.current = claimStudySession({
+        userId,
+        listId,
+        mode: "mixed-adaptive",
+        currentIndex: state.currentIndex,
+        cardsOrder: state.allCardIds,
+        sessionScopeKey: scopeKey,
+        settingsSnapshot: payload.settings_snapshot,
+        sessionSnapshot: state,
+        signal: controller.signal,
+        stage: "mixed-session-create",
+      }).then(({ id }) => id)
         .catch(() => null)
         .finally(() => {
           sessionCreationRef.current = null;

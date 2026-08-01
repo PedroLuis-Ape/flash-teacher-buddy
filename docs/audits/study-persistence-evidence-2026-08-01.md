@@ -127,3 +127,4 @@ O preview apresentou ações de entrada no jogo como botões, e não como links 
 - Build Vite após a implementação: passou com 3.895 módulos transformados.
 - O build regenerou o bundle automático de `supabase/functions/mcp/index.ts`; ele foi restaurado ao conteúdo rastreado e permanece fora do diff.
 - Nenhuma migration, consulta de escrita, troca de projeto, alteração de Auth/RLS ou publicação foi executada.
+- `claimStudySession` replaces the six direct session inserts in `Study` and `MixedStudy`; it uses the transactional RPC when available, requires a confirmed id, and retains a compatibility fallback until the migration is installed.

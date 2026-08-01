@@ -17,6 +17,10 @@ const progressSql = readFileSync(
   new URL("../../../../supabase/migrations/20260801153500_atomic_flashcard_progress_v1.sql", import.meta.url),
   "utf8",
 );
+const claimSessionSql = readFileSync(
+  new URL("../../../../supabase/migrations/20260801160000_claim_study_session_v1.sql", import.meta.url),
+  "utf8",
+);
 
 describe("study persistence migrations", () => {
   it("preserves stable layered identity and transfers status on unmerge", () => {
@@ -46,5 +50,19 @@ describe("study persistence migrations", () => {
       expect(migration).not.toContain("EXECUTE format(");
     }
     expect(persistenceContextSql).toContain("study_sessions_mode_check_v1");
+  });
+
+  it("serializes concurrent session claims without deleting legacy rows", () => {
+    expect(claimSessionSql).toContain("claim_study_session_v1");
+    expect(claimSessionSql).toContain("pg_advisory_xact_lock");
+    expect(claimSessionSql).toContain("FOR UPDATE");
+    expect(claimSessionSql).toContain("study_access_denied");
+    expect(claimSessionSql).toContain("public.is_turma_owner");
+    expect(claimSessionSql).toContain("public.is_turma_member");
+    expect(claimSessionSql).toContain("RETURNING * INTO v_session");
+    expect(claimSessionSql).toContain("REVOKE ALL ON FUNCTION public.claim_study_session_v1");
+    expect(claimSessionSql).toContain("GRANT EXECUTE ON FUNCTION public.claim_study_session_v1");
+    expect(claimSessionSql).not.toContain("DELETE FROM public.study_sessions");
+    expect(claimSessionSql).not.toContain("DROP TABLE");
   });
 });

@@ -79,3 +79,4 @@ Precedência: sessão válida e compatível → preset de lista → preset globa
 - Offline v1/v2 permanece armazenado, mas não é reutilizado automaticamente; o usuário precisa baixar novamente a lista autenticado.
 - A migration é aditiva e não exclui dados. Em regressão, reverta o frontend/feature flag e mantenha as colunas novas; não faça rollback destrutivo de schema.
 - Não fazer merge, deploy, publicação ou migration remota automaticamente; o próximo passo é revisão do PR e execução dos checks do provedor.
+- Atomic RPC `claim_study_session_v1` serializes concurrent session creation by user/list/mode/scope, reuses the newest open row, and never removes legacy rows. Its guarantee starts only after controlled migration application.
