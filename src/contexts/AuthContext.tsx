@@ -18,6 +18,7 @@ import { PRODUCTION_DATA_URL } from "@/integrations/supabase/platformRuntime";
 
 export type AuthStatus =
   | "initializing"
+  | "stale"
   | "authenticated"
   | "anonymous"
   | "error";
@@ -126,10 +127,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (hydrationError) {
           setError(hydrationError);
           if (optimistic.current) {
-            // Network or refresh outages must not masquerade as logout.
+            // Network or refresh outages must not masquerade as logout, but a
+            // persisted token is not confirmation for protected RLS reads.
+            // Keep the identity for the shell and wait for a confirmed
+            // session before study/data loaders are released.
             setSession(optimistic.current);
-            setStatus("authenticated");
-            syncQueryCache(optimistic.current);
+            setStatus("stale");
           } else {
             setStatus("error");
           }
@@ -152,8 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (optimistic.current) {
           setSession(optimistic.current);
-          setStatus("authenticated");
-          syncQueryCache(optimistic.current);
+          setStatus("stale");
         } else {
           setStatus("error");
         }
@@ -174,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       userId: session?.user?.id,
       accessToken: session?.access_token,
-      initializing: status === "initializing",
+      initializing: status === "initializing" || status === "stale",
       error,
     }),
     [status, session, error],

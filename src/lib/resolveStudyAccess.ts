@@ -10,6 +10,7 @@
 
 export type StudyAuthStatus =
   | "initializing"
+  | "stale"
   | "authenticated"
   | "anonymous"
   | "error";
@@ -27,7 +28,7 @@ export interface StudyAccessInput {
  *
  *   authStatus      | isPortalRoute | userId | result
  *   ----------------|---------------|--------|-----------------
- *   initializing    | *             | *      | wait
+ *   initializing/stale | *          | *      | wait
  *   error           | true          | *      | public
  *   error           | false         | *      | denied
  *   anonymous       | true          | *      | public
@@ -38,7 +39,7 @@ export interface StudyAccessInput {
 export function resolveStudyAccess(input: StudyAccessInput): StudyAccess {
   const { authStatus, isPortalRoute, userId } = input;
 
-  if (authStatus === "initializing") return "wait";
+  if (authStatus === "initializing" || authStatus === "stale") return "wait";
 
   if (authStatus === "authenticated") {
     if (!userId) return "wait";

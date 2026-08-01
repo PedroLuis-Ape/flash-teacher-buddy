@@ -16,4 +16,9 @@ describe("AuthContext hydration contract", () => {
     expect(getSessionCall).toBeGreaterThan(nextSessionBranch);
     expect(authSource).toContain("RLS reads");
   });
+
+  it("keeps an optimistic session stale when hydration fails", () => {
+    expect(authSource).toContain('setStatus("stale")');
+    expect(authSource).toContain("protected RLS reads");
+  });
 });

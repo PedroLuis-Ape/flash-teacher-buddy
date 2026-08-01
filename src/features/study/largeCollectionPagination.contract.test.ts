@@ -6,7 +6,8 @@ const read = (path: string) => readFileSync(path, "utf8");
 describe("large collection pagination contracts", () => {
   it("paginates cards in list detail and study routes", () => {
     expect(read("src/pages/ListDetail.tsx")).toContain("fetchAllSupabaseRows<Flashcard>");
-    expect(read("src/pages/Study.tsx")).toContain("fetchAllSupabaseRows<Flashcard>");
+    expect(read("src/pages/Study.tsx")).toContain("loadStudyDeck<Flashcard>");
+    expect(read("src/features/study/lib/studyDeckLoader.ts")).toContain("fetchAllSupabaseRows(fetchPage)");
   });
 
   it("paginates folder glossary, list glossary and account glossary reads", () => {

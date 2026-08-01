@@ -88,9 +88,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const urlMode = new URLSearchParams(location.search).get("mode");
   const isWriteMode = urlMode === "write";
   const isMixedMode = urlMode === "mixed";
-  // Every playable quiz mode supports the same two session formats. Flip is
-  // already a straight-through viewer and therefore does not need this option.
-  const supportsFlowModes = Boolean(urlMode) && urlMode !== "flip";
+  // Every playable mode supports both a gamified round flow and a continuous
+  // run. Flip answers use the same engine gate as the other modes.
+  const supportsFlowModes = Boolean(urlMode);
   const supportsWriteCorrection = isWriteMode || isMixedMode;
   const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(
     () => (typeof window === "undefined" ? DEFAULT_WRITE_CORRECTION_MODE : readWriteCorrectionMode()),

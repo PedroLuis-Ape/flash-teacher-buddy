@@ -123,4 +123,24 @@ describe("adaptive mixed session", () => {
     expect(progress.totalCards).toBe(20);
     expect(progress.overallPercent).toBe(75);
   });
+
+  it("percorre todos os cards sem interrupção no modo contínuo", () => {
+    let state = createAdaptiveMixedSession(ids(20), {
+      random: fixedRandom,
+      flowMode: "continuous",
+    });
+
+    expect(state.flowMode).toBe("continuous");
+    expect(state.currentRoundCardIds).toHaveLength(20);
+    expect(state.roundSize).toBe(20);
+
+    state.currentRoundCardIds.forEach((_, index) => {
+      state = answerCurrent(state, index % 3 !== 0);
+      if (index < 19) expect(state.status).toBe("active");
+    });
+
+    expect(state.status).toBe("journey-complete");
+    expect(state.pendingCardIds).toEqual([]);
+    expect(state.masteredCardIds).toHaveLength(20);
+  });
 });

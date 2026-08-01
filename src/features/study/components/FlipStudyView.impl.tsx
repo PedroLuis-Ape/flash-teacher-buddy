@@ -29,12 +29,6 @@ const MOUSE_DRAG_THRESHOLD_PX = 6;
 
 type ManualFlipAnswer = "knew" | "didntKnow" | null;
 
-function isPureFlipSession(): boolean {
-  if (typeof window === "undefined") return true;
-  const mode = new URLSearchParams(window.location.search).get("mode");
-  return mode !== "mixed";
-}
-
 function hasActiveTextSelection(): boolean {
   if (typeof window === "undefined") return false;
   return Boolean(window.getSelection()?.toString().trim());
@@ -199,7 +193,6 @@ export const FlipStudyView = ({
   const mouseDragStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressNextCardClickRef = useRef(false);
   const { speak, stop } = useTTS();
-  const pureFlipSession = isPureFlipSession();
 
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };
@@ -235,11 +228,12 @@ export const FlipStudyView = ({
 
   const speakSide = useCallback((side: FlipAutoPlaySide) => {
     const rate = getSpeechRate();
-    const fixedSide = side === "a" ? sideA : sideB;
+    const fixedText = side === "a" ? sideA.text : sideB.text;
+    const fixedLang = side === "a" ? sideA.lang : sideB.lang;
     if (!fastMode || (isAutoPlaying && playPreset.playMode === "single")) {
       setIsFlipped(fixedSideToRenderedSide(side) === "second");
     }
-    if (ttsEnabled) speak(fixedSide.text, { langOverride: toBCP47(fixedSide.lang), rate });
+    if (ttsEnabled) speak(fixedText, { langOverride: toBCP47(fixedLang), rate });
     else stop();
   }, [fastMode, fixedSideToRenderedSide, isAutoPlaying, playPreset.playMode, sideA.text, sideA.lang, sideB.text, sideB.lang, speak, stop, ttsEnabled]);
 
@@ -301,20 +295,14 @@ export const FlipStudyView = ({
   const handleKnew = () => {
     pauseAutoPlay();
     playCorrect();
-    if (pureFlipSession) {
-      setManualAnswer("knew");
-      return;
-    }
+    setManualAnswer("knew");
     onKnew();
   };
 
   const handleDidntKnow = () => {
     pauseAutoPlay();
     playWrong();
-    if (pureFlipSession) {
-      setManualAnswer("didntKnow");
-      return;
-    }
+    setManualAnswer("didntKnow");
     onDidntKnow();
   };
 
@@ -469,7 +457,7 @@ export const FlipStudyView = ({
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled, pureFlipSession]);
+  }, [shortcuts, isFlipped, fastMode, onNext, onPrevious, canGoNext, canGoPrevious, ttsEnabled]);
 
   const autoPlayControls = (
     <div className="flip-autoplay-controls w-full rounded-xl border bg-card/80 p-2 shadow-sm sm:rounded-2xl sm:p-3" data-no-card-swipe="true">

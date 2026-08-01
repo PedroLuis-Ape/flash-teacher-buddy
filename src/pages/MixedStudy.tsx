@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Heart, RefreshCcw, Sparkles, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
+import {
+  createStudyDeckRequestId,
+  loadStudyDeck,
+} from "@/features/study/lib/studyDeckLoader";
 import { hashToBool, normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { scoreCard, type CardProgressLike } from "@/features/study/lib/intelligenceScoring";
 import { useAdaptiveMixedSession } from "@/features/study/hooks/useAdaptiveMixedSession";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
+import { StudyDeckEmptyState } from "@/features/study/components/StudyDeckEmptyState";
 import { SkipCardConfirmDialog } from "@/features/study/components/SkipCardConfirmDialog";
 import {
   STUDY_RECOVERY_WATCHDOG_MS,
@@ -16,6 +20,12 @@ import {
   withStudyRuntimeTimeout,
 } from "@/features/study/lib/studySessionRuntime";
 import { useAuth } from "@/contexts/AuthContext";
+import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
+import { useFavorites } from "@/hooks/useFavorites";
+import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
+import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
+import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import type { MixedFlowMode } from "@/features/study/lib/adaptiveMixedSession";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
 import { UnscrambleStudyView } from "@/features/study/components/UnscrambleStudyView";
@@ -63,6 +73,7 @@ export default function MixedStudy() {
 
   const [cards, setCards] = useState<MixedFlashcard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmedEmpty, setConfirmedEmpty] = useState(false);
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [labels, setLabels] = useState(DEFAULT_LABELS);
@@ -81,23 +92,76 @@ export default function MixedStudy() {
 
   const directionParam = searchParams.get("dir") || searchParams.get("direction") || "any";
   const baseDirection: Direction = normalizeDirection(directionParam);
+  const favoritesOnly = searchParams.get("favorites") === "true";
+  const { effectivePreset } = useStudyPreferences(userId, {
+    listId: isListRoute ? resolvedId : undefined,
+    gameMode: "mixed",
+    persistScope: isListRoute ? "list" : "global",
+    canPersistList: isListRoute,
+  });
+  const [selectedFlowMode, setSelectedFlowMode] = useState<MixedFlowMode>(effectivePreset.studyFlowMode);
+  const [gameSettings, setGameSettings] = useState<GameSettings>({
+    mode: "random",
+    subset: favoritesOnly ? "favorites" : "all",
+    fastMode: false,
+    redFocus: false,
+  });
+  const lastPresetFlowModeRef = useRef(effectivePreset.studyFlowMode);
+  useEffect(() => {
+    if (effectivePreset.studyFlowMode === lastPresetFlowModeRef.current) return;
+    lastPresetFlowModeRef.current = effectivePreset.studyFlowMode;
+    setSelectedFlowMode(effectivePreset.studyFlowMode);
+  }, [effectivePreset.studyFlowMode]);
+  useEffect(() => {
+    const handleFlowChange = (event: Event) => {
+      const next = (event as CustomEvent<MixedFlowMode>).detail;
+      if (next === "mastery_rounds" || next === "continuous") setSelectedFlowMode(next);
+    };
+    window.addEventListener("ape:studyFlowModeChanged", handleFlowChange);
+    return () => window.removeEventListener("ape:studyFlowModeChanged", handleFlowChange);
+  }, []);
+  const favoritesScope = useMemo(
+    () => (isListRoute ? { listId: resolvedId } : { collectionId: resolvedId }),
+    [isListRoute, resolvedId],
+  );
+  const favoritesQuery = useFavorites(userId, "flashcard", favoritesScope);
+  const favoriteIds = useMemo(() => favoritesQuery.data ?? [], [favoritesQuery.data]);
+  const favoritesReady = !favoritesOnly
+    || !userId
+    || (favoritesQuery.isSuccess && favoritesQuery.fetchStatus !== "fetching" && !favoritesQuery.isPlaceholderData);
   const scopeKey = [
     "adaptive-mixed-v2",
     userId || "anon",
     isListRoute ? "list" : "collection",
     resolvedId,
-    searchParams.get("favorites") === "true" ? "favorites" : "all",
+    favoritesOnly ? "favorites" : "all",
+    selectedFlowMode,
   ].join(":");
 
   useEffect(() => {
     if (!resolvedId) return;
-    if (authStatus === "initializing") {
+    const isPortalRoute = location.pathname.startsWith("/portal/");
+    const access = resolveStudyAccess({ authStatus, isPortalRoute, userId });
+    setCards([]);
+    setConfirmedEmpty(false);
+    setLoadFailure(null);
+    if (access === "denied") {
+      setLoading(false);
+      setLoadFailure("auth-required");
+      return;
+    }
+    if (access === "wait") {
       setLoading(true);
       const timeoutId = setTimeout(() => {
         setLoading(false);
         setLoadFailure("auth-timeout");
       }, STUDY_RECOVERY_WATCHDOG_MS);
       return () => clearTimeout(timeoutId);
+    }
+    if (!favoritesReady) {
+      setLoading(true);
+      setRemoteLoaded(false);
+      return;
     }
 
     let cancelled = false;
@@ -107,42 +171,64 @@ export default function MixedStudy() {
       setLoadFailure(null);
       setRemoteLoaded(false);
       try {
-        let rawCards: MixedFlashcard[] = [];
-        if (isListRoute && !session) {
-          rawCards = await withStudyRuntimeTimeout(
-            fetchAllSupabaseRows<MixedFlashcard>((from, to) =>
-              (supabase as any)
-                .rpc("get_portal_flashcards", { _list_id: resolvedId })
-                .abortSignal(abortController.signal)
-                .range(from, to),
-            ),
-            STUDY_REQUIRED_LOAD_TIMEOUT_MS,
-            "mixed-portal-cards",
-            () => abortController.abort(),
-          );
-        } else {
-          const queryColumn = isListRoute ? "list_id" : "collection_id";
-          rawCards = await withStudyRuntimeTimeout(
-            fetchAllSupabaseRows<MixedFlashcard>((from, to) =>
-              (supabase as any)
-                .from("flashcards")
-                .select("*")
-                .eq(queryColumn, resolvedId)
-                .is("deleted_at", null)
-                .order("created_at", { ascending: true })
-                .order("id", { ascending: true })
-                .abortSignal(abortController.signal)
-                .range(from, to),
-            ),
-            STUDY_REQUIRED_LOAD_TIMEOUT_MS,
-            "mixed-cards",
-            () => abortController.abort(),
-          );
+        const isPublicList = isListRoute && isPortalRoute;
+        const queryColumn = isListRoute ? "list_id" : "collection_id";
+        const deckResult = await withStudyRuntimeTimeout(
+          loadStudyDeck<MixedFlashcard>({
+            requestId: createStudyDeckRequestId(),
+            resourceKind: isListRoute ? "list" : "collection",
+            resourceId: resolvedId,
+            isPublicList,
+            hasConfirmedSession: Boolean(session),
+            signal: abortController.signal,
+            fetchPage: (from, to) => isPublicList
+              ? (supabase as any)
+                  .rpc("get_portal_flashcards", { _list_id: resolvedId })
+                  .abortSignal(abortController.signal)
+                  .range(from, to)
+              : (supabase as any)
+                  .from("flashcards")
+                  .select("*")
+                  .eq(queryColumn, resolvedId)
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: true })
+                  .order("id", { ascending: true })
+                  .abortSignal(abortController.signal)
+                  .range(from, to),
+            prepare: (rawCards) => prepareLayeredStudyDeck(rawCards),
+          }),
+          STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+          isPublicList ? "mixed-portal-cards" : "mixed-cards",
+          () => abortController.abort(),
+        );
+        if (deckResult.status === "empty") {
+          if (!cancelled) {
+            setCards([]);
+            setConfirmedEmpty(true);
+            setRemoteLoaded(true);
+            setLoading(false);
+          }
+          return;
         }
 
-        const prepared = prepareLayeredStudyDeck(rawCards as any[]) as MixedFlashcard[];
-        if (prepared.length === 0) throw new Error("empty-mixed-deck");
-        if (!cancelled) setCards(prepared);
+        const prepared = deckResult.playableCards as MixedFlashcard[];
+        const scopedCards = filterCardsForStudyScope({
+          cards: prepared,
+          favoriteIds,
+          redListIds: [],
+          settings: { subset: favoritesOnly ? "favorites" : "all" },
+        });
+        if (scopedCards.length === 0) {
+          if (!cancelled) {
+            setCards([]);
+            setConfirmedEmpty(true);
+            setRemoteLoaded(true);
+            setLoading(false);
+          }
+          return;
+        }
+        if (!cancelled) setCards(scopedCards);
+        if (!cancelled) setConfirmedEmpty(false);
 
         if (userId && listId) {
           const [progressResult, sessionResult] = await withStudyRuntimeTimeout(
@@ -244,7 +330,7 @@ export default function MixedStudy() {
       cancelled = true;
       abortController.abort();
     };
-  }, [authStatus, isListRoute, listId, resolvedId, session, userId, loadAttempt]);
+  }, [authStatus, favoriteIds, favoritesOnly, favoritesReady, isListRoute, listId, location.pathname, resolvedId, session, userId, loadAttempt]);
 
   const persistRemoteState = useCallback(async (state: any) => {
     if (!userId || !listId) return;
@@ -255,12 +341,7 @@ export default function MixedStudy() {
       current_index: state.currentIndex,
       cards_order: state,
       completed: state.status === "journey-complete",
-      total_cards: state.allCardIds.length,
-      correct_answers: state.masteredCardIds.length,
-      wrong_answers: state.pendingCardIds.length,
-      skipped_answers: 0,
       updated_at: new Date().toISOString(),
-      completed_at: state.status === "journey-complete" ? new Date().toISOString() : null,
     };
 
     const existingSessionId = studySessionIdRef.current;
@@ -309,11 +390,21 @@ export default function MixedStudy() {
   const mixed = useAdaptiveMixedSession({
     cardIds,
     storageKey: scopeKey,
+    flowMode: selectedFlowMode,
     remoteState,
     remoteLoaded,
     weightByCardId,
     onPersist: persistRemoteState,
   });
+  const handleSettingsChange = useCallback((next: GameSettings) => {
+    setGameSettings(next);
+    const nextFavorites = next.subset === "favorites";
+    if (nextFavorites !== favoritesOnly) {
+      const params = new URLSearchParams(searchParams);
+      params.set("favorites", String(nextFavorites));
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }
+  }, [favoritesOnly, location.pathname, navigate, searchParams]);
   const currentAnswerKey = `${mixed.state?.roundNumber ?? 0}:${mixed.state?.currentIndex ?? 0}:${mixed.currentCardId ?? "none"}`;
   useEffect(() => {
     answeredCardKeyRef.current = null;
@@ -453,12 +544,14 @@ export default function MixedStudy() {
       <StudySessionRecovery
         onRetry={() => {
           setLoadFailure(null);
+          setConfirmedEmpty(false);
           setShowRuntimeRecovery(false);
           setLoadAttempt((attempt) => attempt + 1);
         }}
         onStartFresh={() => {
           const shouldReloadCards = Boolean(loadFailure) || cards.length === 0;
           setLoadFailure(null);
+          setConfirmedEmpty(false);
           setShowRuntimeRecovery(false);
           if (shouldReloadCards) {
             setLoadAttempt((attempt) => attempt + 1);
@@ -469,6 +562,20 @@ export default function MixedStudy() {
         onBack={exit}
         isRetrying={loading}
         technicalId={loadFailure ? "MX-load" : "MX-session"}
+      />
+    );
+  }
+
+  if (confirmedEmpty) {
+    return (
+      <StudyDeckEmptyState
+        onRetry={() => {
+          setConfirmedEmpty(false);
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+        onBack={exit}
+        isRetrying={loading}
+        resourceLabel={isListRoute ? "lista" : "coleção"}
       />
     );
   }
@@ -584,30 +691,44 @@ export default function MixedStudy() {
           <Button variant="ghost" size="sm" className="h-8 px-2" onClick={exit}>
             <ArrowLeft className="mr-1 h-4 w-4" />Sair
           </Button>
-          <div className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary sm:px-3 sm:text-xs">
-            ⭐ Recomendado
+          <div className="flex items-center gap-2">
+            <GameSettingsModal
+              settings={gameSettings}
+              onSettingsChange={handleSettingsChange}
+              onRestart={restartJourneyManually}
+              showFastMode={false}
+            />
+            {selectedFlowMode === "mastery_rounds" && (
+              <div className="rounded-full border border-primary/30 bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary sm:px-3 sm:text-xs">
+                ⭐ Gamificado
+              </div>
+            )}
           </div>
         </div>
 
         <Card className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Rodada {state.roundNumber} · Tentativa {state.attemptNumber}</p>
+              <p className="text-sm font-semibold">
+                {selectedFlowMode === "continuous" ? "Modo extenso" : `Rodada ${state.roundNumber} · Tentativa ${state.attemptNumber}`}
+              </p>
               <p className="text-xs text-muted-foreground">{getActivityLabel(mixed.activityMode)} · Card {progress.roundPosition} de {progress.roundTotal}</p>
             </div>
-            <div className="flex gap-1" aria-label={`${state.hearts} de ${state.maxHearts} corações`}>
-              {Array.from({ length: state.maxHearts }).map((_, index) => (
-                <Heart
-                  key={index}
-                  className={index < state.hearts ? "h-6 w-6 fill-red-500 text-red-500 sm:h-7 sm:w-7" : "h-6 w-6 text-muted-foreground/30 sm:h-7 sm:w-7"}
-                />
-              ))}
-            </div>
+            {selectedFlowMode === "mastery_rounds" && (
+              <div className="flex gap-1" aria-label={`${state.hearts} de ${state.maxHearts} corações`}>
+                {Array.from({ length: state.maxHearts }).map((_, index) => (
+                  <Heart
+                    key={index}
+                    className={index < state.hearts ? "h-6 w-6 fill-red-500 text-red-500 sm:h-7 sm:w-7" : "h-6 w-6 text-muted-foreground/30 sm:h-7 sm:w-7"}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           <Progress value={progress.overallPercent} />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{progress.masteredCards} de {progress.totalCards} dominados</span>
-            <span>{progress.pendingCards} revisões pendentes</span>
+            <span>{selectedFlowMode === "continuous" ? "Sem interrupções até o fim" : `${progress.pendingCards} revisões pendentes`}</span>
           </div>
 
         </Card>
@@ -640,7 +761,7 @@ export default function MixedStudy() {
       </div>
       <SkipCardConfirmDialog
         open={showSkipDialog}
-        flowMode="mastery_rounds"
+        flowMode={selectedFlowMode}
         onCancel={() => {
           skipCardKeyRef.current = null;
           setShowSkipDialog(false);

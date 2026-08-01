@@ -2,13 +2,16 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useKeyboardShortcuts as useStudyShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllSupabaseRows } from "@/lib/fetchAllSupabaseRows";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { hashToBool } from "@/features/study/lib/gameCore";
 import { normalizeStudyMode, type StudyMode } from "@/features/study/lib/studyMode";
 import { getOfflineList } from "@/lib/offlineStore";
 import { prepareLayeredStudyDeck } from "@/lib/studyDeck";
+import {
+  createStudyDeckRequestId,
+  loadStudyDeck,
+} from "@/features/study/lib/studyDeckLoader";
 import { useListGlossary } from "@/hooks/useListGlossary";
 import { mergeGlossaryAndManual, parseExtendedWordHints, type MergedHint } from "@/features/study/lib/glossaryMerge";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
@@ -45,6 +48,7 @@ import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
+import { StudyDeckEmptyState } from "@/features/study/components/StudyDeckEmptyState";
 import { SkipCardConfirmDialog } from "@/features/study/components/SkipCardConfirmDialog";
 import { resolveStudyProgressMetrics } from "@/features/study/lib/studyProgressMetrics";
 import {
@@ -192,6 +196,7 @@ const Study = () => {
 
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmedEmpty, setConfirmedEmpty] = useState(false);
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const loadGenerationRef = useRef(0);
@@ -302,12 +307,12 @@ const Study = () => {
     // Favorites keeps the historical safe fallback. Red focus intentionally
     // stays empty when the user has no red cards; mixing normal cards would
     // violate the selected scope.
-    if (!redFocusActiveForDeck && deckSubset === "favorites" && favorites.length === 0) {
+    if (!redFocusActiveForDeck && deckSubset === "favorites" && favoritesConfirmedZero) {
       return flashcards;
     }
 
     return scoped;
-  }, [flashcards, favorites, redListIds, deckSubset, redFocusActiveForDeck]);
+  }, [favoritesConfirmedZero, flashcards, favorites, redListIds, deckSubset, redFocusActiveForDeck]);
 
   // Memoize flashcards to prevent unstable references triggering re-init
   const prevIdsRef = useRef<string>("");
@@ -472,6 +477,16 @@ const Study = () => {
     const isPortalRoute = typeof window !== "undefined"
       && window.location.pathname.startsWith("/portal/");
     const access = resolveStudyAccess({ authStatus, isPortalRoute, userId: authUserId });
+    setFlashcards([]);
+    setConfirmedEmpty(false);
+    setLoadFailure(null);
+    setListTitle(null);
+    setVideoInfo(null);
+    if (access === "denied") {
+      setLoading(false);
+      setLoadFailure("auth-required");
+      return;
+    }
     if (access === "wait") {
       setLoading(true);
       const timeoutId = setTimeout(() => {
@@ -542,12 +557,13 @@ const Study = () => {
     setLoading(true);
     setLoadFailure(null);
 
-    // isPublicRoute derived from pathname here (no router match available without
-    // declaring a route prefix), but isListRoute is the SSOT from useParams above.
-    const isPublicRoute = window.location.pathname.startsWith("/portal/collection/");
+    // Portal list routes have a public RPC contract even when the browser also
+    // has a session. This keeps the same shared link stable before/after login.
+    const isPortalRoute = window.location.pathname.startsWith("/portal/");
+    const isPublicList = isListRoute && isPortalRoute;
 
     if (import.meta.env.DEV) {
-      console.debug("[Study] Loading flashcards", { resolvedId, isListRoute, isPublicRoute });
+      console.debug("[Study] Loading flashcards", { resolvedId, isListRoute, isPublicList });
     }
 
     try {
@@ -565,6 +581,7 @@ const Study = () => {
           const grouped = prepareLayeredStudyDeck(offlineData.flashcards as any[]);
           const orderedData = initialOrder === "random" ? shuffleArray([...grouped]) : grouped;
           setFlashcards(orderedData as Flashcard[]);
+          setConfirmedEmpty(orderedData.length === 0);
           setListTitle(offlineData.listMeta.title);
           setListSettings({
             studyType: (offlineData.listMeta.study_type === "general" ? "general" : "language") as "language" | "general",
@@ -590,47 +607,46 @@ const Study = () => {
     // `authSession` from useAuth() is the single source of truth.
     const session = authSession;
 
-    if (isListRoute && !session) {
-      const data = await withStudyRuntimeTimeout(
-        fetchAllSupabaseRows<Flashcard>((from, to) =>
-          (supabase as any)
-            .rpc('get_portal_flashcards', { _list_id: resolvedId })
-            .abortSignal(abortController.signal)
-            .range(from, to),
-        ),
-        STUDY_REQUIRED_LOAD_TIMEOUT_MS,
-        "portal-cards",
-        () => abortController.abort(),
-      );
-      if (!isCurrent()) return;
-
-      if (data.length === 0) {
-        toast.error("Esta lista não possui flashcards");
-        setLoading(false);
-        return;
-      }
-
-      const grouped = prepareLayeredStudyDeck(data as any[]);
-      const shuffled = initialOrder === "random" ? shuffleArray([...grouped]) : grouped;
-      setFlashcards(shuffled as Flashcard[]);
-      setLoading(false);
-      return;
-    }
-    
     const queryColumn = isListRoute ? "list_id" : "collection_id";
     
     // ── PERF: Fetch flashcards + list metadata in parallel ──
-    const cardsPromise = fetchAllSupabaseRows<Flashcard>((from, to) =>
-      (supabase as any)
-        .from("flashcards")
-        .select("*")
-        .eq(queryColumn, resolvedId)
-        .is("deleted_at", null)
-          .order("created_at", { ascending: true })
-          .order("id", { ascending: true })
-          .abortSignal(abortController.signal)
-          .range(from, to),
+    const requestId = createStudyDeckRequestId();
+    const deckResult = await withStudyRuntimeTimeout(
+      loadStudyDeck<Flashcard>({
+        requestId,
+        resourceKind: isListRoute ? "list" : "collection",
+        resourceId: resolvedId,
+        isPublicList,
+        hasConfirmedSession: Boolean(session),
+        signal: abortController.signal,
+        fetchPage: (from, to) => isPublicList
+          ? (supabase as any)
+              .rpc("get_portal_flashcards", { _list_id: resolvedId })
+              .abortSignal(abortController.signal)
+              .range(from, to)
+          : (supabase as any)
+              .from("flashcards")
+              .select("*")
+              .eq(queryColumn, resolvedId)
+              .is("deleted_at", null)
+              .order("created_at", { ascending: true })
+              .order("id", { ascending: true })
+              .abortSignal(abortController.signal)
+              .range(from, to),
+        prepare: (rawCards) => prepareLayeredStudyDeck(rawCards),
+      }),
+      STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+      isPublicList ? "portal-cards" : "study-cards",
+      () => abortController.abort(),
     );
+
+    if (!isCurrent()) return;
+    if (deckResult.status === "empty") {
+      setFlashcards([]);
+      setConfirmedEmpty(true);
+      setLoading(false);
+      return;
+    }
 
     const listPromise = isListRoute
       ? supabase
@@ -641,25 +657,11 @@ const Study = () => {
           .maybeSingle()
       : Promise.resolve({ data: null });
 
-    const cardsData = await withStudyRuntimeTimeout(
-      cardsPromise,
-      STUDY_REQUIRED_LOAD_TIMEOUT_MS,
-      "study-cards",
-      () => abortController.abort(),
-    );
-    if (!isCurrent()) return;
-
-    if (cardsData.length === 0) {
-      toast.error(isListRoute ? "Esta lista não tem flashcards ainda" : "Esta coleção não tem flashcards ainda");
-      navigate(isListRoute ? `/list/${resolvedId}` : (isPublicRoute ? `/portal/collection/${resolvedId}` : `/collection/${resolvedId}`));
-      return;
-    }
-
     // Layered cards: collapse each [CAMADAS] group into a SINGLE deck entry.
     // The entry-point carries `__layers` with the full ordered group; the
     // view then lets the user navigate "Camada anterior/Próxima camada"
     // INSIDE the same deck position. Principals/aggregators never play.
-    const studyableCards = prepareLayeredStudyDeck(cardsData as any[]);
+    const studyableCards = deckResult.playableCards;
     const rawData = initialOrder === "random" ? shuffleArray([...studyableCards]) : studyableCards;
     
     // ── PERF: Pre-parse word_hints at load time (off the render path) ──
@@ -680,6 +682,7 @@ const Study = () => {
     // Cards are the only required dependency for the first playable render.
     // Metadata may continue loading within its own bounded window.
     setFlashcards(orderedData);
+    setConfirmedEmpty(false);
     setLoading(false);
 
     const listResult = await withStudyRuntimeTimeout(
@@ -1303,6 +1306,7 @@ const Study = () => {
       },
       prevCard: () => {
         if (writeShortcutsLocked) return;
+        if (masteryProgressActive) return;
         goToPrevious();
       },
       nextLayer: () => {
@@ -1396,6 +1400,7 @@ const Study = () => {
   const handleRecoveryRetry = () => {
     const shouldReloadCards = Boolean(loadFailure) || flashcards.length === 0;
     setLoadFailure(null);
+    setConfirmedEmpty(false);
     setShowSessionRecovery(false);
     setAutomaticRecoveryAttempted(false);
     if (shouldReloadCards) {
@@ -1408,6 +1413,7 @@ const Study = () => {
   const handleRecoveryFresh = () => {
     const shouldReloadCards = Boolean(loadFailure) || flashcards.length === 0;
     setLoadFailure(null);
+    setConfirmedEmpty(false);
     setShowSessionRecovery(false);
     setAutomaticRecoveryAttempted(false);
     if (shouldReloadCards) {
@@ -1456,6 +1462,20 @@ const Study = () => {
   // True empty state: no cards at all (e.g. after errors, or favorites filter
   // somehow still produced 0 — shouldn't happen given the fallback, but kept as
   // a last-resort safety net with a recovery action).
+  if (confirmedEmpty) {
+    return (
+      <StudyDeckEmptyState
+        onRetry={() => {
+          setConfirmedEmpty(false);
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+        onBack={() => void handleExit()}
+        isRetrying={loading}
+        resourceLabel={isListRoute ? "lista" : "coleção"}
+      />
+    );
+  }
+
   if (!currentCard && !isFinished) {
     // Friendly empty state when redFocus produces zero cards
     if (redFocusActive) {
@@ -1500,7 +1520,7 @@ const Study = () => {
 
   if (isFinished) {
     const isFlipMode = normalizedMode === "flip";
-    const showNextRound = !isFlipMode && hasMoreRounds && !isGameComplete;
+    const showNextRound = hasMoreRounds && !isGameComplete;
 
     return (
       <div className="min-h-screen bg-background py-12 px-4 pb-32 md:pb-12">
@@ -1543,11 +1563,11 @@ const Study = () => {
 
             <div className="grid grid-cols-2 gap-4 py-6 sm:grid-cols-4">
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-green-600">{isFlipMode ? correctCount : roundCorrect}</div>
+                <div className="text-3xl font-bold text-green-600">{masteryProgressActive ? roundCorrect : correctCount}</div>
                 <div className="text-sm text-muted-foreground">Acertos</div>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-destructive">{isFlipMode ? errorCount : roundErrors}</div>
+                <div className="text-3xl font-bold text-destructive">{masteryProgressActive ? roundErrors : errorCount}</div>
                 <div className="text-sm text-muted-foreground">Erros</div>
               </div>
               <div className="space-y-2">
@@ -1555,7 +1575,7 @@ const Study = () => {
                 <div className="text-sm text-muted-foreground">Recuperados</div>
               </div>
               <div className="space-y-2">
-                <div className="text-3xl font-bold text-warning">{isFlipMode ? skippedCount : (masteryRoundSummary?.skippedCards ?? 0)}</div>
+                <div className="text-3xl font-bold text-warning">{masteryProgressActive ? (masteryRoundSummary?.skippedCards ?? 0) : skippedCount}</div>
                 <div className="text-sm text-muted-foreground">Pulados</div>
               </div>
             </div>
@@ -1849,10 +1869,10 @@ const Study = () => {
               onToggleSpecial={handleToggleSpecial}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
-              onNext={navigateNext}
-              onPrevious={navigatePrevious}
-              canGoPrevious={canGoPrevious}
-              canGoNext={canGoNext}
+              onNext={masteryProgressActive ? undefined : navigateNext}
+              onPrevious={masteryProgressActive ? undefined : navigatePrevious}
+              canGoPrevious={!masteryProgressActive && canGoPrevious}
+              canGoNext={!masteryProgressActive && canGoNext}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
               onOpenLayers={hasLayers ? goToNextLayer : undefined}
