@@ -2,7 +2,8 @@
  * cardStatusIdentity — single source of truth for "what id should each
  * status system target?" inside the study screen.
  *
- *   - canonicalGroupId : where Favorites & Red List live.
+ *   - stableGroupId    : database status_group_uid used by the new pipeline.
+ *   - canonicalGroupId : legacy Favorite/Red List target kept for back-compat.
  *       Layered card  → parent_card_id of the group principal.
  *       Normal card   → the card's own id.
  *
@@ -21,18 +22,32 @@
  */
 export interface ResolveIdentityInput {
   /** The card currently visible (active layer, when layered). */
-  displayedCard?: { id?: string | null; parent_card_id?: string | null } | null;
+  displayedCard?: {
+    id?: string | null;
+    parent_card_id?: string | null;
+    status_group_uid?: string | null;
+    __statusGroupUid?: string | null;
+  } | null;
   /** The card at the engine's current index (the deck entry-point). */
   engineCard?: {
     id?: string | null;
     parent_card_id?: string | null;
     __parentCardId?: string | null;
+    status_group_uid?: string | null;
+    __statusGroupUid?: string | null;
   } | null;
   /** All layers of the current group, or undefined when the card is not layered. */
-  layers?: ReadonlyArray<{ id?: string | null; parent_card_id?: string | null }> | null;
+  layers?: ReadonlyArray<{
+    id?: string | null;
+    parent_card_id?: string | null;
+    status_group_uid?: string | null;
+    __statusGroupUid?: string | null;
+  }> | null;
 }
 
 export interface CardStatusIdentity {
+  /** Stable group identity supplied by the database. */
+  stableGroupId: string | null;
   visibleLayerId: string | null;
   canonicalGroupId: string | null;
   playableEntryId: string | null;
@@ -50,6 +65,16 @@ export function resolveCardStatusIdentity(
 
   const layerList = Array.isArray(layers) ? layers : [];
   const hasLayers = layerList.length > 1;
+
+  const stableLayer = layerList.find((layer) => layer.status_group_uid || layer.__statusGroupUid);
+  const stableGroupId: string | null =
+    displayedCard?.status_group_uid ??
+    displayedCard?.__statusGroupUid ??
+    engineCard?.status_group_uid ??
+    engineCard?.__statusGroupUid ??
+    stableLayer?.status_group_uid ??
+    stableLayer?.__statusGroupUid ??
+    null;
 
   // Canonical group: parent_card_id when layered, otherwise the card itself.
   const explicitCanonical: string | null =
@@ -77,6 +102,7 @@ export function resolveCardStatusIdentity(
   for (const l of layerList) push(l?.id ?? null);
 
   return {
+    stableGroupId,
     visibleLayerId,
     canonicalGroupId,
     playableEntryId,
@@ -89,15 +115,22 @@ export function resolveCardStatusIdentity(
  * Red-List / favorite ids (stored canonically) into the ids that actually
  * exist in cardsOrder.
  *
- *   - Layered deck entry: map(entry.parent_card_id → entry.id)
+ *   - Layered deck entry: map(status_group_uid and entry.parent_card_id → entry.id)
  *   - Normal entry:       map(entry.id → entry.id)
  */
 export function buildCanonicalToPlayableMap(
-  deck: ReadonlyArray<{ id: string; parent_card_id?: string | null }>,
+  deck: ReadonlyArray<{
+    id: string;
+    parent_card_id?: string | null;
+    status_group_uid?: string | null;
+    __statusGroupUid?: string | null;
+  }>,
 ): Map<string, string> {
   const map = new Map<string, string>();
   for (const card of deck) {
     if (!card?.id) continue;
+    const stableGroup = card.status_group_uid ?? card.__statusGroupUid;
+    if (stableGroup && !map.has(stableGroup)) map.set(stableGroup, card.id);
     const canonical = card.parent_card_id || card.id;
     if (!map.has(canonical)) map.set(canonical, card.id);
   }

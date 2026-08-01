@@ -68,6 +68,8 @@ import { useSetFavoriteGroup } from "@/hooks/useSetFavoriteGroup";
 import { useSetRedListGroup } from "@/hooks/useSetRedListGroup";
 import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
 import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
+import { useGroupStatusGate } from "@/features/cards/hooks/useGroupStatusGate";
+import { useSetFlashcardGroupStatus } from "@/features/cards/hooks/useFlashcardGroupStatus";
 import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
@@ -92,6 +94,7 @@ interface Flashcard {
   image_url_b?: string | null;
   word_hints?: unknown;
   parent_card_id?: string | null;
+  status_group_uid?: string | null;
   layer_index?: number | null;
   example_text?: string | null;
   example_translation?: string | null;
@@ -104,6 +107,7 @@ interface Flashcard {
   __layers?: Flashcard[];
   /** Visual-only metadata for layered cards (each layer is its own deck entry). */
   __groupTitle?: string | null;
+  __statusGroupUid?: string | null;
   __layerIndex?: number;
   __layerCount?: number;
   /** Pre-parsed word hints computed at load time to avoid Main Thread stalls */
@@ -1132,19 +1136,34 @@ const Study = () => {
     [displayedCard, engineCurrentCard, cardLayers],
   );
 
+  // The stable pipeline is opt-in. When the flag is off (the safe default),
+  // this gate is a no-op and the legacy handlers below remain unchanged.
+  const stableStatus = useGroupStatusGate({
+    statusGroupUid: statusIdentity.stableGroupId,
+    legacyIsFavorite: statusIdentity.canonicalGroupId
+      ? favorites.includes(statusIdentity.canonicalGroupId)
+      : false,
+    legacyIsRedList: statusIdentity.canonicalGroupId
+      ? redListIds.includes(statusIdentity.canonicalGroupId)
+      : false,
+  });
+  const setStableStatus = useSetFlashcardGroupStatus();
+
   const isDisplayedGroupFavorite = useMemo(() => {
+    if (stableStatus.mode === "new") return stableStatus.effectiveIsFavorite;
     const c = statusIdentity.canonicalGroupId;
     if (c && favorites.includes(c)) return true;
     // Legacy fallback: recognise marks saved against per-layer ids until
     // the canonicalize migration finishes propagating.
     return statusIdentity.legacyIds.some((id) => favorites.includes(id));
-  }, [statusIdentity, favorites]);
+  }, [stableStatus, statusIdentity, favorites]);
 
   const isDisplayedGroupRedListed = useMemo(() => {
+    if (stableStatus.mode === "new") return stableStatus.effectiveIsRedList;
     const c = statusIdentity.canonicalGroupId;
     if (c && redListIds.includes(c)) return true;
     return statusIdentity.legacyIds.some((id) => redListIds.includes(id));
-  }, [statusIdentity, redListIds]);
+  }, [stableStatus, statusIdentity, redListIds]);
 
   // Specials are strictly per-visible-layer — never matched against legacy.
   const isDisplayedSpecial = useMemo(
@@ -1157,6 +1176,16 @@ const Study = () => {
 
   const handleToggleFavorite = () => {
     if (!userId) return;
+    if (stableStatus.mode === "new" && statusIdentity.stableGroupId) {
+      if (setStableStatus.isPending) return;
+      const next = !stableStatus.effectiveIsFavorite;
+      setStableStatus.mutate({
+        statusGroupUid: statusIdentity.stableGroupId,
+        isFavorite: next,
+        isRedList: next ? stableStatus.effectiveIsRedList : false,
+      });
+      return;
+    }
     const canonical = statusIdentity.canonicalGroupId;
     if (!canonical) return;
     if (setFavoriteGroup.isPending) return; // single-toast guard
@@ -1169,6 +1198,19 @@ const Study = () => {
 
   const handleToggleRedList = () => {
     if (!userId) return;
+    if (stableStatus.mode === "new" && statusIdentity.stableGroupId) {
+      if (!stableStatus.effectiveIsFavorite) {
+        toast.error('Primeiro marque o card como favorito ⭐');
+        return;
+      }
+      if (setStableStatus.isPending) return;
+      setStableStatus.mutate({
+        statusGroupUid: statusIdentity.stableGroupId,
+        isFavorite: true,
+        isRedList: !stableStatus.effectiveIsRedList,
+      });
+      return;
+    }
     const canonical = statusIdentity.canonicalGroupId;
     if (!canonical) return;
     if (setRedListGroup.isPending) return;

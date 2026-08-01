@@ -26,6 +26,7 @@ import { filterCardsForStudyScope } from "@/features/study/lib/studyScopePolicy"
 import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
 import { buildStudySessionScopeKey, buildStudySessionSettingsSnapshot } from "@/features/study/lib/studySessionContext";
+import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
 import type { MixedFlowMode } from "@/features/study/lib/adaptiveMixedSession";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
@@ -44,6 +45,7 @@ interface MixedFlashcard {
   accepted_answers_pt?: string[];
   word_hints?: unknown;
   parent_card_id?: string | null;
+  status_group_uid?: string | null;
   created_at?: string;
 }
 
@@ -262,7 +264,9 @@ export default function MixedStudy() {
                 .from("flashcard_progress")
                 .select("flashcard_id, correct_count, incorrect_count, last_reviewed")
                 .eq("user_id", userId)
-                .eq("list_id", listId)
+                // Progress is globally keyed by (user_id, flashcard_id) in
+                // the existing schema. Filtering by list_id here could hide
+                // valid history after the same card is used in another list.
                 .abortSignal(abortController.signal),
               (supabase as any)
                 .from("study_sessions")
@@ -383,7 +387,9 @@ export default function MixedStudy() {
         studyFlowMode: selectedFlowMode,
       }),
       current_index: state.currentIndex,
-      cards_order: state,
+      // Keep the legacy column a valid playable order. The rich adaptive
+      // state belongs in session_snapshot and is the source of truth.
+      cards_order: state.allCardIds,
       session_snapshot: state,
       completed: state.status === "journey-complete",
       updated_at: new Date().toISOString(),
@@ -392,17 +398,31 @@ export default function MixedStudy() {
     const existingSessionId = studySessionIdRef.current;
     if (existingSessionId) {
       const controller = new AbortController();
-      await withStudyRuntimeTimeout(
+      const { data: updated, error } = await withStudyRuntimeTimeout(
         (supabase as any)
           .from("study_sessions")
           .update(payload)
           .eq("id", existingSessionId)
+          .eq("user_id", userId)
+          .eq("list_id", listId)
+          .eq("mode", "mixed-adaptive")
+          .eq("session_scope_key", scopeKey)
+          .select("id")
+          .maybeSingle()
           .abortSignal(controller.signal),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         "mixed-session-persist",
         () => controller.abort(),
-      ).catch(() => undefined);
-      return;
+      );
+      if (error) throw error;
+      if (updated?.id) return;
+      // A stale session id can survive a reload or a second tab. Do not
+      // report success for a zero-row update and never create a duplicate in
+      // the same write. A later state change can create a session only after
+      // this stale id has been cleared.
+      studySessionIdRef.current = null;
+      setStudySessionId(null);
+      throw new Error("A sessão do Misto não foi confirmada pelo banco");
     }
 
     if (!sessionCreationRef.current) {
@@ -434,7 +454,16 @@ export default function MixedStudy() {
   const cardIds = useMemo(() => cards.map((card) => card.id), [cards]);
   const mixed = useAdaptiveMixedSession({
     cardIds,
-    storageKey: scopeKey,
+    // Never reuse a mixed session between users/lists. The old key contained
+    // only settings and could make a second list inherit the first list's
+    // local journey on the same browser.
+    storageKey: buildStudySnapshotKey({
+      userScope: userId,
+      listId: isListRoute ? resolvedId : undefined,
+      mode: "mixed",
+      sessionScopeKey: scopeKey,
+      cardsSignature: cardIds.join("|"),
+    }),
     flowMode: selectedFlowMode,
     remoteState,
     remoteLoaded,
@@ -481,8 +510,31 @@ export default function MixedStudy() {
   const recordAttempt = useCallback(async (cardId: string, correct: boolean, skipped: boolean) => {
     if (!userId || !listId || skipped) return;
     const client = supabase as any;
+    const operationId = crypto.randomUUID();
+    const rpcController = new AbortController();
+    const rpcResult = await withStudyRuntimeTimeout(
+      client.rpc("record_flashcard_progress_v1", {
+        p_flashcard_id: cardId,
+        p_list_id: listId,
+        p_correct: correct,
+        p_operation_id: operationId,
+      }).abortSignal(rpcController.signal),
+      STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+      "mixed-answer-progress-rpc",
+      () => rpcController.abort(),
+    );
+    const rpcMissing = rpcResult.error && (
+      rpcResult.error.code === "PGRST202"
+      || /record_flashcard_progress_v1|function .* does not exist/i.test(rpcResult.error.message ?? "")
+    );
+    if (!rpcResult.error && rpcResult.data) return;
+    if (rpcResult.error && !rpcMissing) throw rpcResult.error;
+
+    // Compatibility window while the additive migration is being reviewed or
+    // rolled out. This path confirms every write and never filters the global
+    // progress row by list_id (the table is unique per user/card).
     const controller = new AbortController();
-    const { data: existing, error: readError } = await withStudyRuntimeTimeout(
+    const readExisting = async () => withStudyRuntimeTimeout(
       client
         .from("flashcard_progress")
         .select("id, correct_count, incorrect_count")
@@ -494,37 +546,53 @@ export default function MixedStudy() {
       "mixed-answer-progress-read",
       () => controller.abort(),
     );
-    if (readError) throw readError;
-
-    if (existing) {
-      const { error } = await withStudyRuntimeTimeout(
+    const updateExisting = async (existing: any) => {
+      const { data, error } = await withStudyRuntimeTimeout(
         client.from("flashcard_progress").update({
           correct_count: (existing.correct_count ?? 0) + (correct ? 1 : 0),
           incorrect_count: (existing.incorrect_count ?? 0) + (correct ? 0 : 1),
           last_reviewed: new Date().toISOString(),
           list_id: listId,
-        }).eq("id", existing.id).abortSignal(controller.signal),
+        }).eq("id", existing.id).select("id").maybeSingle().abortSignal(controller.signal),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         "mixed-answer-progress-update",
         () => controller.abort(),
       );
       if (error) throw error;
-    } else {
-      const { error } = await withStudyRuntimeTimeout(
-        client.from("flashcard_progress").insert({
-          user_id: userId,
-          flashcard_id: cardId,
-          list_id: listId,
-          correct_count: correct ? 1 : 0,
-          incorrect_count: correct ? 0 : 1,
-          last_reviewed: new Date().toISOString(),
-        }).abortSignal(controller.signal),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "mixed-answer-progress-insert",
-        () => controller.abort(),
-      );
-      if (error) throw error;
+      if (!data?.id) throw new Error("A gravação do progresso não foi confirmada");
+    };
+
+    const { data: existing, error: readError } = await readExisting();
+    if (readError) throw readError;
+    if (existing) {
+      await updateExisting(existing);
+      return;
     }
+
+    const { data: inserted, error: insertError } = await withStudyRuntimeTimeout(
+      client.from("flashcard_progress").insert({
+        user_id: userId,
+        flashcard_id: cardId,
+        list_id: listId,
+        correct_count: correct ? 1 : 0,
+        incorrect_count: correct ? 0 : 1,
+        last_reviewed: new Date().toISOString(),
+      }).select("id").maybeSingle().abortSignal(controller.signal),
+      STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+      "mixed-answer-progress-insert",
+      () => controller.abort(),
+    );
+    if (!insertError && inserted?.id) return;
+    if (insertError?.code !== "23505") {
+      throw insertError ?? new Error("A inserção do progresso não foi confirmada");
+    }
+
+    // Another tab won the unique insert race; reread and apply the answer to
+    // that row instead of losing the attempt or overwriting its counters.
+    const { data: raced, error: raceReadError } = await readExisting();
+    if (raceReadError) throw raceReadError;
+    if (!raced) throw new Error("Progresso criado em outra aba não foi localizado");
+    await updateExisting(raced);
   }, [listId, userId]);
 
   const handleAnswer = useCallback((correct: boolean, skipped = false) => {

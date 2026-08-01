@@ -49,6 +49,18 @@ export function useAdaptiveMixedSession({
   const [state, setState] = useState<AdaptiveMixedSessionState | null>(null);
   const initializedSignatureRef = useRef("");
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistGenerationRef = useRef(0);
+
+  // A timer from a previous list/user/mode must not call the current remote
+  // writer after navigation. The in-memory state can change immediately, but
+  // persistence is allowed only for the active initialization generation.
+  useEffect(() => {
+    persistGenerationRef.current += 1;
+    return () => {
+      persistGenerationRef.current += 1;
+      if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
+    };
+  }, [initializationSignature]);
 
   useEffect(() => {
     if (cardIds.length === 0) {
@@ -79,8 +91,14 @@ export function useAdaptiveMixedSession({
 
     if (!onPersist) return;
     if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
+    const generation = persistGenerationRef.current;
     persistTimeoutRef.current = setTimeout(() => {
-      void onPersist(state);
+      if (generation !== persistGenerationRef.current) return;
+      void Promise.resolve(onPersist(state)).catch((error) => {
+        // Local persistence already succeeded; keep the in-memory session
+        // usable while exposing the remote failure to diagnostics.
+        console.warn("[MixedStudy] Falha ao sincronizar a sessão:", error);
+      });
     }, 350);
 
     return () => {
@@ -107,6 +125,7 @@ export function useAdaptiveMixedSession({
   }, [cardIds, flowMode, random, weightByCardId]);
 
   const clearPersistedJourney = useCallback(() => {
+    persistGenerationRef.current += 1;
     try { localStorage.removeItem(storageKey); } catch {}
     initializedSignatureRef.current = "";
     setState(createAdaptiveMixedSession(cardIds, { random, weightByCardId, flowMode }));

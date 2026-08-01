@@ -17,6 +17,12 @@ const layered = {
 
 const normal = { id: "N1", parent_card_id: null };
 const other = { id: "N2", parent_card_id: null };
+const stableLayered = {
+  id: "SL1",
+  parent_card_id: "legacy-parent",
+  status_group_uid: "stable-group",
+  __layers: [{ id: "SL1", parent_card_id: "legacy-parent", status_group_uid: "stable-group" }],
+};
 
 describe("resolveStudyScope", () => {
   it("treats redFocus as its own scope even when favorites are disabled", () => {
@@ -79,5 +85,15 @@ describe("filterCardsForStudyScope", () => {
 
     expect(byParent.map((card) => card.id)).toEqual(["L1"]);
     expect(byLayer.map((card) => card.id)).toEqual(["L1"]);
+  });
+
+  it("matches a layered entry through stable status_group_uid", () => {
+    const result = filterCardsForStudyScope({
+      cards: [stableLayered, normal],
+      favoriteIds: ["stable-group"],
+      redListIds: [],
+      settings: { subset: "favorites" },
+    });
+    expect(result.map((card) => card.id)).toEqual(["SL1"]);
   });
 });

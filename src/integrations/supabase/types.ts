@@ -3994,6 +3994,15 @@ export type Database = {
         }
         Returns: Json
       }
+      record_flashcard_progress_v1: {
+        Args: {
+          p_correct: boolean
+          p_flashcard_id: string
+          p_list_id: string
+          p_operation_id: string
+        }
+        Returns: Json
+      }
       set_flashcard_group_status: {
         Args: {
           p_is_favorite: boolean
