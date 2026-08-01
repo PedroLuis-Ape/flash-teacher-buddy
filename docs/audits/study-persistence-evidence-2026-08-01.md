@@ -146,3 +146,10 @@ This is an explicit limitation, not a passing runtime test. The real authenticat
 - Typecheck passed; ESLint passed with 0 errors and 68 existing warnings; Vite build passed with 3,896 modules.
 - `supabase/functions/mcp/index.ts` was restored after the build and is outside the diff.
 - The remaining unexecuted checks are operational P2/P3 items listed in `study-persistence-backlog-2026-08-01.md`; no new code refactor is planned in this phase.
+
+## Divergência de publicação na Lovable — 2026-08-01
+
+- O projeto Lovable oficial `b6f1ba83-b44c-4a41-8589-b1e5380cf1ea` está publicado e saudável, mas o `latest_commit_sha` informado pela Lovable é `6a714146d0d29df5af70e0d07b22263c172ae9dd`.
+- Esse SHA é exatamente o `origin/main` atual e corresponde ao PR #379 (`Harden study loading and session flows`); ele não contém o HEAD do PR #380 (`a97e7a17b09fc518ad437b7852a8eb53b98b4715`).
+- Consequência: as correções desta auditoria ainda não estão no app publicado. Isso é uma divergência de promoção GitHub → Lovable, não evidência para trocar o runtime de dados de `ymahldldyxvwjeruaxpr` para `xrnfhhoxmmstagmelvyi`.
+- Ação de rollout: depois da aprovação do gate de banco, integrar o PR #380 em `main` pelo fluxo autorizado, aguardar a sincronização da Lovable e confirmar o SHA publicado antes do teste autenticado de continuidade.
