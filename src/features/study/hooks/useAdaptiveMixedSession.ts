@@ -8,6 +8,7 @@ import {
   restartAdaptiveMixedJourney,
   restartAdaptiveMixedRound,
   startNextAdaptiveMixedRound,
+  buildAdaptiveMixedInitializationSignature,
   type AdaptiveMixedSessionState,
   type CreateAdaptiveMixedSessionOptions,
 } from "@/features/study/lib/adaptiveMixedSession";
@@ -47,8 +48,10 @@ export function useAdaptiveMixedSession({
   weightByCardId,
   onPersist,
 }: UseAdaptiveMixedSessionOptions) {
-  const deckSignature = useMemo(() => [...new Set(cardIds)].sort().join("|"), [cardIds]);
-  const initializationSignature = `${storageKey}|${deckSignature}`;
+  const initializationSignature = useMemo(
+    () => buildAdaptiveMixedInitializationSignature(storageKey, cardIds, flowMode),
+    [cardIds, flowMode, storageKey],
+  );
   const [state, setState] = useState<AdaptiveMixedSessionState | null>(null);
   const initializedSignatureRef = useRef("");
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,6 +65,8 @@ export function useAdaptiveMixedSession({
   useEffect(() => {
     persistGenerationRef.current += 1;
     latestStateRef.current = null;
+    initializedSignatureRef.current = "";
+    setState(null);
     return () => {
       persistGenerationRef.current += 1;
       latestStateRef.current = null;

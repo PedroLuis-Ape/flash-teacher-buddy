@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   answerAdaptiveMixedCard,
+  buildAdaptiveMixedInitializationSignature,
   createAdaptiveMixedSession,
   getAdaptiveMixedProgress,
   getAdaptiveRoundSize,
@@ -18,6 +19,13 @@ function answerCurrent(state: ReturnType<typeof createAdaptiveMixedSession>, cor
 }
 
 describe("adaptive mixed session", () => {
+  it("isolates initialization between mastery and continuous flow formats", () => {
+    expect(buildAdaptiveMixedInitializationSignature("study-key", ids(2), "mastery_rounds"))
+      .not.toBe(buildAdaptiveMixedInitializationSignature("study-key", ids(2), "continuous"));
+    expect(buildAdaptiveMixedInitializationSignature("study-key", ids(2), "continuous"))
+      .toBe("study-key|continuous|card-1|card-2");
+  });
+
   it("persiste novamente o snapshot mais novo quando uma gravação se sobrepõe à resposta", async () => {
     let latest: { id: string } | null = { id: "old" };
     let releaseFirstWrite: (() => void) | undefined;

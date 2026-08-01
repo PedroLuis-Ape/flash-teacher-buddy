@@ -74,6 +74,19 @@ function signature(cardIds: readonly string[]): string {
   return [...unique(cardIds)].sort().join("|");
 }
 
+/**
+ * The flow format is part of the in-memory initialization identity. A mixed
+ * session cannot be reused across mastery rounds and continuous play, even
+ * when the list and storage key stay the same.
+ */
+export function buildAdaptiveMixedInitializationSignature(
+  storageKey: string,
+  cardIds: readonly string[],
+  flowMode: MixedFlowMode,
+): string {
+  return `${storageKey}|${flowMode}|${signature(cardIds)}`;
+}
+
 export function shuffleMixedCards<T>(values: readonly T[], random: () => number = Math.random): T[] {
   const shuffled = [...values];
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
