@@ -46,4 +46,12 @@ describe("study completion flow", () => {
     expect(mixed).toContain("mixed-progress-before-exit");
     expect(mixed).toContain("await mixed.persistNow()");
   });
+
+  it("routes Mixed through the shared readiness contract", () => {
+    const mixed = read("src/pages/MixedStudy.tsx");
+    expect(mixed).toContain("resolveStudySessionReadiness");
+    expect(mixed).toContain('retrying: loadAttempt > 0 && loading');
+    expect(mixed).toContain('sessionReadiness.phase === "retrying"');
+    expect(mixed).toContain('sessionReadiness.phase === "empty"');
+  });
 });

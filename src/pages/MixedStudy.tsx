@@ -17,6 +17,7 @@ import {
   STUDY_RECOVERY_WATCHDOG_MS,
   STUDY_REMOTE_RESTORE_TIMEOUT_MS,
   STUDY_REQUIRED_LOAD_TIMEOUT_MS,
+  resolveStudySessionReadiness,
   withStudyRuntimeTimeout,
 } from "@/features/study/lib/studySessionRuntime";
 import { useAuth } from "@/contexts/AuthContext";
@@ -594,6 +595,27 @@ export default function MixedStudy() {
     return () => clearTimeout(timeoutId);
   }, [cards.length, loading, mixed.state, remoteLoaded, showRuntimeRecovery]);
 
+  // Mixed has its own activity scheduler, but it must expose the same
+  // readiness contract as every other study surface. In particular, an
+  // empty adaptive state while the deck/session is still hydrating is not a
+  // legitimate empty list, and a retry must be visible as its own phase.
+  const sessionReadiness = useMemo(() => {
+    const mixedStatus = mixed.state?.status ?? null;
+    return resolveStudySessionReadiness({
+      pageLoading: loading || !remoteLoaded,
+      engineLoading: !mixed.state || !mixed.progress,
+      retrying: loadAttempt > 0 && loading,
+      eligibleCardIds: cards.map((card) => card.id),
+      cardsOrder: mixed.state?.currentRoundCardIds ?? [],
+      currentIndex: mixed.state?.currentIndex ?? 0,
+      isFinished: mixedStatus === "journey-complete",
+      masteryStatus: mixedStatus === "round-complete" || mixedStatus === "journey-complete"
+        ? mixedStatus
+        : null,
+      recoveryFailed: Boolean(loadFailure || showRuntimeRecovery),
+    });
+  }, [cards, loadAttempt, loading, loadFailure, mixed.progress, mixed.state, remoteLoaded, showRuntimeRecovery]);
+
   const cardById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const currentCard = mixed.currentCardId ? cardById.get(mixed.currentCardId) : undefined;
   const resolvedDirection: Direction = baseDirection === "any"
@@ -693,7 +715,7 @@ export default function MixedStudy() {
     }
   };
 
-  if (loadFailure || showRuntimeRecovery) {
+  if (loadFailure || showRuntimeRecovery || sessionReadiness.phase === "failed") {
     return (
       <StudySessionRecovery
         onRetry={() => {
@@ -720,7 +742,7 @@ export default function MixedStudy() {
     );
   }
 
-  if (confirmedEmpty) {
+  if (confirmedEmpty || sessionReadiness.phase === "empty") {
     return (
       <StudyDeckEmptyState
         onRetry={() => {
@@ -734,7 +756,15 @@ export default function MixedStudy() {
     );
   }
 
-  if (loading || !mixed.state || !mixed.progress) {
+  if (sessionReadiness.phase === "retrying") {
+    return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Tentando preparar sua sessão novamente...</div>;
+  }
+
+  if (sessionReadiness.phase === "loading") {
+    return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Preparando Prática Mista...</div>;
+  }
+
+  if (sessionReadiness.phase === "recovering") {
     return <div className="grid min-h-[70vh] place-items-center text-muted-foreground">Preparando Prática Mista...</div>;
   }
 

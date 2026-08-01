@@ -38,6 +38,7 @@ export async function withStudyRuntimeTimeout<T>(
 
 export type StudySessionReadinessPhase =
   | "loading"
+  | "retrying"
   | "ready"
   | "completed"
   | "empty"
@@ -48,6 +49,8 @@ export type StudySessionReadinessPhase =
 export interface StudySessionReadinessInput {
   pageLoading: boolean;
   engineLoading: boolean;
+  /** A user- or watchdog-triggered recovery request is in flight. */
+  retrying?: boolean;
   auxiliaryLoading?: boolean;
   eligibleCardIds: readonly string[];
   cardsOrder: readonly string[];
@@ -98,6 +101,17 @@ export function resolveStudySessionReadiness(
     return {
       phase: "cancelled",
       reason: "request-cancelled",
+      currentCardId: null,
+    };
+  }
+
+  if (
+    input.retrying
+    && (input.pageLoading || input.engineLoading || input.auxiliaryLoading)
+  ) {
+    return {
+      phase: "retrying",
+      reason: "required-data-loading",
       currentCardId: null,
     };
   }

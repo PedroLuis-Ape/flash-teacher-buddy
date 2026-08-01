@@ -91,6 +91,22 @@ describe("resolveStudySessionReadiness", () => {
       reason: "request-cancelled",
     });
   });
+
+  it("distinguishes a bounded retry from the first load", () => {
+    expect(resolveStudySessionReadiness({
+      ...readyInput,
+      pageLoading: true,
+      retrying: true,
+    })).toMatchObject({
+      phase: "retrying",
+      reason: "required-data-loading",
+    });
+
+    expect(resolveStudySessionReadiness({
+      ...readyInput,
+      pageLoading: true,
+    }).phase).toBe("loading");
+  });
 });
 
 describe("resolveStudyAnswerIdentity", () => {

@@ -136,3 +136,13 @@ O preview apresentou ações de entrada no jogo como botões, e não como links 
 | `ymahldldyxvwjeruaxpr` | project/migration metadata request | denied by connector permissions; production state remains unverified |
 
 This is an explicit limitation, not a passing runtime test. The real authenticated continuity, RLS isolation, retry/rollback and two-tab checks still require an authorized isolated environment or an operator with access to the correct project. No remote write was performed.
+
+## Final regression round for this phase
+
+- Shared readiness now distinguishes `loading`, `retrying`, `ready`, `completed`, `empty`, `recovering`, `failed` and `cancelled`; `MixedStudy` consumes the same contract.
+- The transient-empty regression remains covered by `studyDeckLoader.test.ts`: an initial empty response is retried in a bounded, abortable confirmation and a later card response is rendered as ready.
+- Focused regression: 3 files, 31 tests passed.
+- Full regression: 206 files, 1,240 tests passed.
+- Typecheck passed; ESLint passed with 0 errors and 68 existing warnings; Vite build passed with 3,896 modules.
+- `supabase/functions/mcp/index.ts` was restored after the build and is outside the diff.
+- The remaining unexecuted checks are operational P2/P3 items listed in `study-persistence-backlog-2026-08-01.md`; no new code refactor is planned in this phase.
