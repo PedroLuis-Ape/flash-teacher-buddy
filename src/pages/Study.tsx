@@ -471,6 +471,7 @@ const Study = () => {
     cardsOrder,
     saveProgressNow,
     studySnapshotKey,
+    restoredSessionLayer,
   } = useStudyEngine(
     listId,
     engineFlashcards,
