@@ -52,6 +52,43 @@ export function shouldInjectRedPriority(settings: StudyScopeSettings): boolean {
   return resolveStudyScope(settings) === "favorites";
 }
 
+/**
+ * Readiness of the private scope data (favorites / red list) for the ACTIVE
+ * session scope. This is the single place that decides whether a scope filter
+ * may be applied, and it never converts "still loading" or "failed" into
+ * "empty". A confirmed-empty scope requires an authenticated user, a settled
+ * successful query and non-placeholder data.
+ */
+export type StudyScopeDataStatus = "not-required" | "loading" | "error" | "ready";
+
+export interface StudyScopeQueryState {
+  isSuccess: boolean;
+  isError: boolean;
+  fetchStatus: "fetching" | "paused" | "idle";
+  isPlaceholderData: boolean;
+}
+
+export function resolveStudyScopeDataStatus(input: {
+  required: boolean;
+  /** Undefined/empty when the route has no private capability (public/anon). */
+  userId?: string | null;
+  query: StudyScopeQueryState;
+}): StudyScopeDataStatus {
+  if (!input.required) return "not-required";
+  if (!input.userId) return "not-required";
+  if (input.query.isSuccess
+    && input.query.fetchStatus !== "fetching"
+    && !input.query.isPlaceholderData) {
+    return "ready";
+  }
+  if (input.query.isError && input.query.fetchStatus !== "fetching") return "error";
+  return "loading";
+}
+
+export function isStudyScopeDataUsable(status: StudyScopeDataStatus): boolean {
+  return status === "not-required" || status === "ready";
+}
+
 function cardMatchesIds(card: StudyScopeCard, ids: ReadonlySet<string>): boolean {
   if (ids.has(card.id)) return true;
   if (card.status_group_uid && ids.has(card.status_group_uid)) return true;
