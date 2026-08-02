@@ -2193,6 +2193,9 @@ export type Database = {
           id: string
           list_id: string
           mode: string
+          session_scope_key: string | null
+          session_snapshot: Json | null
+          settings_snapshot: Json | null
           updated_at: string
           user_id: string
         }
@@ -2204,6 +2207,9 @@ export type Database = {
           id?: string
           list_id: string
           mode: string
+          session_scope_key?: string | null
+          session_snapshot?: Json | null
+          settings_snapshot?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -2215,6 +2221,9 @@ export type Database = {
           id?: string
           list_id?: string
           mode?: string
+          session_scope_key?: string | null
+          session_snapshot?: Json | null
+          settings_snapshot?: Json | null
           updated_at?: string
           user_id?: string
         }
