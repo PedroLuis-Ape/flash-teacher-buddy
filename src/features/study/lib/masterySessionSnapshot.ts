@@ -192,10 +192,36 @@ export function readMasterySnapshot(
   }
 }
 
+/**
+ * Reads the local mastery snapshot together with the moment it was written.
+ * The timestamp is required to decide precedence against the remote session
+ * row: without it a stale local copy would always win over a newer session
+ * saved on another device/tab.
+ */
+export function readMasterySnapshotWithMeta(
+  key: string,
+  availableCardIds: Set<string>,
+): { state: MasterySessionState; savedAt: number } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { savedAt?: unknown };
+    const state = sanitizeMasterySnapshot(parsed, availableCardIds);
+    if (!state) return null;
+    const savedAt = typeof parsed?.savedAt === "number" && Number.isFinite(parsed.savedAt)
+      ? parsed.savedAt
+      : 0;
+    return { state, savedAt };
+  } catch {
+    return null;
+  }
+}
+
 export function writeMasterySnapshot(key: string, state: MasterySessionState): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(key, JSON.stringify(state));
+    window.localStorage.setItem(key, JSON.stringify({ ...state, savedAt: Date.now() }));
   } catch {
     // Storage is best-effort; DB session remains authoritative.
   }

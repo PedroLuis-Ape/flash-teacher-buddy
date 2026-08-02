@@ -34,6 +34,7 @@ import {
   buildMasterySnapshotKey,
   clearMasterySnapshot,
   readMasterySnapshot,
+  readMasterySnapshotWithMeta,
   sanitizeMasterySnapshot,
   writeMasterySnapshot,
 } from "@/features/study/lib/masterySessionSnapshot";
@@ -268,6 +269,9 @@ export function useStudyEngine(
   const masteryAnswerGuardRef = useRef<{ session: MasterySessionState; key: string } | null>(null);
   const masteryRoundStartGuardRef = useRef<MasterySessionState | null>(null);
   const sessionLayerRef = useRef<StudySessionLayerSnapshot | undefined>(undefined);
+  // Exposed to the view layer so a cold start on a new device can reopen the
+  // exact layer stored in the authenticated session snapshot.
+  const [restoredSessionLayer, setRestoredSessionLayer] = useState<StudySessionLayerSnapshot | null>(null);
   const restoredSettingsIdentityRef = useRef<string | null>(null);
 
   // Game settings state — initialized from URL params passed by Study.tsx
@@ -610,9 +614,11 @@ export function useStudyEngine(
       authUserIdRef.current = userScope ?? null;
       const eligibleIds = flashcards.map((card) => card.id);
       const availableSet = new Set(eligibleIds);
-      let restored = readMasterySnapshot(masterySnapshotKey, availableSet);
+      const localMastery = readMasterySnapshotWithMeta(masterySnapshotKey, availableSet);
+      let restored = localMastery?.state ?? null;
       let restoredRemoteSessionId: string | null = null;
       sessionLayerRef.current = undefined;
+      setRestoredSessionLayer(null);
 
       if (userScope && listId) {
         try {
@@ -653,9 +659,16 @@ export function useStudyEngine(
             });
           }
           if (remote?.layer) sessionLayerRef.current = remote.layer;
-          if (!restored && remote?.state) {
-            restored = remote.state;
-            restoredRemoteSessionId = remote.id;
+          if (remote?.layer) setRestoredSessionLayer(remote.layer);
+          if (remote?.state) {
+            // Precedence by recency: a session saved on another device/tab must
+            // win over an older local mirror, and vice-versa.
+            const remoteTimestamp = Date.parse(String(remote.updatedAt ?? ""));
+            const remoteAt = Number.isFinite(remoteTimestamp) ? remoteTimestamp : 0;
+            if (!restored || remoteAt > (localMastery?.savedAt ?? 0)) {
+              restored = remote.state;
+              restoredRemoteSessionId = remote.id;
+            }
           }
         } catch {
           // Local persistence remains the safe fallback if remote restore is unavailable.
@@ -706,6 +719,7 @@ export function useStudyEngine(
         enforceUniqueOrder: !!gameSettings.redFocus,
       });
       sessionLayerRef.current = localSnapshot?.layer;
+      setRestoredSessionLayer(localSnapshot?.layer ?? null);
       fallbackLocalSnapshot = localSnapshot;
 
       if (!user) {
@@ -859,6 +873,7 @@ export function useStudyEngine(
 
           if (restoredSession) {
             setSessionId(matchingSession.id);
+            setRestoredSessionLayer(restoredSnapshot?.layer ?? null);
             setCurrentIndex(restoredSession.currentIndex);
             setCardsOrder(restoredSession.cardsOrder);
 
@@ -967,6 +982,9 @@ export function useStudyEngine(
       const matchingSession = selectCurrentScopeSession(openSessions);
 
       if (matchingSession) {
+        // Session settings have precedence over the local preset: resuming must
+        // reopen the same scope/direction that was saved, not the last preset.
+        applyRestoredSessionSettings(matchingSession);
         const remoteSnapshot = readRemoteStudySnapshot(matchingSession);
         const restoredSnapshot = chooseNewestStudySnapshot(
           localSnapshot,
@@ -985,6 +1003,7 @@ export function useStudyEngine(
 
         if (restoredSession) {
           setSessionId(matchingSession.id);
+          setRestoredSessionLayer(restoredSnapshot?.layer ?? null);
           setCurrentIndex(restoredSession.currentIndex);
           setCardsOrder(restoredSession.cardsOrder);
 
@@ -2218,5 +2237,8 @@ export function useStudyEngine(
     saveProgressNow,
     // Chave do snapshot atual — permite persistência satélite (ex: camada visível).
     studySnapshotKey,
+    // Camada restaurada da sessão remota/local — usada como fallback quando o
+    // localStorage está vazio (cold start em outro navegador/dispositivo).
+    restoredSessionLayer,
   };
 }
