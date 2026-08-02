@@ -17,7 +17,7 @@ function createClient(options: {
     update: ReturnType<typeof vi.fn>;
     maybeSingle: ReturnType<typeof vi.fn>;
   }> = [];
-  const client: StudyProgressClient = {
+  const client = {
     rpc: vi.fn(() => Promise.resolve(options.rpc ?? { data: null, error: null })),
     from: vi.fn(() => {
       const query = {

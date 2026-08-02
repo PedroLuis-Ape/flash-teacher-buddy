@@ -45,7 +45,7 @@ describe("sanitizeMasterySnapshot", () => {
 
   it("finishes a recovered journey instead of offering an empty next round", () => {
     const snapshot = baseSnapshot();
-    snapshot.totalEligible = 14;
+    (snapshot as { totalEligible: number }).totalEligible = 14;
     snapshot.unseenIds = [...snapshot.currentRoundIds];
     const restored = sanitizeMasterySnapshot(snapshot, new Set(ids(14)));
 
