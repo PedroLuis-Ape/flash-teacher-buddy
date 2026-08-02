@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type {
   ImportDestinationCatalog,
   ImportDestinationContext,
+  ExistingImportFolder,
 } from "./destination";
 
 const db = supabase as any;
@@ -61,7 +62,7 @@ export async function loadImportDestinationCatalog(
 
   const { data: folderRows, error: foldersError } = await foldersQuery;
   if (foldersError) throw foldersError;
-  const folders = uniqueById(folderRows);
+  const folders = uniqueById(folderRows) as ExistingImportFolder[];
   if (!folders.length) return { folders: [], lists: [] };
 
   // A pasta já foi validada por owner, instituição/turma e exclusão lógica.
