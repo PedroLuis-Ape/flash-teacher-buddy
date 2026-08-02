@@ -1245,17 +1245,20 @@ const Study = () => {
     const persisted = engineCurrentCardId && studySnapshotKey
       ? readStudyLayerSnapshot(studySnapshotKey)
       : null;
+    // Fallback autoritativo: em cold start sem localStorage (outro navegador
+    // ou dispositivo), a camada vem do snapshot da sessão restaurada.
+    const resolvedPersisted = persisted ?? restoredSessionLayer ?? null;
     if (
-      persisted
-      && persisted.cardId === engineCurrentCardId
-      && persisted.layerIdx < layers.length
+      resolvedPersisted
+      && resolvedPersisted.cardId === engineCurrentCardId
+      && resolvedPersisted.layerIdx < layers.length
     ) {
-      setLayerIdx(persisted.layerIdx);
+      setLayerIdx(resolvedPersisted.layerIdx);
       return;
     }
     setLayerIdx(0);
     return;
-  }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck, studySnapshotKey]);
+  }, [engineCurrentCardId, flashcardById, urlFavoritesOnly, favorites, redListIds, redFocusActiveForDeck, studySnapshotKey, restoredSessionLayer]);
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
