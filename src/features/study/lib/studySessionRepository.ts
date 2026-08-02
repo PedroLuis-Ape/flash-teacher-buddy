@@ -16,12 +16,12 @@ interface StudySessionResponse<T = unknown> {
 
 interface StudySessionRequest<T = unknown> extends PromiseLike<StudySessionResponse<T>> {
   abortSignal(signal: AbortSignal): StudySessionRequest<T>;
+  single(): StudySessionRequest<T>;
 }
 
 interface StudySessionQuery extends StudySessionRequest {
   insert(values: Record<string, unknown>): StudySessionQuery;
   select(columns: string): StudySessionQuery;
-  single(): StudySessionRequest;
 }
 
 export interface StudySessionClient {
