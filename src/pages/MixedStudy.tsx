@@ -460,7 +460,7 @@ export default function MixedStudy() {
 
         if (isListRoute) {
           const metadataClient = resourceContext.isPublic ? publicSupabase : supabase;
-          const { data: listRow } = await withStudyRuntimeTimeout(
+          const { data: listRow } = await withStudyRuntimeTimeout<{ data: any }>(
             (metadataClient as any)
               .from("lists")
               .select("folder_id, lang_a, lang_b, labels_a, labels_b")
@@ -473,7 +473,7 @@ export default function MixedStudy() {
           ).catch(() => ({ data: null }));
           let folderRow: any = null;
           if (listRow?.folder_id) {
-            const folderResult = await withStudyRuntimeTimeout(
+            const folderResult = await withStudyRuntimeTimeout<{ data: any }>(
               (metadataClient as any)
                 .from("folders")
                 .select("lang_a, lang_b, labels_a, labels_b")
@@ -543,7 +543,7 @@ export default function MixedStudy() {
     const existingSessionId = studySessionIdRef.current;
     if (existingSessionId) {
       const controller = new AbortController();
-      const { data: updated, error } = await withStudyRuntimeTimeout(
+      const { data: updated, error } = await withStudyRuntimeTimeout<{ data: any; error: any }>(
         (supabase as any)
           .from("study_sessions")
           .update(payload)
@@ -552,8 +552,8 @@ export default function MixedStudy() {
           .eq("list_id", listId)
           .eq("mode", "mixed-adaptive")
           .select("id")
-          .maybeSingle()
-          .abortSignal(controller.signal),
+          .abortSignal(controller.signal)
+          .maybeSingle(),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         "mixed-session-persist",
         () => controller.abort(),

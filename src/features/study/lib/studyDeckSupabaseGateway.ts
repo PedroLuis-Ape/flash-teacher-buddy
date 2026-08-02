@@ -120,8 +120,7 @@ export async function probeStudyDeckAvailability(
   throwIfAborted(context.signal);
 
   if (context.source === "portal-list-rpc") {
-    const result = await publicSupabase
-      .rpc("get_portal_playable_card_count", { _list_id: context.resourceId })
+    const result = await (publicSupabase.rpc as any)("get_portal_playable_card_count", { _list_id: context.resourceId })
       .abortSignal(context.signal)
       .maybeSingle();
     throwIfAborted(context.signal);
@@ -132,11 +131,12 @@ export async function probeStudyDeckAvailability(
       };
     }
     if (!result.data) return { status: "unconfirmed", reason: "unknown" };
+    const countRow = result.data as { resource_exists: boolean; raw_count: number; playable_count: number };
     return {
       status: "verified",
-      resourceExists: result.data.resource_exists,
-      rawCount: Number(result.data.raw_count),
-      playableCount: Number(result.data.playable_count),
+      resourceExists: countRow.resource_exists,
+      rawCount: Number(countRow.raw_count),
+      playableCount: Number(countRow.playable_count),
     };
   }
 

@@ -165,7 +165,7 @@ describe("loadStudyDeck", () => {
       fetchPage: vi.fn(),
     });
 
-    await expect(promise).rejects.toMatchObject<Partial<StudyDeckLoadError>>({
+    await expect(promise).rejects.toMatchObject({
       code: "auth-required",
       requestId: "req-auth",
     });

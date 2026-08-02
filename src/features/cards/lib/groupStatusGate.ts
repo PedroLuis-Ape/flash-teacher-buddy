@@ -8,7 +8,7 @@
 export type GateMode = "legacy" | "shadow" | "new";
 
 export function resolveGateMode(args: {
-  authStatus: "initializing" | "authenticated" | "anonymous" | "error";
+  authStatus: "initializing" | "stale" | "authenticated" | "anonymous" | "error";
   statusGroupUid?: string | null;
   flagValue: "off" | "shadow" | "on";
 }): GateMode {

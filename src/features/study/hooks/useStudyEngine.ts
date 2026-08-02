@@ -124,14 +124,14 @@ async function writeStudySession(request: StudySessionWriteRequest): Promise<voi
   const { data, error } = await withStudyRuntimeTimeout(
     supabase
       .from("study_sessions")
-      .update(request.payload)
+      .update(request.payload as never)
       .eq("id", request.sessionId)
       .eq("user_id", request.userId)
       .eq("list_id", request.listId)
       .eq("mode", request.mode)
       .select("id")
-      .maybeSingle()
-      .abortSignal(controller.signal),
+          .abortSignal(controller.signal)
+      .maybeSingle(),
     STUDY_REMOTE_RESTORE_TIMEOUT_MS,
     request.stage,
     () => controller.abort(),
@@ -636,7 +636,9 @@ export function useStudyEngine(
               id: candidate.id as string,
               scopeKey: candidate.session_scope_key as string | null,
               state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
-              layer: sanitizeStudyLayerSnapshot(candidate.session_snapshot?.layer),
+              layer: sanitizeStudyLayerSnapshot(
+                (candidate.session_snapshot as { layer?: unknown } | null)?.layer,
+              ),
               settingsSnapshot: candidate.settings_snapshot,
               updatedAt: candidate.updated_at,
             }))
@@ -1163,8 +1165,8 @@ export function useStudyEngine(
             .eq('list_id', listId)
             .eq('mode', mode)
             .select('id')
-            .maybeSingle()
-            .abortSignal(controller.signal),
+          .abortSignal(controller.signal)
+            .maybeSingle(),
           STUDY_REMOTE_RESTORE_TIMEOUT_MS,
           'fresh-close-previous-session',
           () => controller.abort(),
@@ -1655,6 +1657,7 @@ export function useStudyEngine(
               ptsAwarded: 0,
               xpAwarded: 0,
               pitecoinAwarded: 0,
+              alreadyProcessed: false,
               error: 'SETTLEMENT_TIMEOUT',
             };
           });
@@ -1690,8 +1693,8 @@ export function useStudyEngine(
             .eq('list_id', listId)
             .eq('mode', mode)
             .select('id')
-            .maybeSingle()
-            .abortSignal(completionController.signal),
+          .abortSignal(completionController.signal)
+            .maybeSingle(),
           STUDY_REMOTE_RESTORE_TIMEOUT_MS,
           'complete-study-session',
           () => completionController.abort(),
@@ -1737,8 +1740,8 @@ export function useStudyEngine(
             .from('lists')
             .select('folder_id')
             .eq('id', listId)
-            .maybeSingle()
-            .abortSignal(listReadController.signal),
+          .abortSignal(listReadController.signal)
+            .maybeSingle(),
           STUDY_REMOTE_RESTORE_TIMEOUT_MS,
           'read-study-folder',
           () => listReadController.abort(),
@@ -1810,8 +1813,8 @@ export function useStudyEngine(
           .eq('list_id', listId)
           .eq('mode', mode)
           .select('id')
-          .maybeSingle()
-          .abortSignal(controller.signal),
+          .abortSignal(controller.signal)
+          .maybeSingle(),
         STUDY_REMOTE_RESTORE_TIMEOUT_MS,
         'discard-study-session',
         () => controller.abort(),
@@ -1877,8 +1880,8 @@ export function useStudyEngine(
               .eq('list_id', listId)
               .eq('mode', mode)
               .select('id')
-              .maybeSingle()
-              .abortSignal(previousController.signal),
+          .abortSignal(previousController.signal)
+              .maybeSingle(),
             STUDY_REMOTE_RESTORE_TIMEOUT_MS,
             'restart-close-previous-session',
             () => previousController.abort(),

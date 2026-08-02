@@ -43,7 +43,7 @@ describe("Rodadas de Domínio — repetir na próxima", () => {
     expect(requestMasteryRepeatNextRound()).toBe(true);
     recordResult(state, "c1", "correct");
 
-    while (state.status === "active") answerCurrentCorrect(state);
+    while ((state.status as string) === "active") answerCurrentCorrect(state);
 
     const summary = summarizeCurrentRound(state);
     expect(summary.correctCards).toBe(15);

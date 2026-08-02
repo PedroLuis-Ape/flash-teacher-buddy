@@ -33,7 +33,7 @@ interface PronunciationStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
-  onNext: () => void;
+  onNext?: () => void;
   onCorrect?: () => void;
   onIncorrect?: () => void;
   onSkip?: () => void;
@@ -89,16 +89,16 @@ export function PronunciationStudyView({
     stopTTS();
     if (!evaluation || !transcript) {
       onSkip?.();
-      if (!onSkip) onNext();
+      if (!onSkip) onNext?.();
       return;
     }
     if (evaluation.result === "correct") {
       onCorrect?.();
-      if (!onCorrect) onNext();
+      if (!onCorrect) onNext?.();
       return;
     }
     onIncorrect?.();
-    if (!onIncorrect) onNext();
+    if (!onIncorrect) onNext?.();
   };
 
   useEffect(() => {
@@ -106,19 +106,6 @@ export function PronunciationStudyView({
     stopTTS();
     lastSoundPlayedForRef.current = "";
   }, [speakSide.text, resetTranscript, stopTTS]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (isTypingTarget(event.target)) return;
-      if (normalizeKey(event.key) === normalizeKey(shortcuts.nextCard)) {
-        event.preventDefault();
-        handleNext();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [shortcuts, onNext, onCorrect, onIncorrect, onSkip, evaluation, transcript]);
 
   const handlePlayPronunciation = () => {
     stopTTS();
