@@ -107,19 +107,6 @@ export function PronunciationStudyView({
     lastSoundPlayedForRef.current = "";
   }, [speakSide.text, resetTranscript, stopTTS]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (isTypingTarget(event.target)) return;
-      if (normalizeKey(event.key) === normalizeKey(shortcuts.nextCard)) {
-        event.preventDefault();
-        handleNext();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [shortcuts, onNext, onCorrect, onIncorrect, onSkip, evaluation, transcript]);
-
   const handlePlayPronunciation = () => {
     stopTTS();
     const rate = getSpeechRate();
