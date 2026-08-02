@@ -6,7 +6,7 @@ import {
 import { StudyRuntimeTimeoutError } from "./studySessionRuntime";
 
 function createRequest<T>(response: { data: T | null; error: { code?: string; message?: string } | null }) {
-  const request = Promise.resolve(response) as PromiseLike<typeof response> & {
+  const request = Promise.resolve(response) as unknown as PromiseLike<typeof response> & {
     abortSignal: ReturnType<typeof vi.fn>;
   };
   request.abortSignal = vi.fn(() => request);
@@ -23,10 +23,10 @@ function createClient(options: {
     abortSignal: vi.fn(() => query),
     single: vi.fn(() => createRequest(options.insert ?? { data: null, error: null })),
   };
-  const client: StudySessionClient = {
+  const client = {
     rpc: vi.fn(() => createRequest(options.rpc)),
     from: vi.fn(() => query),
-  };
+  } as unknown as StudySessionClient;
   return { client, query };
 }
 
@@ -95,7 +95,7 @@ describe("studySessionRepository", () => {
     vi.useFakeTimers();
     try {
       let capturedSignal: AbortSignal | undefined;
-      const pending = new Promise<never>(() => undefined) as PromiseLike<{
+      const pending = new Promise<never>(() => undefined) as unknown as PromiseLike<{
         data: unknown;
         error: null;
       }> & { abortSignal(signal: AbortSignal): typeof pending };

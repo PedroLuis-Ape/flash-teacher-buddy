@@ -30,7 +30,7 @@ function createClient(options: {
       queries.push(query);
       return query;
     }),
-  };
+  } as unknown as StudyProgressClient;
   return { client, queries };
 }
 
