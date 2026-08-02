@@ -719,6 +719,7 @@ export function useStudyEngine(
         enforceUniqueOrder: !!gameSettings.redFocus,
       });
       sessionLayerRef.current = localSnapshot?.layer;
+      setRestoredSessionLayer(localSnapshot?.layer ?? null);
       fallbackLocalSnapshot = localSnapshot;
 
       if (!user) {
@@ -872,6 +873,7 @@ export function useStudyEngine(
 
           if (restoredSession) {
             setSessionId(matchingSession.id);
+            setRestoredSessionLayer(restoredSnapshot?.layer ?? null);
             setCurrentIndex(restoredSession.currentIndex);
             setCardsOrder(restoredSession.cardsOrder);
 
@@ -980,6 +982,9 @@ export function useStudyEngine(
       const matchingSession = selectCurrentScopeSession(openSessions);
 
       if (matchingSession) {
+        // Session settings have precedence over the local preset: resuming must
+        // reopen the same scope/direction that was saved, not the last preset.
+        applyRestoredSessionSettings(matchingSession);
         const remoteSnapshot = readRemoteStudySnapshot(matchingSession);
         const restoredSnapshot = chooseNewestStudySnapshot(
           localSnapshot,
@@ -998,6 +1003,7 @@ export function useStudyEngine(
 
         if (restoredSession) {
           setSessionId(matchingSession.id);
+          setRestoredSessionLayer(restoredSnapshot?.layer ?? null);
           setCurrentIndex(restoredSession.currentIndex);
           setCardsOrder(restoredSession.cardsOrder);
 
