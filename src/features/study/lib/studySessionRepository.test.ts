@@ -103,12 +103,12 @@ describe("studySessionRepository", () => {
         capturedSignal = signal;
         return pending;
       });
-      const client: StudySessionClient = {
+      const client = {
         rpc: vi.fn(() => pending),
         from: vi.fn(() => {
           throw new Error("fallback should not run after timeout");
         }),
-      };
+      } as unknown as StudySessionClient;
 
       const claim = claimStudySession(baseInput, client);
       const timeoutAssertion = expect(claim).rejects.toBeInstanceOf(StudyRuntimeTimeoutError);
