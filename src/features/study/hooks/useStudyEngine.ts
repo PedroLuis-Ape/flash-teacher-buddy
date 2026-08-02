@@ -34,6 +34,7 @@ import {
   buildMasterySnapshotKey,
   clearMasterySnapshot,
   readMasterySnapshot,
+  readMasterySnapshotWithMeta,
   sanitizeMasterySnapshot,
   writeMasterySnapshot,
 } from "@/features/study/lib/masterySessionSnapshot";
@@ -268,6 +269,9 @@ export function useStudyEngine(
   const masteryAnswerGuardRef = useRef<{ session: MasterySessionState; key: string } | null>(null);
   const masteryRoundStartGuardRef = useRef<MasterySessionState | null>(null);
   const sessionLayerRef = useRef<StudySessionLayerSnapshot | undefined>(undefined);
+  // Exposed to the view layer so a cold start on a new device can reopen the
+  // exact layer stored in the authenticated session snapshot.
+  const [restoredSessionLayer, setRestoredSessionLayer] = useState<StudySessionLayerSnapshot | null>(null);
   const restoredSettingsIdentityRef = useRef<string | null>(null);
 
   // Game settings state — initialized from URL params passed by Study.tsx
