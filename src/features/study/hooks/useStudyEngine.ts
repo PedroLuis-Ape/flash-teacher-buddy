@@ -610,9 +610,11 @@ export function useStudyEngine(
       authUserIdRef.current = userScope ?? null;
       const eligibleIds = flashcards.map((card) => card.id);
       const availableSet = new Set(eligibleIds);
-      let restored = readMasterySnapshot(masterySnapshotKey, availableSet);
+      const localMastery = readMasterySnapshotWithMeta(masterySnapshotKey, availableSet);
+      let restored = localMastery?.state ?? null;
       let restoredRemoteSessionId: string | null = null;
       sessionLayerRef.current = undefined;
+      setRestoredSessionLayer(null);
 
       if (userScope && listId) {
         try {
@@ -653,9 +655,16 @@ export function useStudyEngine(
             });
           }
           if (remote?.layer) sessionLayerRef.current = remote.layer;
-          if (!restored && remote?.state) {
-            restored = remote.state;
-            restoredRemoteSessionId = remote.id;
+          if (remote?.layer) setRestoredSessionLayer(remote.layer);
+          if (remote?.state) {
+            // Precedence by recency: a session saved on another device/tab must
+            // win over an older local mirror, and vice-versa.
+            const remoteTimestamp = Date.parse(String(remote.updatedAt ?? ""));
+            const remoteAt = Number.isFinite(remoteTimestamp) ? remoteTimestamp : 0;
+            if (!restored || remoteAt > (localMastery?.savedAt ?? 0)) {
+              restored = remote.state;
+              restoredRemoteSessionId = remote.id;
+            }
           }
         } catch {
           // Local persistence remains the safe fallback if remote restore is unavailable.
