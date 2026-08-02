@@ -89,6 +89,8 @@ import { useGroupStatusGate } from "@/features/cards/hooks/useGroupStatusGate";
 import { useSetFlashcardGroupStatus } from "@/features/cards/hooks/useFlashcardGroupStatus";
 import {
   filterCardsForStudyScope,
+  isStudyScopeDataUsable,
+  resolveStudyScopeDataStatus,
   resolvePersonalStudySubset,
 } from "@/features/study/lib/studyScopePolicy";
 import { useAuth } from "@/contexts/AuthContext";
@@ -96,7 +98,7 @@ import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
 import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { buildStudyReturnRoute } from "@/features/study/lib/studyCompletionNavigation";
+import { buildStudyReturnRoute, buildStudySettingsRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
 import {
   readStudyLayerSnapshot,
@@ -281,6 +283,12 @@ const Study = () => {
     return `study-completed:${scope}:${resolvedId}:${normalizedMode}:${initialDir}:${urlFavoritesOnly}`;
   }, [resolvedId, normalizedMode, initialDir, urlFavoritesOnly, authUserId]);
 
+  const settingsRoute = useMemo(() => buildStudySettingsRoute({
+    pathname: window.location.pathname,
+    resolvedId,
+    isListRoute,
+    searchParams,
+  }), [resolvedId, isListRoute, searchParams]);
   const returnRoute = useMemo(() => buildStudyReturnRoute({
     pathname: window.location.pathname,
     resolvedId,
@@ -324,17 +332,33 @@ const Study = () => {
   const [deckSubset, setDeckSubset] = useState<"all" | "favorites">(initialGameSettings.subset);
   const activeDeckSubset = canUsePersonalFavorites ? deckSubset : "all";
   const [redFocusActiveForDeck, setRedFocusActiveForDeck] = useState(false);
-  const favoritesScopeReady = activeDeckSubset !== "favorites"
-    || !userId
-    || (favoritesQuery.isSuccess
-      && favoritesQuery.fetchStatus !== "fetching"
-      && !favoritesQuery.isPlaceholderData);
-  const redFocusScopeReady = !redFocusActiveForDeck
-    || !userId
-    || (redListQuery.isSuccess
-      && redListQuery.fetchStatus !== "fetching"
-      && !redListQuery.isPlaceholderData);
+  // Scope data readiness is resolved by the shared policy so that every study
+  // mode (including the Write > Rewrite activity) treats loading and failures
+  // as non-empty states.
+  const favoritesScopeStatus = resolveStudyScopeDataStatus({
+    required: activeDeckSubset === "favorites",
+    userId,
+    query: {
+      isSuccess: favoritesQuery.isSuccess,
+      isError: favoritesQuery.isError,
+      fetchStatus: favoritesQuery.fetchStatus,
+      isPlaceholderData: favoritesQuery.isPlaceholderData,
+    },
+  });
+  const redFocusScopeStatus = resolveStudyScopeDataStatus({
+    required: redFocusActiveForDeck,
+    userId,
+    query: {
+      isSuccess: redListQuery.isSuccess,
+      isError: redListQuery.isError,
+      fetchStatus: redListQuery.fetchStatus,
+      isPlaceholderData: redListQuery.isPlaceholderData,
+    },
+  });
+  const favoritesScopeReady = isStudyScopeDataUsable(favoritesScopeStatus);
+  const redFocusScopeReady = isStudyScopeDataUsable(redFocusScopeStatus);
   const selectedScopeReady = favoritesScopeReady && redFocusScopeReady;
+  const scopeDataFailed = favoritesScopeStatus === "error" || redFocusScopeStatus === "error";
   const restoredSessionSettingsRef = useRef<string | null>(null);
 
   const handleSessionSettingsRestored = useCallback((settings: StudySessionSettingsSnapshot) => {
@@ -1622,6 +1646,26 @@ const Study = () => {
     startFreshSession();
   };
 
+  // A failed favorites / red-list read is never an empty deck: it is a
+  // recoverable error, surfaced immediately instead of waiting for the
+  // watchdog.
+  if (scopeDataFailed) {
+    return (
+      <StudySessionRecovery
+        onRetry={() => {
+          if (favoritesScopeStatus === "error") void favoritesQuery.refetch();
+          if (redFocusScopeStatus === "error") void redListQuery.refetch();
+        }}
+        onStartFresh={() => undefined}
+        onBack={() => void handleExit()}
+        technicalId={favoritesScopeStatus === "error"
+          ? "ST-favorites-load-failed"
+          : "ST-red-list-load-failed"}
+        allowStartFresh={false}
+      />
+    );
+  }
+
   if (scopeWaitExpired) {
     return (
       <StudySessionRecovery
@@ -1698,6 +1742,7 @@ const Study = () => {
       <StudyScopeEmptyState
         scope={emptyStudyScope}
         onStudyAll={handleDisableFavoritesFilter}
+        onOpenSettings={() => navigate(settingsRoute)}
         onStudyFavorites={emptyStudyScope === "red-focus"
           ? () => handleSettingsChange({ ...gameSettings, redFocus: false, subset: "favorites" })
           : undefined}
