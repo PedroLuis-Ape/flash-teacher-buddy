@@ -136,6 +136,22 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
 
       if (!instruction) return;
 
+      // Pick the side that is NOT on screen: the small line is only a reminder
+      // of the meaning of the visible text, never a copy of it.
+      const promptText = normalizeRewriteText(readRewritePromptText(instruction));
+      const normalizedFront = normalizeRewriteText(props.front);
+      const normalizedBack = normalizeRewriteText(props.back);
+      const oppositeText = promptText && normalizedFront && promptText.includes(normalizedFront)
+        ? props.back
+        : promptText && normalizedBack && promptText.includes(normalizedBack)
+          ? props.front
+          : rewriteTranslationText;
+
+      if (!oppositeText?.trim() || normalizeRewriteText(oppositeText) === promptText) {
+        existing?.remove();
+        return;
+      }
+
       const preview = existing ?? document.createElement("p");
       if (!existing) {
         preview.dataset.writeRewriteTranslation = "true";
@@ -145,7 +161,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       }
 
       preview.dataset.writeRewriteTranslationKey = rewriteLayerKey;
-      const renderedTranslation = `“${rewriteTranslationText}”`;
+      const renderedTranslation = `“${oppositeText}”`;
       if (preview.textContent !== renderedTranslation) preview.textContent = renderedTranslation;
 
       if (preview.parentElement !== instruction.parentElement || preview.nextElementSibling !== instruction) {
