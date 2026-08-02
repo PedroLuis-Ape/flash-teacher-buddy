@@ -52,6 +52,25 @@ function findRewriteInstruction(root: HTMLElement): HTMLElement | null {
   ) ?? null;
 }
 
+function normalizeRewriteText(value: string | null | undefined) {
+  return (value ?? "")
+    .replace(/[“”"']/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase();
+}
+
+// The visible prompt is the authoritative source of which side is being
+// rewritten. Reading it from the DOM keeps the small translation line always
+// on the opposite side, even when the side resolution is recomputed elsewhere.
+function readRewritePromptText(instruction: HTMLElement): string {
+  let sibling = instruction.previousElementSibling as HTMLElement | null;
+  while (sibling && sibling.dataset?.writeRewriteTranslation === "true") {
+    sibling = sibling.previousElementSibling as HTMLElement | null;
+  }
+  return sibling?.textContent ?? "";
+}
+
 export const WriteStudyView = (props: WriteStudyViewProps) => {
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
   const rewriteCardKey = props.flashcardId || `${props.front}|${props.back}`;
