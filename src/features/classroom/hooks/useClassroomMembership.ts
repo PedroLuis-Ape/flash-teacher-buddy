@@ -54,7 +54,7 @@ export function useSearchTurmaPeople({
   return useQuery({
     queryKey: ['classroom-people-search', userId, kind, turmaId ?? null, normalizedQuery],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('search_turma_people_v1', {
+      const { data, error } = await (supabase.rpc as any)('search_turma_people_v1', {
         p_kind: kind,
         p_turma_id: turmaId ?? undefined,
         p_query: normalizedQuery,
@@ -62,7 +62,7 @@ export function useSearchTurmaPeople({
         p_offset: 0,
       });
       if (error) throw error;
-      return (data ?? []) as ClassroomPerson[];
+      return ((data ?? []) as unknown) as ClassroomPerson[];
     },
     enabled: enabled && !authLoading && Boolean(userId) && normalizedQuery.length >= 2 && (kind === 'teacher' || Boolean(turmaId)),
     staleTime: 15_000,
@@ -98,7 +98,7 @@ export function useMyPendingTurmaMemberships() {
   return useQuery({
     queryKey: ['turma-memberships-pending', userId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('list_my_turma_memberships_v1');
+      const { data, error } = await (supabase.rpc as any)('list_my_turma_memberships_v1');
       if (error) throw error;
       return data ?? [];
     },

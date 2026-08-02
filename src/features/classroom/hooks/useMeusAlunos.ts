@@ -11,7 +11,7 @@ export function useStudentsList(q?: string, turmaId?: string) {
         return { students: [], nextCursor: null, hasMore: false };
       }
 
-      const { data, error } = await supabase.rpc('search_turma_people_v1', {
+      const { data, error } = await (supabase.rpc as any)('search_turma_people_v1', {
         p_kind: 'student',
         p_turma_id: turmaId,
         p_query: normalizedQuery,
@@ -20,7 +20,7 @@ export function useStudentsList(q?: string, turmaId?: string) {
       });
       if (error) throw error;
 
-      const students = (data ?? []).map((person) => ({
+      const students = ((data ?? []) as any[]).map((person: any) => ({
         // The UI uses the public identifier; the gateway resolves it server-side.
         aluno_id: person.public_id,
         nome: person.display_name,

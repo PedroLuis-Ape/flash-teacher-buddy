@@ -77,7 +77,7 @@ export default function TurmaDetailWorkspace() {
     queryKey: ["turma-access-gate", turmaId, user?.id, publicPreview],
     queryFn: async () => {
       if (!turmaId || !user) return null;
-      const { data, error } = await supabase.rpc("get_turma_access_v1", {
+      const { data, error } = await (supabase.rpc as any)("get_turma_access_v1", {
         p_turma_id: turmaId,
       });
       if (!error) return data?.[0] ?? null;
