@@ -2237,5 +2237,8 @@ export function useStudyEngine(
     saveProgressNow,
     // Chave do snapshot atual — permite persistência satélite (ex: camada visível).
     studySnapshotKey,
+    // Camada restaurada da sessão remota/local — usada como fallback quando o
+    // localStorage está vazio (cold start em outro navegador/dispositivo).
+    restoredSessionLayer,
   };
 }
