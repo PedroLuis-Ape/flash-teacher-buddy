@@ -52,6 +52,25 @@ function findRewriteInstruction(root: HTMLElement): HTMLElement | null {
   ) ?? null;
 }
 
+function normalizeRewriteText(value: string | null | undefined) {
+  return (value ?? "")
+    .replace(/[“”"']/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase();
+}
+
+// The visible prompt is the authoritative source of which side is being
+// rewritten. Reading it from the DOM keeps the small translation line always
+// on the opposite side, even when the side resolution is recomputed elsewhere.
+function readRewritePromptText(instruction: HTMLElement): string {
+  let sibling = instruction.previousElementSibling as HTMLElement | null;
+  while (sibling && sibling.dataset?.writeRewriteTranslation === "true") {
+    sibling = sibling.previousElementSibling as HTMLElement | null;
+  }
+  return sibling?.textContent ?? "";
+}
+
 export const WriteStudyView = (props: WriteStudyViewProps) => {
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
   const rewriteCardKey = props.flashcardId || `${props.front}|${props.back}`;
@@ -117,6 +136,22 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
 
       if (!instruction) return;
 
+      // Pick the side that is NOT on screen: the small line is only a reminder
+      // of the meaning of the visible text, never a copy of it.
+      const promptText = normalizeRewriteText(readRewritePromptText(instruction));
+      const normalizedFront = normalizeRewriteText(props.front);
+      const normalizedBack = normalizeRewriteText(props.back);
+      const oppositeText = promptText && normalizedFront && promptText.includes(normalizedFront)
+        ? props.back
+        : promptText && normalizedBack && promptText.includes(normalizedBack)
+          ? props.front
+          : rewriteTranslationText;
+
+      if (!oppositeText?.trim() || normalizeRewriteText(oppositeText) === promptText) {
+        existing?.remove();
+        return;
+      }
+
       const preview = existing ?? document.createElement("p");
       if (!existing) {
         preview.dataset.writeRewriteTranslation = "true";
@@ -126,7 +161,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       }
 
       preview.dataset.writeRewriteTranslationKey = rewriteLayerKey;
-      const renderedTranslation = `“${rewriteTranslationText}”`;
+      const renderedTranslation = `“${oppositeText}”`;
       if (preview.textContent !== renderedTranslation) preview.textContent = renderedTranslation;
 
       if (preview.parentElement !== instruction.parentElement || preview.nextElementSibling !== instruction) {
