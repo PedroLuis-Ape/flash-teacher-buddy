@@ -7,6 +7,7 @@ interface StudyScopeEmptyStateProps {
   onStudyAll: () => void;
   onBack: () => void;
   onStudyFavorites?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export function StudyScopeEmptyState({
@@ -14,6 +15,7 @@ export function StudyScopeEmptyState({
   onStudyAll,
   onBack,
   onStudyFavorites,
+  onOpenSettings,
 }: StudyScopeEmptyStateProps) {
   const isRedFocus = scope === "red-focus";
   const Icon = isRedFocus ? Flame : Star;
@@ -39,7 +41,14 @@ export function StudyScopeEmptyState({
           )}
           <Button onClick={onStudyAll}>Estudar todos os cards</Button>
         </div>
-        <Button variant="ghost" onClick={onBack}>Voltar para a lista</Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {onOpenSettings && (
+            <Button variant="outline" onClick={onOpenSettings}>
+              Voltar às configurações
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onBack}>Voltar para a lista</Button>
+        </div>
       </Card>
     </div>
   );
