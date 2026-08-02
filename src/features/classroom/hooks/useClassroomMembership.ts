@@ -79,12 +79,15 @@ export function useTurmaMembership(turmaId: string | null | undefined) {
       if (!userId || !turmaId) return null;
       const { data, error } = await supabase
         .from('turma_membros')
-        .select('id, turma_id, user_id, status, ativo, updated_at')
+        .select('id, turma_id, user_id, role, ativo, joined_at')
         .eq('turma_id', turmaId)
         .eq('user_id', userId)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      if (!data) return null;
+      // `turma_membros` has no status column: an existing active row is the
+      // only membership state the table can prove.
+      return { ...data, status: data.ativo ? 'active' : null };
     },
     enabled: !authLoading && Boolean(userId && turmaId),
     staleTime: 15_000,
