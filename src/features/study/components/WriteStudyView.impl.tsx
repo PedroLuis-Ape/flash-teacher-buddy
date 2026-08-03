@@ -289,6 +289,14 @@ export const WriteStudyView = ({
 
   const hasFeedback = evaluation !== null;
 
+  // Tradução do lado oposto (modo Reescrever): determinística, sem DOM.
+  const rewriteOppositeText = resolvedRewriteSide === "a" ? back : front;
+  const rewriteTranslationText = normalizeRewriteComparison(rewriteOppositeText)
+    && normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)
+      ? rewriteOppositeText
+      : "";
+  const showRewriteTranslation = isRewriteActivity && !hasFeedback && rewriteTranslationText.length > 0;
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 sm:gap-6">
       <Card className={cn(
@@ -345,9 +353,21 @@ export const WriteStudyView = ({
             </Button>
           </div>
           {!hasFeedback && (
+            <>
+            {showRewriteTranslation && (
+              <p
+                data-write-rewrite-translation="true"
+                dir="auto"
+                aria-label="Tradução do texto para reescrita"
+                className="mx-auto mb-3 mt-2 max-w-[92%] break-words px-2 text-xs italic leading-relaxed text-muted-foreground/60 sm:mb-4 sm:mt-3 sm:text-sm"
+              >
+                {`“${rewriteTranslationText}”`}
+              </p>
+            )}
             <p className="text-sm text-muted-foreground sm:text-sm">
               {isRewriteActivity ? "Reescreva exatamente como aparece acima:" : `Traduza para ${answerLabel}:`}
             </p>
+            </>
           )}
         </div>
       </Card>

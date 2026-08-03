@@ -28,8 +28,6 @@ const LazyWriteStudyView = lazy(() =>
   import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
 );
 
-const REWRITE_TRANSLATION_RETRY_DELAYS = [0, 50, 150, 350] as const;
-
 type WriteStudyViewProps = ComponentProps<typeof LazyWriteStudyView>;
 
 function findActionButton(root: HTMLElement, label: string): HTMLButtonElement | null {
@@ -44,31 +42,6 @@ function setStyle(element: HTMLElement | null, property: string, value: string) 
 
 function clearStyle(element: HTMLElement | null, properties: string[]) {
   properties.forEach((property) => element?.style.removeProperty(property));
-}
-
-function findRewriteInstruction(root: HTMLElement): HTMLElement | null {
-  return Array.from(root.querySelectorAll<HTMLElement>("p")).find((node) =>
-    node.textContent?.trim().startsWith("Reescreva exatamente como aparece acima"),
-  ) ?? null;
-}
-
-function normalizeRewriteText(value: string | null | undefined) {
-  return (value ?? "")
-    .replace(/[“”"']/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLocaleLowerCase();
-}
-
-// The visible prompt is the authoritative source of which side is being
-// rewritten. Reading it from the DOM keeps the small translation line always
-// on the opposite side, even when the side resolution is recomputed elsewhere.
-function readRewritePromptText(instruction: HTMLElement): string {
-  let sibling = instruction.previousElementSibling as HTMLElement | null;
-  while (sibling && sibling.dataset?.writeRewriteTranslation === "true") {
-    sibling = sibling.previousElementSibling as HTMLElement | null;
-  }
-  return sibling?.textContent ?? "";
 }
 
 export const WriteStudyView = (props: WriteStudyViewProps) => {
@@ -86,9 +59,6 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
       : readWriteActivityPreference(writeActivityGameMode)),
   );
-  const resolvedRewriteSide = resolveRewriteSideForCard(rewriteCardKey, writeActivity.rewriteSide);
-  const isRewriteActivity = writeActivityGameMode === "write" && writeActivity.mode === "rewrite";
-  const rewriteTranslationText = resolvedRewriteSide === "a" ? props.back : props.front;
   const glossaryHints = useResolvedStudyGlossaryHints({
     front: props.front,
     back: props.back,
