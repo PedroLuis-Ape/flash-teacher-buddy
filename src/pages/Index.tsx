@@ -364,7 +364,7 @@ const Index = () => {
                     <Progress value={pct} className="h-2" />
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {Number(safeLast.reviewed || 0)} de {Number(safeLast.total || 0)} cards
+                        {safeLast.progressCount} de {safeLast.totalCards} {safeLast.progressUnit}
                       </span>
                       <span className="text-primary font-medium">{pct}%</span>
                     </div>
@@ -372,11 +372,12 @@ const Index = () => {
                 </div>
               </div>
               <Button
-                onClick={() => navigate(`/list/${safeLast.id}/games?mode=${safeLast.mode || "flip"}`)}
+                onClick={handleContinueStudy}
+                disabled={isOpeningResume || !resumeRoute}
                 className="w-full mt-4 min-h-[44px]"
               >
                 <Play className="h-4 w-4 mr-2" />
-                Continuar
+                {isOpeningResume ? "Abrindo sessão..." : "Continuar"}
               </Button>
             </CardContent>
           </Card>
