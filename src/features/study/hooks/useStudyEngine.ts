@@ -659,16 +659,15 @@ export function useStudyEngine(
             ? [requestedRow, ...(remoteSessions ?? []).filter((row: any) => row.id !== requestedRow.id)]
             : (remoteSessions ?? []);
           const mapCandidate = (candidate: any) => ({
-            .map((candidate) => ({
-              id: candidate.id as string,
-              scopeKey: candidate.session_scope_key as string | null,
-              state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
-              layer: sanitizeStudyLayerSnapshot(
-                (candidate.session_snapshot as { layer?: unknown } | null)?.layer,
-              ),
-              settingsSnapshot: candidate.settings_snapshot,
-              updatedAt: candidate.updated_at,
-            });
+            id: candidate.id as string,
+            scopeKey: candidate.session_scope_key as string | null,
+            state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
+            layer: sanitizeStudyLayerSnapshot(
+              (candidate.session_snapshot as { layer?: unknown } | null)?.layer,
+            ),
+            settingsSnapshot: candidate.settings_snapshot,
+            updatedAt: candidate.updated_at,
+          });
           const requestedCandidate = requestedRow ? mapCandidate(requestedRow) : null;
           const fallbackCandidate = candidateRows
             .filter((candidate: any) => !requestedRow || candidate.id !== requestedRow.id)
