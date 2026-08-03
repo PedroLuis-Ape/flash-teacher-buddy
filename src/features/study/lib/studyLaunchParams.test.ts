@@ -20,4 +20,21 @@ describe("buildStudyLaunchSearchParams", () => {
     expect(params.get("mode")).toBe("multiple-choice");
     expect(params.get("turma")).toBe("turma-123");
   });
+
+  it("carries the explicit deck scope chosen in the hub", () => {
+    const favorites = buildStudyLaunchSearchParams("multiple", null, { scope: "favorites" });
+    expect(favorites.get("mode")).toBe("multiple-choice");
+    expect(favorites.get("favorites")).toBe("true");
+
+    const all = buildStudyLaunchSearchParams("pronunciation", null, { scope: "all" });
+    expect(all.get("favorites")).toBe("false");
+  });
+
+  it("carries the flow format only when explicitly requested", () => {
+    expect(buildStudyLaunchSearchParams("write", null, { scope: "all" }).has("flow")).toBe(false);
+    expect(
+      buildStudyLaunchSearchParams("write", null, { scope: "all", studyFlowMode: "mastery_rounds" })
+        .get("flow"),
+    ).toBe("mastery_rounds");
+  });
 });
