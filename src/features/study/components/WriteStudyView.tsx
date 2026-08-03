@@ -28,8 +28,6 @@ const LazyWriteStudyView = lazy(() =>
   import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
 );
 
-const REWRITE_TRANSLATION_RETRY_DELAYS = [0, 50, 150, 350] as const;
-
 type WriteStudyViewProps = ComponentProps<typeof LazyWriteStudyView>;
 
 function findActionButton(root: HTMLElement, label: string): HTMLButtonElement | null {
@@ -46,31 +44,6 @@ function clearStyle(element: HTMLElement | null, properties: string[]) {
   properties.forEach((property) => element?.style.removeProperty(property));
 }
 
-function findRewriteInstruction(root: HTMLElement): HTMLElement | null {
-  return Array.from(root.querySelectorAll<HTMLElement>("p")).find((node) =>
-    node.textContent?.trim().startsWith("Reescreva exatamente como aparece acima"),
-  ) ?? null;
-}
-
-function normalizeRewriteText(value: string | null | undefined) {
-  return (value ?? "")
-    .replace(/[“”"']/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLocaleLowerCase();
-}
-
-// The visible prompt is the authoritative source of which side is being
-// rewritten. Reading it from the DOM keeps the small translation line always
-// on the opposite side, even when the side resolution is recomputed elsewhere.
-function readRewritePromptText(instruction: HTMLElement): string {
-  let sibling = instruction.previousElementSibling as HTMLElement | null;
-  while (sibling && sibling.dataset?.writeRewriteTranslation === "true") {
-    sibling = sibling.previousElementSibling as HTMLElement | null;
-  }
-  return sibling?.textContent ?? "";
-}
-
 export const WriteStudyView = (props: WriteStudyViewProps) => {
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
   const rewriteCardKey = props.flashcardId || `${props.front}|${props.back}`;
@@ -81,14 +54,11 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   const navigationLockedRef = useRef(false);
   const shortcuts = useShortcutMap();
   const writeActivityGameMode = resolveWriteActivityGameMode();
-  const [writeActivity, setWriteActivity] = useState<WriteActivityPreference>(
+  const [, setWriteActivity] = useState<WriteActivityPreference>(
     () => (typeof window === "undefined"
       ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
       : readWriteActivityPreference(writeActivityGameMode)),
   );
-  const resolvedRewriteSide = resolveRewriteSideForCard(rewriteCardKey, writeActivity.rewriteSide);
-  const isRewriteActivity = writeActivityGameMode === "write" && writeActivity.mode === "rewrite";
-  const rewriteTranslationText = resolvedRewriteSide === "a" ? props.back : props.front;
   const glossaryHints = useResolvedStudyGlossaryHints({
     front: props.front,
     back: props.back,
@@ -119,59 +89,12 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     if (!root) return;
 
     const media = window.matchMedia("(max-width: 639px)");
-    const retryTimers: number[] = [];
     let animationFrame = 0;
     let disposed = false;
 
-    const syncRewriteTranslation = () => {
-      if (disposed) return;
-
-      const instruction = findRewriteInstruction(root);
-      const existing = root.querySelector<HTMLElement>("[data-write-rewrite-translation]");
-
-      if (!isRewriteActivity || !rewriteTranslationText?.trim()) {
-        existing?.remove();
-        return;
-      }
-
-      if (!instruction) return;
-
-      // Pick the side that is NOT on screen: the small line is only a reminder
-      // of the meaning of the visible text, never a copy of it.
-      const promptText = normalizeRewriteText(readRewritePromptText(instruction));
-      const normalizedFront = normalizeRewriteText(props.front);
-      const normalizedBack = normalizeRewriteText(props.back);
-      const oppositeText = promptText && normalizedFront && promptText.includes(normalizedFront)
-        ? props.back
-        : promptText && normalizedBack && promptText.includes(normalizedBack)
-          ? props.front
-          : rewriteTranslationText;
-
-      if (!oppositeText?.trim() || normalizeRewriteText(oppositeText) === promptText) {
-        existing?.remove();
-        return;
-      }
-
-      const preview = existing ?? document.createElement("p");
-      if (!existing) {
-        preview.dataset.writeRewriteTranslation = "true";
-        preview.className = "mx-auto mb-3 mt-2 max-w-[92%] break-words px-2 text-xs italic leading-relaxed text-muted-foreground/60 sm:mb-4 sm:mt-3 sm:text-sm";
-        preview.setAttribute("dir", "auto");
-        preview.setAttribute("aria-label", "Tradução do texto para reescrita");
-      }
-
-      preview.dataset.writeRewriteTranslationKey = rewriteLayerKey;
-      const renderedTranslation = `“${oppositeText}”`;
-      if (preview.textContent !== renderedTranslation) preview.textContent = renderedTranslation;
-
-      if (preview.parentElement !== instruction.parentElement || preview.nextElementSibling !== instruction) {
-        instruction.insertAdjacentElement("beforebegin", preview);
-      }
-    };
-
+    // Layout-only: este efeito NÃO cria, move ou remove a tradução do modo
+    // Reescrever (renderizada declarativamente em WriteStudyView.impl.tsx).
     const applyLayout = () => {
-      syncRewriteTranslation();
-
       const skipButton = findActionButton(root, "pular");
       const hintButton = findActionButton(root, "dica");
       const correctButton = findActionButton(root, "corrigir");
@@ -228,9 +151,6 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       if (disposed) return;
       window.cancelAnimationFrame(animationFrame);
       animationFrame = window.requestAnimationFrame(applyLayout);
-      REWRITE_TRANSLATION_RETRY_DELAYS.forEach((delay) => {
-        retryTimers.push(window.setTimeout(applyLayout, delay));
-      });
     };
 
     const observer = new MutationObserver(scheduleLayoutSync);
@@ -249,10 +169,8 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
       observer.disconnect();
       media.removeEventListener("change", scheduleLayoutSync);
       window.cancelAnimationFrame(animationFrame);
-      retryTimers.forEach((timer) => window.clearTimeout(timer));
-      root.querySelector<HTMLElement>("[data-write-rewrite-translation]")?.remove();
     };
-  }, [rewriteLayerKey, direction, isRewriteActivity, rewriteTranslationText]);
+  }, [rewriteLayerKey, direction]);
 
   const runOnce = (action: () => void) => {
     if (navigationLockedRef.current) return;
