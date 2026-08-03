@@ -46,6 +46,8 @@ import {
 } from "@/features/study/lib/studyScopePolicy";
 import { GameSettingsModal, type GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import { useStudySettingsController } from "@/features/study/hooks/useStudySettingsController";
+import type { StudySettingsSnapshotV2 } from "@/features/study/lib/studySettingsSnapshotV2";
 import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
@@ -647,6 +649,37 @@ export default function MixedStudy() {
       navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
     }
   }, [canUsePersonalFavorites, favoritesOnly, location.pathname, navigate, searchParams, updateForCurrentScope]);
+
+  // Fonte única de verdade da janela de configurações nesta tela.
+  const applyMixedRuntimeSettings = useCallback((next: StudySettingsSnapshotV2) => {
+    restoredSessionDirectionRef.current = null;
+    restoredSessionSubsetRef.current = next.scope;
+    setSelectedFlowMode(next.studyFlowMode);
+    setGameSettings({
+      mode: next.order,
+      subset: next.scope,
+      fastMode: next.fastMode,
+      redFocus: next.redFocus,
+    });
+    const nextFavorites = next.scope === "favorites";
+    if (nextFavorites !== favoritesOnly) {
+      const params = new URLSearchParams(searchParams);
+      params.set("favorites", String(nextFavorites));
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }
+  }, [favoritesOnly, location.pathname, navigate, searchParams]);
+
+  const { settings: studySettings, applyStudySettingsChange } = useStudySettingsController({
+    effectivePreset,
+    redFocus: !!gameSettings.redFocus,
+    canUseFavorites: canUsePersonalFavorites,
+    persistPreset: updateForCurrentScope,
+    setSessionOverrides,
+    applyRuntime: applyMixedRuntimeSettings,
+    onFavoritesUnavailable: () => {
+      toast.info("Favoritos exigem uma conta autenticada. Mostrando todos os cards.");
+    },
+  });
   const currentAnswerKey = `${mixed.state?.roundNumber ?? 0}:${mixed.state?.currentIndex ?? 0}:${mixed.currentCardId ?? "none"}`;
   useEffect(() => {
     answeredCardKeyRef.current = null;
@@ -845,7 +878,7 @@ export default function MixedStudy() {
     return (
       <StudyScopeEmptyState
         scope={emptyStudyScope}
-        onStudyAll={() => handleSettingsChange({ ...gameSettings, subset: "all" })}
+        onStudyAll={() => applyStudySettingsChange({ scope: "all" })}
         onBack={exit}
       />
     );
@@ -1000,8 +1033,10 @@ export default function MixedStudy() {
           </Button>
           <div className="flex items-center gap-2">
             <GameSettingsModal
-              settings={gameSettings}
-              onSettingsChange={handleSettingsChange}
+              settings={studySettings}
+              onSettingsChange={applyStudySettingsChange}
+              gameMode="mixed"
+              showDirection={isListRoute}
               onRestart={restartJourneyManually}
               showFastMode={false}
             />

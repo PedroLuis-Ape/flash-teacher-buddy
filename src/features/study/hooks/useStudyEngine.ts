@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { SaveProgressResult } from "@/features/study/lib/saveProgressResult";
 import { toast } from "sonner";
 import { recordStudyAnswer, settleStudySession } from "@/lib/rewardEngine";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
@@ -222,6 +223,11 @@ export function useStudyEngine(
   onSessionSettingsRestored?: (settings: StudySessionSettingsSnapshot) => void,
   /** Stable local-storage scope for non-list resources such as collections. */
   storageResourceId?: string,
+  /**
+   * Sessão exata pedida pelo banner "Continuar". Quando informada, a restauração
+   * prefere esta sessionId em vez de simplesmente abrir a mais recente.
+   */
+  requestedSessionId?: string | null,
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
@@ -649,7 +655,14 @@ export function useStudyEngine(
               updatedAt: candidate.updated_at,
             }))
             .filter((candidate) => candidate.scopeKey === sessionScopeKey || candidate.scopeKey?.startsWith("study-session-v1:"))
-            .sort((left, right) => Number(right.scopeKey === sessionScopeKey) - Number(left.scopeKey === sessionScopeKey))
+            .sort((left, right) => {
+              if (requestedSessionId) {
+                const requestedDelta = Number(right.id === requestedSessionId)
+                  - Number(left.id === requestedSessionId);
+                if (requestedDelta !== 0) return requestedDelta;
+              }
+              return Number(right.scopeKey === sessionScopeKey) - Number(left.scopeKey === sessionScopeKey);
+            })
             .find((candidate) => candidate.state);
           if (remote) {
             applyRestoredSessionSettings({
@@ -790,6 +803,12 @@ export function useStudyEngine(
           .filter((candidate) => candidate.session_scope_key === sessionScopeKey || candidate.session_scope_key?.startsWith("study-session-v1:"))
           .filter((candidate) => sessionMatchesCurrentScope(candidate.cards_order))
           .sort((left, right) => {
+            // A sessão pedida explicitamente vence qualquer heurística de recência.
+            if (requestedSessionId) {
+              const leftRequested = left.id === requestedSessionId;
+              const rightRequested = right.id === requestedSessionId;
+              if (leftRequested !== rightRequested) return leftRequested ? -1 : 1;
+            }
             const leftIsCurrent = left.session_scope_key === sessionScopeKey;
             const rightIsCurrent = right.session_scope_key === sessionScopeKey;
             if (leftIsCurrent !== rightIsCurrent) return leftIsCurrent ? -1 : 1;
@@ -2073,7 +2092,9 @@ export function useStudyEngine(
   // Force-save current index immediately (no debounce). Used when switching
   // study scope so the previous trail's index isn't lost while waiting for
   // the debounced save to fire.
-  const saveProgressNow = useCallback(async (layer?: StudySessionLayerSnapshot) => {
+  const saveProgressNow = useCallback(async (
+    layer?: StudySessionLayerSnapshot,
+  ): Promise<SaveProgressResult> => {
     if (layer) sessionLayerRef.current = { ...layer };
     if (cardsOrder.length > 0 && !isFinished) {
       writeStudySnapshot(studySnapshotKey, {
@@ -2094,7 +2115,16 @@ export function useStudyEngine(
     // otherwise a page navigation could preserve the index while losing the
     // last answer's counters.
     await flushProgressBuffer();
-    if (!sessionId || !listId || !authUserIdRef.current) return;
+    if (!sessionId || !listId || !authUserIdRef.current) {
+      return {
+        status: "local-only",
+        sessionId: sessionId ?? null,
+        updatedAt: Date.now(),
+        reason: !sessionId
+          ? "no-remote-session"
+          : !listId ? "no-list" : "no-authenticated-user",
+      };
+    }
     try {
       const userId = authUserIdRef.current;
       const payload: Record<string, unknown> = {
@@ -2129,8 +2159,15 @@ export function useStudyEngine(
         payload,
         stage: "save-progress",
       });
+      return { status: "remote-confirmed", sessionId, updatedAt: Date.now() };
     } catch (error) {
       console.warn('[StudyEngine] saveProgressNow remoto pendente:', error);
+      return {
+        status: "local-only",
+        sessionId,
+        updatedAt: Date.now(),
+        reason: error instanceof Error ? error.message : "remote-write-failed",
+      };
     }
   }, [sessionId, currentIndex, listId, mode, cardsOrder, results, isFinished, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey, sessionScopeKey, sessionSettingsSnapshot, flushProgressBuffer]);
 
@@ -2235,6 +2272,8 @@ export function useStudyEngine(
     completeSession,
     // Scope helpers — used by Study.tsx to switch scopes without resetting
     saveProgressNow,
+    // Identidade remota da sessão aberta — usada pelo ponteiro de retomada.
+    sessionId,
     // Chave do snapshot atual — permite persistência satélite (ex: camada visível).
     studySnapshotKey,
     // Camada restaurada da sessão remota/local — usada como fallback quando o

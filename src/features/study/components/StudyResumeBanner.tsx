@@ -5,24 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useInstitution } from "@/contexts/InstitutionContext";
-import { useStudyPreferences } from "@/hooks/useStudyPreferences";
+import { describeStudyResume } from "@/features/study/lib/studyResume";
 import {
-  clearStudyResume,
-  describeStudyResume,
-  readStudyResume,
-  studyResumeMatchesInstitution,
-  type StudyResumeSnapshot,
-} from "@/features/study/lib/studyResume";
-import { isResumeSupersededByCompletion } from "@/features/study/lib/studyResumeCompletion";
+  clearStudyResumePointer,
+  readStudyResumePointer,
+  studyResumePointerMatchesInstitution,
+  type StudyResumeSnapshotV2,
+} from "@/features/study/lib/studyResumePointer";
 
 export function StudyResumeBanner() {
   const navigate = useNavigate();
   const { user } = useAuthUser();
   const { selectedInstitution } = useInstitution();
-  const { prefs } = useStudyPreferences(user?.id);
   const institutionId = selectedInstitution?.id ?? null;
   const [dismissed, setDismissed] = useState(false);
-  const [snapshot, setSnapshot] = useState<StudyResumeSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<StudyResumeSnapshotV2 | null>(null);
 
   useEffect(() => {
     if (!user?.id) {
@@ -31,33 +28,34 @@ export function StudyResumeBanner() {
     }
 
     setDismissed(false);
-    const saved = readStudyResume(user.id);
-
-    if (saved && isResumeSupersededByCompletion(user.id, saved, prefs)) {
-      clearStudyResume(user.id);
-      setSnapshot(null);
-      return;
-    }
-
-    setSnapshot(saved);
-  }, [
-    institutionId,
-    prefs.direction,
-    prefs.favoritesOnly,
-    prefs.mode,
-    user?.id,
-  ]);
+    // A conclusão é avaliada pela própria sessionId do ponteiro (dentro de
+    // readStudyResumePointer). Não usamos mais o preset global de outro modo
+    // para decidir se esta sessão terminou.
+    setSnapshot(readStudyResumePointer(user.id));
+  }, [institutionId, user?.id]);
 
   const visibleSnapshot = useMemo(() => {
     if (dismissed || !snapshot) return null;
-    return studyResumeMatchesInstitution(snapshot, institutionId) ? snapshot : null;
+    return studyResumePointerMatchesInstitution(snapshot, institutionId) ? snapshot : null;
   }, [dismissed, institutionId, snapshot]);
 
   if (!visibleSnapshot || !user?.id) return null;
 
   const handleDismiss = () => {
-    clearStudyResume(user.id);
+    clearStudyResumePointer(user.id);
     setDismissed(true);
+  };
+
+  // Continuar pede a sessão exata; o engine valida usuário/lista/modo antes de
+  // aceitá-la e não abre "a mais recente" como substituta.
+  const handleContinue = () => {
+    navigate(visibleSnapshot.path, {
+      state: {
+        resumeSessionId: visibleSnapshot.sessionId,
+        resumeResourceId: visibleSnapshot.resourceId,
+        resumeGameMode: visibleSnapshot.gameMode,
+      },
+    });
   };
 
   return (
@@ -75,7 +73,7 @@ export function StudyResumeBanner() {
           </div>
           <Button
             size="sm"
-            onClick={() => navigate(visibleSnapshot.path)}
+            onClick={handleContinue}
             className="w-auto shrink-0 px-3"
           >
             Continuar
