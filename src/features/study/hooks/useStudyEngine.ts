@@ -58,6 +58,7 @@ import {
   type StudyProgressAttempt,
 } from "@/features/study/lib/studyProgressRepository";
 import { claimStudySession } from "@/features/study/lib/studySessionRepository";
+import { fetchRequestedStudySession } from "@/features/study/lib/requestedStudySession";
 import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
@@ -629,6 +630,17 @@ export function useStudyEngine(
 
       if (userScope && listId) {
         try {
+          // A sessão pedida é consultada por ID antes de qualquer heurística de
+          // recência e não é filtrada pelo preset atual.
+          const requestedRow = await fetchRequestedStudySession<any>({
+            client: supabase as any,
+            sessionId: requestedSessionId,
+            userId: userScope,
+            listId,
+            mode,
+            columns: "id,session_scope_key,session_snapshot,settings_snapshot,updated_at",
+            signal: abortController.signal,
+          });
           const { data: remoteSessions } = await withStudyRuntimeTimeout(
             supabase
               .from("study_sessions")
@@ -644,31 +656,34 @@ export function useStudyEngine(
             "mastery-session-restore",
             () => abortController.abort(),
           );
-          const remote = (remoteSessions ?? [])
-            .map((candidate) => ({
-              id: candidate.id as string,
-              scopeKey: candidate.session_scope_key as string | null,
-              state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
-              layer: sanitizeStudyLayerSnapshot(
-                (candidate.session_snapshot as { layer?: unknown } | null)?.layer,
-              ),
-              settingsSnapshot: candidate.settings_snapshot,
-              updatedAt: candidate.updated_at,
-            }))
+          const candidateRows = requestedRow
+            ? [requestedRow, ...(remoteSessions ?? []).filter((row: any) => row.id !== requestedRow.id)]
+            : (remoteSessions ?? []);
+          const mapCandidate = (candidate: any) => ({
+            id: candidate.id as string,
+            scopeKey: candidate.session_scope_key as string | null,
+            state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
+            layer: sanitizeStudyLayerSnapshot(
+              (candidate.session_snapshot as { layer?: unknown } | null)?.layer,
+            ),
+            settingsSnapshot: candidate.settings_snapshot,
+            updatedAt: candidate.updated_at,
+          });
+          const requestedCandidate = requestedRow ? mapCandidate(requestedRow) : null;
+          const fallbackCandidate = candidateRows
+            .filter((candidate: any) => !requestedRow || candidate.id !== requestedRow.id)
+            .map(mapCandidate)
             .filter((candidate) => isPersistedStudySessionCompatible({
               expected: sessionContext,
               sessionScopeKey: candidate.scopeKey,
               settingsSnapshot: candidate.settingsSnapshot,
             }))
-            .sort((left, right) => {
-              if (requestedSessionId) {
-                const requestedDelta = Number(right.id === requestedSessionId)
-                  - Number(left.id === requestedSessionId);
-                if (requestedDelta !== 0) return requestedDelta;
-              }
-              return Number(right.scopeKey === sessionScopeKey) - Number(left.scopeKey === sessionScopeKey);
-            })
+            .sort((left, right) =>
+              Number(right.scopeKey === sessionScopeKey) - Number(left.scopeKey === sessionScopeKey))
             .find((candidate) => candidate.state);
+          // Sessão pedida vence qualquer sessão mais recente. Quando ela existe
+          // mas não pode ser aberta, não caímos em outra sessão aleatória.
+          const remote = requestedCandidate ?? fallbackCandidate;
           if (remote) {
             applyRestoredSessionSettings({
               id: remote.id,
@@ -812,17 +827,25 @@ export function useStudyEngine(
           }))
           .filter((candidate) => sessionMatchesCurrentScope(candidate.cards_order))
           .sort((left, right) => {
-            // A sessão pedida explicitamente vence qualquer heurística de recência.
-            if (requestedSessionId) {
-              const leftRequested = left.id === requestedSessionId;
-              const rightRequested = right.id === requestedSessionId;
-              if (leftRequested !== rightRequested) return leftRequested ? -1 : 1;
-            }
             const leftIsCurrent = left.session_scope_key === sessionScopeKey;
             const rightIsCurrent = right.session_scope_key === sessionScopeKey;
             if (leftIsCurrent !== rightIsCurrent) return leftIsCurrent ? -1 : 1;
             return Date.parse(String(right.updated_at ?? "")) - Date.parse(String(left.updated_at ?? ""));
           })[0] ?? null;
+
+      // A sessão pedida ("Continuar") é consultada por ID — não depende do
+      // limite das dez mais recentes nem do preset atual. Suas configurações
+      // são aplicadas antes do deck (applyRestoredSessionSettings).
+      const requestedSessionRow = await fetchRequestedStudySession<any>({
+        client: supabase as any,
+        sessionId: requestedSessionId,
+        userId: user.id,
+        listId,
+        mode,
+        signal: abortController.signal,
+      });
+      const resolveSession = (sessions: any[] | null | undefined) =>
+        requestedSessionRow ?? selectCurrentScopeSession(sessions);
 
       const chooseNewestStudySnapshot = (
         local: ReturnType<typeof readStudySnapshot>,
@@ -879,7 +902,7 @@ export function useStudyEngine(
         );
         if (!isCurrent()) return;
 
-        const matchingSession = selectCurrentScopeSession(openSessions);
+        const matchingSession = resolveSession(openSessions);
 
         if (matchingSession) {
           applyRestoredSessionSettings(matchingSession);
@@ -1007,7 +1030,7 @@ export function useStudyEngine(
       );
       if (!isCurrent()) return;
 
-      const matchingSession = selectCurrentScopeSession(openSessions);
+      const matchingSession = resolveSession(openSessions);
 
       if (matchingSession) {
         // Session settings have precedence over the local preset: resuming must

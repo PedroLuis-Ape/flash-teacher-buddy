@@ -67,6 +67,10 @@ import {
   markStudySessionCompleted,
   writeStudyResumePointer,
 } from "@/features/study/lib/studyResumePointer";
+import {
+  parseRequestedResumeSessionId,
+  stripResumeSessionParamFromUrl,
+} from "@/features/study/lib/studyResumeRoute";
 import type {
   StudySettingsPatchV2,
   StudySettingsSnapshotV2,
@@ -110,6 +114,8 @@ import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
 import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { STUDY_RESUME_QUERY_KEY } from "@/hooks/useLatestStudyResume";
 import { buildStudyReturnRoute, buildStudySettingsRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
 import {
@@ -305,10 +311,16 @@ const Study = () => {
   const exitInFlightRef = useRef(false);
   const { selectedInstitution } = useInstitution();
   const [isSavingExit, setIsSavingExit] = useState(false);
+  const queryClient = useQueryClient();
   const resumeInstitutionId = selectedInstitution?.id ?? null;
   // Sessão pedida pelo banner "Continuar". Só é aceita quando o recurso e o
   // modo do ponteiro coincidem com a rota atual.
+  // A URL (`resume_session`) é a fonte durável — sobrevive a refresh, PWA
+  // reiniciada, aba descartada e deep link. location.state fica como
+  // compatibilidade para navegações internas antigas.
   const requestedResumeSessionId = useMemo(() => {
+    const fromUrl = parseRequestedResumeSessionId(searchParams);
+    if (fromUrl) return fromUrl;
     const state = location.state as {
       resumeSessionId?: unknown;
       resumeResourceId?: unknown;
@@ -318,7 +330,7 @@ const Study = () => {
     if (state.resumeResourceId && state.resumeResourceId !== resolvedId) return null;
     if (state.resumeGameMode && state.resumeGameMode !== normalizedMode) return null;
     return state.resumeSessionId;
-  }, [location.state, normalizedMode, resolvedId]);
+  }, [location.state, normalizedMode, resolvedId, searchParams]);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
@@ -1111,6 +1123,9 @@ const Study = () => {
     // usuário — nunca fingimos confirmação remota.
     const result = await awaitSaveProgress(() => saveProgressNow());
     publishResumePointer();
+    // A Home não pode continuar mostrando o progresso antigo em cache.
+    await queryClient.invalidateQueries({ queryKey: [STUDY_RESUME_QUERY_KEY] });
+    await queryClient.invalidateQueries({ queryKey: ["home-data"] });
     if (result.status !== "remote-confirmed") {
       toast.info(describeSaveProgressResult(result));
     }
@@ -1412,6 +1427,23 @@ const Study = () => {
     if (isFinished) return;
     publishResumePointer();
   }, [isFinished, publishResumePointer]);
+
+  // O parâmetro técnico só sai da URL depois que o engine confirmou a sessão
+  // pedida. Se a sessão não pôde ser restaurada, o ponteiro é limpo e o usuário
+  // recebe uma mensagem recuperável — nunca abrimos outra sessão silenciosamente.
+  useEffect(() => {
+    if (!requestedResumeSessionId) return;
+    if (initializationState !== "ready" || !engineSessionId) return;
+    if (engineSessionId === requestedResumeSessionId) {
+      stripResumeSessionParamFromUrl();
+      return;
+    }
+    if (authUserId) {
+      clearStudyResumePointerForSession(authUserId, requestedResumeSessionId);
+    }
+    stripResumeSessionParamFromUrl();
+    toast.info("A sessão salva não está mais disponível. Uma nova sessão foi iniciada.");
+  }, [authUserId, engineSessionId, initializationState, requestedResumeSessionId]);
 
   // Persiste a camada visível a cada mudança, escopada ao snapshot atual.
   useEffect(() => {
