@@ -25,27 +25,38 @@ describe("write rewrite activity UI", () => {
     expect(writeSource).toContain('effectiveCorrectionMode: WriteCorrectionMode = isRewriteActivity ? "hard"');
   });
 
-  it("shows the opposite side as a smaller translation inside the rewrite card", () => {
-    expect(writeBoundarySource).toContain("rewriteTranslationText");
-    expect(writeBoundarySource).toContain("data-write-rewrite-translation");
-    expect(writeBoundarySource).toContain("text-xs italic");
-    expect(writeBoundarySource).toContain("Tradução do texto para reescrita");
-    expect(writeBoundarySource).toContain('resolvedRewriteSide === "a" ? props.back : props.front');
+  it("renders the opposite side declaratively inside the rewrite card", () => {
+    expect(writeSource).toContain('data-write-rewrite-translation="true"');
+    expect(writeSource).toContain('const rewriteOppositeText = resolvedRewriteSide === "a" ? back : front');
+    expect(writeSource).toContain("normalizeRewriteComparison");
+    expect(writeSource).toContain("showRewriteTranslation");
+    expect(writeSource).toContain("text-xs italic");
+    expect(writeSource).toContain("text-muted-foreground/60");
+    expect(writeSource).toContain("Tradução do texto para reescrita");
   });
 
-  it("anchors the translation immediately before the rewrite instruction inside the card", () => {
-    expect(writeBoundarySource).toContain("findRewriteInstruction");
-    expect(writeBoundarySource).toContain('startsWith("Reescreva exatamente como aparece acima")');
-    expect(writeBoundarySource).toContain('instruction.insertAdjacentElement("beforebegin", preview)');
-    expect(writeBoundarySource).not.toContain("findPromptRow");
+  it("hides the translation when empty, equal to the prompt, or when feedback is shown", () => {
+    expect(writeSource).toContain(
+      "isRewriteActivity && !hasFeedback && rewriteTranslationText.length > 0",
+    );
+    expect(writeSource).toContain(
+      "normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)",
+    );
   });
 
-  it("re-synchronizes the translation when a layered card changes under the same flashcard id", () => {
+  it("places the translation before the rewrite instruction", () => {
+    const translationIndex = writeSource.indexOf("data-write-rewrite-translation");
+    const instructionIndex = writeSource.indexOf("Reescreva exatamente como aparece acima:");
+    expect(translationIndex).toBeGreaterThan(-1);
+    expect(instructionIndex).toBeGreaterThan(translationIndex);
+  });
+
+  it("keeps the boundary free of imperative translation injection", () => {
+    expect(writeBoundarySource).not.toContain("data-write-rewrite-translation");
+    expect(writeBoundarySource).not.toContain("insertAdjacentElement");
+    expect(writeBoundarySource).not.toContain("findRewriteInstruction");
+    expect(writeBoundarySource).not.toContain("REWRITE_TRANSLATION_RETRY_DELAYS");
     expect(writeBoundarySource).toContain('const rewriteLayerKey = `${props.flashcardId ?? "card"}|${props.front}|${props.back}`');
     expect(writeBoundarySource).toContain("key={rewriteLayerKey}");
-    expect(writeBoundarySource).toContain("REWRITE_TRANSLATION_RETRY_DELAYS");
-    expect(writeBoundarySource).toContain("characterData: true");
-    expect(writeBoundarySource).toContain("preview.dataset.writeRewriteTranslationKey = rewriteLayerKey");
-    expect(writeBoundarySource).toContain("window.requestAnimationFrame(applyLayout)");
   });
 });
