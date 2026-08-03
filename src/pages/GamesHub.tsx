@@ -233,12 +233,24 @@ const GamesHub = () => {
   }) > 0;
   const favoritesBusy = favoritesSyncing || favoritesMutating;
 
+  // Escopo visível do switch no momento do clique. O tile clicado precisa abrir
+  // exatamente com o deck que o usuário vê marcado, sem depender do preset
+  // antigo daquele modo nem de `setConfiguredMode` concluir.
+  const visibleScope: "all" | "favorites" =
+    effectivePreset.scope === "favorites" ? "favorites" : "all";
+
   const startGame = (rawMode: StudyMode | "multiple") => {
     if (!id) return;
     if (candidateTurmaId && classContextQuery.isLoading) {
       toast.info("Confirmando o contexto da turma antes de iniciar...");
       return;
     }
+    if (favoritesBusy) {
+      toast.info("Sincronizando seus favoritos antes de iniciar...");
+      return;
+    }
+
+    const launchScope = visibleScope;
 
     const mode = normalizeStudyMode(rawMode);
     rememberConfiguredMode(mode);
@@ -249,6 +261,7 @@ const GamesHub = () => {
     const params = buildStudyLaunchSearchParams(
       mode,
       activeTurmaId && isListRoute ? activeTurmaId : undefined,
+      { scope: launchScope },
     );
 
     const route = mode === "mixed" ? "mixed-study" : "study";
@@ -416,8 +429,8 @@ const GamesHub = () => {
               </div>
               <Switch
                 id="favorites-only"
-                disabled={favoritesBusy || favoritesCount === 0}
-                checked={effectivePreset.scope === "favorites" && favoritesCount > 0}
+                disabled={favoritesBusy}
+                checked={effectivePreset.scope === "favorites"}
                 onCheckedChange={(value) => updateForCurrentScope({ scope: value ? "favorites" : "all" })}
               />
             </div>

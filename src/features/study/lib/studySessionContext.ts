@@ -55,15 +55,71 @@ export function buildStudySessionSettingsSnapshot(
   };
 }
 
+export type StudyDeckScopeToken = "all" | "favorites" | "red-focus";
+
 /**
- * Stable identity for an open session.
+ * Escopo canônico do deck. Foco Vermelho é um deck próprio, distinto de
+ * Todos e de Favoritos.
+ */
+export function resolveStudyDeckScopeToken(
+  input: Pick<StudySessionContextInput, "subset" | "redFocus">,
+): StudyDeckScopeToken {
+  if (input.redFocus) return "red-focus";
+  return input.subset === "favorites" ? "favorites" : "all";
+}
+
+function resolveFlowToken(input: StudySessionContextInput): StudyFlowModePreset {
+  return input.studyFlowMode === "mastery_rounds" ? "mastery_rounds" : "continuous";
+}
+
+/**
+ * Identidade estável de uma sessão aberta (v3).
  *
- * Settings belong in `settings_snapshot`, not in the session identity. This
- * keeps a direction/filter/flow change attached to the same user + list +
- * mode session instead of silently creating a second resumable trail.
+ * Inclui modo + escopo canônico do deck + formato (gamificado/extenso), pois
+ * esses três campos definem decks/filas incompatíveis entre si. Uma sessão de
+ * "Todos" nunca pode controlar "Favoritos" e uma sessão gamificada nunca pode
+ * controlar a extensa. Os demais ajustes (direção, ordem, fast mode) seguem
+ * no `settings_snapshot` e não fragmentam a sessão.
  */
 export function buildStudySessionScopeKey(input: StudySessionContextInput): string {
-  return `study-session-v2:${encodeURIComponent(input.mode)}`;
+  const mode = encodeURIComponent(String(input.mode ?? "flip"));
+  const scope = resolveStudyDeckScopeToken(input);
+  const flow = resolveFlowToken(input);
+  return `study-session-v3:${mode}:${scope}:${flow}`;
+}
+
+/**
+ * Decide se uma sessão persistida pode assumir o contexto atual.
+ *
+ * - Chave v3: precisa ser exatamente igual.
+ * - Chave legada (v1/v2): só é aceita quando o `settings_snapshot` comprova
+ *   mesmo modo, mesmo escopo de deck (subset + redFocus) e mesmo fluxo.
+ *   Interseção de fila NUNCA é suficiente.
+ */
+export function isPersistedStudySessionCompatible(input: {
+  expected: StudySessionContextInput;
+  sessionScopeKey: unknown;
+  settingsSnapshot?: unknown;
+}): boolean {
+  const expectedKey = buildStudySessionScopeKey(input.expected);
+  const key = typeof input.sessionScopeKey === "string" ? input.sessionScopeKey : "";
+  if (key === expectedKey) return true;
+  if (key.startsWith("study-session-v3:")) return false;
+  if (!key.startsWith("study-session-v1:") && !key.startsWith("study-session-v2:")) return false;
+
+  const snapshot = input.settingsSnapshot;
+  if (!snapshot || typeof snapshot !== "object") return false;
+  const row = snapshot as Record<string, unknown>;
+  if (String(row.mode ?? "") !== String(input.expected.mode)) return false;
+
+  const snapshotScope = resolveStudyDeckScopeToken({
+    subset: (row.scope ?? row.subset) === "favorites" ? "favorites" : "all",
+    redFocus: row.redFocus === true,
+  });
+  if (snapshotScope !== resolveStudyDeckScopeToken(input.expected)) return false;
+
+  const snapshotFlow = row.studyFlowMode === "mastery_rounds" ? "mastery_rounds" : "continuous";
+  return snapshotFlow === resolveFlowToken(input.expected);
 }
 
 /**

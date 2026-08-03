@@ -160,11 +160,14 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const orderSummary = `${
     redFocusActive ? "Sequencial (Foco Vermelho)" : settings.order === "random" ? "Aleatória" : "Sequencial"
   } · ${favoritesActive ? "Apenas favoritos" : "Todos os cards"}`;
+  const deckSummary = redFocusActive
+    ? "Foco Vermelho"
+    : favoritesActive
+      ? "Apenas favoritos"
+      : "Todos os cards";
   const flowSummary = redFocusActive
-    ? "Modo extenso (Foco Vermelho)"
-    : currentFlowMode === "mastery_rounds"
-      ? "Modo gamificado"
-      : "Modo extenso · todos os cards";
+    ? "Modo extenso · Foco Vermelho"
+    : `${currentFlowMode === "mastery_rounds" ? "Modo gamificado" : "Modo extenso"} · ${deckSummary}`;
 
   const CategoryRow: React.FC<{
     icon: React.ReactNode;

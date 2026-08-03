@@ -232,6 +232,32 @@ const Study = () => {
     canUsePersonalFavorites,
   );
   const urlFavoritesOnly = favoriteSubsetResolution.subset === "favorites";
+
+  // ── Launch intent explícito do Hub ──
+  // `favorites=true|false` na rota é a escolha visível do usuário no momento do
+  // clique e vence o preset antigo do modo clicado. Depois que o contexto está
+  // hidratado, persistimos essa escolha para lista + modo pelo mecanismo de
+  // preferências existente (sem criar um segundo sistema).
+  const launchScopeIntent = useMemo<"all" | "favorites" | null>(() => {
+    const raw = searchParams.get("favorites");
+    if (raw === "true") return "favorites";
+    if (raw === "false") return "all";
+    return null;
+  }, [searchParams]);
+  const persistedLaunchIntentRef = useRef(false);
+  useEffect(() => {
+    if (!launchScopeIntent || persistedLaunchIntentRef.current) return;
+    if (preferencesHydrating || authStatus === "initializing") return;
+    if (launchScopeIntent === "favorites" && !canUsePersonalFavorites) return;
+    persistedLaunchIntentRef.current = true;
+    void updateForCurrentScope({ scope: launchScopeIntent });
+  }, [
+    authStatus,
+    canUsePersonalFavorites,
+    launchScopeIntent,
+    preferencesHydrating,
+    updateForCurrentScope,
+  ]);
   
   // Derive initial game settings from persistent prefs
   // NOTE: only used as initialSettings on first engine init; live updates flow via setGameSettings effect below
