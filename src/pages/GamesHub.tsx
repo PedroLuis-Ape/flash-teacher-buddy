@@ -429,8 +429,8 @@ const GamesHub = () => {
               </div>
               <Switch
                 id="favorites-only"
-                disabled={favoritesBusy || favoritesCount === 0}
-                checked={effectivePreset.scope === "favorites" && favoritesCount > 0}
+                disabled={favoritesBusy}
+                checked={effectivePreset.scope === "favorites"}
                 onCheckedChange={(value) => updateForCurrentScope({ scope: value ? "favorites" : "all" })}
               />
             </div>
