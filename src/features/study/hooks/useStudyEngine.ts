@@ -827,17 +827,25 @@ export function useStudyEngine(
           }))
           .filter((candidate) => sessionMatchesCurrentScope(candidate.cards_order))
           .sort((left, right) => {
-            // A sessão pedida explicitamente vence qualquer heurística de recência.
-            if (requestedSessionId) {
-              const leftRequested = left.id === requestedSessionId;
-              const rightRequested = right.id === requestedSessionId;
-              if (leftRequested !== rightRequested) return leftRequested ? -1 : 1;
-            }
             const leftIsCurrent = left.session_scope_key === sessionScopeKey;
             const rightIsCurrent = right.session_scope_key === sessionScopeKey;
             if (leftIsCurrent !== rightIsCurrent) return leftIsCurrent ? -1 : 1;
             return Date.parse(String(right.updated_at ?? "")) - Date.parse(String(left.updated_at ?? ""));
           })[0] ?? null;
+
+      // A sessão pedida ("Continuar") é consultada por ID — não depende do
+      // limite das dez mais recentes nem do preset atual. Suas configurações
+      // são aplicadas antes do deck (applyRestoredSessionSettings).
+      const requestedSessionRow = await fetchRequestedStudySession<any>({
+        client: supabase as any,
+        sessionId: requestedSessionId,
+        userId: user.id,
+        listId,
+        mode,
+        signal: abortController.signal,
+      });
+      const resolveSession = (sessions: any[] | null | undefined) =>
+        requestedSessionRow ?? selectCurrentScopeSession(sessions);
 
       const chooseNewestStudySnapshot = (
         local: ReturnType<typeof readStudySnapshot>,
