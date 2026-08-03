@@ -1422,6 +1422,23 @@ const Study = () => {
     publishResumePointer();
   }, [isFinished, publishResumePointer]);
 
+  // O parâmetro técnico só sai da URL depois que o engine confirmou a sessão
+  // pedida. Se a sessão não pôde ser restaurada, o ponteiro é limpo e o usuário
+  // recebe uma mensagem recuperável — nunca abrimos outra sessão silenciosamente.
+  useEffect(() => {
+    if (!requestedResumeSessionId) return;
+    if (initializationState !== "ready" || !engineSessionId) return;
+    if (engineSessionId === requestedResumeSessionId) {
+      stripResumeSessionParamFromUrl();
+      return;
+    }
+    if (authUserId) {
+      clearStudyResumePointerForSession(authUserId, requestedResumeSessionId);
+    }
+    stripResumeSessionParamFromUrl();
+    toast.info("A sessão salva não está mais disponível. Uma nova sessão foi iniciada.");
+  }, [authUserId, engineSessionId, initializationState, requestedResumeSessionId]);
+
   // Persiste a camada visível a cada mudança, escopada ao snapshot atual.
   useEffect(() => {
     if (!studySnapshotKey || !engineCurrentCardId) return;
