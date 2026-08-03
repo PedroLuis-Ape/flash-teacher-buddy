@@ -1,7 +1,9 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useHomeData } from "@/hooks/useHomeData";
+import { useLatestStudyResume } from "@/hooks/useLatestStudyResume";
+import { buildStudyResumeRoute } from "@/features/study/lib/studyResumeRoute";
 import { useEconomy } from "@/contexts/EconomyContext";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useAuthUser } from "@/hooks/useAuthUser";
@@ -30,7 +32,11 @@ import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { last, recents, recentFolders, stats, loading, refetch } = useHomeData();
+  const { recents, recentFolders, stats, loading, refetch } = useHomeData();
+  // Fonte única de retomada (ponteiro local + fallback remoto). A Home não
+  // reconstrói mais a sessão a partir de list_id/mode/current_index.
+  const { resume } = useLatestStudyResume();
+  const [isOpeningResume, setIsOpeningResume] = useState(false);
   const { pts_weekly, balance_pitecoin, level, current_streak } = useEconomy();
   const { selectedInstitution } = useInstitution();
   const { soundEnabled, toggleSound, notificationsEnabled, toggleNotifications } = useSoundSettings();
@@ -96,8 +102,20 @@ const Index = () => {
   const safeRecentFolders = Array.isArray(recentFolders) ? recentFolders.filter(Boolean) : [];
   const myFolders = safeRecentFolders.slice(0, 3);
 
-  const safeLast = last && typeof last === "object" ? last : null;
-  const pct = safeLast ? Math.round((Number(safeLast.reviewed || 0) / (Number(safeLast.total || 0) || 1)) * 100) : 0;
+  const safeLast = resume;
+  const pct = safeLast && safeLast.totalCards > 0
+    ? Math.min(100, Math.round((safeLast.progressCount / safeLast.totalCards) * 100))
+    : 0;
+  const resumeRoute = useMemo(
+    () => (safeLast ? buildStudyResumeRoute({ path: safeLast.path, sessionId: safeLast.sessionId }) : null),
+    [safeLast],
+  );
+  // Toque duplo não pode criar duas navegações nem duas sessões.
+  const handleContinueStudy = useCallback(() => {
+    if (isOpeningResume || !resumeRoute) return;
+    setIsOpeningResume(true);
+    navigate(resumeRoute);
+  }, [isOpeningResume, navigate, resumeRoute]);
 
   const safeFirstName = profileData?.firstName && typeof profileData.firstName === "string" && profileData.firstName.trim().length > 0
     ? profileData.firstName
