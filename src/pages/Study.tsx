@@ -60,6 +60,17 @@ import { PronunciationStudyView } from "@/features/study/components/Pronunciatio
 import { DetailedExplanationPanel } from "@/features/study/components/DetailedExplanationPanel";
 import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
+import { useStudySettingsController } from "@/features/study/hooks/useStudySettingsController";
+import { awaitSaveProgress, describeSaveProgressResult } from "@/features/study/lib/saveProgressResult";
+import {
+  clearStudyResumePointerForSession,
+  markStudySessionCompleted,
+  writeStudyResumePointer,
+} from "@/features/study/lib/studyResumePointer";
+import type {
+  StudySettingsPatchV2,
+  StudySettingsSnapshotV2,
+} from "@/features/study/lib/studySettingsSnapshotV2";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
@@ -94,6 +105,7 @@ import {
   resolvePersonalStudySubset,
 } from "@/features/study/lib/studyScopePolicy";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
 import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
@@ -187,6 +199,7 @@ const Study = () => {
     prefs,
     updatePrefs,
     setSessionOverrides,
+    updateForCurrentScope,
     effectivePreset,
     isHydrating: preferencesHydrating,
   } = useStudyPreferences(authUserId, {
@@ -264,6 +277,22 @@ const Study = () => {
   const answeredCardKeyRef = useRef<string | null>(null);
   const skipCardKeyRef = useRef<string | null>(null);
   const exitInFlightRef = useRef(false);
+  const { selectedInstitution } = useInstitution();
+  const [isSavingExit, setIsSavingExit] = useState(false);
+  const resumeInstitutionId = selectedInstitution?.id ?? null;
+  // Sessão pedida pelo banner "Continuar". Só é aceita quando o recurso e o
+  // modo do ponteiro coincidem com a rota atual.
+  const requestedResumeSessionId = useMemo(() => {
+    const state = location.state as {
+      resumeSessionId?: unknown;
+      resumeResourceId?: unknown;
+      resumeGameMode?: unknown;
+    } | null;
+    if (!state || typeof state.resumeSessionId !== "string") return null;
+    if (state.resumeResourceId && state.resumeResourceId !== resolvedId) return null;
+    if (state.resumeGameMode && state.resumeGameMode !== normalizedMode) return null;
+    return state.resumeSessionId;
+  }, [location.state, normalizedMode, resolvedId]);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
@@ -470,6 +499,7 @@ const Study = () => {
     discardSession,
     cardsOrder,
     saveProgressNow,
+    sessionId: engineSessionId,
     studySnapshotKey,
     restoredSessionLayer,
   } = useStudyEngine(
@@ -486,6 +516,7 @@ const Study = () => {
     deckReadyForEngine,
     handleSessionSettingsRestored,
     resolvedId,
+    requestedResumeSessionId,
   );
 
   // A new queue reference represents a new answerable session/round. Resetting
@@ -1044,13 +1075,20 @@ const Study = () => {
     }
   };
 
-  const handleExit = () => {
+  const handleExit = async () => {
     if (exitInFlightRef.current) return;
     exitInFlightRef.current = true;
+    setIsSavingExit(true);
     setShowExitDialog(false);
-    // Local persistence happens synchronously inside saveProgressNow. The
-    // bounded remote flush must never hold navigation hostage.
-    void saveProgressNow();
+    // A persistência local é síncrona dentro de saveProgressNow; a gravação
+    // remota é aguardada com timeout limitado e o resultado é informado ao
+    // usuário — nunca fingimos confirmação remota.
+    const result = await awaitSaveProgress(() => saveProgressNow());
+    publishResumePointer();
+    if (result.status !== "remote-confirmed") {
+      toast.info(describeSaveProgressResult(result));
+    }
+    setIsSavingExit(false);
     navigate(returnRoute, { replace: true });
   };
 
@@ -1060,6 +1098,10 @@ const Study = () => {
     } else {
       const completed = await completeSession();
       if (!completed) return;
+    }
+    if (authUserId && engineSessionId) {
+      markStudySessionCompleted(authUserId, engineSessionId);
+      clearStudyResumePointerForSession(authUserId, engineSessionId);
     }
     setShowCompletionModal(false);
     navigate(returnRoute, { replace: true });
@@ -1109,6 +1151,45 @@ const Study = () => {
       fastMode: coerced.fastMode ?? false,
     });
   };
+
+  // ── Fonte única de verdade da janela "Configurações da Sessão" ──
+  // O preset efetivo (default → global do modo → preset da lista → overrides da
+  // sessão restaurada) é o único valor exibido, e toda alteração passa por
+  // applyStudySettingsChange.
+  const applyStudyRuntimeSettings = useCallback((
+    next: StudySettingsSnapshotV2,
+    _patch: StudySettingsPatchV2,
+  ) => {
+    setGameSettings({
+      mode: next.order === "sequential" ? "sequential" : "random",
+      subset: next.scope,
+      fastMode: next.fastMode,
+      redFocus: next.redFocus,
+    });
+    restoredSessionDirectionRef.current = null;
+    setFlipDirection(next.direction);
+  }, [setGameSettings]);
+
+  const handleQueueAffectingSettingsChange = useCallback((next: StudySettingsSnapshotV2) => {
+    // Política explícita: a sessão anterior é salva antes da fila ser
+    // reconciliada. Nunca reiniciamos em silêncio.
+    void saveProgressNow();
+    setDeckSubset(next.scope);
+    setRedFocusActiveForDeck(next.redFocus);
+  }, [saveProgressNow]);
+
+  const { settings: studySettings, applyStudySettingsChange } = useStudySettingsController({
+    effectivePreset,
+    redFocus: !!gameSettings.redFocus,
+    canUseFavorites: canUsePersonalFavorites,
+    persistPreset: updateForCurrentScope,
+    setSessionOverrides,
+    applyRuntime: applyStudyRuntimeSettings,
+    onQueueAffectingChange: handleQueueAffectingSettingsChange,
+    onFavoritesUnavailable: () => {
+      toast.info("Favoritos exigem uma conta autenticada. Mostrando todos os cards.");
+    },
+  });
 
   const handleRestartWithSettings = async () => {
     setCompletionWasRestored(false);
@@ -1262,6 +1343,49 @@ const Study = () => {
   const cardLayers = (currentCard as any)?.__layers as Flashcard[] | undefined;
   const hasLayers = Array.isArray(cardLayers) && cardLayers.length > 1;
   const safeLayerIdx = hasLayers ? Math.min(layerIdx, cardLayers!.length - 1) : 0;
+
+  // ── Ponteiro de retomada v2 ──
+  // Só publicamos quando existe uma sessão válida com deck pronto e ao menos um
+  // card jogável. O ponteiro aponta para uma sessionId específica.
+  const publishResumePointer = useCallback(() => {
+    if (!authUserId || !engineSessionId) return;
+    if (!resolvedId || cardsOrder.length === 0) return;
+    writeStudyResumePointer({
+      userId: authUserId,
+      sessionId: engineSessionId,
+      resourceKind: isListRoute ? "list" : "collection",
+      resourceId: resolvedId,
+      gameMode: normalizedMode,
+      institutionId: resumeInstitutionId,
+      path: `${location.pathname}${location.search}`,
+      settingsSummary: studySettings,
+      currentIndex,
+      currentCardId: engineCurrentCardId ?? null,
+      layerIndex: hasLayers ? safeLayerIdx : null,
+    });
+  }, [
+    authUserId,
+    cardsOrder.length,
+    currentIndex,
+    engineCurrentCardId,
+    engineSessionId,
+    hasLayers,
+    isListRoute,
+    location.pathname,
+    location.search,
+    normalizedMode,
+    resolvedId,
+    resumeInstitutionId,
+    safeLayerIdx,
+    studySettings,
+  ]);
+
+  // Atualizado sempre que a sessão avança ou as configurações mudam — não
+  // apenas quando a URL muda.
+  useEffect(() => {
+    if (isFinished) return;
+    publishResumePointer();
+  }, [isFinished, publishResumePointer]);
 
   // Persiste a camada visível a cada mudança, escopada ao snapshot atual.
   useEffect(() => {
@@ -1748,7 +1872,7 @@ const Study = () => {
         onStudyAll={handleDisableFavoritesFilter}
         onOpenSettings={() => navigate(settingsRoute)}
         onStudyFavorites={emptyStudyScope === "red-focus"
-          ? () => handleSettingsChange({ ...gameSettings, redFocus: false, subset: "favorites" })
+          ? () => applyStudySettingsChange({ redFocus: false, scope: "favorites" })
           : undefined}
         onBack={() => void handleExit()}
       />
@@ -1991,8 +2115,10 @@ const Study = () => {
             <div className="flex items-center gap-2 sm:gap-4">
               {/* Game Settings Modal */}
               <GameSettingsModal
-                settings={gameSettings}
-                onSettingsChange={handleSettingsChange}
+                settings={studySettings}
+                onSettingsChange={applyStudySettingsChange}
+                gameMode={normalizedMode}
+                showDirection={isListRoute}
                 onRestart={handleRestartWithSettings}
                 showFastMode={effectiveMode === "flip"}
                 onEditCurrentCard={
@@ -2256,15 +2382,16 @@ const Study = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Continuar estudando</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSavingExit}>Continuar estudando</AlertDialogCancel>
             <AlertDialogAction 
+              disabled={isSavingExit}
               onClick={(e) => {
                 e.preventDefault();
                 setShowExitDialog(false);
                 void handleExit();
               }}
             >
-              Salvar e sair
+              {isSavingExit ? "Salvando..." : "Salvar e sair"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

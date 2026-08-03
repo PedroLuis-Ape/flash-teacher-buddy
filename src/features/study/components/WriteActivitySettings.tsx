@@ -1,39 +1,49 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Copy, Languages, Shuffle } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { ChevronDown, ChevronUp, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
-import type { WriteActivityMode, WriteRewriteSide } from "@/features/study/lib/writeActivityMode";
-import { useWriteStudyPreferences } from "@/features/study/hooks/useWriteStudyPreferences";
+import type {
+  StudyWriteActivityModePreset,
+  StudyWriteRewriteSidePreset,
+} from "@/features/study/preferences/studyPreset";
 
-export function WriteActivitySettings() {
-  const location = useLocation();
-  const mode = new URLSearchParams(location.search).get("mode");
+interface WriteActivitySettingsProps {
+  /** Valores efetivamente usados pela sessão — vindos do controlador único. */
+  activityMode: StudyWriteActivityModePreset;
+  rewriteSide: StudyWriteRewriteSidePreset;
+  onChange: (patch: {
+    writeActivityMode?: StudyWriteActivityModePreset;
+    writeRewriteSide?: StudyWriteRewriteSidePreset;
+  }) => void;
+}
+
+/**
+ * Componente controlado: mantém apenas estado de interface (seção expandida).
+ * Não hidrata preferências e não escreve preset por conta própria.
+ */
+export function WriteActivitySettings({
+  activityMode,
+  rewriteSide,
+  onChange,
+}: WriteActivitySettingsProps) {
   const playRuntime = usePlayPresetRuntime();
-  const { preference, updatePreference } = useWriteStudyPreferences();
   const [expanded, setExpanded] = useState(false);
 
-  if (mode !== "write") return null;
-
-  const updateMode = (nextMode: WriteActivityMode) => {
-    const next = { ...preference, mode: nextMode };
-    updatePreference(next);
-  };
-
-  const updateSide = (rewriteSide: WriteRewriteSide) => {
-    const next = { ...preference, rewriteSide };
-    updatePreference(next);
-  };
-
-  const sideSummary = preference.rewriteSide === "a"
+  const sideSummary = rewriteSide === "a"
     ? playRuntime.labelA
-    : preference.rewriteSide === "b"
+    : rewriteSide === "b"
       ? playRuntime.labelB
       : "alternando os lados";
-  const summary = preference.mode === "translate"
+  const summary = activityMode === "translate"
     ? "Traduzir de um lado para o outro"
     : `Reescrever · ${sideSummary}`;
+
+  const sideOptions: { value: StudyWriteRewriteSidePreset; label: string }[] = [
+    { value: "a", label: playRuntime.labelA },
+    { value: "b", label: playRuntime.labelB },
+    { value: "alternating", label: "Alternar" },
+  ];
 
   return (
     <div className="rounded-xl border bg-background/40">
@@ -68,86 +78,43 @@ export function WriteActivitySettings() {
           </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
+            <Button
               type="button"
-              onClick={() => updateMode("translate")}
-              aria-pressed={preference.mode === "translate"}
-              className={cn(
-                "flex min-h-[96px] flex-col items-start gap-1 rounded-xl border p-4 text-left",
-                preference.mode === "translate"
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-background hover:bg-accent/40",
-              )}
+              variant={activityMode === "translate" ? "default" : "outline"}
+              aria-pressed={activityMode === "translate"}
+              onClick={() => onChange({ writeActivityMode: "translate" })}
+              className="min-h-[44px]"
             >
-              <span className="flex items-center gap-2 font-semibold">
-                <Languages className="h-4 w-4" /> Traduzir
-              </span>
-              <span className="text-sm text-muted-foreground">
-                Veja um lado do card e escreva o conteúdo do outro lado.
-              </span>
-            </button>
-
-            <button
+              Traduzir
+            </Button>
+            <Button
               type="button"
-              onClick={() => updateMode("rewrite")}
-              aria-pressed={preference.mode === "rewrite"}
-              className={cn(
-                "flex min-h-[96px] flex-col items-start gap-1 rounded-xl border p-4 text-left",
-                preference.mode === "rewrite"
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-background hover:bg-accent/40",
-              )}
+              variant={activityMode === "rewrite" ? "default" : "outline"}
+              aria-pressed={activityMode === "rewrite"}
+              onClick={() => onChange({ writeActivityMode: "rewrite" })}
+              className="min-h-[44px]"
             >
-              <span className="flex items-center gap-2 font-semibold">
-                <Copy className="h-4 w-4" /> Reescrever
-              </span>
-              <span className="text-sm text-muted-foreground">
-                Veja o texto e escreva a mesma frase no mesmo idioma.
-              </span>
-            </button>
+              Reescrever
+            </Button>
           </div>
 
-          {preference.mode === "rewrite" && (
-            <div className="space-y-3 rounded-xl border bg-muted/20 p-3">
-              <div>
-                <p className="font-medium">Qual lado será reescrito?</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  A configuração de direção da tradução não interfere nesta atividade.
-                </p>
-              </div>
+          {activityMode === "rewrite" && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Qual lado você quer reescrever?</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <Button
-                  type="button"
-                  variant={preference.rewriteSide === "a" ? "default" : "outline"}
-                  aria-pressed={preference.rewriteSide === "a"}
-                  onClick={() => updateSide("a")}
-                  className="min-h-[44px] min-w-0"
-                >
-                  <span className="truncate">Somente {playRuntime.labelA}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant={preference.rewriteSide === "b" ? "default" : "outline"}
-                  aria-pressed={preference.rewriteSide === "b"}
-                  onClick={() => updateSide("b")}
-                  className="min-h-[44px] min-w-0"
-                >
-                  <span className="truncate">Somente {playRuntime.labelB}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant={preference.rewriteSide === "alternating" ? "default" : "outline"}
-                  aria-pressed={preference.rewriteSide === "alternating"}
-                  onClick={() => updateSide("alternating")}
-                  className="min-h-[44px] min-w-0"
-                >
-                  <Shuffle className="mr-2 h-4 w-4 shrink-0" />
-                  <span className="truncate">Alternar</span>
-                </Button>
+                {sideOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={rewriteSide === option.value ? "secondary" : "outline"}
+                    aria-pressed={rewriteSide === option.value}
+                    onClick={() => onChange({ writeRewriteSide: option.value })}
+                    className="min-h-[44px] min-w-0"
+                  >
+                    <span className="truncate">{option.label}</span>
+                  </Button>
+                ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Palavras e ordem continuam sendo cobradas. Pontuação final, acentos, maiúsculas e pequenas variações de teclado seguem as tolerâncias do modo Escrita.
-              </p>
             </div>
           )}
         </div>

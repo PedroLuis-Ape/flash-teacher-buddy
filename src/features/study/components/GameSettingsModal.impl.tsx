@@ -21,23 +21,23 @@ import {
   Volume2,
   ListChecks,
 } from "lucide-react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import type { Direction } from "@/features/study/lib/gameCore";
 import type {
   StudyFlowModePreset,
   StudyPlayModePreset,
   StudyPlaySidePreset,
-  StudyModePreset,
 } from "@/features/study/preferences/studyPreset";
-import { useAuth } from "@/contexts/AuthContext";
-import { useStudyPreferences } from "@/hooks/useStudyPreferences";
-import { normalizeStudyMode } from "@/features/study/lib/studyMode";
 import { setPlayPresetRuntime, usePlayPresetRuntime } from "@/features/study/lib/playPresetRuntime";
 import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
+import type {
+  StudySettingsPatchV2,
+  StudySettingsSnapshotV2,
+} from "@/features/study/lib/studySettingsSnapshotV2";
 import { cn } from "@/lib/utils";
-import { emitStudyFlowModeChanged } from "@/features/study/lib/studyFlowModePreference";
 import { WriteActivitySettings } from "./WriteActivitySettings";
 
+/** Contrato legado do engine (ordem/subset da fila). Mantido para compatibilidade. */
 export interface GameSettings {
   mode: "sequential" | "random";
   subset: "all" | "favorites";
@@ -46,165 +46,111 @@ export interface GameSettings {
 }
 
 interface GameSettingsModalProps {
-  settings: GameSettings;
-  onSettingsChange: (settings: GameSettings) => void;
+  /**
+   * Configurações efetivamente usadas pela sessão, vindas do controlador único
+   * em Study/MixedStudy. A janela é 100% controlada: não hidrata preferências,
+   * não lê URL e não guarda estado de configuração próprio.
+   */
+  settings: StudySettingsSnapshotV2;
+  onSettingsChange: (patch: StudySettingsPatchV2) => void;
+  /** Token canônico do modo (write, flip, mixed, ...). */
+  gameMode: string;
+  /** Sessão de lista privada — habilita a direção da prática. */
+  showDirection?: boolean;
   onRestart: () => void;
   disabled?: boolean;
   showFastMode?: boolean;
   onEditCurrentCard?: () => void;
   canEditCurrentCard?: boolean;
-  direction?: Direction;
-  onDirectionChange?: (direction: Direction) => void;
 }
-
-const MANUAL_DIRECTION_EVENT = "piteco:study-direction-manual";
-const RED_FOCUS_TRANSITION_EVENT = "piteco:study-red-focus-transition";
 
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   settings,
   onSettingsChange,
+  gameMode,
+  showDirection = false,
   onRestart,
   disabled = false,
   showFastMode = false,
   onEditCurrentCard,
   canEditCurrentCard = true,
-  direction,
-  onDirectionChange,
 }) => {
   const [open, setOpen] = useState(false);
   type SettingsPage = "home" | "flow" | "direction" | "correction" | "order" | "audio";
   const [page, setPage] = useState<SettingsPage>("home");
   useEffect(() => { if (!open) setPage("home"); }, [open]);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { userId } = useAuth();
   const playRuntime = usePlayPresetRuntime();
-  const listSession = location.pathname.includes("/list/")
-    && (location.pathname.endsWith("/study") || location.pathname.endsWith("/mixed-study"));
-  const urlMode = new URLSearchParams(location.search).get("mode");
-  const { id } = useParams<{ id?: string }>();
-  const studyMode = normalizeStudyMode(urlMode ?? "flip") as StudyModePreset;
-  const isPrivateList = listSession && !location.pathname.startsWith("/portal/");
-  const { effectivePreset, updateForCurrentScope } = useStudyPreferences(userId, {
-    listId: isPrivateList ? id : undefined,
-    gameMode: studyMode,
-    persistScope: isPrivateList ? "list" : "global",
-    canPersistList: isPrivateList,
-  });
-  const isWriteMode = urlMode === "write";
-  const isMixedMode = urlMode === "mixed";
+  const urlMode = gameMode;
+  const isWriteMode = gameMode === "write";
+  const isMixedMode = gameMode === "mixed";
+  const listSession = showDirection;
   // Every playable mode supports both a gamified round flow and a continuous
   // run. Flip answers use the same engine gate as the other modes.
   const supportsFlowModes = Boolean(urlMode);
   const supportsWriteCorrection = isWriteMode || isMixedMode;
-  const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(effectivePreset.writeCorrectionMode);
+  const correctionMode: WriteCorrectionMode = settings.writeCorrectionMode;
+  const currentFlowMode: StudyFlowModePreset = settings.studyFlowMode;
+  const currentDirection: Direction = settings.direction;
+  const favoritesActive = settings.scope === "favorites";
+  const redFocusActive = settings.redFocus;
 
-  useEffect(() => {
-    setCorrectionMode(effectivePreset.writeCorrectionMode);
-  }, [effectivePreset.writeCorrectionMode]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<WriteCorrectionMode>).detail;
-      if (detail === "flexible" || detail === "hard") setCorrectionMode(detail);
-    };
-    window.addEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
-    return () => window.removeEventListener("ape:writeCorrectionModeChanged", handler as EventListener);
-  }, []);
-
-  const handleCorrectionModeChange = (next: WriteCorrectionMode) => {
-    if (next === correctionMode) return;
-    setCorrectionMode(next);
-    updateForCurrentScope({ writeCorrectionMode: next });
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("ape:writeCorrectionModeChanged", { detail: next }));
-    }
-  };
-
-  const currentFlowMode: StudyFlowModePreset = effectivePreset.studyFlowMode;
-  const handleFlowModeChange = (next: StudyFlowModePreset) => {
-    if (next === currentFlowMode) return;
-    updateForCurrentScope({ studyFlowMode: next });
-    emitStudyFlowModeChanged(next);
-  };
-
+  // Espelha o preset efetivo no runtime de áudio/play (rótulos e botão Play).
   useEffect(() => {
     setPlayPresetRuntime({
-      playMode: effectivePreset.playMode,
-      playSide: effectivePreset.playSide,
+      playMode: settings.playMode,
+      playSide: settings.playSide,
     });
-  }, [effectivePreset.playMode, effectivePreset.playSide]);
+  }, [settings.playMode, settings.playSide]);
 
   const handleRestart = () => {
     onRestart();
     setOpen(false);
   };
 
+  const handleCorrectionModeChange = (next: WriteCorrectionMode) => {
+    if (next === correctionMode) return;
+    onSettingsChange({ writeCorrectionMode: next });
+  };
+
+  const handleFlowModeChange = (next: StudyFlowModePreset) => {
+    if (next === currentFlowMode) return;
+    onSettingsChange({ studyFlowMode: next });
+  };
+
   const handleModeChange = (checked: boolean) => {
-    onSettingsChange({ ...settings, mode: checked ? "random" : "sequential" });
+    onSettingsChange({ order: checked ? "random" : "sequential" });
   };
 
   const handleSubsetChange = (checked: boolean) => {
-    onSettingsChange({ ...settings, subset: checked ? "favorites" : "all" });
+    onSettingsChange({ scope: checked ? "favorites" : "all" });
   };
 
   const handleRedFocusChange = (checked: boolean) => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(RED_FOCUS_TRANSITION_EVENT, {
-        detail: { enabled: checked },
-      }));
-    }
-    onSettingsChange({
-      ...settings,
-      mode: checked ? "sequential" : settings.mode,
-      redFocus: checked,
-    });
+    onSettingsChange({ redFocus: checked, ...(checked ? { order: "sequential" as const } : {}) });
   };
 
   const handleFastModeChange = (checked: boolean) => {
-    onSettingsChange({ ...settings, fastMode: checked });
+    onSettingsChange({ fastMode: checked });
   };
 
   const handlePlayModeChange = (playMode: StudyPlayModePreset) => {
-    setPlayPresetRuntime({ playMode });
-    updateForCurrentScope({ playMode });
+    onSettingsChange({ playMode });
   };
 
   const handlePlaySideChange = (playSide: StudyPlaySidePreset) => {
-    setPlayPresetRuntime({ playSide });
-    updateForCurrentScope({ playSide });
+    onSettingsChange({ playSide });
   };
 
-  const currentDirection: Direction = direction
-    ?? (new URLSearchParams(location.search).get("dir") as Direction | null)
-    ?? effectivePreset.direction;
-
   const applyDirection = (next: Direction) => {
-    // Persist as a study preference so it survives reload / new sessions.
-    updateForCurrentScope({ direction: next });
-    if (onDirectionChange) {
-      onDirectionChange(next);
-    } else {
-      const params = new URLSearchParams(location.search);
-      params.delete("direction");
-      params.set("dir", next);
-      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent(MANUAL_DIRECTION_EVENT, { detail: { direction: next } }));
-      }
-    }
+    onSettingsChange({ direction: next });
   };
 
   const handleInvertDirection = () => {
-    const next: Direction = currentDirection === "a-b" ? "b-a" : "a-b";
-    applyDirection(next);
+    applyDirection(currentDirection === "a-b" ? "b-a" : "a-b");
     setOpen(false);
   };
 
-  const favoritesActive = settings.subset === "favorites";
-  const redFocusActive = !!settings.redFocus;
-  const sideActionPrefix = playRuntime.playMode === "single" ? "Somente" : "Começar em";
+  const sideActionPrefix = settings.playMode === "single" ? "Somente" : "Começar em";
 
   const directionSummary = currentDirection === "a-b"
     ? `Responder em ${playRuntime.labelB}`
@@ -212,7 +158,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
       ? `Responder em ${playRuntime.labelA}`
       : "Misto (alternado)";
   const orderSummary = `${
-    redFocusActive ? "Sequencial (Foco Vermelho)" : settings.mode === "random" ? "Aleatória" : "Sequencial"
+    redFocusActive ? "Sequencial (Foco Vermelho)" : settings.order === "random" ? "Aleatória" : "Sequencial"
   } · ${favoritesActive ? "Apenas favoritos" : "Todos os cards"}`;
   const flowSummary = redFocusActive
     ? "Modo extenso (Foco Vermelho)"
@@ -277,9 +223,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
       </DialogTrigger>
       <DialogContent className="grid-rows-[auto_minmax(0,1fr)] max-h-[calc(100dvh-1rem)] gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-2rem)] sm:max-w-[640px] sm:gap-4 sm:p-6">
         <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 text-left sm:border-0 sm:p-0">
-          <DialogTitle>
-            {page === "home" ? "Configurações da Sessão" : "Configurações da Sessão"}
-          </DialogTitle>
+          <DialogTitle>Configurações da Sessão</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-0 sm:pb-0 sm:pt-0">
           {page === "home" && (
@@ -292,7 +236,13 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   onClick={() => setPage("flow")}
                 />
               )}
-              <WriteActivitySettings />
+              {isWriteMode && (
+                <WriteActivitySettings
+                  activityMode={settings.writeActivityMode}
+                  rewriteSide={settings.writeRewriteSide}
+                  onChange={onSettingsChange}
+                />
+              )}
               {listSession && (
                 <CategoryRow
                   icon={<ArrowLeftRight className="h-4 w-4" />}
@@ -319,7 +269,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 <CategoryRow
                   icon={<Volume2 className="h-4 w-4" />}
                   title="Áudio e ritmo"
-                  summary={`Play: ${playRuntime.playMode === "single" ? "um lado" : "dois lados"}${
+                  summary={`Play: ${settings.playMode === "single" ? "um lado" : "dois lados"}${
                     settings.fastMode ? " · Fast Mode" : ""
                   }`}
                   onClick={() => setPage("audio")}
@@ -487,53 +437,53 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
           {page === "order" && (
             <div className="space-y-4">
               <SubpageHeader title="Ordem e filtros" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <Label htmlFor="random-mode" className="font-medium">Ordem Aleatória</Label>
-              <p className="text-sm text-muted-foreground">
-                {redFocusActive ? "Desativada no Foco Vermelho" : "Embaralha os cards a cada reinício"}
-              </p>
-            </div>
-            <Switch
-              id="random-mode"
-              className="shrink-0"
-              checked={settings.mode === "random" && !redFocusActive}
-              onCheckedChange={handleModeChange}
-              disabled={redFocusActive}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <Label htmlFor="favorites-only" className="font-medium">Apenas Favoritos</Label>
-              <p className="text-sm text-muted-foreground">Estude apenas os cards marcados com estrela</p>
-            </div>
-            <Switch
-              id="favorites-only"
-              className="shrink-0"
-              checked={favoritesActive}
-              onCheckedChange={handleSubsetChange}
-              disabled={redFocusActive}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <Flame className="h-4 w-4 shrink-0 text-red-500" />
-                <Label htmlFor="red-focus" className="font-medium">Foco Vermelho</Label>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <Label htmlFor="random-mode" className="font-medium">Ordem Aleatória</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {redFocusActive ? "Desativada no Foco Vermelho" : "Embaralha os cards a cada reinício"}
+                  </p>
+                </div>
+                <Switch
+                  id="random-mode"
+                  className="shrink-0"
+                  checked={settings.order === "random" && !redFocusActive}
+                  onCheckedChange={handleModeChange}
+                  disabled={redFocusActive}
+                />
               </div>
-              <p className="text-sm text-muted-foreground">
-                Estuda só a Lista Vermelha, em fila única, sem repetir.
-              </p>
-            </div>
-            <Switch
-              id="red-focus"
-              className="shrink-0"
-              checked={redFocusActive}
-              onCheckedChange={handleRedFocusChange}
-            />
-          </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <Label htmlFor="favorites-only" className="font-medium">Apenas Favoritos</Label>
+                  <p className="text-sm text-muted-foreground">Estude apenas os cards marcados com estrela</p>
+                </div>
+                <Switch
+                  id="favorites-only"
+                  className="shrink-0"
+                  checked={favoritesActive}
+                  onCheckedChange={handleSubsetChange}
+                  disabled={redFocusActive}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Flame className="h-4 w-4 shrink-0 text-red-500" />
+                    <Label htmlFor="red-focus" className="font-medium">Foco Vermelho</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Estuda só a Lista Vermelha, em fila única, sem repetir.
+                  </p>
+                </div>
+                <Switch
+                  id="red-focus"
+                  className="shrink-0"
+                  checked={redFocusActive}
+                  onCheckedChange={handleRedFocusChange}
+                />
+              </div>
             </div>
           )}
 
@@ -551,7 +501,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 <Switch
                   id="fast-mode"
                   className="shrink-0"
-                  checked={settings.fastMode ?? false}
+                  checked={settings.fastMode}
                   onCheckedChange={handleFastModeChange}
                 />
               </div>
@@ -570,18 +520,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Button
                     type="button"
-                    variant={playRuntime.playMode === "both" ? "default" : "outline"}
+                    variant={settings.playMode === "both" ? "default" : "outline"}
                     size="sm"
-                    aria-pressed={playRuntime.playMode === "both"}
+                    aria-pressed={settings.playMode === "both"}
                     onClick={() => handlePlayModeChange("both")}
                   >
                     Dois lados
                   </Button>
                   <Button
                     type="button"
-                    variant={playRuntime.playMode === "single" ? "default" : "outline"}
+                    variant={settings.playMode === "single" ? "default" : "outline"}
                     size="sm"
-                    aria-pressed={playRuntime.playMode === "single"}
+                    aria-pressed={settings.playMode === "single"}
                     onClick={() => handlePlayModeChange("single")}
                   >
                     Somente um lado
@@ -591,9 +541,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Button
                     type="button"
-                    variant={playRuntime.playSide === "a" ? "secondary" : "outline"}
+                    variant={settings.playSide === "a" ? "secondary" : "outline"}
                     size="sm"
-                    aria-pressed={playRuntime.playSide === "a"}
+                    aria-pressed={settings.playSide === "a"}
                     onClick={() => handlePlaySideChange("a")}
                     className="min-w-0"
                   >
@@ -601,9 +551,9 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   </Button>
                   <Button
                     type="button"
-                    variant={playRuntime.playSide === "b" ? "secondary" : "outline"}
+                    variant={settings.playSide === "b" ? "secondary" : "outline"}
                     size="sm"
-                    aria-pressed={playRuntime.playSide === "b"}
+                    aria-pressed={settings.playSide === "b"}
                     onClick={() => handlePlaySideChange("b")}
                     className="min-w-0"
                   >

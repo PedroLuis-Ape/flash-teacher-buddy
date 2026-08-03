@@ -11,10 +11,12 @@ describe("write rewrite activity UI", () => {
     expect(settingsSource).toContain("Atividade de escrita");
     expect(settingsSource).toContain("Traduzir");
     expect(settingsSource).toContain("Reescrever");
-    expect(settingsSource).toContain("Somente {playRuntime.labelA}");
-    expect(settingsSource).toContain("Somente {playRuntime.labelB}");
+    // Componente controlado: os lados usam os rótulos dinâmicos do runtime.
+    expect(settingsSource).toContain('{ value: "a", label: playRuntime.labelA }');
+    expect(settingsSource).toContain('{ value: "b", label: playRuntime.labelB }');
     expect(settingsSource).toContain("Alternar");
-    expect(modalSource).toContain("<WriteActivitySettings />");
+    expect(settingsSource).not.toContain("useWriteStudyPreferences");
+    expect(modalSource).toContain("<WriteActivitySettings");
   });
 
   it("routes rewrite submissions through exact-copy evaluation", () => {
