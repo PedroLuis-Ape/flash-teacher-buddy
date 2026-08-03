@@ -43,6 +43,7 @@ import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
+  isPersistedStudySessionCompatible,
   studySessionSettingsToPresetOverride,
   type StudySessionSettingsSnapshot,
   type StudySessionContextInput,
