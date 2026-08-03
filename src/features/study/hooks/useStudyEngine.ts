@@ -629,6 +629,17 @@ export function useStudyEngine(
 
       if (userScope && listId) {
         try {
+          // A sessão pedida é consultada por ID antes de qualquer heurística de
+          // recência e não é filtrada pelo preset atual.
+          const requestedRow = await fetchRequestedStudySession<any>({
+            client: supabase as any,
+            sessionId: requestedSessionId,
+            userId: userScope,
+            listId,
+            mode,
+            columns: "id,session_scope_key,session_snapshot,settings_snapshot,updated_at",
+            signal: abortController.signal,
+          });
           const { data: remoteSessions } = await withStudyRuntimeTimeout(
             supabase
               .from("study_sessions")
@@ -644,7 +655,10 @@ export function useStudyEngine(
             "mastery-session-restore",
             () => abortController.abort(),
           );
-          const remote = (remoteSessions ?? [])
+          const candidateRows = requestedRow
+            ? [requestedRow, ...(remoteSessions ?? []).filter((row: any) => row.id !== requestedRow.id)]
+            : (remoteSessions ?? []);
+          const mapCandidate = (candidate: any) => ({
             .map((candidate) => ({
               id: candidate.id as string,
               scopeKey: candidate.session_scope_key as string | null,
@@ -654,21 +668,22 @@ export function useStudyEngine(
               ),
               settingsSnapshot: candidate.settings_snapshot,
               updatedAt: candidate.updated_at,
-            }))
+            });
+          const requestedCandidate = requestedRow ? mapCandidate(requestedRow) : null;
+          const fallbackCandidate = candidateRows
+            .filter((candidate: any) => !requestedRow || candidate.id !== requestedRow.id)
+            .map(mapCandidate)
             .filter((candidate) => isPersistedStudySessionCompatible({
               expected: sessionContext,
               sessionScopeKey: candidate.scopeKey,
               settingsSnapshot: candidate.settingsSnapshot,
             }))
-            .sort((left, right) => {
-              if (requestedSessionId) {
-                const requestedDelta = Number(right.id === requestedSessionId)
-                  - Number(left.id === requestedSessionId);
-                if (requestedDelta !== 0) return requestedDelta;
-              }
-              return Number(right.scopeKey === sessionScopeKey) - Number(left.scopeKey === sessionScopeKey);
-            })
+            .sort((left, right) =>
+              Number(right.scopeKey === sessionScopeKey) - Number(left.scopeKey === sessionScopeKey))
             .find((candidate) => candidate.state);
+          // Sessão pedida vence qualquer sessão mais recente. Quando ela existe
+          // mas não pode ser aberta, não caímos em outra sessão aleatória.
+          const remote = requestedCandidate ?? fallbackCandidate;
           if (remote) {
             applyRestoredSessionSettings({
               id: remote.id,
