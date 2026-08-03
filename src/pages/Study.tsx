@@ -308,7 +308,12 @@ const Study = () => {
   const resumeInstitutionId = selectedInstitution?.id ?? null;
   // Sessão pedida pelo banner "Continuar". Só é aceita quando o recurso e o
   // modo do ponteiro coincidem com a rota atual.
+  // A URL (`resume_session`) é a fonte durável — sobrevive a refresh, PWA
+  // reiniciada, aba descartada e deep link. location.state fica como
+  // compatibilidade para navegações internas antigas.
   const requestedResumeSessionId = useMemo(() => {
+    const fromUrl = parseRequestedResumeSessionId(searchParams);
+    if (fromUrl) return fromUrl;
     const state = location.state as {
       resumeSessionId?: unknown;
       resumeResourceId?: unknown;
@@ -318,7 +323,7 @@ const Study = () => {
     if (state.resumeResourceId && state.resumeResourceId !== resolvedId) return null;
     if (state.resumeGameMode && state.resumeGameMode !== normalizedMode) return null;
     return state.resumeSessionId;
-  }, [location.state, normalizedMode, resolvedId]);
+  }, [location.state, normalizedMode, resolvedId, searchParams]);
   
   // Direction state for flip mode selector
   const [flipDirection, setFlipDirection] = useState<Direction>(initialDir);
