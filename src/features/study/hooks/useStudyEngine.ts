@@ -58,6 +58,7 @@ import {
   type StudyProgressAttempt,
 } from "@/features/study/lib/studyProgressRepository";
 import { claimStudySession } from "@/features/study/lib/studySessionRepository";
+import { fetchRequestedStudySession } from "@/features/study/lib/requestedStudySession";
 import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
