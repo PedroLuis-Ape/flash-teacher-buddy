@@ -67,6 +67,10 @@ import {
   markStudySessionCompleted,
   writeStudyResumePointer,
 } from "@/features/study/lib/studyResumePointer";
+import {
+  parseRequestedResumeSessionId,
+  stripResumeSessionParamFromUrl,
+} from "@/features/study/lib/studyResumeRoute";
 import type {
   StudySettingsPatchV2,
   StudySettingsSnapshotV2,
