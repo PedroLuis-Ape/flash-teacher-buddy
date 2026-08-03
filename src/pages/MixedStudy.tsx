@@ -52,6 +52,7 @@ import {
   buildLegacyStudySessionScopeKey,
   buildStudySessionScopeKey,
   buildStudySessionSettingsSnapshot,
+  isPersistedStudySessionCompatible,
   isStudySessionSettingsSnapshot,
   type StudySessionSettingsSnapshot,
 } from "@/features/study/lib/studySessionContext";
@@ -442,7 +443,16 @@ export default function MixedStudy() {
               ? [sessionResult.data]
               : [];
           const matchingSession = matchingSessions
-            .filter((candidate) => candidate.session_scope_key === scopeKey || candidate.session_scope_key?.startsWith("study-session-v1:"))
+            .filter((candidate) => isPersistedStudySessionCompatible({
+              expected: {
+                mode: "mixed",
+                subset: favoritesOnly ? "favorites" : "all",
+                redFocus: gameSettings.redFocus,
+                studyFlowMode: selectedFlowMode,
+              },
+              sessionScopeKey: candidate.session_scope_key,
+              settingsSnapshot: candidate.settings_snapshot,
+            }))
             .sort((left, right) => {
               const leftIsCurrent = left.session_scope_key === scopeKey;
               const rightIsCurrent = right.session_scope_key === scopeKey;
