@@ -54,7 +54,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   const navigationLockedRef = useRef(false);
   const shortcuts = useShortcutMap();
   const writeActivityGameMode = resolveWriteActivityGameMode();
-  const [writeActivity, setWriteActivity] = useState<WriteActivityPreference>(
+  const [, setWriteActivity] = useState<WriteActivityPreference>(
     () => (typeof window === "undefined"
       ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
       : readWriteActivityPreference(writeActivityGameMode)),
@@ -89,7 +89,6 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     if (!root) return;
 
     const media = window.matchMedia("(max-width: 639px)");
-    const retryTimers: number[] = [];
     let animationFrame = 0;
     let disposed = false;
 

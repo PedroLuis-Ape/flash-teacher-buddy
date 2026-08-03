@@ -34,6 +34,15 @@ import { LayeredCardHintButton } from "./LayeredCardHintButton";
 import { setWriteAnswerLocked } from "@/features/study/lib/writeAnswerLock";
 import { useWriteStudyPreferences } from "@/features/study/hooks/useWriteStudyPreferences";
 
+/** Normaliza aspas/espaços/case apenas para comparação (nunca para exibição). */
+function normalizeRewriteComparison(value: string | null | undefined): string {
+  return (value ?? "")
+    .replace(/[“”"']/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase();
+}
+
 interface WriteStudyViewProps {
   front: string;
   back: string;
