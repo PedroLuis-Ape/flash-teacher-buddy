@@ -1122,6 +1122,9 @@ const Study = () => {
     // usuário — nunca fingimos confirmação remota.
     const result = await awaitSaveProgress(() => saveProgressNow());
     publishResumePointer();
+    // A Home não pode continuar mostrando o progresso antigo em cache.
+    await queryClient.invalidateQueries({ queryKey: [STUDY_RESUME_QUERY_KEY] });
+    await queryClient.invalidateQueries({ queryKey: ["home-data"] });
     if (result.status !== "remote-confirmed") {
       toast.info(describeSaveProgressResult(result));
     }
