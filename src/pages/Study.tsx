@@ -311,6 +311,7 @@ const Study = () => {
   const exitInFlightRef = useRef(false);
   const { selectedInstitution } = useInstitution();
   const [isSavingExit, setIsSavingExit] = useState(false);
+  const queryClient = useQueryClient();
   const resumeInstitutionId = selectedInstitution?.id ?? null;
   // Sessão pedida pelo banner "Continuar". Só é aceita quando o recurso e o
   // modo do ponteiro coincidem com a rota atual.
