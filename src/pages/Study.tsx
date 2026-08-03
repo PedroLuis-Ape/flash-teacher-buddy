@@ -114,6 +114,8 @@ import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
 import { isWriteAnswerLocked, subscribeWriteAnswerLock } from "@/features/study/lib/writeAnswerLock";
 import { ArrowLeft, RefreshCcw, RotateCcw, CheckCircle, Flame, Layers, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { STUDY_RESUME_QUERY_KEY } from "@/hooks/useLatestStudyResume";
 import { buildStudyReturnRoute, buildStudySettingsRoute } from "@/features/study/lib/studyCompletionNavigation";
 import { pageMount } from "@/lib/perfLog";
 import {
