@@ -654,7 +654,11 @@ export function useStudyEngine(
               settingsSnapshot: candidate.settings_snapshot,
               updatedAt: candidate.updated_at,
             }))
-            .filter((candidate) => candidate.scopeKey === sessionScopeKey || candidate.scopeKey?.startsWith("study-session-v1:"))
+            .filter((candidate) => isPersistedStudySessionCompatible({
+              expected: sessionContext,
+              sessionScopeKey: candidate.scopeKey,
+              settingsSnapshot: candidate.settingsSnapshot,
+            }))
             .sort((left, right) => {
               if (requestedSessionId) {
                 const requestedDelta = Number(right.id === requestedSessionId)
@@ -800,7 +804,11 @@ export function useStudyEngine(
 
       const selectCurrentScopeSession = (sessions: any[] | null | undefined) =>
         (sessions ?? [])
-          .filter((candidate) => candidate.session_scope_key === sessionScopeKey || candidate.session_scope_key?.startsWith("study-session-v1:"))
+          .filter((candidate) => isPersistedStudySessionCompatible({
+            expected: sessionContext,
+            sessionScopeKey: candidate.session_scope_key,
+            settingsSnapshot: candidate.settings_snapshot,
+          }))
           .filter((candidate) => sessionMatchesCurrentScope(candidate.cards_order))
           .sort((left, right) => {
             // A sessão pedida explicitamente vence qualquer heurística de recência.
