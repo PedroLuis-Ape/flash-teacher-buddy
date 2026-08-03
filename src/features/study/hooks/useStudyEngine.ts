@@ -902,7 +902,7 @@ export function useStudyEngine(
         );
         if (!isCurrent()) return;
 
-        const matchingSession = selectCurrentScopeSession(openSessions);
+        const matchingSession = resolveSession(openSessions);
 
         if (matchingSession) {
           applyRestoredSessionSettings(matchingSession);
@@ -1030,7 +1030,7 @@ export function useStudyEngine(
       );
       if (!isCurrent()) return;
 
-      const matchingSession = selectCurrentScopeSession(openSessions);
+      const matchingSession = resolveSession(openSessions);
 
       if (matchingSession) {
         // Session settings have precedence over the local preset: resuming must
