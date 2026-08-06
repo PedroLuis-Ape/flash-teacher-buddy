@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { ArrowLeft, GraduationCap, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -335,6 +335,31 @@ export default function SuperGlobalImportScreenV2() {
     else navigate(-1);
   };
 
+  // Reset pré-importação: limpa somente os estados locais já existentes.
+  // Não toca no catálogo carregado, no executor transacional nem em lotes já
+  // gravados (o desfazer continua sendo a única forma de reverter dados).
+  const clearImportAttempt = () => {
+    source.reset("");
+    setDestinationMode("from-file");
+    setSelectedListId("");
+    setSelectedListStrategy("append");
+    setNewFolderName("");
+    setDestinationPlan(null);
+    setReplacementConfirmed(false);
+    setCardConflict("skip");
+    setProgress(0);
+    setProgressText("");
+    setReport(null);
+  };
+
+  const handleRestartAttempt = () => {
+    if (busy || undoing) return;
+    const hasContent = Boolean(source.raw.trim() || source.validation || report);
+    if (hasContent && !window.confirm("Recomeçar esta importação? O conteúdo já gravado não é afetado.")) return;
+    clearImportAttempt();
+    toast.success("Pronto para uma nova importação.");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 pb-24">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -368,6 +393,14 @@ export default function SuperGlobalImportScreenV2() {
           ) : (
             <Button variant="outline" onClick={() => navigate("/folders")}>Abrir biblioteca</Button>
           )}
+          <Button
+            variant="ghost"
+            onClick={handleRestartAttempt}
+            disabled={busy || undoing}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Cancelar e recomeçar
+          </Button>
         </header>
 
         {classroomMode && (
@@ -466,6 +499,7 @@ export default function SuperGlobalImportScreenV2() {
             undoing={undoing}
             onUndo={handleUndo}
             openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}
+            onPrepareNewImport={clearImportAttempt}
             onOpenFolders={() => {
               if (classroomMode && turmaId) navigate(`/turmas/${turmaId}`);
               else navigate("/folders");
