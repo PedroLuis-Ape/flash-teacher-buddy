@@ -263,7 +263,7 @@ export function ContentIngestDialog({
   };
 
   const completeContext = (): SmartImportContext => {
-
+    // eslint-disable-next-line no-empty
     if (!target) throw new Error("A lista de destino ainda não foi carregada.");
     return {
       packageName: `Importação para ${target.listName}`,
