@@ -1,4 +1,4 @@
-import { CheckCircle2, Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,12 @@ interface Props {
   onUndo: () => void;
   onOpenFolders: () => void;
   openLabel?: string;
+  /**
+   * Ação opcional de reset pré-importação. Quando fornecida, o relatório
+   * exibe um botão para limpar os estados locais e preparar outro lote sem
+   * recarregar a tela nem alterar o executor transacional.
+   */
+  onPrepareNewImport?: () => void;
 }
 
 export function GlobalImportExecutionSection(props: Props) {
@@ -191,6 +197,18 @@ export function GlobalImportExecutionSection(props: Props) {
                 : <RotateCcw className="mr-2 h-4 w-4" />}
               Desfazer esta importação
             </Button>
+            {props.onPrepareNewImport && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="pointer-events-auto"
+                onClick={props.onPrepareNewImport}
+                disabled={props.undoing || props.busy}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Preparar nova importação
+              </Button>
+            )}
           </div>
         </Card>
       )}
