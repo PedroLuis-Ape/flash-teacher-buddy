@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Brain, Check, Clipboard, Eye, FileJson2, Loader2, RotateCcw, Upload, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Brain, Check, Clipboard, Eye, FileJson2, Loader2, RefreshCw, RotateCcw, Upload, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -242,6 +242,14 @@ export function ContentIngestDialog({
   );
 
   const duplicatePolicyBlocked = policy === "error" && Boolean(reconciliation?.cardsDuplicates);
+
+  // Reset pré-importação reaproveitando o reset local já existente.
+  const restartAttempt = () => {
+    if (busy || undoing) return;
+    if (!report && (raw.trim() || parsed) && !window.confirm("Recomeçar esta importação? O conteúdo colado será descartado.")) return;
+    reset();
+    toast.success("Pronto para uma nova importação.");
+  };
 
   const reset = () => {
     setStep(1);
@@ -609,6 +617,8 @@ export function ContentIngestDialog({
               <ArrowLeft className="mr-2 h-4 w-4" />{step === 1 ? "Cancelar" : "Voltar"}
             </Button>
             <div className="flex flex-wrap gap-2">
+              {step > 1 && !report && <Button variant="outline" disabled={busy || undoing} onClick={restartAttempt}><RefreshCw className="mr-2 h-4 w-4" />Recomeçar</Button>}
+              {report && <Button variant="secondary" disabled={undoing} onClick={restartAttempt}><RefreshCw className="mr-2 h-4 w-4" />Preparar nova importação</Button>}
               {report && <Button variant="outline" disabled={undoing} onClick={undo}>{undoing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}Desfazer</Button>}
               {step === 1 && <Button disabled={!raw.trim() || loadingTarget || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={analyze}>Analisar<ArrowRight className="ml-2 h-4 w-4" /></Button>}
               {step === 2 && <Button disabled={Boolean(prepared?.errors.length) || !evaluateImportCapabilities(capabilities.data, requestedCapabilities).ready} onClick={() => setStep(3)}>Continuar<ArrowRight className="ml-2 h-4 w-4" /></Button>}

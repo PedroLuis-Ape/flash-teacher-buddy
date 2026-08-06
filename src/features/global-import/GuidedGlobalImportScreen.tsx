@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, GraduationCap } from "lucide-react";
+import { ArrowLeft, Check, GraduationCap, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -202,6 +202,24 @@ export default function GuidedGlobalImportScreen() {
     setProgressText("");
   };
 
+  // Reset pré-importação: limpa apenas o rascunho local desta tentativa.
+  const clearImportAttempt = () => {
+    source.reset("");
+    setDestinationPlan(null);
+    setReport(null);
+    setProgress(0);
+    setProgressText("");
+    setCardConflict("skip");
+  };
+
+  const handleRestartAttempt = () => {
+    if (busy || undoing) return;
+    const hasContent = Boolean(source.raw.trim() || source.validation || report);
+    if (hasContent && !window.confirm("Recomeçar esta importação? O conteúdo já gravado não é afetado.")) return;
+    clearImportAttempt();
+    toast.success("Pronto para uma nova importação.");
+  };
+
   const handleImport = async () => {
     const validation = source.validation;
     if (!validation?.valid || !validation.package || !catalog) return;
@@ -288,6 +306,9 @@ export default function GuidedGlobalImportScreen() {
             <p className="mt-1 text-muted-foreground">Escolha uma tarefa e avance em etapas claras. O motor transacional atual continua sendo utilizado.</p>
           </div>
           <Button variant="outline" onClick={useLegacy}>Usar importador anterior</Button>
+          <Button variant="ghost" onClick={handleRestartAttempt} disabled={busy || undoing}>
+            <RefreshCw className="mr-2 h-4 w-4" />Cancelar e recomeçar
+          </Button>
         </header>
 
         {classroomMode && <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">Pastas e listas pessoais não aparecem aqui. Todo conteúdo criado nesta tela fica associado à turma atual.</div>}
@@ -322,7 +343,7 @@ export default function GuidedGlobalImportScreen() {
 
         <section className="space-y-3">
           <div><h2 className="text-xl font-semibold">4. Confirme a importação</h2><p className="text-sm text-muted-foreground">Somente o botão abaixo grava dados. O desfazer continua disponível.</p></div>
-          <GlobalImportExecutionSection enabled={Boolean(source.validation?.valid && source.validation.package && catalog)} count={counts.cards} mode={flow === "quick" ? "existing-folder" : destinationMode} listConflictPolicy={flow === "quick" ? quickStrategy : listConflictPolicy} cardConflict={cardConflict} onCardConflictChange={setCardConflict} busy={busy} progress={progress} progressText={progressText} destinationErrors={destinationErrors} onImport={handleImport} report={report} undoing={undoing} onUndo={handleUndo} openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"} onOpenFolders={() => classroomMode && turmaId ? navigate(`/turmas/${turmaId}`) : navigate("/folders")} />
+          <GlobalImportExecutionSection enabled={Boolean(source.validation?.valid && source.validation.package && catalog)} count={counts.cards} mode={flow === "quick" ? "existing-folder" : destinationMode} listConflictPolicy={flow === "quick" ? quickStrategy : listConflictPolicy} cardConflict={cardConflict} onCardConflictChange={setCardConflict} busy={busy} progress={progress} progressText={progressText} destinationErrors={destinationErrors} onImport={handleImport} report={report} undoing={undoing} onUndo={handleUndo} onPrepareNewImport={clearImportAttempt} openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"} onOpenFolders={() => classroomMode && turmaId ? navigate(`/turmas/${turmaId}`) : navigate("/folders")} />
         </section>
 
         {!classroomMode && <details className="rounded-xl border bg-card"><summary className="cursor-pointer select-none p-4 font-medium">Ferramentas adicionais da Caixa de Glossário</summary><div className="border-t p-3"><BulkGlossaryImportPanel catalog={catalog} /></div></details>}

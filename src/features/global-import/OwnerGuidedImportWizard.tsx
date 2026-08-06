@@ -580,6 +580,7 @@ export default function OwnerGuidedImportWizard() {
                 report={report}
                 undoing={undoing}
                 onUndo={handleUndo}
+                onPrepareNewImport={clearAttempt}
                 openLabel={classroomMode ? "Voltar à turma" : "Abrir minhas pastas"}
                 onOpenFolders={openImportedDestination}
               />
