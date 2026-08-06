@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Brain, Check, Clipboard, Eye, FileJson2, Loader2, RotateCcw, Upload, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Brain, Check, Clipboard, Eye, FileJson2, Loader2, RefreshCw, RotateCcw, Upload, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -263,6 +263,7 @@ export function ContentIngestDialog({
   };
 
   const completeContext = (): SmartImportContext => {
+
     if (!target) throw new Error("A lista de destino ainda não foi carregada.");
     return {
       packageName: `Importação para ${target.listName}`,
