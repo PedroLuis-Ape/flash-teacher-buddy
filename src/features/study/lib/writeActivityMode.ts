@@ -109,33 +109,21 @@ export function writeWriteActivityPreference(
   }
 }
 
-function rewriteSessionKey(): string {
-  if (typeof window === "undefined") return "server";
-  return `${window.location.pathname}:${new URLSearchParams(window.location.search).get("mode") || "write"}`;
-}
-
+/**
+ * Lado da reescrita para um card. Determinístico: lados fixos permanecem fixos e
+ * "alternating" usa o mesmo hash do motor ("any" direction), portanto o mesmo
+ * card resolve o mesmo lado em rerenders, rodadas e retomadas.
+ */
 export function resolveRewriteSideForCard(
   cardKey: string,
   preference: WriteRewriteSide,
 ): "a" | "b" {
   if (preference === "a" || preference === "b") return preference;
-
-  const sessionKey = rewriteSessionKey();
-  let state = alternatingStates.get(sessionKey);
-  if (!state) {
-    state = { assignments: new Map(), next: "a" };
-    alternatingStates.set(sessionKey, state);
-  }
-
-  const assigned = state.assignments.get(cardKey);
-  if (assigned) return assigned;
-
-  const next = state.next;
-  state.assignments.set(cardKey, next);
-  state.next = next === "a" ? "b" : "a";
-  return next;
+  // hashToBool true => direction "a-b" (responder no lado B).
+  return hashToBool(cardKey) ? "b" : "a";
 }
 
+/** Mantido por compatibilidade: não há mais estado global para limpar. */
 export function resetRewriteSideAssignmentsForTests(): void {
-  alternatingStates.clear();
+  // no-op
 }
