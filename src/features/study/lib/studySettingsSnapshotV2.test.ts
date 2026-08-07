@@ -17,14 +17,26 @@ describe("contrato único de configurações v2", () => {
     ]);
   });
 
-  it("migra snapshots v1 (subset, sem playMode/playSide)", () => {
+  it("migra snapshots v1 e repara direção contraditória do Reescrever", () => {
     const fallback = { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, playMode: "single" as const, playSide: "b" as const };
     expect(normalizeStudySettingsSnapshotV2({
       version: 1, subset: "favorites", direction: "b-a", order: "sequential",
       writeActivityMode: "rewrite", writeRewriteSide: "b", writeCorrectionMode: "flexible",
     }, fallback)).toMatchObject({
-      version: 2, scope: "favorites", direction: "b-a", order: "sequential",
+      version: 2, scope: "favorites", direction: "a-b", order: "sequential",
       playMode: "single", playSide: "b", writeActivityMode: "rewrite", writeRewriteSide: "b",
+    });
+  });
+
+  it("deriva o lado da direção quando snapshot antigo não possui writeRewriteSide", () => {
+    expect(normalizeStudySettingsSnapshotV2({
+      version: 1,
+      direction: "b-a",
+      writeActivityMode: "rewrite",
+    })).toMatchObject({
+      direction: "b-a",
+      writeActivityMode: "rewrite",
+      writeRewriteSide: "a",
     });
   });
 
@@ -35,6 +47,60 @@ describe("contrato único de configurações v2", () => {
         order: DEFAULT_STUDY_SETTINGS_SNAPSHOT.order,
         scope: DEFAULT_STUDY_SETTINGS_SNAPSHOT.scope,
       });
+  });
+
+  it("sincroniza lado B com direção a-b na mesma ação", () => {
+    const current = {
+      ...DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+      writeActivityMode: "rewrite" as const,
+      writeRewriteSide: "a" as const,
+      direction: "b-a" as const,
+    };
+    expect(applyStudySettingsPatch(current, { writeRewriteSide: "b" })).toMatchObject({
+      writeActivityMode: "rewrite",
+      writeRewriteSide: "b",
+      direction: "a-b",
+    });
+  });
+
+  it("sincroniza direção b-a com lado A quando já está em Reescrever", () => {
+    const current = {
+      ...DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+      writeActivityMode: "rewrite" as const,
+      writeRewriteSide: "b" as const,
+      direction: "a-b" as const,
+    };
+    expect(applyStudySettingsPatch(current, { direction: "b-a" })).toMatchObject({
+      writeRewriteSide: "a",
+      direction: "b-a",
+    });
+  });
+
+  it("ao entrar em Reescrever deriva o alvo da direção atual", () => {
+    const current = {
+      ...DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+      writeActivityMode: "translate" as const,
+      direction: "a-b" as const,
+      writeRewriteSide: "a" as const,
+    };
+    expect(applyStudySettingsPatch(current, { writeActivityMode: "rewrite" })).toMatchObject({
+      writeActivityMode: "rewrite",
+      writeRewriteSide: "b",
+      direction: "a-b",
+    });
+  });
+
+  it("não deixa writeRewriteSide interferir na direção durante Traduzir", () => {
+    const current = {
+      ...DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+      writeActivityMode: "translate" as const,
+      direction: "b-a" as const,
+    };
+    expect(applyStudySettingsPatch(current, { writeRewriteSide: "b" })).toMatchObject({
+      writeActivityMode: "translate",
+      writeRewriteSide: "b",
+      direction: "b-a",
+    });
   });
 
   it("classifica somente os campos que reconstroem a fila", () => {
