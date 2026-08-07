@@ -4,7 +4,6 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState,
   type ComponentProps,
   type KeyboardEvent,
   type MouseEvent,
@@ -14,15 +13,6 @@ import { getBalancedDirection, type RuntimeDirection } from "@/features/study/li
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { useResolvedStudyGlossaryHints } from "@/features/study/hooks/useResolvedStudyGlossaryHints";
-import {
-  DEFAULT_WRITE_ACTIVITY_PREFERENCE,
-  WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT,
-  readWriteActivityPreference,
-  resolveRewriteSideForCard,
-  resolveWriteActivityGameMode,
-  type WriteActivityPreference,
-  type WriteActivityPreferenceChangedDetail,
-} from "@/features/study/lib/writeActivityMode";
 
 const LazyWriteStudyView = lazy(() =>
   import("./WriteStudyView.impl").then((module) => ({ default: module.WriteStudyView }))
@@ -46,19 +36,12 @@ function clearStyle(element: HTMLElement | null, properties: string[]) {
 
 export const WriteStudyView = (props: WriteStudyViewProps) => {
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
-  const rewriteCardKey = props.flashcardId || `${props.front}|${props.back}`;
   const rewriteLayerKey = `${props.flashcardId ?? "card"}|${props.front}|${props.back}`;
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const boundaryRef = useRef<HTMLDivElement>(null);
   const submitLockedRef = useRef(false);
   const navigationLockedRef = useRef(false);
   const shortcuts = useShortcutMap();
-  const writeActivityGameMode = resolveWriteActivityGameMode();
-  const [, setWriteActivity] = useState<WriteActivityPreference>(
-    () => (typeof window === "undefined"
-      ? { ...DEFAULT_WRITE_ACTIVITY_PREFERENCE }
-      : readWriteActivityPreference(writeActivityGameMode)),
-  );
   const glossaryHints = useResolvedStudyGlossaryHints({
     front: props.front,
     back: props.back,
@@ -73,16 +56,6 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     submitLockedRef.current = false;
     navigationLockedRef.current = false;
   }, [cardKey, direction]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<WriteActivityPreferenceChangedDetail>).detail;
-      if (detail?.gameMode === writeActivityGameMode) setWriteActivity(detail.preference);
-    };
-    window.addEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
-    return () => window.removeEventListener(WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT, handler as EventListener);
-  }, [writeActivityGameMode]);
 
   useLayoutEffect(() => {
     const root = boundaryRef.current;
