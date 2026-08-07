@@ -8,12 +8,19 @@ import {
   type RuntimeDirection,
 } from "@/features/study/lib/runtimeStudySchedule";
 import { useResolvedStudyGlossaryHints } from "@/features/study/hooks/useResolvedStudyGlossaryHints";
+import {
+  DEFAULT_WRITE_SESSION_SETTINGS,
+  type WriteSessionSettings,
+} from "@/features/study/lib/writeActivityMode";
 
 const LazyMultipleChoiceStudyView = lazy(() =>
   import("./MultipleChoiceStudyView.impl").then((module) => ({ default: module.MultipleChoiceStudyView }))
 );
 
-type MultipleChoiceStudyViewProps = ComponentProps<typeof LazyMultipleChoiceStudyView>;
+type MultipleChoiceStudyViewProps = ComponentProps<typeof LazyMultipleChoiceStudyView> & {
+  /** Configurações de escrita para o slot "write" das sessões mistas. */
+  writeSettings?: WriteSessionSettings;
+};
 
 export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => {
   const cardKey = props.currentCard.id || `${props.currentCard.term}:${props.currentCard.translation}`;
@@ -65,6 +72,7 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
         mergedHintsA={glossaryHints.mergedHintsA}
         mergedHintsB={glossaryHints.mergedHintsB}
         direction={direction}
+        {...(props.writeSettings ?? DEFAULT_WRITE_SESSION_SETTINGS)}
         langA={props.langA}
         langB={props.langB}
         isFavorite={props.isFavorite}
