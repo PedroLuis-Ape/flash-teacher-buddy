@@ -1091,6 +1091,7 @@ export default function MixedStudy() {
               currentCard={currentCard}
               allCards={cards}
               direction={resolvedDirection}
+              writeSettings={writeSessionSettings}
               langA={labels.langA}
               langB={labels.langB}
               onCorrect={() => handleAnswer(true)}
@@ -1104,6 +1105,10 @@ export default function MixedStudy() {
           {(mixed.activityMode === "write" || !mixed.activityMode) && (
             <WriteStudyView
               {...sharedProps}
+              writeActivityMode={writeSessionSettings.writeActivityMode}
+              writeRewriteSide={writeSessionSettings.writeRewriteSide}
+              writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
+              studyFlowMode={writeSessionSettings.studyFlowMode}
               onSkip={() => handleAnswer(false, true)}
               acceptedAnswersEn={currentCard.accepted_answers_en}
               acceptedAnswersPt={currentCard.accepted_answers_pt}
