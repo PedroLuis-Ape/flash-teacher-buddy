@@ -1,4 +1,8 @@
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
+import {
+  DEFAULT_WRITE_SESSION_SETTINGS,
+  type WriteSessionSettings,
+} from "@/features/study/lib/writeActivityMode";
 import { WriteStudyView } from "./WriteStudyView";
 import { PronunciationStudyView } from "./PronunciationStudyView";
 
@@ -8,6 +12,8 @@ interface MixedSlotActivityProps {
   back: string;
   hint?: string | null;
   direction: string;
+  /** Configurações de escrita vindas do controlador único da sessão. */
+  writeSettings?: WriteSessionSettings;
   flashcardId?: string;
   wordHintsA?: unknown;
   mergedHintsA?: MergedHint[];
@@ -67,6 +73,7 @@ export function MixedSlotActivity(props: MixedSlotActivityProps) {
       mergedHintsA={props.mergedHintsA}
       mergedHintsB={props.mergedHintsB}
       direction={props.direction}
+      {...(props.writeSettings ?? DEFAULT_WRITE_SESSION_SETTINGS)}
       langA={props.langA}
       langB={props.langB}
       isFavorite={props.isFavorite}
