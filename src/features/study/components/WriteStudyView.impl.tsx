@@ -25,6 +25,8 @@ import {
 import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMode";
 import {
   resolveRewriteSideForCard,
+  type WriteActivityMode,
+  type WriteRewriteSide,
 } from "@/features/study/lib/writeActivityMode";
 import { evaluateRewriteAnswer } from "@/features/study/lib/writeRewriteEvaluation";
 import { WriteAnswerDiff } from "./WriteAnswerDiff";
@@ -32,7 +34,7 @@ import { useAdvanceController } from "@/features/study/hooks/useAdvanceControlle
 import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
 import { LayeredCardHintButton } from "./LayeredCardHintButton";
 import { setWriteAnswerLocked } from "@/features/study/lib/writeAnswerLock";
-import { useWriteStudyPreferences } from "@/features/study/hooks/useWriteStudyPreferences";
+import type { StudyFlowModePreset } from "@/features/study/preferences/studyPreset";
 
 /** Normaliza aspas/espaços/case apenas para comparação (nunca para exibição). */
 function normalizeRewriteComparison(value: string | null | undefined): string {
@@ -54,6 +56,11 @@ interface WriteStudyViewProps {
   mergedHintsA?: MergedHint[];
   mergedHintsB?: MergedHint[];
   direction: string;
+  /** Configurações controladas pelo dono da sessão (Study/MixedStudy). */
+  writeActivityMode: WriteActivityMode;
+  writeRewriteSide: WriteRewriteSide;
+  writeCorrectionMode: WriteCorrectionMode;
+  studyFlowMode: StudyFlowModePreset;
   langA?: string;
   langB?: string;
   isFavorite?: boolean;
@@ -83,6 +90,10 @@ export const WriteStudyView = ({
   mergedHintsA,
   mergedHintsB,
   direction,
+  writeActivityMode,
+  writeRewriteSide,
+  writeCorrectionMode,
+  studyFlowMode,
   langA = "en",
   langB = "pt",
   isFavorite = false,
@@ -106,12 +117,7 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
-  const {
-    gameMode: writeActivityGameMode,
-    preference: writeActivity,
-    correctionMode,
-    studyFlowMode,
-  } = useWriteStudyPreferences();
+  const correctionMode = writeCorrectionMode;
 
   // Lock global "next / skip / next-layer" shortcuts while this Write view
   // has no evaluation yet — the user must submit first. Once feedback is
@@ -124,10 +130,9 @@ export const WriteStudyView = ({
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
   const translatedSides = resolveStudySides(sideA, sideB, direction, flashcardId || front);
-  const isRewriteActivity = (writeActivityGameMode === "write" || writeActivityGameMode === "mixed")
-    && writeActivity.mode === "rewrite";
+  const isRewriteActivity = writeActivityMode === "rewrite";
   const cardIdentity = flashcardId ?? `${front}|${back}`;
-  const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeActivity.rewriteSide);
+  const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeRewriteSide);
   const rewriteTargetSide = resolvedRewriteSide === "a" ? sideA : sideB;
   const promptSide = isRewriteActivity ? rewriteTargetSide : translatedSides.promptSide;
   const answerSide = isRewriteActivity ? rewriteTargetSide : translatedSides.answerSide;
