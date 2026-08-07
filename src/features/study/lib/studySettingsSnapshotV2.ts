@@ -29,6 +29,11 @@ import {
   type StudyWriteCorrectionModePreset,
   type StudyWriteRewriteSidePreset,
 } from "@/features/study/preferences/studyPreset";
+import {
+  directionToRewriteSide,
+  isWriteRewriteSide,
+  rewriteSideToDirection,
+} from "@/features/study/lib/writeActivityMode";
 
 export const STUDY_SETTINGS_SNAPSHOT_VERSION = 2 as const;
 
@@ -74,19 +79,41 @@ function bool(value: unknown, fallback: boolean): boolean {
 
 /**
  * Normaliza e migra qualquer snapshot conhecido (v1 ou v2) para o contrato v2.
- * v1 não possuía `playMode`/`playSide`; os campos são preenchidos a partir do
- * fallback informado (normalmente o preset atual da lista/modo).
+ *
+ * Snapshots antigos podem conter `direction` e `writeRewriteSide`
+ * contraditórios. Em Reescrever, um `writeRewriteSide` explicitamente salvo é
+ * a intenção mais específica e corrige a direção. Quando o snapshot não possui
+ * esse campo, o lado é derivado da direção existente.
  */
 export function normalizeStudySettingsSnapshotV2(
   value: unknown,
   fallback: StudySettingsSnapshotV2 = DEFAULT_STUDY_SETTINGS_SNAPSHOT,
 ): StudySettingsSnapshotV2 {
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
-  // v1 chamava o escopo de `subset`.
   const scopeValue = raw.scope ?? raw.subset;
+  const writeActivityMode = pick(
+    STUDY_PRESET_WRITE_ACTIVITY_MODES,
+    raw.writeActivityMode,
+    fallback.writeActivityMode,
+  );
+  let direction = pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction);
+  let writeRewriteSide = pick(
+    STUDY_PRESET_WRITE_REWRITE_SIDES,
+    raw.writeRewriteSide,
+    fallback.writeRewriteSide,
+  );
+
+  if (writeActivityMode === "rewrite") {
+    if (isWriteRewriteSide(raw.writeRewriteSide)) {
+      direction = rewriteSideToDirection(writeRewriteSide);
+    } else {
+      writeRewriteSide = directionToRewriteSide(direction);
+    }
+  }
+
   return {
     version: STUDY_SETTINGS_SNAPSHOT_VERSION,
-    direction: pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction),
+    direction,
     order: pick(STUDY_PRESET_ORDERS, raw.order, fallback.order),
     scope: pick(STUDY_PRESET_SCOPES, scopeValue, fallback.scope),
     redFocus: bool(raw.redFocus, fallback.redFocus),
@@ -94,16 +121,8 @@ export function normalizeStudySettingsSnapshotV2(
     playMode: pick(STUDY_PRESET_PLAY_MODES, raw.playMode, fallback.playMode),
     playSide: pick(STUDY_PRESET_PLAY_SIDES, raw.playSide, fallback.playSide),
     studyFlowMode: pick(STUDY_PRESET_FLOW_MODES, raw.studyFlowMode, fallback.studyFlowMode),
-    writeActivityMode: pick(
-      STUDY_PRESET_WRITE_ACTIVITY_MODES,
-      raw.writeActivityMode,
-      fallback.writeActivityMode,
-    ),
-    writeRewriteSide: pick(
-      STUDY_PRESET_WRITE_REWRITE_SIDES,
-      raw.writeRewriteSide,
-      fallback.writeRewriteSide,
-    ),
+    writeActivityMode,
+    writeRewriteSide,
     writeCorrectionMode: pick(
       STUDY_PRESET_WRITE_CORRECTION_MODES,
       raw.writeCorrectionMode,
@@ -168,12 +187,34 @@ export function patchAffectsQueue(patch: StudySettingsPatchV2): boolean {
   return QUEUE_AFFECTING_SETTINGS.some((key) => patch[key] !== undefined);
 }
 
+/**
+ * Aplica um patch e mantém direção/rewriteSide atômicos quando a atividade
+ * efetiva é Reescrever. A propriedade explicitamente alterada vence:
+ *
+ * - alterar rewriteSide atualiza direction;
+ * - alterar direction atualiza rewriteSide;
+ * - entrar em Reescrever deriva o lado da direção atual.
+ */
 export function applyStudySettingsPatch(
   current: StudySettingsSnapshotV2,
   patch: StudySettingsPatchV2,
 ): StudySettingsSnapshotV2 {
-  const merged = normalizeStudySettingsSnapshotV2({ ...current, ...patch }, current);
-  // Foco Vermelho usa fila única e sequencial.
+  const rawNext: Record<string, unknown> = { ...current, ...patch };
+  const enteringRewrite = current.writeActivityMode !== "rewrite"
+    && patch.writeActivityMode === "rewrite";
+  const effectiveActivity = rawNext.writeActivityMode;
+
+  if (effectiveActivity === "rewrite") {
+    if (patch.writeRewriteSide !== undefined) {
+      rawNext.direction = rewriteSideToDirection(patch.writeRewriteSide);
+    } else if (patch.direction !== undefined) {
+      rawNext.writeRewriteSide = directionToRewriteSide(patch.direction);
+    } else if (enteringRewrite) {
+      rawNext.writeRewriteSide = directionToRewriteSide(String(rawNext.direction ?? current.direction));
+    }
+  }
+
+  const merged = normalizeStudySettingsSnapshotV2(rawNext, current);
   if (merged.redFocus) merged.order = "sequential";
   return merged;
 }
