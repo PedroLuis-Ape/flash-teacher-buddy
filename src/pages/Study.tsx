@@ -1232,6 +1232,20 @@ const Study = () => {
     },
   });
 
+  // Fonte única das configurações de escrita entregues às views (nenhuma view
+  // hidrata preferências por conta própria).
+  const writeSessionSettings = useMemo(() => ({
+    writeActivityMode: studySettings.writeActivityMode,
+    writeRewriteSide: studySettings.writeRewriteSide,
+    writeCorrectionMode: studySettings.writeCorrectionMode,
+    studyFlowMode: studySettings.studyFlowMode,
+  }), [
+    studySettings.writeActivityMode,
+    studySettings.writeRewriteSide,
+    studySettings.writeCorrectionMode,
+    studySettings.studyFlowMode,
+  ]);
+
   const handleRestartWithSettings = async () => {
     setCompletionWasRestored(false);
     setShowCompletionModal(false);
@@ -2290,6 +2304,7 @@ const Study = () => {
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
               fastMode={gameSettings.fastMode}
+              writeSettings={writeSessionSettings}
               ttsEnabled={listSettings.ttsEnabled}
               labelA={listSettings.labelsA}
               labelB={listSettings.labelsB}
@@ -2325,6 +2340,10 @@ const Study = () => {
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
               direction={resolvedDirection}
+              writeActivityMode={writeSessionSettings.writeActivityMode}
+              writeRewriteSide={writeSessionSettings.writeRewriteSide}
+              writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
+              studyFlowMode={writeSessionSettings.studyFlowMode}
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={isDisplayedGroupFavorite}
@@ -2347,6 +2366,7 @@ const Study = () => {
               currentCard={displayedCard}
               allCards={effectiveFlashcards}
               direction={resolvedDirection}
+              writeSettings={writeSessionSettings}
               langA={listSettings.langA}
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}

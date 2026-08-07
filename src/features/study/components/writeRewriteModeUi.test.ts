@@ -19,6 +19,15 @@ describe("write rewrite activity UI", () => {
     expect(modalSource).toContain("<WriteActivitySettings");
   });
 
+  it("keeps the write view fully controlled by the session owner", () => {
+    expect(writeSource).not.toContain("useWriteStudyPreferences");
+    expect(writeSource).toContain("writeActivityMode: WriteActivityMode");
+    expect(writeSource).toContain("writeRewriteSide: WriteRewriteSide");
+    expect(writeSource).toContain('const isRewriteActivity = writeActivityMode === "rewrite"');
+    expect(writeBoundarySource).not.toContain("readWriteActivityPreference");
+    expect(writeBoundarySource).not.toContain("WRITE_ACTIVITY_PREFERENCE_CHANGED_EVENT");
+  });
+
   it("routes rewrite submissions through exact-copy evaluation", () => {
     expect(writeSource).toContain("evaluateRewriteAnswer");
     expect(writeSource).toContain("Reescreva exatamente como aparece acima");

@@ -13,12 +13,16 @@ import {
 } from "@/features/study/lib/flipEntryAudioPreference";
 import { StudyCardDeck } from "./StudyCardDeck";
 import { MixedSlotActivity } from "./MixedSlotActivity";
+import type { WriteSessionSettings } from "@/features/study/lib/writeActivityMode";
 
 const LazyFlipStudyView = lazy(() =>
   import("./FlipStudyView.impl").then((module) => ({ default: module.FlipStudyView }))
 );
 
-type FlipStudyViewProps = ComponentProps<typeof LazyFlipStudyView>;
+type FlipStudyViewProps = ComponentProps<typeof LazyFlipStudyView> & {
+  /** Configurações de escrita para o slot "write" das sessões mistas. */
+  writeSettings?: WriteSessionSettings;
+};
 
 function StudyModeFallback() {
   return (
@@ -72,6 +76,7 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
         back={props.back}
         hint={props.hint}
         direction={props.direction}
+        writeSettings={props.writeSettings}
         flashcardId={props.flashcardId}
         wordHintsA={props.wordHintsA}
         mergedHintsA={props.mergedHintsA}

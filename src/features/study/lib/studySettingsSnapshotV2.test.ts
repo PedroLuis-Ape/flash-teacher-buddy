@@ -23,7 +23,8 @@ describe("contrato único de configurações v2", () => {
       version: 1, subset: "favorites", direction: "b-a", order: "sequential",
       writeActivityMode: "rewrite", writeRewriteSide: "b", writeCorrectionMode: "flexible",
     }, fallback)).toMatchObject({
-      version: 2, scope: "favorites", direction: "b-a", order: "sequential",
+      // Reescrever: a direção é reparada a partir do lado persistido (b => a-b).
+      version: 2, scope: "favorites", direction: "a-b", order: "sequential",
       playMode: "single", playSide: "b", writeActivityMode: "rewrite", writeRewriteSide: "b",
     });
   });
@@ -68,5 +69,34 @@ describe("contrato único de configurações v2", () => {
       DEFAULT_STUDY_SETTINGS_SNAPSHOT,
       { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, scope: "favorites", playSide: "b" },
     )).toEqual({ scope: "favorites", playSide: "b" });
+  });
+
+  it("sincroniza direção e lado da reescrita numa única ação", () => {
+    expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { writeRewriteSide: "b" }))
+      .toMatchObject({ writeRewriteSide: "b", direction: "a-b" });
+    expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { writeRewriteSide: "a" }))
+      .toMatchObject({ writeRewriteSide: "a", direction: "b-a" });
+
+    const rewrite = applyStudySettingsPatch(
+      DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+      { writeActivityMode: "rewrite", writeRewriteSide: "a" },
+    );
+    expect(applyStudySettingsPatch(rewrite, { direction: "a-b" }))
+      .toMatchObject({ direction: "a-b", writeRewriteSide: "b" });
+  });
+
+  it("herda o lado ao entrar no modo Reescrever e repara snapshots dessincronizados", () => {
+    const translate = { ...DEFAULT_STUDY_SETTINGS_SNAPSHOT, direction: "b-a" as const };
+    expect(applyStudySettingsPatch(translate, { writeActivityMode: "rewrite" }))
+      .toMatchObject({ writeActivityMode: "rewrite", writeRewriteSide: "a", direction: "b-a" });
+
+    expect(normalizeStudySettingsSnapshotV2({
+      version: 2, writeActivityMode: "rewrite", writeRewriteSide: "a", direction: "a-b",
+    })).toMatchObject({ writeRewriteSide: "a", direction: "b-a" });
+  });
+
+  it("não sincroniza direção no modo Traduzir", () => {
+    expect(applyStudySettingsPatch(DEFAULT_STUDY_SETTINGS_SNAPSHOT, { direction: "b-a" }))
+      .toMatchObject({ direction: "b-a", writeRewriteSide: DEFAULT_STUDY_SETTINGS_SNAPSHOT.writeRewriteSide });
   });
 });

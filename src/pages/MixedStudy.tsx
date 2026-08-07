@@ -691,6 +691,18 @@ export default function MixedStudy() {
     },
   });
   const currentAnswerKey = `${mixed.state?.roundNumber ?? 0}:${mixed.state?.currentIndex ?? 0}:${mixed.currentCardId ?? "none"}`;
+  // Fonte única das configurações de escrita entregues às views.
+  const writeSessionSettings = useMemo(() => ({
+    writeActivityMode: studySettings.writeActivityMode,
+    writeRewriteSide: studySettings.writeRewriteSide,
+    writeCorrectionMode: studySettings.writeCorrectionMode,
+    studyFlowMode: studySettings.studyFlowMode,
+  }), [
+    studySettings.writeActivityMode,
+    studySettings.writeRewriteSide,
+    studySettings.writeCorrectionMode,
+    studySettings.studyFlowMode,
+  ]);
   useEffect(() => {
     answeredCardKeyRef.current = null;
   }, [currentAnswerKey]);
@@ -1091,6 +1103,7 @@ export default function MixedStudy() {
               currentCard={currentCard}
               allCards={cards}
               direction={resolvedDirection}
+              writeSettings={writeSessionSettings}
               langA={labels.langA}
               langB={labels.langB}
               onCorrect={() => handleAnswer(true)}
@@ -1104,6 +1117,10 @@ export default function MixedStudy() {
           {(mixed.activityMode === "write" || !mixed.activityMode) && (
             <WriteStudyView
               {...sharedProps}
+              writeActivityMode={writeSessionSettings.writeActivityMode}
+              writeRewriteSide={writeSessionSettings.writeRewriteSide}
+              writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
+              studyFlowMode={writeSessionSettings.studyFlowMode}
               onSkip={() => handleAnswer(false, true)}
               acceptedAnswersEn={currentCard.accepted_answers_en}
               acceptedAnswersPt={currentCard.accepted_answers_pt}
