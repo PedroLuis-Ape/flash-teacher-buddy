@@ -23,7 +23,8 @@ describe("contrato único de configurações v2", () => {
       version: 1, subset: "favorites", direction: "b-a", order: "sequential",
       writeActivityMode: "rewrite", writeRewriteSide: "b", writeCorrectionMode: "flexible",
     }, fallback)).toMatchObject({
-      version: 2, scope: "favorites", direction: "b-a", order: "sequential",
+      // Reescrever: a direção é reparada a partir do lado persistido (b => a-b).
+      version: 2, scope: "favorites", direction: "a-b", order: "sequential",
       playMode: "single", playSide: "b", writeActivityMode: "rewrite", writeRewriteSide: "b",
     });
   });
