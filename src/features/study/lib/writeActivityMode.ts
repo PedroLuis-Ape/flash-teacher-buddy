@@ -1,3 +1,5 @@
+import { hashToBool, normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+
 export type WriteActivityMode = "translate" | "rewrite";
 export type WriteRewriteSide = "a" | "b" | "alternating";
 export type WriteActivityGameMode = "write" | "mixed";
@@ -20,13 +22,6 @@ export const DEFAULT_WRITE_ACTIVITY_PREFERENCE: WriteActivityPreference = Object
   rewriteSide: "alternating",
 });
 
-interface AlternatingState {
-  assignments: Map<string, "a" | "b">;
-  next: "a" | "b";
-}
-
-const alternatingStates = new Map<string, AlternatingState>();
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -37,6 +32,26 @@ function isMode(value: unknown): value is WriteActivityMode {
 
 function isRewriteSide(value: unknown): value is WriteRewriteSide {
   return value === "a" || value === "b" || value === "alternating";
+}
+
+/**
+ * MAPEAMENTO CANÔNICO entre direção de estudo e lado da reescrita.
+ *
+ *   writeRewriteSide "a"           <-> direction "b-a"  (responder no lado A)
+ *   writeRewriteSide "b"           <-> direction "a-b"  (responder no lado B)
+ *   writeRewriteSide "alternating" <-> direction "any"
+ */
+export function rewriteSideToDirection(side: unknown): Direction {
+  if (side === "a") return "b-a";
+  if (side === "b") return "a-b";
+  return "any";
+}
+
+export function directionToRewriteSide(direction: unknown): WriteRewriteSide {
+  const normalized = normalizeDirection(typeof direction === "string" ? direction : "any");
+  if (normalized === "b-a") return "a";
+  if (normalized === "a-b") return "b";
+  return "alternating";
 }
 
 export function resolveWriteActivityGameMode(explicit?: string): WriteActivityGameMode {
