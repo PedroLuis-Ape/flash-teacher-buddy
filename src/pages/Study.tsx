@@ -1233,7 +1233,12 @@ const Study = () => {
   });
 
   const handleRestartWithSettings = async () => {
+    // (mantido) reinício explícito da sessão
     setCompletionWasRestored(false);
+
+  };
+
+  const noop = () => {};
     setShowCompletionModal(false);
     if (completionKey) {
       try { localStorage.removeItem(completionKey); } catch {}
