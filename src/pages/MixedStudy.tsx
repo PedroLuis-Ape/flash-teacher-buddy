@@ -691,6 +691,18 @@ export default function MixedStudy() {
     },
   });
   const currentAnswerKey = `${mixed.state?.roundNumber ?? 0}:${mixed.state?.currentIndex ?? 0}:${mixed.currentCardId ?? "none"}`;
+  // Fonte única das configurações de escrita entregues às views.
+  const writeSessionSettings = useMemo(() => ({
+    writeActivityMode: studySettings.writeActivityMode,
+    writeRewriteSide: studySettings.writeRewriteSide,
+    writeCorrectionMode: studySettings.writeCorrectionMode,
+    studyFlowMode: studySettings.studyFlowMode,
+  }), [
+    studySettings.writeActivityMode,
+    studySettings.writeRewriteSide,
+    studySettings.writeCorrectionMode,
+    studySettings.studyFlowMode,
+  ]);
   useEffect(() => {
     answeredCardKeyRef.current = null;
   }, [currentAnswerKey]);
