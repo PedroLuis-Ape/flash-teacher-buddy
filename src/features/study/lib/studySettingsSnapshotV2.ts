@@ -29,6 +29,10 @@ import {
   type StudyWriteCorrectionModePreset,
   type StudyWriteRewriteSidePreset,
 } from "@/features/study/preferences/studyPreset";
+import {
+  directionToRewriteSide,
+  rewriteSideToDirection,
+} from "@/features/study/lib/writeActivityMode";
 
 export const STUDY_SETTINGS_SNAPSHOT_VERSION = 2 as const;
 
@@ -80,11 +84,12 @@ function bool(value: unknown, fallback: boolean): boolean {
 export function normalizeStudySettingsSnapshotV2(
   value: unknown,
   fallback: StudySettingsSnapshotV2 = DEFAULT_STUDY_SETTINGS_SNAPSHOT,
+  options: { syncRewriteDirection?: boolean } = {},
 ): StudySettingsSnapshotV2 {
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
   // v1 chamava o escopo de `subset`.
   const scopeValue = raw.scope ?? raw.subset;
-  return {
+  const snapshot: StudySettingsSnapshotV2 = {
     version: STUDY_SETTINGS_SNAPSHOT_VERSION,
     direction: pick(STUDY_PRESET_DIRECTIONS, raw.direction, fallback.direction),
     order: pick(STUDY_PRESET_ORDERS, raw.order, fallback.order),
@@ -110,6 +115,14 @@ export function normalizeStudySettingsSnapshotV2(
       fallback.writeCorrectionMode,
     ),
   };
+
+  // No modo Reescrever, direção e lado são a MESMA decisão. Snapshots antigos
+  // ou dessincronizados são reparados a partir do lado persistido.
+  if (options.syncRewriteDirection !== false && snapshot.writeActivityMode === "rewrite") {
+    snapshot.direction = rewriteSideToDirection(snapshot.writeRewriteSide) as typeof snapshot.direction;
+  }
+
+  return snapshot;
 }
 
 export function isStudySettingsSnapshotV2(value: unknown): value is StudySettingsSnapshotV2 {
@@ -172,7 +185,25 @@ export function applyStudySettingsPatch(
   current: StudySettingsSnapshotV2,
   patch: StudySettingsPatchV2,
 ): StudySettingsSnapshotV2 {
-  const merged = normalizeStudySettingsSnapshotV2({ ...current, ...patch }, current);
+  const requested: StudySettingsPatchV2 = { ...patch };
+  const nextActivityMode = requested.writeActivityMode ?? current.writeActivityMode;
+  const enteringRewrite = requested.writeActivityMode === "rewrite"
+    && current.writeActivityMode !== "rewrite";
+
+  // Sincronização atômica: uma única ação altera os dois campos, nunca um só.
+  if (requested.writeRewriteSide !== undefined) {
+    requested.direction = rewriteSideToDirection(requested.writeRewriteSide) as typeof current.direction;
+  } else if (requested.direction !== undefined && nextActivityMode === "rewrite") {
+    requested.writeRewriteSide = directionToRewriteSide(requested.direction) as typeof current.writeRewriteSide;
+  } else if (enteringRewrite) {
+    requested.writeRewriteSide = directionToRewriteSide(current.direction) as typeof current.writeRewriteSide;
+  }
+
+  const merged = normalizeStudySettingsSnapshotV2(
+    { ...current, ...requested },
+    current,
+    { syncRewriteDirection: false },
+  );
   // Foco Vermelho usa fila única e sequencial.
   if (merged.redFocus) merged.order = "sequential";
   return merged;
