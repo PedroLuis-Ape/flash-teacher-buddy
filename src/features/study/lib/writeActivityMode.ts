@@ -54,6 +54,24 @@ export function directionToRewriteSide(direction: unknown): WriteRewriteSide {
   return "alternating";
 }
 
+/**
+ * Bloco de configurações de escrita transportado do controlador único
+ * (Study/MixedStudy) até a view. Nenhuma view pode hidratar isso sozinha.
+ */
+export interface WriteSessionSettings {
+  writeActivityMode: WriteActivityMode;
+  writeRewriteSide: WriteRewriteSide;
+  writeCorrectionMode: "flexible" | "hard";
+  studyFlowMode: "mastery_rounds" | "continuous";
+}
+
+export const DEFAULT_WRITE_SESSION_SETTINGS: WriteSessionSettings = Object.freeze({
+  writeActivityMode: "translate",
+  writeRewriteSide: "alternating",
+  writeCorrectionMode: "flexible",
+  studyFlowMode: "mastery_rounds",
+});
+
 export function resolveWriteActivityGameMode(explicit?: string): WriteActivityGameMode {
   if (explicit === "mixed" || explicit === "write") return explicit;
   if (typeof window === "undefined") return "write";
