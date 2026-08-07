@@ -1,3 +1,5 @@
+import { hashToBool, normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
+
 export type WriteActivityMode = "translate" | "rewrite";
 export type WriteRewriteSide = "a" | "b" | "alternating";
 export type WriteActivityGameMode = "write" | "mixed";
@@ -20,13 +22,6 @@ export const DEFAULT_WRITE_ACTIVITY_PREFERENCE: WriteActivityPreference = Object
   rewriteSide: "alternating",
 });
 
-interface AlternatingState {
-  assignments: Map<string, "a" | "b">;
-  next: "a" | "b";
-}
-
-const alternatingStates = new Map<string, AlternatingState>();
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -35,8 +30,29 @@ function isMode(value: unknown): value is WriteActivityMode {
   return value === "translate" || value === "rewrite";
 }
 
-function isRewriteSide(value: unknown): value is WriteRewriteSide {
+export function isWriteRewriteSide(value: unknown): value is WriteRewriteSide {
   return value === "a" || value === "b" || value === "alternating";
+}
+
+/**
+ * Converts the general practice direction into the side the learner must
+ * reproduce in Rewrite mode.
+ *
+ * a-b shows A and answers in B, therefore Rewrite targets B.
+ * b-a shows B and answers in A, therefore Rewrite targets A.
+ */
+export function directionToRewriteSide(direction: Direction | string): WriteRewriteSide {
+  const normalized = normalizeDirection(direction);
+  if (normalized === "a-b") return "b";
+  if (normalized === "b-a") return "a";
+  return "alternating";
+}
+
+/** Converts a Rewrite target side back into the equivalent practice direction. */
+export function rewriteSideToDirection(side: WriteRewriteSide): Direction {
+  if (side === "a") return "b-a";
+  if (side === "b") return "a-b";
+  return "any";
 }
 
 export function resolveWriteActivityGameMode(explicit?: string): WriteActivityGameMode {
@@ -57,7 +73,7 @@ export function normalizeWriteActivityPreference(value: unknown): WriteActivityP
   const input = isRecord(value) ? value : {};
   return {
     mode: isMode(input.mode) ? input.mode : DEFAULT_WRITE_ACTIVITY_PREFERENCE.mode,
-    rewriteSide: isRewriteSide(input.rewriteSide)
+    rewriteSide: isWriteRewriteSide(input.rewriteSide)
       ? input.rewriteSide
       : DEFAULT_WRITE_ACTIVITY_PREFERENCE.rewriteSide,
   };
@@ -94,33 +110,23 @@ export function writeWriteActivityPreference(
   }
 }
 
-function rewriteSessionKey(): string {
-  if (typeof window === "undefined") return "server";
-  return `${window.location.pathname}:${new URLSearchParams(window.location.search).get("mode") || "write"}`;
-}
-
+/**
+ * Resolves the effective Rewrite target for one playable identity.
+ *
+ * Fixed A/B choices never vary. "alternating" deliberately uses the same
+ * deterministic hash as direction="any": when A is shown first, B is the
+ * response side; when B is shown first, A is the response side. This keeps
+ * both selectors semantically synchronized across cards, layers and rerenders.
+ */
 export function resolveRewriteSideForCard(
   cardKey: string,
   preference: WriteRewriteSide,
 ): "a" | "b" {
   if (preference === "a" || preference === "b") return preference;
-
-  const sessionKey = rewriteSessionKey();
-  let state = alternatingStates.get(sessionKey);
-  if (!state) {
-    state = { assignments: new Map(), next: "a" };
-    alternatingStates.set(sessionKey, state);
-  }
-
-  const assigned = state.assignments.get(cardKey);
-  if (assigned) return assigned;
-
-  const next = state.next;
-  state.assignments.set(cardKey, next);
-  state.next = next === "a" ? "b" : "a";
-  return next;
+  return hashToBool(cardKey) ? "b" : "a";
 }
 
+/** Kept as a compatibility hook for older tests; resolution is now stateless. */
 export function resetRewriteSideAssignmentsForTests(): void {
-  alternatingStates.clear();
+  // no-op
 }
