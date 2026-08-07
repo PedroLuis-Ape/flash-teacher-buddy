@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  directionToRewriteSide,
   normalizeWriteActivityPreference,
   resetRewriteSideAssignmentsForTests,
   resolveRewriteSideForCard,
+  rewriteSideToDirection,
 } from "./writeActivityMode";
 
 describe("writeActivityMode", () => {
@@ -27,10 +29,22 @@ describe("writeActivityMode", () => {
     expect(resolveRewriteSideForCard("two", "b")).toBe("b");
   });
 
-  it("alternates new cards and preserves the assignment of repeated cards", () => {
-    expect(resolveRewriteSideForCard("card-1", "alternating")).toBe("a");
-    expect(resolveRewriteSideForCard("card-2", "alternating")).toBe("b");
-    expect(resolveRewriteSideForCard("card-1", "alternating")).toBe("a");
-    expect(resolveRewriteSideForCard("card-3", "alternating")).toBe("a");
+  it("resolves alternating deterministically per card", () => {
+    const first = resolveRewriteSideForCard("card-1", "alternating");
+    expect(resolveRewriteSideForCard("card-1", "alternating")).toBe(first);
+    expect(resolveRewriteSideForCard("card-1", "alternating")).toBe(first);
+    // Cards diferentes podem cair em lados diferentes, mas sempre estáveis.
+    const second = resolveRewriteSideForCard("card-2", "alternating");
+    expect(resolveRewriteSideForCard("card-2", "alternating")).toBe(second);
+    expect(["a", "b"]).toContain(second);
+  });
+
+  it("maps rewrite side and direction as a single decision", () => {
+    expect(rewriteSideToDirection("a")).toBe("b-a");
+    expect(rewriteSideToDirection("b")).toBe("a-b");
+    expect(rewriteSideToDirection("alternating")).toBe("any");
+    expect(directionToRewriteSide("b-a")).toBe("a");
+    expect(directionToRewriteSide("a-b")).toBe("b");
+    expect(directionToRewriteSide("any")).toBe("alternating");
   });
 });
