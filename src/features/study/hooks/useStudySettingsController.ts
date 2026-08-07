@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo } from "react";
 import type { StudyPreset, StudyPresetOverride } from "@/features/study/preferences/studyPreset";
 import { emitStudyFlowModeChanged } from "@/features/study/lib/studyFlowModePreference";
 import { STUDY_RED_FOCUS_TRANSITION_EVENT } from "@/hooks/useStudyPreferences";
+import { setWriteStudyRuntime } from "@/features/study/lib/writeStudyRuntime";
 import {
   applyStudySettingsPatch,
   patchAffectsQueue,
@@ -65,6 +66,23 @@ export function useStudySettingsController(
     [effectivePreset, redFocus],
   );
 
+  // The write card may remount for every card/layer. Mirror the already
+  // resolved controller snapshot before paint so those remounts never open a
+  // second preference hydration or fall back to another side.
+  useLayoutEffect(() => {
+    setWriteStudyRuntime({
+      writeActivityMode: settings.writeActivityMode,
+      writeRewriteSide: settings.writeRewriteSide,
+      writeCorrectionMode: settings.writeCorrectionMode,
+      studyFlowMode: settings.studyFlowMode,
+    });
+  }, [
+    settings.studyFlowMode,
+    settings.writeActivityMode,
+    settings.writeCorrectionMode,
+    settings.writeRewriteSide,
+  ]);
+
   const applyStudySettingsChange = useCallback((patch: StudySettingsPatchV2) => {
     let requested = patch;
     if (requested.scope === "favorites" && !canUseFavorites) {
@@ -75,6 +93,10 @@ export function useStudySettingsController(
     const next = applyStudySettingsPatch(settings, requested);
     const effectivePatch: StudySettingsPatchV2 = { ...requested };
     if (next.order !== settings.order) effectivePatch.order = next.order;
+    if (next.direction !== settings.direction) effectivePatch.direction = next.direction;
+    if (next.writeRewriteSide !== settings.writeRewriteSide) {
+      effectivePatch.writeRewriteSide = next.writeRewriteSide;
+    }
 
     if (patchAffectsQueue(effectivePatch)) {
       onQueueAffectingChange?.(next, effectivePatch);
@@ -86,15 +108,22 @@ export function useStudySettingsController(
       }));
     }
 
+    // Keep the write runtime in the same atomic action as the controlled
+    // settings patch. The layout effect above remains the hydration/restoration
+    // safety net.
+    setWriteStudyRuntime({
+      writeActivityMode: next.writeActivityMode,
+      writeRewriteSide: next.writeRewriteSide,
+      writeCorrectionMode: next.writeCorrectionMode,
+      studyFlowMode: next.studyFlowMode,
+    });
+
     applyRuntime(next, effectivePatch);
 
-    // Consumidores leves (ex.: gate de avanço) escutam a troca de formato.
     if (effectivePatch.studyFlowMode !== undefined) {
       emitStudyFlowModeChanged(next.studyFlowMode);
     }
 
-    // Uma mudança manual substitui o override restaurado e vira o novo preset
-    // da lista/modo, na mesma ação.
     const presetOverride = studySettingsToPresetOverride(next);
     setSessionOverrides(presetOverride);
     persistPreset(presetOverride);
