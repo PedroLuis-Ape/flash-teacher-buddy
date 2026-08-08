@@ -10,4 +10,10 @@ describe("multiple choice navigation", () => {
     expect(source).not.toContain("automaticamente em");
     expect(source).toContain('actionLabel="Próximo card"');
   });
+
+  it("exposes skip through the same confirmation flow as the other modes", () => {
+    expect(source).toContain("onSkip,");
+    expect(source).toContain('key === skipKey');
+    expect(source).toContain("Pular card");
+  });
 });

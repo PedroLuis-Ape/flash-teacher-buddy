@@ -119,7 +119,9 @@ export default function PublicClassGamesHub() {
 
     if (mode === 'mixed') {
       const mixedParams = new URLSearchParams({
+        mode: 'mixed',
         dir: direction,
+        order,
         guest: 'true',
         turma: turmaId,
         atribuicao: assignmentId,
