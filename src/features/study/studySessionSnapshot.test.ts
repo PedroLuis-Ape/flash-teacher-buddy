@@ -185,6 +185,21 @@ describe("study snapshots", () => {
     }, new Set(["entry-card"]))?.layer).toBeUndefined();
   });
 
+  it("keeps results for playable layers that are nested outside the queue ids", () => {
+    const restored = sanitizeStudySnapshot({
+      version: 2,
+      sessionId: "layered-session",
+      currentIndex: 0,
+      cardsOrder: ["parent-card"],
+      results: [{ flashcardId: "layer-2", correct: false, skipped: false, attempts: 1 }],
+      timestamp: 123,
+    }, new Set(["parent-card"]), { resultCardIds: new Set(["parent-card", "layer-2"]) });
+
+    expect(restored?.results).toEqual([
+      { flashcardId: "layer-2", correct: false, skipped: false, attempts: 1 },
+    ]);
+  });
+
   it("isolates keys by user", () => {
     const base = {
       listId: "list-1",

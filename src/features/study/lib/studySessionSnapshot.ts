@@ -29,6 +29,8 @@ export interface SanitizedPersistedStudyOrder {
 
 export interface StudySnapshotSanitizeOptions {
   enforceUniqueOrder?: boolean;
+  /** Result IDs may include nested layered-card IDs not present in cardsOrder. */
+  resultCardIds?: ReadonlySet<string>;
 }
 
 function safeScope(value: string | null | undefined): string {
@@ -184,7 +186,8 @@ export function sanitizeStudySnapshot(
     const results = restored.repaired
       ? []
       : Array.isArray(row.results)
-        ? row.results.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId))
+        ? row.results.filter(isResult).filter((result) =>
+          (options.resultCardIds ?? availableCardIds).has(result.flashcardId))
         : [];
 
     const layer = sanitizeStudyLayerSnapshot(row.layer);
@@ -231,7 +234,8 @@ export function sanitizeStudySnapshot(
     ? Math.min(new Set(rawCardsOrder.slice(0, rawCurrentIndex + 1)).size - 1, cardsOrder.length - 1)
     : Math.min(rawCurrentIndex, cardsOrder.length - 1);
   const results = Array.isArray(row.results)
-    ? row.results.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId))
+    ? row.results.filter(isResult).filter((result) =>
+      (options.resultCardIds ?? availableCardIds).has(result.flashcardId))
     : [];
 
   const layer = sanitizeStudyLayerSnapshot(row.layer);

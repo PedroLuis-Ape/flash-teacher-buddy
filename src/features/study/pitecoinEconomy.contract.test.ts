@@ -6,8 +6,8 @@ const read = (path: string) => readFileSync(path, "utf8");
 describe("PiteCOIN frontend integration", () => {
   it("records explicit card results and settles before completing the session", () => {
     const engine = read("src/features/study/hooks/useStudyEngine.ts");
-    const recordIndex = engine.indexOf("recordStudyAnswer(sessionId, flashcardId, correct, skipped)");
-    const settleIndex = engine.indexOf("settleStudySession(sessionId, true)");
+    const recordIndex = engine.indexOf("recordStudyAnswer(answerSessionId, flashcardId, correct, skipped)");
+    const settleIndex = engine.indexOf("settleStudySession(activeSessionId, true)");
     const completeIndex = engine.indexOf("complete-study-session");
 
     expect(recordIndex).toBeGreaterThan(-1);
