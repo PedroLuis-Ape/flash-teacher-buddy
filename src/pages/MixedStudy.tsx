@@ -122,6 +122,7 @@ export default function MixedStudy() {
   const [weightByCardId, setWeightByCardId] = useState<Record<string, number>>({});
   const [remoteState, setRemoteState] = useState<unknown>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
+  const [remoteRestoreFailure, setRemoteRestoreFailure] = useState(false);
   const [studySessionId, setStudySessionId] = useState<string | null>(null);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
   const skipCardKeyRef = useRef<string | null>(null);
@@ -284,6 +285,7 @@ export default function MixedStudy() {
     });
     setDeckCards([]);
     setRemoteLoaded(false);
+    setRemoteRestoreFailure(false);
     if (access === "denied") {
       setDeckLoadState({ phase: "recoverable-error", reason: "auth-required" });
       return;
@@ -397,7 +399,8 @@ export default function MixedStudy() {
         });
 
         if (userId && listId) {
-          const [progressResult, sessionResult] = await withStudyRuntimeTimeout(
+          let remoteRestoreFailed = false;
+          const restoreResult = await withStudyRuntimeTimeout(
             Promise.all([
               (supabase as any)
                 .from("flashcard_progress")
@@ -421,8 +424,21 @@ export default function MixedStudy() {
             STUDY_REMOTE_RESTORE_TIMEOUT_MS,
             "mixed-session-restore",
             () => abortController.abort(),
-          ).catch(() => [{ data: [] }, { data: null }] as const);
+          ).catch(() => {
+            remoteRestoreFailed = true;
+            return null;
+          });
           if (!isCurrent()) return;
+          if (
+            remoteRestoreFailed
+            || !restoreResult
+            || restoreResult[0].error
+            || restoreResult[1].error
+          ) {
+            setRemoteRestoreFailure(true);
+            return;
+          }
+          const [progressResult, sessionResult] = restoreResult;
 
           const weights: Record<string, number> = {};
           (progressResult.data ?? []).forEach((progress: CardProgressLike) => {
@@ -708,7 +724,7 @@ export default function MixedStudy() {
   }, [currentAnswerKey]);
   const [showRuntimeRecovery, setShowRuntimeRecovery] = useState(false);
   useEffect(() => {
-    if (mixed.state || loading || cards.length === 0 || !remoteLoaded) {
+    if (mixed.state || loading || cards.length === 0 || !remoteLoaded || remoteRestoreFailure) {
       if (mixed.state && showRuntimeRecovery) setShowRuntimeRecovery(false);
       return;
     }
@@ -717,7 +733,7 @@ export default function MixedStudy() {
       STUDY_RECOVERY_WATCHDOG_MS,
     );
     return () => clearTimeout(timeoutId);
-  }, [cards.length, loading, mixed.state, remoteLoaded, showRuntimeRecovery]);
+  }, [cards.length, loading, mixed.state, remoteLoaded, remoteRestoreFailure, showRuntimeRecovery]);
 
   // Mixed has its own activity scheduler, but it must expose the same
   // readiness contract as every other study surface. In particular, an
@@ -736,9 +752,9 @@ export default function MixedStudy() {
       masteryStatus: mixedStatus === "round-complete" || mixedStatus === "journey-complete"
         ? mixedStatus
         : null,
-      recoveryFailed: Boolean(loadFailure || showRuntimeRecovery),
+      recoveryFailed: Boolean(loadFailure || showRuntimeRecovery || remoteRestoreFailure),
     });
-  }, [cards, favoritesOnly, favoritesReady, loadAttempt, loading, loadFailure, mixed.progress, mixed.state, remoteLoaded, scopeWaitExpired, showRuntimeRecovery]);
+  }, [cards, favoritesOnly, favoritesReady, loadAttempt, loading, loadFailure, mixed.progress, mixed.state, remoteLoaded, remoteRestoreFailure, scopeWaitExpired, showRuntimeRecovery]);
 
   const cardById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const currentCard = mixed.currentCardId ? cardById.get(mixed.currentCardId) : undefined;
@@ -854,21 +870,24 @@ export default function MixedStudy() {
     );
   }
 
-  if (loadFailure || showRuntimeRecovery || sessionReadiness.phase === "failed") {
+  if (loadFailure || remoteRestoreFailure || showRuntimeRecovery || sessionReadiness.phase === "failed") {
     return (
       <StudySessionRecovery
         onRetry={() => {
           setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
           setShowRuntimeRecovery(false);
+          setRemoteRestoreFailure(false);
           setLoadAttempt((attempt) => attempt + 1);
         }}
         onStartFresh={() => {
           const shouldReloadCards = Boolean(loadFailure) || cards.length === 0;
           setShowRuntimeRecovery(false);
+          setRemoteRestoreFailure(false);
           if (shouldReloadCards) {
             setDeckLoadState({ phase: "retrying", attempt: loadAttempt + 1 });
             setLoadAttempt((attempt) => attempt + 1);
           } else {
+            setRemoteLoaded(true);
             mixed.clearPersistedJourney();
           }
         }}

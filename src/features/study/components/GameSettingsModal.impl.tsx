@@ -239,7 +239,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
                   onClick={() => setPage("flow")}
                 />
               )}
-              {isWriteMode && (
+              {supportsWriteCorrection && (
                 <WriteActivitySettings
                   activityMode={settings.writeActivityMode}
                   rewriteSide={settings.writeRewriteSide}

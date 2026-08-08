@@ -1301,12 +1301,17 @@ const Study = () => {
             : null,
       };
 
-      const { error } = await supabase
+      const { data: updatedCard, error } = await supabase
         .from("flashcards")
         .update(updateData as any)
-        .eq("id", flashcardId);
+        .eq("id", flashcardId)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw error;
+      if (!updatedCard?.id) {
+        throw new Error("O banco não confirmou a atualização deste card.");
+      }
 
       // In-place update: preserves session order + currentIndex.
       // Recomputes preParsedHints so the lightbulb / glossary react instantly.

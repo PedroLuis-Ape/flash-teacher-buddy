@@ -638,12 +638,17 @@ const ListDetail = () => {
       updateData.image_url_b = imageUrlB || null;
       updateData.word_hints = (wordHints && Array.isArray(wordHints) && wordHints.length > 0) ? wordHints : null;
 
-      const { error } = await supabase
+      const { data: updatedCard, error } = await supabase
         .from("flashcards")
         .update(updateData as any)
-        .eq("id", flashcardId);
+        .eq("id", flashcardId)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw error;
+      if (!updatedCard?.id) {
+        throw new Error("O banco não confirmou a atualização deste card.");
+      }
       toast.success("Flashcard atualizado!");
 
       // Optimistic in-place update — preserves card position

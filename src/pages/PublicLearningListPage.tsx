@@ -195,7 +195,7 @@ export default function PublicLearningListPage() {
         <section className="mt-9 flex flex-wrap gap-3" aria-label="Modos de estudo">
           <Button asChild><Link to={`/portal/list/${list.id}/games`}><Gamepad2 className="mr-2 h-4 w-4" />Abrir atividades</Link></Button>
           <Button asChild variant="secondary"><Link to={`/portal/list/${list.id}/study`}><BookOpen className="mr-2 h-4 w-4" />Estudar flashcards</Link></Button>
-          <Button asChild variant="outline"><Link to={`/portal/list/${list.id}/mixed-study`}>Modo misto</Link></Button>
+          <Button asChild variant="outline"><Link to={`/portal/list/${list.id}/mixed-study?mode=mixed&dir=any&order=random`}>Modo misto</Link></Button>
         </section>
 
         <section className="mt-12" aria-labelledby="list-preview">
