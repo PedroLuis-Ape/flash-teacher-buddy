@@ -37,6 +37,7 @@ import type { WriteCorrectionMode } from "@/features/study/lib/writeCorrectionMo
 import { cn } from "@/lib/utils";
 import { emitStudyFlowModeChanged } from "@/features/study/lib/studyFlowModePreference";
 import { WriteActivitySettings } from "./WriteActivitySettings";
+import { toast } from "sonner";
 
 export interface GameSettings {
   mode: "sequential" | "random";
@@ -49,6 +50,7 @@ interface GameSettingsModalProps {
   settings: GameSettings;
   onSettingsChange: (settings: GameSettings) => void;
   onRestart: () => void;
+  onFlowModeChange?: (mode: StudyFlowModePreset) => void | Promise<void>;
   disabled?: boolean;
   showFastMode?: boolean;
   onEditCurrentCard?: () => void;
@@ -64,6 +66,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   settings,
   onSettingsChange,
   onRestart,
+  onFlowModeChange,
   disabled = false,
   showFastMode = false,
   onEditCurrentCard,
@@ -98,6 +101,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   const supportsFlowModes = Boolean(urlMode);
   const supportsWriteCorrection = isWriteMode || isMixedMode;
   const [correctionMode, setCorrectionMode] = useState<WriteCorrectionMode>(effectivePreset.writeCorrectionMode);
+  const [isChangingFlow, setIsChangingFlow] = useState(false);
 
   useEffect(() => {
     setCorrectionMode(effectivePreset.writeCorrectionMode);
@@ -123,10 +127,21 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   };
 
   const currentFlowMode: StudyFlowModePreset = effectivePreset.studyFlowMode;
-  const handleFlowModeChange = (next: StudyFlowModePreset) => {
-    if (next === currentFlowMode) return;
-    updateForCurrentScope({ studyFlowMode: next });
-    emitStudyFlowModeChanged(next);
+  const handleFlowModeChange = async (next: StudyFlowModePreset) => {
+    if (next === currentFlowMode || isChangingFlow) return;
+    setIsChangingFlow(true);
+    try {
+      // Flow mode changes the session state machine. Flush/close the previous
+      // journey before publishing the new preference so it cannot win on resume.
+      await onFlowModeChange?.(next);
+      updateForCurrentScope({ studyFlowMode: next });
+      emitStudyFlowModeChanged(next);
+    } catch (error) {
+      console.error("[StudySettings] Falha ao trocar o formato da sessao:", error);
+      toast.error("Nao foi possivel trocar o formato sem confirmar a sessao anterior.");
+    } finally {
+      setIsChangingFlow(false);
+    }
   };
 
   useEffect(() => {
@@ -363,8 +378,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               )}
               <button
                 type="button"
-                onClick={() => handleFlowModeChange("mastery_rounds")}
-                disabled={redFocusActive}
+                onClick={() => void handleFlowModeChange("mastery_rounds")}
+                disabled={redFocusActive || isChangingFlow}
                 className={cn(
                   "flex w-full flex-col items-start gap-1 rounded-xl border p-4 text-left",
                   currentFlowMode === "mastery_rounds" && !redFocusActive
@@ -383,8 +398,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => handleFlowModeChange("continuous")}
-                disabled={redFocusActive}
+                onClick={() => void handleFlowModeChange("continuous")}
+                disabled={redFocusActive || isChangingFlow}
                 className={cn(
                   "flex w-full flex-col items-start gap-1 rounded-xl border p-4 text-left",
                   currentFlowMode === "continuous" && !redFocusActive

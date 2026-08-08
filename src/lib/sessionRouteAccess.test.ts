@@ -21,4 +21,14 @@ describe('public classroom route access', () => {
   it('keeps portal study routes public', () => {
     expect(isProtectedPath('/portal/list/123/study')).toBe(false);
   });
+
+  it('keeps localized SEO pages public across every auth guard', () => {
+    expect(isProtectedPath('/pt-br')).toBe(false);
+    expect(isProtectedPath('/pt-br/metodologia')).toBe(false);
+    expect(isProtectedPath('/en/features')).toBe(false);
+  });
+
+  it('keeps private study routes protected', () => {
+    expect(isProtectedPath('/list/list-1/study')).toBe(true);
+  });
 });

@@ -6,12 +6,13 @@ const read = (path: string) => readFileSync(path, "utf8");
 describe("study completion flow", () => {
   it("wires completion, restart and deterministic return actions", () => {
     const study = read("src/pages/Study.tsx");
+    const modal = read("src/features/study/components/StudyCompletionModal.impl.tsx");
     expect(study).toContain("handleCompleteAndExit");
     expect(study).toContain("handleFinishedExit");
     expect(study).toContain("handleRestartWithSettings");
     expect(study).toContain("buildStudyReturnRoute");
-    expect(study).toContain("CONCLUINDO...");
-    expect(study).toContain("Reiniciando...");
+    expect(modal).toContain("CONCLUINDO...");
+    expect(modal).toContain("Reiniciando...");
   });
 
   it("uses the 3D trophy emoji in both completion views", () => {

@@ -3,7 +3,8 @@ import { Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useFreezeWatchdog } from "@/hooks/useFreezeWatchdog";
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/contexts/AuthContext";
+import { isProtectedPath } from "@/lib/sessionRouteAccess";
 import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
@@ -15,42 +16,21 @@ interface GlobalLayoutProps {
   children: ReactNode;
 }
 
-const PUBLIC_EXACT = new Set<string>([
-  "/",
-  "/landing",
-  "/auth",
-  "/auth/callback",
-  "/ingles-para-iniciantes",
-  "/atividades-de-ingles",
-  "/flashcards-de-ingles",
-  "/para-professores",
-  "/about",
-]);
-
-function isClassSharePath(pathname: string): boolean {
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts[0] !== "turmas" || parts.length !== 2) return false;
-  return parts[1] !== "professor" && parts[1] !== "aluno";
-}
-
-function isPublicRoute(pathname: string, isGuest: boolean): boolean {
-  if (PUBLIC_EXACT.has(pathname)) return true;
-  if (pathname === "/pt-br" || pathname.startsWith("/pt-br/")) return true;
-  if (pathname === "/en" || pathname.startsWith("/en/")) return true;
-  if (pathname === "/portal" || pathname.startsWith("/portal/")) return true;
-  if (isGuest && isClassSharePath(pathname)) return true;
-  return false;
-}
-
 export function GlobalLayout({ children }: GlobalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuthUser();
+  const { user, status } = useAuth();
   useFreezeWatchdog();
 
   useEffect(() => installPortraitOrientationGuard(), []);
 
-  const content = isPublicRoute(location.pathname, !user)
+  // Keep the private shell unmounted until AuthProvider has confirmed the
+  // session. Private pages perform queries/effects during render, so letting
+  // them mount while auth is initializing can expose stale identity data or
+  // trigger writes under the wrong session. AuthHydrationGate still owns the
+  // visible loading/error state inside the shell.
+  const shouldUsePrivateShell = status === "authenticated" && isProtectedPath(location.pathname);
+  const content = !shouldUsePrivateShell
     ? <PublicShell>{children}</PublicShell>
     : <PrivateShell>{children}</PrivateShell>;
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Volume2 } from "lucide-react";
+import { SkipForward, Volume2 } from "lucide-react";
 import { useTTS } from "@/features/study/hooks/useTTS";
 import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { InteractiveText } from "./InteractiveText";
@@ -65,6 +65,7 @@ export const MultipleChoiceStudyView = ({
   onRestartJourney,
   onCorrect,
   onIncorrect,
+  onSkip,
 }: MultipleChoiceStudyViewProps) => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -137,6 +138,13 @@ export const MultipleChoiceStudyView = ({
         return;
       }
 
+      const skipKey = normalizeKey(shortcuts.skip);
+      if (onSkip && key === skipKey) {
+        event.preventDefault();
+        onSkip();
+        return;
+      }
+
       let index: number | null = null;
       if (key === "1" || key === "A") index = 0;
       else if (key === "2" || key === "B") index = 1;
@@ -151,7 +159,7 @@ export const MultipleChoiceStudyView = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showFeedback, options.length, shortcuts, handleOptionClick, advanceSelected]);
+  }, [showFeedback, options.length, shortcuts, handleOptionClick, advanceSelected, onSkip]);
 
   const getOptionClassName = (index: number) => {
     if (!showFeedback) return "hover:bg-accent/50 cursor-pointer transition-colors";
@@ -225,6 +233,18 @@ export const MultipleChoiceStudyView = ({
           </Card>
         ))}
       </div>
+
+      {onSkip && !showFeedback && (
+        <Button
+          type="button"
+          variant="outline"
+          className="mx-auto min-h-[44px] w-full max-w-xs"
+          onClick={onSkip}
+        >
+          <SkipForward className="mr-2 h-4 w-4" />
+          Pular card
+        </Button>
+      )}
 
       {showFeedback && (
         <StudyFeedbackPanel

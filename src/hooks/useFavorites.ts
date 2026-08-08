@@ -92,7 +92,6 @@ export function useFavorites(
     },
     enabled: !!userId,
     staleTime: 60_000,
-    placeholderData: keepPreviousData,
     retry: 1,
   });
 }

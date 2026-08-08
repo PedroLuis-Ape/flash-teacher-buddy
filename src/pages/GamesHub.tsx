@@ -241,7 +241,7 @@ const GamesHub = () => {
     }
 
     const mode = normalizeStudyMode(rawMode);
-    rememberConfiguredMode(mode);
+    rememberConfiguredMode(mode, userId);
     setConfiguredMode(mode);
 
     const kind = isListRoute ? "list" : "collection";

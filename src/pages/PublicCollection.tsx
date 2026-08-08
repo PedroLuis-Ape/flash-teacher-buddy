@@ -66,8 +66,9 @@ export default function PublicCollection() {
   };
 
   const startGame = (mode: "flip" | "write" | "mixed") => {
+    const route = mode === "mixed" ? "mixed-study" : "study";
     navigate(
-      `/portal/collection/${resolvedCollectionId}/study?mode=${mode}&direction=any&order=random`
+      `/portal/collection/${resolvedCollectionId}/${route}?mode=${mode}&direction=any&order=random`
     );
   };
 

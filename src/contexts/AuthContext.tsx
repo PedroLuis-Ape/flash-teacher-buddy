@@ -74,6 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [queryClient]);
 
+  const clearCacheOnIdentityChange = useCallback((nextSession: Session | null) => {
+    const previousUserId = optimistic.current?.user?.id ?? null;
+    const nextUserId = nextSession?.user?.id ?? null;
+    if (previousUserId && nextUserId && previousUserId !== nextUserId) {
+      // Query keys are not uniformly user-scoped across the legacy surface.
+      // Clearing before publishing the new identity prevents keep-previous
+      // data and unscoped keys from being rendered for the next account.
+      queryClient.clear();
+    }
+  }, [queryClient]);
+
   const retryHydration = useCallback(() => {
     setError(null);
     setStatus("initializing");
@@ -105,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === "INITIAL_SESSION") {
           const candidate = nextSession ?? optimistic.current;
           if (candidate) {
+            clearCacheOnIdentityChange(candidate);
             optimistic.current = candidate;
             setSession(candidate);
             setStatus("initializing");
@@ -114,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (nextSession) {
+          clearCacheOnIdentityChange(nextSession);
           optimistic.current = nextSession;
           setSession(nextSession);
           setStatus("authenticated");
@@ -135,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     // queryClient is stable; mount the subscription exactly once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [syncQueryCache]);
+  }, [clearCacheOnIdentityChange, syncQueryCache]);
 
   useEffect(() => {
     let cancelled = false;
@@ -161,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const next = data.session ?? null;
+        clearCacheOnIdentityChange(next);
         optimistic.current = next;
         setSession(next);
         setStatus(next ? "authenticated" : "anonymous");
@@ -185,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [hydrationAttempt, syncQueryCache]);
+  }, [clearCacheOnIdentityChange, hydrationAttempt, syncQueryCache]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

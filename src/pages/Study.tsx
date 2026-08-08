@@ -62,6 +62,7 @@ import { StudyVideoButton } from "@/features/study/components/StudyVideoButton";
 import { GameSettingsModal, GameSettings } from "@/features/study/components/GameSettingsModal";
 import { useStudyEngine } from "@/features/study/hooks/useStudyEngine";
 import { StudyCompletionModal } from "@/features/study/components/StudyCompletionModal";
+import { RoundSummaryDialog } from "@/features/study/components/RoundSummaryDialog";
 import { StudyProgressHud } from "@/features/study/components/StudyProgressHud";
 import { StudySessionRecovery } from "@/features/study/components/StudySessionRecovery";
 import { StudyDeckEmptyState } from "@/features/study/components/StudyDeckEmptyState";
@@ -1094,6 +1095,16 @@ const Study = () => {
     await restartSession(gameSettings);
   };
 
+  const handleFlowModeChange = useCallback(async (_next: "mastery_rounds" | "continuous") => {
+    // Flow mode is a state-machine boundary. Close the previous session and
+    // clear its local snapshot before the preference hook publishes the new
+    // flow, otherwise initialization can restore the old journey into it.
+    const discarded = await discardSession();
+    if (!discarded) {
+      throw new Error("A sessao anterior nao foi confirmada pelo banco");
+    }
+  }, [discardSession]);
+
   // Use engine's cardsOrder to resolve the actual current card
   const engineCurrentCardId = cardsOrder[currentIndex];
   // PERF: O(1) lookup via memoized Map instead of repeated find() across large lists.
@@ -1140,12 +1151,17 @@ const Study = () => {
             : null,
       };
 
-      const { error } = await supabase
+      const { data: updatedCard, error } = await supabase
         .from("flashcards")
         .update(updateData as any)
-        .eq("id", flashcardId);
+        .eq("id", flashcardId)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw error;
+      if (!updatedCard?.id) {
+        throw new Error("O banco não confirmou a atualização deste card");
+      }
 
       // In-place update: preserves session order + currentIndex.
       // Recomputes preParsedHints so the lightbulb / glossary react instantly.
@@ -1719,6 +1735,49 @@ const Study = () => {
     );
   }
 
+  // A finished session must use the same explicit transition surface in every
+  // activity. The legacy summary below remains only as a defensive fallback
+  // if a corrupted mastery snapshot reaches this point without a summary.
+  if (isFinished && masteryProgressActive && !isGameComplete && masteryRoundSummary) {
+    return (
+      <RoundSummaryDialog
+        open
+        summary={masteryRoundSummary}
+        onNextRound={() => void startNextRound()}
+        onExit={handleExit}
+      />
+    );
+  }
+
+  if (isFinished && isGameComplete) {
+    return (
+      <StudyCompletionModal
+        open
+        correctCount={masteryProgressActive
+          ? (masteryRoundSummary?.correctCards ?? roundCorrect)
+          : correctCount}
+        errorCount={masteryProgressActive
+          ? (masteryRoundSummary?.incorrectCards ?? roundErrors)
+          : errorCount}
+        skippedCount={masteryProgressActive
+          ? (masteryRoundSummary?.skippedCards ?? 0)
+          : skippedCount}
+        totalCards={masteryProgressActive ? overallTotalCards : totalCards}
+        onComplete={() => void handleCompleteAndExit()}
+        onRestart={() => void handleRestartWithSettings()}
+        isCompleting={isCompleting}
+        isRestarting={isRestarting}
+        onReviewErrors={!masteryProgressActive && errorCount > 0 ? handleReviewErrors : undefined}
+        onExit={() => void handleFinishedExit()}
+        onOpenChange={(open) => {
+          if (!open) void handleFinishedExit();
+        }}
+        fromGoalId={fromGoalId}
+        onGoToGoals={fromGoalId ? () => navigate('/goals') : undefined}
+      />
+    );
+  }
+
   if (isFinished) {
     const isFlipMode = normalizedMode === "flip";
     const showNextRound = hasMoreRounds && !isGameComplete;
@@ -1945,6 +2004,7 @@ const Study = () => {
                 settings={gameSettings}
                 onSettingsChange={handleSettingsChange}
                 onRestart={handleRestartWithSettings}
+                onFlowModeChange={handleFlowModeChange}
                 showFastMode={effectiveMode === "flip"}
                 onEditCurrentCard={
                   displayedCard

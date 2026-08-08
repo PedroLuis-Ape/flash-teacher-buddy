@@ -14,7 +14,10 @@ export function WriteActivitySettings() {
   const { preference, updatePreference } = useWriteStudyPreferences();
   const [expanded, setExpanded] = useState(false);
 
-  if (mode !== "write") return null;
+  // Mixed sessions can schedule the write activity dynamically. Keep the
+  // write controls available there too, so the activity that the adaptive
+  // engine actually launches is configured by the same surface as /write.
+  if (mode !== "write" && mode !== "mixed") return null;
 
   const updateMode = (nextMode: WriteActivityMode) => {
     const next = { ...preference, mode: nextMode };

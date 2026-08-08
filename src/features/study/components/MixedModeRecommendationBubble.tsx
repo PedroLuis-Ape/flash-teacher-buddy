@@ -9,8 +9,7 @@ const DISPLAY_DURATION_MS = 10_000;
 
 function buildMixedTarget(pathname: string, search: string): string {
   const params = new URLSearchParams(search);
-  params.delete("mode");
-  params.delete("order");
+  params.set("mode", "mixed");
   const query = params.toString();
 
   if (pathname.endsWith("/games")) {

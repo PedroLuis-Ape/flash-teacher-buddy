@@ -185,6 +185,22 @@ describe("study snapshots", () => {
     }, new Set(["entry-card"]))?.layer).toBeUndefined();
   });
 
+  it("keeps progress recorded against a visible layer without adding that layer to the queue", () => {
+    const restored = sanitizeStudySnapshot({
+      version: 2,
+      sessionId: "layered-session",
+      currentIndex: 0,
+      cardsOrder: ["entry-card"],
+      results: [{ flashcardId: "layer-2", correct: false, skipped: false, attempts: 1 }],
+      timestamp: 123,
+    }, new Set(["entry-card"]), { resultCardIds: new Set(["entry-card", "layer-2"]) });
+
+    expect(restored?.cardsOrder).toEqual(["entry-card"]);
+    expect(restored?.results).toEqual([
+      { flashcardId: "layer-2", correct: false, skipped: false, attempts: 1 },
+    ]);
+  });
+
   it("isolates keys by user", () => {
     const base = {
       listId: "list-1",
