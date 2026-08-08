@@ -1,29 +1,14 @@
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-
-const PUBLIC_PREFIXES = [
-  "/auth",
-  "/portal",
-  "/about",
-  "/ingles-para-iniciantes",
-  "/atividades-de-ingles",
-  "/flashcards-de-ingles",
-  "/para-professores",
-] as const;
-
-const PUBLIC_EXACT = new Set(["/", "/landing"]);
-
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_EXACT.has(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
+import { isProtectedPath } from "@/lib/sessionRouteAccess";
 
 export function AuthHydrationGate({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { status, retryHydration } = useAuth();
 
-  if (isPublicPath(location.pathname)) return <>{children}</>;
+  if (!isProtectedPath(location.pathname)) return <>{children}</>;
 
   if (status === "initializing" || status === "stale") {
     return (

@@ -3,56 +3,30 @@ import { Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useFreezeWatchdog } from "@/hooks/useFreezeWatchdog";
-import { useAuthUser } from "@/hooks/useAuthUser";
+import { useAuth } from "@/contexts/AuthContext";
 import { PublicShell } from "@/components/layout/PublicShell";
 import { PrivateShell } from "@/components/layout/PrivateShell";
 import { PortalHistorySyncAgent } from "@/components/portal/PortalHistorySyncAgent";
 import { MixedModeRecommendationBubble } from "@/features/study/components/MixedModeRecommendationBubble";
 import { MobilePortraitOnlyGate } from "@/components/layout/MobilePortraitOnlyGate";
 import { installPortraitOrientationGuard } from "@/lib/portraitOrientationLock";
+import { isProtectedPath } from "@/lib/sessionRouteAccess";
 
 interface GlobalLayoutProps {
   children: ReactNode;
 }
 
-const PUBLIC_EXACT = new Set<string>([
-  "/",
-  "/landing",
-  "/auth",
-  "/auth/callback",
-  "/ingles-para-iniciantes",
-  "/atividades-de-ingles",
-  "/flashcards-de-ingles",
-  "/para-professores",
-  "/about",
-]);
-
-function isClassSharePath(pathname: string): boolean {
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts[0] !== "turmas" || parts.length !== 2) return false;
-  return parts[1] !== "professor" && parts[1] !== "aluno";
-}
-
-function isPublicRoute(pathname: string, isGuest: boolean): boolean {
-  if (PUBLIC_EXACT.has(pathname)) return true;
-  if (pathname === "/pt-br" || pathname.startsWith("/pt-br/")) return true;
-  if (pathname === "/en" || pathname.startsWith("/en/")) return true;
-  if (pathname === "/portal" || pathname.startsWith("/portal/")) return true;
-  if (isGuest && isClassSharePath(pathname)) return true;
-  return false;
-}
-
 export function GlobalLayout({ children }: GlobalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuthUser();
+  const { status, user } = useAuth();
   useFreezeWatchdog();
 
   useEffect(() => installPortraitOrientationGuard(), []);
 
-  const content = isPublicRoute(location.pathname, !user)
-    ? <PublicShell>{children}</PublicShell>
-    : <PrivateShell>{children}</PrivateShell>;
+  const content = status === "authenticated" && isProtectedPath(location.pathname)
+    ? <PrivateShell>{children}</PrivateShell>
+    : <PublicShell>{children}</PublicShell>;
 
   const portraitOnlySession =
     location.pathname.endsWith("/study") ||

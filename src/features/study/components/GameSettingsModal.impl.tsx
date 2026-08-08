@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -53,6 +54,8 @@ interface GameSettingsModalProps {
    */
   settings: StudySettingsSnapshotV2;
   onSettingsChange: (patch: StudySettingsPatchV2) => void;
+  /** Confirms the current remote session is closed before changing flow. */
+  onFlowModeChange?: (next: StudyFlowModePreset) => void | Promise<void>;
   /** Token canônico do modo (write, flip, mixed, ...). */
   gameMode: string;
   /** Sessão de lista privada — habilita a direção da prática. */
@@ -67,6 +70,7 @@ interface GameSettingsModalProps {
 export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   settings,
   onSettingsChange,
+  onFlowModeChange,
   gameMode,
   showDirection = false,
   onRestart,
@@ -76,6 +80,7 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
   canEditCurrentCard = true,
 }) => {
   const [open, setOpen] = useState(false);
+  const [isChangingFlow, setIsChangingFlow] = useState(false);
   type SettingsPage = "home" | "flow" | "direction" | "correction" | "order" | "audio";
   const [page, setPage] = useState<SettingsPage>("home");
   useEffect(() => { if (!open) setPage("home"); }, [open]);
@@ -112,9 +117,18 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
     onSettingsChange({ writeCorrectionMode: next });
   };
 
-  const handleFlowModeChange = (next: StudyFlowModePreset) => {
-    if (next === currentFlowMode) return;
-    onSettingsChange({ studyFlowMode: next });
+  const handleFlowModeChange = async (next: StudyFlowModePreset) => {
+    if (next === currentFlowMode || isChangingFlow) return;
+    setIsChangingFlow(true);
+    try {
+      await onFlowModeChange?.(next);
+      onSettingsChange({ studyFlowMode: next });
+    } catch (error) {
+      console.error("[GameSettingsModal] Não foi possível trocar o formato:", error);
+      toast.error("Não foi possível confirmar a sessão anterior no banco. O formato não foi alterado.");
+    } finally {
+      setIsChangingFlow(false);
+    }
   };
 
   const handleModeChange = (checked: boolean) => {
@@ -316,8 +330,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               )}
               <button
                 type="button"
-                onClick={() => handleFlowModeChange("mastery_rounds")}
-                disabled={redFocusActive}
+                onClick={() => void handleFlowModeChange("mastery_rounds")}
+                disabled={redFocusActive || isChangingFlow}
                 className={cn(
                   "flex w-full flex-col items-start gap-1 rounded-xl border p-4 text-left",
                   currentFlowMode === "mastery_rounds" && !redFocusActive
@@ -336,8 +350,8 @@ export const GameSettingsModal: React.FC<GameSettingsModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => handleFlowModeChange("continuous")}
-                disabled={redFocusActive}
+                onClick={() => void handleFlowModeChange("continuous")}
+                disabled={redFocusActive || isChangingFlow}
                 className={cn(
                   "flex w-full flex-col items-start gap-1 rounded-xl border p-4 text-left",
                   currentFlowMode === "continuous" && !redFocusActive

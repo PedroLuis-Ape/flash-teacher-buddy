@@ -650,6 +650,38 @@ export default function MixedStudy() {
     weightByCardId,
     onPersist: persistRemoteState,
   });
+
+  const handleFlowModeChange = useCallback(async () => {
+    // The mixed engine has its own durable snapshot. Close that exact remote
+    // row before changing the flow contract so the old adaptive state cannot
+    // be resumed as a different format.
+    await mixed.persistNow();
+    const currentSessionId = studySessionIdRef.current;
+    if (!currentSessionId || !userId || !listId) return;
+
+    const controller = new AbortController();
+    const { data: closedSession, error } = await withStudyRuntimeTimeout(
+      (supabase as any)
+        .from("study_sessions")
+        .update({ completed: true, updated_at: new Date().toISOString() })
+        .eq("id", currentSessionId)
+        .eq("user_id", userId)
+        .eq("list_id", listId)
+        .eq("mode", "mixed-adaptive")
+        .select("id")
+        .abortSignal(controller.signal)
+        .maybeSingle(),
+      STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+      "mixed-flow-close-session",
+      () => controller.abort(),
+    );
+    if (error || !closedSession?.id) {
+      throw error ?? new Error("mixed-flow-close-session-unconfirmed");
+    }
+    studySessionIdRef.current = null;
+    setStudySessionId(null);
+  }, [listId, mixed, userId]);
+
   const handleSettingsChange = useCallback((next: GameSettings) => {
     const requestedSubset = next.subset;
     const resolvedSubset = resolvePersonalStudySubset(
@@ -1076,6 +1108,7 @@ export default function MixedStudy() {
             <GameSettingsModal
               settings={studySettings}
               onSettingsChange={applyStudySettingsChange}
+              onFlowModeChange={handleFlowModeChange}
               gameMode="mixed"
               showDirection={isListRoute}
               onRestart={restartJourneyManually}

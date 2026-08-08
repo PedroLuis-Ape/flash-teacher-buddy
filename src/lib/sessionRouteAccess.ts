@@ -6,6 +6,8 @@ const PUBLIC_PREFIXES = [
   '/atividades-de-ingles',
   '/flashcards-de-ingles',
   '/para-professores',
+  '/pt-br',
+  '/en',
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>(['/', '/landing']);

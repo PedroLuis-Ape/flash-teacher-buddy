@@ -1219,6 +1219,15 @@ const Study = () => {
     setRedFocusActiveForDeck(next.redFocus);
   }, [saveProgressNow]);
 
+  const handleFlowModeChange = useCallback(async () => {
+    // The flow preset changes the session contract. Close the current durable
+    // row first so the old queue cannot be resumed under the new semantics.
+    const discarded = await discardSession();
+    if (discarded !== true) {
+      throw new Error("study-session-discard-unconfirmed");
+    }
+  }, [discardSession]);
+
   const { settings: studySettings, applyStudySettingsChange } = useStudySettingsController({
     effectivePreset,
     redFocus: !!gameSettings.redFocus,
@@ -2194,6 +2203,7 @@ const Study = () => {
               <GameSettingsModal
                 settings={studySettings}
                 onSettingsChange={applyStudySettingsChange}
+                onFlowModeChange={handleFlowModeChange}
                 gameMode={normalizedMode}
                 showDirection={isListRoute}
                 onRestart={handleRestartWithSettings}

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
 import { toast } from 'sonner';
@@ -92,7 +92,6 @@ export function useFavorites(
     },
     enabled: !!userId,
     staleTime: 60_000,
-    placeholderData: keepPreviousData,
     retry: 1,
   });
 }
@@ -239,7 +238,6 @@ export function useFavoritesCount(
     },
     enabled: !!userId,
     staleTime: 60_000,
-    placeholderData: keepPreviousData,
   });
 }
 

@@ -21,4 +21,11 @@ describe('public classroom route access', () => {
   it('keeps portal study routes public', () => {
     expect(isProtectedPath('/portal/list/123/study')).toBe(false);
   });
+
+  it('keeps localized editorial routes public during auth hydration', () => {
+    expect(isProtectedPath('/pt-br')).toBe(false);
+    expect(isProtectedPath('/pt-br/flashcards')).toBe(false);
+    expect(isProtectedPath('/en')).toBe(false);
+    expect(isProtectedPath('/en/teachers')).toBe(false);
+  });
 });
