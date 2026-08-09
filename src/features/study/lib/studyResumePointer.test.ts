@@ -51,6 +51,14 @@ describe("study resume pointer v2", () => {
     expect(writeStudyResumePointer({ ...base, path: "https://evil.test" }, storage)).toBeNull();
   });
 
+  it("remove resume_session antes de persistir o path", () => {
+    const written = writeStudyResumePointer({
+      ...base,
+      path: `${base.path}&resume_session=${base.sessionId}`,
+    }, storage);
+    expect(written?.path).toBe(base.path);
+  });
+
   it("desaparece quando a sessão apontada foi concluída", () => {
     writeStudyResumePointer(base, storage);
     markStudySessionCompleted("user-1", "session-1", storage);

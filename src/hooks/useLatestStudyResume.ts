@@ -40,23 +40,28 @@ async function fetchLatestStudyResume(
   const pointer = readStudyResumePointer(userId);
 
   if (pointer && studyResumePointerMatchesInstitution(pointer, institutionId)) {
-    const { data, error } = await supabase
+    let pointerQuery = supabase
       .from("study_sessions")
       .select(RESUMABLE_STUDY_SESSION_COLUMNS)
       .eq("id", pointer.sessionId)
       .eq("user_id", userId)
+      .eq("mode", pointer.gameMode)
       .eq("completed", false)
-      .maybeSingle();
+    if (pointer.resourceKind === "list") {
+      pointerQuery = pointerQuery.eq("list_id", pointer.resourceId);
+    }
+    const { data, error } = await pointerQuery.maybeSingle();
 
     if (!error && data) {
-      const progress = deriveStudyResumeProgress({
+      const remoteResume = resumableFromRemoteSession(data as any);
+      const progress = remoteResume ?? deriveStudyResumeProgress({
         sessionSnapshot: (data as any).session_snapshot,
         cardsOrder: (data as any).cards_order,
         currentIndex: (data as any).current_index,
       });
       const list = Array.isArray((data as any).lists) ? (data as any).lists[0] : (data as any).lists;
       return resumableFromPointer(pointer, {
-        title: typeof list?.title === "string" ? list.title : null,
+        title: remoteResume?.title ?? (typeof list?.title === "string" ? list.title : null),
         totalCards: progress.totalCards,
         progressCount: progress.progressCount,
         progressUnit: progress.progressUnit,

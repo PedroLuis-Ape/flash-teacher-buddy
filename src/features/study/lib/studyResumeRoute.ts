@@ -19,6 +19,15 @@ export interface StudyResumeRouteInput {
   sessionId: string;
 }
 
+/** Remove o token transitorio antes de persistir o path no ponteiro local. */
+export function canonicalizeStudyResumePath(path: string): string | null {
+  if (!path || !isSafeStudyResumePath(path)) return null;
+  const url = new URL(path, BASE_ORIGIN);
+  url.searchParams.delete(RESUME_SESSION_PARAM);
+  const canonical = `${url.pathname}${url.search}${url.hash}`;
+  return isSafeStudyResumePath(canonical) ? canonical : null;
+}
+
 /** Devolve o path de estudo com `resume_session` aplicado, ou null se inseguro. */
 export function buildStudyResumeRoute(input: StudyResumeRouteInput): string | null {
   if (!input?.path || !input.sessionId || !UUID_RE.test(input.sessionId)) return null;

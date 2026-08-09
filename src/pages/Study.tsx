@@ -68,6 +68,7 @@ import {
   writeStudyResumePointer,
 } from "@/features/study/lib/studyResumePointer";
 import {
+  canonicalizeStudyResumePath,
   parseRequestedResumeSessionId,
   stripResumeSessionParamFromUrl,
 } from "@/features/study/lib/studyResumeRoute";
@@ -199,6 +200,7 @@ const Study = () => {
   // The URL identifies the game being opened. The saved preset configures that
   // mode, but can never silently replace it with another mode from stale state.
   const { status: authStatus, userId: authUserId, session: authSession } = useAuth();
+  const hasConfirmedAuthSession = authStatus === "authenticated" && Boolean(authSession);
   const requestedMode: StudyMode = normalizeStudyMode(searchParams.get("mode") ?? "flip");
   const isPrivateListRoute = isListRoute && !resourceContext.isPublic;
   const {
@@ -681,7 +683,7 @@ const Study = () => {
       }, STUDY_RECOVERY_WATCHDOG_MS);
       return () => clearTimeout(timeoutId);
     }
-    if (!resourceContext.isPublic && !authSession) {
+    if (!resourceContext.isPublic && !hasConfirmedAuthSession) {
       setDeckLoadState({ phase: "waiting-auth", reason: "auth" });
       const timeoutId = setTimeout(() => {
         setDeckLoadState({ phase: "recoverable-error", reason: "session-timeout" });
@@ -696,7 +698,7 @@ const Study = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     resolvedId,
-    authSession,
+    hasConfirmedAuthSession,
     authStatus,
     authUserId,
     loadAttempt,
@@ -766,6 +768,7 @@ const Study = () => {
       signal: abortController.signal,
     });
     const requestId = createStudyDeckRequestId();
+    const loadStartedAt = performance.now();
     setDeckLoadState({
       phase: loadAttempt > 0 ? "retrying" : "loading",
       attempt: loadAttempt,
@@ -783,6 +786,13 @@ const Study = () => {
         authStatus,
       });
     }
+    logStudyRuntime("deck-load-start", {
+      requestId,
+      generation,
+      resourceId: resolvedId,
+      resumeRequested: Boolean(requestedResumeSessionId),
+      authConfirmed: hasConfirmedAuthSession,
+    });
 
     try {
 
@@ -839,9 +849,6 @@ const Study = () => {
     }
     
     // Clara Master P0 — auth is owned by AuthContext. No local re-fetch here.
-    // `authSession` from useAuth() is the single source of truth.
-    const session = authSession;
-
     // ── PERF: Fetch flashcards + list metadata in parallel ──
     const deckResult = await withStudyRuntimeTimeout(
       loadStudyDeck<Flashcard>({
@@ -849,7 +856,7 @@ const Study = () => {
         resourceKind: resourceContext.resourceKind,
         resourceId: resolvedId,
         source: resourceContext.source,
-        hasConfirmedSession: Boolean(session),
+        hasConfirmedSession: hasConfirmedAuthSession,
         signal: abortController.signal,
         fetchPage: (from, to) => fetchStudyDeckPage<Flashcard>({
           ...resourceContext,
@@ -930,6 +937,12 @@ const Study = () => {
       source: deckResult.source,
       rawCount: deckResult.rawCards.length,
       playableCount: deckResult.playableCards.length,
+    });
+    logStudyRuntime("deck-ready", {
+      requestId,
+      generation,
+      cards: deckResult.playableCards.length,
+      elapsedMs: Math.round(performance.now() - loadStartedAt),
     });
 
     const listResult = await withStudyRuntimeTimeout(
@@ -1426,7 +1439,8 @@ const Study = () => {
       resourceId: resolvedId,
       gameMode: normalizedMode,
       institutionId: resumeInstitutionId,
-      path: `${location.pathname}${location.search}`,
+      path: canonicalizeStudyResumePath(`${location.pathname}${location.search}`)
+        ?? location.pathname,
       settingsSummary: studySettings,
       currentIndex,
       currentCardId: engineCurrentCardId ?? null,
