@@ -3,6 +3,7 @@ import { useKeyboardShortcuts as useStudyShortcuts } from "@/hooks/useKeyboardSh
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
+import { readPlatformRuntime } from "@/integrations/supabase/platformRuntime";
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection, type Direction } from "@/features/study/lib/gameCore";
 import { hashToBool } from "@/features/study/lib/gameCore";
@@ -886,6 +887,43 @@ const Study = () => {
       return;
     }
     if (deckResult.status === "unconfirmed") {
+      // A previously downloaded copy is scoped to this exact list and user.
+      // It is a recovery source only: it never overwrites the database and is
+      // not treated as proof that the remote list still exists.
+      if (isListRoute && deckResult.reason === "resource-unavailable") {
+        try {
+          const offlineData = await withStudyRuntimeTimeout(
+            getOfflineList(resolvedId, userId),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            "offline-resource-recovery",
+          );
+          if (offlineData?.flashcards.length) {
+            const grouped = prepareLayeredStudyDeck(offlineData.flashcards as any[]);
+            const orderedData = initialOrder === "random" ? shuffleArray([...grouped]) : grouped;
+            setFlashcards(orderedData as Flashcard[]);
+            setDeckLoadState({
+              phase: "ready",
+              requestId: deckResult.requestId,
+              source: deckResult.source,
+              rawCount: offlineData.flashcards.length,
+              playableCount: orderedData.length,
+            });
+            setListTitle(offlineData.listMeta.title);
+            setListSettings({
+              studyType: offlineData.listMeta.study_type === "general" ? "general" : "language",
+              langA: offlineData.listMeta.lang_a,
+              langB: offlineData.listMeta.lang_b,
+              labelsA: offlineData.listMeta.labels_a,
+              labelsB: offlineData.listMeta.labels_b,
+              ttsEnabled: offlineData.listMeta.tts_enabled,
+            });
+            toast.info("Usando a última cópia local salva para recuperar esta sessão. O banco não foi alterado.");
+            return;
+          }
+        } catch {
+          // Continue with the authoritative recovery screen below.
+        }
+      }
       setFlashcards([]);
       setDeckLoadState({
         phase: "empty-unconfirmed",
@@ -1927,6 +1965,16 @@ const Study = () => {
           ? studyDeckTechnicalId("ST", deckLoadState)
           : `ST-${sessionReadiness.reason}`}
         allowStartFresh={!loadFailure && flashcards.length > 0}
+        diagnostic={loadFailure === "resource-unavailable" ? {
+          title: "A lista salva não está disponível nesta sessão",
+          description: "A retomada encontrou a sessão, mas o backend não devolveu a lista para a conta atual.",
+          details: [
+            `Projeto de dados: ${readPlatformRuntime().projectId ?? "não identificado"}`,
+            `Tipo de recurso: ${resourceContext.resourceKind}`,
+            "Possíveis causas: sessão antiga, lista arquivada ou acesso da conta/instituição ainda não confirmado.",
+          ],
+          action: "volte para a lista e abra-a novamente; se ela não aparecer, confirme a conta e a instituição ativa antes de tentar criar outra sessão.",
+        } : undefined}
       />
     );
   }
