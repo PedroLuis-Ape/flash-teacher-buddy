@@ -664,32 +664,44 @@ export function useStudyEngine(
         try {
           // A sessão pedida é consultada por ID antes de qualquer heurística de
           // recência e não é filtrada pelo preset atual.
-          const requestedRow = await fetchRequestedStudySession<any>({
-            client: supabase as any,
-            sessionId: requestedSessionId,
-            userId: userScope,
-            listId,
-            mode,
-            columns: "id,session_scope_key,session_snapshot,settings_snapshot,updated_at",
-            signal: abortController.signal,
-          });
-          const { data: remoteSessions } = await withStudyRuntimeTimeout(
-            supabase
-              .from("study_sessions")
-              .select("id,session_scope_key,session_snapshot,settings_snapshot,updated_at")
-              .eq("user_id", userScope)
-              .eq("list_id", listId)
-              .eq("mode", mode)
-              .eq("completed", false)
-              .order("updated_at", { ascending: false })
-              .limit(10)
-              .abortSignal(abortController.signal),
-            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-            "mastery-session-restore",
-            () => abortController.abort(),
-          );
+          const requestedLookup = requestedSessionId
+            ? await fetchRequestedStudySession<any>({
+              client: supabase as any,
+              sessionId: requestedSessionId,
+              userId: userScope,
+              listId,
+              mode,
+              columns: "id,session_scope_key,session_snapshot,settings_snapshot,updated_at",
+              signal: abortController.signal,
+            })
+            : null;
+          if (requestedLookup?.status === "cancelled") return;
+          if (requestedLookup?.status === "unavailable") throw requestedLookup.error;
+          if (requestedSessionId && requestedLookup?.status !== "found") {
+            throw new Error("study-resume-session-not-found");
+          }
+          const requestedRow = requestedLookup?.status === "found"
+            ? requestedLookup.session
+            : null;
+          const { data: remoteSessions } = requestedSessionId
+            ? { data: [] as any[] }
+            : await withStudyRuntimeTimeout(
+              supabase
+                .from("study_sessions")
+                .select("id,session_scope_key,session_snapshot,settings_snapshot,updated_at")
+                .eq("user_id", userScope)
+                .eq("list_id", listId)
+                .eq("mode", mode)
+                .eq("completed", false)
+                .order("updated_at", { ascending: false })
+                .limit(10)
+                .abortSignal(abortController.signal),
+              STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+              "mastery-session-restore",
+              () => abortController.abort(),
+            );
           const candidateRows = requestedRow
-            ? [requestedRow, ...(remoteSessions ?? []).filter((row: any) => row.id !== requestedRow.id)]
+            ? [requestedRow]
             : (remoteSessions ?? []);
           const mapCandidate = (candidate: any) => ({
             id: candidate.id as string,
@@ -716,6 +728,9 @@ export function useStudyEngine(
           // Sessão pedida vence qualquer sessão mais recente. Quando ela existe
           // mas não pode ser aberta, não caímos em outra sessão aleatória.
           const remote = requestedCandidate ?? fallbackCandidate;
+          if (requestedSessionId && !remote?.state) {
+            throw new Error("study-resume-session-invalid");
+          }
           if (remote) {
             applyRestoredSessionSettings({
               id: remote.id,
@@ -730,13 +745,19 @@ export function useStudyEngine(
             // win over an older local mirror, and vice-versa.
             const remoteTimestamp = Date.parse(String(remote.updatedAt ?? ""));
             const remoteAt = Number.isFinite(remoteTimestamp) ? remoteTimestamp : 0;
-            if (!restored || remoteAt > (localMastery?.savedAt ?? 0)) {
+            if (requestedSessionId || !restored || remoteAt > (localMastery?.savedAt ?? 0)) {
               restored = remote.state;
               restoredRemoteSessionId = remote.id;
             }
           }
         } catch {
-          // Local persistence remains the safe fallback if remote restore is unavailable.
+          if (requestedSessionId) {
+            setInitializationState("failed");
+            setIsLoading(false);
+            toast.error("N\\u00e3o foi poss\\u00edvel retomar esta sess\\u00e3o. Tente novamente.");
+            return;
+          }
+          // Local persistence remains the safe fallback when opening normally.
         }
       }
 
@@ -878,16 +899,33 @@ export function useStudyEngine(
       // A sessão pedida ("Continuar") é consultada por ID — não depende do
       // limite das dez mais recentes nem do preset atual. Suas configurações
       // são aplicadas antes do deck (applyRestoredSessionSettings).
-      const requestedSessionRow = await fetchRequestedStudySession<any>({
-        client: supabase as any,
-        sessionId: requestedSessionId,
-        userId: user.id,
-        listId,
-        mode,
-        signal: abortController.signal,
-      });
+      const requestedLookup = requestedSessionId
+        ? await fetchRequestedStudySession<any>({
+          client: supabase as any,
+          sessionId: requestedSessionId,
+          userId: user.id,
+          listId,
+          mode,
+          signal: abortController.signal,
+        })
+        : null;
+      if (requestedLookup?.status === "cancelled") return;
+      if (requestedLookup?.status === "unavailable") throw requestedLookup.error;
+      if (requestedSessionId && requestedLookup?.status === "not-found") {
+        if (localSnapshot?.sessionId === requestedSessionId) {
+          setCardsOrder(localSnapshot.cardsOrder);
+          setCurrentIndex(localSnapshot.currentIndex);
+          setResults(localSnapshot.results);
+          markReady();
+          return;
+        }
+        throw new Error("study-resume-session-not-found");
+      }
+      const requestedSessionRow = requestedLookup?.status === "found"
+        ? requestedLookup.session
+        : null;
       const resolveSession = (sessions: any[] | null | undefined) =>
-        requestedSessionRow ?? selectCurrentScopeSession(sessions);
+        requestedSessionId ? requestedSessionRow : selectCurrentScopeSession(sessions);
 
       const chooseNewestStudySnapshot = (
         local: ReturnType<typeof readStudySnapshot>,
@@ -927,21 +965,23 @@ export function useStudyEngine(
         // Try to restore from database first (for session continuity).
         // We fetch the recent open sessions and pick the one whose card-set
         // matches the current scope, so "all" and "favorites" stay isolated.
-        const { data: openSessions } = await withStudyRuntimeTimeout(
-          supabase
-            .from('study_sessions')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('list_id', listId)
-            .eq('mode', mode)
-             .eq('completed', false)
-             .order('updated_at', { ascending: false })
-            .limit(10)
-            .abortSignal(abortController.signal),
-          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-          "flip-session-restore",
-          () => abortController.abort(),
-        );
+        const { data: openSessions } = requestedSessionId
+          ? { data: [] as any[] }
+          : await withStudyRuntimeTimeout(
+            supabase
+              .from('study_sessions')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('list_id', listId)
+              .eq('mode', mode)
+               .eq('completed', false)
+              .order('updated_at', { ascending: false })
+              .limit(10)
+              .abortSignal(abortController.signal),
+            STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+            "flip-session-restore",
+            () => abortController.abort(),
+          );
         if (!isCurrent()) return;
 
         const matchingSession = resolveSession(openSessions);
@@ -997,6 +1037,7 @@ export function useStudyEngine(
             markReady();
             return;
           }
+          if (requestedSessionId) throw new Error("study-resume-session-invalid");
         }
 
         // Fallback to localStorage if no database session
@@ -1053,21 +1094,23 @@ export function useStudyEngine(
       // current scope. This keeps "all" and "favorites" (and redFocus) on
       // separate persisted rows so toggling between them never zeroes the
       // other trail.
-      const { data: openSessions } = await withStudyRuntimeTimeout(
-        supabase
-          .from('study_sessions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('list_id', listId)
-          .eq('mode', mode)
-           .eq('completed', false)
-          .order('updated_at', { ascending: false })
-          .limit(10)
-          .abortSignal(abortController.signal),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "quiz-session-restore",
-        () => abortController.abort(),
-      );
+      const { data: openSessions } = requestedSessionId
+        ? { data: [] as any[] }
+        : await withStudyRuntimeTimeout(
+          supabase
+            .from('study_sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('list_id', listId)
+            .eq('mode', mode)
+             .eq('completed', false)
+            .order('updated_at', { ascending: false })
+            .limit(10)
+            .abortSignal(abortController.signal),
+          STUDY_REMOTE_RESTORE_TIMEOUT_MS,
+          "quiz-session-restore",
+          () => abortController.abort(),
+        );
       if (!isCurrent()) return;
 
       const matchingSession = resolveSession(openSessions);
@@ -1125,6 +1168,7 @@ export function useStudyEngine(
           markReady();
           return;
         }
+        if (requestedSessionId) throw new Error("study-resume-session-invalid");
       }
 
       // Create new session with ALL flashcards (straight-through, no batching)
@@ -1182,6 +1226,12 @@ export function useStudyEngine(
       }, isCurrent).catch(() => undefined);
     } catch (error) {
       if (!isCurrent()) return;
+      if (requestedSessionId) {
+        setInitializationState("failed");
+        setIsLoading(false);
+        toast.error("N\\u00e3o foi poss\\u00edvel retomar esta sess\\u00e3o. Tente novamente.");
+        return;
+      }
       logStudyRuntime("initialization-fallback", {
         generation,
         mode,

@@ -14,6 +14,7 @@ import {
   normalizeStudySettingsSnapshotV2,
   type StudySettingsSnapshotV2,
 } from "./studySettingsSnapshotV2";
+import { canonicalizeStudyResumePath } from "./studyResumeRoute";
 
 export interface StudyResumeSnapshotV2 {
   version: 2;
@@ -75,10 +76,12 @@ export function writeStudyResumePointer(
   storage: Pick<Storage, "setItem" | "removeItem"> = localStorage,
 ): StudyResumeSnapshotV2 | null {
   if (!input.userId || !input.sessionId || !input.resourceId) return null;
-  if (!isSafeStudyResumePath(input.path)) return null;
+  const path = canonicalizeStudyResumePath(input.path);
+  if (!path) return null;
 
   const snapshot: StudyResumeSnapshotV2 = {
     ...input,
+    path,
     version: 2,
     settingsSummary: normalizeStudySettingsSnapshotV2(input.settingsSummary),
     currentIndex: Number.isFinite(input.currentIndex) ? Math.max(0, Math.trunc(input.currentIndex)) : 0,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  canonicalizeStudyResumePath,
   RESUME_SESSION_PARAM,
   buildStudyPathFromRemoteSession,
   buildStudyResumeRoute,
@@ -33,6 +34,12 @@ const pointer: StudyResumeSnapshotV2 = {
 };
 
 describe("buildStudyResumeRoute", () => {
+  it("mantem o ponteiro canonico sem resume_session", () => {
+    expect(canonicalizeStudyResumePath(
+      `${pointer.path}&${RESUME_SESSION_PARAM}=${SESSION_ID}`,
+    )).toBe(pointer.path);
+  });
+
   it("inclui resume_session e nunca navega para o hub de jogos", () => {
     const route = buildStudyResumeRoute({ path: pointer.path, sessionId: SESSION_ID })!;
     expect(route).toContain(`${RESUME_SESSION_PARAM}=${SESSION_ID}`);
@@ -134,7 +141,7 @@ describe("consulta direta da sessão pedida", () => {
       listId: "list-1",
       mode: "write",
     });
-    expect(row).toEqual({ id: SESSION_ID });
+    expect(row).toEqual({ status: "found", session: { id: SESSION_ID } });
     expect(calls).toEqual([
       ["id", SESSION_ID],
       ["user_id", "user-1"],
@@ -152,7 +159,24 @@ describe("consulta direta da sessão pedida", () => {
       userId: "user-1",
       listId: "list-1",
       mode: "write",
-    })).resolves.toBeNull();
+    })).resolves.toEqual({ status: "not-found" });
+  });
+
+  it("distingue falha de transporte de sessao inexistente", async () => {
+    const query: any = {
+      select: () => query,
+      eq: () => query,
+      abortSignal: () => query,
+      maybeSingle: () => Promise.resolve({ data: null, error: { code: "PGRST301", message: "network" } }),
+    };
+    const result = await fetchRequestedStudySession({
+      client: { from: () => query } as any,
+      sessionId: SESSION_ID,
+      userId: "user-1",
+      listId: "list-1",
+      mode: "write",
+    });
+    expect(result.status).toBe("unavailable");
   });
 
   it("não consulta nada sem sessionId", async () => {
@@ -163,7 +187,7 @@ describe("consulta direta da sessão pedida", () => {
       userId: "user-1",
       listId: "list-1",
       mode: "write",
-    })).resolves.toBeNull();
+    })).resolves.toEqual({ status: "not-found" });
     expect(client.from).not.toHaveBeenCalled();
   });
 });
