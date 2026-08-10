@@ -22,6 +22,14 @@ describe("authoritative study empty-state contract", () => {
     expect(source).not.toContain('deckResult.status === "empty"');
   });
 
+  it("keeps resource-unavailable recovery read-only and actionable", () => {
+    expect(study).toContain("getOfflineList(resolvedId, userId)");
+    expect(study).toContain("offline-resource-recovery");
+    expect(study).toContain("O banco não foi alterado");
+    expect(study).toContain("readPlatformRuntime().projectId");
+    expect(recovery).toContain("diagnostic");
+  });
+
   it("never maps MixedStudy session/filter emptiness to the business empty screen", () => {
     expect(mixed).not.toContain('confirmedEmpty || sessionReadiness.phase === "empty"');
     expect(mixed).toContain("<StudyScopeEmptyState");
@@ -43,6 +51,8 @@ describe("authoritative study empty-state contract", () => {
   it("keeps retry available after a deck timeout", () => {
     expect(study).toContain("isRetrying={loading || studyLoading || preferencesHydrating}");
     expect(study).not.toContain("isRetrying={loading || studyLoading || preferencesHydrating || !sessionPresetReady}");
+    expect(engine).toContain('if (!deckReady)');
+    expect(engine).toMatch(/if \(!deckReady\)[\s\S]*?setIsLoading\(false\);[\s\S]*?return;/);
   });
 
   it("gates engine initialization and isolates local collection snapshots", () => {

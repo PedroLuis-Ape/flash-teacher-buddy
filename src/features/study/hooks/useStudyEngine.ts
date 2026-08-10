@@ -604,7 +604,10 @@ export function useStudyEngine(
       if (isCurrent()) {
         completedInitSignatureRef.current = "";
         setInitializationState("loading");
-        setIsLoading(true);
+        // The engine is gated by the page deck, not actively initializing.
+        // Keeping this true would leave recovery actions disabled forever
+        // after the deck request reaches a terminal failure.
+        setIsLoading(false);
       }
       return;
     }
