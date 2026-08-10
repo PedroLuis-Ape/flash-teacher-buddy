@@ -51,6 +51,8 @@ describe("authoritative study empty-state contract", () => {
   it("keeps retry available after a deck timeout", () => {
     expect(study).toContain("isRetrying={loading || studyLoading || preferencesHydrating}");
     expect(study).not.toContain("isRetrying={loading || studyLoading || preferencesHydrating || !sessionPresetReady}");
+    expect(engine).toContain('if (!deckReady)');
+    expect(engine).toMatch(/if \(!deckReady\)[\s\S]*?setIsLoading\(false\);[\s\S]*?return;/);
   });
 
   it("gates engine initialization and isolates local collection snapshots", () => {

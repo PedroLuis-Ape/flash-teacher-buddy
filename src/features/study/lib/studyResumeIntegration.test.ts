@@ -95,7 +95,7 @@ describe("modelo único de retomada", () => {
       session_snapshot: { version: 2, results: [{ flashcardId: "a" }, { flashcardId: "b" }] },
       updated_at: "2026-08-01T10:00:00.000Z",
       completed: false,
-      lists: { title: "Avançado 003", institution_id: null },
+      lists: { id: "list-1", title: "Avançado 003", institution_id: null, deleted_at: null },
     })!;
     expect(resume.source).toBe("remote-session");
     expect(resume.path).toContain("favorites=true");
@@ -105,6 +105,26 @@ describe("modelo único de retomada", () => {
 
   it("recusa sessão concluída", () => {
     expect(resumableFromRemoteSession({ id: SESSION_ID, list_id: "l", mode: "write", completed: true })).toBeNull();
+  });
+
+  it("recusa retomada quando a lista relacionada não está visível", () => {
+    expect(resumableFromRemoteSession({
+      id: SESSION_ID,
+      list_id: "list-1",
+      mode: "write",
+      completed: false,
+      lists: null,
+    })).toBeNull();
+  });
+
+  it("recusa retomada quando a lista relacionada foi arquivada", () => {
+    expect(resumableFromRemoteSession({
+      id: SESSION_ID,
+      list_id: "list-1",
+      mode: "write",
+      completed: false,
+      lists: { id: "list-1", deleted_at: "2026-08-10T10:00:00.000Z" },
+    })).toBeNull();
   });
 
   it("conta dominados no gamificado e respondidos no extenso", () => {

@@ -46,6 +46,21 @@ export interface RemoteStudySessionRow {
   lists?: unknown;
 }
 
+function visibleListFromRemoteSession(row: RemoteStudySessionRow): {
+  id: string;
+  title?: unknown;
+  institution_id?: unknown;
+  deleted_at?: unknown;
+} | null {
+  const candidate = (Array.isArray(row.lists) ? row.lists[0] : row.lists) as
+    | { id?: unknown; title?: unknown; institution_id?: unknown; deleted_at?: unknown }
+    | null
+    | undefined;
+  return candidate && typeof candidate.id === "string" && candidate.deleted_at == null
+    ? { ...candidate, id: candidate.id }
+    : null;
+}
+
 interface MasteryLikeSnapshot {
   version?: unknown;
   masteredIds?: unknown;
@@ -144,14 +159,15 @@ export function resumableFromRemoteSession(
   const mode = typeof row.mode === "string" && row.mode.length > 0 ? row.mode : null;
   if (!sessionId || !listId || !mode) return null;
 
+  // A study-session row can outlive, or remain readable after losing access
+  // to, its related list. Such a row must not create a resume link that is
+  // guaranteed to fail with ST-resource-unavailable.
+  const list = visibleListFromRemoteSession(row);
+  if (!list || list.id !== listId) return null;
+
   const settings = normalizeStudySettingsSnapshotV2(row.settings_snapshot);
   const path = buildStudyPathFromRemoteSession({ listId, mode, settings });
   if (!path) return null;
-
-  const list = (Array.isArray(row.lists) ? row.lists[0] : row.lists) as
-    | { title?: unknown; institution_id?: unknown }
-    | null
-    | undefined;
 
   const progress = deriveStudyResumeProgress({
     sessionSnapshot: row.session_snapshot,
@@ -182,4 +198,4 @@ export function resumableFromRemoteSession(
 }
 
 export const RESUMABLE_STUDY_SESSION_COLUMNS =
-  "id, list_id, mode, session_scope_key, current_index, cards_order, settings_snapshot, session_snapshot, updated_at, completed, lists(id, title, institution_id)";
+  "id, list_id, mode, session_scope_key, current_index, cards_order, settings_snapshot, session_snapshot, updated_at, completed, lists(id, title, institution_id, deleted_at)";

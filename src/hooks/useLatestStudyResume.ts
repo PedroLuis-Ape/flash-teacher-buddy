@@ -29,6 +29,7 @@ export const STUDY_RESUME_QUERY_KEY = "study-resume";
 
 function matchesInstitution(row: any, institutionId: string | null): boolean {
   const list = Array.isArray(row?.lists) ? row.lists[0] : row?.lists;
+  if (!list || typeof list.id !== "string" || list.deleted_at != null) return false;
   const listInstitution = list?.institution_id ?? null;
   return institutionId ? listInstitution === institutionId : listInstitution === null;
 }
@@ -54,18 +55,25 @@ async function fetchLatestStudyResume(
 
     if (!error && data) {
       const remoteResume = resumableFromRemoteSession(data as any);
-      const progress = remoteResume ?? deriveStudyResumeProgress({
-        sessionSnapshot: (data as any).session_snapshot,
-        cardsOrder: (data as any).cards_order,
-        currentIndex: (data as any).current_index,
-      });
-      const list = Array.isArray((data as any).lists) ? (data as any).lists[0] : (data as any).lists;
-      return resumableFromPointer(pointer, {
-        title: remoteResume?.title ?? (typeof list?.title === "string" ? list.title : null),
-        totalCards: progress.totalCards,
-        progressCount: progress.progressCount,
-        progressUnit: progress.progressUnit,
-      });
+      if (pointer.resourceKind === "list" && !remoteResume) {
+        // The session row exists, but its related list is no longer visible to
+        // this account. Remove only the local pointer; never mutate the remote
+        // session or the list from this read path.
+        clearStudyResumePointer(userId);
+      } else {
+        const progress = remoteResume ?? deriveStudyResumeProgress({
+          sessionSnapshot: (data as any).session_snapshot,
+          cardsOrder: (data as any).cards_order,
+          currentIndex: (data as any).current_index,
+        });
+        const list = Array.isArray((data as any).lists) ? (data as any).lists[0] : (data as any).lists;
+        return resumableFromPointer(pointer, {
+          title: remoteResume?.title ?? (typeof list?.title === "string" ? list.title : null),
+          totalCards: progress.totalCards,
+          progressCount: progress.progressCount,
+          progressUnit: progress.progressUnit,
+        });
+      }
     }
 
     // A sessão apontada não existe mais (ou foi concluída): o ponteiro inválido
@@ -83,8 +91,10 @@ async function fetchLatestStudyResume(
     .limit(10);
   if (openError) throw openError;
 
-  const candidate = (openSessions ?? []).find((row) => matchesInstitution(row, institutionId));
-  return resumableFromRemoteSession(candidate as any);
+  const candidate = (openSessions ?? [])
+    .map((row) => ({ row, resume: resumableFromRemoteSession(row as any) }))
+    .find(({ row, resume }) => Boolean(resume) && matchesInstitution(row, institutionId));
+  return candidate?.resume ?? null;
 }
 
 export function useLatestStudyResume() {
