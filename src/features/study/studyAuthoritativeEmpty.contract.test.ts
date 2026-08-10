@@ -48,6 +48,11 @@ describe("authoritative study empty-state contract", () => {
     expect(mixed).toContain("allowStartFresh={!loadFailure && cards.length > 0}");
   });
 
+  it("keeps retry available after a deck timeout", () => {
+    expect(study).toContain("isRetrying={loading || studyLoading || preferencesHydrating}");
+    expect(study).not.toContain("isRetrying={loading || studyLoading || preferencesHydrating || !sessionPresetReady}");
+  });
+
   it("gates engine initialization and isolates local collection snapshots", () => {
     expect(engine).toContain("if (!deckReady)");
     expect(engine).toContain("storageResourceId || listId");

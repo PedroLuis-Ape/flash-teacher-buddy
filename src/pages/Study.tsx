@@ -1955,12 +1955,15 @@ const Study = () => {
     initializationState === "failed" ||
     sessionReadiness.phase === "failed"
   ) {
+    // A failed deck never reaches preset-ready. Readiness is not proof that
+    // a retry is still running; otherwise a timeout leaves this button
+    // disabled forever with the label "Tentando...".
     return (
       <StudySessionRecovery
         onRetry={handleRecoveryRetry}
         onStartFresh={handleRecoveryFresh}
         onBack={() => void handleExit()}
-        isRetrying={loading || studyLoading || preferencesHydrating || !sessionPresetReady}
+        isRetrying={loading || studyLoading || preferencesHydrating}
         technicalId={loadFailure || deckLoadState.phase === "cancelled"
           ? studyDeckTechnicalId("ST", deckLoadState)
           : `ST-${sessionReadiness.reason}`}
