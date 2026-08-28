@@ -81,7 +81,7 @@ export function ApeTabBar() {
                 settings.visualFeedback && "active:scale-95",
                 active ? "space-ui-tab-active text-foreground" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground"),
               )}
-              aria-label={tab.label}
+              aria-label={t(tab.labelKey)}
               aria-current={active ? "page" : undefined}
             >
               <div
@@ -103,7 +103,7 @@ export function ApeTabBar() {
                   active ? "font-semibold" : "font-normal",
                 )}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </span>
             </button>
           );
