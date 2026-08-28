@@ -34,6 +34,7 @@ import ptDates from './resources/pt-BR/dates.json';
 import ptLanguage from './resources/pt-BR/language.json';
 import ptErrors from './resources/pt-BR/errors.json';
 import ptStudy from './resources/pt-BR/study.json';
+import ptLibrary from './resources/pt-BR/library.json';
 
 import enCommon from './resources/en/common.json';
 import enNav from './resources/en/nav.json';
@@ -45,6 +46,7 @@ import enDates from './resources/en/dates.json';
 import enLanguage from './resources/en/language.json';
 import enErrors from './resources/en/errors.json';
 import enStudy from './resources/en/study.json';
+import enLibrary from './resources/en/library.json';
 
 import esCommon from './resources/es/common.json';
 import esNav from './resources/es/nav.json';
@@ -56,6 +58,7 @@ import esDates from './resources/es/dates.json';
 import esLanguage from './resources/es/language.json';
 import esErrors from './resources/es/errors.json';
 import esStudy from './resources/es/study.json';
+import esLibrary from './resources/es/library.json';
 
 import frCommon from './resources/fr/common.json';
 import frNav from './resources/fr/nav.json';
@@ -67,6 +70,7 @@ import frDates from './resources/fr/dates.json';
 import frLanguage from './resources/fr/language.json';
 import frErrors from './resources/fr/errors.json';
 import frStudy from './resources/fr/study.json';
+import frLibrary from './resources/fr/library.json';
 
 import itCommon from './resources/it/common.json';
 import itNav from './resources/it/nav.json';
@@ -78,17 +82,18 @@ import itDates from './resources/it/dates.json';
 import itLanguage from './resources/it/language.json';
 import itErrors from './resources/it/errors.json';
 import itStudy from './resources/it/study.json';
+import itLibrary from './resources/it/library.json';
 
 type Catalog = Record<string, unknown>;
 
 const merge = (...parts: Catalog[]): Catalog => Object.assign({}, ...parts);
 
 const catalogs: Record<AppLocale, Catalog> = {
-  'pt-BR': merge(ptCommon, ptNav, ptSidebar, ptHome, ptFlashcards, ptClasses, ptDates, ptLanguage, ptErrors, ptStudy),
-  en: merge(enCommon, enNav, enSidebar, enHome, enFlashcards, enClasses, enDates, enLanguage, enErrors, enStudy),
-  es: merge(esCommon, esNav, esSidebar, esHome, esFlashcards, esClasses, esDates, esLanguage, esErrors, esStudy),
-  fr: merge(frCommon, frNav, frSidebar, frHome, frFlashcards, frClasses, frDates, frLanguage, frErrors, frStudy),
-  it: merge(itCommon, itNav, itSidebar, itHome, itFlashcards, itClasses, itDates, itLanguage, itErrors, itStudy),
+  'pt-BR': merge(ptCommon, ptNav, ptSidebar, ptHome, ptFlashcards, ptClasses, ptDates, ptLanguage, ptErrors, ptStudy, ptLibrary),
+  en: merge(enCommon, enNav, enSidebar, enHome, enFlashcards, enClasses, enDates, enLanguage, enErrors, enStudy, enLibrary),
+  es: merge(esCommon, esNav, esSidebar, esHome, esFlashcards, esClasses, esDates, esLanguage, esErrors, esStudy, esLibrary),
+  fr: merge(frCommon, frNav, frSidebar, frHome, frFlashcards, frClasses, frDates, frLanguage, frErrors, frStudy, frLibrary),
+  it: merge(itCommon, itNav, itSidebar, itHome, itFlashcards, itClasses, itDates, itLanguage, itErrors, itStudy, itLibrary),
 };
 
 const resources = Object.fromEntries(

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 // Shared lang-label resolver for all language fallbacks
 import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -52,6 +53,7 @@ interface FolderType {
 }
 
 const Folder = () => {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -155,14 +157,14 @@ const Folder = () => {
           
           if (edgeFnError) {
             console.error("[Folder] Edge function error:", edgeFnError);
-            toast.error("Pasta não encontrada ou sem permissão");
+            toast.error(t("library.folder.toast.notFoundOrForbidden"));
             navigate("/folders");
             return;
           }
           
           if (!edgeFnData?.folder) {
             console.log("[Folder] No folder returned from edge function");
-            toast.error("Pasta não encontrada ou sem permissão");
+            toast.error(t("library.folder.toast.notFoundOrForbidden"));
             navigate("/folders");
             return;
           }
@@ -189,14 +191,14 @@ const Folder = () => {
         
         if (error) {
           console.error("Erro RPC get_portal_folder:", error);
-          toast.error("Pasta não encontrada ou não está compartilhada");
+          toast.error(t("library.folder.toast.notShared"));
           navigate("/portal");
           return;
         }
         
         if (!data) {
           console.log("Nenhuma pasta retornada do RPC");
-          toast.error("Pasta não encontrada ou não está compartilhada");
+          toast.error(t("library.folder.toast.notShared"));
           navigate("/portal");
           return;
         }
@@ -207,7 +209,7 @@ const Folder = () => {
       }
     } catch (error: any) {
       console.error("Erro ao carregar pasta:", error);
-      toast.error("Erro ao carregar pasta: " + error.message);
+      toast.error(t("library.folder.toast.loadError", { message: error.message }));
       const { data: { session } } = await supabase.auth.getSession();
       navigate(session ? "/folders" : "/portal");
     }
@@ -235,7 +237,7 @@ const Folder = () => {
         setLists(data);
       }
     } catch (error: any) {
-      toast.error("Erro ao carregar listas: " + error.message);
+      toast.error(t("library.folder.toast.loadListsError", { message: error.message }));
     } finally {
       setLoading(false);
     }
@@ -255,9 +257,9 @@ const Folder = () => {
       
       setFolder({ ...folder, title: editTitle.trim() });
       setIsEditingTitle(false);
-      toast.success("Título atualizado!");
+      toast.success(t("library.folder.toast.titleUpdated"));
     } catch (error: any) {
-      toast.error("Erro ao atualizar: " + error.message);
+      toast.error(t("library.folder.toast.updateError", { message: error.message }));
     } finally {
       setIsSavingTitle(false);
     }
@@ -297,10 +299,10 @@ const Folder = () => {
         if (profileError) throw profileError;
       }
 
-      toast.success("Pasta compartilhada com sucesso!");
+      toast.success(t("library.folder.toast.shared"));
       setShareDialogOpen(false);
     } catch (error: any) {
-      toast.error("Erro ao compartilhar: " + error.message);
+      toast.error(t("library.folder.toast.shareError", { message: error.message }));
     } finally {
       setSharing(false);
     }
@@ -371,10 +373,10 @@ const Folder = () => {
         tts_enabled: folderSettings.ttsEnabled,
       });
       
-      toast.success("Idiomas da pasta atualizados! Listas herdadas foram sincronizadas.");
+      toast.success(t("library.folder.toast.languagesSynced"));
       setFolderSettingsOpen(false);
     } catch (error: any) {
-      toast.error("Erro ao salvar: " + error.message);
+      toast.error(t("library.folder.toast.saveError", { message: error.message }));
     } finally {
       setIsSavingFolderSettings(false);
     }
@@ -399,7 +401,7 @@ const Folder = () => {
     e.preventDefault();
     
     if (!newList.title.trim()) {
-      toast.error("O título é obrigatório");
+      toast.error(t("library.folder.toast.titleRequired"));
       return;
     }
 
@@ -424,7 +426,7 @@ const Folder = () => {
 
       if (error) throw error;
 
-      toast.success("Lista criada! Edite o conteúdo abaixo.");
+      toast.success(t("library.folder.toast.listCreated"));
       setDialogOpen(false);
       setNewList({ title: "", description: "" });
       setNewListStudySettings(getDefaultListStudySettings());
@@ -436,7 +438,7 @@ const Folder = () => {
         loadLists();
       }
     } catch (error: any) {
-      toast.error("Erro ao criar lista: " + error.message);
+      toast.error(t("library.folder.toast.createListError", { message: error.message }));
     }
   };
 
@@ -449,7 +451,7 @@ const Folder = () => {
     e.preventDefault();
     
     if (!editingList || !editingList.title.trim()) {
-      toast.error("O título é obrigatório");
+      toast.error(t("library.folder.toast.titleRequired"));
       return;
     }
 
@@ -464,12 +466,12 @@ const Folder = () => {
 
       if (error) throw error;
 
-      toast.success("Lista atualizada com sucesso!");
+      toast.success(t("library.folder.toast.listUpdated"));
       setEditDialogOpen(false);
       setEditingList(null);
       loadLists();
     } catch (error: any) {
-      toast.error("Erro ao atualizar lista: " + error.message);
+      toast.error(t("library.folder.toast.updateListError", { message: error.message }));
     }
   };
 
@@ -492,7 +494,7 @@ const Folder = () => {
       );
       loadLists();
     } catch (error: any) {
-      toast.error("Erro ao excluir lista: " + error.message);
+      toast.error(t("library.folder.toast.deleteListError", { message: error.message }));
     }
   };
 
@@ -562,7 +564,7 @@ const Folder = () => {
       setShowBulkDeleteDialog(false);
       loadLists();
     } catch (error: any) {
-      toast.error("Erro ao excluir: " + (error?.message || "desconhecido"));
+      toast.error(t("library.folder.toast.deleteError", { message: error?.message || "" }));
     } finally {
       setIsBulkDeleting(false);
     }
@@ -580,7 +582,7 @@ const Folder = () => {
       if (error) throw error;
       
       if (!flashcards || flashcards.length === 0) {
-        toast.error("Nenhum termo encontrado nas listas");
+        toast.error(t("library.folder.toast.noTerms"));
         return;
       }
       
@@ -589,9 +591,9 @@ const Folder = () => {
       const vocabulary = uniqueTerms.join(", ");
       
       await navigator.clipboard.writeText(vocabulary);
-      toast.success(`${uniqueTerms.length} termos copiados!`);
+      toast.success(t("library.folder.toast.termsCopied", { count: uniqueTerms.length }));
     } catch (error: any) {
-      toast.error("Erro ao copiar: " + error.message);
+      toast.error(t("library.folder.toast.copyError", { message: error.message }));
     }
   };
 
@@ -607,7 +609,7 @@ const Folder = () => {
       if (error) throw error;
       
       if (!flashcards || flashcards.length === 0) {
-        toast.error("Nenhum termo encontrado nas listas");
+        toast.error(t("library.folder.toast.noTerms"));
         return;
       }
       
@@ -624,9 +626,9 @@ const Folder = () => {
       const prompt = `Crie uma história curta em ${langLabel} usando as seguintes palavras: ${vocabulary}. O texto deve ser adequado para nível iniciante.`;
       
       await navigator.clipboard.writeText(prompt);
-      toast.success("Prompt copiado! Cole em uma IA como ChatGPT ou Gemini.");
+      toast.success(t("library.folder.toast.promptCopied"));
     } catch (error: any) {
-      toast.error("Erro ao copiar: " + error.message);
+      toast.error(t("library.folder.toast.copyError", { message: error.message }));
     }
   };
 
@@ -643,7 +645,7 @@ const Folder = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Carregando pasta...</p>
+          <p className="text-muted-foreground">{t("library.folder.loading")}</p>
         </div>
       </div>
     );
@@ -707,12 +709,12 @@ const Folder = () => {
 
         <Tabs defaultValue="lists" className="w-full">
           <TabsList className="mb-6">
-            <TabsTrigger value="lists">Listas</TabsTrigger>
+            <TabsTrigger value="lists">{t("library.folder.lists")}</TabsTrigger>
             <TabsTrigger value="texto">
               <BookOpen className="mr-1.5 h-4 w-4" />
               Texto
             </TabsTrigger>
-            <TabsTrigger value="videos">Vídeos</TabsTrigger>
+            <TabsTrigger value="videos">{t("library.folder.videos")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="lists">
@@ -733,7 +735,7 @@ const Folder = () => {
                   </DialogTrigger>
                    <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
                     <DialogHeader>
-                      <DialogTitle>Criar Nova Lista</DialogTitle>
+                      <DialogTitle>{t("library.folder.createList")}</DialogTitle>
                       <DialogDescription>
                         A lista será criada e você será redirecionado automaticamente para editá-la.
                       </DialogDescription>
@@ -742,22 +744,22 @@ const Folder = () => {
                       <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1">
                         <div className="space-y-4 py-2 pb-4">
                           <div className="space-y-2">
-                            <Label htmlFor="title">Título</Label>
+                            <Label htmlFor="title">{t("library.folder.titleLabel")}</Label>
                             <Input
                               id="title"
                               value={newList.title}
                               onChange={(e) => setNewList({ ...newList, title: e.target.value })}
-                              placeholder="Ex: Verbos Irregulares"
+                              placeholder={t("library.folder.titlePlaceholder")}
                               required
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="description">Descrição (opcional)</Label>
+                            <Label htmlFor="description">{t("library.folder.descriptionOptional")}</Label>
                             <Textarea
                               id="description"
                               value={newList.description}
                               onChange={(e) => setNewList({ ...newList, description: e.target.value })}
-                              placeholder="Descreva o conteúdo desta lista..."
+                              placeholder={t("library.folder.descriptionPlaceholder")}
                               rows={3}
                             />
                           </div>
@@ -770,7 +772,7 @@ const Folder = () => {
                         </div>
                       </div>
                       <DialogFooter className="mt-2 pt-2 border-t flex-shrink-0">
-                        <Button type="submit" className="w-full sm:w-auto">Criar Lista</Button>
+                        <Button type="submit" className="w-full sm:w-auto">{t("library.folder.createListAction")}</Button>
                       </DialogFooter>
                     </form>
                   </DialogContent>
@@ -785,7 +787,7 @@ const Folder = () => {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Compartilhar Pasta</DialogTitle>
+                      <DialogTitle>{t("library.folder.share")}</DialogTitle>
                       <DialogDescription>
                         Torne esta pasta e todo o seu conteúdo visível para seus alunos no Portal do Aluno.
                       </DialogDescription>
@@ -885,18 +887,18 @@ const Folder = () => {
                 <Input
                   value={listSearch}
                   onChange={(e) => setListSearch(e.target.value)}
-                  placeholder="Buscar lista..."
+                  placeholder={t("library.folder.searchList")}
                   className="pl-9 h-10"
                 />
               </div>
             )}
 
             {loading ? (
-              <p className="text-center text-sm text-muted-foreground py-4">Carregando...</p>
+              <p className="text-center text-sm text-muted-foreground py-4">{t("common.loading")}</p>
             ) : lists.length === 0 ? (
               <Card className="text-center p-8">
                 <CardHeader>
-                  <CardTitle className="text-lg">Nenhuma lista ainda</CardTitle>
+                  <CardTitle className="text-lg">{t("library.folder.noLists")}</CardTitle>
                   <CardDescription className="text-sm">
                     {canEdit
                       ? "Crie sua primeira lista de flashcards"
@@ -1008,7 +1010,7 @@ const Folder = () => {
                                           <Pencil className="h-3 w-3" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Editar conteúdo</TooltipContent>
+                                      <TooltipContent>{t("library.folder.editContent")}</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <AlertDialog>
@@ -1023,13 +1025,13 @@ const Folder = () => {
                                     </AlertDialogTrigger>
                                     <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                       <AlertDialogHeader>
-                                        <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
+                                        <AlertDialogTitle>{t("library.folder.deleteList")}</AlertDialogTitle>
                                         <AlertDialogDescription>
                                           Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
                                         </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                                         <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
                                           Excluir
                                         </AlertDialogAction>
@@ -1053,7 +1055,7 @@ const Folder = () => {
           <TabsContent value="texto">
             {textLoading ? (
               <Card className="p-8 text-center">
-                <p className="text-muted-foreground">Carregando...</p>
+                <p className="text-muted-foreground">{t("common.loading")}</p>
               </Card>
             ) : isEditingText ? (
               // EDIT MODE
@@ -1065,21 +1067,21 @@ const Folder = () => {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="text-title">Título</Label>
+                  <Label htmlFor="text-title">{t("library.folder.titleLabel")}</Label>
                   <Input
                     id="text-title"
                     value={editTextTitle}
                     onChange={(e) => setEditTextTitle(e.target.value)}
-                    placeholder="Ex: História com vocabulário"
+                    placeholder={t("library.folder.textTitlePlaceholder")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="text-content">Conteúdo</Label>
+                  <Label htmlFor="text-content">{t("library.folder.contentLabel")}</Label>
                   <Textarea
                     id="text-content"
                     value={editTextContent}
                     onChange={(e) => setEditTextContent(e.target.value)}
-                    placeholder="Digite ou cole seu texto aqui..."
+                    placeholder={t("library.folder.textPlaceholder")}
                     className="min-h-[300px] font-mono text-sm"
                   />
                 </div>
@@ -1122,7 +1124,7 @@ const Folder = () => {
                               Copiar Vocabulário
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Copia todos os termos das listas</TooltipContent>
+                          <TooltipContent>{t("library.folder.copyTermsHint")}</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                       <Button
@@ -1151,7 +1153,7 @@ const Folder = () => {
               <Card className="p-8 text-center space-y-4">
                 <BookOpen className="h-12 w-12 mx-auto text-muted-foreground" />
                 <div>
-                  <h3 className="font-semibold">Nenhum texto ainda</h3>
+                  <h3 className="font-semibold">{t("library.folder.noTexts")}</h3>
                   <p className="text-sm text-muted-foreground">
                     {canEdit
                       ? "Adicione textos de leitura baseados no vocabulário das listas"
@@ -1178,7 +1180,7 @@ const Folder = () => {
                             Copiar Vocabulário
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Copia todos os termos das listas</TooltipContent>
+                        <TooltipContent>{t("library.folder.copyTermsHint")}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                     <TooltipProvider>
@@ -1189,7 +1191,7 @@ const Folder = () => {
                             Copiar Prompt para IA
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Copia um prompt para gerar história com IA</TooltipContent>
+                        <TooltipContent>{t("library.folder.copyStoryHint")}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
@@ -1206,7 +1208,7 @@ const Folder = () => {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Lista</DialogTitle>
+              <DialogTitle>{t("library.folder.editList")}</DialogTitle>
               <DialogDescription>
                 Altere o título e descrição da lista
               </DialogDescription>
@@ -1215,27 +1217,27 @@ const Folder = () => {
               <form onSubmit={handleUpdateList}>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-list-title">Título</Label>
+                    <Label htmlFor="edit-list-title">{t("library.folder.titleLabel")}</Label>
                     <Input
                       id="edit-list-title"
                       value={editingList.title}
                       onChange={(e) => setEditingList({ ...editingList, title: e.target.value })}
-                      placeholder="Ex: Verbos Irregulares"
+                      placeholder={t("library.folder.titlePlaceholder")}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-list-description">Descrição (opcional)</Label>
+                    <Label htmlFor="edit-list-description">{t("library.folder.descriptionOptional")}</Label>
                     <Textarea
                       id="edit-list-description"
                       value={editingList.description || ""}
                       onChange={(e) => setEditingList({ ...editingList, description: e.target.value })}
-                      placeholder="Descreva o conteúdo desta lista..."
+                      placeholder={t("library.folder.descriptionPlaceholder")}
                     />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Salvar Alterações</Button>
+                  <Button type="submit">{t("library.folder.saveChanges")}</Button>
                 </DialogFooter>
               </form>
             )}
@@ -1252,7 +1254,7 @@ const Folder = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isBulkDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={isBulkDeleting}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}

@@ -5,8 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FolderGlossaryManager } from "@/features/study/components/FolderGlossaryManager";
+import { useTranslation } from "react-i18next";
 
 export default function FolderGlossary() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: folder, isLoading } = useQuery({
@@ -31,14 +33,14 @@ export default function FolderGlossary() {
           variant="ghost"
           size="icon"
           onClick={() => navigate(`/folder/${id}`)}
-          aria-label="Voltar para a pasta"
+          aria-label={t("library.folder.backToFolder")}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <BookOpen className="h-6 w-6 text-primary" />
-            <h1 className="truncate text-2xl font-bold">Glossário da pasta</h1>
+            <h1 className="truncate text-2xl font-bold">{t("library.folder.glossaryTitle")}</h1>
             {folder && (
               <Badge variant={folder.class_id ? "default" : "secondary"}>
                 {folder.class_id ? "Turma" : "Pessoal"}
@@ -47,7 +49,7 @@ export default function FolderGlossary() {
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {isLoading
-              ? "Carregando pasta..."
+              ? t("library.folder.loading")
               : `${folder?.title ?? "Pasta"} · compartilhado por todas as listas`}
           </p>
         </div>

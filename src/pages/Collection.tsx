@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ interface Collection {
 }
 
 const Collection = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [practiceMode, setPracticeMode] = useState<"write_pt_en" | "write_en_pt" | null>(null);
@@ -84,7 +86,7 @@ const Collection = () => {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      toast.error("Você precisa estar logado");
+      toast.error(t("library.collection.mustBeSignedIn"));
       return;
     }
 
@@ -96,7 +98,7 @@ const Collection = () => {
     });
 
     if (error) {
-      toast.error("Erro ao criar flashcard");
+      toast.error(t("library.collection.createCardError"));
     } else {
       loadFlashcards();
     }
@@ -140,7 +142,7 @@ const Collection = () => {
 
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Adicionar Flashcard</h2>
+            <h2 className="text-2xl font-bold">{t("library.collection.addFlashcard")}</h2>
             <BulkImportDialog
               collectionId={id!}
               existingCards={flashcards.map(f => ({ term: f.term, translation: f.translation }))}
@@ -176,7 +178,7 @@ const Collection = () => {
             Flashcards ({flashcards.length})
           </h2>
           {flashcardsLoading ? (
-            <p className="text-muted-foreground">Carregando...</p>
+            <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <FlashcardList flashcards={flashcards} />
           )}

@@ -1,8 +1,10 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { SEOHead } from "@/components/seo/SEOHead";
+import { useTranslation } from "react-i18next";
 
 const NotFound = () => {
+  const { t } = useTranslation();
   const location = useLocation();
 
   useEffect(() => {
@@ -26,7 +28,7 @@ const NotFound = () => {
           <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
             Erro 404
           </p>
-          <h1 className="mb-4 text-4xl font-bold">Página não encontrada</h1>
+          <h1 className="mb-4 text-4xl font-bold">{t("library.notFound.title")}</h1>
           <p className="mb-6 text-lg text-muted-foreground">
             O endereço acessado não existe ou pode ter sido alterado.
           </p>
