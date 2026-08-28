@@ -17,9 +17,11 @@ import {
   sortTurmasForManagement,
 } from '@/features/classroom/lib/publicTurmaOrder';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 export default function TurmasProfessor() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data, isLoading, isError, refetch } = useTurmasMine();
   const createTurma = useCreateTurma();
@@ -50,7 +52,7 @@ export default function TurmasProfessor() {
 
   const handleCreateTurma = async () => {
     if (!newTurmaNome.trim()) {
-      toast.error('Nome é obrigatório');
+      toast.error(t('classes.toast.nameRequired'));
       return;
     }
 
@@ -60,7 +62,7 @@ export default function TurmasProfessor() {
         descricao: newTurmaDesc,
         public: newTurmaPublic,
       });
-      toast.success('Turma criada com sucesso!');
+      toast.success(t('classes.toast.created'));
       handleCreateDialogChange(false);
       setNewTurmaNome('');
       setNewTurmaDesc('');
@@ -70,13 +72,13 @@ export default function TurmasProfessor() {
         navigate(`/turmas/${result.turma.id}`);
       }
     } catch (error: any) {
-      toast.error(error?.message || 'Erro ao criar turma');
+      toast.error(error?.message || t('classes.toast.createFailed'));
     }
   };
 
   const handleEnrollAluno = async () => {
     if (!selectedTurmaId || !enrollApeId.trim()) {
-      toast.error('APE ID é obrigatório');
+      toast.error(t('classes.toast.apeIdRequired'));
       return;
     }
 
@@ -85,12 +87,12 @@ export default function TurmasProfessor() {
         turma_id: selectedTurmaId,
         ape_id: enrollApeId,
       });
-      toast.success('Aluno matriculado com sucesso!');
+      toast.success(t('classes.toast.enrolled'));
       setEnrollDialogOpen(false);
       setEnrollApeId('');
       setSelectedTurmaId(null);
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao matricular aluno');
+      toast.error(error.message || t('classes.toast.enrollFailed'));
     }
   };
 
@@ -104,12 +106,12 @@ export default function TurmasProfessor() {
       });
 
       if (result?.turma?.public !== nextPublic) {
-        throw new Error('A visibilidade retornada pelo banco não corresponde à alteração solicitada.');
+        throw new Error(t('classes.toast.visibilityMismatch'));
       }
 
-      toast.success(nextPublic ? 'Turma publicada com sucesso!' : 'Turma agora é privada.');
+      toast.success(nextPublic ? t('classes.toast.published') : t('classes.toast.madePrivate'));
     } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível alterar a visibilidade da turma.');
+      toast.error(error?.message || t('classes.toast.visibilityFailed'));
     }
   };
 
@@ -117,9 +119,9 @@ export default function TurmasProfessor() {
     const url = `${window.location.origin}/turmas/${turmaId}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Link público copiado!');
+      toast.success(t('classes.toast.linkCopied'));
     } catch {
-      toast.error('Não foi possível copiar o link.');
+      toast.error(t('classes.toast.linkCopyFailed'));
     }
   };
 
@@ -138,7 +140,7 @@ export default function TurmasProfessor() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+        <p className="text-muted-foreground">{t('common.loading')}</p>
       </div>
     );
   }
@@ -147,8 +149,8 @@ export default function TurmasProfessor() {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <Card className="w-full max-w-md space-y-4 p-6 text-center">
-          <p className="text-sm text-destructive">Não foi possível carregar suas turmas agora.</p>
-          <Button onClick={() => void refetch()}>Tentar novamente</Button>
+          <p className="text-sm text-destructive">{t('classes.loadError')}</p>
+          <Button onClick={() => void refetch()}>{t('common.retry')}</Button>
         </Card>
       </div>
     );
@@ -162,9 +164,9 @@ export default function TurmasProfessor() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold leading-tight sm:text-3xl">Minhas Turmas</h1>
+            <h1 className="text-2xl font-bold leading-tight sm:text-3xl">{t('classes.myClasses')}</h1>
             <p className="mt-1 text-sm leading-snug text-muted-foreground">
-              {turmas.length} {turmas.length === 1 ? 'turma criada' : 'turmas criadas'}. Você pode criar quantas turmas precisar.
+              {t('classes.createdCount', { count: turmas.length })}
             </p>
           </div>
         </div>
@@ -176,31 +178,31 @@ export default function TurmasProfessor() {
             <DialogTrigger asChild>
               <Button className="h-11 w-full rounded-xl sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                Criar Nova Turma
+                {t('classes.createNew')}
               </Button>
             </DialogTrigger>
             <DialogContent className="w-[calc(100vw-1rem)] max-w-lg rounded-2xl sm:w-full">
               <DialogHeader>
-                <DialogTitle>Criar uma nova turma</DialogTitle>
+                <DialogTitle>{t('classes.teacher.createDialogTitle')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="nome">Nome da Turma</Label>
+                  <Label htmlFor="nome">{t('classes.teacher.nameLabel')}</Label>
                   <Input
                     id="nome"
                     value={newTurmaNome}
                     onChange={(e) => setNewTurmaNome(e.target.value)}
-                    placeholder="Ex: Inglês Básico"
+                    placeholder={t('classes.teacher.namePlaceholder')}
                     maxLength={120}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="descricao">Descrição (opcional)</Label>
+                  <Label htmlFor="descricao">{t('classes.teacher.descriptionLabel')}</Label>
                   <Textarea
                     id="descricao"
                     value={newTurmaDesc}
                     onChange={(e) => setNewTurmaDesc(e.target.value)}
-                    placeholder="Descrição da turma..."
+                    placeholder={t('classes.teacher.descriptionPlaceholder')}
                     maxLength={1000}
                   />
                 </div>
@@ -208,22 +210,22 @@ export default function TurmasProfessor() {
                   <div className="min-w-0 space-y-1">
                     <Label htmlFor="turma-publica" className="flex items-center gap-2">
                       <Globe2 className="h-4 w-4 text-primary" />
-                      Turma pública
+                      {t('classes.teacher.publicLabel')}
                     </Label>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      Qualquer pessoa com o link poderá ver as atividades em modo somente leitura.
+                      {t('classes.teacher.publicHint')}
                     </p>
                   </div>
                   <Switch
                     id="turma-publica"
                     checked={newTurmaPublic}
                     onCheckedChange={setNewTurmaPublic}
-                    aria-label="Permitir acesso público à turma"
+                    aria-label={t('classes.teacher.publicSwitchAria')}
                     className="shrink-0"
                   />
                 </div>
                 <Button onClick={handleCreateTurma} disabled={createTurma.isPending} className="min-h-[48px] w-full">
-                  {createTurma.isPending ? 'Criando...' : 'Criar Turma'}
+                  {createTurma.isPending ? t('classes.teacher.creating') : t('classes.teacher.create')}
                 </Button>
               </div>
             </DialogContent>
@@ -233,20 +235,20 @@ export default function TurmasProfessor() {
         <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
           <DialogContent className="w-[calc(100vw-1rem)] max-w-lg rounded-2xl sm:w-full">
             <DialogHeader>
-              <DialogTitle>Matricular Aluno</DialogTitle>
+              <DialogTitle>{t('classes.teacher.enrollTitle')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="ape_id">APE ID do Aluno</Label>
+                <Label htmlFor="ape_id">{t('classes.teacher.apeIdLabel')}</Label>
                 <Input
                   id="ape_id"
                   value={enrollApeId}
                   onChange={(e) => setEnrollApeId(e.target.value)}
-                  placeholder="Ex: ABC12345"
+                  placeholder={t('classes.teacher.apeIdPlaceholder')}
                 />
               </div>
               <Button onClick={handleEnrollAluno} disabled={enrollAluno.isPending} className="w-full">
-                {enrollAluno.isPending ? 'Matriculando...' : 'Matricular'}
+                {enrollAluno.isPending ? t('classes.teacher.enrolling') : t('classes.teacher.enroll')}
               </Button>
             </div>
           </DialogContent>
@@ -256,10 +258,10 @@ export default function TurmasProfessor() {
           {turmas.length === 0 ? (
             <Card className="p-6 text-center sm:p-8">
               <Users className="mx-auto h-10 w-10 text-primary" />
-              <p className="mt-4 font-semibold">Nenhuma turma criada ainda.</p>
-              <p className="mt-2 text-sm text-muted-foreground">Crie sua primeira turma para organizar alunos e conteúdos separadamente.</p>
+              <p className="mt-4 font-semibold">{t('classes.noneCreated')}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t('classes.teacher.emptyHint')}</p>
               <Button className="mt-5 w-full sm:w-auto" onClick={() => handleCreateDialogChange(true)}>
-                <Plus className="mr-2 h-4 w-4" />Criar primeira turma
+                <Plus className="mr-2 h-4 w-4" />{t('classes.teacher.createFirst')}
               </Button>
             </Card>
           ) : (
@@ -273,7 +275,7 @@ export default function TurmasProfessor() {
                         <h3 className="min-w-0 break-words text-base font-semibold sm:text-lg">{turma.nome}</h3>
                         <Badge variant={turma.public ? 'default' : 'secondary'} className="shrink-0">
                           {turma.public ? <Globe2 className="mr-1 h-3 w-3" /> : <Lock className="mr-1 h-3 w-3" />}
-                          {turma.public ? 'Pública' : 'Privada'}
+                          {turma.public ? t('classes.teacher.badgePublic') : t('classes.teacher.badgePrivate')}
                         </Badge>
                         {turma.public && publicPosition !== undefined && (
                           <Badge variant="outline" className="shrink-0 font-mono text-primary">
@@ -286,7 +288,7 @@ export default function TurmasProfessor() {
                       )}
                       <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="h-4 w-4" />
-                        <span>{turma.turma_membros?.[0]?.count || 0} alunos</span>
+                        <span>{t('classes.studentsCount', { count: turma.turma_membros?.[0]?.count || 0 })}</span>
                       </div>
                     </div>
 
@@ -299,13 +301,13 @@ export default function TurmasProfessor() {
                         onClick={() => handleTogglePublic(turma)}
                       >
                         {turma.public ? <Lock className="mr-1 h-4 w-4" /> : <Globe2 className="mr-1 h-4 w-4" />}
-                        {turma.public ? 'Privar' : 'Publicar'}
+                        {turma.public ? t('classes.teacher.makePrivate') : t('classes.teacher.makePublic')}
                       </Button>
 
                       {turma.public && (
                         <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => handleCopyPublicLink(turma.id)}>
                           <Copy className="mr-1 h-4 w-4" />
-                          Copiar link
+                          {t('classes.teacher.copyLink')}
                         </Button>
                       )}
 
@@ -316,7 +318,7 @@ export default function TurmasProfessor() {
                         onClick={() => navigate(`/turmas/${turma.id}?tab=trafego`)}
                       >
                         <BarChart3 className="mr-1 h-4 w-4" />
-                        Tráfego
+                        {t('classes.teacher.traffic')}
                       </Button>
 
                       <Button
@@ -329,11 +331,11 @@ export default function TurmasProfessor() {
                         }}
                       >
                         <Plus className="mr-1 h-4 w-4" />
-                        Aluno
+                        {t('classes.teacher.student')}
                       </Button>
 
                       <Button size="sm" className="col-span-2 w-full sm:w-auto" onClick={() => navigate(`/turmas/${turma.id}`)}>
-                        Gerenciar
+                        {t('classes.teacher.manage')}
                       </Button>
                     </div>
                   </div>

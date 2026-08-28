@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Circle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { markPendingClassGlossaryContext } from '@/features/classroom/lib/classG
 
 export default function TurmasAluno() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { data: turmasData, isLoading: turmasLoading, isError: turmasError, refetch: refetchTurmas } = useTurmasAsAluno();
   const { data: atribuicoesData, isLoading: atribuicoesLoading, isError: atribuicoesError } = useAtribuicoesMinhas();
   const pendingMemberships = useMyPendingTurmaMemberships();
@@ -27,7 +29,7 @@ export default function TurmasAluno() {
   if (turmasLoading || atribuicoesLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+        <p className="text-muted-foreground">{t('common.loading')}</p>
       </div>
     );
   }
@@ -36,8 +38,8 @@ export default function TurmasAluno() {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <Card className="w-full max-w-md space-y-4 p-6 text-center">
-          <p className="text-sm text-destructive">Não foi possível carregar suas turmas agora.</p>
-          <Button onClick={() => void refetchTurmas()}>Tentar novamente</Button>
+          <p className="text-sm text-destructive">{t('classes.loadError')}</p>
+          <Button onClick={() => void refetchTurmas()}>{t('common.retry')}</Button>
         </Card>
       </div>
     );
@@ -59,11 +61,11 @@ export default function TurmasAluno() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'concluida':
-        return <Badge className="bg-green-500">Concluída</Badge>;
+        return <Badge className="bg-green-500">{t('classes.student.statusDone')}</Badge>;
       case 'em_andamento':
-        return <Badge className="bg-yellow-500">Em Andamento</Badge>;
+        return <Badge className="bg-yellow-500">{t('classes.student.statusInProgress')}</Badge>;
       default:
-        return <Badge variant="outline">Pendente</Badge>;
+        return <Badge variant="outline">{t('classes.student.statusPending')}</Badge>;
     }
   };
 
@@ -86,21 +88,21 @@ export default function TurmasAluno() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Minhas Turmas</h1>
+          <h1 className="text-2xl font-bold">{t('classes.myClasses')}</h1>
         </div>
 
         <div className="space-y-4">
           {(pendingMemberships.data?.length ?? 0) > 0 && (
             <Card className="space-y-3 border-primary/20 p-4">
               <div>
-                <h2 className="font-semibold">Solicitações e convites</h2>
-                <p className="text-sm text-muted-foreground">Acompanhe vínculos que ainda aguardam aprovação ou aceitação.</p>
+                <h2 className="font-semibold">{t('classes.student.requestsTitle')}</h2>
+                <p className="text-sm text-muted-foreground">{t('classes.student.requestsHint')}</p>
               </div>
               {pendingMemberships.data?.map((membership) => (
                 <div key={membership.membership_id} className="flex flex-col gap-3 rounded border p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-medium">{membership.nome}</p>
-                    <p className="text-xs text-muted-foreground">{membership.status === 'invited' ? 'Convite recebido' : 'Solicitação pendente'}</p>
+                    <p className="text-xs text-muted-foreground">{membership.status === 'invited' ? t('classes.student.inviteReceived') : t('classes.student.requestPending')}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {membership.status === 'invited' ? (
@@ -110,7 +112,7 @@ export default function TurmasAluno() {
                           disabled={membershipTransition.isPending}
                           onClick={() => void membershipTransition.mutateAsync({ turmaId: membership.turma_id, action: 'accept_invite' })}
                         >
-                          Aceitar
+                          {t('classes.student.accept')}
                         </Button>
                         <Button
                           size="sm"
@@ -118,7 +120,7 @@ export default function TurmasAluno() {
                           disabled={membershipTransition.isPending}
                           onClick={() => void membershipTransition.mutateAsync({ turmaId: membership.turma_id, action: 'reject_invite' })}
                         >
-                          Recusar
+                          {t('classes.student.reject')}
                         </Button>
                       </>
                     ) : (
@@ -128,19 +130,19 @@ export default function TurmasAluno() {
                         disabled={membershipTransition.isPending}
                         onClick={() => void membershipTransition.mutateAsync({ turmaId: membership.turma_id, action: 'cancel_request' })}
                       >
-                        Cancelar solicitação
+                        {t('classes.student.cancelRequest')}
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => navigate(`/turmas/${membership.turma_id}`)}>Abrir</Button>
+                    <Button size="sm" variant="ghost" onClick={() => navigate(`/turmas/${membership.turma_id}`)}>{t('classes.student.open')}</Button>
                   </div>
                 </div>
               ))}
             </Card>
           )}
-          <h2 className="text-lg font-semibold">Turmas Matriculadas</h2>
+          <h2 className="text-lg font-semibold">{t('classes.student.enrolledClasses')}</h2>
           {turmas.length === 0 ? (
             <Card className="p-8 text-center">
-              <p className="text-muted-foreground">Você não está matriculado em nenhuma turma ainda.</p>
+              <p className="text-muted-foreground">{t('classes.student.notEnrolled')}</p>
             </Card>
           ) : (
             turmas.map((turma: any) => (
@@ -164,10 +166,10 @@ export default function TurmasAluno() {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Atribuições</h2>
+          <h2 className="text-lg font-semibold">{t('classes.assignments')}</h2>
           {atribuicoes.length === 0 ? (
             <Card className="p-8 text-center">
-              <p className="text-muted-foreground">Nenhuma atribuição ainda.</p>
+              <p className="text-muted-foreground">{t('classes.noAssignments')}</p>
             </Card>
           ) : (
             atribuicoes.map((atribuicao: any) => (
@@ -192,14 +194,14 @@ export default function TurmasAluno() {
                             />
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {atribuicao.progresso}% completo
+                            {t('classes.student.percentComplete', { value: atribuicao.progresso })}
                           </p>
                         </div>
                       )}
                     </div>
                   </div>
                   <Button size="sm" onClick={() => openAssignment(atribuicao)}>
-                    {atribuicao.status === 'concluida' ? 'Revisar' : 'Estudar'}
+                    {atribuicao.status === 'concluida' ? t('classes.student.review') : t('classes.student.study')}
                   </Button>
                 </div>
               </Card>

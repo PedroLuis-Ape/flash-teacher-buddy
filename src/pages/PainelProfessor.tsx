@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeSectionTitle } from "@/components/ape/ApeSectionTitle";
 import { MeusAlunosCard } from "@/features/classroom/components/MeusAlunosCard";
@@ -8,16 +9,17 @@ import { BookOpen, Globe2 } from "lucide-react";
 
 const PainelProfessor = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <ApeAppBar title="Painel do Professor" showBack />
+      <ApeAppBar title={t('classes.panel.title')} showBack />
       
       <div className="max-w-6xl mx-auto p-4 lg:px-8 space-y-8">
         <div className="space-y-2">
-          <ApeSectionTitle>Gestão de Ensino</ApeSectionTitle>
+          <ApeSectionTitle>{t('classes.panel.management')}</ApeSectionTitle>
           <p className="text-sm text-muted-foreground">
-            Gerencie seus alunos, turmas e atribuições
+            {t('classes.panel.managementHint')}
           </p>
         </div>
 
@@ -27,7 +29,7 @@ const PainelProfessor = () => {
         </div>
 
         <div className="space-y-4">
-          <ApeSectionTitle>Recursos</ApeSectionTitle>
+          <ApeSectionTitle>{t('classes.panel.resources')}</ApeSectionTitle>
 
           <Card
             className="hover:shadow-lg transition-all duration-200 cursor-pointer border-border"
@@ -39,9 +41,9 @@ const PainelProfessor = () => {
                   <Globe2 className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base truncate">Perfil público</h3>
+                  <h3 className="font-semibold text-base truncate">{t('classes.panel.publicProfile')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Configure sua bio, especialidades e materiais publicados
+                    {t('classes.panel.publicProfileHint')}
                   </p>
                 </div>
               </div>
@@ -55,9 +57,9 @@ const PainelProfessor = () => {
                   <BookOpen className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base truncate">Criar Conteúdo</h3>
+                  <h3 className="font-semibold text-base truncate">{t('classes.panel.createContent')}</h3>
                   <p className="text-sm text-muted-foreground truncate">
-                    Crie listas e pastas para seus alunos
+                    {t('classes.panel.createContentHint')}
                   </p>
                 </div>
               </div>

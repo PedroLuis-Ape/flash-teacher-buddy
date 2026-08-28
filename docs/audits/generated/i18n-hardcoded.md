@@ -4,8 +4,8 @@
 
 - Área analisada: `src/pages`
 - Arquivos analisados: 67
-- Arquivos com pendências: 53 (com useTranslation: 0)
-- Strings pendentes: 706
+- Arquivos com pendências: 49 (com useTranslation: 2)
+- Strings pendentes: 601
 
 ## src/pages/TurmaPrivateDetail.tsx
 
@@ -73,115 +73,6 @@
 - L874 · attribute: "Selecione o tipo"
 - L952 · attribute: "Ex: Estudar verbos irregulares"
 - … mais 29
-
-## src/pages/Folder.tsx
-
-- useTranslation: não
-- Pendências: 57
-
-- L646 · jsx-text: "Carregando pasta..."
-- L710 · jsx-text: "Listas"
-- L715 · jsx-text: "Vídeos"
-- L736 · jsx-text: "Criar Nova Lista"
-- L745 · jsx-text: "Título"
-- L755 · jsx-text: "Descrição (opcional)"
-- L773 · jsx-text: "Criar Lista"
-- L788 · jsx-text: "Compartilhar Pasta"
-- L895 · jsx-text: "Carregando..."
-- L899 · jsx-text: "Nenhuma lista ainda"
-- L1011 · jsx-text: "Editar conteúdo"
-- L1026 · jsx-text: "Excluir lista?"
-- L1032 · jsx-text: "Cancelar"
-- L1056 · jsx-text: "Carregando..."
-- L1068 · jsx-text: "Título"
-- L1077 · jsx-text: "Conteúdo"
-- L1125 · jsx-text: "Copia todos os termos das listas"
-- L1154 · jsx-text: "Nenhum texto ainda"
-- L1181 · jsx-text: "Copia todos os termos das listas"
-- L1192 · jsx-text: "Copia um prompt para gerar história com IA"
-- L1209 · jsx-text: "Editar Lista"
-- L1218 · jsx-text: "Título"
-- L1228 · jsx-text: "Descrição (opcional)"
-- L1238 · jsx-text: "Salvar Alterações"
-- L1255 · jsx-text: "Cancelar"
-- L750 · attribute: "Ex: Verbos Irregulares"
-- L760 · attribute: "Descreva o conteúdo desta lista..."
-- L888 · attribute: "Buscar lista..."
-- L1073 · attribute: "Ex: História com vocabulário"
-- L1082 · attribute: "Digite ou cole seu texto aqui..."
-- L1223 · attribute: "Ex: Verbos Irregulares"
-- L1233 · attribute: "Descreva o conteúdo desta lista..."
-- L158 · toast: "Pasta não encontrada ou sem permissão"
-- L165 · toast: "Pasta não encontrada ou sem permissão"
-- L192 · toast: "Pasta não encontrada ou não está compartilhada"
-- L199 · toast: "Pasta não encontrada ou não está compartilhada"
-- L210 · toast: "Erro ao carregar pasta:"
-- L238 · toast: "Erro ao carregar listas:"
-- L258 · toast: "Título atualizado!"
-- L260 · toast: "Erro ao atualizar:"
-- L300 · toast: "Pasta compartilhada com sucesso!"
-- L303 · toast: "Erro ao compartilhar:"
-- L374 · toast: "Idiomas da pasta atualizados! Listas herdadas foram sincronizadas."
-- L377 · toast: "Erro ao salvar:"
-- L402 · toast: "O título é obrigatório"
-- L427 · toast: "Lista criada! Edite o conteúdo abaixo."
-- L439 · toast: "Erro ao criar lista:"
-- L452 · toast: "O título é obrigatório"
-- L467 · toast: "Lista atualizada com sucesso!"
-- L472 · toast: "Erro ao atualizar lista:"
-- L495 · toast: "Erro ao excluir lista:"
-- L565 · toast: "Erro ao excluir:"
-- L583 · toast: "Nenhum termo encontrado nas listas"
-- L594 · toast: "Erro ao copiar:"
-- L610 · toast: "Nenhum termo encontrado nas listas"
-- L627 · toast: "Prompt copiado! Cole em uma IA como ChatGPT ou Gemini."
-- L629 · toast: "Erro ao copiar:"
-
-## src/pages/ListDetail.tsx
-
-- useTranslation: não
-- Pendências: 40
-
-- L952 · jsx-text: "Carregando..."
-- L956 · jsx-text: "Lista não encontrada"
-- L960 · jsx-text: "Pasta não encontrada"
-- L994 · jsx-text: "(herdado da pasta)"
-- L1162 · jsx-text: "apenas o conteúdo"
-- L1162 · jsx-text: "de todos os"
-- L1162 · jsx-text: "desta lista."
-- L1169 · jsx-text: "Antes"
-- L1171 · jsx-text: "Lado A:"
-- L1172 · jsx-text: "Lado B:"
-- L1176 · jsx-text: "Depois"
-- L1178 · jsx-text: "Lado A:"
-- L1179 · jsx-text: "Lado B:"
-- L1186 · jsx-text: "Apenas o conteúdo dos cards"
-- L1186 · jsx-text: "será trocado (term ↔ translation)."
-- L1187 · jsx-text: "🔒 Idiomas, rótulos e configurações da lista"
-- L1187 · jsx-text: "permanecem iguais"
-- L1188 · jsx-text: "↩️ Você pode desfazer invertendo novamente."
-- L1194 · jsx-text: "Cancelar"
-- L1226 · jsx-text: "Carregando..."
-- L1269 · jsx-text: "Confirmar exclusão"
-- L1275 · jsx-text: "Cancelar"
-- L1326 · jsx-text: "pagedFlashcards.length && ("
-- L217 · attribute: "Separar camadas"
-- L1136 · attribute: "Carregando..."
-- L1305 · attribute: "Buscar card..."
-- L524 · toast: "Erro ao adicionar flashcard:"
-- L543 · toast: "Erro ao excluir:"
-- L589 · toast: "Erro ao excluir:"
-- L611 · toast: "Camadas separadas — cards restaurados"
-- L652 · toast: "Flashcard atualizado!"
-- L672 · toast: "Erro ao atualizar:"
-- L696 · toast: "Erro ao alterar compartilhamento:"
-- L706 · toast: "Link copiado para a área de transferência!"
-- L785 · toast: "Erro ao clonar lista:"
-- L839 · toast: "Copiado para a área de transferência!"
-- L905 · toast: "Erro ao inverter conteúdo:"
-- L939 · toast: "Configurações salvas!"
-- L943 · toast: "Erro ao salvar:"
-- L607 · dialog: "Separar as camadas? Cada camada voltará a ser um card individual."
 
 ## src/pages/AuditRepair.tsx
 
@@ -890,16 +781,6 @@
 - L95 · jsx-text: "Tentar novamente"
 - L96 · jsx-text: "Voltar ao Portal"
 
-## src/pages/Collection.tsx
-
-- useTranslation: não
-- Pendências: 4
-
-- L143 · jsx-text: "Adicionar Flashcard"
-- L179 · jsx-text: "Carregando..."
-- L87 · toast: "Você precisa estar logado"
-- L99 · toast: "Erro ao criar flashcard"
-
 ## src/pages/Store.tsx
 
 - useTranslation: não
@@ -936,30 +817,6 @@
 - L19 · toast: "Erro na autenticação. Tente novamente."
 - L46 · toast: "Google conectado com sucesso! 🎉"
 
-## src/pages/FolderGlossary.tsx
-
-- useTranslation: não
-- Pendências: 2
-
-- L41 · jsx-text: "Glossário da pasta"
-- L34 · attribute: "Voltar para a pasta"
-
-## src/pages/FolderWorkspace.tsx
-
-- useTranslation: não
-- Pendências: 2
-
-- L39 · jsx-text: "Ferramentas da pasta"
-- L40 · jsx-text: "Organize as listas ou abra o glossário."
-
-## src/pages/NotFound.tsx
-
-- useTranslation: não
-- Pendências: 2
-
-- L29 · jsx-text: "Página não encontrada"
-- L17 · attribute: "Página não encontrada | APE"
-
 ## src/pages/Notes.tsx
 
 - useTranslation: não
@@ -982,12 +839,26 @@
 
 - L8 · jsx-text: "Controles do Teclado"
 
+## src/pages/ListDetail.tsx
+
+- useTranslation: sim
+- Pendências: 1
+
+- L1329 · jsx-text: "pagedFlashcards.length && ("
+
 ## src/pages/MyTeachers.tsx
 
 - useTranslation: não
 - Pendências: 1
 
 - L75 · jsx-text: "Meus Professores"
+
+## src/pages/NotFound.tsx
+
+- useTranslation: sim
+- Pendências: 1
+
+- L19 · attribute: "Página não encontrada | APE"
 
 ## src/pages/PublicFolderRoute.tsx
 
