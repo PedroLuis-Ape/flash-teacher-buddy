@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Plus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function Turmas() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const { data: profile } = useQuery({
     queryKey: ['profile'],
@@ -36,7 +38,7 @@ export default function Turmas() {
   if (professorLoading || alunoLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+        <p className="text-muted-foreground">{t('common.loading')}</p>
       </div>
     );
   }
@@ -48,7 +50,7 @@ export default function Turmas() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Turmas</h1>
+          <h1 className="text-2xl font-bold">{t('classes.title')}</h1>
         </div>
       </div>
 
@@ -56,23 +58,23 @@ export default function Turmas() {
         {isTeacher ? (
           <Tabs defaultValue="professor">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="professor">Como Professor</TabsTrigger>
-              <TabsTrigger value="aluno">Como Aluno</TabsTrigger>
+              <TabsTrigger value="professor">{t('classes.asTeacher')}</TabsTrigger>
+              <TabsTrigger value="aluno">{t('classes.asStudent')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="professor" className="space-y-4 mt-4">
               <div className="grid gap-2 sm:grid-cols-2">
                 <Button onClick={() => navigate('/turmas/professor?create=1')} className="min-h-[48px]">
                   <Plus className="h-4 w-4 mr-2" />
-                  Criar Nova Turma
+                  {t('classes.createNew')}
                 </Button>
                 <Button variant="outline" onClick={() => navigate('/turmas/professor')} className="min-h-[48px]">
-                  Gerenciar todas ({turmasProfessor.length})
+                  {t('classes.manageAll', { count: turmasProfessor.length })}
                 </Button>
               </div>
               {turmasProfessor.length === 0 ? (
                 <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">Nenhuma turma criada ainda.</p>
+                  <p className="text-muted-foreground">{t('classes.noneCreated')}</p>
                 </Card>
               ) : (
                 turmasProfessor.map((turma: any) => (
@@ -106,7 +108,7 @@ export default function Turmas() {
             <TabsContent value="aluno" className="space-y-4 mt-4">
               {turmasAluno.length === 0 ? (
                 <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">Nenhuma turma matriculada.</p>
+                  <p className="text-muted-foreground">{t('classes.noneEnrolled')}</p>
                 </Card>
               ) : (
                 turmasAluno.map((turma: any) => (
@@ -128,7 +130,7 @@ export default function Turmas() {
           <div className="space-y-4">
             {turmasAluno.length === 0 ? (
               <Card className="p-8 text-center">
-                <p className="text-muted-foreground">Nenhuma turma matriculada.</p>
+                <p className="text-muted-foreground">{t('classes.noneEnrolled')}</p>
               </Card>
             ) : (
               turmasAluno.map((turma: any) => (
