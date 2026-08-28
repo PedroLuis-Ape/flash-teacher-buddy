@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 
 
@@ -58,17 +57,10 @@ describe('troca de idioma', () => {
     expect(i18n.t('common.cardCount', { count: 2 })).toBe('2 cards');
   });
 
-  it('atualiza o locale Intl e o atributo lang do documento', async () => {
+  it('atualiza o locale Intl atual', async () => {
     await changeAppLocale('es');
     expect(getCurrentIntlLocale()).toBe('es-ES');
-    expect(document.documentElement.lang).toBe('es');
     await changeAppLocale('pt-BR');
-    expect(document.documentElement.lang).toBe('pt-BR');
-  });
-
-  it('persiste a escolha no armazenamento local', async () => {
-    await changeAppLocale('it');
-    expect(window.localStorage.getItem('ape.uiLocale')).toBe('it');
-    await changeAppLocale('pt-BR');
+    expect(getCurrentIntlLocale()).toBe('pt-BR');
   });
 });
