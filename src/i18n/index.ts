@@ -97,8 +97,9 @@ const resources = Object.fromEntries(
 
 const initialLocale = detectInitialLocale();
 
-if (!i18n.isInitialized) {
-  void i18n.use(initReactI18next).init({
+const initPromise = i18n.isInitialized
+  ? Promise.resolve()
+  : i18n.use(initReactI18next).init({
     resources,
     lng: initialLocale,
     fallbackLng: DEFAULT_APP_LOCALE,
@@ -108,7 +109,9 @@ if (!i18n.isInitialized) {
     interpolation: { escapeValue: false },
     react: { useSuspense: false },
   });
-}
+
+/** Resolve quando o catálogo está pronto (usado em testes e bootstraps). */
+export const i18nReady = Promise.resolve(initPromise).then(() => undefined);
 
 applyDocumentLocale(initialLocale);
 

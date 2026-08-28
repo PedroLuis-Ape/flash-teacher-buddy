@@ -1,7 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 
-import i18n, { APP_TRANSLATION_CATALOGS, changeAppLocale, getCurrentIntlLocale } from '../index';
+import i18n, {
+  APP_TRANSLATION_CATALOGS,
+  changeAppLocale,
+  getCurrentIntlLocale,
+  i18nReady,
+} from '../index';
 import { APP_LOCALE_CODES, type AppLocale } from '../languages';
 
 function flatten(value: Record<string, unknown>, prefix = '', out: Record<string, unknown> = {}) {
@@ -39,6 +44,10 @@ describe('paridade dos catálogos de interface', () => {
 });
 
 describe('troca de idioma', () => {
+  beforeAll(async () => {
+    await i18nReady;
+  });
+
   it.each([...APP_LOCALE_CODES])('resolve chaves reais em %s sem fallback', async (locale) => {
     await changeAppLocale(locale);
     expect(i18n.resolvedLanguage).toBe(locale);
