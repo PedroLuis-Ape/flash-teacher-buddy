@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "home": "Home",
+    "folders": "Le mie cartelle",
+    "library": "Libreria",
+    "goals": "Obiettivi",
+    "store": "Negozio",
+    "classes": "Classi",
+    "myClasses": "Le mie classi",
+    "myTeachers": "I miei insegnanti",
+    "professorPanel": "Area docente",
+    "profile": "Profilo",
+    "notes": "Le mie note",
+    "trash": "Cestino",
+    "search": "Cerca",
+    "landing": "Pagina iniziale",
+    "logout": "Esci",
+    "openMenu": "Apri menu",
+    "closeMenu": "Chiudi menu",
+    "goBack": "Indietro"
+  }
+}

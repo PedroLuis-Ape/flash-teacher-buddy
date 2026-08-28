@@ -1,0 +1,22 @@
+{
+  "nav": {
+    "home": "Home",
+    "folders": "My Folders",
+    "library": "Library",
+    "goals": "Goals",
+    "store": "Store",
+    "classes": "Classes",
+    "myClasses": "My Classes",
+    "myTeachers": "My Teachers",
+    "professorPanel": "Teacher Panel",
+    "profile": "Profile",
+    "notes": "My Notes",
+    "trash": "Trash",
+    "search": "Search",
+    "landing": "Landing page",
+    "logout": "Sign out",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "goBack": "Go back"
+  }
+}

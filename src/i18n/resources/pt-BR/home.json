@@ -1,0 +1,15 @@
+{
+  "home": {
+    "welcome": "Bem-vindo",
+    "weeklyPts": "PTS Semanais",
+    "level": "Nível",
+    "streak": "Sequência",
+    "recentLists": "Listas Recentes",
+    "noLists": "Nenhuma lista ainda",
+    "createFirst": "Crie sua primeira lista de flashcards",
+    "emptyHub": "Este hub está vazio",
+    "emptyHubDescription": "Comece criando pastas e listas para organizar seu conteúdo",
+    "continueStudy": "Continuar de onde você parou",
+    "activeClasses": "Turmas ativas"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "home": {
+    "welcome": "Bienvenue",
+    "weeklyPts": "PTS hebdomadaires",
+    "level": "Niveau",
+    "streak": "Série",
+    "recentLists": "Listes récentes",
+    "noLists": "Aucune liste pour le moment",
+    "createFirst": "Créez votre première liste de cartes",
+    "emptyHub": "Ce hub est vide",
+    "emptyHubDescription": "Commencez par créer des dossiers et des listes pour organiser votre contenu",
+    "continueStudy": "Reprendre où vous en étiez",
+    "activeClasses": "Classes actives"
+  }
+}

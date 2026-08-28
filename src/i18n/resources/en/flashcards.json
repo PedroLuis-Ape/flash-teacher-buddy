@@ -1,0 +1,16 @@
+{
+  "flashcards": {
+    "term": "Term",
+    "translation": "Translation",
+    "hint": "Hint",
+    "addFlashcard": "Add Flashcard",
+    "noFlashcards": "No flashcards yet",
+    "study": "Study",
+    "cards": "cards",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "flip": "Flip",
+    "favorites": "Favorites",
+    "redList": "Red List"
+  }
+}

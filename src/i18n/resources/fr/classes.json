@@ -1,0 +1,15 @@
+{
+  "classes": {
+    "assignments": "Devoirs",
+    "members": "Membres",
+    "chat": "Discussion",
+    "noAssignments": "Aucun devoir pour le moment",
+    "createAssignment": "Créer un devoir",
+    "points": "points",
+    "addStudent": "Ajouter un élève",
+    "noMembers": "Aucun membre pour le moment",
+    "noMessages": "Aucun message pour le moment",
+    "beFirst": "Soyez le premier à écrire !",
+    "notFound": "Classe introuvable"
+  }
+}

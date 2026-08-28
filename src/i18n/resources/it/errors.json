@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "generic": "Si è verificato un errore. Riprova.",
+    "network": "Nessuna connessione al server. Controlla la rete.",
+    "permission": "Non hai i permessi per questa azione.",
+    "notFound": "Non abbiamo trovato quello che cercavi.",
+    "loadCards": "Non è stato possibile caricare le schede.",
+    "prepareSession": "Non è stato possibile preparare questa sessione.",
+    "updateFailed": "Aggiornamento non riuscito.",
+    "saveFailed": "Salvataggio non riuscito.",
+    "technicalCode": "Codice tecnico: {{code}}"
+  }
+}

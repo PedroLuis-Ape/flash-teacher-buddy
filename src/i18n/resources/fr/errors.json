@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "generic": "Une erreur est survenue. Veuillez réessayer.",
+    "network": "Aucune connexion au serveur. Vérifiez votre réseau.",
+    "permission": "Vous n'avez pas l'autorisation pour cette action.",
+    "notFound": "Nous n'avons pas trouvé ce que vous cherchiez.",
+    "loadCards": "Impossible de charger les cartes.",
+    "prepareSession": "Cette session n'a pas pu être préparée.",
+    "updateFailed": "Échec de la mise à jour.",
+    "saveFailed": "Échec de l'enregistrement.",
+    "technicalCode": "Code technique : {{code}}"
+  }
+}

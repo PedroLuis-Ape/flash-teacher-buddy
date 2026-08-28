@@ -1,0 +1,29 @@
+{
+  "study": {
+    "title": "Étudier",
+    "settings": "Paramètres de la session",
+    "practiceDirection": "Sens de la pratique",
+    "modeFlip": "Retourner",
+    "modeWrite": "Écrire",
+    "modeRewrite": "Réécrire",
+    "modeTranslate": "Traduire",
+    "modeMultipleChoice": "Choix multiple",
+    "modeUnscramble": "Remettre en ordre",
+    "modePronunciation": "Prononciation",
+    "modeMixed": "Mixte",
+    "scopeAll": "Toutes les cartes",
+    "scopeFavorites": "Favoris uniquement",
+    "scopeRed": "Liste rouge",
+    "round": "Manche {{current}} sur {{total}}",
+    "progress": "{{current}} sur {{total}}",
+    "noCards": "Aucune carte disponible",
+    "noFavorites": "Vous n'avez encore aucun favori dans cette liste",
+    "loadingCards": "Préparation de votre session...",
+    "finishSession": "Terminer la session",
+    "continueSession": "Reprendre la session",
+    "tryAgain": "Réessayer",
+    "showHint": "Voir l'indice",
+    "playAudio": "Écouter",
+    "checkAnswer": "Vérifier"
+  }
+}

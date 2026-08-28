@@ -1,0 +1,29 @@
+{
+  "study": {
+    "title": "Estudiar",
+    "settings": "Ajustes de la sesión",
+    "practiceDirection": "Dirección de la práctica",
+    "modeFlip": "Girar",
+    "modeWrite": "Escribir",
+    "modeRewrite": "Reescribir",
+    "modeTranslate": "Traducir",
+    "modeMultipleChoice": "Opción múltiple",
+    "modeUnscramble": "Ordenar",
+    "modePronunciation": "Pronunciación",
+    "modeMixed": "Mixto",
+    "scopeAll": "Todas las tarjetas",
+    "scopeFavorites": "Solo favoritos",
+    "scopeRed": "Lista roja",
+    "round": "Ronda {{current}} de {{total}}",
+    "progress": "{{current}} de {{total}}",
+    "noCards": "No hay tarjetas disponibles",
+    "noFavorites": "Todavía no has marcado favoritos en esta lista",
+    "loadingCards": "Preparando tu sesión...",
+    "finishSession": "Finalizar sesión",
+    "continueSession": "Continuar sesión",
+    "tryAgain": "Intentar de nuevo",
+    "showHint": "Ver pista",
+    "playAudio": "Escuchar",
+    "checkAnswer": "Comprobar"
+  }
+}

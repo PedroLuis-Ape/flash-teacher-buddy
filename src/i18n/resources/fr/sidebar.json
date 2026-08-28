@@ -1,0 +1,31 @@
+{
+  "sidebar": {
+    "menu": "Menu",
+    "mainNav": "Principal",
+    "tools": "Outils",
+    "myNotes": "Mes notes",
+    "search": "Rechercher",
+    "classes": "Classes",
+    "trash": "Corbeille",
+    "landing": "Page d'accueil",
+    "hubs": "Hubs / Établissements",
+    "newHub": "Nouveau",
+    "createNewHub": "Créer un hub",
+    "hubName": "Nom",
+    "hubNamePlaceholder": "Ex. : Chinois, Allemand, Anglais Kids...",
+    "hubDescription": "Description",
+    "hubDescriptionPlaceholder": "Décrivez l'objectif de ce hub...",
+    "hubColor": "Couleur",
+    "creating": "Création...",
+    "createHub": "Créer le hub",
+    "allNoFilter": "Tous (sans filtre)",
+    "noHubsYet": "Aucun hub pour le moment",
+    "enterHubName": "Saisissez un nom pour le hub",
+    "hubCreatedSuccess": "Hub créé avec succès !",
+    "hubCreateError": "Erreur lors de la création du hub",
+    "deleteHubTitle": "Supprimer le hub ?",
+    "deleteHubDescription": "Les dossiers de ce hub seront déplacés vers « Général ». Cette action est irréversible.",
+    "hubDeletedSuccess": "Hub supprimé. Dossiers déplacés vers Général.",
+    "hubDeleteError": "Erreur lors de la suppression du hub"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "network": "Sin conexión con el servidor. Revisa tu internet.",
+    "permission": "No tienes permiso para esta acción.",
+    "notFound": "No encontramos lo que buscabas.",
+    "loadCards": "No pudimos cargar las tarjetas.",
+    "prepareSession": "No se pudo preparar esta sesión.",
+    "updateFailed": "Error al actualizar.",
+    "saveFailed": "Error al guardar.",
+    "technicalCode": "Código técnico: {{code}}"
+  }
+}

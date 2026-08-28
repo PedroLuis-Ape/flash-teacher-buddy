@@ -1,0 +1,29 @@
+{
+  "study": {
+    "title": "Studia",
+    "settings": "Impostazioni della sessione",
+    "practiceDirection": "Direzione della pratica",
+    "modeFlip": "Gira",
+    "modeWrite": "Scrivi",
+    "modeRewrite": "Riscrivi",
+    "modeTranslate": "Traduci",
+    "modeMultipleChoice": "Scelta multipla",
+    "modeUnscramble": "Riordina",
+    "modePronunciation": "Pronuncia",
+    "modeMixed": "Misto",
+    "scopeAll": "Tutte le schede",
+    "scopeFavorites": "Solo preferiti",
+    "scopeRed": "Lista rossa",
+    "round": "Round {{current}} di {{total}}",
+    "progress": "{{current}} di {{total}}",
+    "noCards": "Nessuna scheda disponibile",
+    "noFavorites": "Non hai ancora preferiti in questo elenco",
+    "loadingCards": "Preparazione della sessione...",
+    "finishSession": "Termina sessione",
+    "continueSession": "Riprendi sessione",
+    "tryAgain": "Riprova",
+    "showHint": "Mostra suggerimento",
+    "playAudio": "Ascolta",
+    "checkAnswer": "Verifica"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "home": {
+    "welcome": "Welcome",
+    "weeklyPts": "Weekly PTS",
+    "level": "Level",
+    "streak": "Streak",
+    "recentLists": "Recent Lists",
+    "noLists": "No lists yet",
+    "createFirst": "Create your first flashcard list",
+    "emptyHub": "This hub is empty",
+    "emptyHubDescription": "Start by creating folders and lists to organize your content",
+    "continueStudy": "Continue where you left off",
+    "activeClasses": "Active classes"
+  }
+}
