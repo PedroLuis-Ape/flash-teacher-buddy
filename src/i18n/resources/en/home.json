@@ -10,6 +10,67 @@
     "emptyHub": "This hub is empty",
     "emptyHubDescription": "Start by creating folders and lists to organize your content",
     "continueStudy": "Continue where you left off",
-    "activeClasses": "Active classes"
+    "activeClasses": "Active classes",
+    "title": "Home",
+    "greeting": "Hi, {{name}}",
+    "keepLearning": "Keep learning!",
+    "settings": "Settings",
+    "gameSounds": "Game sounds",
+    "notifications": "Notifications",
+    "viewAll": "View all",
+    "shortcuts": "Shortcuts",
+    "recentFolders": "Recent folders",
+    "recentFoldersScoped": "Recent folders — {{name}}",
+    "recentListsSection": "Recent lists",
+    "untitled": "Untitled",
+    "noFolder": "No folder",
+    "stats": {
+      "weeklyPts": "Weekly PTS",
+      "pitecoin": "PiteCOIN",
+      "level": "Level",
+      "streak": "Streak",
+      "lists": "Lists"
+    },
+    "teacherPanel": {
+      "title": "Teacher Panel",
+      "description": "Manage students, classes and assignments"
+    },
+    "myTeachers": {
+      "title": "My Teachers",
+      "description": "See the teachers you follow"
+    },
+    "resume": {
+      "label": "Pick up where you left off",
+      "progress": "{{done}} of {{total}} {{unit}}",
+      "opening": "Opening session...",
+      "continue": "Continue"
+    },
+    "start": {
+      "ready": "Ready to start?",
+      "openLibrary": "Open my library",
+      "createFirst": "Create my first list",
+      "openLibraryDescription": "Choose a list or folder to study now.",
+      "createFirstDescription": "Build your first vocabulary list and start practising.",
+      "ctaOpenLibrary": "Open library",
+      "ctaCreateList": "Create list"
+    },
+    "kingdom": {
+      "title": "Kingdom Mode",
+      "description": "Gamified progression system • Coming soon"
+    },
+    "quick": {
+      "library": "Library",
+      "libraryDescription": "Folders and lists",
+      "newList": "New list",
+      "newListDescription": "Create from scratch",
+      "goals": "Goals",
+      "goalsDescription": "Track your progress",
+      "notes": "My Notes",
+      "notesDescription": "Quick notes",
+      "store": "Store",
+      "storeDescription": "Mascots and avatars",
+      "search": "Search",
+      "searchDescription": "Find teachers"
+    }
   }
 }

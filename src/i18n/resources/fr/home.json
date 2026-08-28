@@ -10,6 +10,67 @@
     "emptyHub": "Ce hub est vide",
     "emptyHubDescription": "Commencez par créer des dossiers et des listes pour organiser votre contenu",
     "continueStudy": "Reprendre où vous en étiez",
-    "activeClasses": "Classes actives"
+    "activeClasses": "Classes actives",
+    "title": "Accueil",
+    "greeting": "Bonjour, {{name}}",
+    "keepLearning": "Continuez à apprendre !",
+    "settings": "Paramètres",
+    "gameSounds": "Sons du jeu",
+    "notifications": "Notifications",
+    "viewAll": "Voir tout",
+    "shortcuts": "Raccourcis",
+    "recentFolders": "Dossiers récents",
+    "recentFoldersScoped": "Dossiers récents — {{name}}",
+    "recentListsSection": "Listes récentes",
+    "untitled": "Sans titre",
+    "noFolder": "Sans dossier",
+    "stats": {
+      "weeklyPts": "PTS hebdo",
+      "pitecoin": "PiteCOIN",
+      "level": "Niveau",
+      "streak": "Série",
+      "lists": "Listes"
+    },
+    "teacherPanel": {
+      "title": "Espace Enseignant",
+      "description": "Gérez élèves, classes et devoirs"
+    },
+    "myTeachers": {
+      "title": "Mes Enseignants",
+      "description": "Voyez les enseignants que vous suivez"
+    },
+    "resume": {
+      "label": "Reprendre où vous en étiez",
+      "progress": "{{done}} sur {{total}} {{unit}}",
+      "opening": "Ouverture de la session...",
+      "continue": "Continuer"
+    },
+    "start": {
+      "ready": "Prêt à commencer ?",
+      "openLibrary": "Ouvrir ma bibliothèque",
+      "createFirst": "Créer ma première liste",
+      "openLibraryDescription": "Choisissez une liste ou un dossier pour étudier maintenant.",
+      "createFirstDescription": "Créez votre première liste de vocabulaire et commencez à pratiquer.",
+      "ctaOpenLibrary": "Ouvrir la bibliothèque",
+      "ctaCreateList": "Créer une liste"
+    },
+    "kingdom": {
+      "title": "Mode Royaume",
+      "description": "Système de progression gamifié • Bientôt"
+    },
+    "quick": {
+      "library": "Bibliothèque",
+      "libraryDescription": "Dossiers et listes",
+      "newList": "Nouvelle liste",
+      "newListDescription": "Créer de zéro",
+      "goals": "Objectifs",
+      "goalsDescription": "Suivez votre progression",
+      "notes": "Mes Notes",
+      "notesDescription": "Notes rapides",
+      "store": "Boutique",
+      "storeDescription": "Mascottes et avatars",
+      "search": "Rechercher",
+      "searchDescription": "Trouver des enseignants"
+    }
   }
 }

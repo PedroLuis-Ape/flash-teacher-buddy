@@ -10,6 +10,67 @@
     "emptyHub": "Questo hub è vuoto",
     "emptyHubDescription": "Inizia creando cartelle ed elenchi per organizzare i contenuti",
     "continueStudy": "Riprendi da dove eri",
-    "activeClasses": "Classi attive"
+    "activeClasses": "Classi attive",
+    "title": "Home",
+    "greeting": "Ciao, {{name}}",
+    "keepLearning": "Continua a imparare!",
+    "settings": "Impostazioni",
+    "gameSounds": "Suoni del gioco",
+    "notifications": "Notifiche",
+    "viewAll": "Vedi tutte",
+    "shortcuts": "Scorciatoie",
+    "recentFolders": "Cartelle recenti",
+    "recentFoldersScoped": "Cartelle recenti — {{name}}",
+    "recentListsSection": "Liste recenti",
+    "untitled": "Senza titolo",
+    "noFolder": "Senza cartella",
+    "stats": {
+      "weeklyPts": "PTS settimanali",
+      "pitecoin": "PiteCOIN",
+      "level": "Livello",
+      "streak": "Serie",
+      "lists": "Liste"
+    },
+    "teacherPanel": {
+      "title": "Pannello Insegnante",
+      "description": "Gestisci studenti, classi e compiti"
+    },
+    "myTeachers": {
+      "title": "I miei Insegnanti",
+      "description": "Guarda gli insegnanti che segui"
+    },
+    "resume": {
+      "label": "Riprendi da dove eri",
+      "progress": "{{done}} di {{total}} {{unit}}",
+      "opening": "Apertura sessione...",
+      "continue": "Continua"
+    },
+    "start": {
+      "ready": "Pronto per iniziare?",
+      "openLibrary": "Apri la mia libreria",
+      "createFirst": "Crea la mia prima lista",
+      "openLibraryDescription": "Scegli una lista o una cartella per studiare adesso.",
+      "createFirstDescription": "Crea la tua prima lista di vocaboli e inizia a esercitarti.",
+      "ctaOpenLibrary": "Apri libreria",
+      "ctaCreateList": "Crea lista"
+    },
+    "kingdom": {
+      "title": "Modalità Regno",
+      "description": "Sistema di progressione gamificato • In arrivo"
+    },
+    "quick": {
+      "library": "Libreria",
+      "libraryDescription": "Cartelle e liste",
+      "newList": "Nuova lista",
+      "newListDescription": "Crea da zero",
+      "goals": "Obiettivi",
+      "goalsDescription": "Monitora i progressi",
+      "notes": "Le mie Note",
+      "notesDescription": "Appunti rapidi",
+      "store": "Negozio",
+      "storeDescription": "Mascotte e avatar",
+      "search": "Cerca",
+      "searchDescription": "Trova insegnanti"
+    }
   }
 }

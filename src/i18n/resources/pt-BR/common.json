@@ -29,6 +29,7 @@
     "cardCount_one": "{{count}} card",
     "cardCount_other": "{{count}} cards",
     "listCount_one": "{{count}} lista",
-    "listCount_other": "{{count}} listas"
+    "listCount_other": "{{count}} listas",
+    "user": "Usuário"
   }
 }
