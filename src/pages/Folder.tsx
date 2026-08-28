@@ -709,12 +709,12 @@ const Folder = () => {
 
         <Tabs defaultValue="lists" className="w-full">
           <TabsList className="mb-6">
-            <TabsTrigger value="lists">Listas</TabsTrigger>
+            <TabsTrigger value="lists">{t("library.folder.lists")}</TabsTrigger>
             <TabsTrigger value="texto">
               <BookOpen className="mr-1.5 h-4 w-4" />
               Texto
             </TabsTrigger>
-            <TabsTrigger value="videos">Vídeos</TabsTrigger>
+            <TabsTrigger value="videos">{t("library.folder.videos")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="lists">
@@ -735,7 +735,7 @@ const Folder = () => {
                   </DialogTrigger>
                    <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
                     <DialogHeader>
-                      <DialogTitle>Criar Nova Lista</DialogTitle>
+                      <DialogTitle>{t("library.folder.createList")}</DialogTitle>
                       <DialogDescription>
                         A lista será criada e você será redirecionado automaticamente para editá-la.
                       </DialogDescription>
@@ -744,7 +744,7 @@ const Folder = () => {
                       <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1">
                         <div className="space-y-4 py-2 pb-4">
                           <div className="space-y-2">
-                            <Label htmlFor="title">Título</Label>
+                            <Label htmlFor="title">{t("library.folder.titleLabel")}</Label>
                             <Input
                               id="title"
                               value={newList.title}
@@ -754,7 +754,7 @@ const Folder = () => {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="description">Descrição (opcional)</Label>
+                            <Label htmlFor="description">{t("library.folder.descriptionOptional")}</Label>
                             <Textarea
                               id="description"
                               value={newList.description}
@@ -772,7 +772,7 @@ const Folder = () => {
                         </div>
                       </div>
                       <DialogFooter className="mt-2 pt-2 border-t flex-shrink-0">
-                        <Button type="submit" className="w-full sm:w-auto">Criar Lista</Button>
+                        <Button type="submit" className="w-full sm:w-auto">{t("library.folder.createListAction")}</Button>
                       </DialogFooter>
                     </form>
                   </DialogContent>
@@ -787,7 +787,7 @@ const Folder = () => {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Compartilhar Pasta</DialogTitle>
+                      <DialogTitle>{t("library.folder.share")}</DialogTitle>
                       <DialogDescription>
                         Torne esta pasta e todo o seu conteúdo visível para seus alunos no Portal do Aluno.
                       </DialogDescription>
@@ -1208,7 +1208,7 @@ const Folder = () => {
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Lista</DialogTitle>
+              <DialogTitle>{t("library.folder.editList")}</DialogTitle>
               <DialogDescription>
                 Altere o título e descrição da lista
               </DialogDescription>
