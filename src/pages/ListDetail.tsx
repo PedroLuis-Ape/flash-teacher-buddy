@@ -131,7 +131,9 @@ const FlashcardRow = memo(({
   onDelete: (id: string) => void;
   onUnmerge?: (id: string) => void;
   onViewLayers: (f: Flashcard) => void;
-}) => (
+}) => {
+  const { t: tRow } = useTranslation();
+  return (
   <Card
     className={`p-4 sm:p-6 transition-shadow ${flashcard.__layerCount && flashcard.__layerCount > 0 ? 'cursor-pointer hover:shadow-md hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''} ${isSelected ? 'ring-2 ring-primary' : ''}`}
     role={flashcard.__layerCount && flashcard.__layerCount > 0 ? "button" : undefined}
@@ -228,7 +230,8 @@ const FlashcardRow = memo(({
       </div>
     </div>
   </Card>
-));
+  );
+});
 FlashcardRow.displayName = "FlashcardRow";
 
 // ── PERF: Memoized list wrapper ──
