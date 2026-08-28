@@ -1,102 +1,87 @@
-# Plano: Formatos de Sessão + Reorganização das Configurações
+# APE multilíngue — pt-BR, en, es, fr, it
 
-## Parte 1 — Motor de fluxo de sessão
+Objetivo: internacionalizar a interface existente de ponta a ponta, sem redesenhar telas, sem tocar no motor de estudos, sem alterar schema ou dados de cards.
 
-### Arquitetura
-Motor puro e determinístico, isolado da UI, para ambos os modos (Escrever e Misto):
+## Estado atual verificado
 
-- `src/features/study/lib/studySessionFlow.ts`
-  - Tipos: `StudyFlowMode = "mastery_rounds" | "continuous"`, `StudyCardResult`, `MasterySessionState`, `RoundSummary`.
-  - Funções puras: `createMasterySession(ids, {roundSize:15, shuffle})`, `recordResult(state, cardId, result)`, `advanceCard(state)`, `startNextRound(state)`, `isSessionFinished(state)`, `buildContinuousQueue(ids, shuffle)`.
-  - `MASTERY_ROUND_SIZE = 15` constante.
-- `src/features/study/lib/studySessionFlow.test.ts` — 17 casos exigidos.
-- `src/features/study/hooks/useStudySessionFlow.ts` — adapter React (estado + `report(result)` + `advance()` + `roundSummary`).
+- Já existe infraestrutura i18next: `src/i18n/config.ts` com `LanguageDetector`, persistência em `localStorage` (`i18nextLng`), fallback `pt`, e catálogos `src/locales/pt/translation.json` e `src/locales/en/translation.json` (97 linhas cada, ~40 chaves).
+- Somente 3 arquivos consomem tradução hoje: `AppSidebar.tsx`, `LanguageSwitcher.tsx`, mais os formatadores `src/lib/formatters.ts` e `src/lib/dateUtils.ts` (que já leem o locale do i18n).
+- O inventário heurístico existente (`scripts/audit-i18n-strings.mjs`) reporta 735 arquivos analisados, 396 com candidatos e 2.779 strings candidatas; há 570 chamadas `toast.*` no código.
+- `i18n.language` não é usado por TTS (`src/lib/AudioService.ts`, `src/lib/edgeTTS.ts` não aparecem entre os consumidores) — a auditoria da Fase TTS confirma/documenta isso por arquivo antes de qualquer alteração.
 
-### Fila de erros (rodadas de domínio)
-1. Ao final da rodada, `retryIds = [...incorretos, ...pulados, ...revelados]` (menos os que depois foram acertados).
-2. Próxima rodada = `retryIds.slice(0,15)` na frente + vagas restantes preenchidas com `unseenIds`.
-3. `retryIds` restantes ficam na fila para rodadas futuras.
-4. Enquanto houver ≥15 pendentes, nenhum card novo entra.
-5. Sessão termina só quando `unseenIds.length===0 && retryIds.length===0 && !currentCard`.
+Conclusão: completar a infraestrutura existente, não criar um segundo sistema.
 
-### Identidade dos cards
-Usa o ID canônico já usado pelo runtime atual (não texto, não layer id). Garantia via `Set` para não duplicar dentro da mesma rodada.
+## Arquitetura final
 
-### Fluxo Contínuo
-- Uma passagem única sobre os IDs elegíveis. `incorrect`, `skipped`, `revealed` **não** reinserem.
-- Nenhuma rodada, nenhum modal de "próxima rodada".
+```text
+src/i18n/
+  index.ts        (init único, re-export compatível com src/i18n/config.ts)
+  languages.ts    (AppLocale, APP_LOCALES, fallback, locale Intl)
+  detect.ts       (precedência de locale)
+  resources/
+    pt-BR/ en/ es/ fr/ it/
+      common.json auth.json home.json nav.json library.json study.json
+      settings.json import.json teacher.json store.json goals.json errors.json
+```
 
-### Integração
-- `WriteStudyView.impl.tsx`: reporta `correct` (inclui aceite em Flexível), `incorrect`, `skipped`, `revealed` ao hook.
-- Modo Misto (componentes usados por `MixedStudy.tsx`): cada minijogo reporta um único resultado ao mesmo hook. Selecionar tipo de exercício não altera o ID.
-- Modo de correção (Flexível/Hard) permanece separado — decide o resultado; o motor decide reinserção.
+- `AppLocale = "pt-BR" | "en" | "es" | "fr" | "it"`; `pt` legado é normalizado para `pt-BR` (usuários atuais não perdem o idioma).
+- Precedência: escolha explícita → preferência persistida → idioma compatível do navegador → `pt-BR`.
+- Persistência em `localStorage` (sem migration de banco). Sincronização cross-device fica documentada como melhoria futura.
+- `document.documentElement.lang` atualizado na troca; troca sem reload, preservando rota, sessão, card e formulário.
+- Seletor: `LanguageSwitcher` existente ganha os 5 idiomas com nomes nativos; nenhuma tela é redesenhada.
 
-### Filtros existentes
-- "Apenas Favoritos" filtra IDs antes de entrar no motor.
-- "Foco Vermelho": força `continuous` + sequencial na sessão atual; **não persiste**; ao desligar, restaura preferência anterior. Explicação visível no modal.
+## Regras invioláveis
 
-### UI de progresso
-- `StudyRoundProgress.tsx` — barra/linha discreta:
-  - Domínio: `Rodada N · x de 15 · y para revisar · z de total dominados`.
-  - Contínuo: `x de total`.
-- `StudyRoundSummary.tsx` — modal ao fim de cada rodada: contagens + botões `Próxima rodada` / `Encerrar por agora`.
-- Modal atual de conclusão total é reaproveitado; só dispara quando o motor sinaliza fim real.
+- Nenhum conteúdo do usuário passa por `t()`: nomes de listas, pastas, termos, traduções de cards, glossários, explicações, nomes de alunos/professores, conteúdo importado.
+- Idioma da interface é independente de `lang_a`/`lang_b`. Trocar interface nunca altera idiomas da lista.
+- TTS continua derivando voz do lado do card (`langA`/`langB`), nunca de `i18n.language`. Normalizador de locale de voz (pt/pt-BR, en/en-US/en-GB, es, fr, it) se necessário.
+- Identidade sempre por enum/ID (`scope === "favorites"`, `activityMode === "rewrite"`), nunca por texto traduzido.
+- `technicalId`, códigos de erro, IDs e logs não são traduzidos.
 
-## Parte 2 — Reorganização de "Configurações da Sessão"
+## Ordem de execução (loop auditar → implementar → traduzir → testar → reauditar)
 
-Um único `Dialog`, com máquina de estado interna (`page: "home" | "flow" | "direction" | "correction" | "order" | "audio"`).
+1. Infra canônica + `languages.ts` + precedência + seletor + scripts de auditoria/validação.
+2. Navegação + Home (prioridade escolhida): sidebar, bottom bar, headers, breadcrumbs, dialogs de navegação.
+3. Auth + onboarding.
+4. Biblioteca: pastas, listas, coleções, busca, lixeira.
+5. Study: Flip, Write, Reescrever, Traduzir, Multiple Choice, Unscramble, Pronunciation, Mixed, Mastery/Rodadas, Extenso, Favoritos, Lista Vermelha, cards em camadas — instruções, botões, feedback, progresso, resultados, recovery, loading, empty states.
+6. Configurações, Perfil, Metas.
+7. Importadores (global, super global, lista existente, JSON/CSV/texto, glossários, preview, reset/undo).
+8. Turmas e Painel do Professor.
+9. Gamificação, Store, Reinos, presentes.
+10. Erros, toasts, acessibilidade e formulários varridos por área a cada lote (não como fase separada no final).
+11. SEO público multilíngue (bloco separado, abaixo).
 
-Novo layout de arquivos:
+Cada lote: migrar área → traduzir nos 5 idiomas → testes da área nos 5 locales → reauditar → `typecheck` + testes + lint da área.
 
-- `src/features/study/components/settings/SessionSettingsHome.tsx` — lista de categorias com resumo do valor atual.
-- `src/features/study/components/settings/StudyFlowSettings.tsx` — Rodadas de Domínio vs Fluxo Contínuo (só Escrever/Misto).
-- `src/features/study/components/settings/PracticeDirectionSettings.tsx` — move os controles de direção do modal atual.
-- `src/features/study/components/settings/WriteCorrectionSettings.tsx` — Flexível/Hard (só Escrever/Misto).
-- `src/features/study/components/settings/OrderAndFilterSettings.tsx` — Ordem aleatória, Apenas Favoritos, Foco Vermelho, outros.
-- `src/features/study/components/settings/AudioAndPaceSettings.tsx` — velocidade, autoplay, Fast Mode etc. (após auditar o que existe hoje).
-- `GameSettingsModal.impl.tsx` vira o container do Dialog + roteador interno; a lógica sai para as subpáginas.
+## Qualidade e consistência
 
-Sub-header comum: seta voltar + título + X. Página home cabe sem scroll (~5 linhas). Categorias condicionais: Formato/Correção só em Escrever e Misto. Desktop 600–760px, mobile quase full-screen, targets ≥44px, foco preservado.
+Glossário interno de UI com uma tradução oficial por conceito (Flashcard, Lista, Pasta, Favorito, Lista Vermelha, Modo, Rodada, Sessão, Continuar, Reescrever, Traduzir, Dica, Explicação, Configurações). Espanhol internacional, francês e italiano naturais; pt-BR preservado.
 
-## Persistência
+Pluralização pelo i18next; números, datas e tempo relativo por `Intl` usando o locale canônico (reaproveitando `formatters.ts` e `dateUtils.ts`).
 
-Amplia o objeto de preferências existente (`studyPreset` / `useStudyPreferences`):
-- adiciona `studyFlowMode: "mastery_rounds" | "continuous"` (default `mastery_rounds`).
-- respeita camadas atuais: global → override por lista → URL param (temporário) → cache convidado.
-- **Sem migration** — o schema atual em `user_study_preferences` / `user_list_study_preferences` aceita um novo campo dentro do payload normalizado; se o repositório exigir uma coluna, adiciono coluna `flow_mode` **nullable** com default local; decidido durante a auditoria do repositório antes de codar. Estado transitório da rodada nunca vai ao banco.
+## Ferramentas de verificação (novas)
 
-## Testes
+- `scripts/audit-i18n.mjs` + `npm run i18n:audit` — strings de UI prováveis hardcoded, com allowlist explícita (logs, IDs técnicos, nomes próprios, conteúdo de usuário, valores de schema, dados SEO localizados).
+- `scripts/validate-i18n-keys.mjs` + `npm run i18n:validate` — paridade dos 5 catálogos: chave ausente, chave extra suspeita, interpolação incompatível, pluralização faltando.
+- `renderWithLocale(component, locale)` em test utils; modo estrito que registra `missingKey`/fallback nos testes — uma área só é DONE com `missingKeys = 0` e `fallbackHits = 0`.
+- Smoke E2E via Playwright por idioma: Auth → Home → Biblioteca → Pasta → Lista → Study → responder card → configurações → favoritos → sair → continuar sessão → Perfil; fluxo professor; fluxo importador. Teste de troca ao vivo (pt → es → fr → it → pt) preservando estado.
+- Layout em 320/375/390/768/1024/desktop, ajustando responsividade quando fr/it estourarem (sem reduzir fonte global).
 
-- Motor: 17 casos exigidos em `studySessionFlow.test.ts`.
-- Preferências: estender `useStudyPreferences.test.ts` para cobrir persistência do `studyFlowMode` e override de Foco Vermelho não-persistente.
-- UI: teste do roteador interno do modal (home → subpágina → back), visibilidade condicional de Formato/Correção.
+## Matriz de auditoria
 
-## Validação
+`docs/audits/i18n-audit.md` com colunas: Área | Arquivo | Strings | Internacionalizado | Namespaces | pt-BR | en | es | fr | it | Status. Nenhuma área marcada DONE com texto visível hardcoded.
 
-`npm run typecheck && npm run test && npm run lint && npm run build` no fim.
+## SEO público multilíngue (bloco separado)
 
-## Restrições respeitadas
+Analisar a arquitetura pública/prerender existente antes de criar rotas. Escopo: rotas localizadas `/es/`, `/fr/`, `/it/` (pt-BR permanece na raiz, en avaliado junto), `hreflang` recíproco + `x-default`, canonical por locale, `og:locale`/`og:locale:alternate`, sitemap por locale e JSON-LD com `inLanguage` correto. Conteúdo traduzido com revisão de qualidade, sem geração automática em massa. Rotas privadas continuam sem tradução de URL. Este bloco não bloqueia a entrega do app privado e é reportado separadamente.
 
-Sem alteração em Auth/RLS, sem scheduler duplicado, sem identificar por texto, sem duplicar card em rodada, sem confundir fim de rodada com fim de sessão, sem remover opções, sem dialog sobre dialog, sem IA/API externa, sem alterar Flip/MC/Organizar/Pronúncia individualmente.
+## Riscos e limites
 
-## Arquivos previstos (alteração/criação)
+- Volume alto (~2.779 candidatos, 570 toasts): mudanças incrementais por área, sem reescrita de telas.
+- Sem alteração de Supabase project ref, Auth, RLS, migrations, schema ou dados.
+- Sem publicação automática. Itens impossíveis de resolver no código são registrados como BLOCKED com evidência, impacto e ação necessária.
 
-Criar:
-- `lib/studySessionFlow.ts` + `.test.ts`
-- `hooks/useStudySessionFlow.ts`
-- `components/StudyRoundProgress.tsx`
-- `components/StudyRoundSummary.tsx`
-- `components/settings/{SessionSettingsHome,StudyFlowSettings,PracticeDirectionSettings,WriteCorrectionSettings,OrderAndFilterSettings,AudioAndPaceSettings}.tsx`
+## Checks finais
 
-Alterar:
-- `components/GameSettingsModal.impl.tsx` (vira container/roteador)
-- `components/WriteStudyView.impl.tsx` (reporta resultados ao motor)
-- `pages/Study.tsx` e `pages/MixedStudy.tsx` (usam `useStudySessionFlow`, exibem progress/summary)
-- `preferences/studyPreset.ts` + `studyPreferenceRepository.ts` + `useStudyPreferences.ts` (novo campo `studyFlowMode`)
-- Integração do Foco Vermelho no ponto onde ele hoje força regras
-
-## Execução
-
-Ordem: (1) auditar arquivos listados; (2) motor + testes; (3) preferências; (4) hook + integração Escrever; (5) integração Misto; (6) UI progresso + resumo de rodada; (7) reorganizar modal em subpáginas; (8) Foco Vermelho override; (9) rodar typecheck/test/lint/build.
-
-Aprovar para começar?
+`npm run typecheck`, `npm run test`, `npm run lint`, `npm run build`, `npm run i18n:audit`, `npm run i18n:validate`. Relatório final com tabela ÁREA | pt-BR | en | es | fr | it | TESTADO.
