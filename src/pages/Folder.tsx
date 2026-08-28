@@ -894,11 +894,11 @@ const Folder = () => {
             )}
 
             {loading ? (
-              <p className="text-center text-sm text-muted-foreground py-4">Carregando...</p>
+              <p className="text-center text-sm text-muted-foreground py-4">{t("common.loading")}</p>
             ) : lists.length === 0 ? (
               <Card className="text-center p-8">
                 <CardHeader>
-                  <CardTitle className="text-lg">Nenhuma lista ainda</CardTitle>
+                  <CardTitle className="text-lg">{t("library.folder.noLists")}</CardTitle>
                   <CardDescription className="text-sm">
                     {canEdit
                       ? "Crie sua primeira lista de flashcards"
@@ -1010,7 +1010,7 @@ const Folder = () => {
                                           <Pencil className="h-3 w-3" />
                                         </Button>
                                       </TooltipTrigger>
-                                      <TooltipContent>Editar conteúdo</TooltipContent>
+                                      <TooltipContent>{t("library.folder.editContent")}</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                   <AlertDialog>
@@ -1025,13 +1025,13 @@ const Folder = () => {
                                     </AlertDialogTrigger>
                                     <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                       <AlertDialogHeader>
-                                        <AlertDialogTitle>Excluir lista?</AlertDialogTitle>
+                                        <AlertDialogTitle>{t("library.folder.deleteList")}</AlertDialogTitle>
                                         <AlertDialogDescription>
                                           Esta ação não pode ser desfeita. Todos os flashcards desta lista também serão excluídos.
                                         </AlertDialogDescription>
                                       </AlertDialogHeader>
                                       <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                                         <AlertDialogAction onClick={() => handleDeleteList(list.id)}>
                                           Excluir
                                         </AlertDialogAction>
@@ -1055,7 +1055,7 @@ const Folder = () => {
           <TabsContent value="texto">
             {textLoading ? (
               <Card className="p-8 text-center">
-                <p className="text-muted-foreground">Carregando...</p>
+                <p className="text-muted-foreground">{t("common.loading")}</p>
               </Card>
             ) : isEditingText ? (
               // EDIT MODE
@@ -1067,7 +1067,7 @@ const Folder = () => {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="text-title">Título</Label>
+                  <Label htmlFor="text-title">{t("library.folder.titleLabel")}</Label>
                   <Input
                     id="text-title"
                     value={editTextTitle}
@@ -1076,7 +1076,7 @@ const Folder = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="text-content">Conteúdo</Label>
+                  <Label htmlFor="text-content">{t("library.folder.contentLabel")}</Label>
                   <Textarea
                     id="text-content"
                     value={editTextContent}
@@ -1124,7 +1124,7 @@ const Folder = () => {
                               Copiar Vocabulário
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Copia todos os termos das listas</TooltipContent>
+                          <TooltipContent>{t("library.folder.copyTermsHint")}</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                       <Button
@@ -1153,7 +1153,7 @@ const Folder = () => {
               <Card className="p-8 text-center space-y-4">
                 <BookOpen className="h-12 w-12 mx-auto text-muted-foreground" />
                 <div>
-                  <h3 className="font-semibold">Nenhum texto ainda</h3>
+                  <h3 className="font-semibold">{t("library.folder.noTexts")}</h3>
                   <p className="text-sm text-muted-foreground">
                     {canEdit
                       ? "Adicione textos de leitura baseados no vocabulário das listas"
@@ -1180,7 +1180,7 @@ const Folder = () => {
                             Copiar Vocabulário
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Copia todos os termos das listas</TooltipContent>
+                        <TooltipContent>{t("library.folder.copyTermsHint")}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                     <TooltipProvider>
@@ -1191,7 +1191,7 @@ const Folder = () => {
                             Copiar Prompt para IA
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Copia um prompt para gerar história com IA</TooltipContent>
+                        <TooltipContent>{t("library.folder.copyStoryHint")}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
@@ -1217,7 +1217,7 @@ const Folder = () => {
               <form onSubmit={handleUpdateList}>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-list-title">Título</Label>
+                    <Label htmlFor="edit-list-title">{t("library.folder.titleLabel")}</Label>
                     <Input
                       id="edit-list-title"
                       value={editingList.title}
@@ -1227,7 +1227,7 @@ const Folder = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-list-description">Descrição (opcional)</Label>
+                    <Label htmlFor="edit-list-description">{t("library.folder.descriptionOptional")}</Label>
                     <Textarea
                       id="edit-list-description"
                       value={editingList.description || ""}
@@ -1237,7 +1237,7 @@ const Folder = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Salvar Alterações</Button>
+                  <Button type="submit">{t("library.folder.saveChanges")}</Button>
                 </DialogFooter>
               </form>
             )}
@@ -1254,7 +1254,7 @@ const Folder = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isBulkDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={isBulkDeleting}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}
