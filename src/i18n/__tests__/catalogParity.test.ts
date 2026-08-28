@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+
 
 import i18n, { APP_TRANSLATION_CATALOGS, changeAppLocale, getCurrentIntlLocale } from '../index';
 import { APP_LOCALE_CODES, type AppLocale } from '../languages';
