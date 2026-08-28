@@ -660,7 +660,7 @@ export default function MixedStudy() {
     if (!currentSessionId || !userId || !listId) return;
 
     const controller = new AbortController();
-    const { data: closedSession, error } = await withStudyRuntimeTimeout(
+    const { data: closedSession, error } = (await withStudyRuntimeTimeout(
       (supabase as any)
         .from("study_sessions")
         .update({ completed: true, updated_at: new Date().toISOString() })
@@ -674,7 +674,8 @@ export default function MixedStudy() {
       STUDY_REMOTE_RESTORE_TIMEOUT_MS,
       "mixed-flow-close-session",
       () => controller.abort(),
-    );
+    )) as { data: { id?: string } | null; error: unknown };
+
     if (error || !closedSession?.id) {
       throw error ?? new Error("mixed-flow-close-session-unconfirmed");
     }

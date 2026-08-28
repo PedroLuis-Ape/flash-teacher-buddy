@@ -1,0 +1,29 @@
+{
+  "study": {
+    "title": "Study",
+    "settings": "Session settings",
+    "practiceDirection": "Practice direction",
+    "modeFlip": "Flip",
+    "modeWrite": "Write",
+    "modeRewrite": "Rewrite",
+    "modeTranslate": "Translate",
+    "modeMultipleChoice": "Multiple choice",
+    "modeUnscramble": "Unscramble",
+    "modePronunciation": "Pronunciation",
+    "modeMixed": "Mixed",
+    "scopeAll": "All cards",
+    "scopeFavorites": "Favorites only",
+    "scopeRed": "Red List",
+    "round": "Round {{current}} of {{total}}",
+    "progress": "{{current}} of {{total}}",
+    "noCards": "No cards available",
+    "noFavorites": "You haven't marked any favorites in this list yet",
+    "loadingCards": "Preparing your session...",
+    "finishSession": "Finish session",
+    "continueSession": "Continue session",
+    "tryAgain": "Try again",
+    "showHint": "Show hint",
+    "playAudio": "Listen",
+    "checkAnswer": "Check"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "No connection to the server. Check your internet.",
+    "permission": "You do not have permission for this action.",
+    "notFound": "We couldn't find what you were looking for.",
+    "loadCards": "We couldn't load the cards.",
+    "prepareSession": "This session could not be prepared.",
+    "updateFailed": "Update failed.",
+    "saveFailed": "Saving failed.",
+    "technicalCode": "Technical code: {{code}}"
+  }
+}

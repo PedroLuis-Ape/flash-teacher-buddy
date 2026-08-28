@@ -1,0 +1,15 @@
+{
+  "classes": {
+    "assignments": "Tareas",
+    "members": "Personas",
+    "chat": "Chat",
+    "noAssignments": "Todavía no hay tareas",
+    "createAssignment": "Crear tarea",
+    "points": "puntos",
+    "addStudent": "Añadir alumno",
+    "noMembers": "Todavía no hay miembros",
+    "noMessages": "Todavía no hay mensajes",
+    "beFirst": "¡Sé el primero en enviar un mensaje!",
+    "notFound": "Clase no encontrada"
+  }
+}

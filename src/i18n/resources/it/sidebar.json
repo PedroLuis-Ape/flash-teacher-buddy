@@ -1,0 +1,31 @@
+{
+  "sidebar": {
+    "menu": "Menu",
+    "mainNav": "Principale",
+    "tools": "Strumenti",
+    "myNotes": "Le mie note",
+    "search": "Cerca",
+    "classes": "Classi",
+    "trash": "Cestino",
+    "landing": "Pagina iniziale",
+    "hubs": "Hub / Istituti",
+    "newHub": "Nuovo",
+    "createNewHub": "Crea nuovo hub",
+    "hubName": "Nome",
+    "hubNamePlaceholder": "Es.: Cinese, Tedesco, Inglese Kids...",
+    "hubDescription": "Descrizione",
+    "hubDescriptionPlaceholder": "Descrivi lo scopo di questo hub...",
+    "hubColor": "Colore",
+    "creating": "Creazione...",
+    "createHub": "Crea hub",
+    "allNoFilter": "Tutti (senza filtro)",
+    "noHubsYet": "Nessun hub creato",
+    "enterHubName": "Inserisci un nome per l'hub",
+    "hubCreatedSuccess": "Hub creato con successo!",
+    "hubCreateError": "Errore nella creazione dell'hub",
+    "deleteHubTitle": "Eliminare l'hub?",
+    "deleteHubDescription": "Le cartelle di questo hub verranno spostate in «Generale». L'azione non è reversibile.",
+    "hubDeletedSuccess": "Hub eliminato. Cartelle spostate in Generale.",
+    "hubDeleteError": "Errore nell'eliminazione dell'hub"
+  }
+}

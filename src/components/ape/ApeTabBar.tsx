@@ -1,21 +1,25 @@
 import { Home, Library, Store, User, Target } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 import { usePerformance } from "@/contexts/PerformanceContext";
 
+// A identidade das abas é o `id`; o rótulo é apenas apresentação traduzida.
 const tabs = [
-  { id: "home", label: "Início", icon: Home, path: "/dashboard" },
-  { id: "library", label: "Biblioteca", icon: Library, path: "/folders" },
-  { id: "goals", label: "Metas", icon: Target, path: "/goals" },
-  { id: "store", label: "Loja", icon: Store, path: "/store" },
-  { id: "profile", label: "Perfil", icon: User, path: "/profile" },
+  { id: "home", labelKey: "nav.home", icon: Home, path: "/dashboard" },
+  { id: "library", labelKey: "nav.library", icon: Library, path: "/folders" },
+  { id: "goals", labelKey: "nav.goals", icon: Target, path: "/goals" },
+  { id: "store", labelKey: "nav.store", icon: Store, path: "/store" },
+  { id: "profile", labelKey: "nav.profile", icon: User, path: "/profile" },
 ];
 
 export function ApeTabBar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { settings } = usePerformance();
+
 
   const activeIndex = useMemo(() => {
     for (let i = 0; i < tabs.length; i++) {
@@ -77,7 +81,7 @@ export function ApeTabBar() {
                 settings.visualFeedback && "active:scale-95",
                 active ? "space-ui-tab-active text-foreground" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground"),
               )}
-              aria-label={tab.label}
+              aria-label={t(tab.labelKey)}
               aria-current={active ? "page" : undefined}
             >
               <div
@@ -99,7 +103,7 @@ export function ApeTabBar() {
                   active ? "font-semibold" : "font-normal",
                 )}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </span>
             </button>
           );

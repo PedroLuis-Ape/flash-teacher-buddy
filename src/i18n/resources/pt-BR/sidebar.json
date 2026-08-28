@@ -1,0 +1,31 @@
+{
+  "sidebar": {
+    "menu": "Menu",
+    "mainNav": "Principal",
+    "tools": "Ferramentas",
+    "myNotes": "Minhas Notas",
+    "search": "Buscar",
+    "classes": "Turmas",
+    "trash": "Lixeira",
+    "landing": "Página inicial",
+    "hubs": "Hubs / Instituições",
+    "newHub": "Novo",
+    "createNewHub": "Criar Novo Hub",
+    "hubName": "Nome",
+    "hubNamePlaceholder": "Ex: Chinês, Alemão, Inglês Kids...",
+    "hubDescription": "Descrição",
+    "hubDescriptionPlaceholder": "Descreva o propósito deste hub...",
+    "hubColor": "Cor",
+    "creating": "Criando...",
+    "createHub": "Criar Hub",
+    "allNoFilter": "Todos (sem filtro)",
+    "noHubsYet": "Nenhum hub criado ainda",
+    "enterHubName": "Digite um nome para o hub",
+    "hubCreatedSuccess": "Hub criado com sucesso!",
+    "hubCreateError": "Erro ao criar hub",
+    "deleteHubTitle": "Excluir Hub?",
+    "deleteHubDescription": "As pastas deste hub serão movidas para 'Geral'. Esta ação não pode ser desfeita.",
+    "hubDeletedSuccess": "Hub excluído! Pastas movidas para Geral.",
+    "hubDeleteError": "Erro ao excluir hub"
+  }
+}

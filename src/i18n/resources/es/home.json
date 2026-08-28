@@ -1,0 +1,76 @@
+{
+  "home": {
+    "welcome": "Bienvenido",
+    "weeklyPts": "PTS semanales",
+    "level": "Nivel",
+    "streak": "Racha",
+    "recentLists": "Listas recientes",
+    "noLists": "Todavía no hay listas",
+    "createFirst": "Crea tu primera lista de tarjetas",
+    "emptyHub": "Este hub está vacío",
+    "emptyHubDescription": "Empieza creando carpetas y listas para organizar tu contenido",
+    "continueStudy": "Continuar donde lo dejaste",
+    "activeClasses": "Clases activas",
+    "title": "Inicio",
+    "greeting": "Hola, {{name}}",
+    "keepLearning": "¡Sigue aprendiendo!",
+    "settings": "Ajustes",
+    "gameSounds": "Sonidos del juego",
+    "notifications": "Notificaciones",
+    "viewAll": "Ver todas",
+    "shortcuts": "Atajos",
+    "recentFolders": "Carpetas recientes",
+    "recentFoldersScoped": "Carpetas recientes — {{name}}",
+    "recentListsSection": "Listas recientes",
+    "untitled": "Sin título",
+    "noFolder": "Sin carpeta",
+    "stats": {
+      "weeklyPts": "PTS semanales",
+      "pitecoin": "PiteCOIN",
+      "level": "Nivel",
+      "streak": "Racha",
+      "lists": "Listas"
+    },
+    "teacherPanel": {
+      "title": "Panel del Profesor",
+      "description": "Gestiona alumnos, clases y tareas"
+    },
+    "myTeachers": {
+      "title": "Mis Profesores",
+      "description": "Mira los profesores que sigues"
+    },
+    "resume": {
+      "label": "Volver donde lo dejaste",
+      "progress": "{{done}} de {{total}} {{unit}}",
+      "opening": "Abriendo sesión...",
+      "continue": "Continuar"
+    },
+    "start": {
+      "ready": "¿Listo para empezar?",
+      "openLibrary": "Abrir mi biblioteca",
+      "createFirst": "Crear mi primera lista",
+      "openLibraryDescription": "Elige una lista o carpeta para estudiar ahora.",
+      "createFirstDescription": "Crea tu primera lista de vocabulario y empieza a practicar.",
+      "ctaOpenLibrary": "Abrir biblioteca",
+      "ctaCreateList": "Crear lista"
+    },
+    "kingdom": {
+      "title": "Modo Reino",
+      "description": "Sistema de progresión gamificado • Pronto"
+    },
+    "quick": {
+      "library": "Biblioteca",
+      "libraryDescription": "Carpetas y listas",
+      "newList": "Nueva lista",
+      "newListDescription": "Crear desde cero",
+      "goals": "Metas",
+      "goalsDescription": "Sigue tu progreso",
+      "notes": "Mis Notas",
+      "notesDescription": "Notas rápidas",
+      "store": "Tienda",
+      "storeDescription": "Mascotas y avatares",
+      "search": "Buscar",
+      "searchDescription": "Encuentra profesores"
+    }
+  }
+}

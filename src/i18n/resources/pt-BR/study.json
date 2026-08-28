@@ -1,0 +1,29 @@
+{
+  "study": {
+    "title": "Estudar",
+    "settings": "Configurações da Sessão",
+    "practiceDirection": "Direção da prática",
+    "modeFlip": "Virar",
+    "modeWrite": "Escrever",
+    "modeRewrite": "Reescrever",
+    "modeTranslate": "Traduzir",
+    "modeMultipleChoice": "Múltipla escolha",
+    "modeUnscramble": "Ordenar",
+    "modePronunciation": "Pronúncia",
+    "modeMixed": "Misto",
+    "scopeAll": "Todos os cards",
+    "scopeFavorites": "Somente favoritos",
+    "scopeRed": "Lista Vermelha",
+    "round": "Rodada {{current}} de {{total}}",
+    "progress": "{{current}} de {{total}}",
+    "noCards": "Nenhum card disponível",
+    "noFavorites": "Você ainda não marcou favoritos nesta lista",
+    "loadingCards": "Preparando sua sessão...",
+    "finishSession": "Concluir sessão",
+    "continueSession": "Continuar sessão",
+    "tryAgain": "Tentar novamente",
+    "showHint": "Ver dica",
+    "playAudio": "Ouvir",
+    "checkAnswer": "Verificar"
+  }
+}

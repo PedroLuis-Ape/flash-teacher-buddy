@@ -1,0 +1,31 @@
+{
+  "sidebar": {
+    "menu": "Menú",
+    "mainNav": "Principal",
+    "tools": "Herramientas",
+    "myNotes": "Mis notas",
+    "search": "Buscar",
+    "classes": "Clases",
+    "trash": "Papelera",
+    "landing": "Página de inicio",
+    "hubs": "Hubs / Instituciones",
+    "newHub": "Nuevo",
+    "createNewHub": "Crear nuevo hub",
+    "hubName": "Nombre",
+    "hubNamePlaceholder": "Ej.: Chino, Alemán, Inglés Kids...",
+    "hubDescription": "Descripción",
+    "hubDescriptionPlaceholder": "Describe el propósito de este hub...",
+    "hubColor": "Color",
+    "creating": "Creando...",
+    "createHub": "Crear hub",
+    "allNoFilter": "Todos (sin filtro)",
+    "noHubsYet": "Todavía no hay hubs",
+    "enterHubName": "Escribe un nombre para el hub",
+    "hubCreatedSuccess": "¡Hub creado con éxito!",
+    "hubCreateError": "Error al crear el hub",
+    "deleteHubTitle": "¿Eliminar hub?",
+    "deleteHubDescription": "Las carpetas de este hub se moverán a «General». Esta acción no se puede deshacer.",
+    "hubDeletedSuccess": "Hub eliminado. Carpetas movidas a General.",
+    "hubDeleteError": "Error al eliminar el hub"
+  }
+}

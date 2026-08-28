@@ -1,0 +1,16 @@
+{
+  "flashcards": {
+    "term": "Termine",
+    "translation": "Traduzione",
+    "hint": "Suggerimento",
+    "addFlashcard": "Aggiungi scheda",
+    "noFlashcards": "Nessuna scheda per ora",
+    "study": "Studia",
+    "cards": "schede",
+    "correct": "Corretto",
+    "incorrect": "Errato",
+    "flip": "Gira",
+    "favorites": "Preferiti",
+    "redList": "Lista rossa"
+  }
+}

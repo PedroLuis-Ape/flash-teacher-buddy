@@ -1,0 +1,31 @@
+{
+  "sidebar": {
+    "menu": "Menu",
+    "mainNav": "Main",
+    "tools": "Tools",
+    "myNotes": "My Notes",
+    "search": "Search",
+    "classes": "Classes",
+    "trash": "Trash",
+    "landing": "Landing page",
+    "hubs": "Hubs / Institutions",
+    "newHub": "New",
+    "createNewHub": "Create New Hub",
+    "hubName": "Name",
+    "hubNamePlaceholder": "E.g.: Chinese, German, Kids English...",
+    "hubDescription": "Description",
+    "hubDescriptionPlaceholder": "Describe the purpose of this hub...",
+    "hubColor": "Color",
+    "creating": "Creating...",
+    "createHub": "Create Hub",
+    "allNoFilter": "All (no filter)",
+    "noHubsYet": "No hubs created yet",
+    "enterHubName": "Enter a name for the hub",
+    "hubCreatedSuccess": "Hub created successfully!",
+    "hubCreateError": "Error creating hub",
+    "deleteHubTitle": "Delete Hub?",
+    "deleteHubDescription": "Folders in this hub will be moved to 'General'. This action cannot be undone.",
+    "hubDeletedSuccess": "Hub deleted! Folders moved to General.",
+    "hubDeleteError": "Error deleting hub"
+  }
+}

@@ -36,7 +36,9 @@ describe("PiteCOIN frontend integration", () => {
     const statistics = read("src/components/StatisticsTab.tsx");
 
     expect(home).toContain("balance_pitecoin");
-    expect(home).toContain("PiteCOIN");
+    // O rótulo agora vem do catálogo i18n, não de texto fixo na página.
+    expect(home).toContain("home.stats.pitecoin");
+    expect(read("src/i18n/resources/pt-BR/home.json")).toContain("PiteCOIN");
     expect(home).toContain("navigate('/store')");
     expect(statistics).toContain("XP Total");
     expect(statistics).toContain("PTS disponíveis");

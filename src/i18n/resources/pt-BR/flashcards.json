@@ -1,0 +1,16 @@
+{
+  "flashcards": {
+    "term": "Termo",
+    "translation": "Tradução",
+    "hint": "Dica",
+    "addFlashcard": "Adicionar Flashcard",
+    "noFlashcards": "Nenhum flashcard ainda",
+    "study": "Estudar",
+    "cards": "cards",
+    "correct": "Correto",
+    "incorrect": "Incorreto",
+    "flip": "Virar",
+    "favorites": "Favoritos",
+    "redList": "Lista Vermelha"
+  }
+}

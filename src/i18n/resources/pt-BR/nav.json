@@ -1,0 +1,23 @@
+{
+  "nav": {
+    "home": "Início",
+    "folders": "Minhas Pastas",
+    "library": "Biblioteca",
+    "goals": "Metas",
+    "store": "Loja",
+    "classes": "Turmas",
+    "myClasses": "Minhas Turmas",
+    "myTeachers": "Meus Professores",
+    "professorPanel": "Painel do Professor",
+    "profile": "Perfil",
+    "notes": "Minhas Notas",
+    "trash": "Lixeira",
+    "search": "Buscar",
+    "landing": "Página inicial",
+    "logout": "Sair",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
+    "goBack": "Voltar",
+    "searchUsers": "Pesquisar usuários"
+  }
+}

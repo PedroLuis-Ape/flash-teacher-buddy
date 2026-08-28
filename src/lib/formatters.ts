@@ -1,17 +1,13 @@
-import i18n from '@/i18n/config';
+import i18n from '@/i18n';
+import { getIntlLocale } from '@/i18n/languages';
 
 /**
- * Get current locale from i18n
+ * Locale Intl derivado do idioma de interface atual (fonte única).
  */
 export function getCurrentLocale(): string {
-  const lang = i18n.language || 'pt';
-  // Map short codes to full locale codes
-  const localeMap: Record<string, string> = {
-    pt: 'pt-BR',
-    en: 'en-US',
-  };
-  return localeMap[lang] || localeMap['pt'];
+  return getIntlLocale(i18n.resolvedLanguage || i18n.language);
 }
+
 
 /**
  * Format currency value using Intl.NumberFormat

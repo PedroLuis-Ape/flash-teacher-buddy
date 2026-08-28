@@ -1,0 +1,15 @@
+{
+  "classes": {
+    "assignments": "Atribuições",
+    "members": "Pessoas",
+    "chat": "Chat",
+    "noAssignments": "Nenhuma atribuição ainda",
+    "createAssignment": "Criar Atribuição",
+    "points": "pontos",
+    "addStudent": "Adicionar Aluno",
+    "noMembers": "Nenhum membro ainda",
+    "noMessages": "Nenhuma mensagem ainda",
+    "beFirst": "Seja o primeiro a enviar uma mensagem!",
+    "notFound": "Turma não encontrada"
+  }
+}

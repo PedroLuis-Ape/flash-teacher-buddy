@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useHomeData } from "@/hooks/useHomeData";
 import { useLatestStudyResume } from "@/hooks/useLatestStudyResume";
@@ -32,6 +33,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { recents, recentFolders, stats, loading, refetch } = useHomeData();
   // Fonte única de retomada (ponteiro local + fallback remoto). A Home não
   // reconstrói mais a sessão a partir de list_id/mode/current_index.
@@ -64,7 +66,7 @@ const Index = () => {
   const { data: profileData } = useQuery({
     queryKey: ['profile-home', user?.id],
     queryFn: async () => {
-      if (!user) return { firstName: "Usuário", avatarUrl: null, isTeacher: false };
+      if (!user) return { firstName: t("common.user"), avatarUrl: null, isTeacher: false };
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -72,7 +74,7 @@ const Index = () => {
         .eq("id", user.id)
         .single();
 
-      if (!profile) return { firstName: "Usuário", avatarUrl: null, isTeacher: false };
+      if (!profile) return { firstName: t("common.user"), avatarUrl: null, isTeacher: false };
 
       let avatarUrl = profile.avatar_url;
       if (!avatarUrl && profile.avatar_skin_id) {
@@ -87,7 +89,7 @@ const Index = () => {
       }
 
       return {
-        firstName: profile.first_name || "Usuário",
+        firstName: profile.first_name || t("common.user"),
         avatarUrl: avatarUrl || null,
         isTeacher: Boolean(profile.is_teacher),
       };
@@ -119,7 +121,7 @@ const Index = () => {
 
   const safeFirstName = profileData?.firstName && typeof profileData.firstName === "string" && profileData.firstName.trim().length > 0
     ? profileData.firstName
-    : "Usuário";
+    : t("common.user");
 
   const userInitials = safeFirstName
     .split(" ")
@@ -144,7 +146,7 @@ const Index = () => {
         para evitar duplicação visual no mobile.
       */}
       <ApeAppBar
-        title="Início"
+        title={t("home.title")}
         variant="home"
         showSearch
       />
@@ -165,10 +167,10 @@ const Index = () => {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl sm:text-2xl font-bold truncate">
-                  Olá, {safeFirstName}
+                  {t("home.greeting", { name: safeFirstName })}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Continue aprendendo!
+                  {t("home.keepLearning")}
                 </p>
               </div>
               {/* Settings Popover */}
@@ -180,7 +182,7 @@ const Index = () => {
                 </PopoverTrigger>
                 <PopoverContent className="w-64" align="end" onClick={(e) => e.stopPropagation()}>
                   <div className="space-y-4">
-                    <h4 className="font-medium text-sm">Configurações</h4>
+                    <h4 className="font-medium text-sm">{t("home.settings")}</h4>
                     
                     {/* Sound Toggle */}
                     <div className="flex items-center justify-between">
@@ -191,7 +193,7 @@ const Index = () => {
                           <VolumeX className="h-4 w-4 text-muted-foreground" />
                         )}
                         <Label htmlFor="sound-toggle" className="text-sm">
-                          Sons do jogo
+                          {t("home.gameSounds")}
                         </Label>
                       </div>
                       <Switch
@@ -212,7 +214,7 @@ const Index = () => {
                           <BellOff className="h-4 w-4 text-muted-foreground" />
                         )}
                         <Label htmlFor="notifications-toggle" className="text-sm">
-                          Notificações
+                          {t("home.notifications")}
                         </Label>
                       </div>
                       <Switch
@@ -238,7 +240,7 @@ const Index = () => {
           <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><TrendingUp className="h-4 w-4 text-primary" /></span>
-              <span className="text-xs text-muted-foreground">PTS Semanais</span>
+              <span className="text-xs text-muted-foreground">{t("home.stats.weeklyPts")}</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
@@ -253,7 +255,7 @@ const Index = () => {
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !h-9 !w-9"><Coins className="h-4 w-4 text-primary" /></span>
-              <span className="text-xs text-muted-foreground">PiteCOIN</span>
+              <span className="text-xs text-muted-foreground">{t("home.stats.pitecoin")}</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
@@ -265,7 +267,7 @@ const Index = () => {
           <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><Crown className="h-4 w-4 text-primary" /></span>
-              <span className="text-xs text-muted-foreground">Nível</span>
+              <span className="text-xs text-muted-foreground">{t("home.stats.level")}</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
@@ -277,7 +279,7 @@ const Index = () => {
           <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><Play className="h-4 w-4 text-primary" /></span>
-              <span className="text-xs text-muted-foreground">Sequência</span>
+              <span className="text-xs text-muted-foreground">{t("home.stats.streak")}</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
@@ -289,7 +291,7 @@ const Index = () => {
           <Card className="stat-tile p-4 border-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="icon-tile !w-9 !h-9"><BookOpen className="h-4 w-4 text-primary" /></span>
-              <span className="text-xs text-muted-foreground">Listas</span>
+              <span className="text-xs text-muted-foreground">{t("home.stats.lists")}</span>
             </div>
             {loading ? (
               <Skeleton className="h-8 w-16" />
@@ -317,9 +319,9 @@ const Index = () => {
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base truncate">Painel do Professor</h3>
+                <h3 className="font-semibold text-base truncate">{t("home.teacherPanel.title")}</h3>
                 <p className="text-sm text-muted-foreground truncate">
-                  Gerencie alunos, turmas e atribuições
+                  {t("home.teacherPanel.description")}
                 </p>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -339,9 +341,9 @@ const Index = () => {
                 <GraduationCap className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base truncate">Meus Professores</h3>
+                <h3 className="font-semibold text-base truncate">{t("home.myTeachers.title")}</h3>
                 <p className="text-sm text-muted-foreground truncate">
-                  Veja os professores que você segue
+                  {t("home.myTeachers.description")}
                 </p>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -358,13 +360,17 @@ const Index = () => {
                   <Play className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground mb-1">Voltar para onde parou</p>
-                  <h3 className="font-semibold text-base mb-3 truncate">{safeLast.title || "Sem título"}</h3>
+                  <p className="text-sm text-muted-foreground mb-1">{t("home.resume.label")}</p>
+                  <h3 className="font-semibold text-base mb-3 truncate">{safeLast.title || t("home.untitled")}</h3>
                   <div className="space-y-2">
                     <Progress value={pct} className="h-2" />
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {safeLast.progressCount} de {safeLast.totalCards} {safeLast.progressUnit}
+                        {t("home.resume.progress", {
+                          done: safeLast.progressCount,
+                          total: safeLast.totalCards,
+                          unit: safeLast.progressUnit,
+                        })}
                       </span>
                       <span className="text-primary font-medium">{pct}%</span>
                     </div>
@@ -377,7 +383,7 @@ const Index = () => {
                 className="w-full mt-4 min-h-[44px]"
               >
                 <Play className="h-4 w-4 mr-2" />
-                {isOpeningResume ? "Abrindo sessão..." : "Continuar"}
+                {isOpeningResume ? t("home.resume.opening") : t("home.resume.continue")}
               </Button>
             </CardContent>
           </Card>
@@ -392,16 +398,16 @@ const Index = () => {
                   <Library className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground mb-1">Pronto para começar?</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("home.start.ready")}</p>
                   <h3 className="font-semibold text-base mb-3">
                     {safeRecents.length > 0 || myFolders.length > 0
-                      ? "Abrir minha biblioteca"
-                      : "Criar minha primeira lista"}
+                      ? t("home.start.openLibrary")
+                      : t("home.start.createFirst")}
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {safeRecents.length > 0 || myFolders.length > 0
-                      ? "Escolha uma lista ou pasta para estudar agora."
-                      : "Monte sua primeira lista de vocabulário e comece a praticar."}
+                      ? t("home.start.openLibraryDescription")
+                      : t("home.start.createFirstDescription")}
                   </p>
                 </div>
               </div>
@@ -411,8 +417,8 @@ const Index = () => {
               >
                 <Play className="h-4 w-4 mr-2" />
                 {safeRecents.length > 0 || myFolders.length > 0
-                  ? "Abrir biblioteca"
-                  : "Criar lista"}
+                  ? t("home.start.ctaOpenLibrary")
+                  : t("home.start.ctaCreateList")}
               </Button>
             </CardContent>
           </Card>
@@ -434,11 +440,11 @@ const Index = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-base truncate">Modo Reino</h3>
+                  <h3 className="font-semibold text-base truncate">{t("home.kingdom.title")}</h3>
                   <Lock className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground truncate">
-                  Sistema de progressão gamificado • Em breve
+                  {t("home.kingdom.description")}
                 </p>
               </div>
             </div>
@@ -452,8 +458,8 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <ApeSectionTitle>
               {selectedInstitution
-                ? `Pastas recentes — ${selectedInstitution.name}`
-                : "Pastas recentes"}
+                ? t("home.recentFoldersScoped", { name: selectedInstitution.name })
+                : t("home.recentFolders")}
             </ApeSectionTitle>
             <Button
               variant="ghost"
@@ -461,7 +467,7 @@ const Index = () => {
               onClick={() => navigate("/folders")}
               className="min-h-[36px] px-3 text-primary hover:text-primary"
             >
-              Ver todas
+              {t("home.viewAll")}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
@@ -491,7 +497,7 @@ const Index = () => {
         {/* Listas recentes — só aparece quando há listas */}
         {loading ? (
           <div className="space-y-4">
-            <ApeSectionTitle>Listas recentes</ApeSectionTitle>
+            <ApeSectionTitle>{t("home.recentListsSection")}</ApeSectionTitle>
             <div className="space-y-3">
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
@@ -501,14 +507,14 @@ const Index = () => {
         ) : myLists.filter((list) => typeof (list as any)?.id === "string").length > 0 ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <ApeSectionTitle>Listas recentes</ApeSectionTitle>
+              <ApeSectionTitle>{t("home.recentListsSection")}</ApeSectionTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/folders")}
                 className="min-h-[36px] px-3 text-primary hover:text-primary"
               >
-                Ver todas
+                {t("home.viewAll")}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -518,9 +524,9 @@ const Index = () => {
                 .map((list) => (
                   <ApeCardList
                     key={list.id}
-                    title={list.title || "Sem título"}
+                    title={list.title || t("home.untitled")}
                     cardCount={Number(list.count) || 0}
-                    badge={list.folder_name || "Sem pasta"}
+                    badge={list.folder_name || t("home.noFolder")}
                     onClick={() => navigate(`/list/${list.id}`)}
                     onPlayClick={() => navigate(`/list/${list.id}/games`)}
                   />
@@ -531,7 +537,7 @@ const Index = () => {
 
         {/* Quick Actions */}
         <div className="space-y-4">
-          <ApeSectionTitle>Atalhos</ApeSectionTitle>
+          <ApeSectionTitle>{t("home.shortcuts")}</ApeSectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             <Card
               className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border"
@@ -542,9 +548,9 @@ const Index = () => {
                   <Library className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">Biblioteca</h3>
+                  <h3 className="font-semibold text-base">{t("home.quick.library")}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Pastas e listas
+                    {t("home.quick.libraryDescription")}
                   </p>
                 </div>
               </div>
@@ -559,9 +565,9 @@ const Index = () => {
                   <Plus className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">Nova lista</h3>
+                  <h3 className="font-semibold text-base">{t("home.quick.newList")}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Criar do zero
+                    {t("home.quick.newListDescription")}
                   </p>
                 </div>
               </div>
@@ -576,9 +582,9 @@ const Index = () => {
                   <Target className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">Metas</h3>
+                  <h3 className="font-semibold text-base">{t("home.quick.goals")}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Acompanhe progresso
+                    {t("home.quick.goalsDescription")}
                   </p>
                 </div>
               </div>
@@ -593,9 +599,9 @@ const Index = () => {
                   <StickyNote className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">Minhas Notas</h3>
+                  <h3 className="font-semibold text-base">{t("home.quick.notes")}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Anotações rápidas
+                    {t("home.quick.notesDescription")}
                   </p>
                 </div>
               </div>
@@ -610,9 +616,9 @@ const Index = () => {
                   <Store className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">Loja</h3>
+                  <h3 className="font-semibold text-base">{t("home.quick.store")}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Mascotes e avatares
+                    {t("home.quick.storeDescription")}
                   </p>
                 </div>
               </div>
@@ -627,9 +633,9 @@ const Index = () => {
                   <SearchIcon className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">Buscar</h3>
+                  <h3 className="font-semibold text-base">{t("home.quick.search")}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Encontre professores
+                    {t("home.quick.searchDescription")}
                   </p>
                 </div>
               </div>

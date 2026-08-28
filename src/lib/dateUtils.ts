@@ -4,19 +4,16 @@
  * These utilities are i18n-aware and use the current language setting.
  */
 
-import i18n from '@/i18n/config';
+import i18n from '@/i18n';
+import { getIntlLocale } from '@/i18n/languages';
 
 /**
- * Get the appropriate locale based on current i18n language
+ * Get the appropriate Intl locale based on the current interface language
  */
 function getLocale(): string {
-  const lang = i18n.language || 'pt';
-  const localeMap: Record<string, string> = {
-    pt: 'pt-BR',
-    en: 'en-US',
-  };
-  return localeMap[lang] || localeMap['pt'];
+  return getIntlLocale(i18n.resolvedLanguage || i18n.language);
 }
+
 
 /**
  * Get i18n-aware fallback text for unavailable dates
