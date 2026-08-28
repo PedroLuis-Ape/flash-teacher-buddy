@@ -52,6 +52,7 @@ export function ApeAppBar({
   showThemeToggle = false,
 }: ApeAppBarProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Variant-driven defaults — keep behavior previsível por tela.
   // Cada variant define um padrão; props explícitas sempre vencem.
