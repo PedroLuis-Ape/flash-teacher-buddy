@@ -33,6 +33,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { recents, recentFolders, stats, loading, refetch } = useHomeData();
   // Fonte única de retomada (ponteiro local + fallback remoto). A Home não
   // reconstrói mais a sessão a partir de list_id/mode/current_index.
@@ -65,7 +66,7 @@ const Index = () => {
   const { data: profileData } = useQuery({
     queryKey: ['profile-home', user?.id],
     queryFn: async () => {
-      if (!user) return { firstName: "Usuário", avatarUrl: null, isTeacher: false };
+      if (!user) return { firstName: t("common.user"), avatarUrl: null, isTeacher: false };
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -73,7 +74,7 @@ const Index = () => {
         .eq("id", user.id)
         .single();
 
-      if (!profile) return { firstName: "Usuário", avatarUrl: null, isTeacher: false };
+      if (!profile) return { firstName: t("common.user"), avatarUrl: null, isTeacher: false };
 
       let avatarUrl = profile.avatar_url;
       if (!avatarUrl && profile.avatar_skin_id) {
@@ -88,7 +89,7 @@ const Index = () => {
       }
 
       return {
-        firstName: profile.first_name || "Usuário",
+        firstName: profile.first_name || t("common.user"),
         avatarUrl: avatarUrl || null,
         isTeacher: Boolean(profile.is_teacher),
       };
