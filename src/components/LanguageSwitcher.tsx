@@ -1,4 +1,3 @@
-import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
 import {
@@ -8,47 +7,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-const languages = [
-  { code: 'pt', label: 'Português', flag: '🇧🇷' },
-  { code: 'en', label: 'English', flag: '🇺🇸' },
-];
+import { APP_LOCALES } from '@/i18n/languages';
+import { changeAppLocale, getCurrentAppLocale } from '@/i18n';
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // i18n é lido para reagir a mudanças de idioma sem manter estado paralelo.
+  void i18n.resolvedLanguage;
 
-  const normalizedLang = (i18n.resolvedLanguage || i18n.language || 'pt').split('-')[0];
-  const currentLang = languages.some((lang) => lang.code === normalizedLang) ? normalizedLang : 'pt';
-
-  const currentLabel = useMemo(() => {
-    const current = languages.find((lang) => lang.code === currentLang);
-    return current ? `${current.flag} ${current.label}` : 'Idioma';
-  }, [currentLang]);
-
-  useEffect(() => {
-    if (normalizedLang !== currentLang) {
-      i18n.changeLanguage(currentLang);
-    }
-  }, [normalizedLang, currentLang, i18n]);
+  const currentLang = getCurrentAppLocale();
 
   const handleLanguageChange = (langCode: string) => {
-    i18n.changeLanguage(langCode || 'pt');
+    void changeAppLocale(langCode);
   };
 
   return (
     <Select value={currentLang} onValueChange={handleLanguageChange}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full" aria-label={t('language.selectLanguage')}>
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4" />
-          <SelectValue placeholder={currentLabel} />
+          <SelectValue placeholder={t('language.selectLanguage')} />
         </div>
       </SelectTrigger>
       <SelectContent>
-        {languages.map((lang) => (
+        {APP_LOCALES.map((lang) => (
           <SelectItem key={lang.code} value={lang.code}>
             <div className="flex items-center gap-2">
-              <span>{lang.flag}</span>
-              <span>{lang.label}</span>
+              <span aria-hidden="true">{lang.flag}</span>
+              <span>{lang.nativeName}</span>
             </div>
           </SelectItem>
         ))}
