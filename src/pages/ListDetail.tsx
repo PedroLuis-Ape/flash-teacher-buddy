@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, memo, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 // Shared lang-label resolver for all language fallbacks
 import { getLangLabel, resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { useNavigate, useParams } from "react-router-dom";
@@ -214,7 +215,7 @@ const FlashcardRow = memo(({
                 size="icon"
                 onClick={() => onUnmerge(flashcard.id)}
                 className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                title="Separar camadas"
+                title={tRow("library.list.separateLayers")}
               >
                 <Unlink className="h-4 w-4" />
               </Button>
@@ -291,6 +292,7 @@ const MemoizedCardList = memo(({
 MemoizedCardList.displayName = "MemoizedCardList";
 
 const ListDetail = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { id } = useParams();
@@ -521,7 +523,7 @@ const ListDetail = () => {
       if (error) throw error;
       loadFlashcards();
     } catch (error: any) {
-      toast.error("Erro ao adicionar flashcard: " + error.message);
+      toast.error(t("library.list.toast.addCardError", { message: error.message }));
     }
   };
 
@@ -540,7 +542,7 @@ const ListDetail = () => {
         () => { loadFlashcards(); },
       );
     } catch (error: any) {
-      toast.error("Erro ao excluir: " + error.message);
+      toast.error(t("library.list.toast.deleteError", { message: error.message }));
     }
   }, [loadFlashcards]);
 
@@ -586,7 +588,7 @@ const ListDetail = () => {
       const undoItems = visibleSelection.map((id) => ({ id, type: "flashcard" as const }));
       showBulkUndoDeleteToast(undoItems, () => { loadFlashcards(); });
     } catch (error: any) {
-      toast.error("Erro ao excluir: " + (error?.message || "desconhecido"));
+      toast.error(t("library.list.toast.deleteError", { message: error?.message || "" }));
     } finally {
       setBulkDeleteProgress("");
       setIsDeleting(false);
@@ -604,14 +606,14 @@ const ListDetail = () => {
 
   const handleUnmergeLayers = useCallback(async (principalId: string) => {
     if (isUnmergingRef.current) return;
-    if (!window.confirm("Separar as camadas? Cada camada voltará a ser um card individual.")) return;
+    if (!window.confirm(t("library.list.toast.separateLayersConfirm"))) return;
     isUnmergingRef.current = true;
     try {
       await unmergeLayers(principalId);
-      toast.success("Camadas separadas — cards restaurados");
+      toast.success(t("library.list.toast.layersSeparated"));
       await loadFlashcards();
     } catch (err: any) {
-      toast.error(err?.message || "Erro ao separar camadas");
+      toast.error(err?.message || t("library.list.toast.separateLayersError"));
     } finally {
       isUnmergingRef.current = false;
     }
@@ -649,7 +651,7 @@ const ListDetail = () => {
       if (!updatedCard?.id) {
         throw new Error("O banco não confirmou a atualização deste card.");
       }
-      toast.success("Flashcard atualizado!");
+      toast.success(t("library.list.toast.cardUpdated"));
 
       // Optimistic in-place update — preserves card position
       queryClient.setQueryData<Flashcard[]>(["flashcards", id], (old) => {
@@ -669,7 +671,7 @@ const ListDetail = () => {
         );
       });
     } catch (error: any) {
-      toast.error("Erro ao atualizar: " + error.message);
+      toast.error(t("library.list.toast.updateError", { message: error.message }));
     }
   };
 
@@ -693,7 +695,7 @@ const ListDetail = () => {
           : "Compartilhamento desativado"
       );
     } catch (error: any) {
-      toast.error("Erro ao alterar compartilhamento: " + error.message);
+      toast.error(t("library.list.toast.shareError", { message: error.message }));
     } finally {
       setIsSharing(false);
     }
@@ -703,7 +705,7 @@ const ListDetail = () => {
     if (!folder) return;
     const shareUrl = `${window.location.origin}/share/folder/${folder.id}`;
     navigator.clipboard.writeText(shareUrl);
-    toast.success("Link copiado para a área de transferência!");
+    toast.success(t("library.list.toast.linkCopied"));
   };
 
   // NEW: Clone list to user's account
@@ -774,7 +776,7 @@ const ListDetail = () => {
         if (cardsError) throw cardsError;
       }
       
-      toast.success(`Lista clonada com ${flashcards.length} cards!`);
+      toast.success(t("library.list.toast.cloned", { count: flashcards.length }));
       queryClient.invalidateQueries({ queryKey: ["lists"] });
       queryClient.invalidateQueries({ queryKey: ["folders"] });
       
@@ -782,7 +784,7 @@ const ListDetail = () => {
       navigate(`/list/${clonedList.id}`);
     } catch (error: any) {
       console.error("Clone error:", error);
-      toast.error("Erro ao clonar lista: " + error.message);
+      toast.error(t("library.list.toast.cloneError", { message: error.message }));
     } finally {
       setIsCloning(false);
     }
@@ -836,7 +838,7 @@ const ListDetail = () => {
 
   const handleCopyExport = () => {
     navigator.clipboard.writeText(exportText);
-    toast.success("Copiado para a área de transferência!");
+    toast.success(t("library.list.toast.copied"));
   };
 
   // ────────────────────────────────────────────────────────────────────
@@ -884,7 +886,7 @@ const ListDetail = () => {
       }
 
       const swapped = result.cards_swapped ?? flashcards.length;
-      toast.success(`Conteúdo de ${swapped} cards invertido com sucesso!`);
+      toast.success(t("library.list.toast.swapDone", { count: swapped }));
 
       // Invalidate every cache that holds card content so the UI reflects the swap
       // immediately (list view, hub, study session, offline copy).
@@ -902,7 +904,7 @@ const ListDetail = () => {
       setSwapDialogOpen(false);
     } catch (error: any) {
       console.error("Swap error:", error);
-      toast.error("Erro ao inverter conteúdo: " + error.message);
+      toast.error(t("library.list.toast.swapError", { message: error.message }));
     } finally {
       setIsSwapping(false);
     }
@@ -936,11 +938,11 @@ const ListDetail = () => {
       
       if (error) throw error;
       
-      toast.success("Configurações salvas!");
+      toast.success(t("library.list.toast.settingsSaved"));
       setSettingsDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["list", id] });
     } catch (error: any) {
-      toast.error("Erro ao salvar: " + error.message);
+      toast.error(t("library.list.toast.saveError", { message: error.message }));
     } finally {
       setIsSavingSettings(false);
     }
@@ -949,15 +951,15 @@ const ListDetail = () => {
   const loading = listLoading || flashcardsLoading || folderLoading;
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+    return <div className="min-h-screen flex items-center justify-center">{t("common.loading")}</div>;
   }
 
   if (!list) {
-    return <div className="min-h-screen flex items-center justify-center">Lista não encontrada</div>;
+    return <div className="min-h-screen flex items-center justify-center">{t("library.list.notFound")}</div>;
   }
 
   if (!folder) {
-    return <div className="min-h-screen flex items-center justify-center">Pasta não encontrada</div>;
+    return <div className="min-h-screen flex items-center justify-center">{t("library.list.folderNotFound")}</div>;
   }
 
   return (
@@ -991,7 +993,7 @@ const ListDetail = () => {
                     B: {effectiveSettings.labelsB}
                   </span>
                   {!effectiveSettings.isListOverride && (
-                    <span className="text-muted-foreground/60 italic text-[10px]">(herdado da pasta)</span>
+                    <span className="text-muted-foreground/60 italic text-[10px]">{t("library.list.inheritedFromFolder")}</span>
                   )}
                 </div>
               )}
@@ -1133,7 +1135,7 @@ const ListDetail = () => {
                 value={exportText}
                 readOnly
                 className="min-h-[300px] font-mono text-sm"
-                placeholder="Carregando..."
+                placeholder={t("common.loading")}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
@@ -1154,49 +1156,47 @@ const ListDetail = () => {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <ArrowLeftRight className="h-5 w-5" />
-                Inverter conteúdo dos cards
+                {t("library.list.swap.title")}
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    Esta ação troca <strong className="text-foreground">apenas o conteúdo</strong> de todos os <strong className="text-foreground">{flashcards.length} cards</strong> desta lista.
-                  </p>
+                  <p>{t("library.list.swap.intro", { count: flashcards.length })}</p>
 
                   {/* Before / After preview */}
                   {flashcards[0] && (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
-                        <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Antes</p>
+                        <p className="font-semibold text-foreground text-xs uppercase tracking-wide">{t("library.list.swap.before")}</p>
                         <div className="text-xs space-y-0.5">
-                          <p className="truncate"><span className="font-medium text-foreground">Lado A:</span> <em>{flashcards[0].term}</em></p>
-                          <p className="truncate"><span className="font-medium text-foreground">Lado B:</span> <em>{flashcards[0].translation}</em></p>
+                          <p className="truncate"><span className="font-medium text-foreground">{t("library.list.swap.sideA")}</span> <em>{flashcards[0].term}</em></p>
+                          <p className="truncate"><span className="font-medium text-foreground">{t("library.list.swap.sideB")}</span> <em>{flashcards[0].translation}</em></p>
                         </div>
                       </div>
                       <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1.5">
-                        <p className="font-semibold text-foreground text-xs uppercase tracking-wide">Depois</p>
+                        <p className="font-semibold text-foreground text-xs uppercase tracking-wide">{t("library.list.swap.after")}</p>
                         <div className="text-xs space-y-0.5">
-                          <p className="truncate"><span className="font-medium text-foreground">Lado A:</span> <em>{flashcards[0].translation}</em></p>
-                          <p className="truncate"><span className="font-medium text-foreground">Lado B:</span> <em>{flashcards[0].term}</em></p>
+                          <p className="truncate"><span className="font-medium text-foreground">{t("library.list.swap.sideA")}</span> <em>{flashcards[0].translation}</em></p>
+                          <p className="truncate"><span className="font-medium text-foreground">{t("library.list.swap.sideB")}</span> <em>{flashcards[0].term}</em></p>
                         </div>
                       </div>
                     </div>
                   )}
 
                   <div className="rounded-md border border-border bg-muted/30 p-2.5 text-xs space-y-1">
-                    <p>✅ <strong className="text-foreground">Apenas o conteúdo dos cards</strong> será trocado (term ↔ translation).</p>
-                    <p>🔒 Idiomas, rótulos e configurações da lista <strong className="text-foreground">permanecem iguais</strong>.</p>
-                    <p>↩️ Você pode desfazer invertendo novamente.</p>
+                    <p>{t("library.list.swap.note1")}</p>
+                    <p>{t("library.list.swap.note2")}</p>
+                    <p>{t("library.list.swap.note3")}</p>
                   </div>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isSwapping}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={isSwapping}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleSwapSides} 
                 disabled={isSwapping}
               >
-                {isSwapping ? "Invertendo..." : "Inverter conteúdo agora"}
+                {isSwapping ? t("library.list.swap.running") : t("library.list.swap.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1223,7 +1223,7 @@ const ListDetail = () => {
           )}
 
           {loading ? (
-            <p className="text-center text-muted-foreground">Carregando...</p>
+            <p className="text-center text-muted-foreground">{t("common.loading")}</p>
           ) : flashcards.length === 0 ? (
             <Card className="text-center p-12">
               <p className="text-muted-foreground">
@@ -1266,13 +1266,13 @@ const ListDetail = () => {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                          <AlertDialogTitle>{t("library.list.confirmDelete")}</AlertDialogTitle>
                           <AlertDialogDescription>
                             Tem certeza que deseja excluir {selectedVisibleCount} cards visíveis? Esta ação não pode ser desfeita.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                           <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                             Excluir
                           </AlertDialogAction>
@@ -1302,7 +1302,7 @@ const ListDetail = () => {
                   <Input
                     value={cardSearch}
                     onChange={(e) => setCardSearch(e.target.value)}
-                    placeholder="Buscar card..."
+                    placeholder={t("library.list.searchCard")}
                     className="pl-9 h-10"
                   />
                 </div>
@@ -1326,7 +1326,7 @@ const ListDetail = () => {
               {filteredFlashcards.length > pagedFlashcards.length && (
                 <div className="flex flex-col items-center gap-2 pt-2">
                   <p className="text-xs text-muted-foreground">
-                    Exibindo {pagedFlashcards.length} de {filteredFlashcards.length} cards
+                    {t("library.list.showing", { shown: pagedFlashcards.length, total: filteredFlashcards.length })}
                   </p>
                   <Button
                     variant="outline"
