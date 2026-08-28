@@ -17,6 +17,7 @@
     "logout": "Sair",
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
-    "goBack": "Voltar"
+    "goBack": "Voltar",
+    "searchUsers": "Pesquisar usuários"
   }
 }

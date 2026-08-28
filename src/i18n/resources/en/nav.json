@@ -17,6 +17,7 @@
     "logout": "Sign out",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "goBack": "Go back"
+    "goBack": "Go back",
+    "searchUsers": "Search users"
   }
 }

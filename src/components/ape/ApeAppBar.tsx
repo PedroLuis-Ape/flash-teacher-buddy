@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { ArrowLeft, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -90,7 +91,7 @@ export function ApeAppBar({
             variant="ghost"
             size="icon"
             onClick={handleBack}
-            aria-label="Voltar"
+            aria-label={t("nav.goBack")}
             className="shrink-0 h-10 w-10"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -111,8 +112,8 @@ export function ApeAppBar({
               variant="ghost"
               size="icon"
               onClick={() => navigate('/search')}
-              aria-label="Pesquisar usuários"
-              title="Pesquisar"
+              aria-label={t("nav.searchUsers")}
+              title={t("nav.search")}
               className="h-10 w-10"
             >
               <Search className="h-5 w-5" />

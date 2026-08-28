@@ -17,6 +17,7 @@
     "logout": "Esci",
     "openMenu": "Apri menu",
     "closeMenu": "Chiudi menu",
-    "goBack": "Indietro"
+    "goBack": "Indietro",
+    "searchUsers": "Cerca utenti"
   }
 }
