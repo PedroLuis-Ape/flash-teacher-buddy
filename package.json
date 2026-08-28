@@ -23,10 +23,12 @@
     "store:validate": "node scripts/store-packages/validate.mjs",
     "store:sync": "npm run store:validate && node scripts/store-packages/sync.mjs",
     "check:environment": "node scripts/validate-environment.mjs",
+    "i18n:audit": "node scripts/audit-i18n.mjs --write",
+    "i18n:validate": "node scripts/validate-i18n-keys.mjs",
     "check:security": "node scripts/audit-security.mjs",
     "check:dependencies": "node scripts/audit-dependencies.mjs",
     "check:bundle": "node scripts/report-bundle.mjs",
-    "check": "npm run check:environment && npm run check:security && npm run check:dependencies && npm run store:validate && npm run typecheck && npm run test && npm run lint && npm run build"
+    "check": "npm run i18n:validate && npm run check:environment && npm run check:security && npm run check:dependencies && npm run store:validate && npm run typecheck && npm run test && npm run lint && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

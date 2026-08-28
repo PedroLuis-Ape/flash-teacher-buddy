@@ -9,7 +9,7 @@ import "./index.css";
 import "./styles/store-package-avatar.css";
 import "./lib/versionManager";
 import "./lib/errorCapture";
-import "./i18n/config";
+import "./i18n";
 import { SafeMode } from "./components/SafeMode";
 import { BootstrapDiagnostics } from "./components/BootstrapDiagnostics";
 import PreviewHealth from "./components/PreviewHealth";
