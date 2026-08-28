@@ -674,7 +674,8 @@ export default function MixedStudy() {
       STUDY_REMOTE_RESTORE_TIMEOUT_MS,
       "mixed-flow-close-session",
       () => controller.abort(),
-    );
+    )) as { data: { id?: string } | null; error: unknown };
+
     if (error || !closedSession?.id) {
       throw error ?? new Error("mixed-flow-close-session-unconfirmed");
     }
