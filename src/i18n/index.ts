@@ -104,7 +104,6 @@ const initPromise = i18n.isInitialized
     lng: initialLocale,
     fallbackLng: DEFAULT_APP_LOCALE,
     supportedLngs: [...APP_LOCALE_CODES],
-    nonExplicitSupportedLngs: true,
     load: 'currentOnly',
     interpolation: { escapeValue: false },
     react: { useSuspense: false },
