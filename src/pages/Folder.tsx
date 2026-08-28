@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 // Shared lang-label resolver for all language fallbacks
 import { getLangLabel } from "@/features/study/lib/resolveStudySides";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -52,6 +53,7 @@ interface FolderType {
 }
 
 const Folder = () => {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -155,14 +157,14 @@ const Folder = () => {
           
           if (edgeFnError) {
             console.error("[Folder] Edge function error:", edgeFnError);
-            toast.error("Pasta não encontrada ou sem permissão");
+            toast.error(t("library.folder.toast.notFoundOrForbidden"));
             navigate("/folders");
             return;
           }
           
           if (!edgeFnData?.folder) {
             console.log("[Folder] No folder returned from edge function");
-            toast.error("Pasta não encontrada ou sem permissão");
+            toast.error(t("library.folder.toast.notFoundOrForbidden"));
             navigate("/folders");
             return;
           }
@@ -189,14 +191,14 @@ const Folder = () => {
         
         if (error) {
           console.error("Erro RPC get_portal_folder:", error);
-          toast.error("Pasta não encontrada ou não está compartilhada");
+          toast.error(t("library.folder.toast.notShared"));
           navigate("/portal");
           return;
         }
         
         if (!data) {
           console.log("Nenhuma pasta retornada do RPC");
-          toast.error("Pasta não encontrada ou não está compartilhada");
+          toast.error(t("library.folder.toast.notShared"));
           navigate("/portal");
           return;
         }
@@ -207,7 +209,7 @@ const Folder = () => {
       }
     } catch (error: any) {
       console.error("Erro ao carregar pasta:", error);
-      toast.error("Erro ao carregar pasta: " + error.message);
+      toast.error(t("library.folder.toast.loadError", { message: error.message }));
       const { data: { session } } = await supabase.auth.getSession();
       navigate(session ? "/folders" : "/portal");
     }
@@ -235,7 +237,7 @@ const Folder = () => {
         setLists(data);
       }
     } catch (error: any) {
-      toast.error("Erro ao carregar listas: " + error.message);
+      toast.error(t("library.folder.toast.loadListsError", { message: error.message }));
     } finally {
       setLoading(false);
     }
@@ -255,9 +257,9 @@ const Folder = () => {
       
       setFolder({ ...folder, title: editTitle.trim() });
       setIsEditingTitle(false);
-      toast.success("Título atualizado!");
+      toast.success(t("library.folder.toast.titleUpdated"));
     } catch (error: any) {
-      toast.error("Erro ao atualizar: " + error.message);
+      toast.error(t("library.folder.toast.updateError", { message: error.message }));
     } finally {
       setIsSavingTitle(false);
     }
@@ -297,10 +299,10 @@ const Folder = () => {
         if (profileError) throw profileError;
       }
 
-      toast.success("Pasta compartilhada com sucesso!");
+      toast.success(t("library.folder.toast.shared"));
       setShareDialogOpen(false);
     } catch (error: any) {
-      toast.error("Erro ao compartilhar: " + error.message);
+      toast.error(t("library.folder.toast.shareError", { message: error.message }));
     } finally {
       setSharing(false);
     }
@@ -371,10 +373,10 @@ const Folder = () => {
         tts_enabled: folderSettings.ttsEnabled,
       });
       
-      toast.success("Idiomas da pasta atualizados! Listas herdadas foram sincronizadas.");
+      toast.success(t("library.folder.toast.languagesSynced"));
       setFolderSettingsOpen(false);
     } catch (error: any) {
-      toast.error("Erro ao salvar: " + error.message);
+      toast.error(t("library.folder.toast.saveError", { message: error.message }));
     } finally {
       setIsSavingFolderSettings(false);
     }
@@ -399,7 +401,7 @@ const Folder = () => {
     e.preventDefault();
     
     if (!newList.title.trim()) {
-      toast.error("O título é obrigatório");
+      toast.error(t("library.folder.toast.titleRequired"));
       return;
     }
 
@@ -424,7 +426,7 @@ const Folder = () => {
 
       if (error) throw error;
 
-      toast.success("Lista criada! Edite o conteúdo abaixo.");
+      toast.success(t("library.folder.toast.listCreated"));
       setDialogOpen(false);
       setNewList({ title: "", description: "" });
       setNewListStudySettings(getDefaultListStudySettings());
@@ -436,7 +438,7 @@ const Folder = () => {
         loadLists();
       }
     } catch (error: any) {
-      toast.error("Erro ao criar lista: " + error.message);
+      toast.error(t("library.folder.toast.createListError", { message: error.message }));
     }
   };
 
@@ -449,7 +451,7 @@ const Folder = () => {
     e.preventDefault();
     
     if (!editingList || !editingList.title.trim()) {
-      toast.error("O título é obrigatório");
+      toast.error(t("library.folder.toast.titleRequired"));
       return;
     }
 
@@ -464,12 +466,12 @@ const Folder = () => {
 
       if (error) throw error;
 
-      toast.success("Lista atualizada com sucesso!");
+      toast.success(t("library.folder.toast.listUpdated"));
       setEditDialogOpen(false);
       setEditingList(null);
       loadLists();
     } catch (error: any) {
-      toast.error("Erro ao atualizar lista: " + error.message);
+      toast.error(t("library.folder.toast.updateListError", { message: error.message }));
     }
   };
 
@@ -492,7 +494,7 @@ const Folder = () => {
       );
       loadLists();
     } catch (error: any) {
-      toast.error("Erro ao excluir lista: " + error.message);
+      toast.error(t("library.folder.toast.deleteListError", { message: error.message }));
     }
   };
 
@@ -562,7 +564,7 @@ const Folder = () => {
       setShowBulkDeleteDialog(false);
       loadLists();
     } catch (error: any) {
-      toast.error("Erro ao excluir: " + (error?.message || "desconhecido"));
+      toast.error(t("library.folder.toast.deleteError", { message: error?.message || "" }));
     } finally {
       setIsBulkDeleting(false);
     }
@@ -580,7 +582,7 @@ const Folder = () => {
       if (error) throw error;
       
       if (!flashcards || flashcards.length === 0) {
-        toast.error("Nenhum termo encontrado nas listas");
+        toast.error(t("library.folder.toast.noTerms"));
         return;
       }
       
@@ -589,9 +591,9 @@ const Folder = () => {
       const vocabulary = uniqueTerms.join(", ");
       
       await navigator.clipboard.writeText(vocabulary);
-      toast.success(`${uniqueTerms.length} termos copiados!`);
+      toast.success(t("library.folder.toast.termsCopied", { count: uniqueTerms.length }));
     } catch (error: any) {
-      toast.error("Erro ao copiar: " + error.message);
+      toast.error(t("library.folder.toast.copyError", { message: error.message }));
     }
   };
 
@@ -607,7 +609,7 @@ const Folder = () => {
       if (error) throw error;
       
       if (!flashcards || flashcards.length === 0) {
-        toast.error("Nenhum termo encontrado nas listas");
+        toast.error(t("library.folder.toast.noTerms"));
         return;
       }
       
@@ -624,9 +626,9 @@ const Folder = () => {
       const prompt = `Crie uma história curta em ${langLabel} usando as seguintes palavras: ${vocabulary}. O texto deve ser adequado para nível iniciante.`;
       
       await navigator.clipboard.writeText(prompt);
-      toast.success("Prompt copiado! Cole em uma IA como ChatGPT ou Gemini.");
+      toast.success(t("library.folder.toast.promptCopied"));
     } catch (error: any) {
-      toast.error("Erro ao copiar: " + error.message);
+      toast.error(t("library.folder.toast.copyError", { message: error.message }));
     }
   };
 
@@ -643,7 +645,7 @@ const Folder = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Carregando pasta...</p>
+          <p className="text-muted-foreground">{t("library.folder.loading")}</p>
         </div>
       </div>
     );
@@ -747,7 +749,7 @@ const Folder = () => {
                               id="title"
                               value={newList.title}
                               onChange={(e) => setNewList({ ...newList, title: e.target.value })}
-                              placeholder="Ex: Verbos Irregulares"
+                              placeholder={t("library.folder.titlePlaceholder")}
                               required
                             />
                           </div>
@@ -757,7 +759,7 @@ const Folder = () => {
                               id="description"
                               value={newList.description}
                               onChange={(e) => setNewList({ ...newList, description: e.target.value })}
-                              placeholder="Descreva o conteúdo desta lista..."
+                              placeholder={t("library.folder.descriptionPlaceholder")}
                               rows={3}
                             />
                           </div>
@@ -885,7 +887,7 @@ const Folder = () => {
                 <Input
                   value={listSearch}
                   onChange={(e) => setListSearch(e.target.value)}
-                  placeholder="Buscar lista..."
+                  placeholder={t("library.folder.searchList")}
                   className="pl-9 h-10"
                 />
               </div>
@@ -1070,7 +1072,7 @@ const Folder = () => {
                     id="text-title"
                     value={editTextTitle}
                     onChange={(e) => setEditTextTitle(e.target.value)}
-                    placeholder="Ex: História com vocabulário"
+                    placeholder={t("library.folder.textTitlePlaceholder")}
                   />
                 </div>
                 <div className="space-y-2">
@@ -1079,7 +1081,7 @@ const Folder = () => {
                     id="text-content"
                     value={editTextContent}
                     onChange={(e) => setEditTextContent(e.target.value)}
-                    placeholder="Digite ou cole seu texto aqui..."
+                    placeholder={t("library.folder.textPlaceholder")}
                     className="min-h-[300px] font-mono text-sm"
                   />
                 </div>
@@ -1220,7 +1222,7 @@ const Folder = () => {
                       id="edit-list-title"
                       value={editingList.title}
                       onChange={(e) => setEditingList({ ...editingList, title: e.target.value })}
-                      placeholder="Ex: Verbos Irregulares"
+                      placeholder={t("library.folder.titlePlaceholder")}
                       required
                     />
                   </div>
@@ -1230,7 +1232,7 @@ const Folder = () => {
                       id="edit-list-description"
                       value={editingList.description || ""}
                       onChange={(e) => setEditingList({ ...editingList, description: e.target.value })}
-                      placeholder="Descreva o conteúdo desta lista..."
+                      placeholder={t("library.folder.descriptionPlaceholder")}
                     />
                   </div>
                 </div>
