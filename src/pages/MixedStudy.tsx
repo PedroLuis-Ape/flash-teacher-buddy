@@ -660,7 +660,7 @@ export default function MixedStudy() {
     if (!currentSessionId || !userId || !listId) return;
 
     const controller = new AbortController();
-    const { data: closedSession, error } = await withStudyRuntimeTimeout(
+    const { data: closedSession, error } = (await withStudyRuntimeTimeout(
       (supabase as any)
         .from("study_sessions")
         .update({ completed: true, updated_at: new Date().toISOString() })
