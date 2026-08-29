@@ -4,8 +4,8 @@
 
 - Área analisada: `src/pages`
 - Arquivos analisados: 67
-- Arquivos com pendências: 49 (com useTranslation: 2)
-- Strings pendentes: 601
+- Arquivos com pendências: 45 (com useTranslation: 2)
+- Strings pendentes: 553
 
 ## src/pages/TurmaPrivateDetail.tsx
 
@@ -205,34 +205,6 @@
 - L739 · toast: "Favoritos exigem uma conta autenticada. Mostrando todos os cards."
 - L880 · dialog: "Reiniciar somente esta rodada? O percurso completo será preservado."
 - L886 · dialog: "Reiniciar todo o percurso da Prática Mista desde o começo?"
-
-## src/pages/TurmasProfessor.tsx
-
-- useTranslation: não
-- Pendências: 22
-
-- L141 · jsx-text: "Carregando..."
-- L150 · jsx-text: "Não foi possível carregar suas turmas agora."
-- L151 · jsx-text: "Tentar novamente"
-- L165 · jsx-text: "Minhas Turmas"
-- L184 · jsx-text: "Criar uma nova turma"
-- L188 · jsx-text: "Nome da Turma"
-- L198 · jsx-text: "Descrição (opcional)"
-- L236 · jsx-text: "Matricular Aluno"
-- L240 · jsx-text: "APE ID do Aluno"
-- L259 · jsx-text: "Nenhuma turma criada ainda."
-- L260 · jsx-text: "Crie sua primeira turma para organizar alunos e conteúdos separadamente."
-- L262 · jsx-text: "Criar primeira turma"
-- L193 · attribute: "Ex: Inglês Básico"
-- L203 · attribute: "Descrição da turma..."
-- L221 · attribute: "Permitir acesso público à turma"
-- L245 · attribute: "Ex: ABC12345"
-- L53 · toast: "Nome é obrigatório"
-- L63 · toast: "Turma criada com sucesso!"
-- L79 · toast: "APE ID é obrigatório"
-- L88 · toast: "Aluno matriculado com sucesso!"
-- L120 · toast: "Link público copiado!"
-- L122 · toast: "Não foi possível copiar o link."
 
 ## src/pages/PublicProfileSettings.tsx
 
@@ -448,26 +420,6 @@
 - L211 · toast: "Coleção não encontrada"
 - L245 · toast: "Confirmando o contexto da turma antes de iniciar..."
 - L249 · toast: "Sincronizando seus favoritos antes de iniciar..."
-
-## src/pages/TurmasAluno.tsx
-
-- useTranslation: não
-- Pendências: 14
-
-- L30 · jsx-text: "Carregando..."
-- L39 · jsx-text: "Não foi possível carregar suas turmas agora."
-- L40 · jsx-text: "Tentar novamente"
-- L62 · jsx-text: "Concluída"
-- L64 · jsx-text: "Em Andamento"
-- L66 · jsx-text: "Pendente"
-- L89 · jsx-text: "Minhas Turmas"
-- L96 · jsx-text: "Solicitações e convites"
-- L97 · jsx-text: "Acompanhe vínculos que ainda aguardam aprovação ou aceitação."
-- L134 · jsx-text: "Abrir"
-- L140 · jsx-text: "Turmas Matriculadas"
-- L143 · jsx-text: "Você não está matriculado em nenhuma turma ainda."
-- L167 · jsx-text: "Atribuições"
-- L170 · jsx-text: "Nenhuma atribuição ainda."
 
 ## src/pages/PublicPortalTopFirst.tsx
 
@@ -723,19 +675,6 @@
 - L300 · attribute: "Metas"
 - L311 · attribute: "Metas"
 
-## src/pages/Turmas.tsx
-
-- useTranslation: não
-- Pendências: 7
-
-- L39 · jsx-text: "Carregando..."
-- L51 · jsx-text: "Turmas"
-- L59 · jsx-text: "Como Professor"
-- L60 · jsx-text: "Como Aluno"
-- L75 · jsx-text: "Nenhuma turma criada ainda."
-- L109 · jsx-text: "Nenhuma turma matriculada."
-- L131 · jsx-text: "Nenhuma turma matriculada."
-
 ## src/pages/PresentBox.tsx
 
 - useTranslation: não
@@ -758,17 +697,6 @@
 - L23 · jsx-text: "Promise"
 - L94 · jsx-text: "Não foi possível carregar"
 - L104 · jsx-text: "Carregando…"
-
-## src/pages/PainelProfessor.tsx
-
-- useTranslation: não
-- Pendências: 5
-
-- L18 · jsx-text: "Gestão de Ensino"
-- L30 · jsx-text: "Recursos"
-- L42 · jsx-text: "Perfil público"
-- L58 · jsx-text: "Criar Conteúdo"
-- L14 · attribute: "Painel do Professor"
 
 ## src/pages/PublicCollection.tsx
 

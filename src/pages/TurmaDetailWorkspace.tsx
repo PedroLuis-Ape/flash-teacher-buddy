@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import TurmaPrivateDetail from "@/pages/TurmaPrivateDetail";
 import TurmaPublicPage from "@/pages/TurmaPublicPage";
+import { useTranslation } from "react-i18next";
 
 function PendingTurmaMembership({
   turmaId,
@@ -25,11 +26,12 @@ function PendingTurmaMembership({
   nome: string;
   status: "requested" | "invited";
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const transition = useTransitionTurmaMembership();
 
   const action = status === "invited" ? "accept_invite" : "cancel_request";
-  const label = status === "invited" ? "Aceitar convite" : "Cancelar solicitação";
+  const label = status === "invited" ? t("classes.detail.acceptInvite") : t("classes.detail.cancelRequest");
 
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
@@ -38,8 +40,8 @@ function PendingTurmaMembership({
           <h1 className="text-xl font-semibold">{nome}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {status === "invited"
-              ? "Você recebeu um convite para esta turma. Aceite para liberar o acesso privado."
-              : "Sua solicitação está aguardando aprovação do professor."}
+              ? t("classes.detail.invitePendingInfo")
+              : t("classes.detail.requestPendingInfo")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -47,7 +49,7 @@ function PendingTurmaMembership({
             disabled={transition.isPending}
             onClick={() => void transition.mutateAsync({ turmaId, action })}
           >
-            {transition.isPending ? "Processando..." : label}
+            {transition.isPending ? t("classes.detail.processing") : label}
           </Button>
           {status === "invited" && (
             <Button
@@ -55,13 +57,13 @@ function PendingTurmaMembership({
               disabled={transition.isPending}
               onClick={() => void transition.mutateAsync({ turmaId, action: "reject_invite" })}
             >
-              Recusar convite
+              {t("classes.detail.rejectInvite")}
             </Button>
           )}
-          <Button variant="ghost" onClick={() => navigate("/turmas")}>Voltar</Button>
+          <Button variant="ghost" onClick={() => navigate("/turmas")}>{t("common.back")}</Button>
         </div>
         {transition.isError && (
-          <p className="text-sm text-destructive">Não foi possível atualizar o vínculo. Tente novamente.</p>
+          <p className="text-sm text-destructive">{t("classes.detail.membershipUpdateFailed")}</p>
         )}
       </Card>
     </div>
@@ -69,6 +71,7 @@ function PendingTurmaMembership({
 }
 
 export default function TurmaDetailWorkspace() {
+  const { t } = useTranslation();
   const { turmaId } = useParams<{ turmaId: string }>();
   const [params] = useSearchParams();
   const { user, isLoading: authLoading } = useAuthUser();
@@ -113,7 +116,7 @@ export default function TurmaDetailWorkspace() {
     placeholderData: (previous) => previous,
   });
 
-  if (authLoading || (user && access.isLoading && !access.data)) return <div className="min-h-screen grid place-items-center">Carregando turma...</div>;
+  if (authLoading || (user && access.isLoading && !access.data)) return <div className="min-h-screen grid place-items-center">{t("classes.detail.loadingClass")}</div>;
   if (
     access.data &&
     access.data.is_public === false &&
@@ -146,7 +149,7 @@ export default function TurmaDetailWorkspace() {
     <>
       {isOwner && <TeacherClassNavigation />}
       {glossaryView && turmaId ? (
-        <ClassGlossaryManager turmaId={turmaId} turmaTitle={access.data?.nome ?? "Turma"} />
+        <ClassGlossaryManager turmaId={turmaId} turmaTitle={access.data?.nome ?? t("classes.detail.classFallback")} />
       ) : trafficView && turmaId ? (
         <ClassTrafficDashboard turmaId={turmaId} />
       ) : (
