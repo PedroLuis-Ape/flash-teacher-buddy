@@ -14,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useTranslation } from 'react-i18next';
 
 export default function MeusAlunos() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
@@ -49,7 +51,7 @@ export default function MeusAlunos() {
 
 
   if (!authReady || isLoading) {
-    return <LoadingSpinner message="Carregando alunos..." />;
+    return <LoadingSpinner message={t('classes.students.loading')} />;
   }
 
   const toggleStudent = (studentId: string) => {
@@ -72,11 +74,11 @@ export default function MeusAlunos() {
 
   const handleAddToClass = async () => {
     if (selectedStudents.size === 0) {
-      toast.error('Selecione ao menos 1 aluno.');
+      toast.error(t('classes.toast.selectAtLeastOne'));
       return;
     }
     if (!selectedTurmaId) {
-      toast.error('Selecione uma turma.');
+      toast.error(t('classes.toast.selectClass'));
       return;
     }
 
@@ -85,12 +87,12 @@ export default function MeusAlunos() {
         turma_id: selectedTurmaId,
         student_ids: Array.from(selectedStudents),
       });
-      toast.success('✅ Alunos adicionados à turma.');
+      toast.success(t('classes.toast.studentsAdded'));
       setShowAddToClassDialog(false);
       setSelectedStudents(new Set());
       setSelectedTurmaId('');
     } catch (error: any) {
-      toast.error(error.message || '❌ Erro ao adicionar alunos');
+      toast.error(error.message || t('classes.toast.addStudentsFailed'));
     }
   };
 
@@ -101,7 +103,7 @@ export default function MeusAlunos() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold truncate">Meus Alunos</h1>
+          <h1 className="text-2xl font-bold truncate">{t('classes.students.title')}</h1>
         </div>
       </div>
 
@@ -109,10 +111,10 @@ export default function MeusAlunos() {
         {/* Search and Actions */}
         <div className="space-y-3">
           <div className="max-w-md">
-            <Label htmlFor="student-search-class">Turma para pesquisar</Label>
+            <Label htmlFor="student-search-class">{t('classes.students.classToSearch')}</Label>
             <Select value={searchTurmaId} onValueChange={setSearchTurmaId}>
               <SelectTrigger id="student-search-class" className="mt-1 min-h-[44px]">
-                <SelectValue placeholder="Selecione uma turma antes de buscar" />
+                <SelectValue placeholder={t('classes.students.selectClassFirst')} />
               </SelectTrigger>
               <SelectContent>
                 {turmas.map((turma: any) => (
@@ -125,7 +127,7 @@ export default function MeusAlunos() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder={searchTurmaId ? 'Buscar por nome ou APE ID...' : 'Selecione uma turma para habilitar a busca'}
+              placeholder={searchTurmaId ? t('classes.students.searchPlaceholder') : t('classes.students.searchDisabled')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 min-h-[44px]"
@@ -135,7 +137,7 @@ export default function MeusAlunos() {
           </div>
           {!searchTurmaId && (
             <p className="text-sm text-muted-foreground">
-              A busca é restrita à turma escolhida e exige pelo menos 2 caracteres. Nenhum aluno é listado globalmente.
+              {t('classes.students.searchHint')}
             </p>
           )}
         </div>
@@ -144,7 +146,7 @@ export default function MeusAlunos() {
           <Card className="p-4 border-border">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                {selectedStudents.size} aluno(s) selecionado(s)
+                {t('classes.detail.selectedCount', { count: selectedStudents.size })}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -154,7 +156,7 @@ export default function MeusAlunos() {
                   className="min-h-[40px]"
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Adicionar à Turma
+                  {t('classes.students.addToClass')}
                 </Button>
               </div>
             </div>
@@ -164,7 +166,7 @@ export default function MeusAlunos() {
         {/* Students List */}
         {students.length === 0 ? (
           <Card className="p-8 text-center border-border">
-            <p className="text-muted-foreground">Nenhum aluno encontrado.</p>
+            <p className="text-muted-foreground">{t('classes.students.noStudents')}</p>
           </Card>
         ) : (
           <div className="space-y-3">
@@ -173,7 +175,7 @@ export default function MeusAlunos() {
                 checked={selectedStudents.size === students.length && students.length > 0}
                 onCheckedChange={selectAll}
               />
-              <span className="text-sm text-muted-foreground">Selecionar todos</span>
+              <span className="text-sm text-muted-foreground">{t('classes.students.selectAll')}</span>
             </div>
 
             {students.map((student: any) => (
@@ -211,17 +213,17 @@ export default function MeusAlunos() {
       <Dialog open={showAddToClassDialog} onOpenChange={setShowAddToClassDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar à Turma</DialogTitle>
+            <DialogTitle>{t('classes.students.addToClass')}</DialogTitle>
             <DialogDescription>
-              Selecione a turma para adicionar {selectedStudents.size} aluno(s).
+              {t('classes.students.addDialogDesc', { count: selectedStudents.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Turma</Label>
+              <Label>{t('classes.students.classLabel')}</Label>
               <Select value={selectedTurmaId} onValueChange={setSelectedTurmaId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma turma" />
+                  <SelectValue placeholder={t('classes.students.selectClass')} />
                 </SelectTrigger>
                 <SelectContent>
                   {turmas.map((turma: any) => (
@@ -234,16 +236,16 @@ export default function MeusAlunos() {
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowAddToClassDialog(false)}>
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleAddToClass} disabled={addToClass.isPending}>
                 {addToClass.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Adicionando...
+                    {t('classes.detail.adding')}
                   </>
                 ) : (
-                  'Adicionar'
+                  t('common.add')
                 )}
               </Button>
             </div>

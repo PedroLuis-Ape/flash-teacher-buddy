@@ -27,8 +27,10 @@ import { StudentAnalyticsModal } from '@/components/StudentAnalyticsModal';
 import { TurmaActivityPanel } from '@/features/classroom/components/TurmaActivityPanel';
 import { ClassGoalsTab } from '@/components/ClassGoalsTab';
 import { isActiveMembership, isPendingMembership } from '@/features/classroom/lib/membershipState';
+import { useTranslation } from 'react-i18next';
 
 export default function TurmaDetail() {
+  const { t } = useTranslation();
   const { turmaId } = useParams<{ turmaId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -120,7 +122,7 @@ export default function TurmaDetail() {
       const isOwner = turmaWithMembros?.owner_teacher_id === user.id;
 
       // Fetch teacher profile for the teacher's name
-      let teacherName = 'Professor';
+      let teacherName = '';
       if (turmaWithMembros?.owner_teacher_id) {
         const { data: teacherProfile } = await supabase
           .from('profiles')
@@ -181,7 +183,7 @@ export default function TurmaDetail() {
   if (turmaLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
+        <p className="text-muted-foreground">{t('classes.detail.loading')}</p>
       </div>
     );
   }
@@ -192,7 +194,7 @@ export default function TurmaDetail() {
   if (!turma) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <p className="text-muted-foreground">Turma não encontrada</p>
+        <p className="text-muted-foreground">{t('classes.detail.notFound')}</p>
       </div>
     );
   }
@@ -222,7 +224,7 @@ export default function TurmaDetail() {
         reorderAtribuicao.mutateAsync({ atribuicao_id: other.id, new_order_index: current.order_index ?? idx }),
       ]);
     } catch {
-      toast.error('Erro ao reordenar');
+      toast.error(t('classes.toast.reorderFailed'));
     }
   };
 
@@ -235,7 +237,7 @@ export default function TurmaDetail() {
 
   const handleUpdateTurma = async () => {
     if (!turmaId || !editNome.trim()) {
-      toast.error('❌ Nome é obrigatório');
+      toast.error(t('classes.toast.nameRequired'));
       return;
     }
 
@@ -248,12 +250,12 @@ export default function TurmaDetail() {
       });
       toast.success(
         editPublic
-          ? '✅ Turma atualizada e publicada com sucesso!'
-          : '✅ Turma atualizada e definida como privada!',
+          ? t('classes.toast.classUpdatedPublic')
+          : t('classes.toast.classUpdatedPrivate'),
       );
       setEditDialogOpen(false);
     } catch (error) {
-      toast.error('❌ Erro ao atualizar turma');
+      toast.error(t('classes.toast.classUpdateFailed'));
     }
   };
 
@@ -263,9 +265,9 @@ export default function TurmaDetail() {
     const url = `${window.location.origin}/turmas/${turmaId}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Link público copiado!');
+      toast.success(t('classes.toast.linkCopied'));
     } catch {
-      toast.error('Não foi possível copiar o link.');
+      toast.error(t('classes.toast.linkCopyFailed'));
     }
   };
 
@@ -284,10 +286,10 @@ export default function TurmaDetail() {
 
     try {
       await deleteTurma.mutateAsync(turmaId);
-      toast.success('✅ Turma deletada!');
+      toast.success(t('classes.toast.classDeleted'));
       navigate('/turmas/professor');
     } catch (error) {
-      toast.error('❌ Erro ao deletar turma');
+      toast.error(t('classes.toast.classDeleteFailed'));
     }
   };
 
@@ -295,7 +297,7 @@ export default function TurmaDetail() {
     const idToUse = apeId || enrollApeId;
     
     if (!turmaId || !idToUse.trim()) {
-      toast.error('❌ APE ID é obrigatório');
+      toast.error(t('classes.toast.apeIdRequired'));
       return;
     }
 
@@ -305,17 +307,17 @@ export default function TurmaDetail() {
         action: 'add_direct',
         targetPublicId: idToUse,
       });
-      toast.success('✅ Aluno matriculado!');
+      toast.success(t('classes.toast.studentEnrolled'));
       setEnrollDialogOpen(false);
       setEnrollApeId('');
     } catch (error: any) {
-      toast.error(`❌ ${error.message || 'Erro ao matricular aluno'}`);
+      toast.error(error.message || t('classes.toast.enrollStudentFailed'));
     }
   };
 
   const handleCreateAtribuicao = async () => {
     if (!turmaId || !atribTitulo.trim() || !atribFonteId) {
-      toast.error('❌ Preencha todos os campos obrigatórios');
+      toast.error(t('classes.toast.fillRequired'));
       return;
     }
 
@@ -328,31 +330,31 @@ export default function TurmaDetail() {
         fonte_id: atribFonteId,
         pontos_vale: parseInt(atribPontos) || 50,
       });
-      toast.success('✅ Atribuição criada!');
+      toast.success(t('classes.toast.assignmentCreated'));
       setAtribDialogOpen(false);
       setAtribTitulo('');
       setAtribDescricao('');
       setAtribFonteId('');
       setAtribPontos('50');
     } catch (error: any) {
-      toast.error(`❌ ${error.message || 'Erro ao criar atribuição'}`);
+      toast.error(error.message || t('classes.toast.assignmentCreateFailed'));
     }
   };
 
   const handleCreateAnnouncement = async () => {
     if (!turmaId || !announcementTitulo.trim() || !announcementMensagem.trim()) {
-      toast.error('❌ Preencha todos os campos');
+      toast.error(t('classes.toast.fillAll'));
       return;
     }
 
     // Additional validation for direct_assignment mode
     if (announcementMode === 'direct_assignment') {
       if (selectedStudentIds.length === 0) {
-        toast.error('❌ Selecione pelo menos um aluno');
+        toast.error(t('classes.toast.selectAtLeastOneStudent'));
         return;
       }
       if (!selectedAssignmentId) {
-        toast.error('❌ Selecione uma atribuição');
+        toast.error(t('classes.toast.selectAssignment'));
         return;
       }
     }
@@ -368,8 +370,8 @@ export default function TurmaDetail() {
       });
       
       const successMessage = announcementMode === 'direct_assignment'
-        ? `✅ Aviso enviado para ${selectedStudentIds.length} aluno(s)!`
-        : '✅ Aviso enviado para todos os alunos!';
+        ? t('classes.toast.noticeSentCount', { count: selectedStudentIds.length })
+        : t('classes.toast.noticeSentAll');
       toast.success(successMessage);
       
       // Reset form
@@ -380,7 +382,7 @@ export default function TurmaDetail() {
       setSelectedStudentIds([]);
       setSelectedAssignmentId('');
     } catch (error: any) {
-      toast.error(`❌ ${error.message || 'Erro ao criar aviso'}`);
+      toast.error(error.message || t('classes.toast.noticeFailed'));
     }
   };
 
@@ -395,7 +397,7 @@ export default function TurmaDetail() {
 
   const handleUpdateAtribuicao = async () => {
     if (!editAtribId || !editAtribTitulo.trim()) {
-      toast.error('❌ Título é obrigatório');
+      toast.error(t('classes.toast.titleRequired'));
       return;
     }
 
@@ -406,11 +408,11 @@ export default function TurmaDetail() {
         descricao: editAtribDescricao,
         pontos_vale: parseInt(editAtribPontos) || 50,
       });
-      toast.success('✅ Atribuição atualizada!');
+      toast.success(t('classes.toast.assignmentUpdated'));
       setEditAtribDialogOpen(false);
       setEditAtribId(null);
     } catch (error: any) {
-      toast.error(`❌ ${error.message || 'Erro ao atualizar atribuição'}`);
+      toast.error(error.message || t('classes.toast.assignmentUpdateFailed'));
     }
   };
 
@@ -431,7 +433,7 @@ export default function TurmaDetail() {
                   ) : (
                     <Lock className="mr-1 h-3 w-3" />
                   )}
-                  {turma.public ? 'Pública' : 'Privada'}
+                  {turma.public ? t('classes.detail.public') : t('classes.detail.private')}
                 </Badge>
               </div>
               {turma.descricao && (
@@ -442,7 +444,7 @@ export default function TurmaDetail() {
               <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                 <Button variant="default" size="sm" onClick={() => setAnnouncementDialogOpen(true)}>
                   <Megaphone className="h-4 w-4 mr-2" />
-                  Aviso
+                  {t('classes.detail.announcement')}
                 </Button>
                 {turma.public && (
                   <>
@@ -450,46 +452,46 @@ export default function TurmaDetail() {
                       variant="outline"
                       size="sm"
                       onClick={handleCopyPublicLink}
-                      aria-label="Copiar link público da turma"
-                      title="Copiar link público"
+                      aria-label={t('classes.detail.copyLinkAria')}
+                      title={t('classes.detail.copyLinkAria')}
                     >
                       <Copy className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Copiar link</span>
+                      <span className="hidden sm:inline">{t('classes.detail.copyLink')}</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleOpenPublicPreview}
-                      aria-label="Ver turma como visitante"
-                      title="Ver como visitante"
+                      aria-label={t('classes.detail.viewAsGuestAria')}
+                      title={t('classes.detail.viewAsGuest')}
                     >
                       <ExternalLink className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Ver como visitante</span>
+                      <span className="hidden sm:inline">{t('classes.detail.viewAsGuest')}</span>
                     </Button>
                   </>
                 )}
                 <Button variant="outline" size="sm" onClick={handleOpenEdit}>
                   <Pencil className="h-4 w-4 mr-2" />
-                  Editar
+                  {t('common.edit')}
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm">
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Deletar
+                      {t('classes.detail.delete')}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                      <AlertDialogTitle>{t('classes.detail.confirmDeleteTitle')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Tem certeza que deseja deletar esta turma? Esta ação não pode ser desfeita.
+                        {t('classes.detail.confirmDeleteDesc')}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                       <AlertDialogAction onClick={handleDeleteTurma}>
-                        Deletar
+                        {t('classes.detail.delete')}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -516,7 +518,7 @@ export default function TurmaDetail() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="h-5 w-5 text-primary" />
-              Criar Aviso da Turma
+              {t('classes.detail.createAnnouncementTitle')}
             </DialogTitle>
           </DialogHeader>
           
@@ -530,7 +532,7 @@ export default function TurmaDetail() {
                 onClick={() => setAnnouncementMode('general')}
               >
                 <UsersIcon className="h-4 w-4 mr-2" />
-                Aviso Geral
+                {t('classes.detail.generalAnnouncement')}
               </Button>
               <Button
                 variant={announcementMode === 'direct_assignment' ? 'default' : 'ghost'}
@@ -539,30 +541,30 @@ export default function TurmaDetail() {
                 onClick={() => setAnnouncementMode('direct_assignment')}
               >
                 <BookOpen className="h-4 w-4 mr-2" />
-                Atribuição Direta
+                {t('classes.detail.directAssignment')}
               </Button>
             </div>
             
             {/* Title */}
             <div>
-              <Label htmlFor="announcement-titulo">Título *</Label>
+              <Label htmlFor="announcement-titulo">{t('classes.detail.titleLabel')}</Label>
               <Input
                 id="announcement-titulo"
                 value={announcementTitulo}
                 onChange={(e) => setAnnouncementTitulo(e.target.value)}
-                placeholder="Ex: Prova na próxima semana"
+                placeholder={t('classes.detail.titlePlaceholder')}
                 maxLength={200}
               />
             </div>
             
             {/* Message */}
             <div>
-              <Label htmlFor="announcement-mensagem">Mensagem *</Label>
+              <Label htmlFor="announcement-mensagem">{t('classes.detail.messageLabel')}</Label>
               <Textarea
                 id="announcement-mensagem"
                 value={announcementMensagem}
                 onChange={(e) => setAnnouncementMensagem(e.target.value)}
-                placeholder="Digite a mensagem..."
+                placeholder={t('classes.detail.messagePlaceholder')}
                 rows={4}
                 maxLength={5000}
               />
@@ -573,14 +575,14 @@ export default function TurmaDetail() {
               <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <UsersIcon className="h-4 w-4" />
-                  Este aviso será enviado para <strong>todos os {activeMembros.length} alunos</strong> da turma.
+                  <span>{t('classes.detail.generalInfo', { count: activeMembros.length })}</span>
                 </p>
               </div>
             ) : (
               <>
                 {/* Student selection */}
                 <div>
-                  <Label className="mb-2 block">Selecionar Alunos *</Label>
+                  <Label className="mb-2 block">{t('classes.detail.selectStudents')}</Label>
                   {activeMembros.length > 0 ? (
                     <ScrollArea className="h-[150px] border rounded-lg p-2">
                       <div className="space-y-1">
@@ -607,7 +609,7 @@ export default function TurmaDetail() {
                                 }`}>
                                   {isSelected && <CheckCircle2 className="h-3 w-3" />}
                                 </div>
-                                <span className="font-medium">{profile?.first_name || 'Aluno'}</span>
+                                <span className="font-medium">{profile?.first_name || t('classes.detail.studentFallback')}</span>
                               </div>
                               <Badge variant="outline" className="text-xs">
                                 {profile?.ape_id || 'N/A'}
@@ -619,22 +621,22 @@ export default function TurmaDetail() {
                     </ScrollArea>
                   ) : (
                     <p className="text-sm text-muted-foreground p-4 border rounded-lg">
-                      Nenhum aluno matriculado na turma.
+                      {t('classes.detail.noEnrolled')}
                     </p>
                   )}
                   {selectedStudentIds.length > 0 && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {selectedStudentIds.length} aluno(s) selecionado(s)
+                      {t('classes.detail.selectedCount', { count: selectedStudentIds.length })}
                     </p>
                   )}
                 </div>
                 
                 {/* Assignment selection */}
                 <div>
-                  <Label htmlFor="announcement-atribuicao">Atribuição Vinculada *</Label>
+                  <Label htmlFor="announcement-atribuicao">{t('classes.detail.linkedAssignment')}</Label>
                   <Select value={selectedAssignmentId} onValueChange={setSelectedAssignmentId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma atribuição" />
+                      <SelectValue placeholder={t('classes.detail.selectAssignment')} />
                     </SelectTrigger>
                     <SelectContent>
                       {atribuicoes && atribuicoes.length > 0 ? (
@@ -645,7 +647,7 @@ export default function TurmaDetail() {
                         ))
                       ) : (
                         <SelectItem value="" disabled>
-                          Nenhuma atribuição disponível
+                          {t('classes.detail.noAssignmentsAvailable')}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -657,7 +659,7 @@ export default function TurmaDetail() {
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setAnnouncementDialogOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleCreateAnnouncement} 
@@ -668,11 +670,11 @@ export default function TurmaDetail() {
                 (announcementMode === 'direct_assignment' && (selectedStudentIds.length === 0 || !selectedAssignmentId))
               }
             >
-              {createAnnouncement.isPending 
-                ? 'Enviando...' 
-                : announcementMode === 'general' 
-                  ? 'Enviar Aviso Geral' 
-                  : `Enviar para ${selectedStudentIds.length} aluno(s)`}
+              {createAnnouncement.isPending
+                ? t('classes.detail.sending')
+                : announcementMode === 'general'
+                  ? t('classes.detail.sendGeneral')
+                  : t('classes.detail.sendToCount', { count: selectedStudentIds.length })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -682,25 +684,25 @@ export default function TurmaDetail() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Turma</DialogTitle>
+            <DialogTitle>{t('classes.detail.editClass')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-nome">Nome da Turma</Label>
+              <Label htmlFor="edit-nome">{t('classes.detail.className')}</Label>
               <Input
                 id="edit-nome"
                 value={editNome}
                 onChange={(e) => setEditNome(e.target.value)}
-                placeholder="Ex: Inglês Básico"
+                placeholder={t('classes.detail.classNamePlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Label htmlFor="edit-descricao">{t('classes.detail.description')}</Label>
               <Textarea
                 id="edit-descricao"
                 value={editDescricao}
                 onChange={(e) => setEditDescricao(e.target.value)}
-                placeholder="Descrição da turma..."
+                placeholder={t('classes.detail.descriptionPlaceholder')}
               />
             </div>
             <div className="flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -711,32 +713,32 @@ export default function TurmaDetail() {
                   ) : (
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   )}
-                  {editPublic ? 'Turma pública' : 'Turma privada'}
+                  {editPublic ? t('classes.detail.publicClass') : t('classes.detail.privateClass')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   {editPublic
-                    ? 'Qualquer pessoa com o link poderá visualizar as atividades em modo somente leitura.'
-                    : 'Somente o professor e os alunos matriculados podem acessar.'}
+                    ? t('classes.detail.publicHint')
+                    : t('classes.detail.privateHint')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Visitantes não poderão editar conteúdo nem registrar progresso.
+                  {t('classes.detail.guestsHint')}
                 </p>
               </div>
               <Switch
                 id="edit-turma-publica"
                 checked={editPublic}
                 onCheckedChange={setEditPublic}
-                aria-label="Permitir acesso público à turma"
+                aria-label={t('classes.detail.publicSwitchAria')}
                 className="self-end shrink-0 sm:self-auto"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleUpdateTurma} disabled={updateTurma.isPending}>
-              {updateTurma.isPending ? 'Salvando...' : 'Salvar'}
+              {updateTurma.isPending ? t('classes.detail.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -746,27 +748,27 @@ export default function TurmaDetail() {
       <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Adicionar Aluno</DialogTitle>
+            <DialogTitle>{t('classes.detail.addStudentTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="member-search">Pesquisar aluno nesta turma</Label>
+              <Label htmlFor="member-search">{t('classes.detail.searchStudent')}</Label>
               <Input
                 id="member-search"
                 value={memberSearchQuery}
                 onChange={(event) => setMemberSearchQuery(event.target.value)}
-                placeholder="Nome ou APE ID (mínimo de 2 caracteres)"
+                placeholder={t('classes.detail.searchPlaceholder')}
                 maxLength={80}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                A busca é limitada a alunos autorizados e só retorna dados mínimos.
+                {t('classes.detail.searchHint')}
               </p>
               {memberSearchQuery.trim().length >= 2 && memberSearch.isLoading && (
-                <p className="mt-2 text-sm text-muted-foreground">Pesquisando alunos...</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('classes.detail.searching')}</p>
               )}
               {memberSearch.isError && (
                 <p className="mt-2 text-sm text-destructive">
-                  Não foi possível pesquisar alunos agora. Tente novamente.
+                  {t('classes.detail.searchError')}
                 </p>
               )}
               {memberSearchQuery.trim().length >= 2 && !memberSearch.isLoading && !memberSearch.isError && (
@@ -789,14 +791,14 @@ export default function TurmaDetail() {
                             turmaId: turmaId!,
                             action: 'invite',
                             targetPublicId: person.public_id,
-                          }).then(() => toast.success('Convite enviado.')).catch((error: any) => toast.error(error.message || 'Não foi possível enviar o convite.'))}
+                          }).then(() => toast.success(t('classes.toast.inviteSent'))).catch((error: any) => toast.error(error.message || t('classes.toast.inviteFailed')))}
                         >
-                          {person.membership_status === 'active' ? 'Já está na turma' : person.membership_status === 'invited' ? 'Convite pendente' : 'Convidar'}
+                          {person.membership_status === 'active' ? t('classes.detail.alreadyMember') : person.membership_status === 'invited' ? t('classes.detail.invitePending') : t('classes.detail.invite')}
                         </Button>
                       </div>
                     ))}
                     {(memberSearch.data || []).length === 0 && (
-                      <p className="p-3 text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+                      <p className="p-3 text-sm text-muted-foreground">{t('classes.detail.noStudentsFound')}</p>
                     )}
                   </div>
                 </ScrollArea>
@@ -808,17 +810,17 @@ export default function TurmaDetail() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Ou digite o APE ID</span>
+                <span className="bg-background px-2 text-muted-foreground">{t('classes.detail.orApeId')}</span>
               </div>
             </div>
 
             <div>
-              <Label htmlFor="enroll-ape-id">APE ID do Aluno</Label>
+              <Label htmlFor="enroll-ape-id">{t('classes.detail.apeIdLabel')}</Label>
               <Input
                 id="enroll-ape-id"
                 value={enrollApeId}
                 onChange={(e) => setEnrollApeId(e.target.value)}
-                placeholder="Ex: ABC12345"
+                placeholder={t('classes.detail.apeIdPlaceholder')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && enrollApeId.trim()) {
                     handleEnrollAluno();
@@ -829,10 +831,10 @@ export default function TurmaDetail() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEnrollDialogOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={() => handleEnrollAluno()} disabled={membershipTransition.isPending || !enrollApeId.trim()}>
-              {membershipTransition.isPending ? 'Adicionando...' : 'Adicionar'}
+              {membershipTransition.isPending ? t('classes.detail.adding') : t('common.add')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -842,56 +844,56 @@ export default function TurmaDetail() {
       <Dialog open={atribDialogOpen} onOpenChange={setAtribDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Criar Atribuição</DialogTitle>
+            <DialogTitle>{t('classes.detail.createAssignmentTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="atrib-titulo">Título *</Label>
+              <Label htmlFor="atrib-titulo">{t('classes.detail.titleLabel')}</Label>
               <Input
                 id="atrib-titulo"
                 value={atribTitulo}
                 onChange={(e) => setAtribTitulo(e.target.value)}
-                placeholder="Ex: Estudar verbos irregulares"
+                placeholder={t('classes.detail.assignmentTitlePlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="atrib-descricao">Descrição</Label>
+              <Label htmlFor="atrib-descricao">{t('classes.detail.description')}</Label>
               <Textarea
                 id="atrib-descricao"
                 value={atribDescricao}
                 onChange={(e) => setAtribDescricao(e.target.value)}
-                placeholder="Instruções para os alunos..."
+                placeholder={t('classes.detail.assignmentDescPlaceholder')}
                 rows={3}
               />
             </div>
             <div>
-              <Label>Tipo de Conteúdo *</Label>
+              <Label>{t('classes.detail.contentType')}</Label>
               <Select value={atribFonteTipo} onValueChange={(v: any) => {
                 setAtribFonteTipo(v);
                 setAtribFonteId(''); // Reset selection
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
+                  <SelectValue placeholder={t('classes.detail.selectType')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pasta">Pasta</SelectItem>
-                  <SelectItem value="lista">Lista</SelectItem>
+                  <SelectItem value="pasta">{t('classes.detail.folder')}</SelectItem>
+                  <SelectItem value="lista">{t('classes.detail.list')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Selecione o Conteúdo *</Label>
+              <Label>{t('classes.detail.selectContent')}</Label>
               <Select value={atribFonteId} onValueChange={setAtribFonteId}>
                 <SelectTrigger>
-                  <SelectValue placeholder={`Selecione ${atribFonteTipo === 'pasta' ? 'uma pasta' : 'uma lista'}`} />
+                  <SelectValue placeholder={atribFonteTipo === 'pasta' ? t('classes.detail.selectFolder') : t('classes.detail.selectList')} />
                 </SelectTrigger>
                 <SelectContent>
                   {atribFonteTipo === 'pasta' ? (
                     (fontesData?.pastas || []).length === 0 ? (
                       <div className="p-4 text-sm text-muted-foreground text-center">
-                        Nenhuma pasta compartilhada encontrada.
+                        {t('classes.detail.noSharedFolders')}
                         <br />
-                        Crie uma pasta e defina visibilidade como "Turma".
+                        {t('classes.detail.createFolderHint')}
                       </div>
                     ) : (
                       (fontesData?.pastas || []).map((pasta: any) => (
@@ -906,9 +908,9 @@ export default function TurmaDetail() {
                   ) : (
                     (fontesData?.listas || []).length === 0 ? (
                       <div className="p-4 text-sm text-muted-foreground text-center">
-                        Nenhuma lista compartilhada encontrada.
+                        {t('classes.detail.noSharedLists')}
                         <br />
-                        Crie uma lista e defina visibilidade como "Turma".
+                        {t('classes.detail.createListHint')}
                       </div>
                     ) : (
                       (fontesData?.listas || []).map((lista: any) => (
@@ -927,10 +929,10 @@ export default function TurmaDetail() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAtribDialogOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleCreateAtribuicao} disabled={createAtribuicao.isPending}>
-              {createAtribuicao.isPending ? 'Criando...' : 'Criar Atribuição'}
+              {createAtribuicao.isPending ? t('classes.detail.creating') : t('classes.detail.createAssignmentTitle')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -940,35 +942,35 @@ export default function TurmaDetail() {
       <Dialog open={editAtribDialogOpen} onOpenChange={setEditAtribDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Atribuição</DialogTitle>
+            <DialogTitle>{t('classes.detail.editAssignment')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-atrib-titulo">Título *</Label>
+              <Label htmlFor="edit-atrib-titulo">{t('classes.detail.titleLabel')}</Label>
               <Input
                 id="edit-atrib-titulo"
                 value={editAtribTitulo}
                 onChange={(e) => setEditAtribTitulo(e.target.value)}
-                placeholder="Ex: Estudar verbos irregulares"
+                placeholder={t('classes.detail.assignmentTitlePlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="edit-atrib-descricao">Descrição</Label>
+              <Label htmlFor="edit-atrib-descricao">{t('classes.detail.description')}</Label>
               <Textarea
                 id="edit-atrib-descricao"
                 value={editAtribDescricao}
                 onChange={(e) => setEditAtribDescricao(e.target.value)}
-                placeholder="Instruções para os alunos..."
+                placeholder={t('classes.detail.assignmentDescPlaceholder')}
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditAtribDialogOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleUpdateAtribuicao} disabled={updateAtribuicao.isPending}>
-              {updateAtribuicao.isPending ? 'Salvando...' : 'Salvar'}
+              {updateAtribuicao.isPending ? t('classes.detail.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -979,23 +981,23 @@ export default function TurmaDetail() {
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="atribuicoes">
               <BookOpen className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Atribuições</span>
+              <span className="hidden sm:inline">{t('classes.detail.tabAssignments')}</span>
             </TabsTrigger>
             <TabsTrigger value="metas">
               <Target className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Metas</span>
+              <span className="hidden sm:inline">{t('classes.detail.tabGoals')}</span>
             </TabsTrigger>
             <TabsTrigger value="avisos">
               <Megaphone className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Avisos</span>
+              <span className="hidden sm:inline">{t('classes.detail.tabNotices')}</span>
             </TabsTrigger>
             <TabsTrigger value="pessoas">
               <UsersIcon className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Pessoas</span>
+              <span className="hidden sm:inline">{t('classes.detail.tabPeople')}</span>
             </TabsTrigger>
             <TabsTrigger value="mensagens">
               <MessageSquare className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Mensagens</span>
+              <span className="hidden sm:inline">{t('classes.detail.tabMessages')}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1003,12 +1005,12 @@ export default function TurmaDetail() {
             {isOwner && (
               <Button className="w-full" onClick={() => setAtribDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Criar Atribuição
+                {t('classes.detail.createAssignmentTitle')}
               </Button>
             )}
             {atribuicoes.length === 0 ? (
               <Card className="p-8 text-center">
-                <p className="text-muted-foreground">Nenhuma atribuição ainda.</p>
+                <p className="text-muted-foreground">{t('classes.detail.noAssignmentsYet')}</p>
               </Card>
             ) : (
               atribuicoes.map((atrib: any) => (
@@ -1039,7 +1041,7 @@ export default function TurmaDetail() {
                           className="h-7 w-7 text-muted-foreground"
                           disabled={atribuicoes.indexOf(atrib) === 0}
                           onClick={(e) => { e.stopPropagation(); handleMoveAtrib(atrib.id, 'up'); }}
-                          title="Mover para cima"
+                          title={t('classes.detail.moveUp')}
                         >
                           <ChevronUp className="h-4 w-4" />
                         </Button>
@@ -1049,7 +1051,7 @@ export default function TurmaDetail() {
                           className="h-7 w-7 text-muted-foreground"
                           disabled={atribuicoes.indexOf(atrib) === atribuicoes.length - 1}
                           onClick={(e) => { e.stopPropagation(); handleMoveAtrib(atrib.id, 'down'); }}
-                          title="Mover para baixo"
+                          title={t('classes.detail.moveDown')}
                         >
                           <ChevronDown className="h-4 w-4" />
                         </Button>
@@ -1077,24 +1079,24 @@ export default function TurmaDetail() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Deletar atribuição</AlertDialogTitle>
+                              <AlertDialogTitle>{t('classes.detail.deleteAssignment')}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Tem certeza que deseja deletar "{atrib.titulo}"? Esta ação não pode ser desfeita.
+                                {t('classes.detail.deleteAssignmentDesc', { title: atrib.titulo })}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                               <AlertDialogAction 
                                 onClick={async () => {
                                   try {
                                     await deleteAtribuicao.mutateAsync(atrib.id);
-                                    toast.success('✅ Atribuição deletada!');
+                                    toast.success(t('classes.toast.assignmentDeleted'));
                                   } catch (error) {
-                                    toast.error('❌ Erro ao deletar atribuição');
+                                    toast.error(t('classes.toast.assignmentDeleteFailed'));
                                   }
                                 }}
                               >
-                                Deletar
+                                {t('classes.detail.delete')}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -1103,9 +1105,9 @@ export default function TurmaDetail() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-2">
-                    <Badge variant="outline">{atrib.fonte_tipo === 'pasta' ? 'Pasta' : 'Lista'}</Badge>
+                    <Badge variant="outline">{atrib.fonte_tipo === 'pasta' ? t('classes.detail.folder') : t('classes.detail.list')}</Badge>
                     <span className="text-sm text-muted-foreground">
-                      {atrib.card_count ?? 0} cards
+                      {t('common.cardCount', { count: atrib.card_count ?? 0 })}
                     </span>
                     {atrib.progresso && (
                       <span className="text-sm text-muted-foreground ml-auto">
@@ -1135,31 +1137,31 @@ export default function TurmaDetail() {
             {isOwner && (
               <Button className="w-full" onClick={() => setEnrollDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar Aluno
+                {t('classes.detail.addStudentTitle')}
               </Button>
             )}
             {isOwner && pendingMembros.length > 0 && (
               <Card className="p-4">
-                <h3 className="font-semibold mb-3">Solicitações e convites pendentes ({pendingMembros.length})</h3>
+                <h3 className="font-semibold mb-3">{t('classes.detail.pendingTitle', { count: pendingMembros.length })}</h3>
                 <div className="space-y-2">
                   {pendingMembros.map((membro: any) => {
                     const isRequest = membro.status === 'requested';
-                    const displayName = membro.profiles?.first_name || membro.profiles?.ape_id || 'Aluno';
+                    const displayName = membro.profiles?.first_name || membro.profiles?.ape_id || t('classes.detail.studentFallback');
                     return (
                       <div key={membro.id} className="flex flex-col gap-3 rounded border p-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="font-medium">{displayName}</p>
                           <p className="text-xs text-muted-foreground">APE ID: {membro.profiles?.ape_id || 'N/A'}</p>
-                          <Badge variant="outline" className="mt-1">{isRequest ? 'Solicitou entrada' : 'Convite enviado'}</Badge>
+                          <Badge variant="outline" className="mt-1">{isRequest ? t('classes.detail.requested') : t('classes.detail.invited')}</Badge>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {isRequest ? (
                             <>
-                              <Button size="sm" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'approve_request', targetUserId: membro.user_id }).then(() => toast.success('Solicitação aprovada.')).catch((error: any) => toast.error(error.message || 'Não foi possível aprovar a solicitação.'))}>Aprovar</Button>
-                              <Button size="sm" variant="outline" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'reject_request', targetUserId: membro.user_id }).then(() => toast.success('Solicitação recusada.')).catch((error: any) => toast.error(error.message || 'Não foi possível recusar a solicitação.'))}>Recusar</Button>
+                              <Button size="sm" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'approve_request', targetUserId: membro.user_id }).then(() => toast.success(t('classes.toast.requestApproved'))).catch((error: any) => toast.error(error.message || t('classes.toast.approveFailed')))}>{t('classes.detail.approve')}</Button>
+                              <Button size="sm" variant="outline" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'reject_request', targetUserId: membro.user_id }).then(() => toast.success(t('classes.toast.requestRejected'))).catch((error: any) => toast.error(error.message || t('classes.toast.rejectFailed')))}>{t('classes.detail.reject')}</Button>
                             </>
                           ) : (
-                            <Button size="sm" variant="outline" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'cancel_invite', targetUserId: membro.user_id }).then(() => toast.success('Convite cancelado.')).catch((error: any) => toast.error(error.message || 'Não foi possível cancelar o convite.'))}>Cancelar convite</Button>
+                            <Button size="sm" variant="outline" disabled={membershipTransition.isPending} onClick={() => membershipTransition.mutateAsync({ turmaId: turmaId!, action: 'cancel_invite', targetUserId: membro.user_id }).then(() => toast.success(t('classes.toast.inviteCancelled'))).catch((error: any) => toast.error(error.message || t('classes.toast.cancelInviteFailed')))}>{t('classes.detail.cancelInvite')}</Button>
                           )}
                         </div>
                       </div>
@@ -1169,15 +1171,15 @@ export default function TurmaDetail() {
               </Card>
             )}
             <Card className="p-4">
-              <h3 className="font-semibold mb-3">Membros ativos ({activeMembros.length})</h3>
+              <h3 className="font-semibold mb-3">{t('classes.detail.activeMembers', { count: activeMembros.length })}</h3>
               <div className="space-y-2">
                 {activeMembros.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">Nenhum membro ativo ainda.</p>
+                  <p className="text-center text-muted-foreground py-4">{t('classes.detail.noActiveMembers')}</p>
                 ) : (
                   activeMembros.map((membro: any) => (
                     <div key={membro.id} className="flex items-center justify-between p-2 rounded hover:bg-muted">
                       <div>
-                        <p className="font-medium">{membro.profiles?.first_name || 'Sem nome'}</p>
+                        <p className="font-medium">{membro.profiles?.first_name || t('classes.detail.noName')}</p>
                         <p className="text-xs text-muted-foreground">
                           APE ID: {membro.profiles?.ape_id || 'N/A'}
                         </p>
@@ -1191,7 +1193,7 @@ export default function TurmaDetail() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Ver desempenho"
+                              title={t('classes.detail.viewPerformance')}
                               className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               onClick={() => {
                                 setSelectedStudentId(membro.user_id);
@@ -1208,13 +1210,13 @@ export default function TurmaDetail() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Remover aluno</AlertDialogTitle>
+                                <AlertDialogTitle>{t('classes.detail.removeStudent')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja remover {membro.profiles?.first_name || 'este aluno'} da turma?
+                                  {t('classes.detail.removeStudentDesc', { name: membro.profiles?.first_name || t('classes.detail.thisStudent') })}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                         <AlertDialogAction 
                                   onClick={async () => {
                                     try {
@@ -1223,13 +1225,13 @@ export default function TurmaDetail() {
                                         action: 'remove_member',
                                         targetUserId: membro.user_id,
                                       });
-                                      toast.success('✅ Aluno removido!');
+                                      toast.success(t('classes.toast.studentRemoved'));
                                     } catch (error) {
-                                      toast.error('❌ Erro ao remover aluno');
+                                      toast.error(t('classes.toast.removeStudentFailed'));
                                     }
                                   }}
                                 >
-                                  Remover
+                                  {t('common.remove')}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -1244,9 +1246,9 @@ export default function TurmaDetail() {
                             onClick={() => membershipTransition.mutateAsync({
                               turmaId: turmaId!,
                               action: 'leave',
-                            }).then(() => toast.success('Você saiu da turma.')).catch((error: any) => toast.error(error.message || 'Não foi possível sair da turma.'))}
+                            }).then(() => toast.success(t('classes.toast.leftClass'))).catch((error: any) => toast.error(error.message || t('classes.toast.leaveFailed')))}
                           >
-                            Sair
+                            {t('classes.detail.leave')}
                           </Button>
                         )}
                       </div>
@@ -1263,7 +1265,7 @@ export default function TurmaDetail() {
               isOwner={isOwner} 
               membros={activeMembros}
               teacherId={turma.owner_teacher_id}
-              teacherName={turmaData?.teacherName || 'Professor'}
+              teacherName={turmaData?.teacherName || t('classes.detail.teacherFallback')}
               autoOpenRecipientId={senderFromUrl || undefined}
             />
           </TabsContent>
