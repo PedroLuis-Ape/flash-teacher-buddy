@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Flag, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,10 @@ interface StudyFeedbackPanelProps {
   actionLabel?: string;
   actionHint?: string;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  secondaryActionHint?: string;
+  secondaryActionDisabled?: boolean;
+  onSecondaryAction?: () => void;
   className?: string;
 }
 
@@ -72,6 +76,10 @@ export function StudyFeedbackPanel({
   actionLabel,
   actionHint,
   onAction,
+  secondaryActionLabel,
+  secondaryActionHint,
+  secondaryActionDisabled = false,
+  onSecondaryAction,
   className,
 }: StudyFeedbackPanelProps) {
   const config = STATUS_CONFIG[status];
@@ -170,6 +178,26 @@ export function StudyFeedbackPanel({
               <p className="text-center text-[10px] leading-tight text-muted-foreground" aria-live="polite">
                 {actionHint}
               </p>
+            )}
+            {secondaryActionLabel && onSecondaryAction && (
+              <div className="mt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-full gap-1.5 rounded-xl text-xs font-semibold"
+                  onClick={onSecondaryAction}
+                  disabled={secondaryActionDisabled}
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                  {secondaryActionLabel}
+                </Button>
+                {secondaryActionHint && (
+                  <p className="mt-1 text-center text-[10px] leading-tight text-muted-foreground">
+                    {secondaryActionHint}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}

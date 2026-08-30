@@ -14,11 +14,13 @@ import { isAlmostCorrect } from "@/lib/levenshtein";
 import { getSpeechRate } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
+import { AttentionPointSheet } from "./AttentionPointSheet";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { playCorrect, playWrong } from "@/lib/sfx";
 import { useShortcutMap } from "@/hooks/useKeyboardShortcuts";
 import { normalizeKey } from "@/features/study/lib/keyboardShortcuts";
+import type { SpecialFocusContext } from "@/hooks/useSpecialFlashcards";
 
 interface WriteStudyViewProps {
   front: string;
@@ -39,6 +41,8 @@ interface WriteStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  isSavingAttentionPoint?: boolean;
+  onSaveAttentionPoint?: (flashcardId: string, focus: SpecialFocusContext) => Promise<void> | void;
   onRestartRound?: () => void;
   onRestartJourney?: () => void;
   onCorrect: () => void;
@@ -65,6 +69,8 @@ export const WriteStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  isSavingAttentionPoint = false,
+  onSaveAttentionPoint,
   onRestartRound,
   onRestartJourney,
   onCorrect,
@@ -77,6 +83,7 @@ export const WriteStudyView = ({
   const [currentHint, setCurrentHint] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [shake, setShake] = useState(false);
+  const [attentionPointOpen, setAttentionPointOpen] = useState(false);
 
   const sideA = { text: front, lang: langA, label: getLangLabel(langA), acceptedAnswers: acceptedAnswersEn };
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
@@ -110,6 +117,7 @@ export const WriteStudyView = ({
     setCurrentHint("");
     setRevealed(false);
     setShake(false);
+    setAttentionPointOpen(false);
     window.setTimeout(() => inputRef.current?.focus(), 100);
   }, [front, back]);
 
@@ -184,6 +192,11 @@ export const WriteStudyView = ({
       event.preventDefault();
       onSkip();
     }
+  };
+
+  const handleSaveAttentionPoint = async (focus: SpecialFocusContext) => {
+    if (!flashcardId || !onSaveAttentionPoint) return;
+    await onSaveAttentionPoint(flashcardId, focus);
   };
 
   return (
@@ -294,9 +307,25 @@ export const WriteStudyView = ({
             correctAnswer={correctAnswer}
             actionLabel="Continuar"
             onAction={onIncorrect}
+            secondaryActionLabel="Marcar dificuldade"
+            secondaryActionHint="Guarde uma palavra sem sair do estudo."
+            secondaryActionDisabled={isSavingAttentionPoint}
+            onSecondaryAction={() => setAttentionPointOpen(true)}
           />
         )}
       </div>
+
+      {flashcardId && onSaveAttentionPoint && (
+        <AttentionPointSheet
+          open={attentionPointOpen}
+          onOpenChange={setAttentionPointOpen}
+          expectedText={correctAnswer}
+          typedText={answer.trim()}
+          focusSide={isAFirst ? "b" : "a"}
+          isSaving={isSavingAttentionPoint}
+          onSave={handleSaveAttentionPoint}
+        />
+      )}
 
       {feedback === null && (
         <div className="sticky bottom-4 z-10 rounded-lg bg-background/95 p-2 shadow-lg backdrop-blur-sm">

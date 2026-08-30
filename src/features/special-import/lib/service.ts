@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { setAttentionPoints } from "@/hooks/useAttentionPoint";
 import { APPLY_BATCH, VALIDATE_LOOKUP_BATCH, runInBatches } from "./chunking";
 import type { NormalizedSpecialImportItem, ReconciledSpecialImportRow } from "./parser";
 import {
@@ -60,7 +61,8 @@ async function loadCurrentSpecialRows(
     .from("user_special_flashcards" as any)
     .select("id, flashcard_id, focus_text, focus_tag, focus_note, notes")
     .eq("user_id", userId)
-    .in("flashcard_id", flashcardIds);
+    .in("flashcard_id", flashcardIds)
+    .eq("is_active", true);
 
   if (!enhanced.error) return (enhanced.data as unknown as CurrentSpecialRow[]) ?? [];
   if (!isMissingSpecialFocusColumns(enhanced.error)) throw enhanced.error;
@@ -188,17 +190,19 @@ async function verifyAppliedItemsLeftTheQueue(results: ApplyResult[]): Promise<A
     } : result);
   }
 
-  const { error: cleanupError } = await supabase
-    .from("user_special_flashcards" as any)
-    .delete()
-    .eq("user_id", user.id)
-    .in("flashcard_id", appliedIds);
+  let cleanupError: { message?: string } | null = null;
+  try {
+    await setAttentionPoints({ sourceCardIds: appliedIds, enabled: false });
+  } catch (error) {
+    cleanupError = error as { message?: string };
+  }
 
   const { data: remaining, error: verifyError } = await supabase
     .from("user_special_flashcards" as any)
     .select("flashcard_id")
     .eq("user_id", user.id)
-    .in("flashcard_id", appliedIds);
+    .in("flashcard_id", appliedIds)
+    .eq("is_active", true);
 
   if (cleanupError || verifyError) {
     return results.map((result) => result.status === "applied" ? {

@@ -3,7 +3,7 @@
  * status system target?" inside the study screen.
  *
  *   - canonicalGroupId : where Favorites & Red List live.
- *       Layered card  → parent_card_id of the group principal.
+ *       Layered card  → stable status_group_uid (fallback: parent_card_id).
  *       Normal card   → the card's own id.
  *
  *   - playableEntryId  : the id the engine actually puts into cardsOrder.
@@ -11,7 +11,7 @@
  *       Normal card   → the card's own id.
  *
  *   - visibleLayerId   : the id of the layer currently displayed on screen.
- *       Used ONLY by the Special button (per-layer semantic).
+ *       Used as the exact source/focus id; the special toggle itself is group-wide.
  *
  *   - legacyIds        : every id that could legitimately have an OLD mark
  *       written against it before the canonicalization migration (principal,
@@ -21,15 +21,16 @@
  */
 export interface ResolveIdentityInput {
   /** The card currently visible (active layer, when layered). */
-  displayedCard?: { id?: string | null; parent_card_id?: string | null } | null;
+  displayedCard?: { id?: string | null; parent_card_id?: string | null; status_group_uid?: string | null } | null;
   /** The card at the engine's current index (the deck entry-point). */
   engineCard?: {
     id?: string | null;
     parent_card_id?: string | null;
+    status_group_uid?: string | null;
     __parentCardId?: string | null;
   } | null;
   /** All layers of the current group, or undefined when the card is not layered. */
-  layers?: ReadonlyArray<{ id?: string | null; parent_card_id?: string | null }> | null;
+  layers?: ReadonlyArray<{ id?: string | null; parent_card_id?: string | null; status_group_uid?: string | null }> | null;
 }
 
 export interface CardStatusIdentity {
@@ -51,12 +52,16 @@ export function resolveCardStatusIdentity(
   const layerList = Array.isArray(layers) ? layers : [];
   const hasLayers = layerList.length > 1;
 
-  // Canonical group: parent_card_id when layered, otherwise the card itself.
+  // Canonical group: stable status_group_uid when available, with the
+  // structural parent fallback for legacy/offline payloads.
   const explicitCanonical: string | null =
+    displayedCard?.status_group_uid ??
     (displayedCard as any)?.__parentCardId ??
     displayedCard?.parent_card_id ??
+    engineCard?.status_group_uid ??
     (engineCard as any)?.__parentCardId ??
     engineCard?.parent_card_id ??
+    layerList[0]?.status_group_uid ??
     layerList[0]?.parent_card_id ??
     null;
   const canonicalGroupId: string | null =
@@ -93,12 +98,12 @@ export function resolveCardStatusIdentity(
  *   - Normal entry:       map(entry.id → entry.id)
  */
 export function buildCanonicalToPlayableMap(
-  deck: ReadonlyArray<{ id: string; parent_card_id?: string | null }>,
+  deck: ReadonlyArray<{ id: string; parent_card_id?: string | null; status_group_uid?: string | null }>,
 ): Map<string, string> {
   const map = new Map<string, string>();
   for (const card of deck) {
     if (!card?.id) continue;
-    const canonical = card.parent_card_id || card.id;
+    const canonical = card.status_group_uid || card.parent_card_id || card.id;
     if (!map.has(canonical)) map.set(canonical, card.id);
   }
   return map;
