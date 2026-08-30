@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { SpecialFocusContext, SpecialFlashcardDetail } from "./useSpecialFlashcards";
+import { setAttentionPoint, invalidateAttentionPointQueries } from "./useAttentionPoint";
 
 function clean(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;
@@ -12,6 +12,7 @@ function clean(value: string | null | undefined): string | null {
 interface UpdateSpecialFocusInput {
   specialId: string;
   flashcardId: string;
+  institutionId?: string | null;
   focus: SpecialFocusContext;
 }
 
@@ -19,29 +20,20 @@ export function useUpdateSpecialFocus(userId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ specialId, flashcardId, focus }: UpdateSpecialFocusInput) => {
+    mutationFn: async ({ specialId, flashcardId, institutionId, focus }: UpdateSpecialFocusInput) => {
       if (!userId) throw new Error("Não autenticado");
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || authData.user?.id !== userId) throw new Error("Sessão inválida");
-
-      const payload = {
-        focus_text: clean(focus.focus_text),
-        focus_side: focus.focus_side ?? null,
-        focus_tag: focus.focus_tag ?? null,
-        focus_note: clean(focus.focus_note),
-        updated_at: new Date().toISOString(),
-      };
-      const { data, error } = await supabase
-        .from("user_special_flashcards" as any)
-        .update(payload as any)
-        .eq("id", specialId)
-        .eq("user_id", userId)
-        .eq("flashcard_id", flashcardId)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error("Card Especial não encontrado ou sem permissão para editar.");
-      return { specialId, flashcardId, payload };
+      const result = await setAttentionPoint({
+        sourceCardId: flashcardId,
+        enabled: true,
+        institutionId: institutionId ?? null,
+        focus: {
+          focus_text: clean(focus.focus_text),
+          focus_side: focus.focus_side ?? null,
+          focus_tag: focus.focus_tag ?? null,
+          focus_note: clean(focus.focus_note),
+        },
+      });
+      return { specialId, flashcardId, result };
     },
     onMutate: async ({ specialId, focus }) => {
       if (!userId) return undefined;
@@ -69,7 +61,7 @@ export function useUpdateSpecialFocus(userId: string | undefined) {
     },
     onSuccess: () => toast.success("Foco pedagógico atualizado."),
     onSettled: () => {
-      if (userId) queryClient.invalidateQueries({ queryKey: ["special-flashcards-details", userId] });
+      if (userId) invalidateAttentionPointQueries(queryClient, userId);
     },
   });
 }

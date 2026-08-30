@@ -97,7 +97,7 @@ import {
 import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
-import { useSpecialFlashcards, useToggleSpecialFlashcard } from "@/hooks/useSpecialFlashcards";
+import { useSpecialFlashcards, type SpecialFocusContext } from "@/hooks/useSpecialFlashcards";
 import { useSetFavoriteGroup } from "@/hooks/useSetFavoriteGroup";
 import { useSetRedListGroup } from "@/hooks/useSetRedListGroup";
 import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
@@ -389,8 +389,8 @@ const Study = () => {
   // the list of special flashcard ids is global per user, but we still pass
   // listId on insert for traceability.
   const { data: specialIds = [] } = useSpecialFlashcards(userId);
-  const toggleSpecial = useToggleSpecialFlashcard();
-  const setSpecialLayer = useSetSpecialLayer();
+  const setSpecialLayer = useSetSpecialLayer(userId);
+  const institutionId = selectedInstitution?.id ?? null;
 
   const listId = isListRoute ? resolvedId : undefined;
 
@@ -1572,7 +1572,7 @@ const Study = () => {
   // Backed by `resolveCardStatusIdentity` so every button in the study screen
   // shares the exact same identity contract:
   //   - Favorite + Red List → canonicalGroupId  (parent_card_id when layered)
-  //   - Special             → visibleLayerId    (per-layer semantic)
+  //   - Special             → canonicalGroupId  (one reversible point per group)
   // `legacyIds` lets the UI recognise marks left under old per-layer ids
   // during the migration window, and lets the mutation hooks scrub them
   // in a single DELETE.
@@ -1616,13 +1616,19 @@ const Study = () => {
     return statusIdentity.legacyIds.some((id) => redListIds.includes(id));
   }, [stableStatus, statusIdentity, redListIds]);
 
-  // Specials are strictly per-visible-layer — never matched against legacy.
+  // A layered card is one user-facing point of attention. The source layer
+  // still identifies the exact focus/export target, while the toggle is group-wide.
   const isDisplayedSpecial = useMemo(
-    () =>
-      statusIdentity.visibleLayerId
-        ? specialIds.includes(statusIdentity.visibleLayerId)
-        : false,
-    [statusIdentity.visibleLayerId, specialIds],
+    () => {
+      if (
+        statusIdentity.canonicalGroupId
+        && specialIds.includes(statusIdentity.canonicalGroupId)
+      ) return true;
+      return statusIdentity.stableGroupId
+        ? specialIds.includes(statusIdentity.stableGroupId)
+        : false;
+    },
+    [statusIdentity.canonicalGroupId, statusIdentity.stableGroupId, specialIds],
   );
 
   const handleToggleFavorite = () => {
@@ -1677,7 +1683,6 @@ const Study = () => {
     });
   };
 
-  // Specials are per-layer. Never touch the group.
   const handleToggleSpecial = () => {
     if (!userId) return;
     const layer = statusIdentity.visibleLayerId;
@@ -1687,8 +1692,25 @@ const Study = () => {
       visibleLayerId: layer,
       listId: listId ?? null,
       enable: !isDisplayedSpecial,
+      institutionId,
+      sourceGroupId: statusIdentity.stableGroupId ?? statusIdentity.canonicalGroupId,
     });
   };
+
+  const handleSaveAttentionPoint = useCallback(async (
+    targetFlashcardId: string,
+    focus: SpecialFocusContext,
+  ) => {
+    if (!userId) throw new Error("Não autenticado");
+    await setSpecialLayer.mutateAsync({
+      visibleLayerId: targetFlashcardId,
+      listId: listId ?? null,
+      enable: true,
+      focus,
+      institutionId,
+      sourceGroupId: statusIdentity.stableGroupId ?? statusIdentity.canonicalGroupId,
+    });
+  }, [institutionId, listId, setSpecialLayer, statusIdentity.canonicalGroupId, statusIdentity.stableGroupId, userId]);
 
   // DEV-only diagnostic for layer navigation. Stripped in production builds.
   useEffect(() => {
@@ -2432,6 +2454,8 @@ const Study = () => {
               onToggleRedList={handleToggleRedList}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={handleToggleSpecial}
+              isSavingAttentionPoint={setSpecialLayer.isPending}
+              onSaveAttentionPoint={userId ? handleSaveAttentionPoint : undefined}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}

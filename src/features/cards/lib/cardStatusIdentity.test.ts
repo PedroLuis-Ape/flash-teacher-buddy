@@ -69,7 +69,7 @@ describe('resolveCardStatusIdentity', () => {
     expect(r.legacyIds).toContain('P');
   });
 
-  it('layered card on layer 3: special target is L3 only', () => {
+  it('layered card on layer 3: special target remains the whole group', () => {
     const layers = [
       { id: 'L1', parent_card_id: 'P' },
       { id: 'L2', parent_card_id: 'P' },

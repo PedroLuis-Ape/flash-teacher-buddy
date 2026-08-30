@@ -189,7 +189,7 @@ export function AppSidebar() {
                 }}
               >
                 <Gem className="h-4 w-4" />
-                <span>Especiais</span>
+                <span>Pontos de atenção</span>
               </Button>
               <Button
                 variant={location.pathname === '/import/super' ? "secondary" : "ghost"}

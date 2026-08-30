@@ -57,6 +57,7 @@ export default function SpecialFocusEditorDialog({ card, userId, open, onOpenCha
       await mutation.mutateAsync({
         specialId: card.id,
         flashcardId: card.flashcard_id,
+        institutionId: card.institution_id,
         focus: {
           focus_text: focusText,
           focus_side: null,

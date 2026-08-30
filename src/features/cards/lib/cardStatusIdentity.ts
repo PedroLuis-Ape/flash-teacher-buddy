@@ -3,16 +3,16 @@
  * status system target?" inside the study screen.
  *
  *   - stableGroupId    : database status_group_uid used by the new pipeline.
- *   - canonicalGroupId : legacy Favorite/Red List target kept for back-compat.
- *       Layered card  → parent_card_id of the group principal.
- *       Normal card   → the card's own id.
+ *   - canonicalGroupId : where legacy group-wide statuses live.
+ *       Layered card  → parent_card_id (fallback: stable status_group_uid).
+ *       Normal card   → the card's own id or stable group id.
  *
  *   - playableEntryId  : the id the engine actually puts into cardsOrder.
  *       Layered card  → layers[0].id (the deck entry-point).
  *       Normal card   → the card's own id.
  *
  *   - visibleLayerId   : the id of the layer currently displayed on screen.
- *       Used ONLY by the Special button (per-layer semantic).
+ *       Used as the exact source/focus id; the special toggle itself is group-wide.
  *
  *   - legacyIds        : every id that could legitimately have an OLD mark
  *       written against it before the canonicalization migration (principal,
@@ -32,8 +32,8 @@ export interface ResolveIdentityInput {
   engineCard?: {
     id?: string | null;
     parent_card_id?: string | null;
-    __parentCardId?: string | null;
     status_group_uid?: string | null;
+    __parentCardId?: string | null;
     __statusGroupUid?: string | null;
   } | null;
   /** All layers of the current group, or undefined when the card is not layered. */
@@ -76,13 +76,16 @@ export function resolveCardStatusIdentity(
     stableLayer?.__statusGroupUid ??
     null;
 
-  // Canonical group: parent_card_id when layered, otherwise the card itself.
+  // Legacy canonical group: preserve parent_card_id for layered cards because
+  // favorites/red-list and pre-migration special marks were stored there.
+  // Keep the database stable group separately for the new attention pipeline.
   const explicitCanonical: string | null =
     (displayedCard as any)?.__parentCardId ??
     displayedCard?.parent_card_id ??
     (engineCard as any)?.__parentCardId ??
     engineCard?.parent_card_id ??
     layerList[0]?.parent_card_id ??
+    stableGroupId ??
     null;
   const canonicalGroupId: string | null =
     explicitCanonical ?? (hasLayers ? null : visibleLayerId);

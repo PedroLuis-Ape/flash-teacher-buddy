@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   CheckCircle2,
-  Download,
+  Clipboard,
   FileJson,
   FileText,
   Gem,
+  MoreHorizontal,
   Pencil,
   Search,
   Sparkles,
@@ -33,6 +34,19 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import ImportExplanationsDialog from "@/components/ImportExplanationsDialog";
 import SpecialExportDialog from "./components/SpecialExportDialog";
 import SpecialFocusEditorDialog from "./components/SpecialFocusEditorDialog";
+import { copyText } from "./lib/protocolPolicy";
+import {
+  buildAttentionPointAiText,
+  buildAttentionPointContextText,
+  buildAttentionPointJson,
+  buildAttentionPointWordsText,
+} from "./lib/attentionPointExport";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const PAGE_SIZE = 100;
 const FOCUS_TAG_LABELS = {
@@ -69,7 +83,9 @@ export default function GemQueue() {
   const [search, setSearch] = useState("");
   const [listFilter, setListFilter] = useState("all");
   const [focusFilter, setFocusFilter] = useState("all");
+  const [focusTagFilter, setFocusTagFilter] = useState("all");
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const [expandedId, setExpandedId] = useState(null);
   const query = useSpecialFlashcardsDetails(userId);
   const removeMutation = useRemoveSpecialFlashcards();
   const cards = query.data || [];
@@ -83,7 +99,7 @@ export default function GemQueue() {
     setSelected((previous) => new Set([...previous].filter((id) => valid.has(id))));
   }, [cards]);
 
-  useEffect(() => setVisibleLimit(PAGE_SIZE), [focusFilter, listFilter, search]);
+  useEffect(() => setVisibleLimit(PAGE_SIZE), [focusFilter, focusTagFilter, listFilter, search]);
 
   const listOptions = useMemo(() => Array.from(new Set(cards
     .map((card) => card.list_title)
@@ -95,17 +111,19 @@ export default function GemQueue() {
       const focused = hasFocusContext(card);
       if (focusFilter === "with" && !focused) return false;
       if (focusFilter === "without" && focused) return false;
+      if (focusTagFilter !== "all" && card.focus_tag !== focusTagFilter) return false;
       if (!needle) return true;
       return [card.term, card.translation, card.list_title, card.context_tag, card.focus_text, card.focus_note, card.notes]
         .some((value) => normalize(value).includes(needle));
     });
-  }, [cards, focusFilter, listFilter, search]);
+  }, [cards, focusFilter, focusTagFilter, listFilter, search]);
   const renderedCards = filteredCards.slice(0, visibleLimit);
   const chosen = useMemo(() => cards.filter((card) => selected.has(card.flashcard_id)), [cards, selected]);
   const allFilteredSelected = filteredCards.length > 0 && filteredCards.every((card) => selected.has(card.flashcard_id));
   const filteredSelectedCount = filteredCards.filter((card) => selected.has(card.flashcard_id)).length;
   const partialFiltered = filteredSelectedCount > 0 && !allFilteredSelected;
   const focusedCount = useMemo(() => cards.filter(hasFocusContext).length, [cards]);
+  const tagOptions = useMemo(() => Array.from(new Set(cards.map((card) => card.focus_tag).filter(Boolean))), [cards]);
 
   const toggle = (id) => setSelected((previous) => {
     const next = new Set(previous);
@@ -126,10 +144,31 @@ export default function GemQueue() {
     setExportOpen(true);
   };
 
+  const copyExport = async (target, builder, successMessage) => {
+    if (!target.length) return toast.error("Nenhum ponto de atenção para copiar.");
+    const copied = await copyText(builder(target));
+    if (copied) toast.success(successMessage);
+    else toast.error("Não foi possível copiar para a área de transferência.");
+  };
+
+  const downloadJson = (target) => {
+    if (!target.length) return toast.error("Nenhum ponto de atenção para exportar.");
+    const blob = new Blob([buildAttentionPointJson(target)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pontos-de-atencao-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("JSON exportado sem remover os cards.");
+  };
+
+  const actionTarget = chosen.length ? chosen : filteredCards;
+
   const removeCards = async (target) => {
     const ids = Array.from(new Set(target.map((card) => card.flashcard_id)));
     if (!ids.length) return;
-    const confirmed = window.confirm(`Remover ${ids.length} card(s) da fila de Especiais? Nenhum flashcard será apagado.`);
+    const confirmed = window.confirm(`Remover ${ids.length} ponto(s) de atenção? Nenhum flashcard será apagado.`);
     if (!confirmed) return;
     try {
       await removeMutation.mutateAsync(ids);
@@ -145,40 +184,37 @@ export default function GemQueue() {
   };
 
   return <div className="container mx-auto max-w-6xl px-3 py-5 pb-24 sm:px-4 sm:py-8 sm:pb-12">
-    <Helmet><title>Cards Especiais | App Piteco</title></Helmet>
+    <Helmet><title>Pontos de atenção | App Piteco</title></Helmet>
 
     <div className="mb-4 flex items-center gap-3 sm:mb-6 sm:flex-wrap">
       <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0" aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Button>
-      <div className="rounded-xl bg-sky-100 p-2.5 dark:bg-sky-950/40"><Gem className="h-6 w-6 text-sky-600" /></div>
+      <div className="rounded-xl bg-amber-100 p-2.5 dark:bg-amber-950/40"><Gem className="h-6 w-6 text-amber-600" /></div>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-xl font-bold sm:text-3xl">Central de Cards Especiais</h1>
-        <p className="text-xs text-muted-foreground sm:text-sm">Organize a fila, exporte TXT e importe o JSON da IA</p>
+        <h1 className="truncate text-xl font-bold sm:text-3xl">Pontos de atenção</h1>
+        <p className="text-xs text-muted-foreground sm:text-sm">Reveja palavras e frases que merecem uma explicação extra.</p>
       </div>
-      <Badge variant="secondary" className="hidden sm:inline-flex">{cards.length} na fila</Badge>
+      <Badge variant="secondary" className="hidden sm:inline-flex">{cards.length} item(s)</Badge>
       <Button onClick={() => setImportOpen(true)} size="sm" className="shrink-0"><Upload className="mr-1.5 h-4 w-4" />Importar JSON</Button>
     </div>
 
-    <Card className="mb-4 border-sky-200 bg-gradient-to-br from-sky-50 via-background to-violet-50 p-3 dark:border-sky-900 dark:from-sky-950/20 dark:to-violet-950/20 sm:mb-6 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 font-semibold"><Sparkles className="h-5 w-5 text-sky-600" />Fluxo oficial de ponta a ponta</div>
-        <Badge variant="outline">TXT → IA → JSON v3</Badge>
+    <Card className="mb-4 border-amber-200 bg-gradient-to-br from-amber-50 via-background to-sky-50 p-3 dark:border-amber-900 dark:from-amber-950/20 dark:to-sky-950/20 sm:mb-6 sm:p-4">
+      <div className="flex items-start gap-3">
+        <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <div className="min-w-0 text-sm">
+          <p className="font-semibold">Organize antes de pedir ajuda à IA</p>
+          <p className="mt-1 text-muted-foreground">Selecione itens, copie o contexto necessário e mantenha os pontos na fila até decidir removê-los.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{focusedCount} de {cards.length} item(s) possuem foco pedagógico definido.</p>
+        </div>
       </div>
-      <div className="grid gap-2 text-sm sm:grid-cols-4 sm:gap-3">
-        <div className="rounded-lg bg-background/80 p-2.5 sm:p-3"><b>1. Organize</b><p className="mt-1 text-xs text-muted-foreground">Busque, filtre e ajuste o foco.</p></div>
-        <div className="rounded-lg bg-background/80 p-2.5 sm:p-3"><b>2. Exporte TXT</b><p className="mt-1 text-xs text-muted-foreground">O prompt e os cards vão juntos.</p></div>
-        <div className="rounded-lg bg-background/80 p-2.5 sm:p-3"><b>3. Receba JSON</b><p className="mt-1 text-xs text-muted-foreground">A IA devolve somente o contrato v3.</p></div>
-        <div className="rounded-lg bg-background/80 p-2.5 sm:p-3"><b>4. Valide</b><p className="mt-1 text-xs text-muted-foreground">Confira antes de gravar e remover da fila.</p></div>
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">{focusedCount} de {cards.length} card(s) possuem foco pedagógico definido.</p>
     </Card>
 
-    {authLoading || query.isLoading ? <LoadingSpinner message="Carregando especiais..." /> : !cards.length ? <Card className="p-10 text-center">
+    {authLoading || query.isLoading ? <LoadingSpinner message="Carregando pontos de atenção..." /> : !cards.length ? <Card className="p-10 text-center">
       <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
       <div className="font-semibold">A fila está vazia</div>
-      <p className="mt-1 text-sm text-muted-foreground">Marque um flashcard como especial para ele aparecer aqui.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Marque uma dificuldade durante um estudo de escrita para ela aparecer aqui.</p>
     </Card> : <>
       <Card className="mb-3 p-3 sm:mb-4 sm:p-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_210px_180px_180px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar termo, tradução, lista ou foco..." className="pl-9" />
@@ -198,10 +234,17 @@ export default function GemQueue() {
               <SelectItem value="without">Somente sem foco</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={focusTagFilter} onValueChange={setFocusTagFilter}>
+            <SelectTrigger><SelectValue placeholder="Todas as categorias" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              {tagOptions.map((tag) => <SelectItem key={tag} value={tag}>{focusTagLabel(tag)}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>{filteredCards.length} resultado(s)</span>
-          {(search || listFilter !== "all" || focusFilter !== "all") && <Button variant="ghost" size="sm" className="h-7" onClick={() => { setSearch(""); setListFilter("all"); setFocusFilter("all"); }}>Limpar filtros</Button>}
+          {(search || listFilter !== "all" || focusFilter !== "all" || focusTagFilter !== "all") && <Button variant="ghost" size="sm" className="h-7" onClick={() => { setSearch(""); setListFilter("all"); setFocusFilter("all"); setFocusTagFilter("all"); }}>Limpar filtros</Button>}
         </div>
       </Card>
 
@@ -211,23 +254,49 @@ export default function GemQueue() {
         <Button variant="outline" size="sm" onClick={() => void removeCards(chosen)} disabled={!chosen.length || removeMutation.isPending}>
           <Trash2 className="mr-1 h-4 w-4" />Remover
         </Button>
-        <Button variant="outline" size="sm" onClick={() => exportTarget(chosen)} disabled={!chosen.length}>
-          <FileText className="mr-1 h-4 w-4" />TXT selecionados
+        <Button
+          size="sm"
+          onClick={() => void copyExport(actionTarget, buildAttentionPointAiText, "Pontos de atenção copiados para a IA.")}
+          disabled={!actionTarget.length}
+        >
+          <Clipboard className="mr-1 h-4 w-4" />Copiar para IA
         </Button>
-        <Button size="sm" onClick={() => exportTarget(filteredCards)} disabled={!filteredCards.length}><Download className="mr-1 h-4 w-4" />TXT filtrados</Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" aria-label="Mais ações de exportação">
+              <MoreHorizontal className="mr-1 h-4 w-4" />Mais ações
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => void copyExport(actionTarget, buildAttentionPointWordsText, "Palavras copiadas.")}>
+              <Clipboard className="mr-2 h-4 w-4" />Copiar somente palavras
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void copyExport(actionTarget, buildAttentionPointContextText, "Contexto copiado.")}>
+              <Clipboard className="mr-2 h-4 w-4" />Copiar com contexto
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => downloadJson(actionTarget)}>
+              <FileJson className="mr-2 h-4 w-4" />Exportar JSON
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => exportTarget(actionTarget)}>
+              <FileText className="mr-2 h-4 w-4" />Abrir exportador TXT oficial
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {!filteredCards.length ? <Card className="p-8 text-center">
         <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-        <div className="font-medium">Nenhum Card Especial corresponde aos filtros</div>
-        <Button variant="link" onClick={() => { setSearch(""); setListFilter("all"); setFocusFilter("all"); }}>Limpar filtros</Button>
+        <div className="font-medium">Nenhum ponto de atenção corresponde aos filtros</div>
+        <Button variant="link" onClick={() => { setSearch(""); setListFilter("all"); setFocusFilter("all"); setFocusTagFilter("all"); }}>Limpar filtros</Button>
       </Card> : <div className="space-y-3">
         {renderedCards.map((card) => {
           const hasFocus = hasFocusContext(card);
+          const expanded = expandedId === card.id;
           return <Card key={card.id} className={`p-3 transition sm:p-4 ${selected.has(card.flashcard_id) ? "border-primary/50 bg-primary/5" : "hover:border-primary/30"}`}>
             <div className="flex items-start gap-3">
               <Checkbox checked={selected.has(card.flashcard_id)} onCheckedChange={() => toggle(card.flashcard_id)} className="mt-1" aria-label={`Selecionar ${card.term}`} />
-              <button type="button" onClick={() => toggle(card.flashcard_id)} className="min-w-0 flex-1 text-left">
+              <div className="min-w-0 flex-1">
+                <button type="button" onClick={() => setExpandedId(expanded ? null : card.id)} className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                 <div className="space-y-1">
                   <div className="break-words text-sm font-semibold sm:text-base">{card.term}</div>
                   <div className="break-words text-sm text-muted-foreground">→ {card.translation}</div>
@@ -237,22 +306,27 @@ export default function GemQueue() {
                   {card.list_title && <Badge variant="secondary" className="max-w-full truncate">{card.list_title}</Badge>}
                   {card.context_tag && <Badge variant="outline" className="max-w-full truncate">{card.context_tag}</Badge>}
                   {card.layer_index != null && <Badge variant="outline">Camada {card.layer_index + 1}</Badge>}
+                  {hasFocus && <Badge variant="outline" className="border-primary/30 text-primary">Ponto definido</Badge>}
                 </div>
+                </button>
 
-                {hasFocus ? <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs sm:p-3">
+                {expanded && (hasFocus ? <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs sm:p-3">
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                    <span className="font-semibold text-primary">Foco da explicação</span>
+                    <span className="font-semibold text-primary">Ponto de atenção</span>
                     {card.focus_tag && <Badge variant="secondary" className="text-[11px]">{focusTagLabel(card.focus_tag)}</Badge>}
+                    {card.focus_side && <Badge variant="outline" className="text-[11px]">Lado {card.focus_side === "a" ? "A" : card.focus_side === "b" ? "B" : "A e B"}</Badge>}
                   </div>
                   {card.focus_text && <div className="break-words"><span className="font-medium text-muted-foreground">Trecho: </span><span className="font-semibold text-foreground">{card.focus_text}</span></div>}
                   {(card.focus_note || card.notes) && <div className="mt-1 break-words text-muted-foreground"><span className="font-medium">Orientação: </span>{card.focus_note || card.notes}</div>}
-                </div> : <div className="mt-3 rounded-lg border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground">Sem foco específico. Edite o foco para orientar a IA com mais precisão.</div>}
+                </div> : <div className="mt-3 rounded-lg border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground">Sem foco específico. Edite o ponto para orientar a IA com mais precisão.</div>)}
 
-                {card.hint && <p className="mt-2 break-words text-xs text-muted-foreground">Dica: {card.hint}</p>}
-              </button>
+                {expanded && card.hint && <p className="mt-2 break-words text-xs text-muted-foreground">Dica: {card.hint}</p>}
+                {!expanded && hasFocus && card.focus_text && <p className="mt-2 truncate text-xs text-muted-foreground">Trecho marcado: <span className="font-medium text-foreground">{card.focus_text}</span></p>}
+                <p className="mt-2 text-[11px] text-muted-foreground">{expanded ? "Toque no resumo para recolher" : "Toque para ver o ponto completo"}</p>
+              </div>
 
               <div className="flex shrink-0 flex-col gap-1">
-                <Button variant="ghost" size="icon" onClick={() => setEditingCard(card)} title="Editar foco" aria-label={`Editar foco de ${card.term}`}><Pencil className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => setEditingCard(card)} title="Editar ponto de atenção" aria-label={`Editar ponto de atenção de ${card.term}`}><Pencil className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" onClick={() => void removeCards([card])} title="Remover da fila" aria-label={`Remover ${card.term} da fila`}><Trash2 className="h-4 w-4 text-destructive" /></Button>
               </div>
             </div>

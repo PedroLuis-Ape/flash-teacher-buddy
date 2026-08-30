@@ -20,12 +20,16 @@ import {
   RefreshCw,
   Settings,
   Sparkles,
+  ChevronRight,
+  Flag,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { equipAvatarAsPhoto } from "@/lib/storeEngine";
 import { GoogleAccountSection } from "@/features/auth/components/GoogleAccountSection";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { useSpecialFlashcardsCount } from "@/hooks/useSpecialFlashcards";
 
 type PreviewAsset = {
   src: string;
@@ -35,6 +39,8 @@ type PreviewAsset = {
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { userId } = useAuthUser();
+  const attentionPoints = useSpecialFlashcardsCount(userId);
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [publicId, setPublicId] = useState("");
@@ -312,6 +318,26 @@ const Profile = () => {
           )}
         </Card>
       </div>
+
+      <Card className="rounded-3xl border-primary/10 p-1 shadow-sm">
+        <Button
+          variant="ghost"
+          className="min-h-[68px] w-full justify-start gap-3 rounded-2xl px-4 text-left"
+          onClick={() => navigate("/special-cards")}
+          aria-label="Abrir pontos de atenção"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            <Flag className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Pontos de atenção</span>
+            <span className="block text-sm text-muted-foreground">
+              {attentionPoints.isLoading ? "Carregando..." : `${attentionPoints.data ?? 0} item(s) aguardando revisão`}
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+        </Button>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <GoogleAccountSection />

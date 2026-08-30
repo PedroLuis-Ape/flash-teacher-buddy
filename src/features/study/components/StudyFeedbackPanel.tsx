@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, Pencil, RotateCcw, Volume2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Flag, Pencil, RotateCcw, Volume2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,13 @@ interface StudyFeedbackPanelProps {
   actionHint?: string;
   onAction?: () => void;
   secondaryActionLabel?: string;
+  secondaryActionHint?: string;
+  secondaryActionDisabled?: boolean;
   onSecondaryAction?: () => void;
+  tertiaryActionLabel?: string;
+  tertiaryActionHint?: string;
+  tertiaryActionDisabled?: boolean;
+  onTertiaryAction?: () => void;
   className?: string;
   onPlayAnswer?: () => void;
   isPlayingAnswer?: boolean;
@@ -90,7 +96,13 @@ export function StudyFeedbackPanel({
   actionHint,
   onAction,
   secondaryActionLabel,
+  secondaryActionHint,
+  secondaryActionDisabled = false,
   onSecondaryAction,
+  tertiaryActionLabel,
+  tertiaryActionHint,
+  tertiaryActionDisabled = false,
+  onTertiaryAction,
   className,
   onPlayAnswer,
   isPlayingAnswer = false,
@@ -249,9 +261,12 @@ export function StudyFeedbackPanel({
                 size="lg"
                 variant="outline"
                 onClick={onSecondaryAction}
+                disabled={secondaryActionDisabled}
                 className="h-11 w-full gap-2 rounded-xl font-semibold sm:w-auto"
               >
-                <Pencil className="h-4 w-4" />
+                {secondaryActionLabel === "Marcar dificuldade"
+                  ? <Flag className="h-4 w-4" />
+                  : <Pencil className="h-4 w-4" />}
                 {secondaryActionLabel}
               </Button>
             )}
@@ -281,6 +296,31 @@ export function StudyFeedbackPanel({
               <p className="w-full text-center text-[10px] leading-tight text-muted-foreground sm:text-right" aria-live="polite">
                 {actionHint}
               </p>
+            )}
+            {secondaryActionHint && (
+              <p className="w-full text-center text-[10px] leading-tight text-muted-foreground sm:text-right">
+                {secondaryActionHint}
+              </p>
+            )}
+            {tertiaryActionLabel && onTertiaryAction && (
+              <div className="w-full sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-full gap-1.5 rounded-xl text-xs font-semibold sm:w-auto"
+                  onClick={onTertiaryAction}
+                  disabled={tertiaryActionDisabled}
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                  {tertiaryActionLabel}
+                </Button>
+                {tertiaryActionHint && (
+                  <p className="mt-1 text-center text-[10px] leading-tight text-muted-foreground">
+                    {tertiaryActionHint}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}

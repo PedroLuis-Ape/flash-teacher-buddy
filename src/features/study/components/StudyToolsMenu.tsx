@@ -292,7 +292,7 @@ export function StudyToolsMenu({
         <DialogHeader className="border-b px-4 pb-3 pt-4 text-left sm:px-5">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Gem className="h-4 w-4 text-primary" />
-            Pedir explicação
+            Guardar ponto de atenção
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
             Marque o trecho que a IA deve explicar.
@@ -358,7 +358,7 @@ export function StudyToolsMenu({
               Cancelar
             </Button>
             <Button type="button" size="sm" className="flex-1 sm:flex-none" onClick={handleSaveSpecialFocus} disabled={specialPending}>
-              {hasFocusContent ? "Salvar foco" : "Salvar especial"}
+              {hasFocusContent ? "Salvar ponto de atenção" : "Salvar item"}
             </Button>
           </div>
         </div>
@@ -447,7 +447,7 @@ export function StudyToolsMenu({
               }}
             >
               <span className="mr-2 inline-flex w-5 justify-center">{specialIcon}</span>
-              {isSpecial ? "Editar foco especial" : "Pedir explicação"}
+              {isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
             </DropdownMenuItem>
           )}
 
@@ -514,7 +514,7 @@ export function StudyToolsMenu({
       )}
       {hasAccount && onToggleSpecial && (
         <InlineToolButton
-          label={isSpecial ? "Editar foco especial" : "Pedir explicação"}
+          label={isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
           active={isSpecial}
           disabled={specialPending}
           onClick={openSpecialFocusDialog}

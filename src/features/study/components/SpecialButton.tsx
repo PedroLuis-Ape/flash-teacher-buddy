@@ -10,7 +10,7 @@ interface SpecialButtonProps {
 }
 
 /**
- * In-game button to mark the currently displayed card/layer as "Especial"
+ * In-game button to mark the currently displayed card/layer as a point of attention
  * (a temporary queue for IA detailed-explanation export).
  * Independent from favorites and red-list.
  */
@@ -34,11 +34,11 @@ export function SpecialButton({ isSpecial, onToggle, size = "sm", className }: S
       )}
       title={
         isSpecial
-          ? "Remover dos especiais"
-          : "Salvar para explicação detalhada depois"
+          ? "Remover ponto de atenção"
+          : "Salvar ponto de atenção para revisar depois"
       }
       aria-pressed={isSpecial}
-      aria-label="Salvar como especial"
+      aria-label="Salvar ponto de atenção"
     >
       <Gem className={cn("h-4 w-4", isSpecial && "fill-current")} />
     </Button>

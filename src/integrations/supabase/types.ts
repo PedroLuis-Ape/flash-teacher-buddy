@@ -2934,27 +2934,60 @@ export type Database = {
       }
       user_special_flashcards: {
         Row: {
+          attention_area_id: string | null
           created_at: string
+          deactivated_at: string | null
           flashcard_id: string
+          focus_note: string | null
+          focus_side: string | null
+          focus_tag: string | null
+          focus_text: string | null
           id: string
+          is_active: boolean
           list_id: string | null
+          materialization_group_id: string | null
+          materialization_list_id: string | null
           notes: string | null
+          source_group_id: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
+          attention_area_id?: string | null
           created_at?: string
+          deactivated_at?: string | null
           flashcard_id: string
+          focus_note?: string | null
+          focus_side?: string | null
+          focus_tag?: string | null
+          focus_text?: string | null
           id?: string
+          is_active?: boolean
           list_id?: string | null
+          materialization_group_id?: string | null
+          materialization_list_id?: string | null
           notes?: string | null
+          source_group_id?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
+          attention_area_id?: string | null
           created_at?: string
+          deactivated_at?: string | null
           flashcard_id?: string
+          focus_note?: string | null
+          focus_side?: string | null
+          focus_tag?: string | null
+          focus_text?: string | null
           id?: string
+          is_active?: boolean
           list_id?: string | null
+          materialization_group_id?: string | null
+          materialization_list_id?: string | null
           notes?: string | null
+          source_group_id?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -2967,6 +3000,86 @@ export type Database = {
           },
           {
             foreignKeyName: "user_special_flashcards_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_special_flashcards_source_group_id_fkey"
+            columns: ["source_group_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_special_flashcards_attention_area_id_fkey"
+            columns: ["attention_area_id"]
+            isOneToOne: false
+            referencedRelation: "user_attention_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_special_flashcards_materialization_list_id_fkey"
+            columns: ["materialization_list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_special_flashcards_materialization_group_id_fkey"
+            columns: ["materialization_group_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_attention_areas: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          institution_id: string | null
+          list_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          institution_id?: string | null
+          list_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          institution_id?: string | null
+          list_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_attention_areas_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_attention_areas_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_attention_areas_list_id_fkey"
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "lists"
@@ -3918,6 +4031,24 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_user_attention_point: {
+        Args: {
+          _enabled: boolean
+          _flashcard_id: string
+          _focus?: Json
+          _institution_id?: string
+        }
+        Returns: Json
+      }
+      set_user_attention_points: {
+        Args: {
+          _enabled: boolean
+          _flashcard_ids: string[]
+          _focus?: Json
+          _institution_id?: string
+        }
+        Returns: Json
       }
       set_public_teacher_folder_visibility: {
         Args: { _folder_id: string; _is_public: boolean }

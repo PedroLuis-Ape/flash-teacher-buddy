@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import {
+  setAttentionPoint,
+  useAttentionPointsMutation,
+  invalidateAttentionPointQueries,
+} from './useAttentionPoint';
 
 export type SpecialFocusSide = 'a' | 'b' | 'both';
 export type SpecialFocusTag =
@@ -24,42 +28,33 @@ export interface SpecialFlashcardScope {
   listId?: string;
 }
 
-function emptyToNull(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return value ?? null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function normalizeFocusContext(context?: SpecialFocusContext | null) {
-  if (!context) return {};
-  return {
-    focus_text: emptyToNull(context.focus_text),
-    focus_side: context.focus_side ?? null,
-    focus_tag: context.focus_tag ?? null,
-    focus_note: emptyToNull(context.focus_note),
-  };
-}
-
-function isMissingSpecialFocusColumns(error: unknown): boolean {
+function isMissingAttentionColumns(error: unknown): boolean {
   const err = error as { message?: string; details?: string; hint?: string; code?: string } | null | undefined;
   const text = `${err?.message ?? ''} ${err?.details ?? ''} ${err?.hint ?? ''} ${err?.code ?? ''}`.toLowerCase();
-  return ['focus_text', 'focus_side', 'focus_tag', 'focus_note', 'updated_at']
+  return [
+    'focus_text', 'focus_side', 'focus_tag', 'focus_note', 'updated_at',
+    'source_group_id', 'attention_area_id', 'materialization_list_id',
+    'materialization_group_id', 'is_active', 'deactivated_at',
+  ]
     .some((column) => text.includes(column));
 }
 
-async function upsertSpecialWithFocusFallback(payload: Record<string, unknown>) {
-  const { error } = await supabase
+async function resolveLegacyGroupIds(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
     .from('user_special_flashcards' as any)
-    .upsert(payload as any, { onConflict: 'user_id,flashcard_id' });
-
-  if (!error) return;
-  if (!isMissingSpecialFocusColumns(error)) throw error;
-
-  const { user_id, flashcard_id, list_id } = payload;
-  const { error: legacyError } = await supabase
-    .from('user_special_flashcards' as any)
-    .upsert({ user_id, flashcard_id, list_id: list_id ?? null } as any, { onConflict: 'user_id,flashcard_id' });
-  if (legacyError) throw legacyError;
+    .select('flashcard_id')
+    .eq('user_id', userId);
+  if (error) throw error;
+  const ids = ((data as any[]) ?? []).map((row) => row.flashcard_id).filter(Boolean);
+  if (!ids.length) return [];
+  const { data: cards, error: cardsError } = await supabase
+    .from('flashcards')
+    .select('id, status_group_uid, parent_card_id')
+    .in('id', ids);
+  if (cardsError) throw cardsError;
+  return Array.from(new Set(((cards as any[]) ?? []).map((card) =>
+    card.status_group_uid ?? card.parent_card_id ?? card.id
+  )));
 }
 
 /**
@@ -74,12 +69,19 @@ export function useSpecialFlashcards(
     queryKey: ['special-flashcards', userId],
     queryFn: async (): Promise<string[]> => {
       if (!userId) return [];
-      const { data, error } = await supabase
+      const enhanced = await supabase
         .from('user_special_flashcards' as any)
-        .select('flashcard_id')
-        .eq('user_id', userId);
-      if (error) throw error;
-      return ((data as any[]) ?? []).map((r) => r.flashcard_id);
+        .select('source_group_id, flashcard_id, materialization_group_id')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+      if (enhanced.error) {
+        if (!isMissingAttentionColumns(enhanced.error)) throw enhanced.error;
+        return resolveLegacyGroupIds(userId);
+      }
+      return Array.from(new Set(((enhanced.data as any[]) ?? []).flatMap((row) => [
+        row.source_group_id ?? row.flashcard_id,
+        row.materialization_group_id,
+      ]).filter(Boolean)));
     },
     enabled: !!userId,
     staleTime: 60_000,
@@ -91,12 +93,21 @@ export function useSpecialFlashcardsCount(userId: string | undefined) {
     queryKey: ['special-flashcards-count', userId],
     queryFn: async () => {
       if (!userId) return 0;
-      const { count, error } = await supabase
+      const enhanced = await supabase
         .from('user_special_flashcards' as any)
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-      if (error) throw error;
-      return count ?? 0;
+        .eq('user_id', userId)
+        .eq('is_active', true);
+      if (enhanced.error) {
+        if (!isMissingAttentionColumns(enhanced.error)) throw enhanced.error;
+        const legacy = await supabase
+          .from('user_special_flashcards' as any)
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        if (legacy.error) throw legacy.error;
+        return legacy.count ?? 0;
+      }
+      return enhanced.count ?? 0;
     },
     enabled: !!userId,
     staleTime: 60_000,
@@ -106,64 +117,24 @@ export function useSpecialFlashcardsCount(userId: string | undefined) {
 export function useToggleSpecialFlashcard() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      flashcardId,
-      listId,
-      isSpecial,
-      focus,
-    }: {
+    mutationFn: async ({ flashcardId, listId, isSpecial, focus, institutionId }: {
       flashcardId: string;
       listId?: string | null;
       isSpecial: boolean;
       focus?: SpecialFocusContext | null;
+      institutionId?: string | null;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
-
-      if (isSpecial) {
-        const { error } = await supabase
-          .from('user_special_flashcards' as any)
-          .delete()
-          .eq('user_id', user.id)
-          .eq('flashcard_id', flashcardId);
-        if (error) throw error;
-      } else {
-        await upsertSpecialWithFocusFallback({
-          user_id: user.id,
-          flashcard_id: flashcardId,
-          list_id: listId ?? null,
-          ...normalizeFocusContext(focus),
-        });
-      }
-      return { flashcardId, isSpecial: !isSpecial, userId: user.id };
-    },
-    onMutate: async ({ flashcardId, isSpecial }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await queryClient.cancelQueries({ queryKey: ['special-flashcards', user.id] });
-      const previous = queryClient.getQueryData<string[]>(['special-flashcards', user.id]);
-      queryClient.setQueryData<string[]>(['special-flashcards', user.id], (old = []) => {
-        if (isSpecial) return old.filter((id) => id !== flashcardId);
-        return old.includes(flashcardId) ? old : [...old, flashcardId];
+      const result = await setAttentionPoint({
+        sourceCardId: flashcardId,
+        enabled: !isSpecial,
+        institutionId: institutionId ?? null,
+        focus: !isSpecial ? focus : null,
       });
-      return { previous, userId: user.id };
+      return { ...result, flashcardId, isSpecial: !result.enabled, listId };
     },
-    onError: (error, _vars, context) => {
-      if (context?.previous && context.userId) {
-        queryClient.setQueryData(['special-flashcards', context.userId], context.previous);
-      }
-      console.error('Error toggling special:', error);
-      toast.error('Erro ao atualizar especiais');
-    },
-    onSuccess: (data) => {
-      toast.success(data.isSpecial ? '💎 Salvo nos especiais' : 'Removido dos especiais');
-    },
-    onSettled: (_d, _e, _v, context) => {
-      if (context?.userId) {
-        queryClient.invalidateQueries({ queryKey: ['special-flashcards', context.userId] });
-        queryClient.invalidateQueries({ queryKey: ['special-flashcards-count', context.userId] });
-        queryClient.invalidateQueries({ queryKey: ['special-flashcards-details', context.userId] });
-      }
+    onSettled: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) invalidateAttentionPointQueries(queryClient, user.id);
     },
   });
 }
@@ -172,38 +143,25 @@ export function useToggleSpecialFlashcard() {
  * Bulk remove special flashcards (used after an export to clear the queue).
  */
 export function useRemoveSpecialFlashcards() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (flashcardIds: string[]) => {
-      if (flashcardIds.length === 0) return { removed: 0 };
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
-      const { error } = await supabase
-        .from('user_special_flashcards' as any)
-        .delete()
-        .eq('user_id', user.id)
-        .in('flashcard_id', flashcardIds);
-      if (error) throw error;
-      return { removed: flashcardIds.length, userId: user.id };
-    },
-    onSuccess: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['special-flashcards', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['special-flashcards-count', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['special-flashcards-details', user.id] });
-      }
-    },
-    onError: (error) => {
-      console.error('Error removing specials:', error);
-      toast.error('Erro ao remover dos especiais');
-    },
-  });
+  const mutation = useAttentionPointsMutation();
+  return {
+    ...mutation,
+    mutate: (flashcardIds: string[], options?: Parameters<typeof mutation.mutate>[1]) =>
+      mutation.mutate({ sourceCardIds: flashcardIds, enabled: false }, options),
+    mutateAsync: (flashcardIds: string[]) =>
+      mutation.mutateAsync({ sourceCardIds: flashcardIds, enabled: false }),
+  };
 }
 
 export interface SpecialFlashcardDetail {
   id: string;
   flashcard_id: string;
+  source_group_id?: string | null;
+  attention_area_id?: string | null;
+  institution_id?: string | null;
+  materialization_list_id?: string | null;
+  materialization_group_id?: string | null;
+  is_active?: boolean;
   created_at: string;
   updated_at: string | null;
   term: string;
@@ -235,12 +193,13 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
       let rows: any[] = [];
       const enhanced = await supabase
         .from('user_special_flashcards' as any)
-        .select('id, flashcard_id, created_at, updated_at, list_id, focus_text, focus_side, focus_tag, focus_note, notes')
+        .select('id, flashcard_id, source_group_id, attention_area_id, materialization_list_id, materialization_group_id, is_active, created_at, updated_at, list_id, focus_text, focus_side, focus_tag, focus_note, notes')
         .eq('user_id', userId)
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (enhanced.error) {
-        if (!isMissingSpecialFocusColumns(enhanced.error)) throw enhanced.error;
+        if (!isMissingAttentionColumns(enhanced.error)) throw enhanced.error;
         const legacy = await supabase
           .from('user_special_flashcards' as any)
           .select('id, flashcard_id, created_at, list_id, notes')
@@ -253,6 +212,16 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
       }
 
       if (rows.length === 0) return [];
+
+      const areaIds = Array.from(new Set(rows.map((row) => row.attention_area_id).filter(Boolean)));
+      const areaInstitutionById = new Map<string, string | null>();
+      if (areaIds.length > 0) {
+        const { data: areas } = await supabase
+          .from('user_attention_areas' as any)
+          .select('id, institution_id')
+          .in('id', areaIds);
+        for (const area of (areas as any[]) ?? []) areaInstitutionById.set(area.id, area.institution_id ?? null);
+      }
 
       const flashcardIds = rows.map((r) => r.flashcard_id);
       const { data: cards, error: cardsErr } = await supabase
@@ -285,6 +254,12 @@ export function useSpecialFlashcardsDetails(userId: string | undefined) {
           return {
             id: r.id,
             flashcard_id: r.flashcard_id,
+            source_group_id: r.source_group_id ?? c.status_group_uid ?? c.parent_card_id ?? c.id,
+            attention_area_id: r.attention_area_id ?? null,
+            institution_id: r.attention_area_id ? areaInstitutionById.get(r.attention_area_id) ?? null : null,
+            materialization_list_id: r.materialization_list_id ?? null,
+            materialization_group_id: r.materialization_group_id ?? null,
+            is_active: r.is_active ?? true,
             created_at: r.created_at,
             updated_at: r.updated_at ?? null,
             term: c.term,
