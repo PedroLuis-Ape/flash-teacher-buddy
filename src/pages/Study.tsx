@@ -2470,10 +2470,10 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
               onKnew={() => handleNext(true)}
@@ -2506,10 +2506,10 @@ const Study = () => {
               studyFlowMode={writeSessionSettings.studyFlowMode}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
               isSavingAttentionPoint={isSystemCollection ? false : setSpecialLayer.isPending}
@@ -2533,10 +2533,10 @@ const Study = () => {
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
               onCorrect={() => handleNext(true)}
@@ -2557,10 +2557,10 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
               onCorrect={() => handleNext(true)}
@@ -2580,10 +2580,10 @@ const Study = () => {
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
               onCorrect={() => handleNext(true)}

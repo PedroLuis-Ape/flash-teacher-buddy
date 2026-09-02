@@ -50,8 +50,10 @@ describe("Reforço separation contract", () => {
     expect(page).toContain("Estudar agora");
     expect(page).toContain("somente leitura");
     expect(study).toContain("Adicionar ao Reforço");
-    expect(study).toContain("isSystemCollection");
-  });
+   expect(study).toContain("isSystemCollection");
+    expect(study).toContain("onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}");
+    expect(study).toContain("onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}");
+ });
 
   it("does not promote an empty reinforcement area on Home", () => {
     expect(home).toContain("reinforcementCount > 0 &&");
