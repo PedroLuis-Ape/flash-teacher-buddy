@@ -1,20 +1,20 @@
-import { useEffect, useState } from "react";
+import { useVisualPreferences } from "@/hooks/useVisualPreferences";
 
 export function useTheme() {
-  const [theme, setTheme] = useState<"light" | "dark">(
-    () => (localStorage.getItem("theme") as "light" | "dark") || "dark"
-  );
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+  const {
+    appearance,
+    resolvedAppearance,
+    setAppearance,
+  } = useVisualPreferences();
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    setAppearance(resolvedAppearance === "dark" ? "light" : "dark");
   };
 
-  return { theme, toggleTheme };
+  return {
+    theme: resolvedAppearance,
+    appearance,
+    setAppearance,
+    toggleTheme,
+  };
 }

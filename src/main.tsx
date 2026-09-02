@@ -15,7 +15,7 @@ import { BootstrapDiagnostics } from "./components/BootstrapDiagnostics";
 import PreviewHealth from "./components/PreviewHealth";
 import { PreviewSmokeComponentError } from "./components/PreviewSmokeScenarios";
 import { HelmetProvider } from "react-helmet-async";
-import { bootPalette } from "./lib/palettes";
+import { bootVisualPreferences } from "./lib/visualPreferences";
 import { isPreviewContext, runBootStability } from "./lib/bootStability";
 import { diagnoseRuntimeConfig } from "./lib/runtimeDiagnostics";
 import { createTechnicalIncident, logTechnicalIncident } from "./lib/runtimeIncident";
@@ -30,7 +30,7 @@ async function attemptAutomaticRecovery() {
 
 void attemptAutomaticRecovery;
 
-try { bootPalette(); } catch { /* noop */ }
+try { bootVisualPreferences(); } catch { /* noop */ }
 try { runBootStability(); } catch { /* noop */ }
 
 const reportBoot = (value: number, label?: string) => {
