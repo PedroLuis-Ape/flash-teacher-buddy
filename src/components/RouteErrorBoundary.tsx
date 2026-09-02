@@ -3,6 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RefreshCcw, ArrowLeft, Home } from "lucide-react";
+import { APP_BUILD_ID } from "@/lib/versionManager";
+import {
+  claimChunkRetry,
+  reloadWithFreshAppShell,
+} from "@/lib/chunkRecovery";
 
 /**
  * RouteErrorBoundary — isolates errors to the route content area.
@@ -39,24 +44,19 @@ function isChunkLoadError(error: unknown): boolean {
   );
 }
 
-const BUILD_ID =
-  (typeof window !== "undefined" && (window as any).__BUILD_ID__) ||
-  (import.meta as any).env?.VITE_BUILD_ID ||
-  "dev";
-
 function tryOneChunkRetry(error: unknown): boolean {
   if (!isChunkLoadError(error)) return false;
   if (typeof window === "undefined") return false;
+
+  let storage: Storage | null = null;
   try {
-    const key = `chunkRetry:${BUILD_ID}:${window.location.pathname}`;
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    // Soft reload: get the fresh module graph for this route only.
-    window.location.reload();
-    return true;
+    storage = sessionStorage;
   } catch {
-    return false;
+    // Private/restricted contexts may deny sessionStorage; keep the error UI.
   }
+
+  const claimed = claimChunkRetry(APP_BUILD_ID, window.location.pathname, storage);
+  return claimed && reloadWithFreshAppShell();
 }
 
 class InnerRouteErrorBoundary extends Component<Props, State> {
@@ -82,6 +82,13 @@ class InnerRouteErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
+    if (this.state.isChunkError) {
+      // A same-route navigation can reuse the stale document/chunk. Ask the
+      // server for a fresh app shell while preserving the authenticated URL.
+      if (!reloadWithFreshAppShell()) window.location.reload();
+      return;
+    }
+
     this.setState({ hasError: false, isChunkError: false, message: "" });
     this.props.onReset();
   };
@@ -127,9 +134,6 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
     <InnerRouteErrorBoundary
       locationKey={location.key}
       onReset={() => {
-        // Re-run the lazy import without a hard reload.
-        // Navigating to the same path triggers React Router re-render;
-        // the lazy chunk loader will be re-invoked.
         navigate(location.pathname + location.search, { replace: true });
       }}
       onNavigateHome={() => navigate("/dashboard")}
