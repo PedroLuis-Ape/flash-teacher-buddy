@@ -55,7 +55,9 @@ export function normalizeLibrarySnapshot(input: {
 
   const folders: LibraryFolder[] = input.folders.map((folder) => {
     const activeLists = (folder.lists ?? []).filter(
-      (list: any) => list?.deleted_at == null && typeof list?.id === "string",
+      (list: any) => list?.deleted_at == null
+        && (!list?.system_kind || list.system_kind === "user")
+        && typeof list?.id === "string",
     );
     return {
       id: folder.id,
@@ -112,16 +114,19 @@ export async function fetchLibrarySnapshot(
   const client = supabase as any;
   let foldersQuery = client
     .from("folders")
-    .select("id,title,description,visibility,owner_id,institution_id,lists(id,deleted_at)")
+    .select("id,title,description,visibility,owner_id,institution_id,system_kind,lists(id,deleted_at,system_kind)")
     .eq("owner_id", userId)
+    .eq("system_kind", "user")
     .is("class_id", null)
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
   let listsQuery = client
     .from("lists")
-    .select("id,title,description,folder_id,folders!inner(title,owner_id,institution_id,class_id)")
+    .select("id,title,description,folder_id,system_kind,folders!inner(title,owner_id,institution_id,class_id,system_kind)")
     .eq("folders.owner_id", userId)
+    .eq("system_kind", "user")
+    .eq("folders.system_kind", "user")
     .is("folders.class_id", null)
     .is("deleted_at", null);
 

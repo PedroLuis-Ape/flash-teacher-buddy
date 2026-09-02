@@ -1023,6 +1023,7 @@ export type Database = {
           lang_a: string | null
           lang_b: string | null
           owner_id: string
+          system_kind: string
           study_type: string
           title: string
           tts_enabled: boolean
@@ -1041,6 +1042,7 @@ export type Database = {
           lang_a?: string | null
           lang_b?: string | null
           owner_id: string
+          system_kind?: string
           study_type?: string
           title: string
           tts_enabled?: boolean
@@ -1059,6 +1061,7 @@ export type Database = {
           lang_a?: string | null
           lang_b?: string | null
           owner_id?: string
+          system_kind?: string
           study_type?: string
           title?: string
           tts_enabled?: boolean
@@ -1473,6 +1476,7 @@ export type Database = {
           lang_b: string | null
           order_index: number
           owner_id: string
+          system_kind: string
           primary_side: string
           study_type: string
           title: string
@@ -1495,6 +1499,7 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id: string
+          system_kind?: string
           primary_side?: string
           study_type?: string
           title: string
@@ -1517,6 +1522,7 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id?: string
+          system_kind?: string
           primary_side?: string
           study_type?: string
           title?: string
@@ -3006,13 +3012,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_special_flashcards_source_group_id_fkey"
-            columns: ["source_group_id"]
-            isOneToOne: false
-            referencedRelation: "flashcards"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "user_special_flashcards_attention_area_id_fkey"
             columns: ["attention_area_id"]
             isOneToOne: false
@@ -3083,6 +3082,139 @@ export type Database = {
             columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_reinforcement_areas: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          institution_id: string | null
+          list_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          institution_id?: string | null
+          list_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          institution_id?: string | null
+          list_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reinforcement_areas_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_areas_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_areas_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_reinforcement_points: {
+        Row: {
+          created_at: string
+          deactivated_at: string | null
+          id: string
+          institution_id: string | null
+          is_active: boolean
+          materialization_group_id: string | null
+          materialization_list_id: string | null
+          source_card_id: string
+          source_group_uid: string
+          source_list_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          institution_id?: string | null
+          is_active?: boolean
+          materialization_group_id?: string | null
+          materialization_list_id?: string | null
+          source_card_id: string
+          source_group_uid: string
+          source_list_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          institution_id?: string | null
+          is_active?: boolean
+          materialization_group_id?: string | null
+          materialization_list_id?: string | null
+          source_card_id?: string
+          source_group_uid?: string
+          source_list_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reinforcement_points_source_card_id_fkey"
+            columns: ["source_card_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_points_source_list_id_fkey"
+            columns: ["source_list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_points_materialization_list_id_fkey"
+            columns: ["materialization_list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_points_materialization_group_id_fkey"
+            columns: ["materialization_group_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_points_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
             referencedColumns: ["id"]
           },
         ]
@@ -4046,6 +4178,22 @@ export type Database = {
           _enabled: boolean
           _flashcard_ids: string[]
           _focus?: Json
+          _institution_id?: string
+        }
+        Returns: Json
+      }
+      set_user_reinforcement_point: {
+        Args: {
+          _enabled: boolean
+          _flashcard_id: string
+          _institution_id?: string
+        }
+        Returns: Json
+      }
+      set_user_reinforcement_points: {
+        Args: {
+          _enabled: boolean
+          _flashcard_ids: string[]
           _institution_id?: string
         }
         Returns: Json

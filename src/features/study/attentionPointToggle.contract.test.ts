@@ -5,20 +5,38 @@ const migration = readFileSync(
   "supabase/migrations/20260830120000_reversible_attention_points.sql",
   "utf8",
 );
+const separationMigration = readFileSync(
+  "supabase/migrations/20260902090000_separate_attention_and_reinforcement.sql",
+  "utf8",
+);
 const attentionHook = readFileSync("src/hooks/useAttentionPoint.ts", "utf8");
 const legacyHook = readFileSync("src/hooks/useSetSpecialLayer.ts", "utf8");
 const specialHook = readFileSync("src/hooks/useSpecialFlashcards.ts", "utf8");
 const studyPage = readFileSync("src/pages/Study.tsx", "utf8");
 
 describe("reversible Points of attention contract", () => {
-  it("has one canonical transactional ON/OFF RPC and an atomic bulk wrapper", () => {
+  it("keeps the historical migration and evolves the live attention RPC without cloning", () => {
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.set_user_attention_point(");
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.set_user_attention_points(");
     expect(migration).toContain("CREATE UNIQUE INDEX IF NOT EXISTS uq_user_special_flashcards_active_group");
-    expect(migration).toContain("is_active = false");
-    expect(migration).toContain("materialization_group_id");
-    expect(migration).toContain("DELETE FROM public.flashcard_progress");
-    expect(migration).toContain("p.list_id = v_point.materialization_list_id");
+    const attentionRpcStart = separationMigration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.set_user_attention_point(",
+    );
+    const reinforcementRpcStart = separationMigration.indexOf(
+      "CREATE OR REPLACE FUNCTION public.set_user_reinforcement_point(",
+    );
+    const attentionRpc = separationMigration.slice(attentionRpcStart, reinforcementRpcStart);
+    expect(attentionRpc).toContain("source_group_id");
+    expect(attentionRpc).toContain("materialization_group_id = NULL");
+    expect(attentionRpc).not.toContain("INSERT INTO public.flashcards");
+    expect(attentionRpc).not.toContain("DELETE FROM public.flashcard_progress");
+  });
+
+  it("can recover when the focus migration was not committed", () => {
+    expect(separationMigration).toContain("ADD COLUMN IF NOT EXISTS focus_text text");
+    expect(separationMigration).toContain("ADD COLUMN IF NOT EXISTS focus_side text");
+    expect(separationMigration).toContain("CREATE TABLE IF NOT EXISTS public.user_attention_areas");
+    expect(separationMigration).toContain("retained as inactive history");
   });
 
   it("retires only derived clones and preserves the source group", () => {
@@ -32,7 +50,8 @@ describe("reversible Points of attention contract", () => {
     expect(attentionHook).toContain('rpc("set_user_attention_point"');
     expect(attentionHook).toContain('rpc("set_user_attention_points"');
     expect(legacyHook).toContain("useAttentionPointMutation");
-    expect(specialHook).toContain("source_group_id, flashcard_id, materialization_group_id");
+    expect(specialHook).toContain("source_group_id, flashcard_id");
+    expect(specialHook).not.toContain("row.materialization_group_id");
     expect(specialHook).not.toContain(".from('user_special_flashcards' as any)\n          .delete()");
     expect(studyPage).toContain("specialIds.includes(statusIdentity.canonicalGroupId)");
   });

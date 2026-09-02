@@ -60,6 +60,7 @@ interface ListType {
   folder_id: string;
   owner_id: string;
   class_id?: string | null;
+  system_kind?: string;
 }
 
 interface FolderType {
@@ -347,7 +348,7 @@ const ListDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lists")
-        .select("*, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, class_id")
+        .select("*, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, class_id, system_kind")
         .eq("id", id)
         .maybeSingle();
       
@@ -376,7 +377,8 @@ const ListDetail = () => {
   // DERIVED STATE: Calculate isOwner and canEdit from data (not side effects!)
   const isOwner = !!(userId && list?.owner_id === userId);
   const isTurmaOwner = !!(turmaOwnerData?.owner_teacher_id === userId);
-  const canEdit = isOwner || isTurmaOwner;
+  const isSystemCollection = list?.system_kind === "reinforcement" || list?.system_kind === "attention_points";
+  const canEdit = !isSystemCollection && (isOwner || isTurmaOwner);
 
   const { data: folder, isLoading: folderLoading } = useQuery({
     queryKey: ["folder", list?.folder_id],
@@ -985,6 +987,14 @@ const ListDetail = () => {
               {list.description && (
                 <p className="text-muted-foreground mt-2 text-sm line-clamp-2">{list.description}</p>
               )}
+              {isSystemCollection && (
+                <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+                  Coleção automática somente leitura.
+                  {list.system_kind === "reinforcement"
+                    ? " Use a tela Reforço para estudar ou remover cards."
+                    : " Use a tela Pontos de atenção para consultar e exportar."}
+                </p>
+              )}
               {/* Language direction indicator */}
               {effectiveSettings.studyType === "language" && (
                 <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
@@ -1024,7 +1034,7 @@ const ListDetail = () => {
                 </>
               )}
               {/* Clone button for non-owners */}
-              {!canEdit && userId && (
+              {!isSystemCollection && !canEdit && userId && (
                 <Button
                   variant="outline"
                   onClick={handleCloneList}

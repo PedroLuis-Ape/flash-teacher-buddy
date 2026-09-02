@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { CircleAlert, CheckSquare, FolderInput, FolderPlus, Search, Square, Star, Trash2, X } from "lucide-react";
+import { CircleAlert, CheckSquare, FolderInput, FolderPlus, RefreshCcw, Search, Square, Star, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ import { sortResourcesWithFavoritesFirst } from "@/features/study/lib/listMarker
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useResourceAttention, useToggleResourceAttention } from "@/hooks/useResourceAttention";
+import { useReinforcement } from "@/hooks/useReinforcement";
 import { supabase } from "@/integrations/supabase/client";
 import { pageMount } from "@/lib/perfLog";
 
@@ -55,6 +57,8 @@ export default function FoldersOptimized() {
   const { user, userId, isLoading: authLoading } = useAuthUser();
   const { selectedInstitution, institutions } = useInstitution();
   const institutionId = selectedInstitution?.id ?? null;
+  const reinforcementQuery = useReinforcement(userId, institutionId);
+  const reinforcementSnapshot = reinforcementQuery.data;
   const snapshotKey = userId
     ? libraryKeys.snapshot(userId, institutionId)
     : libraryKeys.snapshot("anonymous", institutionId);
@@ -392,7 +396,21 @@ export default function FoldersOptimized() {
   return (
     <div className="min-h-screen bg-background">
       <ApeAppBar title="Biblioteca" variant="home" />
-      <div className="mx-auto max-w-6xl px-4 lg:px-8"><ApeTabs tabs={tabs} defaultValue="folders" /></div>
+      <div className="mx-auto max-w-6xl space-y-4 px-4 pt-4 lg:px-8">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+            <RefreshCcw className="h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Revisão pessoal</p>
+              <p className="truncate text-sm font-medium">🔁 Reforço · {reinforcementSnapshot?.items.length ?? 0} cards</p>
+            </div>
+            <Button variant="outline" className="min-h-11 shrink-0" onClick={() => navigate("/reinforcement")}>
+              Abrir
+            </Button>
+          </CardContent>
+        </Card>
+        <ApeTabs tabs={tabs} defaultValue="folders" />
+      </div>
 
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
         <DialogContent><DialogHeader><DialogTitle>Mover {foldersToMove.length > 1 ? `${foldersToMove.length} pastas` : "pasta"}</DialogTitle><DialogDescription>Selecione o destino</DialogDescription></DialogHeader><div className="py-4"><Label htmlFor="destination">Destino</Label><Select value={moveDestination} onValueChange={setMoveDestination}><SelectTrigger id="destination" className="mt-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="general">📚 Biblioteca Geral</SelectItem>{institutions.map((institution) => <SelectItem key={institution.id} value={institution.id}>🏫 {institution.name}</SelectItem>)}</SelectContent></Select></div><DialogFooter><Button variant="outline" onClick={() => setMoveDialogOpen(false)} disabled={isMoving}>Cancelar</Button><Button onClick={handleMoveFolders} disabled={isMoving}>{isMoving ? "Movendo..." : "Mover"}</Button></DialogFooter></DialogContent>
