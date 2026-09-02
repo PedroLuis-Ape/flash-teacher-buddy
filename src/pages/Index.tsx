@@ -312,23 +312,25 @@ const Index = () => {
           para aproveitar melhor a largura sem mexer na lógica de cada card.
         */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 xl:gap-4">
-        <Card
-          className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-primary/30 bg-primary/5 h-full"
-          onClick={() => navigate('/reinforcement')}
-        >
-          <div className="flex items-center gap-4">
-            <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/15 flex items-center justify-center">
-              <RefreshCcw className="h-6 w-6 text-primary" />
+        {reinforcementCount > 0 && (
+          <Card
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-primary/30 bg-primary/5 h-full"
+            onClick={() => navigate('/reinforcement')}
+          >
+            <div className="flex items-center gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/15 flex items-center justify-center">
+                <RefreshCcw className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base truncate">🔁 Reforço</h3>
+                <p className="text-sm text-muted-foreground truncate">
+                  {reinforcementCount} {reinforcementCount === 1 ? "card" : "cards"} para revisar
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base truncate">🔁 Reforço</h3>
-              <p className="text-sm text-muted-foreground truncate">
-                {reinforcementCount > 0 ? `${reinforcementCount} ${reinforcementCount === 1 ? "card" : "cards"} para revisar` : "Sua revisão pessoal"}
-              </p>
-            </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card

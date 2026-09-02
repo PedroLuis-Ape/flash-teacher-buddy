@@ -8,6 +8,7 @@ const migration = readFileSync(
 const hook = readFileSync("src/hooks/useReinforcement.ts", "utf8");
 const page = readFileSync("src/pages/Reinforcement.tsx", "utf8");
 const study = readFileSync("src/pages/Study.tsx", "utf8");
+const home = readFileSync("src/pages/Index.tsx", "utf8");
 
 describe("Reforço separation contract", () => {
   it("has an institution-scoped canonical table and idempotent ON/OFF RPC", () => {
@@ -40,11 +41,20 @@ describe("Reforço separation contract", () => {
     expect(migration).toContain("app.allow_system_collection_mutation");
     expect(migration).toContain("Coleção automática é somente leitura.");
     expect(migration).toContain("Cards de coleção automática são somente leitura.");
+    expect(migration).toContain("v_old_kind");
+    expect(migration).toContain("v_new_kind");
+    expect(migration).toContain("COALESCE(v_old_kind, 'user')");
+    expect(migration).toContain("COALESCE(v_new_kind, 'user')");
     expect(hook).toContain('rpc("set_user_reinforcement_point"');
     expect(hook).toContain("reinforcementKeys");
     expect(page).toContain("Estudar agora");
     expect(page).toContain("somente leitura");
     expect(study).toContain("Adicionar ao Reforço");
     expect(study).toContain("isSystemCollection");
+  });
+
+  it("does not promote an empty reinforcement area on Home", () => {
+    expect(home).toContain("reinforcementCount > 0 &&");
+    expect(home).toContain("navigate('/reinforcement')");
   });
 });

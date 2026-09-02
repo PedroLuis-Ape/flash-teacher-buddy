@@ -299,20 +299,29 @@ LANGUAGE plpgsql
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  v_kind text;
-  v_list_id uuid;
+  v_old_kind text;
+  v_new_kind text;
+  v_old_list_id uuid;
+  v_new_list_id uuid;
 BEGIN
-  IF TG_OP = 'DELETE' THEN
-    v_list_id := OLD.list_id;
-  ELSE
-    v_list_id := NEW.list_id;
+  IF TG_OP <> 'INSERT' THEN
+    v_old_list_id := OLD.list_id;
+    SELECT system_kind INTO v_old_kind
+    FROM public.lists
+    WHERE id = v_old_list_id;
   END IF;
 
-  SELECT system_kind INTO v_kind
-  FROM public.lists
-  WHERE id = v_list_id;
+  IF TG_OP <> 'DELETE' THEN
+    v_new_list_id := NEW.list_id;
+    SELECT system_kind INTO v_new_kind
+    FROM public.lists
+    WHERE id = v_new_list_id;
+  END IF;
 
-  IF COALESCE(v_kind, 'user') <> 'user'
+  IF (
+       COALESCE(v_old_kind, 'user') <> 'user'
+       OR COALESCE(v_new_kind, 'user') <> 'user'
+     )
      AND NOT (
        current_user = 'service_role'
        OR (
