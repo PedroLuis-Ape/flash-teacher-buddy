@@ -47,13 +47,14 @@ describe("Reforço separation contract", () => {
     expect(migration).toContain("COALESCE(v_new_kind, 'user')");
     expect(hook).toContain('rpc("set_user_reinforcement_point"');
     expect(hook).toContain("reinforcementKeys");
-    expect(page).toContain("Estudar agora");
-    expect(page).toContain("somente leitura");
+   expect(page).toContain("Estudar agora");
+   expect(page).toContain("somente leitura");
+    expect(page).toContain("items.length === 1 ? \"card\" : \"cards\"");
     expect(study).toContain("Adicionar ao Reforço");
-   expect(study).toContain("isSystemCollection");
+    expect(study).toContain("isSystemCollection");
     expect(study).toContain("onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}");
     expect(study).toContain("onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}");
- });
+  });
 
   it("does not promote an empty reinforcement area on Home", () => {
     expect(home).toContain("reinforcementCount > 0 &&");

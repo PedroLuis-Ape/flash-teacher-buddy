@@ -36,7 +36,12 @@ export default function Reinforcement() {
               <RefreshCcw className="h-6 w-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-semibold">REVISÃO PESSOAL</h1>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <h1 className="text-lg font-semibold">REVISÃO PESSOAL</h1>
+                <span className="text-sm font-medium text-primary">
+                  {items.length} {items.length === 1 ? "card" : "cards"}
+                </span>
+              </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 Cards completos que você escolheu praticar novamente
                 {selectedInstitution ? ` em ${selectedInstitution.name}` : ""}.
@@ -94,7 +99,7 @@ export default function Reinforcement() {
                     variant="ghost"
                     className="min-h-11 min-w-11 shrink-0 text-destructive hover:text-destructive"
                     disabled={mutation.isPending}
-                    title="Remover dos pontos de reforço"
+                    title="Remover do Reforço"
                     aria-label={`Remover ${item.term} do Reforço`}
                     onClick={() => mutation.mutate({
                       sourceCardId: item.source_card_id,
