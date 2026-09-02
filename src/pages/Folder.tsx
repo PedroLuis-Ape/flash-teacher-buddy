@@ -35,6 +35,7 @@ interface ListType {
   title: string;
   description: string | null;
   card_count?: number;
+  system_kind?: "user" | "attention_points" | "reinforcement";
 }
 
 interface FolderType {
@@ -50,6 +51,7 @@ interface FolderType {
   labels_a?: string | null;
   labels_b?: string | null;
   tts_enabled?: boolean;
+  system_kind?: "user" | "attention_points" | "reinforcement";
 }
 
 const Folder = () => {
@@ -99,6 +101,7 @@ const Folder = () => {
   const toggleFavorite = useToggleFavorite();
   const { data: attentionListIds = [] } = useListAttention(userId);
   const toggleListAttention = useToggleListAttention();
+  const isSystemFolder = folder?.system_kind === "reinforcement" || folder?.system_kind === "attention_points";
 
   // Reset permission states when id changes, THEN load data
   useEffect(() => {
@@ -133,7 +136,8 @@ const Folder = () => {
           const isDirectOwner = session.user.id === directData.owner_id;
           setIsOwner(isDirectOwner);
           setIsClassContext(!!directData.class_id);
-          
+          const directSystemFolder = directData.system_kind === "reinforcement" || directData.system_kind === "attention_points";
+
           // Check if user is turma owner (if folder is linked to a turma via class_id)
           if (directData.class_id) {
             const { data: turmaData } = await supabase
@@ -143,9 +147,9 @@ const Folder = () => {
               .maybeSingle();
             
             const isTurmaOwner = turmaData?.owner_teacher_id === session.user.id;
-            setCanEdit(isDirectOwner || isTurmaOwner);
+            setCanEdit(!directSystemFolder && (isDirectOwner || isTurmaOwner));
           } else {
-            setCanEdit(isDirectOwner);
+            setCanEdit(!directSystemFolder && isDirectOwner);
           }
         } else {
           // If RLS blocked or not owner, use edge function for student access
@@ -172,7 +176,11 @@ const Folder = () => {
           console.log("[Folder] Loaded via edge function:", edgeFnData.folder.title);
           setFolder(edgeFnData.folder);
           setIsOwner(session.user.id === edgeFnData.folder.owner_id);
-          setCanEdit(session.user.id === edgeFnData.folder.owner_id);
+          setCanEdit(
+            edgeFnData.folder.system_kind !== "reinforcement"
+              && edgeFnData.folder.system_kind !== "attention_points"
+              && session.user.id === edgeFnData.folder.owner_id,
+          );
           
           // Also set lists if returned by edge function
           if (edgeFnData.lists) {
@@ -705,6 +713,11 @@ const Folder = () => {
           {folder.description && (
             <p className="text-muted-foreground mt-2">{folder.description}</p>
           )}
+          {isSystemFolder && (
+            <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+              Coleção automática somente leitura. Use a tela correspondente para estudar ou remover itens.
+            </p>
+          )}
         </div>
 
         <Tabs defaultValue="lists" className="w-full">
@@ -978,7 +991,7 @@ const Folder = () => {
 
                           {!selectionMode && (
                             <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              {userId && (
+                              {userId && !isSystemFolder && (
                                 <ListMarkerButtons
                                   isFavorite={isFavorite}
                                   isAttention={isAttention}
@@ -1201,7 +1214,7 @@ const Folder = () => {
           </TabsContent>
 
           <TabsContent value="videos">
-            <VideoList folderId={id as string} isOwner={isOwner} />
+            <VideoList folderId={id as string} isOwner={!isSystemFolder && isOwner} />
           </TabsContent>
         </Tabs>
 
