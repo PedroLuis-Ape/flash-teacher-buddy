@@ -85,3 +85,17 @@
     margin-bottom: 0.75rem;
   }
 }
+
+/* Atenção é a ação de estudo menos óbvia: mantém o rótulo visível para que
+   o diamante não pareça apenas uma decoração. Nos telefones, o botão ganha
+   largura própria e pode quebrar para uma segunda linha sem espremer o card. */
+.study-tools-attention-button {
+  min-width: 10.5rem;
+}
+
+@media (max-width: 767px) {
+  .study-tools-attention-button {
+    width: auto;
+    min-width: 10rem !important;
+  }
+}

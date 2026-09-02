@@ -84,6 +84,7 @@ async function fetchHomeData(userId: string, institutionId: string | null): Prom
       .from("lists")
       .select("id, title, updated_at, folder_id, folders(title)")
       .eq("owner_id", userId)
+      .eq("system_kind", "user")
       .is("class_id", null)
       .is("deleted_at", null)
       .order("updated_at", { ascending: false })
@@ -94,6 +95,7 @@ async function fetchHomeData(userId: string, institutionId: string | null): Prom
       .from("lists")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", userId)
+      .eq("system_kind", "user")
       .is("class_id", null)
       .is("deleted_at", null);
     listCountQuery = applyInstitutionFilter(listCountQuery, institutionId);
@@ -102,6 +104,7 @@ async function fetchHomeData(userId: string, institutionId: string | null): Prom
       .from("folders")
       .select("id, title, updated_at, institution_id")
       .eq("owner_id", userId)
+      .eq("system_kind", "user")
       .is("deleted_at", null)
       .order("updated_at", { ascending: false })
       .limit(5);
@@ -185,6 +188,7 @@ async function fetchHomeData(userId: string, institutionId: string | null): Prom
         .from("lists")
         .select("id, title, updated_at, folders(title, owner_id), flashcards(count)")
         .in("owner_id", allTeacherIds)
+        .eq("system_kind", "user")
         .eq("visibility", "class")
         .is("deleted_at", null)
         .order("updated_at", { ascending: false })
@@ -200,6 +204,7 @@ async function fetchHomeData(userId: string, institutionId: string | null): Prom
             .select("id, folder_id")
             .in("folder_id", recentFolderIds)
             .eq("owner_id", userId)
+            .eq("system_kind", "user")
             .is("class_id", null)
             .is("deleted_at", null)
         : Promise.resolve({ data: [], error: null }),
@@ -324,7 +329,15 @@ async function fetchHomeData(userId: string, institutionId: string | null): Prom
       };
     }
 
-    const totalCards = Object.values(perListCardCounts).reduce((sum, count) => sum + count, 0);
+    // Card stats must follow the same user-visible list scope. System
+    // collections (Reforço/Pontos de atenção) are intentionally excluded from
+    // Home's ordinary library counters.
+    const visibleListIds = new Set([
+      ...ownListsMapped.map((list) => list.id),
+      ...sharedListsMapped.map((list) => list.id),
+    ]);
+    const totalCards = Array.from(visibleListIds)
+      .reduce((sum, listId) => sum + toNumber(perListCardCounts[listId]), 0);
 
     return {
       last,

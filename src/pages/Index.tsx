@@ -8,6 +8,7 @@ import { buildStudyResumeRoute } from "@/features/study/lib/studyResumeRoute";
 import { useEconomy } from "@/contexts/EconomyContext";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { useReinforcement } from "@/hooks/useReinforcement";
 import { FEATURE_FLAGS } from "@/lib/featureFlags";
 import { pageMount, pageReady } from "@/lib/perfLog";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
@@ -20,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Play, TrendingUp, Users, Crown, Coins, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus } from "lucide-react";
+import { BookOpen, Play, TrendingUp, Users, Crown, Coins, Lock, Store, Search as SearchIcon, ChevronRight, GraduationCap, Settings, Volume2, VolumeX, Bell, BellOff, Library, Target, StickyNote, Plus, RefreshCcw } from "lucide-react";
 
 import { TurmaShortcut } from "@/components/TurmaShortcut";
 import { useSoundSettings } from "@/features/study/hooks/useSoundSettings";
@@ -43,6 +44,8 @@ const Index = () => {
   const { selectedInstitution } = useInstitution();
   const { soundEnabled, toggleSound, notificationsEnabled, toggleNotifications } = useSoundSettings();
   const { user, isLoading: authLoading } = useAuthUser();
+  const reinforcementQuery = useReinforcement(user?.id, selectedInstitution?.id ?? null);
+  const reinforcementCount = reinforcementQuery.data?.items.length ?? 0;
 
   // DEV-only lifecycle markers — help locate where the app freezes.
   useEffect(() => {
@@ -309,6 +312,26 @@ const Index = () => {
           para aproveitar melhor a largura sem mexer na lógica de cada card.
         */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 xl:gap-4">
+        {reinforcementCount > 0 && (
+          <Card
+            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-primary/30 bg-primary/5 h-full"
+            onClick={() => navigate('/reinforcement')}
+          >
+            <div className="flex items-center gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-lg bg-primary/15 flex items-center justify-center">
+                <RefreshCcw className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base truncate">🔁 Reforço</h3>
+                <p className="text-sm text-muted-foreground truncate">
+                  {reinforcementCount} {reinforcementCount === 1 ? "card" : "cards"} para revisar
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+            </div>
+          </Card>
+        )}
+
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card
             className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-border h-full"

@@ -22,6 +22,7 @@ import {
   Sparkles,
   ChevronRight,
   Flag,
+  RotateCcw,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,6 +31,8 @@ import { equipAvatarAsPhoto } from "@/lib/storeEngine";
 import { GoogleAccountSection } from "@/features/auth/components/GoogleAccountSection";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useSpecialFlashcardsCount } from "@/hooks/useSpecialFlashcards";
+import { useInstitution } from "@/contexts/InstitutionContext";
+import { useReinforcement } from "@/hooks/useReinforcement";
 
 type PreviewAsset = {
   src: string;
@@ -40,7 +43,9 @@ type PreviewAsset = {
 const Profile = () => {
   const navigate = useNavigate();
   const { userId } = useAuthUser();
+  const { selectedInstitution } = useInstitution();
   const attentionPoints = useSpecialFlashcardsCount(userId);
+  const reinforcement = useReinforcement(userId, selectedInstitution?.id ?? null);
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [publicId, setPublicId] = useState("");
@@ -333,6 +338,28 @@ const Profile = () => {
             <span className="block font-semibold">Pontos de atenção</span>
             <span className="block text-sm text-muted-foreground">
               {attentionPoints.isLoading ? "Carregando..." : `${attentionPoints.data ?? 0} item(s) aguardando revisão`}
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+        </Button>
+      </Card>
+
+      <Card className="rounded-3xl border-primary/10 p-1 shadow-sm">
+        <Button
+          variant="ghost"
+          className="min-h-[68px] w-full justify-start gap-3 rounded-2xl px-4 text-left"
+          onClick={() => navigate("/reinforcement")}
+          aria-label="Abrir Reforço"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <RotateCcw className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Reforço</span>
+            <span className="block text-sm text-muted-foreground">
+              {reinforcement.isLoading
+                ? "Carregando..."
+                : `${reinforcement.data?.items.length ?? 0} card(s) para praticar novamente`}
             </span>
           </span>
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />

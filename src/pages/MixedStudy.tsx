@@ -39,7 +39,11 @@ import {
 } from "@/features/study/lib/studySessionRuntime";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveStudyAccess } from "@/lib/resolveStudyAccess";
+import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useSpecialFlashcards } from "@/hooks/useSpecialFlashcards";
+import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
+import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
 import {
   filterCardsForStudyScope,
   resolvePersonalStudySubset,
@@ -106,6 +110,7 @@ export default function MixedStudy() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { status: authStatus, userId, session } = useAuth();
+  const { selectedInstitution } = useInstitution();
   const isListRoute = resourceContext.resourceKind === "list";
   const listId = isListRoute ? resolvedId : undefined;
 
@@ -791,6 +796,37 @@ export default function MixedStudy() {
 
   const cardById = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const currentCard = mixed.currentCardId ? cardById.get(mixed.currentCardId) : undefined;
+  const currentCardLayers = (currentCard as (MixedFlashcard & { __layers?: MixedFlashcard[] }) | undefined)?.__layers;
+  const statusIdentity = useMemo(
+    () => resolveCardStatusIdentity({
+      displayedCard: currentCard,
+      engineCard: currentCard,
+      layers: currentCardLayers,
+    }),
+    [currentCard, currentCardLayers],
+  );
+  const { data: specialIds = [] } = useSpecialFlashcards(userId);
+  const setSpecialLayer = useSetSpecialLayer(userId);
+  const institutionId = selectedInstitution?.id ?? null;
+  const isCurrentCardSpecial = useMemo(() => {
+    const candidates = [
+      statusIdentity.canonicalGroupId,
+      statusIdentity.stableGroupId,
+    ].filter((value): value is string => Boolean(value));
+    return candidates.some((value) => specialIds.includes(value));
+  }, [specialIds, statusIdentity.canonicalGroupId, statusIdentity.stableGroupId]);
+  const handleToggleSpecial = useCallback(() => {
+    if (!userId || !currentCard || setSpecialLayer.isPending) return;
+    const visibleLayerId = statusIdentity.visibleLayerId;
+    if (!visibleLayerId) return;
+    setSpecialLayer.mutate({
+      visibleLayerId,
+      listId: listId ?? null,
+      enable: !isCurrentCardSpecial,
+      institutionId,
+      sourceGroupId: statusIdentity.stableGroupId ?? statusIdentity.canonicalGroupId,
+    });
+  }, [currentCard, institutionId, isCurrentCardSpecial, listId, setSpecialLayer, statusIdentity.canonicalGroupId, statusIdentity.stableGroupId, statusIdentity.visibleLayerId, userId]);
   const resolvedDirection: Direction = baseDirection === "any"
     ? (mixed.currentCardId && hashToBool(mixed.currentCardId) ? "a-b" : "b-a")
     : baseDirection;
@@ -1096,6 +1132,8 @@ export default function MixedStudy() {
     onSkip: requestSkip,
     onRestartRound: restartRoundManually,
     onRestartJourney: restartJourneyManually,
+    isSpecial: isCurrentCardSpecial,
+    onToggleSpecial: handleToggleSpecial,
   };
 
   return (
@@ -1164,6 +1202,8 @@ export default function MixedStudy() {
               onSkip={requestSkip}
               onRestartRound={restartRoundManually}
               onRestartJourney={restartJourneyManually}
+              isSpecial={isCurrentCardSpecial}
+              onToggleSpecial={handleToggleSpecial}
             />
           )}
           {mixed.activityMode === "unscramble" && <UnscrambleStudyView {...sharedProps} />}

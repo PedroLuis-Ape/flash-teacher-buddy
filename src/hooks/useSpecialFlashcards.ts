@@ -71,7 +71,7 @@ export function useSpecialFlashcards(
       if (!userId) return [];
       const enhanced = await supabase
         .from('user_special_flashcards' as any)
-        .select('source_group_id, flashcard_id, materialization_group_id')
+        .select('source_group_id, flashcard_id')
         .eq('user_id', userId)
         .eq('is_active', true);
       if (enhanced.error) {
@@ -80,7 +80,6 @@ export function useSpecialFlashcards(
       }
       return Array.from(new Set(((enhanced.data as any[]) ?? []).flatMap((row) => [
         row.source_group_id ?? row.flashcard_id,
-        row.materialization_group_id,
       ]).filter(Boolean)));
     },
     enabled: !!userId,

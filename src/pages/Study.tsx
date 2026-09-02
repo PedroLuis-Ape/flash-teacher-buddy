@@ -98,6 +98,7 @@ import { EditFlashcardDialog } from "@/components/EditFlashcardDialog";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useRedList, useToggleRedList } from "@/hooks/useRedList";
 import { useSpecialFlashcards, type SpecialFocusContext } from "@/hooks/useSpecialFlashcards";
+import { useReinforcement, useReinforcementMutation } from "@/hooks/useReinforcement";
 import { useSetFavoriteGroup } from "@/hooks/useSetFavoriteGroup";
 import { useSetRedListGroup } from "@/hooks/useSetRedListGroup";
 import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
@@ -303,6 +304,7 @@ const Study = () => {
   // Keeping the same local name minimizes diff to call sites below.
   const userId = authUserId;
   const [listSettings, setListSettings] = useState<ListSettings>(getDefaultListSettings());
+  const [listSystemKind, setListSystemKind] = useState<"user" | "attention_points" | "reinforcement">("user");
   // In-game card editor (uses the same EditFlashcardDialog as ListDetail)
   const [editingFlashcard, setEditingFlashcard] = useState<Flashcard | null>(null);
   // Tracks the currently visible layer id (for layered cards). Set up in an
@@ -391,6 +393,8 @@ const Study = () => {
   const { data: specialIds = [] } = useSpecialFlashcards(userId);
   const setSpecialLayer = useSetSpecialLayer(userId);
   const institutionId = selectedInstitution?.id ?? null;
+  const reinforcementQuery = useReinforcement(userId, institutionId);
+  const reinforcementMutation = useReinforcementMutation(userId, institutionId);
 
   const listId = isListRoute ? resolvedId : undefined;
 
@@ -672,6 +676,7 @@ const Study = () => {
     });
     setFlashcards([]);
     setListTitle(null);
+    setListSystemKind("user");
     setVideoInfo(null);
     if (access === "denied") {
       setDeckLoadState({ phase: "recoverable-error", reason: "auth-required" });
@@ -938,7 +943,7 @@ const Study = () => {
     const listPromise = isListRoute
       ? metadataClient
           .from("lists")
-          .select("title, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled")
+          .select("title, folder_id, study_type, lang_a, lang_b, labels_a, labels_b, tts_enabled, system_kind")
           .eq("id", resolvedId)
           .abortSignal(abortController.signal)
           .maybeSingle()
@@ -994,6 +999,11 @@ const Study = () => {
 
     if (isListRoute && listData) {
       setListTitle(listData.title);
+      setListSystemKind(
+        listData.system_kind === "reinforcement" || listData.system_kind === "attention_points"
+          ? listData.system_kind
+          : "user",
+      );
 
       // ── PERF: Fetch folder + video in parallel ──
       const folderPromise = listData.folder_id
@@ -1631,6 +1641,20 @@ const Study = () => {
     [statusIdentity.canonicalGroupId, statusIdentity.stableGroupId, specialIds],
   );
 
+  const reinforcementActiveIds = useMemo(
+    () => new Set((reinforcementQuery.data?.items ?? []).flatMap((item) => item.active_ids)),
+    [reinforcementQuery.data?.items],
+  );
+  const isDisplayedReinforcement = useMemo(() => {
+    const candidates = [
+      displayedCard?.id,
+      statusIdentity.visibleLayerId,
+      statusIdentity.canonicalGroupId,
+      statusIdentity.stableGroupId,
+    ].filter((value): value is string => Boolean(value));
+    return candidates.some((value) => reinforcementActiveIds.has(value));
+  }, [displayedCard?.id, reinforcementActiveIds, statusIdentity]);
+
   const handleToggleFavorite = () => {
     if (!userId) return;
     if (stableStatus.mode === "new" && statusIdentity.stableGroupId) {
@@ -1696,6 +1720,20 @@ const Study = () => {
       sourceGroupId: statusIdentity.stableGroupId ?? statusIdentity.canonicalGroupId,
     });
   };
+
+  const handleToggleReinforcement = () => {
+    if (!userId || !displayedCard || reinforcementMutation.isPending) return;
+    if (listSystemKind === "attention_points") return;
+    reinforcementMutation.mutate({
+      sourceCardId: displayedCard.id,
+      sourceGroupId: statusIdentity.stableGroupId ?? statusIdentity.canonicalGroupId,
+      enabled: !isDisplayedReinforcement,
+      institutionId,
+    });
+  };
+  const isSystemCollection = listSystemKind !== "user";
+  const canToggleReinforcement = !isSystemCollection || listSystemKind === "reinforcement";
+  const specialToggleHandler = isSystemCollection ? undefined : handleToggleSpecial;
 
   const handleSaveAttentionPoint = useCallback(async (
     targetFlashcardId: string,
@@ -2286,6 +2324,26 @@ const Study = () => {
             </Button>
 
             <div className="flex items-center gap-2 sm:gap-4">
+              {userId && displayedCard && canToggleReinforcement && (
+                <Button
+                  type="button"
+                  variant={isDisplayedReinforcement ? "secondary" : "outline"}
+                  size="sm"
+                  className="min-h-11 gap-1.5 px-2.5"
+                  disabled={reinforcementMutation.isPending}
+                  title={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
+                  aria-label={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
+                  aria-pressed={isDisplayedReinforcement}
+                  onClick={handleToggleReinforcement}
+                >
+                  {reinforcementMutation.isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <RefreshCcw className="h-4 w-4" />}
+                  <span className="hidden sm:inline text-xs">
+                    {isDisplayedReinforcement ? "No Reforço" : "Adicionar ao Reforço"}
+                  </span>
+                </Button>
+              )}
               {/* Game Settings Modal */}
               <GameSettingsModal
                 settings={studySettings}
@@ -2296,11 +2354,11 @@ const Study = () => {
                 onRestart={handleRestartWithSettings}
                 showFastMode={effectiveMode === "flip"}
                 onEditCurrentCard={
-                  displayedCard
+                  displayedCard && !isSystemCollection
                     ? () => setEditingFlashcard(displayedCard as Flashcard)
                     : undefined
                 }
-                canEditCurrentCard={!!displayedCard}
+                canEditCurrentCard={!!displayedCard && !isSystemCollection}
               />
               
               {/* Direction selector for flip mode — uses dynamic labels */}
@@ -2412,12 +2470,12 @@ const Study = () => {
               labelB={listSettings.labelsB}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
-              onToggleSpecial={handleToggleSpecial}
+              onToggleSpecial={specialToggleHandler}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={masteryProgressActive ? undefined : navigateNext}
@@ -2448,14 +2506,14 @@ const Study = () => {
               studyFlowMode={writeSessionSettings.studyFlowMode}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
-              onToggleSpecial={handleToggleSpecial}
-              isSavingAttentionPoint={setSpecialLayer.isPending}
-              onSaveAttentionPoint={userId ? handleSaveAttentionPoint : undefined}
+              onToggleSpecial={specialToggleHandler}
+              isSavingAttentionPoint={isSystemCollection ? false : setSpecialLayer.isPending}
+              onSaveAttentionPoint={userId && !isSystemCollection ? handleSaveAttentionPoint : undefined}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
@@ -2475,12 +2533,12 @@ const Study = () => {
               langB={listSettings.langB}
               mergedHintsA={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsA : undefined}
               mergedHintsB={FEATURE_FLAGS.word_hints_enabled ? currentMergedHintsB : undefined}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
-              onToggleSpecial={handleToggleSpecial}
+              onToggleSpecial={specialToggleHandler}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
@@ -2499,12 +2557,12 @@ const Study = () => {
               direction={resolvedDirection}
               langA={listSettings.langA}
               langB={listSettings.langB}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
-              onToggleSpecial={handleToggleSpecial}
+              onToggleSpecial={specialToggleHandler}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
@@ -2522,12 +2580,12 @@ const Study = () => {
               langB={listSettings?.langB || "pt"}
               labelA={listSettings?.labelsA || undefined}
               labelB={listSettings?.labelsB || undefined}
-              isFavorite={isDisplayedGroupFavorite}
-              isRedListed={isDisplayedGroupRedListed}
-              onToggleFavorite={handleToggleFavorite}
-              onToggleRedList={handleToggleRedList}
+              isFavorite={!isSystemCollection && isDisplayedGroupFavorite}
+              isRedListed={!isSystemCollection && isDisplayedGroupRedListed}
+              onToggleFavorite={!isSystemCollection ? handleToggleFavorite : undefined}
+              onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
-              onToggleSpecial={handleToggleSpecial}
+              onToggleSpecial={specialToggleHandler}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}

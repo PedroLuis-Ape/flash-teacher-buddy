@@ -96,12 +96,16 @@ function EmojiIcon({
 function InlineToolButton({
   icon,
   label,
+  visibleLabel,
+  alwaysShowLabel = false,
   active,
   disabled,
   onClick,
 }: {
   icon: ReactNode;
   label: string;
+  visibleLabel?: string;
+  alwaysShowLabel?: boolean;
   active?: boolean;
   disabled?: boolean;
   onClick?: () => void;
@@ -115,6 +119,7 @@ function InlineToolButton({
       className={cn(
         "study-tools-inline-button h-9 min-w-9 gap-1.5 px-2.5",
         active && "border-primary/60 bg-primary/10 text-primary",
+        alwaysShowLabel && "study-tools-attention-button",
       )}
       title={label}
       aria-label={label}
@@ -125,7 +130,9 @@ function InlineToolButton({
       }}
     >
       {icon}
-      <span className="hidden 2xl:inline text-xs">{label}</span>
+      <span className={alwaysShowLabel ? "text-xs font-semibold" : "hidden 2xl:inline text-xs"}>
+        {visibleLabel ?? label}
+      </span>
     </Button>
   );
 }
@@ -295,7 +302,7 @@ export function StudyToolsMenu({
             Guardar ponto de atenção
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Marque o trecho que a IA deve explicar.
+            O card entra agora na sua pasta de atenção. O trecho e a observação são opcionais.
           </DialogDescription>
         </DialogHeader>
 
@@ -358,7 +365,7 @@ export function StudyToolsMenu({
               Cancelar
             </Button>
             <Button type="button" size="sm" className="flex-1 sm:flex-none" onClick={handleSaveSpecialFocus} disabled={specialPending}>
-              {hasFocusContent ? "Salvar ponto de atenção" : "Salvar item"}
+              {hasFocusContent ? "Salvar ponto de atenção" : "Marcar ponto de atenção"}
             </Button>
           </div>
         </div>
@@ -515,6 +522,8 @@ export function StudyToolsMenu({
       {hasAccount && onToggleSpecial && (
         <InlineToolButton
           label={isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
+          visibleLabel={isSpecial ? "Ponto de atenção ✓" : "Ponto de atenção"}
+          alwaysShowLabel
           active={isSpecial}
           disabled={specialPending}
           onClick={openSpecialFocusDialog}

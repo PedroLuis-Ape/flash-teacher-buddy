@@ -23,6 +23,7 @@ import { AuthHydrationGate } from "@/components/auth/AuthHydrationGate";
 import { ListDirectionGate } from "@/features/study/components/ListDirectionGate";
 
 const Index = lazy(() => import("./pages/Index"));
+const Reinforcement = lazy(() => import("./pages/Reinforcement"));
 const Auth = lazy(() => import("./pages/Auth"));
 import LandingPage from "./pages/LandingPage";
 import RootEntry from "./components/RootEntry";
@@ -146,6 +147,7 @@ const App = () => {
                           <Route path="/" element={<RootEntry />} />
                           <Route path="/landing" element={<LandingPage />} />
                           <Route path="/dashboard" element={<Index />} />
+                          <Route path="/reinforcement" element={<Reinforcement />} />
                           <Route path="/ingles-para-iniciantes" element={<InglesParaIniciantes />} />
                           <Route path="/atividades-de-ingles" element={<AtividadesDeIngles />} />
                           <Route path="/flashcards-de-ingles" element={<FlashcardsDeIngles />} />

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RefreshCcw, ArrowLeft, ShieldAlert } from "lucide-react";
 import { enableSafeMode } from "@/lib/safeMode";
+import { reloadWithFreshAppShell } from "@/lib/chunkRecovery";
 
 interface Props {
   children: ReactNode;
@@ -40,7 +41,9 @@ export class LazyErrorBoundary extends Component<Props, State> {
   }
 
   handleReload = () => {
-    window.location.reload();
+    if (!this.state.isChunkError || !reloadWithFreshAppShell()) {
+      window.location.reload();
+    }
   };
 
   handleGoHome = () => {
