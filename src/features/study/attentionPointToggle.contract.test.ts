@@ -13,6 +13,8 @@ const attentionHook = readFileSync("src/hooks/useAttentionPoint.ts", "utf8");
 const legacyHook = readFileSync("src/hooks/useSetSpecialLayer.ts", "utf8");
 const specialHook = readFileSync("src/hooks/useSpecialFlashcards.ts", "utf8");
 const studyPage = readFileSync("src/pages/Study.tsx", "utf8");
+const mixedStudyPage = readFileSync("src/pages/MixedStudy.tsx", "utf8");
+const studyToolsMenu = readFileSync("src/features/study/components/StudyToolsMenu.tsx", "utf8");
 
 describe("reversible Points of attention contract", () => {
   it("keeps the historical migration and evolves the live attention RPC without cloning", () => {
@@ -54,5 +56,15 @@ describe("reversible Points of attention contract", () => {
     expect(specialHook).not.toContain("row.materialization_group_id");
     expect(specialHook).not.toContain(".from('user_special_flashcards' as any)\n          .delete()");
     expect(studyPage).toContain("specialIds.includes(statusIdentity.canonicalGroupId)");
+    expect(studyPage.match(/onToggleSpecial=\{specialToggleHandler\}/g)?.length).toBe(5);
+  });
+
+  it("keeps the in-game action visible and wires Prática Mista to the same mutation", () => {
+    expect(studyToolsMenu).toContain("alwaysShowLabel");
+    expect(studyToolsMenu).toContain('visibleLabel={isSpecial ? "Ponto de atenção ✓" : "Ponto de atenção"}');
+    expect(mixedStudyPage).toContain("useSetSpecialLayer");
+    expect(mixedStudyPage).toContain("isSpecial: isCurrentCardSpecial");
+    expect(mixedStudyPage).toContain("onToggleSpecial: handleToggleSpecial");
+    expect(mixedStudyPage).toContain("onToggleSpecial={handleToggleSpecial}");
   });
 });
