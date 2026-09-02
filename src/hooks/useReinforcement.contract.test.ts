@@ -10,6 +10,7 @@ const page = readFileSync("src/pages/Reinforcement.tsx", "utf8");
 const study = readFileSync("src/pages/Study.tsx", "utf8");
 const home = readFileSync("src/pages/Index.tsx", "utf8");
 const folder = readFileSync("src/pages/Folder.tsx", "utf8");
+const listDetail = readFileSync("src/pages/ListDetail.tsx", "utf8");
 
 describe("Reforço separation contract", () => {
   it("has an institution-scoped canonical table and idempotent ON/OFF RPC", () => {
@@ -58,6 +59,9 @@ describe("Reforço separation contract", () => {
     expect(folder).toContain("setCanEdit(!directSystemFolder");
     expect(folder).toContain("userId && !isSystemFolder");
     expect(folder).toContain("isOwner={!isSystemFolder && isOwner}");
+    expect(listDetail).toContain("isSystemCollection: boolean;");
+    expect(listDetail).toContain("{userId && !isSystemCollection && (");
+    expect(listDetail).toContain("isSystemCollection={Boolean(isSystemCollection)}");
   });
 
   it("does not promote an empty reinforcement area on Home", () => {

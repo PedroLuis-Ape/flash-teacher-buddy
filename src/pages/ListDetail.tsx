@@ -112,6 +112,7 @@ const FlashcardRow = memo(({
   flashcard,
   isSelected,
   canEdit,
+  isSystemCollection,
   userId,
   isFavorite,
   isRedListed,
@@ -124,6 +125,7 @@ const FlashcardRow = memo(({
   flashcard: Flashcard;
   isSelected: boolean;
   canEdit: boolean;
+  isSystemCollection: boolean;
   userId?: string;
   isFavorite: boolean;
   isRedListed: boolean;
@@ -188,7 +190,7 @@ const FlashcardRow = memo(({
         )}
       </div>
       <div className="flex items-center gap-1 shrink-0" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-        {userId && (
+        {userId && !isSystemCollection && (
           <>
             <FavoriteButton
               resourceId={flashcard.id}
@@ -240,6 +242,7 @@ const MemoizedCardList = memo(({
   flashcards,
   selectedCards,
   canEdit,
+  isSystemCollection,
   userId,
   favorites,
   redListIds,
@@ -252,6 +255,7 @@ const MemoizedCardList = memo(({
   flashcards: Flashcard[];
   selectedCards: string[];
   canEdit: boolean;
+  isSystemCollection: boolean;
   userId?: string;
   favorites: string[];
   redListIds: string[];
@@ -278,6 +282,7 @@ const MemoizedCardList = memo(({
               flashcard={flashcard}
               isSelected={selectedSet.has(flashcard.id)}
               canEdit={canEdit}
+              isSystemCollection={isSystemCollection}
               userId={userId}
               isFavorite={favSet.has(groupId)}
               isRedListed={redSet.has(groupId)}
@@ -1326,6 +1331,7 @@ const ListDetail = () => {
                 flashcards={pagedFlashcards}
                 selectedCards={selectedCards}
                 canEdit={canEdit}
+                isSystemCollection={Boolean(isSystemCollection)}
                 userId={userId}
                 favorites={favorites}
                 redListIds={redListIds}
