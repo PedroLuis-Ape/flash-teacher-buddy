@@ -22,10 +22,12 @@ assert(new Set(pages.map((page) => page.path)).size === pages.length, "O mapa ed
 
 if (home) {
   assert(home.h1.includes("APE — App Piteco"), "O H1 não identifica APE e App Piteco.");
-  assert(home.intro.some((paragraph) => paragraph.includes("Apprentice Practice & Enhancement")), "A expansão da sigla APE está ausente.");
+  assert(JSON.stringify(home).includes("Apprentice Practice & Enhancement"), "A expansão da sigla APE está ausente.");
   assert(home.author?.name === "Pedro Luis", "A autoria oficial está ausente ou divergente.");
   assert(/^\d{4}-\d{2}-\d{2}$/.test(home.dateModified ?? ""), "A data de revisão deve usar YYYY-MM-DD.");
-  assert(home.sections.length >= 8, "A home precisa manter profundidade editorial real.");
+  assert(home.sections.length === 5, "A home deve conter os cinco blocos concisos consumidos pelo layout: passos, alunos, professores, autoria e metodologia.");
+  assert(home.intro.length === 1 && home.intro[0].split(/\s+/).length <= 45, "A abertura precisa explicar o produto em até 45 palavras.");
+  assert(Boolean(home.landingDemo?.prompt && home.landingDemo?.answer), "A demonstração precisa de pergunta e resposta.");
   assert(home.faq.length >= 5, "A FAQ da home está incompleta.");
   assert(new Set(home.faq.map((faq) => faq.question)).size === home.faq.length, "A FAQ contém perguntas duplicadas.");
   assert(home.sections.some((section) => section.heading.includes("Metodologia")), "O limite metodológico deve permanecer visível.");

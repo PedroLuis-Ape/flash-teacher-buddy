@@ -18,8 +18,9 @@ const NAV_LINKS = [
   { to: "/portal", label: "Portal" },
 ];
 
-export function PublicNav() {
+export function PublicNav({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
+  const links = compact ? NAV_LINKS.filter(link => ["/atividades-de-ingles", "/para-professores", "/portal"].includes(link.to)) : NAV_LINKS;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -30,7 +31,7 @@ export function PublicNav() {
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 text-sm xl:flex 2xl:gap-1">
-          {NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <Link
               key={link.to}
               to={link.to}
@@ -42,18 +43,18 @@ export function PublicNav() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
-          <InstallAppButton
+          {!compact && <InstallAppButton
             compact
             className="shrink-0 max-[480px]:h-9 max-[480px]:w-9 max-[480px]:gap-0 max-[480px]:px-0 max-[480px]:[&>span]:hidden"
-          />
+          />}
           <PublicThemeToggle />
 
-          <AuthAwareCTA guestMode="login" variant="ghost" size="sm" className="hidden 2xl:inline-flex">
+          <AuthAwareCTA guestMode="login" variant="ghost" size="sm" className={compact ? "inline-flex" : "hidden 2xl:inline-flex"}>
             Entrar
           </AuthAwareCTA>
-          <AuthAwareCTA guestMode="signup" size="sm" className="hidden 2xl:inline-flex">
+          {!compact && <AuthAwareCTA guestMode="signup" size="sm" className="hidden 2xl:inline-flex">
             Começar agora
-          </AuthAwareCTA>
+          </AuthAwareCTA>}
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -63,7 +64,7 @@ export function PublicNav() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[min(20rem,88vw)]">
               <nav className="mt-8 flex flex-col gap-1">
-                {NAV_LINKS.map((link) => (
+                {links.map((link) => (
                   <Link
                     key={link.to}
                     to={link.to}

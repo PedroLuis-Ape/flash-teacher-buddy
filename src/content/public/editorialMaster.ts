@@ -44,6 +44,15 @@ export interface EditorialReference {
 }
 
 export interface EditorialPageDefinition {
+  landingDemo?: {
+    label: string;
+    context: string;
+    prompt: string;
+    instruction: string;
+    answerLabel: string;
+    answer: string;
+    caption: string;
+  };
   path: string;
   intent: string;
   audience: string;

@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import LandingPage from "@/pages/LandingPage";
 import { ResponsiveLandingHelpOverlay } from "@/components/landing/ResponsiveLandingHelpOverlay";
@@ -7,7 +7,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 /**
  * Smart "/" gate:
  *  - logged-in user  → redirect to /dashboard
- *  - logged-out user → render public LandingPage with the first-visit help overlay
+ *  - logged-out user → landing; the guide opens only when requested
  *
  * Uses useAuthUser, which already provides optimistic session from
  * localStorage (Supabase-managed), so there is no extra flash when a
@@ -15,6 +15,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
  */
 export default function RootEntry() {
   const { user, isLoading } = useAuthUser();
+  const [searchParams] = useSearchParams();
+  const showGuide = searchParams.get("guia") === "1" || searchParams.get("help-preview") === "1";
 
   if (isLoading) {
     return <LoadingSpinner message="Carregando..." variant="skeleton" />;
@@ -27,7 +29,7 @@ export default function RootEntry() {
   return (
     <>
       <LandingPage />
-      <ResponsiveLandingHelpOverlay />
+      {showGuide && <ResponsiveLandingHelpOverlay />}
     </>
   );
 }

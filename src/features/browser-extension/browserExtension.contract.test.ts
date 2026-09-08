@@ -16,13 +16,14 @@ describe("APE browser extension contract", () => {
     expect(background).toContain('defaultLang: "en-US"');
   });
 
-  it("exposes a prominent landing shortcut without requiring authentication", () => {
+  it("keeps extension discovery inline without covering landing content", () => {
     const publicShell = read("src/components/layout/PublicShell.tsx");
+    const landing = read("src/components/landing/LandingHome.tsx");
     const quickInstall = read("src/features/browser-extension/BrowserExtensionQuickInstall.tsx");
     const installPage = read("public/extensao/index.html");
 
-    expect(publicShell).toContain("BrowserExtensionQuickInstall");
-    expect(publicShell).toContain('location.pathname === "/"');
+    expect(publicShell).not.toContain("BrowserExtensionQuickInstall");
+    expect(landing).toContain('href="/extensao/index.html"');
     expect(quickInstall).toContain("Instalar a extensão");
     expect(quickInstall).toContain("inglês americano");
     expect(installPage).toContain("Chrome Web Store");

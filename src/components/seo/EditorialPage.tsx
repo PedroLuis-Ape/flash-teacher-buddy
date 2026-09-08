@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LandingHome } from "@/components/landing/LandingHome";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -365,10 +366,11 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
         jsonLd={structuredData}
         ogType={page.schema.includes("Article") ? "article" : "website"}
       />
-      <PublicNav />
+      <PublicNav compact={page.path === "/"} />
       {page.path !== "/" && <PublicBackBar />}
 
       <main>
+        {page.path === "/" ? <LandingHome page={page} /> : <>
         <section className="relative overflow-hidden border-b border-border/50">
           <div
             aria-hidden="true"
@@ -425,10 +427,11 @@ export function EditorialPage({ path, afterHero, includeLandingStickyCta = false
 
         {afterHero}
         <EditorialContent page={page} />
+        </>}
       </main>
 
       <PublicFooter />
-      {includeLandingStickyCta && <LandingStickyCTA />}
+      {includeLandingStickyCta && page.path !== "/" && <LandingStickyCTA />}
     </div>
   );
 }
