@@ -160,21 +160,27 @@ function rememberHelpDismissal(): void {
 }
 
 export function LandingHelpOverlay() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const forcePreview = searchParams.get("help-preview") === "1";
+  const requestedGuide = searchParams.get("guia") === "1";
   const [open, setOpen] = useState(false);
   const [screen, setScreen] = useState<HelpScreen>("choose");
 
   useEffect(() => {
-    if (forcePreview || !hasDismissedHelp()) {
+    if (forcePreview || requestedGuide || !hasDismissedHelp()) {
       setOpen(true);
     }
-  }, [forcePreview]);
+  }, [forcePreview, requestedGuide]);
 
   const closeHelp = () => {
     if (!forcePreview) rememberHelpDismissal();
     setOpen(false);
     setScreen("choose");
+    if (requestedGuide) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("guia");
+      setSearchParams(next, { replace: true });
+    }
   };
 
   return (

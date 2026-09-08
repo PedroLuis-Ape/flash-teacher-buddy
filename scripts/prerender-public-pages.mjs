@@ -104,6 +104,8 @@ function renderRelatedLinks(page) {
 
 function renderStaticContent(page) {
   const intro = renderParagraphs(page.intro);
+  const demo = page.landingDemo;
+  const homePreview = demo ? `<aside><h2>${escapeHtml(demo.label)}</h2><p>${escapeHtml(demo.context)}</p><p><strong>${escapeHtml(demo.prompt)}</strong></p><p>${escapeHtml(demo.instruction)}</p><details><summary>${escapeHtml(demo.answerLabel)}</summary><p>${escapeHtml(demo.answer)}</p></details><p>${escapeHtml(demo.caption)}</p></aside>` : "";
   const authorText = page.locale === "en"
     ? `Pedro Luis is a Brazilian English tutor and the creator of APE. His public Preply profile documents more than 1,900 lessons taught and a verified teaching certificate. These credentials describe the creator, not a scientific rating of the software.`
     : `Pedro Luis é professor brasileiro de inglês e criador do APE. Seu perfil público na Preply registra ${escapeHtml(meta.preply.stableLessonClaim)} e certificado de ensino verificado. Essas credenciais descrevem o criador, não uma avaliação científica do software.`;
@@ -113,12 +115,14 @@ function renderStaticContent(page) {
     <p class="seo-static-brand"><a href="/">APE — App Piteco</a></p>
     <h1>${escapeHtml(page.h1)}</h1>
     <div class="seo-static-intro">${intro}</div>
+    ${page.path === "/" ? `<p><a href="/auth?mode=signup">${escapeHtml(page.cta.primary)}</a> · <a href="/portal">${escapeHtml(page.cta.secondary)}</a></p>${homePreview}` : ""}
     ${renderHighlights(page)}
     ${renderSections(page)}
     ${renderFaq(page)}
     ${renderReferences(page)}
-    <section><h2>${page.locale === "en" ? "Authorship and professional context" : "Autoria e contexto profissional"}</h2><p><strong>${escapeHtml(page.author.name)}</strong> — ${escapeHtml(page.author.role)}</p><p>${authorText}</p><p><a href="${escapeHtml(meta.preply.url)}">${page.locale === "en" ? "Verify the public Preply profile" : "Verificar perfil público na Preply"}</a></p><p>${page.locale === "en" ? "Last reviewed" : "Última revisão"}: ${escapeHtml(page.dateModified)}.</p></section>
+    ${page.path !== "/" ? `<section><h2>${page.locale === "en" ? "Authorship and professional context" : "Autoria e contexto profissional"}</h2><p><strong>${escapeHtml(page.author.name)}</strong> — ${escapeHtml(page.author.role)}</p><p>${authorText}</p><p><a href="${escapeHtml(meta.preply.url)}">${page.locale === "en" ? "Verify the public Preply profile" : "Verificar perfil público na Preply"}</a></p><p>${page.locale === "en" ? "Last reviewed" : "Última revisão"}: ${escapeHtml(page.dateModified)}.</p></section>` : `<p>Última revisão: ${escapeHtml(page.dateModified)}.</p>`}
     ${renderRelatedLinks(page)}
+    ${page.path === "/" ? '<p><a href="/extensao/index.html">Extensão de pronúncia e notas</a></p>' : ""}
   </article>
 </main>`;
 }

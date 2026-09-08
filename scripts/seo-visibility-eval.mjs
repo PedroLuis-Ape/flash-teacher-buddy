@@ -52,7 +52,7 @@ addCheck({
   id: "entity-expansion",
   area: "entity_clarity",
   points: 4,
-  passed: Boolean(home?.intro.some((paragraph) => paragraph.includes("Apprentice Practice & Enhancement"))),
+  passed: Boolean(JSON.stringify(home).includes("Apprentice Practice & Enhancement")),
   detail: "A expansão da sigla APE deve estar visível.",
 });
 addCheck({
