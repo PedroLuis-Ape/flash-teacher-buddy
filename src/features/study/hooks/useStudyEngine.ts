@@ -24,9 +24,9 @@ import {
   buildStudySnapshotKey,
   clearStudySnapshot,
   readStudySnapshot,
-  sanitizePersistedStudyOrder,
+  readRawStudySnapshot,
+  readSameSessionSnapshot,
   sanitizeStudyLayerSnapshot,
-  sanitizeStudySnapshot,
   writeStudySnapshot,
   type StudySessionLayerSnapshot,
   type StudySessionSnapshot,
@@ -58,7 +58,8 @@ import {
   type StudyProgressAttempt,
 } from "@/features/study/lib/studyProgressRepository";
 import { claimStudySession } from "@/features/study/lib/studySessionRepository";
-import { fetchRequestedStudySession } from "@/features/study/lib/requestedStudySession";
+import { fetchRequestedStudySession, type RequestedStudySessionClient } from "@/features/study/lib/requestedStudySession";
+import { assertStudySessionWrite, restoreStudySession, restoreMasterySession, type RestorableStudySession } from "@/features/study/lib/restoreStudySession";
 import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
 import {
   createMasterySession,
@@ -124,6 +125,7 @@ interface StudySessionWriteRequest {
 }
 
 async function writeStudySession(request: StudySessionWriteRequest): Promise<void> {
+  assertStudySessionWrite(request.payload);
   const controller = new AbortController();
   const { data, error } = await withStudyRuntimeTimeout(
     supabase
@@ -229,8 +231,11 @@ export function useStudyEngine(
    * Sessão exata pedida pelo banner "Continuar". Quando informada, a restauração
    * prefere esta sessionId em vez de simplesmente abrir a mais recente.
    */
-  requestedSessionId?: string | null,
+  requestedSessionIdInput?: string | null,
+  presetReady: boolean = true,
 ) {
+  const [dismissedResumeId, setDismissedResumeId] = useState<string | null>(null);
+  const requestedSessionId = requestedSessionIdInput === dismissedResumeId ? null : requestedSessionIdInput;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsOrder, setCardsOrder] = useState<string[]>([]);
   const [results, setResults] = useState<StudyResult[]>([]);
@@ -285,6 +290,12 @@ export function useStudyEngine(
   // exact layer stored in the authenticated session snapshot.
   const [restoredSessionLayer, setRestoredSessionLayer] = useState<StudySessionLayerSnapshot | null>(null);
   const restoredSettingsIdentityRef = useRef<string | null>(null);
+  const runtimeWritableRef = useRef(false);
+  const liveSessionSnapshotRef = useRef<{ identity: string; snapshot: StudySessionSnapshot } | null>(null);
+  const [resumeAttempt, setResumeAttempt] = useState(0);
+  const [requestedRestore, setRequestedRestore] = useState<{
+    key: string; row?: RestorableStudySession; error?: string;
+  } | null>(null);
 
   const setTrackedSessionId = useCallback((nextSessionId: string | null) => {
     sessionIdRef.current = nextSessionId;
@@ -405,6 +416,45 @@ export function useStudyEngine(
     }));
     onSessionSettingsRestored?.(typedSnapshot);
   }, [onSessionSettingsRestored]);
+
+  // Fetch and apply settings independently of deck readiness: the saved scope
+  // may be the reason the current (preset-filtered) deck is empty.
+  const requestedKey = `${userScope}:${listId}:${mode}:${requestedSessionId}:${resumeAttempt}`;
+  const restoreSettingsRef = useRef(applyRestoredSessionSettings);
+  restoreSettingsRef.current = applyRestoredSessionSettings;
+  useEffect(() => {
+    if (!requestedSessionId || !userScope || !listId || !presetReady) return;
+    authUserIdRef.current = userScope;
+    setIsAuthenticated(true);
+    const controller = new AbortController();
+    runtimeWritableRef.current = false;
+    void fetchRequestedStudySession<RestorableStudySession>({
+      client: supabase as unknown as RequestedStudySessionClient,
+      sessionId: requestedSessionId, userId: userScope, listId, mode,
+      includeCompleted: true, signal: controller.signal,
+    }).then(result => {
+      if (controller.signal.aborted) return;
+      if (result.status === "found") {
+        restoreSettingsRef.current(result.session);
+        setRequestedRestore({ key: requestedKey, row: result.session });
+      } else if (result.status !== "cancelled") {
+        const local = result.status === "unavailable"
+          ? readSameSessionSnapshot(userScope, listId, mode, requestedSessionId) : null;
+        if (local) {
+          const row: RestorableStudySession = {
+            id: requestedSessionId, cards_order: local.cardsOrder, current_index: local.currentIndex,
+            session_snapshot: local.masterySnapshot ?? local, settings_snapshot: local.settingsSnapshot,
+          };
+          restoreSettingsRef.current(row);
+          setRequestedRestore({ key: requestedKey, row });
+          return;
+        }
+        setRequestedRestore({ key: requestedKey, error: result.status === "not-found"
+          ? "study-resume-session-not-found" : "study-resume-session-unavailable" });
+      }
+    });
+    return () => controller.abort();
+  }, [requestedKey, requestedSessionId, userScope, listId, mode, presetReady]);
 
   const sessionWriteIdentity = `${userScope ?? "anon"}:${listId ?? "no-list"}:${mode}:${sessionScopeKey}`;
   useEffect(() => {
@@ -581,12 +631,6 @@ export function useStudyEngine(
   const initializeSession = useCallback(async (force = false) => {
     if (restartInFlightRef.current) return;
     const __t0 = performance.now();
-    initializationAbortRef.current?.abort();
-    const abortController = new AbortController();
-    initializationAbortRef.current = abortController;
-    const generation = ++initializationGenerationRef.current;
-    const isCurrent = () =>
-      mountedRef.current && initializationGenerationRef.current === generation;
     // Skip if already initialized with same signature.
     // IMPORTANT: include sessionScopeKey so switching between "all"/"favorites"
     // (or toggling redFocus / order) re-initializes the engine and loads the
@@ -599,10 +643,33 @@ export function useStudyEngine(
       cardsSignature,
       sessionScopeKey,
       JSON.stringify(sessionSettingsSnapshot),
+      requestedSessionId ?? "",
     ].join("|");
+    // Equivalent renders must not abort a pending claim or invalidate a save.
+    if (!force && deckReady && completedInitSignatureRef.current === initKey
+      && (!requestedSessionId || requestedRestore?.key === requestedKey)) {
+      runtimeWritableRef.current = requestedRestore?.row?.completed !== true;
+      setInitializationState("ready");
+      setIsLoading(false);
+      return;
+    }
+    initializationAbortRef.current?.abort();
+    const abortController = new AbortController();
+    initializationAbortRef.current = abortController;
+    const generation = ++initializationGenerationRef.current;
+    const isCurrent = () =>
+      mountedRef.current && initializationGenerationRef.current === generation;
+    if (requestedSessionId && (requestedRestore?.key !== requestedKey || requestedRestore.error)) {
+      runtimeWritableRef.current = false;
+      setInitializationState(requestedRestore?.key === requestedKey && requestedRestore.error ? "failed" : "loading");
+      setIsLoading(requestedRestore?.key !== requestedKey);
+      return;
+    }
     if (!deckReady) {
+      runtimeWritableRef.current = false;
       if (isCurrent()) {
-        completedInitSignatureRef.current = "";
+        // Keep the committed queue through temporary scope/auth refetches.
+        // The final deck signature decides whether reconciliation is needed.
         setInitializationState("loading");
         // The engine is gated by the page deck, not actively initializing.
         // Keeping this true would leave recovery actions disabled forever
@@ -611,14 +678,12 @@ export function useStudyEngine(
       }
       return;
     }
-    if (!force && completedInitSignatureRef.current === initKey) {
-      return;
-    }
 
     const markReady = () => {
       if (!isCurrent()) return;
       completedInitSignatureRef.current = initKey;
       setInitializationState("ready");
+      runtimeWritableRef.current = true;
       setIsLoading(false);
       logStudyRuntime("initialization-ready", {
         generation,
@@ -630,6 +695,9 @@ export function useStudyEngine(
     };
 
     completedInitSignatureRef.current = "";
+    runtimeWritableRef.current = false;
+    if (saveProgressTimeoutRef.current) clearTimeout(saveProgressTimeoutRef.current);
+    sessionWriteQueueRef.current?.invalidate();
     setInitializationState("loading");
     setIsLoading(true);
     logStudyRuntime("initialization-start", {
@@ -640,6 +708,17 @@ export function useStudyEngine(
       forced: force,
     });
     
+    if (requestedSessionId && requestedRestore?.row?.completed) {
+      const restored = restoreStudySession({ session: requestedRestore.row, eligibleIds: flashcards.map(card => card.id) });
+      setTrackedSessionId(requestedRestore.row.id);
+      setCardsOrder(restored.snapshot.cardsOrder);
+      setCurrentIndex(restored.snapshot.currentIndex);
+      setResults(restored.snapshot.results);
+      setIsFinished(true);
+      markReady();
+      runtimeWritableRef.current = false;
+      return;
+    }
     if (flashcards.length === 0) {
       if (isCurrent()) {
         setCardsOrder([]);
@@ -667,25 +746,7 @@ export function useStudyEngine(
         try {
           // A sessão pedida é consultada por ID antes de qualquer heurística de
           // recência e não é filtrada pelo preset atual.
-          const requestedLookup = requestedSessionId
-            ? await fetchRequestedStudySession<any>({
-              client: supabase as any,
-              sessionId: requestedSessionId,
-              userId: userScope,
-              listId,
-              mode,
-              columns: "id,session_scope_key,session_snapshot,settings_snapshot,updated_at",
-              signal: abortController.signal,
-            })
-            : null;
-          if (requestedLookup?.status === "cancelled") return;
-          if (requestedLookup?.status === "unavailable") throw requestedLookup.error;
-          if (requestedSessionId && requestedLookup?.status !== "found") {
-            throw new Error("study-resume-session-not-found");
-          }
-          const requestedRow = requestedLookup?.status === "found"
-            ? requestedLookup.session
-            : null;
+          const requestedRow = requestedSessionId ? requestedRestore?.row : null;
           const { data: remoteSessions } = requestedSessionId
             ? { data: [] as any[] }
             : await withStudyRuntimeTimeout(
@@ -709,7 +770,9 @@ export function useStudyEngine(
           const mapCandidate = (candidate: any) => ({
             id: candidate.id as string,
             scopeKey: candidate.session_scope_key as string | null,
-            state: sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
+            state: candidate.id === requestedSessionId
+              ? restoreMasterySession(candidate, eligibleIds, gameSettings.mode === "random")
+              : sanitizeMasterySnapshot(candidate.session_snapshot, availableSet),
             layer: sanitizeStudyLayerSnapshot(
               (candidate.session_snapshot as { layer?: unknown } | null)?.layer,
             ),
@@ -734,7 +797,8 @@ export function useStudyEngine(
           if (requestedSessionId && !remote?.state) {
             throw new Error("study-resume-session-invalid");
           }
-          if (remote) {
+          if (!isCurrent()) return;
+          if (remote && !requestedSessionId) {
             applyRestoredSessionSettings({
               id: remote.id,
               updated_at: remote.updatedAt,
@@ -764,6 +828,7 @@ export function useStudyEngine(
         }
       }
 
+      if (!isCurrent()) return;
       const session = restored
         ?? createMasterySession(eligibleIds, {
           shuffle: gameSettings.mode === "random",
@@ -870,19 +935,6 @@ export function useStudyEngine(
       }
 
       const availableCardIds = new Set(flashcards.map((card) => card.id));
-      const sanitizeSessionOrder = (sessionOrder: unknown, currentIndex: unknown) =>
-        sanitizePersistedStudyOrder({
-          sessionOrder,
-          currentIndex,
-          availableCardIds,
-          enforceUniqueOrder: !!gameSettings.redFocus,
-        });
-
-      // A persisted session belongs to this scope only when it contains the
-      // same effective card set. In red focus the sanitizer additionally
-      // repairs legacy duplicated/random queues to the canonical deck order.
-      const sessionMatchesCurrentScope = (sessionOrder: unknown): boolean =>
-        sanitizeSessionOrder(sessionOrder, 0) !== null;
 
       const selectCurrentScopeSession = (sessions: any[] | null | undefined) =>
         (sessions ?? [])
@@ -891,7 +943,6 @@ export function useStudyEngine(
             sessionScopeKey: candidate.session_scope_key,
             settingsSnapshot: candidate.settings_snapshot,
           }))
-          .filter((candidate) => sessionMatchesCurrentScope(candidate.cards_order))
           .sort((left, right) => {
             const leftIsCurrent = left.session_scope_key === sessionScopeKey;
             const rightIsCurrent = right.session_scope_key === sessionScopeKey;
@@ -902,56 +953,47 @@ export function useStudyEngine(
       // A sessão pedida ("Continuar") é consultada por ID — não depende do
       // limite das dez mais recentes nem do preset atual. Suas configurações
       // são aplicadas antes do deck (applyRestoredSessionSettings).
-      const requestedLookup = requestedSessionId
-        ? await fetchRequestedStudySession<any>({
-          client: supabase as any,
-          sessionId: requestedSessionId,
-          userId: user.id,
-          listId,
-          mode,
-          signal: abortController.signal,
-        })
-        : null;
-      if (requestedLookup?.status === "cancelled") return;
-      if (requestedLookup?.status === "unavailable") throw requestedLookup.error;
-      if (requestedSessionId && requestedLookup?.status === "not-found") {
-        if (localSnapshot?.sessionId === requestedSessionId) {
-          setCardsOrder(localSnapshot.cardsOrder);
-          setCurrentIndex(localSnapshot.currentIndex);
-          setResults(localSnapshot.results);
-          markReady();
-          return;
-        }
-        throw new Error("study-resume-session-not-found");
-      }
-      const requestedSessionRow = requestedLookup?.status === "found"
-        ? requestedLookup.session
-        : null;
+      const requestedSessionRow = requestedSessionId ? requestedRestore?.row : null;
       const resolveSession = (sessions: any[] | null | undefined) =>
         requestedSessionId ? requestedSessionRow : selectCurrentScopeSession(sessions);
 
-      const chooseNewestStudySnapshot = (
-        local: ReturnType<typeof readStudySnapshot>,
-        remote: StudySessionSnapshot | null,
-        remoteSessionId: string,
-        remoteUpdatedAt: unknown,
-      ): StudySessionSnapshot | null => {
-        if (!remote) return local;
-        if (!local) return remote;
-        const localBelongsToRemote = local.sessionId === null || local.sessionId === remoteSessionId;
-        if (!localBelongsToRemote) return remote;
-        const remoteTimestamp = Date.parse(String(remoteUpdatedAt ?? ""));
-        return local.timestamp > (Number.isFinite(remoteTimestamp) ? remoteTimestamp : 0)
-          ? local
-          : remote;
+      const restoreRow = (row: RestorableStudySession) => {
+        const live = liveSessionSnapshotRef.current;
+        const continuing = live?.identity === `${userScope}:${listId}:${mode}:${sessionScopeKey}`
+          && live.snapshot.sessionId === row.id ? live.snapshot : null;
+        const restored = restoreStudySession({
+          session: continuing ? { ...row, session_snapshot: continuing } : row,
+          eligibleIds: flashcards.map(card => card.id),
+          local: readRawStudySnapshot(studySnapshotKey) ?? readRawStudySnapshot(legacyStudySnapshotKey),
+          unique: !!gameSettings.redFocus, resultCardIds,
+        });
+        const snapshot = { ...restored.snapshot, settingsSnapshot: sessionSettingsSnapshot };
+        setTrackedSessionId(row.id);
+        sessionLayerRef.current = snapshot.layer;
+        setRestoredSessionLayer(snapshot.layer ?? null);
+        setCardsOrder(snapshot.cardsOrder);
+        setCurrentIndex(snapshot.currentIndex);
+        setResults(snapshot.results);
+        setIsFinished(row.completed === true);
+        writeStudySnapshot(studySnapshotKey, snapshot);
+        logStudyRuntime("session-restored", {
+          requestedSessionId, sessionId: row.id, source: restored.source,
+          cardsOrderLength: snapshot.cardsOrder.length, eligibleCardIdsLength: availableCardIds.size,
+          currentIndex: snapshot.currentIndex, repaired: restored.repaired,
+        });
+        if (snapshot.cardsOrder.length) {
+          void sessionWriteQueueRef.current?.enqueue({
+            sessionId: row.id, userId: user.id, listId, mode, sessionScopeKey,
+            payload: {
+              cards_order: snapshot.cardsOrder, current_index: snapshot.currentIndex,
+              session_snapshot: snapshot, session_scope_key: sessionScopeKey,
+              settings_snapshot: sessionSettingsSnapshot, updated_at: new Date().toISOString(),
+            },
+            stage: "session-restore-repair",
+          }).catch(() => toast.warning("Sessão recuperada neste aparelho; sincronização pendente."));
+        }
+        markReady();
       };
-
-      const readRemoteStudySnapshot = (session: any): StudySessionSnapshot | null =>
-        sanitizeStudySnapshot(
-          session?.session_snapshot,
-          availableCardIds,
-          { enforceUniqueOrder: !!gameSettings.redFocus, resultCardIds },
-        );
 
       // Track that the user opened this list
       trackListOpened(listId);
@@ -990,57 +1032,8 @@ export function useStudyEngine(
         const matchingSession = resolveSession(openSessions);
 
         if (matchingSession) {
-          applyRestoredSessionSettings(matchingSession);
-          const remoteSnapshot = readRemoteStudySnapshot(matchingSession);
-          const restoredSnapshot = chooseNewestStudySnapshot(
-            localSnapshot,
-            remoteSnapshot,
-            matchingSession.id,
-            matchingSession.updated_at,
-          );
-          sessionLayerRef.current = restoredSnapshot?.layer;
-          const restoredSession = restoredSnapshot
-            ? {
-              cardsOrder: restoredSnapshot.cardsOrder,
-              currentIndex: restoredSnapshot.currentIndex,
-              repaired: false,
-            }
-            : sanitizeSessionOrder(matchingSession.cards_order, matchingSession.current_index);
-
-          if (restoredSession) {
-            setTrackedSessionId(matchingSession.id);
-            setRestoredSessionLayer(restoredSnapshot?.layer ?? null);
-            setCurrentIndex(restoredSession.currentIndex);
-            setCardsOrder(restoredSession.cardsOrder);
-
-            if (restoredSession.repaired) {
-              setResults([]);
-              void sessionWriteQueueRef.current?.enqueue({
-                sessionId: matchingSession.id,
-                userId: user.id,
-                listId,
-                mode,
-                sessionScopeKey,
-                payload: {
-                  cards_order: restoredSession.cardsOrder,
-                  current_index: 0,
-                  session_scope_key: sessionScopeKey,
-                  settings_snapshot: sessionSettingsSnapshot,
-                  schema_version: 1,
-                  updated_at: new Date().toISOString(),
-                },
-                stage: "flip-session-repair",
-              }).catch(() => undefined);
-              toast.info("Fila do Foco Vermelho corrigida. Recomeçando do primeiro card.");
-            } else {
-              setResults(restoredSnapshot?.results ?? []);
-              toast.success("Continuando de onde você parou!");
-            }
-
-            markReady();
-            return;
-          }
-          if (requestedSessionId) throw new Error("study-resume-session-invalid");
+          restoreRow(matchingSession);
+          return;
         }
 
         // Fallback to localStorage if no database session
@@ -1119,59 +1112,8 @@ export function useStudyEngine(
       const matchingSession = resolveSession(openSessions);
 
       if (matchingSession) {
-        // Session settings have precedence over the local preset: resuming must
-        // reopen the same scope/direction that was saved, not the last preset.
-        applyRestoredSessionSettings(matchingSession);
-        const remoteSnapshot = readRemoteStudySnapshot(matchingSession);
-        const restoredSnapshot = chooseNewestStudySnapshot(
-          localSnapshot,
-          remoteSnapshot,
-          matchingSession.id,
-          matchingSession.updated_at,
-        );
-        sessionLayerRef.current = restoredSnapshot?.layer;
-        const restoredSession = restoredSnapshot
-          ? {
-            cardsOrder: restoredSnapshot.cardsOrder,
-            currentIndex: restoredSnapshot.currentIndex,
-            repaired: false,
-          }
-          : sanitizeSessionOrder(matchingSession.cards_order, matchingSession.current_index);
-
-        if (restoredSession) {
-          setTrackedSessionId(matchingSession.id);
-          setRestoredSessionLayer(restoredSnapshot?.layer ?? null);
-          setCurrentIndex(restoredSession.currentIndex);
-          setCardsOrder(restoredSession.cardsOrder);
-
-          if (restoredSession.repaired) {
-            setResults([]);
-            void sessionWriteQueueRef.current?.enqueue({
-              sessionId: matchingSession.id,
-              userId: user.id,
-              listId,
-              mode,
-              sessionScopeKey,
-              payload: {
-                cards_order: restoredSession.cardsOrder,
-                current_index: 0,
-                session_scope_key: sessionScopeKey,
-                settings_snapshot: sessionSettingsSnapshot,
-                schema_version: 1,
-                updated_at: new Date().toISOString(),
-              },
-              stage: "quiz-session-repair",
-            }).catch(() => undefined);
-            toast.info("Fila do Foco Vermelho corrigida. Recomeçando do primeiro card.");
-          } else {
-            setResults(restoredSnapshot?.results ?? []);
-            toast.success("Continuando de onde você parou!");
-          }
-
-          markReady();
-          return;
-        }
-        if (requestedSessionId) throw new Error("study-resume-session-invalid");
+        restoreRow(matchingSession);
+        return;
       }
 
       // Create new session with ALL flashcards (straight-through, no batching)
@@ -1285,6 +1227,8 @@ export function useStudyEngine(
     sessionSettingsSnapshot,
     setTrackedSessionId,
     requestedSessionId,
+    requestedRestore,
+    requestedKey,
     sessionContext,
     studyFlowMode,
     studySnapshotKey,
@@ -1294,9 +1238,15 @@ export function useStudyEngine(
   ]);
 
   const retryInitialization = useCallback(() => {
+    liveSessionSnapshotRef.current = null;
     completedInitSignatureRef.current = "";
-    void initializeSession(true);
-  }, [initializeSession]);
+    if (requestedSessionId) {
+      restoredSettingsIdentityRef.current = null;
+      setResumeAttempt(attempt => attempt + 1);
+    } else {
+      void initializeSession(true);
+    }
+  }, [initializeSession, requestedSessionId]);
 
   const startFreshSession = useCallback(async () => {
     if (isRestarting || restartInFlightRef.current) return;
@@ -1350,6 +1300,8 @@ export function useStudyEngine(
       }
     }
 
+    setDismissedResumeId(requestedSessionIdInput ?? null);
+    liveSessionSnapshotRef.current = null;
     clearStudySnapshot(studySnapshotKey);
     clearMasterySnapshot(masterySnapshotKey);
     clearStudyLayerSnapshot(studySnapshotKey);
@@ -1394,6 +1346,7 @@ export function useStudyEngine(
       setCurrentIndex(0);
     }
     setInitializationState(eligibleIds.length > 0 ? "ready" : "failed");
+    runtimeWritableRef.current = eligibleIds.length > 0;
     setIsLoading(false);
 
     // A new row is created only after the previous row was confirmed closed.
@@ -1435,6 +1388,7 @@ export function useStudyEngine(
     });
   }, [
     effectiveRedPlayableIds,
+    requestedSessionIdInput,
     claimAndTrackSession,
     flashcards,
     flipProgressKey,
@@ -1463,6 +1417,10 @@ export function useStudyEngine(
 
   // Save progress with debounce to reduce DB writes
   const saveProgress = useCallback(async () => {
+    if (!runtimeWritableRef.current || cardsOrder.length === 0) return;
+    const scheduledSessionId = sessionIdRef.current;
+    const scheduledUserId = authUserIdRef.current;
+    const scheduledGeneration = initializationGenerationRef.current;
     // Clear any pending save
     if (saveProgressTimeoutRef.current) {
       clearTimeout(saveProgressTimeoutRef.current);
@@ -1470,12 +1428,15 @@ export function useStudyEngine(
     
     // Debounce by 500ms
     saveProgressTimeoutRef.current = setTimeout(async () => {
-      const userId = authUserIdRef.current;
-      const activeSessionId = sessionIdRef.current;
+      const userId = scheduledUserId;
+      const activeSessionId = scheduledSessionId;
+      if (!runtimeWritableRef.current || scheduledGeneration !== initializationGenerationRef.current
+        || activeSessionId !== sessionIdRef.current || userId !== authUserIdRef.current) return;
       if (!activeSessionId || !listId || !userId) return;
 
       const payload: Record<string, unknown> = {
         current_index: currentIndex,
+        cards_order: cardsOrder,
         ...(!isMasteryMode
           ? {
             session_snapshot: buildStudyProgressSnapshot({
@@ -2194,10 +2155,16 @@ export function useStudyEngine(
   }, [currentIndex, results, isLoading, isFlipMode, saveFlipProgress]);
 
   useEffect(() => {
-    if (isLoading || isFinished || cardsOrder.length === 0) return;
+    if (!runtimeWritableRef.current || isLoading || isFinished || cardsOrder.length === 0) return;
     const activeSessionId = sessionIdRef.current ?? sessionId;
+    liveSessionSnapshotRef.current = {
+      identity: `${userScope}:${listId}:${mode}:${sessionScopeKey}`,
+      snapshot: buildStudyProgressSnapshot({ sessionId: activeSessionId, currentIndex, cardsOrder, results, layer: sessionLayerRef.current }),
+    };
     writeStudySnapshot(studySnapshotKey, {
       version: 2,
+      settingsSnapshot: sessionSettingsSnapshot,
+      ...(isMasteryMode && masterySession ? { masterySnapshot: masterySession } : {}),
       sessionId: activeSessionId,
       currentIndex,
       cardsOrder,
@@ -2205,14 +2172,14 @@ export function useStudyEngine(
       timestamp: Date.now(),
       ...(sessionLayerRef.current ? { layer: { ...sessionLayerRef.current } } : {}),
     });
-  }, [studySnapshotKey, sessionId, currentIndex, cardsOrder, results, isLoading, isFinished]);
+  }, [studySnapshotKey, sessionId, currentIndex, cardsOrder, results, isLoading, isFinished, sessionSettingsSnapshot, isMasteryMode, masterySession, userScope, listId, mode, sessionScopeKey]);
 
   // Persist mastery session state so rounds survive a refresh. The regular
   // study snapshot only captures the current round; the mastery snapshot adds
   // queue/retry/mastered bookkeeping owned by studySessionFlow.ts.
   useEffect(() => {
     if (!isMasteryMode) return;
-    if (isLoading || !masterySession) return;
+    if (!runtimeWritableRef.current || isLoading || !masterySession) return;
     writeMasterySnapshot(masterySnapshotKey, masterySession);
     const activeSessionId = sessionIdRef.current;
     if (!activeSessionId || !listId || !authUserIdRef.current) return;
@@ -2245,11 +2212,18 @@ export function useStudyEngine(
   const saveProgressNow = useCallback(async (
     layer?: StudySessionLayerSnapshot,
   ): Promise<SaveProgressResult> => {
+    if (!runtimeWritableRef.current || !cardsOrder.length) return { status: "failed", reason: "session-not-ready" };
+    const savingGeneration = initializationGenerationRef.current;
+    const savingUserId = authUserIdRef.current;
+    const savingSessionId = sessionIdRef.current;
+    if (saveProgressTimeoutRef.current) clearTimeout(saveProgressTimeoutRef.current);
     if (layer) sessionLayerRef.current = { ...layer };
     const snapshotSessionId = sessionIdRef.current ?? sessionId;
     if (cardsOrder.length > 0 && !isFinished) {
       writeStudySnapshot(studySnapshotKey, {
         version: 2,
+        settingsSnapshot: sessionSettingsSnapshot,
+        ...(isMasteryMode && masterySession ? { masterySnapshot: masterySession } : {}),
         sessionId: snapshotSessionId,
         currentIndex,
         cardsOrder,
@@ -2270,6 +2244,11 @@ export function useStudyEngine(
       await pendingSessionClaimRef.current.catch(() => null);
     }
     const activeSessionId = sessionIdRef.current ?? sessionId;
+    if (!runtimeWritableRef.current || savingGeneration !== initializationGenerationRef.current
+      || savingUserId !== authUserIdRef.current
+      || (savingSessionId !== null && savingSessionId !== activeSessionId)) {
+      return { status: "failed", reason: "session-changed-during-save" };
+    }
     if (!activeSessionId || !listId || !authUserIdRef.current) {
       return {
         status: "local-only",
@@ -2284,6 +2263,7 @@ export function useStudyEngine(
       const userId = authUserIdRef.current;
       const payload: Record<string, unknown> = {
         current_index: currentIndex,
+        cards_order: cardsOrder,
         ...(isMasteryMode && masterySession
           ? {
             cards_order: masterySession.currentRoundIds,
@@ -2389,6 +2369,7 @@ export function useStudyEngine(
     isFinished,
     isLoading,
     initializationState,
+    initializationError: requestedRestore?.key === requestedKey ? requestedRestore.error : undefined,
     isCompleting,
     isRestarting,
     currentCard,

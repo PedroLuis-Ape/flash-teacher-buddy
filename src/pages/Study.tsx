@@ -277,11 +277,11 @@ const Study = () => {
     fastMode: prefs.fastMode,
   }), [initialOrder, urlFavoritesOnly, prefs.fastMode]);
   const sessionContext = useMemo(() => ({
-    direction: initialDir,
+    direction: effectivePreset.direction,
     writeActivityMode: effectivePreset.writeActivityMode,
     writeRewriteSide: effectivePreset.writeRewriteSide,
     writeCorrectionMode: effectivePreset.writeCorrectionMode,
-  }), [effectivePreset.writeActivityMode, effectivePreset.writeCorrectionMode, effectivePreset.writeRewriteSide, initialDir]);
+  }), [effectivePreset.writeActivityMode, effectivePreset.writeCorrectionMode, effectivePreset.writeRewriteSide, effectivePreset.direction]);
   
   // Goal context
   const fromGoalId = searchParams.get("from_goal");
@@ -497,7 +497,7 @@ const Study = () => {
   const presetContextKey = `${authUserId ?? "anon"}:${resolvedId}:${normalizedMode}`;
   const [appliedPresetContext, setAppliedPresetContext] = useState<string | null>(null);
   const sessionPresetReady = !preferencesHydrating && appliedPresetContext === presetContextKey;
-  const deckReadyForEngine = deckLoadState.phase === "ready"
+  const deckReadyForEngine = (deckLoadState.phase === "ready" || confirmedEmpty)
     && sessionPresetReady
     && selectedScopeReady;
   const engineFlashcards = deckReadyForEngine ? stableFlashcards : [];
@@ -511,6 +511,7 @@ const Study = () => {
     isFinished,
     isLoading: studyLoading,
     initializationState,
+    initializationError,
     isCompleting,
     isRestarting,
     totalCards,
@@ -562,6 +563,7 @@ const Study = () => {
     handleSessionSettingsRestored,
     resolvedId,
     requestedResumeSessionId,
+    sessionPresetReady,
   );
 
   // A new queue reference represents a new answerable session/round. Resetting
@@ -1525,7 +1527,8 @@ const Study = () => {
     if (!requestedResumeSessionId) return;
     if (initializationState !== "ready" || !engineSessionId) return;
     if (engineSessionId === requestedResumeSessionId) {
-      stripResumeSessionParamFromUrl();
+      // Keep the exact identity on reload, even if another device creates a
+      // newer session in the meantime. Only explicit start-fresh replaces it.
       return;
     }
     if (authUserId) {
@@ -1926,7 +1929,8 @@ const Study = () => {
       if (showSessionRecovery) setShowSessionRecovery(false);
       return;
     }
-    if (flashcards.length === 0 || loadFailure || preferencesHydrating || !sessionPresetReady) return;
+    if (flashcards.length === 0 || loadFailure || preferencesHydrating || !sessionPresetReady
+      || !selectedScopeReady || studyLoading) return;
 
     const timeoutId = setTimeout(() => {
       if (!automaticRecoveryAttempted) {
@@ -1945,6 +1949,8 @@ const Study = () => {
     retryInitialization,
     sessionPresetReady,
     sessionReadiness.phase,
+    selectedScopeReady,
+    studyLoading,
     showSessionRecovery,
   ]);
 
@@ -2026,7 +2032,7 @@ const Study = () => {
         isRetrying={loading || studyLoading || preferencesHydrating}
         technicalId={loadFailure || deckLoadState.phase === "cancelled"
           ? studyDeckTechnicalId("ST", deckLoadState)
-          : `ST-${sessionReadiness.reason}`}
+          : initializationError ?? `ST-${sessionReadiness.reason}`}
         allowStartFresh={!loadFailure && flashcards.length > 0}
         diagnostic={loadFailure === "resource-unavailable" ? {
           title: "A lista salva não está disponível nesta sessão",

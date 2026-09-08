@@ -43,6 +43,7 @@ import { useInstitution } from "@/contexts/InstitutionContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useSpecialFlashcards } from "@/hooks/useSpecialFlashcards";
 import { useSetSpecialLayer } from "@/hooks/useSetSpecialLayer";
+import { assertStudySessionWrite } from "@/features/study/lib/restoreStudySession";
 import { resolveCardStatusIdentity } from "@/features/cards/lib/cardStatusIdentity";
 import {
   filterCardsForStudyScope,
@@ -574,6 +575,7 @@ export default function MixedStudy() {
     };
 
     const existingSessionId = studySessionIdRef.current;
+    assertStudySessionWrite(payload);
     if (existingSessionId) {
       const controller = new AbortController();
       const { data: updated, error } = await withStudyRuntimeTimeout<{ data: any; error: any }>(

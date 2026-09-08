@@ -5,7 +5,8 @@
  * priorizava a sessionId pedida na ordenação — se ela estivesse fora do limite,
  * fosse filtrada pelo preset atual ou tivesse outro escopo, outra sessão era
  * aberta como substituta. Agora a sessão pedida é buscada por ID com filtros
- * obrigatórios: mesmo usuário, mesma lista, mesmo modo e não concluída.
+ * obrigatórios: mesmo usuário, mesma lista e mesmo modo. O chamador pode
+ * incluir concluídas para mostrar o resumo ao reabrir um link antigo.
  */
 import {
   STUDY_REMOTE_RESTORE_TIMEOUT_MS,
@@ -21,7 +22,7 @@ export interface RequestedStudySessionQuery {
 }
 
 export interface RequestedStudySessionClient {
-  from(table: string): RequestedStudySessionQuery;
+  from(table: string): Pick<RequestedStudySessionQuery, "select">;
 }
 
 export interface FetchRequestedStudySessionInput {
@@ -33,6 +34,7 @@ export interface FetchRequestedStudySessionInput {
   columns?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
+  includeCompleted?: boolean;
 }
 
 export type RequestedStudySessionResult<T> =
@@ -62,8 +64,8 @@ export async function fetchRequestedStudySession<T = any>(
     .eq("id", sessionId)
     .eq("user_id", userId)
     .eq("list_id", listId)
-    .eq("mode", mode)
-    .eq("completed", false);
+    .eq("mode", mode);
+  if (!input.includeCompleted) query = query.eq("completed", false);
   query = query.abortSignal(controller.signal);
 
   try {
