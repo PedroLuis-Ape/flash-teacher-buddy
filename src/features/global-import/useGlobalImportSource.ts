@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { readImportFile } from "@/features/import-shared/readImportFile";
 import { analyzeGlobalImportText } from "./analysisService";
 import { parseGlobalImportCsv } from "./csvPackage";
 import { APP_PITECO_SUPER_IMPORT_LIMITS } from "./schema/appPitecoSuperImportSchema";
@@ -26,14 +27,20 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
   const [raw, setRaw] = useState("");
   const [validation, setValidation] = useState<GlobalImportV2ValidationResult | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
+  const readRevision = useRef(0);
+  useEffect(() => () => { readRevision.current += 1; }, []);
 
   const reset = (value: string) => {
+    readRevision.current += 1;
     setRaw(value);
     setValidation(null);
     setNotes([]);
   };
 
   const analyze = (value = raw) => {
+    readRevision.current += 1;
+    setValidation(null);
+    setNotes([]);
     if (looksLikeAdvancedSmartCsv(value) || (!looksLikeJson(value) && !looksLikeLegacyCsv(value))) {
       const smart = parseSmartImportSource(value, {
         packageName: "Pacote importado",
@@ -89,14 +96,22 @@ export function useGlobalImportSource(options: UseGlobalImportSourceOptions = {}
 
   const readFile = async (file?: File) => {
     if (!file) return null;
+    const revision = ++readRevision.current;
+    setValidation(null);
+    setNotes([]);
     const maxFileBytes = Math.max(
       APP_PITECO_SUPER_IMPORT_LIMITS.maxFileBytes,
       SMART_IMPORT_LIMITS.maxFileBytes,
     );
-    if (file.size > maxFileBytes) {
-      throw new Error(`O arquivo excede ${Math.round(maxFileBytes / 1024 / 1024)} MB.`);
+    let text: string;
+    try {
+      text = await readImportFile(file, maxFileBytes);
+    } catch (error) {
+      if (revision !== readRevision.current) return null;
+      throw error;
     }
-    const text = await file.text();
+    // A newer file, edit, cancellation or unmount owns the current draft.
+    if (revision !== readRevision.current) return null;
     reset(text);
     return { text, validation: analyze(text) };
   };
