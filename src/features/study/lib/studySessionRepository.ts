@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { assertStudySessionWrite } from "./restoreStudySession";
 import {
   STUDY_REMOTE_RESTORE_TIMEOUT_MS,
   withStudyRuntimeTimeout,
@@ -161,6 +162,7 @@ export async function claimStudySession(
   input: ClaimStudySessionInput,
   client: StudySessionClient = defaultClient,
 ): Promise<StudySessionClaimResult> {
+  assertStudySessionWrite({ cards_order: input.cardsOrder, session_snapshot: input.sessionSnapshot });
   const abortBinding = bindAbortSignal(input.signal);
   let response: StudySessionResponse;
   try {

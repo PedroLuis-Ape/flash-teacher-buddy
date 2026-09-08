@@ -32,12 +32,14 @@ describe("dependency security toolchain", () => {
   it("pins patched transitive packages reported by the security scan", () => {
     expect(manifest.overrides?.["@hono/node-server"]).toBe("2.0.12");
     expect(manifest.overrides?.["@modelcontextprotocol/sdk"]).toBe("1.30.0");
-    expect(manifest.overrides?.["brace-expansion"]).toBe("5.0.8");
+    expect(manifest.overrides?.["brace-expansion"]).toBe("5.0.9");
     expect(manifest.overrides?.minimatch).toBe("10.2.6");
 
     expect(lockfile.packages?.["node_modules/@hono/node-server"]?.version).toBe("2.0.12");
     expect(lockfile.packages?.["node_modules/@modelcontextprotocol/sdk"]?.version).toBe("1.30.0");
-    expect(lockfile.packages?.["node_modules/brace-expansion"]?.version).toBe("5.0.8");
+    expect(lockfile.packages?.["node_modules/brace-expansion"]?.version).toBe("5.0.9");
+    expect(lockfile.packages?.["node_modules/fast-uri"]?.version).toBe("3.1.7");
+    expect(lockfile.packages?.["node_modules/nanoid"]?.version).toBe("3.3.18");
     expect(lockfile.packages?.["node_modules/minimatch"]?.version).toBe("10.2.6");
   });
 

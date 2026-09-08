@@ -17,6 +17,8 @@ export interface StudySessionSnapshot {
   cardsOrder: string[];
   results: PersistedStudyResult[];
   timestamp: number;
+  settingsSnapshot?: unknown;
+  masterySnapshot?: unknown;
   /** Visible layer inside the current playable group, when applicable. */
   layer?: StudySessionLayerSnapshot;
 }
@@ -264,8 +266,38 @@ export function readStudySnapshot(
   }
 }
 
+/** Read without deck filtering; reconciliation must happen after saved settings. */
+export function readRawStudySnapshot(key: string): unknown {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Offline lookup is bounded to this account/resource/mode AND exact session. */
+export function readSameSessionSnapshot(userId: string, listId: string, mode: string, sessionId: string): StudySessionSnapshot | null {
+  if (typeof window === "undefined") return null;
+  const prefix = ["study-progress-v3", safeScope(userId), safeScope(listId), safeScope(mode), ""].join(":");
+  try {
+    const candidates: StudySessionSnapshot[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (!key?.startsWith(prefix) || key.endsWith(":mastery")) continue;
+      const value = readRawStudySnapshot(key) as Partial<StudySessionSnapshot> | null;
+      if (value?.version === 2 && value.sessionId === sessionId && Array.isArray(value.cardsOrder) && value.cardsOrder.length) {
+        candidates.push(value as StudySessionSnapshot);
+      }
+    }
+    return candidates.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0] ?? null;
+  } catch { return null; }
+}
+
 export function writeStudySnapshot(key: string, snapshot: StudySessionSnapshot): void {
   if (typeof window === "undefined") return;
+  if (snapshot.cardsOrder.length === 0) return;
   try {
     window.localStorage.setItem(key, JSON.stringify(snapshot));
   } catch {

@@ -152,6 +152,12 @@ function createClient(row: unknown) {
 }
 
 describe("consulta direta da sessão pedida", () => {
+  it("inclui uma sessão concluída somente quando o chamador pede o resumo", async () => {
+    const { client, calls } = createClient({ id: SESSION_ID, completed: true });
+    const result = await fetchRequestedStudySession({ client, sessionId: SESSION_ID, userId: "user-1", listId: "list-1", mode: "write", includeCompleted: true });
+    expect(result).toEqual({ status: "found", session: { id: SESSION_ID, completed: true } });
+    expect(calls).toEqual([["id", SESSION_ID], ["user_id", "user-1"], ["list_id", "list-1"], ["mode", "write"]]);
+  });
   it("filtra por id, usuário, lista, modo e completed=false", async () => {
     const { client, calls } = createClient({ id: SESSION_ID });
     const row = await fetchRequestedStudySession({
