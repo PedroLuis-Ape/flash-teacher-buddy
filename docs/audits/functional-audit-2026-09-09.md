@@ -115,6 +115,8 @@ PWA está desativada na configuração atual.
 Typecheck real dos dois projetos: passou. Suíte ampla: 240 arquivos / 1511 testes aprovados. Lint: 0 erros, 72 avisos. Build completo com pré-render, privacidade, bundle e SEO: passou.
 O runtime local não possui npm; executados os entrypoints correspondentes e todos os passos do script build. CI executará os comandos npm reais com instalação limpa.
 Script study-outbox-smoke: passou em Chromium real (duas abas, reload, isolamento, confirmação antiga e remoção idempotente). Adicionado ao CI.
-Validação SQL e resultado final do browser serão registrados após o último diff.
+Preview final: 16/16 casos aprovados, com splash removido e formulário visível. Captura auth 360x800 inspecionada visualmente.
+Primeiro CI expôs também grant direto em helper privado; migration ampliada aos quatro helpers previstos no teste de segurança existente. Workflow list-markers usava Node 20, incompatível com WebSocket nativo exigido pela dependência Supabase atual; alinhado ao Node 22 dos outros workflows.
+As migrations foram reconstruídas pelo CI sem alteração do banco remoto.
 Novos testes: snapshot de conclusão no save explícito, rejeição de glossário parcial, rejeição de CSV incompleto, rota mobile com barra final, script real de IndexedDB.
 Rollback: revert do PR de código; migration só restringe execução anônima e não apaga dados. Não restaurar acesso anônimo como rollback automático.
