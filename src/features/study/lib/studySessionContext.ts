@@ -3,6 +3,8 @@ import type {
   StudyFlowModePreset,
   StudyModePreset,
   StudyOrderPreset,
+  StudyPlayModePreset,
+  StudyPlaySidePreset,
   StudyPresetOverride,
   StudyScopePreset,
   StudyWriteActivityModePreset,
@@ -22,6 +24,9 @@ export interface StudySessionSettingsSnapshot {
   writeActivityMode?: StudyWriteActivityModePreset;
   writeRewriteSide?: StudyWriteRewriteSidePreset;
   writeCorrectionMode?: StudyWriteCorrectionModePreset;
+  /** Optional fields added to the v1 envelope for exact session recovery. */
+  playMode?: StudyPlayModePreset;
+  playSide?: StudyPlaySidePreset;
 }
 
 export interface StudySessionContextInput {
@@ -35,6 +40,8 @@ export interface StudySessionContextInput {
   writeActivityMode?: StudyWriteActivityModePreset;
   writeRewriteSide?: StudyWriteRewriteSidePreset;
   writeCorrectionMode?: StudyWriteCorrectionModePreset;
+  playMode?: StudyPlayModePreset;
+  playSide?: StudyPlaySidePreset;
 }
 
 export function buildStudySessionSettingsSnapshot(
@@ -52,6 +59,8 @@ export function buildStudySessionSettingsSnapshot(
     ...(input.writeActivityMode ? { writeActivityMode: input.writeActivityMode } : {}),
     ...(input.writeRewriteSide ? { writeRewriteSide: input.writeRewriteSide } : {}),
     ...(input.writeCorrectionMode ? { writeCorrectionMode: input.writeCorrectionMode } : {}),
+    ...(input.playMode ? { playMode: input.playMode } : {}),
+    ...(input.playSide ? { playSide: input.playSide } : {}),
   };
 }
 
@@ -134,6 +143,12 @@ export function buildLegacyStudySessionScopeKey(input: StudySessionContextInput)
 export function isStudySessionSettingsSnapshot(value: unknown): value is StudySessionSettingsSnapshot {
   if (!value || typeof value !== "object") return false;
   const row = value as Partial<StudySessionSettingsSnapshot>;
+  const playModeValid = row.playMode === undefined
+    || row.playMode === "both"
+    || row.playMode === "single";
+  const playSideValid = row.playSide === undefined
+    || row.playSide === "a"
+    || row.playSide === "b";
   return row.version === 1
     && typeof row.mode === "string"
     && (row.subset === "all" || row.subset === "favorites")
@@ -141,7 +156,9 @@ export function isStudySessionSettingsSnapshot(value: unknown): value is StudySe
     && typeof row.redFocus === "boolean"
     && typeof row.fastMode === "boolean"
     && (row.direction === "a-b" || row.direction === "b-a" || row.direction === "any")
-    && (row.studyFlowMode === "mastery_rounds" || row.studyFlowMode === "continuous");
+    && (row.studyFlowMode === "mastery_rounds" || row.studyFlowMode === "continuous")
+    && playModeValid
+    && playSideValid;
 }
 
 /**
@@ -165,5 +182,7 @@ export function studySessionSettingsToPresetOverride(
     ...(value.writeActivityMode ? { writeActivityMode: value.writeActivityMode } : {}),
     ...(value.writeRewriteSide ? { writeRewriteSide: value.writeRewriteSide } : {}),
     ...(value.writeCorrectionMode ? { writeCorrectionMode: value.writeCorrectionMode } : {}),
+    ...(value.playMode ? { playMode: value.playMode } : {}),
+    ...(value.playSide ? { playSide: value.playSide } : {}),
   };
 }

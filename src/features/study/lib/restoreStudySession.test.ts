@@ -49,6 +49,43 @@ describe("ST-empty-order resume regression", () => {
   it("does not read a foreign session ID embedded in the remote snapshot", () => {
     expect(restoreStudySession({ session: { ...row, session_snapshot: { ...snapshot, sessionId: "session-y" } }, eligibleIds: ids }).source).toBe("cards_order");
   });
+  it("prefers a newer same-session local snapshot over an older remote row", () => {
+    const result = restoreStudySession({
+      session: {
+        ...row,
+        updated_at: new Date(1_000).toISOString(),
+        session_snapshot: { ...snapshot, currentIndex: 1, timestamp: 1_000 },
+      },
+      local: { ...snapshot, currentIndex: 2, timestamp: 2_000 },
+      eligibleIds: ids,
+    });
+    expect(result.source).toBe("local");
+    expect(result.snapshot.currentIndex).toBe(2);
+    expect(result.snapshot.results).toEqual([answer]);
+  });
+  it("restores standard round bookkeeping with the queue", () => {
+    const result = restoreStudySession({
+      session: {
+        ...row,
+        session_snapshot: {
+          ...snapshot,
+          roundNumber: 3,
+          roundResults: [answer],
+          unseenCards: ["d"],
+          missedCards: ["b"],
+          isFinished: true,
+        },
+      },
+      eligibleIds: ids,
+    });
+    expect(result.snapshot).toMatchObject({
+      roundNumber: 3,
+      roundResults: [answer],
+      unseenCards: ["d"],
+      missedCards: ["b"],
+      isFinished: true,
+    });
+  });
   it.each(["all", "favorites", "redFocus", "sequential", "random"])("reconciles the final %s deck without importing excluded cards", scope => {
     const eligibleIds = scope === "all" ? ids : ["b", "d"];
     const restored = restoreStudySession({ session: { ...row, cards_order: ["d", "b", "b", "a", "c"], current_index: 1 }, eligibleIds, unique: scope === "redFocus" });

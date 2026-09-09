@@ -278,10 +278,12 @@ const Study = () => {
   }), [initialOrder, urlFavoritesOnly, prefs.fastMode]);
   const sessionContext = useMemo(() => ({
     direction: effectivePreset.direction,
+    playMode: effectivePreset.playMode,
+    playSide: effectivePreset.playSide,
     writeActivityMode: effectivePreset.writeActivityMode,
     writeRewriteSide: effectivePreset.writeRewriteSide,
     writeCorrectionMode: effectivePreset.writeCorrectionMode,
-  }), [effectivePreset.writeActivityMode, effectivePreset.writeCorrectionMode, effectivePreset.writeRewriteSide, effectivePreset.direction]);
+  }), [effectivePreset.direction, effectivePreset.playMode, effectivePreset.playSide, effectivePreset.writeActivityMode, effectivePreset.writeCorrectionMode, effectivePreset.writeRewriteSide]);
   
   // Goal context
   const fromGoalId = searchParams.get("from_goal");
@@ -450,6 +452,8 @@ const Study = () => {
       scope: subset,
       fastMode: settings.fastMode,
       studyFlowMode: settings.studyFlowMode,
+      ...(settings.playMode ? { playMode: settings.playMode } : {}),
+      ...(settings.playSide ? { playSide: settings.playSide } : {}),
       ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
       ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
       ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),

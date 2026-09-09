@@ -19,6 +19,12 @@ export interface StudySessionSnapshot {
   timestamp: number;
   settingsSnapshot?: unknown;
   masterySnapshot?: unknown;
+  /** Standard-mode round state; mastery has its own richer snapshot. */
+  roundNumber?: number;
+  roundResults?: PersistedStudyResult[];
+  unseenCards?: string[];
+  missedCards?: string[];
+  isFinished?: boolean;
   /** Visible layer inside the current playable group, when applicable. */
   layer?: StudySessionLayerSnapshot;
 }
@@ -88,6 +94,16 @@ function isResult(value: unknown): value is PersistedStudyResult {
     && typeof row.correct === "boolean"
     && typeof row.skipped === "boolean"
     && Number.isFinite(Number(row.attempts));
+}
+
+function stringArray(value: unknown, availableCardIds: Set<string>): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((id): id is string => typeof id === "string" && availableCardIds.has(id));
+}
+
+function roundResults(value: unknown, availableCardIds: Set<string>): PersistedStudyResult[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter(isResult).filter((result) => availableCardIds.has(result.flashcardId));
 }
 
 export function sanitizeStudyLayerSnapshot(value: unknown): StudySessionLayerSnapshot | undefined {
@@ -200,6 +216,13 @@ export function sanitizeStudySnapshot(
       cardsOrder: restored.cardsOrder,
       results,
       timestamp: Number.isFinite(Number(row.timestamp)) ? Number(row.timestamp) : 0,
+      ...(row.settingsSnapshot !== undefined ? { settingsSnapshot: row.settingsSnapshot } : {}),
+      ...(row.masterySnapshot !== undefined ? { masterySnapshot: row.masterySnapshot } : {}),
+      ...(Number.isFinite(Number(row.roundNumber)) ? { roundNumber: Math.max(1, Math.floor(Number(row.roundNumber))) } : {}),
+      ...(roundResults(row.roundResults, availableCardIds) ? { roundResults: roundResults(row.roundResults, availableCardIds) } : {}),
+      ...(stringArray(row.unseenCards, availableCardIds) ? { unseenCards: stringArray(row.unseenCards, availableCardIds) } : {}),
+      ...(stringArray(row.missedCards, availableCardIds) ? { missedCards: stringArray(row.missedCards, availableCardIds) } : {}),
+      ...(typeof row.isFinished === "boolean" ? { isFinished: row.isFinished } : {}),
       ...(layer ? { layer } : {}),
     };
   }
@@ -248,6 +271,13 @@ export function sanitizeStudySnapshot(
     cardsOrder,
     results,
     timestamp: Number.isFinite(Number(row.timestamp)) ? Number(row.timestamp) : 0,
+    ...(row.settingsSnapshot !== undefined ? { settingsSnapshot: row.settingsSnapshot } : {}),
+    ...(row.masterySnapshot !== undefined ? { masterySnapshot: row.masterySnapshot } : {}),
+    ...(Number.isFinite(Number(row.roundNumber)) ? { roundNumber: Math.max(1, Math.floor(Number(row.roundNumber))) } : {}),
+    ...(roundResults(row.roundResults, availableCardIds) ? { roundResults: roundResults(row.roundResults, availableCardIds) } : {}),
+    ...(stringArray(row.unseenCards, availableCardIds) ? { unseenCards: stringArray(row.unseenCards, availableCardIds) } : {}),
+    ...(stringArray(row.missedCards, availableCardIds) ? { missedCards: stringArray(row.missedCards, availableCardIds) } : {}),
+    ...(typeof row.isFinished === "boolean" ? { isFinished: row.isFinished } : {}),
     ...(layer ? { layer } : {}),
   };
 }
