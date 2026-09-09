@@ -7,7 +7,7 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3;
 const EDGE_ZONE_WIDTH = 30;
 
 const mainRoutes = [
-  "/",
+  "/dashboard",
   "/folders",
   "/goals",
   "/store",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,8 @@ export default function KingdomImport() {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const importingRef = useRef(false);
+  const [failureReport, setFailureReport] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -19,12 +21,15 @@ export default function KingdomImport() {
   };
 
   const handleImport = async () => {
+    if (importingRef.current) return;
     if (!file) {
       toast.error("Selecione um arquivo CSV");
       return;
     }
 
+    importingRef.current = true;
     setImporting(true);
+    setFailureReport("");
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -72,6 +77,11 @@ export default function KingdomImport() {
         return;
       }
 
+      if (result.failed > 0) {
+        setFailureReport(JSON.stringify(result.failedDetails ?? [], null, 2));
+        toast.error(`Importação parcial: ${result.inserted} atividade(s) salvas e ${result.failed} falharam. O arquivo foi preservado para revisão.`, { duration: 10000 });
+        return;
+      }
       toast.success(
         <div>
           <div className="font-semibold">Importação concluída!</div>
@@ -88,6 +98,7 @@ export default function KingdomImport() {
       console.error("Import error:", error);
       toast.error("Erro ao importar CSV");
     } finally {
+      importingRef.current = false;
       setImporting(false);
     }
   };
@@ -150,6 +161,7 @@ K1,L1,Feelings,translate,I am happy (estado emocional),I am happy,[I'm happy],en
               </p>
 
               <div className="space-y-4">
+                {failureReport && <pre role="alert" className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-sm text-destructive">{failureReport}</pre>}
                 <Input
                   type="file"
                   accept=".csv"

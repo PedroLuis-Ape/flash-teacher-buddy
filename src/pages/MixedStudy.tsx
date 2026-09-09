@@ -62,7 +62,7 @@ import {
   type StudySessionSettingsSnapshot,
 } from "@/features/study/lib/studySessionContext";
 import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
-import { recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
+import { createStudyProgressOperationId, recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
 import { claimStudySession, persistStudySession } from "@/features/study/lib/studySessionRepository";
 import {
   enqueueStudySessionSnapshot,
@@ -70,6 +70,10 @@ import {
   markStudySessionSnapshotFailed,
   markStudySessionSnapshotSuccess,
   requeueStudyOutbox,
+  enqueueStudyProgress,
+  listPendingStudyProgress,
+  markStudyProgressSuccess,
+  markStudyProgressFailed,
 } from "@/features/study/lib/studyPersistenceOutbox";
 import type { MixedFlowMode } from "@/features/study/lib/adaptiveMixedSession";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
@@ -657,6 +661,15 @@ export default function MixedStudy() {
   const flushMixedStudyOutbox = useCallback(async () => {
     if (!userId) return;
     await requeueStudyOutbox(userId).catch(() => undefined);
+    const progress = await listPendingStudyProgress(userId).catch(() => []);
+    for (const record of progress) {
+      try {
+        await recordStudyProgressAttempt(record);
+        await markStudyProgressSuccess(record.operationId);
+      } catch (error) {
+        await markStudyProgressFailed(record.operationId, error).catch(() => undefined);
+      }
+    }
     const pending = await listPendingStudySessionSnapshots(userId).catch(() => []);
     for (const record of pending) {
       try {
@@ -680,7 +693,12 @@ export default function MixedStudy() {
     void flushMixedStudyOutbox();
     const retry = () => { void flushMixedStudyOutbox(); };
     window.addEventListener("online", retry);
-    return () => window.removeEventListener("online", retry);
+    const visible = () => { if (document.visibilityState === "visible") retry(); };
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      window.removeEventListener("online", retry);
+      document.removeEventListener("visibilitychange", visible);
+    };
   }, [flushMixedStudyOutbox]);
 
   const cardIds = useMemo(() => cards.map((card) => card.id), [cards]);
@@ -887,12 +905,23 @@ export default function MixedStudy() {
 
   const recordAttempt = useCallback(async (cardId: string, correct: boolean, skipped: boolean) => {
     if (!userId || !listId || skipped) return;
-    const write = recordStudyProgressAttempt({
+    const attempt = {
       userId,
       flashcardId: cardId,
       listId,
       correct,
-    });
+      operationId: createStudyProgressOperationId(),
+    };
+    const write = (async () => {
+      await enqueueStudyProgress(attempt);
+      try {
+        await recordStudyProgressAttempt(attempt);
+        await markStudyProgressSuccess(attempt.operationId);
+      } catch (error) {
+        await markStudyProgressFailed(attempt.operationId, error).catch(() => undefined);
+        throw error;
+      }
+    })();
     progressWritesRef.current.add(write);
     try {
       await write;

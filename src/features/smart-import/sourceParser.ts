@@ -336,6 +336,15 @@ function parseSimpleCsv(input: string, context: SmartImportContext): SmartImport
   const hasGlobalHeader = headers.includes("folder_name") && headers.includes("list_name") && headers.includes("front") && headers.includes("back");
   const hasSimpleHeader = headers.some((header) => ["front", "lado a", "english", "inglês", "ingles"].includes(header));
   const contentRows = hasGlobalHeader || hasSimpleHeader ? rows.slice(1) : rows;
+  const incompleteRows = contentRows.flatMap((row, index) => {
+    const record = hasGlobalHeader ? csvObject(headers, row) : null;
+    const valid = record ? record.front?.trim() && record.back?.trim()
+      : row.values[0]?.trim() && row.values[1]?.trim();
+    return valid ? [] : [index + (hasGlobalHeader || hasSimpleHeader ? 2 : 1)];
+  });
+  if (incompleteRows.length) {
+    throw new Error(`CSV com linhas incompletas: ${incompleteRows.join(", ")}. Preencha os dois lados antes de importar; nenhuma linha foi descartada.`);
+  }
 
   if (hasGlobalHeader) {
     const folders = new Map<string, SmartImportFolder>();

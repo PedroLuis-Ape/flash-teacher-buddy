@@ -121,6 +121,8 @@ export function ContentIngestDialog({
   langB = "pt-BR",
 }: Props) {
   const completeFileRef = useRef<HTMLInputElement>(null);
+  const sourceRevisionRef = useRef(0);
+  const savingRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>(1);
   const [mode, setMode] = useState<ImportMode>("simple");
@@ -252,6 +254,7 @@ export function ContentIngestDialog({
   };
 
   const reset = () => {
+    sourceRevisionRef.current += 1;
     setStep(1);
     setMode("simple");
     setRaw("");
@@ -357,8 +360,10 @@ export function ContentIngestDialog({
   };
 
   const handleCompleteFile = async (file?: File) => {
+    const revision = ++sourceRevisionRef.current;
     try {
       const text = await readCompleteImportFile(file);
+      if (revision !== sourceRevisionRef.current) return;
       if (!text || !file) return;
       const result = parseComplete(text);
       const requirements = requirementsForPackage(result.packageValue);
@@ -379,6 +384,7 @@ export function ContentIngestDialog({
       setStep(2);
       toast.success(`Arquivo “${file.name}” carregado e analisado.`);
     } catch (error: unknown) {
+      if (revision !== sourceRevisionRef.current) return;
       toast.error(error instanceof Error ? error.message : "Não foi possível ler o arquivo JSON.");
     } finally {
       if (completeFileRef.current) completeFileRef.current.value = "";
@@ -386,16 +392,17 @@ export function ContentIngestDialog({
   };
 
   const save = async () => {
-    if (!prepared || !catalog || prepared.errors.length || duplicatePolicyBlocked) return;
+    if (savingRef.current || !prepared || !catalog || prepared.errors.length || duplicatePolicyBlocked) return;
     if (strategy === "replace" && !window.confirm("Os cards atuais desta lista serão substituídos. Deseja continuar?")) return;
-    const latestCapabilities = await fetchImportCapabilities();
-    if (!evaluateImportCapabilities(latestCapabilities, requirementsForPackage(prepared.smartPackage)).ready) {
-      toast.error("O ambiente mudou e a importação foi bloqueada para evitar perda de dados.");
-      return;
-    }
+    savingRef.current = true;
     setBusy(true);
     setReport(null);
     try {
+      const latestCapabilities = await fetchImportCapabilities();
+      if (!evaluateImportCapabilities(latestCapabilities, requirementsForPackage(prepared.smartPackage)).ready) {
+        toast.error("O ambiente mudou e a importação foi bloqueada para evitar perda de dados.");
+        return;
+      }
       const imported = await executeMappedGlobalImport(prepared.packageValue, {
         smartPackage: prepared.smartPackage,
         destinationPlan: prepared.plan,
@@ -416,6 +423,7 @@ export function ContentIngestDialog({
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "A importação falhou e foi desfeita.");
     } finally {
+      savingRef.current = false;
       setBusy(false);
     }
   };
@@ -443,6 +451,7 @@ export function ContentIngestDialog({
   };
 
   const changeMode = (next: ImportMode) => {
+    sourceRevisionRef.current += 1;
     setMode(next);
     setRaw("");
     setSelectedFileName("");
@@ -456,7 +465,7 @@ export function ContentIngestDialog({
   };
 
   return <>
-    <Dialog open={open} onOpenChange={(next) => { if (!next && !busy) reset(); setOpen(next); }}>
+    <Dialog open={open} onOpenChange={(next) => { if (!next && (savingRef.current || undoing)) return; if (!next) reset(); setOpen(next); }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4" />Importar para esta lista</Button>
       </DialogTrigger>
@@ -535,7 +544,7 @@ export function ContentIngestDialog({
               <Label>{mode === "simple" ? "Flashcards" : "Pacote completo — colagem opcional"}</Label>
               <Textarea
                 value={raw}
-                onChange={(event) => { setRaw(event.target.value); setSelectedFileName(""); }}
+                onChange={(event) => { sourceRevisionRef.current += 1; setRaw(event.target.value); setSelectedFileName(""); setParsed(null); setReport(null); }}
                 className="min-h-[320px] font-mono text-xs sm:text-sm"
                 placeholder={mode === "simple"
                   ? "Hello / Olá\nGood morning / Bom dia"

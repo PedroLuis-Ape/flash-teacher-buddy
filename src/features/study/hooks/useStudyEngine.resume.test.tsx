@@ -70,6 +70,20 @@ afterEach(async () => {
 });
 
 describe("ST-empty-order real React resume lifecycle", () => {
+  it("preserves completion and round bookkeeping in the explicit exit snapshot", async () => {
+    await mount();
+    await act(async () => engine.goToNext());
+    await act(async () => engine.goToNext());
+    expect(engine.isFinished).toBe(true);
+    await act(async () => { await engine.saveProgressNow(); });
+    const saved = Array.from({ length: localStorage.length }, (_, i) =>
+      JSON.parse(localStorage.getItem(localStorage.key(i)!)!))
+      .find(value => value?.version === 2 && value?.sessionId === "session-x");
+    expect(saved).toMatchObject({ isFinished: true, roundNumber: 1 });
+    expect(saved).toHaveProperty("roundResults");
+    expect(saved).toHaveProperty("unseenCards");
+    expect(saved).toHaveProperty("missedCards");
+  });
   it("stays loading until the actual requested lookup resolves", async () => {
     let resolveLookup!: (value: unknown) => void;
     mocks.lookup.mockReturnValue(new Promise(resolve => { resolveLookup = resolve; }));

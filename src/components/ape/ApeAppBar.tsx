@@ -72,8 +72,10 @@ export function ApeAppBar({
       onBack();
     } else if (backPath) {
       navigate(backPath);
-    } else {
+    } else if (typeof window.history.state?.idx === "number" && window.history.state.idx > 0) {
       navigate(-1);
+    } else {
+      navigate("/dashboard", { replace: true });
     }
   };
 

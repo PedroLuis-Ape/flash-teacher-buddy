@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { isActiveStudyPath } from "./isActiveStudyPath";
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");
@@ -24,8 +25,14 @@ describe("mobile portrait fallback", () => {
   });
 
   it("covers both regular and mixed study routes", () => {
-    expect(layout).toContain('location.pathname.endsWith("/study")');
-    expect(layout).toContain('location.pathname.endsWith("/mixed-study")');
+    for (const mode of ["study", "mixed-study"]) {
+      expect(isActiveStudyPath(`/list/id/${mode}`)).toBe(true);
+      expect(isActiveStudyPath(`/list/id/${mode}/`)).toBe(true);
+      expect(isActiveStudyPath(`/portal/list/id/${mode}/`)).toBe(true);
+    }
+    expect(isActiveStudyPath("/list/id/games")).toBe(false);
+    expect(isActiveStudyPath("/study-settings")).toBe(false);
+    expect(layout).toContain("isActiveStudyPath(location.pathname)");
     expect(layout).toContain("<MobilePortraitOnlyGate active={portraitOnlySession} />");
   });
 });

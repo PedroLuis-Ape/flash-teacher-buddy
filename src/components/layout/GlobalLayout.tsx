@@ -11,6 +11,7 @@ import { MixedModeRecommendationBubble } from "@/features/study/components/Mixed
 import { MobilePortraitOnlyGate } from "@/components/layout/MobilePortraitOnlyGate";
 import { installPortraitOrientationGuard } from "@/lib/portraitOrientationLock";
 import { isProtectedPath } from "@/lib/sessionRouteAccess";
+import { isActiveStudyPath } from "@/lib/isActiveStudyPath";
 
 interface GlobalLayoutProps {
   children: ReactNode;
@@ -29,8 +30,7 @@ export function GlobalLayout({ children }: GlobalLayoutProps) {
     : <PublicShell>{children}</PublicShell>;
 
   const portraitOnlySession =
-    location.pathname.endsWith("/study") ||
-    location.pathname.endsWith("/mixed-study");
+    isActiveStudyPath(location.pathname);
 
   return (
     <>

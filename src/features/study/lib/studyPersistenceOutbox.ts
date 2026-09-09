@@ -232,22 +232,10 @@ export async function markStudyProgressFailed(operationId: string, error: unknow
 }
 
 export async function requeueStudyOutbox(userId: string): Promise<void> {
-  const [sessions, progress] = await Promise.all([
-    listPendingStudySessionSnapshots(userId),
-    listPendingStudyProgress(userId),
-  ]);
-  await Promise.all([
-    ...sessions.filter((record) => record.state === "failed").map((record) => putRecord(SESSION_STORE, {
-      ...record,
-      state: "pending",
-      updatedAt: Date.now(),
-    })),
-    ...progress.filter((record) => record.state === "failed").map((record) => putRecord(PROGRESS_STORE, {
-      ...record,
-      state: "pending",
-      updatedAt: Date.now(),
-    })),
-  ]);
+  // Both readers already include failed records. Rewriting copies read in
+  // another transaction could resurrect acknowledged writes or replace a
+  // newer snapshot from another tab. Retrying requires no state mutation.
+  void userId;
 }
 
 /** Test-only cleanup; production never truncates this store. */

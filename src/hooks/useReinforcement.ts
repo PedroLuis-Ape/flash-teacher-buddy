@@ -9,6 +9,14 @@ export interface ReinforcementArea {
   list_id: string;
 }
 
+function isReinforcementArea(value: unknown): value is ReinforcementArea {
+  if (!value || typeof value !== "object") return false;
+  return "id" in value && typeof value.id === "string"
+    && "folder_id" in value && typeof value.folder_id === "string"
+    && "list_id" in value && typeof value.list_id === "string"
+    && "institution_id" in value && (value.institution_id === null || typeof value.institution_id === "string");
+}
+
 export interface ReinforcementItem {
   id: string;
   source_card_id: string;
@@ -71,7 +79,10 @@ export async function fetchReinforcementSnapshot(
   const { data: areaData, error: areaError } = await areaQuery.maybeSingle();
   if (areaError) throw areaError;
 
-  const area = (areaData as ReinforcementArea | null) ?? null;
+  if (areaData && !isReinforcementArea(areaData)) {
+    throw new Error("Resposta inválida ao carregar a área de reforço.");
+  }
+  const area = isReinforcementArea(areaData) ? areaData : null;
   if (!area) return { area: null, items: [] };
 
   let pointsQuery = supabase
