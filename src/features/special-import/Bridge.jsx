@@ -9,6 +9,7 @@ import { useBridgeState } from "./useBridgeState";
 export default function Bridge({ open, onOpenChange, userId }) {
   const state = useBridgeState(userId);
   const close = (value) => {
+    if (!value && state.busy) return;
     onOpenChange(value);
     if (!value) state.reset();
   };
@@ -55,7 +56,7 @@ export default function Bridge({ open, onOpenChange, userId }) {
 
       <DialogFooter className="gap-2 border-t bg-background px-5 py-3 sm:border-0 sm:p-0">
         {state.rows && !state.report && <Button variant="outline" onClick={() => state.setRows(null)} disabled={state.busy}>Voltar</Button>}
-        <Button variant="ghost" onClick={() => close(false)}>{state.report ? "Fechar" : "Cancelar"}</Button>
+        <Button variant="ghost" disabled={state.busy} onClick={() => close(false)}>{state.report ? "Fechar" : "Cancelar"}</Button>
         {state.rows && !state.report && <Button onClick={state.apply} disabled={state.busy || !canApply}>
           {state.busy && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
           Aplicar itens válidos

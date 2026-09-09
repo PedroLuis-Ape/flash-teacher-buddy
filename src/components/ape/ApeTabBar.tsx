@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 import { usePerformance } from "@/contexts/PerformanceContext";
+import { isActiveStudyPath } from "@/lib/isActiveStudyPath";
 
 // A identidade das abas é o `id`; o rótulo é apenas apresentação traduzida.
 const tabs = [
@@ -40,8 +41,7 @@ export function ApeTabBar() {
     /^\/turmas\/[^/]+\/import\/super\/?$/.test(location.pathname);
 
   const isActiveStudyRoute =
-    location.pathname.endsWith("/study") ||
-    location.pathname.endsWith("/mixed-study");
+    isActiveStudyPath(location.pathname);
 
   // Full-screen study sessions already provide their own exit and navigation
   // controls. Keeping the global tab bar mounted steals valuable mobile height

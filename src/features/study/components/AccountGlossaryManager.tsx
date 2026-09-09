@@ -63,10 +63,14 @@ export function AccountGlossaryManager({
   };
 
   const importGlossary = async () => {
-    if (parsed.entries.length === 0) return;
-    await importEntries.mutateAsync(parsed.entries);
-    setImportText("");
-    setImportOpen(false);
+    if (parsed.entries.length === 0 || parsed.errors.length || importEntries.isPending) return;
+    try {
+      await importEntries.mutateAsync(parsed.entries);
+      setImportText("");
+      setImportOpen(false);
+    } catch {
+      toast.error("Não foi possível importar. Seu texto foi preservado para tentar novamente.");
+    }
   };
 
   const download = () => {
@@ -136,11 +140,11 @@ export function AccountGlossaryManager({
       </div>}
     </Card>
 
-    <Dialog open={importOpen} onOpenChange={setImportOpen}>
+    <Dialog open={importOpen} onOpenChange={(next) => { if (!importEntries.isPending) setImportOpen(next); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle>Importar para a Caixa de Glossário</DialogTitle></DialogHeader>
         <div className="space-y-2"><Label>JSON ou texto compatível</Label><Textarea value={importText} onChange={(event) => setImportText(event.target.value)} className="min-h-[320px] font-mono text-xs" /><Badge variant="secondary">{parsed.entries.length} válida(s)</Badge>{parsed.errors.slice(0, 5).map((message) => <p key={message} className="text-xs text-destructive">{message}</p>)}</div>
-        <DialogFooter><Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button><Button onClick={() => void importGlossary()} disabled={parsed.entries.length === 0 || importEntries.isPending}>Importar</Button></DialogFooter>
+        <DialogFooter><Button variant="outline" disabled={importEntries.isPending} onClick={() => setImportOpen(false)}>Cancelar</Button><Button onClick={() => void importGlossary()} disabled={parsed.entries.length === 0 || parsed.errors.length > 0 || importEntries.isPending}>Importar</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   </>;

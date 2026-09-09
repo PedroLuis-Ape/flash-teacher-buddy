@@ -13,6 +13,10 @@ const context = {
 };
 
 describe("smart import source parser", () => {
+  it("rejects incomplete CSV rows without silently importing a subset", () => {
+    expect(() => parseSmartImportSource("front,back\ncat,gato\ndog,", context))
+      .toThrow("linhas incompletas");
+  });
   it("parses text with overlapping glossary and layered cards", () => {
     const result = parseSmartImportSource(`=== GLOSSÁRIO GLOBAL ===
 because / porque

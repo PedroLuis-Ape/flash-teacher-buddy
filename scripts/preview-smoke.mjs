@@ -45,6 +45,7 @@ async function waitForPreview() {
 }
 
 async function waitForContent(page) {
+  await page.locator("#boot-loader").waitFor({ state: "hidden", timeout: 12_000 });
   await page.waitForFunction(() => document.body.innerText.trim().length > 40, null, {
     timeout: 12_000,
   });
@@ -74,6 +75,8 @@ async function runCase(browser, name, path, options = {}) {
     if (options.mobileLayout) {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
       if (overflow) throw new Error("mobile layout has horizontal overflow");
+      await mkdir(artifactDir, { recursive: true });
+      await page.screenshot({ path: resolve(artifactDir, `${name}.png`), fullPage: true });
     }
     const allowed = options.allowConsole || [];
     const allowedPageErrors = options.allowPageErrors || [];
@@ -129,15 +132,17 @@ try {
     routeSupabase: true,
     allowConsole: [/supabase/i, /network/i, /fetch/i, /auth/i, /Query/i],
   });
-  await runCase(browser, "health-mobile", "/__preview-health", {
-    viewport: { width: 390, height: 844 },
-    selector: '[data-testid="preview-health"]',
-    mobileLayout: true,
-  });
-  await runCase(browser, "landing-mobile", "/landing", {
-    viewport: { width: 390, height: 844 },
-    mobileLayout: true,
-  });
+  for (const viewport of [{ width: 360, height: 800 }, { width: 390, height: 844 }, { width: 412, height: 915 }]) {
+    await runCase(browser, `health-mobile-${viewport.width}`, "/__preview-health", {
+      viewport, selector: '[data-testid="preview-health"]', mobileLayout: true,
+    });
+    await runCase(browser, `landing-mobile-${viewport.width}`, "/landing", {
+      viewport, mobileLayout: true,
+    });
+    await runCase(browser, `auth-mobile-${viewport.width}`, "/auth", {
+      viewport, mobileLayout: true, text: "Entrar na APE",
+    });
+  }
 
   console.log("Preview Safety Gate: PASS");
 } catch (error) {

@@ -132,7 +132,11 @@ const Folder = () => {
         
         if (directData) {
           // Got folder directly (user is owner or has RLS access)
-          setFolder(directData);
+          setFolder({
+            ...directData,
+            system_kind: directData.system_kind === "reinforcement" || directData.system_kind === "attention_points"
+              ? directData.system_kind : "user",
+          });
           const isDirectOwner = session.user.id === directData.owner_id;
           setIsOwner(isDirectOwner);
           setIsClassContext(!!directData.class_id);

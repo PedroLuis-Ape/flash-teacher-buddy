@@ -73,7 +73,12 @@ export function parseFolderGlossaryJson(text: string): FolderGlossaryInput[] {
     throw new Error('O arquivo não contém uma lista "entries" ou "glossary" com entradas.');
   }
 
-  return rows.map(normalizeFolderGlossaryInput).filter((entry): entry is FolderGlossaryInput => Boolean(entry));
+  const entries = rows.map(normalizeFolderGlossaryInput);
+  const invalidRows = entries.flatMap((entry, index) => entry ? [] : [index + 1]);
+  if (invalidRows.length) {
+    throw new Error(`Entradas inválidas nas posições ${invalidRows.join(", ")}: cada entrada precisa de termo e tradução. Nenhuma entrada foi importada; corrija o arquivo e tente novamente.`);
+  }
+  return entries as FolderGlossaryInput[];
 }
 
 export function serializeFolderGlossary(

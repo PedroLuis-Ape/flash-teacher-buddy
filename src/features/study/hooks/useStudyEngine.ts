@@ -174,6 +174,9 @@ async function writeStudySession(request: StudySessionWriteRequest): Promise<voi
     if (queued) {
       await markStudySessionSnapshotSuccess(key, revision);
     }
+    if (!result.accepted && result.revision > revision) {
+      throw new Error("session-write-conflict-newer-remote-revision");
+    }
     if (import.meta.env.DEV) {
       logStudyRuntime("session-write", {
         sessionId: request.sessionId,
@@ -2414,6 +2417,11 @@ export function useStudyEngine(
         currentIndex,
         cardsOrder,
         results,
+        roundNumber,
+        roundResults,
+        unseenCards,
+        missedCards,
+        isFinished,
         timestamp: Date.now(),
         ...(sessionLayerRef.current ? { layer: { ...sessionLayerRef.current } } : {}),
       });
@@ -2500,7 +2508,7 @@ export function useStudyEngine(
         reason: error instanceof Error ? error.message : "remote-write-failed",
       };
     }
-  }, [sessionId, currentIndex, listId, mode, cardsOrder, results, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey, sessionScopeKey, sessionSettingsSnapshot, flushPersistedStudyOutbox, flushProgressBuffer]);
+  }, [sessionId, currentIndex, listId, mode, cardsOrder, results, roundNumber, roundResults, unseenCards, missedCards, isFinished, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey, sessionScopeKey, sessionSettingsSnapshot, flushPersistedStudyOutbox, flushProgressBuffer]);
 
   useEffect(() => {
     void flushPersistedStudyOutbox();
