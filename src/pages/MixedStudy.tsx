@@ -63,7 +63,14 @@ import {
 } from "@/features/study/lib/studySessionContext";
 import { buildStudySnapshotKey } from "@/features/study/lib/studySessionSnapshot";
 import { recordStudyProgressAttempt } from "@/features/study/lib/studyProgressRepository";
-import { claimStudySession } from "@/features/study/lib/studySessionRepository";
+import { claimStudySession, persistStudySession } from "@/features/study/lib/studySessionRepository";
+import {
+  enqueueStudySessionSnapshot,
+  listPendingStudySessionSnapshots,
+  markStudySessionSnapshotFailed,
+  markStudySessionSnapshotSuccess,
+  requeueStudyOutbox,
+} from "@/features/study/lib/studyPersistenceOutbox";
 import type { MixedFlowMode } from "@/features/study/lib/adaptiveMixedSession";
 import { WriteStudyView } from "@/features/study/components/WriteStudyView";
 import { MultipleChoiceStudyView } from "@/features/study/components/MultipleChoiceStudyView";
@@ -136,6 +143,7 @@ export default function MixedStudy() {
   const studySessionIdRef = useRef<string | null>(null);
   const sessionCreationRef = useRef<Promise<string | null> | null>(null);
   const progressWritesRef = useRef<Set<Promise<unknown>>>(new Set());
+  const sessionRevisionRef = useRef(0);
   useEffect(() => {
     studySessionIdRef.current = studySessionId;
   }, [studySessionId]);
@@ -193,6 +201,8 @@ export default function MixedStudy() {
       scope: subset,
       fastMode: settings.fastMode,
       studyFlowMode: settings.studyFlowMode,
+      ...(settings.playMode ? { playMode: settings.playMode } : {}),
+      ...(settings.playSide ? { playSide: settings.playSide } : {}),
       ...(settings.writeActivityMode ? { writeActivityMode: settings.writeActivityMode } : {}),
       ...(settings.writeRewriteSide ? { writeRewriteSide: settings.writeRewriteSide } : {}),
       ...(settings.writeCorrectionMode ? { writeCorrectionMode: settings.writeCorrectionMode } : {}),
@@ -546,7 +556,7 @@ export default function MixedStudy() {
       if (loadGenerationRef.current === generation) loadGenerationRef.current += 1;
       abortController.abort();
     };
-  }, [authStatus, baseDirection, handleSessionSettingsRestored, isListRoute, listId, loadAttempt, resolvedId, resourceContext, scopeKey, session, userId]);
+  }, [authStatus, baseDirection, favoritesOnly, gameSettings.redFocus, handleSessionSettingsRestored, isListRoute, listId, loadAttempt, resolvedId, resourceContext, scopeKey, selectedFlowMode, session, userId]);
 
   const persistRemoteState = useCallback(async (state: any) => {
     if (!userId || !listId) return;
@@ -563,6 +573,8 @@ export default function MixedStudy() {
         redFocus: gameSettings.redFocus,
         fastMode: gameSettings.fastMode,
         direction: baseDirection,
+        playMode: effectivePreset.playMode,
+        playSide: effectivePreset.playSide,
         studyFlowMode: selectedFlowMode,
       }),
       current_index: state.currentIndex,
@@ -571,37 +583,48 @@ export default function MixedStudy() {
       cards_order: state.allCardIds,
       session_snapshot: state,
       completed: state.status === "journey-complete",
+      client_revision: Math.max(Date.now(), sessionRevisionRef.current + 1),
       updated_at: new Date().toISOString(),
     };
+    sessionRevisionRef.current = payload.client_revision;
 
     const existingSessionId = studySessionIdRef.current;
     assertStudySessionWrite(payload);
     if (existingSessionId) {
-      const controller = new AbortController();
-      const { data: updated, error } = await withStudyRuntimeTimeout<{ data: any; error: any }>(
-        (supabase as any)
-          .from("study_sessions")
-          .update(payload)
-          .eq("id", existingSessionId)
-          .eq("user_id", userId)
-          .eq("list_id", listId)
-          .eq("mode", "mixed-adaptive")
-          .select("id")
-          .abortSignal(controller.signal)
-          .maybeSingle(),
-        STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-        "mixed-session-persist",
-        () => controller.abort(),
-      );
-      if (error) throw error;
-      if (updated?.id) return;
-      // A stale session id can survive a reload or a second tab. Do not
-      // report success for a zero-row update and never create a duplicate in
-      // the same write. A later state change can create a session only after
-      // this stale id has been cleared.
-      studySessionIdRef.current = null;
-      setStudySessionId(null);
-      throw new Error("A sessão do Misto não foi confirmada pelo banco");
+      const revision = Number(payload.client_revision);
+      const key = `${userId}:${existingSessionId}`;
+      let queued = false;
+      try {
+        queued = await enqueueStudySessionSnapshot({
+          key,
+          userId,
+          sessionId: existingSessionId,
+          listId,
+          mode: "mixed-adaptive",
+          sessionScopeKey: scopeKey,
+          revision,
+          payload,
+          updatedAt: Date.now(),
+        });
+      } catch {
+        // The local adaptive snapshot remains usable if IndexedDB is blocked.
+      }
+      try {
+        await persistStudySession({
+          sessionId: existingSessionId,
+          userId,
+          listId,
+          mode: "mixed-adaptive",
+          revision,
+          payload,
+          stage: "mixed-session-persist",
+        });
+        if (queued) await markStudySessionSnapshotSuccess(key, revision);
+        return;
+      } catch (error) {
+        if (queued) await markStudySessionSnapshotFailed(key, revision, error).catch(() => undefined);
+        throw error;
+      }
     }
 
     if (!sessionCreationRef.current) {
@@ -629,7 +652,36 @@ export default function MixedStudy() {
       studySessionIdRef.current = createdSessionId;
       setStudySessionId(createdSessionId);
     }
-  }, [baseDirection, favoritesOnly, gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, listId, scopeKey, selectedFlowMode, userId]);
+  }, [baseDirection, effectivePreset.playMode, effectivePreset.playSide, favoritesOnly, gameSettings.fastMode, gameSettings.mode, gameSettings.redFocus, listId, scopeKey, selectedFlowMode, userId]);
+
+  const flushMixedStudyOutbox = useCallback(async () => {
+    if (!userId) return;
+    await requeueStudyOutbox(userId).catch(() => undefined);
+    const pending = await listPendingStudySessionSnapshots(userId).catch(() => []);
+    for (const record of pending) {
+      try {
+        await persistStudySession({
+          sessionId: record.sessionId,
+          userId: record.userId,
+          listId: record.listId,
+          mode: record.mode,
+          revision: record.revision,
+          payload: record.payload,
+          stage: "mixed-outbox-session-replay",
+        });
+        await markStudySessionSnapshotSuccess(record.key, record.revision);
+      } catch (error) {
+        await markStudySessionSnapshotFailed(record.key, record.revision, error).catch(() => undefined);
+      }
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void flushMixedStudyOutbox();
+    const retry = () => { void flushMixedStudyOutbox(); };
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, [flushMixedStudyOutbox]);
 
   const cardIds = useMemo(() => cards.map((card) => card.id), [cards]);
   const mixed = useAdaptiveMixedSession({

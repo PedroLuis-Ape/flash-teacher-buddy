@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   claimStudySession,
+  persistStudySession,
   type StudySessionClient,
 } from "./studySessionRepository";
 import { StudyRuntimeTimeoutError } from "./studySessionRuntime";
@@ -18,10 +19,13 @@ function createClient(options: {
   insert?: { data: unknown; error: { code?: string; message?: string } | null };
 }) {
   const query = {
+    eq: vi.fn(() => query),
     insert: vi.fn(() => query),
+    update: vi.fn(() => query),
     select: vi.fn(() => query),
     abortSignal: vi.fn(() => query),
     single: vi.fn(() => createRequest(options.insert ?? { data: null, error: null })),
+    maybeSingle: vi.fn(() => createRequest(options.insert ?? { data: null, error: null })),
   };
   const client = {
     rpc: vi.fn(() => createRequest(options.rpc)),
@@ -89,6 +93,51 @@ describe("studySessionRepository", () => {
     await expect(claimStudySession(baseInput, client)).rejects.toMatchObject({
       code: "42501",
     });
+  });
+
+  it("uses the server revision fence and accepts a confirmed snapshot", async () => {
+    const client = {
+      rpc: vi.fn(() => createRequest({
+        data: { accepted: true, revision: 42 },
+        error: null,
+      })),
+      from: vi.fn(),
+    } as unknown as StudySessionClient;
+
+    await expect(persistStudySession({
+      sessionId: "session-1",
+      userId: "user-1",
+      listId: "list-1",
+      mode: "flip",
+      revision: 42,
+      payload: {
+        current_index: 1,
+        cards_order: ["card-1"],
+        session_snapshot: { version: 2, cardsOrder: ["card-1"] },
+      },
+    }, client)).resolves.toEqual({ accepted: true, revision: 42, usedRpc: true });
+    expect(client.rpc).toHaveBeenCalledWith("persist_study_session_v1", {
+      p_session_id: "session-1",
+      p_revision: 42,
+      p_payload: expect.objectContaining({ current_index: 1 }),
+    });
+  });
+
+  it("treats a stale revision as a safe no-op", async () => {
+    const client = {
+      rpc: vi.fn(() => createRequest({
+        data: { accepted: false, revision: 43 },
+        error: null,
+      })),
+      from: vi.fn(),
+    } as unknown as StudySessionClient;
+
+    await expect(persistStudySession({
+      ...baseInput,
+      sessionId: "session-1",
+      revision: 42,
+      payload: { current_index: 0, cards_order: ["card-1"] },
+    }, client)).resolves.toEqual({ accepted: false, revision: 43, usedRpc: true });
   });
 
   it("aborts the underlying request when the claim timeout fires", async () => {

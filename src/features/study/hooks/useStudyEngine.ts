@@ -57,7 +57,21 @@ import {
   recordStudyProgressAttempt,
   type StudyProgressAttempt,
 } from "@/features/study/lib/studyProgressRepository";
-import { claimStudySession } from "@/features/study/lib/studySessionRepository";
+import {
+  claimStudySession,
+  persistStudySession,
+} from "@/features/study/lib/studySessionRepository";
+import {
+  enqueueStudySessionSnapshot,
+  enqueueStudyProgress,
+  listPendingStudySessionSnapshots,
+  listPendingStudyProgress,
+  markStudySessionSnapshotFailed,
+  markStudySessionSnapshotSuccess,
+  markStudyProgressFailed,
+  markStudyProgressSuccess,
+  requeueStudyOutbox,
+} from "@/features/study/lib/studyPersistenceOutbox";
 import { fetchRequestedStudySession, type RequestedStudySessionClient } from "@/features/study/lib/requestedStudySession";
 import { assertStudySessionWrite, restoreStudySession, restoreMasterySession, type RestorableStudySession } from "@/features/study/lib/restoreStudySession";
 import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot";
@@ -126,24 +140,59 @@ interface StudySessionWriteRequest {
 
 async function writeStudySession(request: StudySessionWriteRequest): Promise<void> {
   assertStudySessionWrite(request.payload);
-  const controller = new AbortController();
-  const { data, error } = await withStudyRuntimeTimeout(
-    supabase
-      .from("study_sessions")
-      .update(request.payload as never)
-      .eq("id", request.sessionId)
-      .eq("user_id", request.userId)
-      .eq("list_id", request.listId)
-      .eq("mode", request.mode)
-      .select("id")
-          .abortSignal(controller.signal)
-      .maybeSingle(),
-    STUDY_REMOTE_RESTORE_TIMEOUT_MS,
-    request.stage,
-    () => controller.abort(),
-  );
-  if (error) throw error;
-  if (!data?.id) throw new Error(`${request.stage}-unconfirmed`);
+  const revision = Math.max(0, Math.floor(Number(request.payload.client_revision) || Date.now()));
+  const key = `${request.userId}:${request.sessionId}`;
+  let queued = false;
+  try {
+    queued = await enqueueStudySessionSnapshot({
+      key,
+      userId: request.userId,
+      sessionId: request.sessionId,
+      listId: request.listId,
+      mode: request.mode,
+      sessionScopeKey: request.sessionScopeKey,
+      revision,
+      payload: request.payload,
+      updatedAt: Date.parse(String(request.payload.updated_at ?? "")) || Date.now(),
+    });
+  } catch (error) {
+    // IndexedDB is a durable enhancement, not a reason to stop a usable
+    // online session. The synchronous localStorage snapshot remains active.
+    if (import.meta.env.DEV) console.debug("[StudyEngine] Outbox indisponível", { stage: request.stage });
+  }
+
+  try {
+    const result = await persistStudySession({
+      sessionId: request.sessionId,
+      userId: request.userId,
+      listId: request.listId,
+      mode: request.mode,
+      revision,
+      payload: request.payload,
+      stage: request.stage,
+    });
+    if (queued) {
+      await markStudySessionSnapshotSuccess(key, revision);
+    }
+    if (import.meta.env.DEV) {
+      logStudyRuntime("session-write", {
+        sessionId: request.sessionId,
+        mode: request.mode,
+        revision,
+        source: result.usedRpc ? "rpc" : "legacy-fallback",
+        accepted: result.accepted,
+      });
+    }
+  } catch (error) {
+    if (queued) await markStudySessionSnapshotFailed(key, revision, error).catch(() => undefined);
+    throw error;
+  }
+}
+
+function nextStudySessionRevision(ref: { current: number }): number {
+  const revision = Math.max(Date.now(), ref.current + 1);
+  ref.current = revision;
+  return revision;
 }
 
 function buildStudyProgressSnapshot(input: {
@@ -152,6 +201,11 @@ function buildStudyProgressSnapshot(input: {
   cardsOrder: string[];
   results: StudyResult[];
   layer?: StudySessionLayerSnapshot;
+  roundNumber?: number;
+  roundResults?: StudyResult[];
+  unseenCards?: string[];
+  missedCards?: string[];
+  isFinished?: boolean;
 }): StudySessionSnapshot {
   return {
     version: 2,
@@ -160,6 +214,11 @@ function buildStudyProgressSnapshot(input: {
     cardsOrder: [...input.cardsOrder],
     results: input.results.map((result) => ({ ...result })),
     timestamp: Date.now(),
+    ...(input.roundNumber !== undefined ? { roundNumber: input.roundNumber } : {}),
+    ...(input.roundResults ? { roundResults: input.roundResults.map((result) => ({ ...result })) } : {}),
+    ...(input.unseenCards ? { unseenCards: [...input.unseenCards] } : {}),
+    ...(input.missedCards ? { missedCards: [...input.missedCards] } : {}),
+    ...(input.isFinished !== undefined ? { isFinished: input.isFinished } : {}),
     ...(input.layer ? { layer: { ...input.layer } } : {}),
   };
 }
@@ -279,6 +338,7 @@ export function useStudyEngine(
   // Keep the authoritative session id in a ref: fast exit/completion actions
   // can run before React renders the id returned by the claim request.
   const sessionIdRef = useRef<string | null>(null);
+  const sessionRevisionRef = useRef(0);
   const pendingSessionClaimRef = useRef<Promise<string | null> | null>(null);
   const completionInFlightRef = useRef(false);
   const restartInFlightRef = useRef(false);
@@ -974,7 +1034,11 @@ export function useStudyEngine(
         setCardsOrder(snapshot.cardsOrder);
         setCurrentIndex(snapshot.currentIndex);
         setResults(snapshot.results);
-        setIsFinished(row.completed === true);
+        setRoundNumber(snapshot.roundNumber ?? 1);
+        setRoundResults(snapshot.roundResults ?? []);
+        setUnseenCards(snapshot.unseenCards ?? []);
+        setMissedCards(snapshot.missedCards ?? []);
+        setIsFinished(row.completed === true || snapshot.isFinished === true);
         writeStudySnapshot(studySnapshotKey, snapshot);
         logStudyRuntime("session-restored", {
           requestedSessionId, sessionId: row.id, source: restored.source,
@@ -987,7 +1051,9 @@ export function useStudyEngine(
             payload: {
               cards_order: snapshot.cardsOrder, current_index: snapshot.currentIndex,
               session_snapshot: snapshot, session_scope_key: sessionScopeKey,
-              settings_snapshot: sessionSettingsSnapshot, updated_at: new Date().toISOString(),
+              settings_snapshot: sessionSettingsSnapshot,
+              client_revision: nextStudySessionRevision(sessionRevisionRef),
+              updated_at: new Date().toISOString(),
             },
             stage: "session-restore-repair",
           }).catch(() => toast.warning("Sessão recuperada neste aparelho; sincronização pendente."));
@@ -1045,6 +1111,11 @@ export function useStudyEngine(
         const restoredIndex = localSnapshot?.currentIndex ?? savedProgress?.index ?? 0;
         
         setCardsOrder(orderedCards);
+        setRoundNumber(localSnapshot?.roundNumber ?? 1);
+        setRoundResults(localSnapshot?.roundResults ?? []);
+        setUnseenCards(localSnapshot?.unseenCards ?? []);
+        setMissedCards(localSnapshot?.missedCards ?? []);
+        setIsFinished(localSnapshot?.isFinished ?? false);
         
         if (localSnapshot) {
           setCurrentIndex(restoredIndex);
@@ -1079,6 +1150,11 @@ export function useStudyEngine(
             cardsOrder: orderedCards,
             results: localSnapshot?.results ?? [],
             layer: sessionLayerRef.current,
+            roundNumber: localSnapshot?.roundNumber ?? 1,
+            roundResults: localSnapshot?.roundResults ?? [],
+            unseenCards: localSnapshot?.unseenCards ?? [],
+            missedCards: localSnapshot?.missedCards ?? [],
+            isFinished: localSnapshot?.isFinished ?? false,
           }),
           signal: abortController.signal,
           stage: "flip-session-create",
@@ -1145,6 +1221,11 @@ export function useStudyEngine(
       
       setCardsOrder(orderedCards);
       setCurrentIndex(localSnapshot?.currentIndex ?? 0);
+      setRoundNumber(localSnapshot?.roundNumber ?? 1);
+      setRoundResults(localSnapshot?.roundResults ?? []);
+      setUnseenCards(localSnapshot?.unseenCards ?? []);
+      setMissedCards(localSnapshot?.missedCards ?? []);
+      setIsFinished(localSnapshot?.isFinished ?? false);
       if (localSnapshot) {
         setResults(localSnapshot.results);
         toast.success("Continuando de onde você parou!");
@@ -1165,6 +1246,11 @@ export function useStudyEngine(
           cardsOrder: orderedCards,
           results: localSnapshot?.results ?? [],
           layer: sessionLayerRef.current,
+          roundNumber: localSnapshot?.roundNumber ?? 1,
+          roundResults: localSnapshot?.roundResults ?? [],
+          unseenCards: localSnapshot?.unseenCards ?? [],
+          missedCards: localSnapshot?.missedCards ?? [],
+          isFinished: localSnapshot?.isFinished ?? false,
         }),
         signal: abortController.signal,
         stage: "quiz-session-create",
@@ -1369,6 +1455,11 @@ export function useStudyEngine(
             cardsOrder: freshCardsOrder,
             results: [],
             layer: sessionLayerRef.current,
+            roundNumber: 1,
+            roundResults: [],
+            unseenCards: [],
+            missedCards: [],
+            isFinished: false,
           }),
           signal: controller.signal,
           stage: 'fresh-create-session',
@@ -1445,11 +1536,17 @@ export function useStudyEngine(
               cardsOrder,
               results,
               layer: sessionLayerRef.current,
+              roundNumber,
+              roundResults,
+              unseenCards,
+              missedCards,
+              isFinished,
             }),
           }
           : {}),
         session_scope_key: sessionScopeKey,
         settings_snapshot: sessionSettingsSnapshot,
+        client_revision: nextStudySessionRevision(sessionRevisionRef),
         updated_at: new Date().toISOString(),
       };
 
@@ -1491,10 +1588,12 @@ export function useStudyEngine(
       await Promise.all(Array.from(groupedEntries.values()).map(async (group) => {
         for (const { entry, index } of group) {
           try {
+            const result = await recordStudyProgressAttempt(entry);
             outcomes[index] = {
               status: "fulfilled",
-              value: await recordStudyProgressAttempt(entry),
+              value: result,
             };
+            await markStudyProgressSuccess(entry.operationId).catch(() => undefined);
           } catch (reason) {
             outcomes[index] = { status: "rejected", reason };
           }
@@ -1543,6 +1642,66 @@ export function useStudyEngine(
       flushProgressBuffer();
     }, FLUSH_INTERVAL_MS);
   }, [flushProgressBuffer]);
+
+  /**
+   * Replays writes that survived a tab close or a network interruption. This
+   * is intentionally scoped by the authenticated account; a new login can
+   * never drain another account's study data.
+   */
+  const flushPersistedStudyOutbox = useCallback(async () => {
+    const userId = authUserIdRef.current;
+    if (!userId) return;
+
+    try {
+      await requeueStudyOutbox(userId);
+    } catch {
+      return;
+    }
+
+    const sessions = await listPendingStudySessionSnapshots(userId).catch(() => []);
+    for (const record of sessions) {
+      try {
+        const result = await persistStudySession({
+          sessionId: record.sessionId,
+          userId: record.userId,
+          listId: record.listId,
+          mode: record.mode,
+          revision: record.revision,
+          payload: record.payload,
+          stage: "study-outbox-session-replay",
+        });
+        // A false CAS result means another tab already has a newer snapshot;
+        // retaining this stale item would only replay it forever.
+        await markStudySessionSnapshotSuccess(record.key, record.revision);
+        if (import.meta.env.DEV) {
+          logStudyRuntime("outbox-session-replay", {
+            sessionId: record.sessionId,
+            mode: record.mode,
+            revision: record.revision,
+            accepted: result.accepted,
+          });
+        }
+      } catch (error) {
+        await markStudySessionSnapshotFailed(record.key, record.revision, error).catch(() => undefined);
+      }
+    }
+
+    const progress = await listPendingStudyProgress(userId).catch(() => []);
+    for (const record of progress) {
+      try {
+        await recordStudyProgressAttempt({
+          userId: record.userId,
+          flashcardId: record.flashcardId,
+          listId: record.listId,
+          correct: record.correct,
+          operationId: record.operationId,
+        });
+        await markStudyProgressSuccess(record.operationId);
+      } catch (error) {
+        await markStudyProgressFailed(record.operationId, error).catch(() => undefined);
+      }
+    }
+  }, []);
 
   // Record result and buffer flashcard progress for batch save
   const recordResult = useCallback(async (
@@ -1657,14 +1816,19 @@ export function useStudyEngine(
     // Buffer the progress update instead of writing immediately
     const progressUserId = authUserIdRef.current;
     if (!progressUserId) return;
-    progressBufferRef.current.push({
+    const progressEntry: PendingProgressEntry = {
       userId: progressUserId,
       flashcardId,
       listId,
       correct,
       operationId: createStudyProgressOperationId(),
       timestamp: Date.now(),
-    });
+    };
+    // Write the event to the durable outbox before relying on the in-memory
+    // buffer. A failed IndexedDB write is non-fatal; the current tab still
+    // retains the previous in-memory behavior and retries on the next event.
+    await enqueueStudyProgress(progressEntry).catch(() => undefined);
+    progressBufferRef.current.push(progressEntry);
     scheduleFlush();
 
     // Update turma activity (debounced internally)
@@ -2071,6 +2235,11 @@ export function useStudyEngine(
             cardsOrder: cardIds,
             results: [],
             layer: sessionLayerRef.current,
+            roundNumber: 1,
+            roundResults: [],
+            unseenCards: [],
+            missedCards: [],
+            isFinished: false,
           }),
           signal: createController.signal,
           stage: 'restart-create-session',
@@ -2155,11 +2324,22 @@ export function useStudyEngine(
   }, [currentIndex, results, isLoading, isFlipMode, saveFlipProgress]);
 
   useEffect(() => {
-    if (!runtimeWritableRef.current || isLoading || isFinished || cardsOrder.length === 0) return;
+    if (!runtimeWritableRef.current || isLoading || cardsOrder.length === 0) return;
     const activeSessionId = sessionIdRef.current ?? sessionId;
     liveSessionSnapshotRef.current = {
       identity: `${userScope}:${listId}:${mode}:${sessionScopeKey}`,
-      snapshot: buildStudyProgressSnapshot({ sessionId: activeSessionId, currentIndex, cardsOrder, results, layer: sessionLayerRef.current }),
+      snapshot: buildStudyProgressSnapshot({
+        sessionId: activeSessionId,
+        currentIndex,
+        cardsOrder,
+        results,
+        layer: sessionLayerRef.current,
+        roundNumber,
+        roundResults,
+        unseenCards,
+        missedCards,
+        isFinished,
+      }),
     };
     writeStudySnapshot(studySnapshotKey, {
       version: 2,
@@ -2170,6 +2350,11 @@ export function useStudyEngine(
       cardsOrder,
       results,
       timestamp: Date.now(),
+      roundNumber,
+      roundResults,
+      unseenCards,
+      missedCards,
+      isFinished,
       ...(sessionLayerRef.current ? { layer: { ...sessionLayerRef.current } } : {}),
     });
   }, [studySnapshotKey, sessionId, currentIndex, cardsOrder, results, isLoading, isFinished, sessionSettingsSnapshot, isMasteryMode, masterySession, userScope, listId, mode, sessionScopeKey]);
@@ -2199,6 +2384,7 @@ export function useStudyEngine(
         },
         session_scope_key: sessionScopeKey,
         settings_snapshot: sessionSettingsSnapshot,
+        client_revision: nextStudySessionRevision(sessionRevisionRef),
         completed: masterySession.status === "journey-complete",
         updated_at: new Date().toISOString(),
       },
@@ -2219,7 +2405,7 @@ export function useStudyEngine(
     if (saveProgressTimeoutRef.current) clearTimeout(saveProgressTimeoutRef.current);
     if (layer) sessionLayerRef.current = { ...layer };
     const snapshotSessionId = sessionIdRef.current ?? sessionId;
-    if (cardsOrder.length > 0 && !isFinished) {
+    if (cardsOrder.length > 0) {
       writeStudySnapshot(studySnapshotKey, {
         version: 2,
         settingsSnapshot: sessionSettingsSnapshot,
@@ -2239,6 +2425,7 @@ export function useStudyEngine(
     // confirmed flush before considering the current session safely saved;
     // otherwise a page navigation could preserve the index while losing the
     // last answer's counters.
+    await flushPersistedStudyOutbox();
     await flushProgressBuffer();
     if (!sessionIdRef.current && pendingSessionClaimRef.current) {
       await pendingSessionClaimRef.current.catch(() => null);
@@ -2279,10 +2466,16 @@ export function useStudyEngine(
               cardsOrder,
               results,
               layer: sessionLayerRef.current,
+              roundNumber,
+              roundResults,
+              unseenCards,
+              missedCards,
+              isFinished,
             }),
           }),
         session_scope_key: sessionScopeKey,
         settings_snapshot: sessionSettingsSnapshot,
+        client_revision: nextStudySessionRevision(sessionRevisionRef),
         updated_at: new Date().toISOString(),
       };
       await sessionWriteQueueRef.current?.enqueue({
@@ -2294,6 +2487,9 @@ export function useStudyEngine(
         payload,
         stage: "save-progress",
       });
+      // `enqueue` only schedules the write. Returning a confirmed status is
+      // valid only after the queue has drained, especially before navigation.
+      await sessionWriteQueueRef.current?.drain();
       return { status: "remote-confirmed", sessionId: activeSessionId, updatedAt: Date.now() };
     } catch (error) {
       console.warn('[StudyEngine] saveProgressNow remoto pendente:', error);
@@ -2304,20 +2500,29 @@ export function useStudyEngine(
         reason: error instanceof Error ? error.message : "remote-write-failed",
       };
     }
-  }, [sessionId, currentIndex, listId, mode, cardsOrder, results, isFinished, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey, sessionScopeKey, sessionSettingsSnapshot, flushProgressBuffer]);
+  }, [sessionId, currentIndex, listId, mode, cardsOrder, results, studySnapshotKey, isMasteryMode, masterySession, masterySnapshotKey, sessionScopeKey, sessionSettingsSnapshot, flushPersistedStudyOutbox, flushProgressBuffer]);
 
   useEffect(() => {
+    void flushPersistedStudyOutbox();
     const flushBeforeLeave = () => { void saveProgressNow(); };
     const flushWhenHidden = () => {
       if (document.visibilityState === 'hidden') void saveProgressNow();
     };
+    const flushWhenOnline = () => { void flushPersistedStudyOutbox(); };
+    const flushWhenVisible = () => {
+      if (document.visibilityState === 'visible') void flushPersistedStudyOutbox();
+    };
     window.addEventListener('pagehide', flushBeforeLeave);
+    window.addEventListener('online', flushWhenOnline);
     document.addEventListener('visibilitychange', flushWhenHidden);
+    document.addEventListener('visibilitychange', flushWhenVisible);
     return () => {
       window.removeEventListener('pagehide', flushBeforeLeave);
+      window.removeEventListener('online', flushWhenOnline);
       document.removeEventListener('visibilitychange', flushWhenHidden);
+      document.removeEventListener('visibilitychange', flushWhenVisible);
     };
-  }, [saveProgressNow]);
+  }, [flushPersistedStudyOutbox, saveProgressNow]);
 
   // Cleanup: flush progress buffer and turma activity on unmount
   useEffect(() => {
@@ -2333,10 +2538,11 @@ export function useStudyEngine(
       if (progressBufferRef.current.length > 0) {
         void flushProgressBuffer();
       }
+      void flushPersistedStudyOutbox();
       // Flush turma activity
       flushActivity();
     };
-  }, [flushProgressBuffer, flushActivity]);
+  }, [flushProgressBuffer, flushPersistedStudyOutbox, flushActivity]);
 
   const currentCard = cardsOrder[currentIndex] 
     ? flashcards.find(f => f.id === cardsOrder[currentIndex])

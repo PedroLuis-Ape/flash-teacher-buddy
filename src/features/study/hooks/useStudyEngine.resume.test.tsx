@@ -9,7 +9,14 @@ const mocks = vi.hoisted(() => ({
   claim: vi.fn(), noop: () => undefined, asyncNoop: async () => undefined,
 }));
 vi.mock("@/features/study/lib/requestedStudySession", () => ({ fetchRequestedStudySession: mocks.lookup }));
-vi.mock("@/features/study/lib/studySessionRepository", () => ({ claimStudySession: mocks.claim }));
+vi.mock("@/features/study/lib/studySessionRepository", () => ({
+  claimStudySession: mocks.claim,
+  persistStudySession: async (input: { payload: Record<string, unknown>; revision: number }) => {
+    mocks.writes.push(input.payload);
+    Object.assign(mocks.row, input.payload);
+    return { accepted: true, revision: input.revision, usedRpc: true };
+  },
+}));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: () => {
   let payload: Record<string, unknown> = {};
   const query = {

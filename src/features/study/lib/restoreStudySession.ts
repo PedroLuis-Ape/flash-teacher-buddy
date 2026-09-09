@@ -35,18 +35,44 @@ export function restoreStudySession(input: {
   const localRow = record(input.local);
   const local = localRow.sessionId === session.id ? localRow : {};
   const remoteValid = remote.version === 2 && (remote.sessionId == null || remote.sessionId === session.id);
-  const candidates = [
+  const remoteSavedAt = Math.max(
+    Date.parse(String(session.updated_at ?? "")) || 0,
+    Number.isFinite(Number(remote.timestamp)) ? Number(remote.timestamp) : 0,
+  );
+  const localSavedAt = Number.isFinite(Number(local.timestamp)) ? Number(local.timestamp) : 0;
+  const localIsNewer = localSavedAt > remoteSavedAt;
+  const remoteCandidates = [
     { source: "session_snapshot" as const, row: remoteValid ? remote : {} },
     { source: "cards_order" as const, row: { cardsOrder: session.cards_order, currentIndex: session.current_index } },
-    { source: "local" as const, row: local },
   ];
+  const candidates = localIsNewer
+    ? [{ source: "local" as const, row: local }, ...remoteCandidates]
+    : [...remoteCandidates, { source: "local" as const, row: local }];
   const selected = candidates.find(({ row }) => Array.isArray(row.cardsOrder) && row.cardsOrder.some(id => typeof id === "string" && eligible.has(id)));
-  const resultSource = selected?.source === "local" ? local : remoteValid ? remote : {};
+  const resultSource = selected?.source === "local"
+    ? local
+    : selected?.source === "session_snapshot"
+      ? remote
+      : remoteValid
+        ? remote
+        : {};
   const results = (Array.isArray(resultSource.results) ? resultSource.results : []).filter((value): value is PersistedStudyResult => {
     const row = record(value);
     return typeof row.flashcardId === "string" && (input.resultCardIds ?? eligible).has(row.flashcardId)
       && typeof row.correct === "boolean" && typeof row.skipped === "boolean" && Number.isFinite(row.attempts);
   });
+  const persistedRoundResults = (Array.isArray(resultSource.roundResults) ? resultSource.roundResults : [])
+    .filter((value): value is PersistedStudyResult => {
+      const row = record(value);
+      return typeof row.flashcardId === "string"
+        && (input.resultCardIds ?? eligible).has(row.flashcardId)
+        && typeof row.correct === "boolean"
+        && typeof row.skipped === "boolean"
+        && Number.isFinite(row.attempts);
+    });
+  const persistedIds = (value: unknown) => Array.isArray(value)
+    ? value.filter((id): id is string => typeof id === "string" && eligible.has(id))
+    : [];
   const raw = selected?.row.cardsOrder as unknown[] | undefined;
   const position = index(selected?.row.currentIndex ?? session.current_index);
   const seen = new Set<string>();
@@ -70,7 +96,14 @@ export function restoreStudySession(input: {
   const layer = sanitizeStudyLayerSnapshot(resultSource.layer);
   const snapshot: StudySessionSnapshot = {
     version: 2, sessionId: session.id, cardsOrder, currentIndex, results,
-    timestamp: Date.now(), ...(layer ? { layer } : {}),
+    timestamp: Math.max(Date.now(), localSavedAt, remoteSavedAt), ...(layer ? { layer } : {}),
+    ...(Number.isFinite(Number(resultSource.roundNumber))
+      ? { roundNumber: Math.max(1, Math.floor(Number(resultSource.roundNumber))) }
+      : {}),
+    ...(persistedRoundResults.length > 0 ? { roundResults: persistedRoundResults } : {}),
+    ...(Array.isArray(resultSource.unseenCards) ? { unseenCards: persistedIds(resultSource.unseenCards) } : {}),
+    ...(Array.isArray(resultSource.missedCards) ? { missedCards: persistedIds(resultSource.missedCards) } : {}),
+    ...(typeof resultSource.isFinished === "boolean" ? { isFinished: resultSource.isFinished } : {}),
   };
   return {
     snapshot, source: selected?.source ?? "repaired",
