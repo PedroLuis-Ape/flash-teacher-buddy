@@ -77,7 +77,11 @@ export function wordHintToLegacy(hint: SmartWordHint) {
     scope: hint.scope,
     kind: hint.kind,
     expression: hint.expression ?? undefined,
-    segments: hint.segments,
+    segments: hint.segments?.map(segment => ({
+      text: segment.text,
+      startIndex: segment.startIndex,
+      endIndex: segment.endIndex,
+    })),
   };
 }
 
