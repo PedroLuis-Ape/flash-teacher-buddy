@@ -1,5 +1,6 @@
 import type { GlossaryItem } from "./glossaryMerge";
 import { folderGlossaryIdentity } from "./folderGlossaryCompact";
+import { expressionForms } from "./glossaryExpressions";
 
 export interface IndexedGlossaryMatch {
   matchText: string;
@@ -62,11 +63,13 @@ export function buildGlossaryIndex(glossary: GlossaryItem[]): GlossaryIndex {
   for (const entry of glossary) {
     if (!entry.is_active) continue;
 
-    addMatch(index, seen, entry.side, {
-      matchText: entry.original_text,
-      translationText: entry.translated_text,
-      note: entry.note,
-    });
+    for (const form of expressionForms(entry.original_text)) {
+      addMatch(index, seen, entry.side, {
+        matchText: form,
+        translationText: entry.translated_text,
+        note: entry.note,
+      });
+    }
 
     const reverseSide = entry.side === "A" ? "B" : "A";
     for (const alternative of splitAlternatives(entry.translated_text)) {

@@ -1,6 +1,7 @@
 export type GlossarySourceSide = "A" | "B" | "both";
 
 import { JSON_FILE_DELIVERY_CONTRACT } from "@/features/import-prompts/deliveryContract";
+import { CONTEXTUAL_GLOSSARY_RULES } from "@/features/import-prompts/contextualGlossaryContract";
 
 export interface GlossarySourceCard {
   id: string;
@@ -9,6 +10,10 @@ export interface GlossarySourceCard {
   translation: string;
   list_title?: string;
   folder_title?: string;
+  context_tag?: string | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  word_hints?: unknown;
 }
 
 export interface GlossaryWordInventoryItem {
@@ -56,8 +61,12 @@ function sourceLines(cards: readonly GlossarySourceCard[], sourceSide: GlossaryS
     const list = cleanInline(card.list_title ?? "");
     const context = [folder ? `PASTA: ${folder}` : "", list ? `LISTA: ${list}` : ""].filter(Boolean).join(" | ");
     const prefix = `[CARD ${startIndex + index + 1}${context ? ` | ${context}` : ""}]`;
-    if ((sourceSide === "A" || sourceSide === "both") && term) lines.push(`${prefix}[A] ${term}`);
-    if ((sourceSide === "B" || sourceSide === "both") && translation) lines.push(`${prefix}[B] ${translation}`);
+    // Selection controls enrichment direction, never which evidence is retained.
+    if (term) lines.push(`${prefix}[A] ${term}`);
+    if (translation) lines.push(`${prefix}[B] ${translation}`);
+    lines.push(JSON.stringify({ card_id: card.id, list_id: card.list_id, target_side: sourceSide,
+      front: card.term, back: card.translation, context_tag: card.context_tag,
+      example: card.example_text, example_translation: card.example_translation, word_hints: card.word_hints }));
   });
   return lines;
 }
@@ -76,6 +85,7 @@ Crie um glossário JSON completo a partir de todo o conteúdo-fonte, mesmo com d
 
 DIREÇÃO
 ${directionRule(sourceSide)}
+${CONTEXTUAL_GLOSSARY_RULES}
 O glossário funciona nos dois sentidos durante o estudo.
 
 COBERTURA OBRIGATÓRIA

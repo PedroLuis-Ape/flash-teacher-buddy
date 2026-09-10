@@ -1,4 +1,5 @@
 import { JSON_FILE_DELIVERY_CONTRACT, withJsonFileDeliveryContract } from "@/features/import-prompts/deliveryContract";
+import { CONTEXTUAL_GLOSSARY_RULES } from "@/features/import-prompts/contextualGlossaryContract";
 
 export type SmartImportOutputFormat = "json" | "csv" | "text";
 
@@ -59,7 +60,7 @@ export function buildSmartImportPrompt(options: SmartImportPromptOptions): strin
     quantity,
     theme,
     yesNoRule(options.includeGlobalGlossary, "Inclua glossário global com termos independentes, inclusive termos sobrepostos.", "Não crie glossário global; use glossary como array vazio."),
-    yesNoRule(options.includeContextGlossary, "Inclua word_hints por card quando houver glossário contextual.", "Não crie word_hints."),
+    yesNoRule(options.includeContextGlossary, `Inclua word_hints por card quando houver glossário contextual.\n${CONTEXTUAL_GLOSSARY_RULES}`, "Não crie word_hints."),
     yesNoRule(options.includeDetailedExplanations, "Inclua detailed_explanation quando agregar valor.", "Não crie detailed_explanation."),
     yesNoRule(options.includeUsageNotes, "Inclua usage_notes quando necessário.", "Não crie usage_notes."),
     yesNoRule(options.includeCommonMistakes, "Inclua common_mistakes quando necessário.", "Não crie common_mistakes."),

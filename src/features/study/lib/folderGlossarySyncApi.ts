@@ -36,6 +36,9 @@ const normalize = (value: string) =>
 function hintEntry(value: unknown): FolderGlossaryInput | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
+  // Per-card annotations (including legacy hints) are NOT dictionary entries.
+  // Preserve them on their card; only explicit global hints may be promoted.
+  if (row.scope !== "global") return null;
   const term = readString(
     row.original_text ?? row.original ?? row.text ?? row.term ?? row.word,
   );
@@ -126,7 +129,7 @@ async function loadFolderCards(folderId: string) {
   return { listIds, cards };
 }
 
-function entriesFromCards(
+export function entriesFromCards(
   cards: FolderCardRow[],
   includeNormalCards: boolean,
 ) {

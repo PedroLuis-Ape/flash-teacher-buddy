@@ -30,6 +30,13 @@ export interface WordHint {
    * Backward-compatible: undefined is treated as "A".
    */
   side?: "A" | "B";
+  /** Legacy hints are contextual. Global promotion must be explicit. */
+  scope?: "global" | "contextual";
+  kind?: "word" | "expression";
+  expression?: string;
+  occurrence?: number | "all";
+  /** Exact UTF-16 spans, end exclusive, for discontinuous expressions. */
+  segments?: Array<{ text: string; startIndex: number; endIndex: number }>;
 }
 
 /** A segment of text that may or may not have a hint attached */

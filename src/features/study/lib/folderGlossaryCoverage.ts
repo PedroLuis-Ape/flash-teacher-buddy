@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { findGlossaryOccurrences } from "./glossaryLayers";
 import type { FolderGlossaryEntry, GlossarySide } from "./folderGlossaryTypes";
+import { discoverExpressionCandidates, type ExpressionCandidate } from "./glossaryExpressions";
 
 const TOKEN_REGEX = /[\p{L}\p{M}]+(?:['’\-][\p{L}\p{M}]+)*/gu;
 const QUERY_CHUNK_SIZE = 50;
@@ -20,6 +21,11 @@ export interface FolderGlossaryCoverageOccurrence {
   listTitle: string;
   side: GlossarySide;
   text: string;
+  oppositeText?: string;
+  context_tag?: string | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  word_hints?: unknown;
 }
 
 export interface FolderGlossaryCoverageTerm {
@@ -50,6 +56,7 @@ export interface FolderGlossaryCoverageReport {
   totalOccurrences: number;
   usedGlossaryEntryIds: string[];
   terms: FolderGlossaryCoverageTerm[];
+  expressionCandidates?: Array<ExpressionCandidate & { cardId: string; listId: string; side: GlossarySide; text: string; oppositeText: string }>;
 }
 
 export interface CoverageListRow {
@@ -62,6 +69,10 @@ export interface CoverageCardRow {
   list_id: string;
   term: string;
   translation: string;
+  context_tag?: string | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  word_hints?: unknown;
 }
 
 export interface FolderGlossaryCoverageAnalysisInput {
@@ -291,6 +302,11 @@ export function analyzeFolderGlossaryCoverageRows(
           listTitle: listTitles.get(card.list_id) ?? "Lista sem nome",
           side,
           text,
+          oppositeText: side === "A" ? card.translation : card.term,
+          context_tag: card.context_tag,
+          example_text: card.example_text,
+          example_translation: card.example_translation,
+          word_hints: card.word_hints,
         });
       }
       terms.set(key, current);
@@ -344,6 +360,13 @@ export function analyzeFolderGlossaryCoverageRows(
     totalOccurrences,
     usedGlossaryEntryIds: Array.from(usedGlossaryEntryIds),
     terms: finalized,
+    expressionCandidates: input.cards.flatMap(card => (["A", "B"] as const).flatMap(side => {
+      const text = side === "A" ? card.term : card.translation;
+      return discoverExpressionCandidates(text).map(candidate => ({
+        ...candidate, cardId: card.id, listId: card.list_id, side, text,
+        oppositeText: side === "A" ? card.translation : card.term,
+      }));
+    })),
   };
 }
 
@@ -365,7 +388,7 @@ async function loadFolderCards(listIds: string[]): Promise<CoverageCardRow[]> {
     while (true) {
       const { data, error } = await supabase
         .from("flashcards")
-        .select("id, list_id, term, translation")
+        .select("id, list_id, term, translation, context_tag, example_text, example_translation, word_hints")
         .in("list_id", ids)
         .is("deleted_at", null)
         .order("created_at", { ascending: true })

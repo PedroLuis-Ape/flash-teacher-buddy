@@ -46,10 +46,11 @@ export async function streamGlossarySourceCards(
     while (true) {
       const { data, error } = await supabase
         .from("flashcards")
-        .select("id, list_id, term, translation")
+        .select("id, list_id, term, translation, context_tag, example_text, example_translation, word_hints")
         .in("list_id", listChunk)
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
 
       if (error) throw error;

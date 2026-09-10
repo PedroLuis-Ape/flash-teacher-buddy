@@ -136,7 +136,8 @@ function GlossaryPanel({
   mobile?: boolean;
 }) {
   const prioritized = prioritizeLayeredHintMatches(value, matches);
-  const visible = prioritized.slice(0, 3);
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? prioritized : prioritized.slice(0, 3);
   const hiddenCount = Math.max(0, prioritized.length - visible.length);
 
   return (
@@ -150,7 +151,7 @@ function GlossaryPanel({
       <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-4 py-3 sm:px-5">
         <div className="min-w-0">
           <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">
-            Glossário da pasta
+            Glossário
           </p>
           <p className="truncate text-base font-semibold sm:text-lg">{value}</p>
         </div>
@@ -175,10 +176,10 @@ function GlossaryPanel({
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0 break-words text-sm font-semibold leading-snug text-foreground sm:text-base">
-                  {match.text}
+                  {match.expression ?? match.text}
                 </span>
                 <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
-                  {isExact ? "exata" : isExpression ? "expressão" : "relacionada"}
+                  {match.scope === "contextual" ? "neste contexto" : isExpression || match.kind === "expression" ? "expressão" : isExact ? "significado base" : "relacionada"}
                 </span>
               </div>
 
@@ -201,10 +202,9 @@ function GlossaryPanel({
         })}
 
         {hiddenCount > 0 && (
-          <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground sm:px-5">
-            {hiddenCount} camada{hiddenCount === 1 ? "" : "s"} adicional
-            {hiddenCount === 1 ? "" : "is"} foi ocultada para manter a leitura organizada.
-          </p>
+          <Button variant="ghost" onClick={() => setExpanded(true)} className="min-h-[44px] shrink-0">
+            Mostrar mais ({hiddenCount})
+          </Button>
         )}
       </div>
     </div>

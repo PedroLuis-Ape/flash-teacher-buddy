@@ -37,7 +37,20 @@ export const smartWordHintSchema = z.object({
   occurrence: z.union([z.literal("all"), z.number().int().nonnegative()]).default("all"),
   start_index: z.number().int().nonnegative().optional(),
   end_index: z.number().int().positive().optional(),
+  scope: z.enum(["global", "contextual"]).optional(),
+  kind: z.enum(["word", "expression"]).optional(),
+  expression: optionalTrimmed(),
+  segments: z.array(z.object({
+    text: z.string().min(1),
+    startIndex: z.number().int().nonnegative(),
+    endIndex: z.number().int().positive(),
+  }).strict()).min(2).max(20).optional(),
 }).strict().superRefine((value, ctx) => {
+  value.segments?.forEach((span, index, spans) => {
+    if (span.endIndex <= span.startIndex || (index > 0 && spans[index - 1].endIndex > span.startIndex)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Segmentos devem ser válidos, ordenados e não sobrepostos." });
+    }
+  });
   if ((value.start_index === undefined) !== (value.end_index === undefined)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "start_index e end_index precisam ser informados juntos." });
   }
@@ -47,8 +60,9 @@ export const smartWordHintSchema = z.object({
 });
 
 const smartCardContentShape = {
-  front: trimmed("O lado A do card"),
-  back: trimmed("O lado B do card"),
+  // Keep original text byte-for-byte: hint offsets refer to this exact string.
+  front: z.string().max(SMART_IMPORT_LIMITS.maxTextLength, `O lado A do card excede ${formatLimit(SMART_IMPORT_LIMITS.maxTextLength)} caracteres.`).refine(value => value.trim().length > 0, "O lado A do card não pode ficar vazio."),
+  back: z.string().max(SMART_IMPORT_LIMITS.maxTextLength, `O lado B do card excede ${formatLimit(SMART_IMPORT_LIMITS.maxTextLength)} caracteres.`).refine(value => value.trim().length > 0, "O lado B do card não pode ficar vazio."),
   key: optionalTrimmed(SMART_IMPORT_LIMITS.maxNameLength),
   hint: optionalTrimmed(),
   short_observation: optionalTrimmed(),
