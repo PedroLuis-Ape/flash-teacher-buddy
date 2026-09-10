@@ -35,7 +35,6 @@
 }
 
 .study-tools-desktop-actions {
-  display: flex !important;
   max-width: 100%;
   flex-wrap: wrap;
 }
@@ -47,17 +46,12 @@
     margin-bottom: 0.125rem;
   }
 
-  .study-tools-desktop-actions {
-    width: 100%;
-    justify-content: center !important;
-    gap: 0.375rem !important;
+  .study-tools-portal-slot > div:first-child {
+    display: flex !important;
   }
 
-  .study-tools-inline-button {
-    width: 3.25rem;
-    min-width: 3.25rem !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+  .study-tools-desktop-actions {
+    display: none !important;
   }
 
   /* Every game mode mounts its shared tools slot directly inside the mode root.
@@ -84,6 +78,10 @@
     min-height: 2.75rem;
     margin-bottom: 0.75rem;
   }
+
+  .study-tools-desktop-actions {
+    display: flex !important;
+  }
 }
 
 /* Atenção é a ação de estudo menos óbvia: mantém o rótulo visível para que
@@ -96,6 +94,6 @@
 @media (max-width: 767px) {
   .study-tools-attention-button {
     width: auto;
-    min-width: 10rem !important;
+    min-width: 0 !important;
   }
 }

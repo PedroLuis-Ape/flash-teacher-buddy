@@ -374,12 +374,12 @@ export function StudyToolsMenu({
   );
 
   const mobileMenu = (
-    <div className="flex items-center gap-2 md:hidden">
+    <div className="flex w-full min-w-0 items-center justify-center gap-1.5 md:hidden">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="study-tools-inline-button h-9 min-w-[4.25rem] gap-1.5 px-2.5"
+        className="study-tools-inline-button h-9 min-w-[3.75rem] shrink-0 gap-1 px-2"
         title={rateLabel}
         aria-label={`${rateLabel}. Toque para alternar.`}
         onPointerDown={stopCardInteraction}
@@ -391,6 +391,27 @@ export function StudyToolsMenu({
         <Gauge className="h-4 w-4" />
         <span className="text-xs font-semibold">{rate === 1 ? "1x" : "0.5x"}</span>
       </Button>
+
+      {hasAccount && onToggleSpecial && (
+        <Button
+          type="button"
+          variant={isSpecial ? "secondary" : "outline"}
+          size="sm"
+          className="study-tools-inline-button study-tools-attention-button h-9 min-w-0 flex-1 gap-1 px-2"
+          disabled={specialPending}
+          title={isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
+          aria-label={isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
+          aria-pressed={isSpecial}
+          onPointerDown={stopCardInteraction}
+          onClick={(event) => {
+            stopCardInteraction(event);
+            if (!specialPending) openSpecialFocusDialog();
+          }}
+        >
+          {specialIcon}
+          <span className="truncate text-xs font-semibold">Ponto de atenção</span>
+        </Button>
+      )}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -445,20 +466,7 @@ export function StudyToolsMenu({
             </DropdownMenuItem>
           )}
 
-          {hasAccount && onToggleSpecial && (
-            <DropdownMenuItem
-              disabled={specialPending}
-              onSelect={(event) => {
-                event.preventDefault();
-                if (!specialPending) openSpecialFocusDialog();
-              }}
-            >
-              <span className="mr-2 inline-flex w-5 justify-center">{specialIcon}</span>
-              {isSpecial ? "Editar ponto de atenção" : "Guardar ponto de atenção"}
-            </DropdownMenuItem>
-          )}
-
-          {hasAccount && (onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
+          {hasAccount && onToggleFavorite && <DropdownMenuSeparator />}
 
           <DropdownMenuItem
             disabled={!hasHint}

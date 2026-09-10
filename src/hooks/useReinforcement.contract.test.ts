@@ -64,8 +64,9 @@ describe("Reforço separation contract", () => {
     expect(listDetail).toContain("isSystemCollection={Boolean(isSystemCollection)}");
   });
 
-  it("does not promote an empty reinforcement area on Home", () => {
-    expect(home).toContain("reinforcementCount > 0 &&");
+  it("keeps the reinforcement area visible on Home even when empty", () => {
+    expect(home).not.toContain("reinforcementCount > 0 &&");
+    expect(home).toContain("onClick={() => navigate('/reinforcement')}");
     expect(home).toContain("navigate('/reinforcement')");
   });
 });

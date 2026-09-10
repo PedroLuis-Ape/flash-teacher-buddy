@@ -169,7 +169,7 @@ const Index = () => {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl sm:text-2xl font-bold truncate">
+                <h2 className="text-xl sm:text-2xl font-bold leading-tight break-words line-clamp-2">
                   {t("home.greeting", { name: safeFirstName })}
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -312,7 +312,7 @@ const Index = () => {
           para aproveitar melhor a largura sem mexer na lógica de cada card.
         */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 xl:gap-4">
-        {reinforcementCount > 0 && (
+        <>
           <Card
             className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-primary/30 bg-primary/5 h-full"
             onClick={() => navigate('/reinforcement')}
@@ -322,15 +322,15 @@ const Index = () => {
                 <RefreshCcw className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base truncate">🔁 Reforço</h3>
-                <p className="text-sm text-muted-foreground truncate">
+                <h3 className="font-semibold text-base leading-tight line-clamp-2">🔁 Reforço</h3>
+                <p className="text-sm text-muted-foreground leading-tight line-clamp-2">
                   {reinforcementCount} {reinforcementCount === 1 ? "card" : "cards"} para revisar
                 </p>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
             </div>
           </Card>
-        )}
+        </>
 
         {FEATURE_FLAGS.meus_alunos_enabled && isTeacher && (
           <Card

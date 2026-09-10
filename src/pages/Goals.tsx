@@ -228,14 +228,14 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
 
             {/* Actions */}
             {goal.status !== 'completed' && (
-              <div className="flex items-center gap-2 pt-2 border-t">
+              <div className="flex flex-wrap items-center gap-2 border-t pt-2">
                 {goal.status === 'active' ? (
-                  <Button variant="outline" size="sm" onClick={onPause} className="gap-1">
+                  <Button variant="outline" size="sm" onClick={onPause} className="min-h-10 gap-1">
                     <Pause className="h-3 w-3" />
                     Pausar
                   </Button>
                 ) : goal.status === 'paused' && (
-                  <Button variant="outline" size="sm" onClick={onResume} className="gap-1">
+                  <Button variant="outline" size="sm" onClick={onResume} className="min-h-10 gap-1">
                     <Play className="h-3 w-3" />
                     Retomar
                   </Button>
@@ -243,7 +243,7 @@ function GoalCard({ goal, onPause, onResume, onDelete }: {
                 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive gap-1">
+                    <Button variant="ghost" size="sm" className="min-h-10 gap-1 text-destructive hover:text-destructive">
                       <Trash2 className="h-3 w-3" />
                       Apagar
                     </Button>

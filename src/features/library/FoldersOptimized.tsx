@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { CircleAlert, CheckSquare, FolderInput, FolderPlus, RefreshCcw, Search, Square, Star, Trash2, X } from "lucide-react";
+import { CircleAlert, CheckSquare, FolderInput, FolderPlus, MoreHorizontal, RefreshCcw, Search, Square, Star, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { ApeAppBar } from "@/components/ape/ApeAppBar";
 import { ApeCardFolder } from "@/components/ape/ApeCardFolder";
@@ -34,6 +34,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SkeletonGrid } from "@/components/ui/skeleton-card";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useInstitution } from "@/contexts/InstitutionContext";
 import {
   fetchLibrarySnapshot,
@@ -323,18 +330,50 @@ export default function FoldersOptimized() {
             </div>
             {!selectMode && (
               <>
-                <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl" onClick={() => { setFoldersToMove([folder.id]); setMoveDialogOpen(true); }} title="Mover pasta">
+                <Button variant="ghost" size="icon" className="hidden h-11 w-11 shrink-0 rounded-xl sm:inline-flex" onClick={() => { setFoldersToMove([folder.id]); setMoveDialogOpen(true); }} title="Mover pasta">
                   <FolderInput className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className={`h-11 w-11 shrink-0 rounded-xl ${isFavorite ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}`} onClick={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite })}>
+                <Button variant="ghost" size="icon" className={`hidden h-11 w-11 shrink-0 rounded-xl sm:inline-flex ${isFavorite ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}`} onClick={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite })}>
                   <Star className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
                 </Button>
-                <Button variant="ghost" size="icon" className={`h-11 w-11 shrink-0 rounded-xl ${isAttention ? "bg-red-500/15 text-red-500" : "text-muted-foreground hover:text-red-500"}`} onClick={() => userId && toggleFolderAttention.mutate({ userId, resourceType: "folder", resourceId: folder.id, isAttention })}>
+                <Button variant="ghost" size="icon" className={`hidden h-11 w-11 shrink-0 rounded-xl sm:inline-flex ${isAttention ? "bg-red-500/15 text-red-500" : "text-muted-foreground hover:text-red-500"}`} onClick={() => userId && toggleFolderAttention.mutate({ userId, resourceType: "folder", resourceId: folder.id, isAttention })}>
                   <CircleAlert className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-xl text-destructive" onClick={() => setFolderToDelete(folder.id)}>
+                <Button variant="ghost" size="icon" className="hidden h-11 w-11 shrink-0 rounded-xl text-destructive sm:inline-flex" onClick={() => setFolderToDelete(folder.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0 rounded-xl sm:hidden"
+                      aria-label={`Ações da pasta ${folder.title}`}
+                      title="Ações da pasta"
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onSelect={() => { setFoldersToMove([folder.id]); setMoveDialogOpen(true); }}>
+                      <FolderInput className="mr-2 h-4 w-4" />
+                      Mover pasta
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => toggleFavorite.mutate({ resourceId: folder.id, resourceType: "folder", isFavorite })}>
+                      <Star className={`mr-2 h-4 w-4 ${isFavorite ? "fill-current text-yellow-500" : ""}`} />
+                      {isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => userId && toggleFolderAttention.mutate({ userId, resourceType: "folder", resourceId: folder.id, isAttention })}>
+                      <CircleAlert className={`mr-2 h-4 w-4 ${isAttention ? "text-red-500" : ""}`} />
+                      {isAttention ? "Remover dos pontos de atenção" : "Adicionar aos pontos de atenção"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setFolderToDelete(folder.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir pasta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>
@@ -398,11 +437,11 @@ export default function FoldersOptimized() {
       <ApeAppBar title="Biblioteca" variant="home" />
       <div className="mx-auto max-w-6xl space-y-4 px-4 pt-4 lg:px-8">
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex items-center gap-3 p-4 sm:p-5">
+          <CardContent className="flex items-start gap-3 p-4 sm:items-center sm:p-5">
             <RefreshCcw className="h-5 w-5 shrink-0 text-primary" />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Revisão pessoal</p>
-              <p className="truncate text-sm font-medium">🔁 Reforço · {reinforcementSnapshot?.items.length ?? 0} cards</p>
+              <p className="line-clamp-2 break-words text-sm font-medium">🔁 Reforço · {reinforcementSnapshot?.items.length ?? 0} cards</p>
             </div>
             <Button variant="outline" className="min-h-11 shrink-0" onClick={() => navigate("/reinforcement")}>
               Abrir

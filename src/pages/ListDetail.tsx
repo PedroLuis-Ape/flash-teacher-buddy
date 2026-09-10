@@ -974,7 +974,7 @@ const ListDetail = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="mb-8">
           <Button
             variant="ghost"
@@ -987,8 +987,8 @@ const ListDetail = () => {
           
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground mb-1 truncate">{folder.title}</p>
-              <h1 className="text-2xl md:text-3xl font-bold truncate">{list.title}</h1>
+              <p className="text-sm text-muted-foreground mb-1 break-words line-clamp-2">{folder.title}</p>
+              <h1 className="text-2xl md:text-3xl font-bold break-words line-clamp-2">{list.title}</h1>
               {list.description && (
                 <p className="text-muted-foreground mt-2 text-sm line-clamp-2">{list.description}</p>
               )}
@@ -1002,7 +1002,7 @@ const ListDetail = () => {
               )}
               {/* Language direction indicator */}
               {effectiveSettings.studyType === "language" && (
-                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
                   <span className="px-2 py-0.5 rounded bg-muted font-medium">
                     A: {effectiveSettings.labelsA}
                   </span>
@@ -1023,7 +1023,7 @@ const ListDetail = () => {
                 <>
                   <Button
                     onClick={() => navigate(isOwner ? `/list/${id}/games` : `/portal/list/${id}/games`)}
-                    className="ape-action-btn col-span-1"
+                    className="ape-action-btn col-span-1 min-w-0 gap-1.5 px-2 text-sm sm:gap-2 sm:px-4 sm:text-base"
                   >
                     <Play className="h-5 w-5 shrink-0" />
                     Estudar
@@ -1031,7 +1031,7 @@ const ListDetail = () => {
                   <Button
                     variant="secondary"
                     onClick={() => navigate(`/list/${id}/study?mode=pronunciation`)}
-                    className="ape-action-btn col-span-1"
+                    className="ape-action-btn col-span-1 min-w-0 gap-1.5 px-2 text-sm sm:gap-2 sm:px-4 sm:text-base"
                   >
                     <Mic className="h-5 w-5 shrink-0" />
                     Pronúncia
