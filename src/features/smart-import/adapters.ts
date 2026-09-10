@@ -1,6 +1,7 @@
 import type { GlobalImportCard, GlobalImportList, GlobalImportPackage } from "@/features/global-import/schema";
 import {
   smartImportPackageSchema,
+  smartWordHintSchema,
   type SmartCard,
   type SmartImportList,
   type SmartImportPackage,
@@ -64,7 +65,7 @@ function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function wordHintToLegacy(hint: SmartWordHint) {
+export function wordHintToLegacy(hint: SmartWordHint) {
   return {
     text: hint.text,
     translation: hint.translation,
@@ -73,23 +74,31 @@ function wordHintToLegacy(hint: SmartWordHint) {
     occurrence: hint.occurrence,
     startIndex: hint.start_index,
     endIndex: hint.end_index,
+    scope: hint.scope,
+    kind: hint.kind,
+    expression: hint.expression ?? undefined,
+    segments: hint.segments?.map(segment => ({
+      text: segment.text,
+      startIndex: segment.startIndex,
+      endIndex: segment.endIndex,
+    })),
   };
 }
 
-function legacyWordHints(value: unknown): SmartWordHint[] | undefined {
+export function legacyWordHints(value: unknown): SmartWordHint[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const result = value.flatMap((item) => {
     const hint = recordOf(item);
     const text = optionalString(hint?.text);
     const translation = optionalString(hint?.translation);
-    if (!text || !translation) return [];
+    if (!text || !translation) throw new Error("Hint inválido: exportação interrompida para evitar perda de dados.");
     const rawOccurrence = hint?.occurrence;
     const occurrence: number | "all" = typeof rawOccurrence === "number"
       ? rawOccurrence
       : "all";
     const start = hint?.start_index ?? hint?.startIndex;
     const end = hint?.end_index ?? hint?.endIndex;
-    return [{
+    return [smartWordHintSchema.parse({
       text,
       translation,
       note: optionalString(hint?.note),
@@ -97,7 +106,11 @@ function legacyWordHints(value: unknown): SmartWordHint[] | undefined {
       occurrence,
       start_index: typeof start === "number" ? start : undefined,
       end_index: typeof end === "number" ? end : undefined,
-    }];
+      ...(hint?.scope === "global" || hint?.scope === "contextual" ? { scope: hint.scope } : {}),
+      ...(hint?.kind === "word" || hint?.kind === "expression" ? { kind: hint.kind } : {}),
+      ...(typeof hint?.expression === "string" ? { expression: hint.expression } : {}),
+      ...(Array.isArray(hint?.segments) ? { segments: hint.segments } : {}),
+    })];
   });
   return result.length ? result : undefined;
 }

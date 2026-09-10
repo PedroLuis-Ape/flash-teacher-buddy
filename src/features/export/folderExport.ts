@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllSupabaseRows } from '@/lib/fetchAllSupabaseRows';
+import { legacyWordHints } from '@/features/smart-import/adapters';
 import {
   smartImportPackageSchema,
   withSmartDeclaredTotals,
@@ -8,7 +9,6 @@ import {
   type SmartImportList,
   type SmartImportPackage,
   type SmartNormalCard,
-  type SmartWordHint,
 } from '@/features/smart-import/schema';
 
 export interface FolderExportSource {
@@ -108,47 +108,11 @@ function normalizeStudyType(value: unknown): SmartImportList['study_type'] {
     : 'language';
 }
 
-function normalizeWordHints(value: unknown): SmartWordHint[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-
-  const hints = value.flatMap<SmartWordHint>((item) => {
-    if (!item || typeof item !== 'object') return [];
-    const row = item as Record<string, unknown>;
-    const text = cleanOptional(row.text);
-    const translation = cleanOptional(row.translation);
-    if (!text || !translation) return [];
-
-    const occurrence = row.occurrence === 'all'
-      ? 'all' as const
-      : typeof row.occurrence === 'number' && Number.isInteger(row.occurrence) && row.occurrence >= 0
-        ? row.occurrence
-        : 'all' as const;
-    const startIndex = typeof row.start_index === 'number' && Number.isInteger(row.start_index) && row.start_index >= 0
-      ? row.start_index
-      : undefined;
-    const endIndex = typeof row.end_index === 'number' && Number.isInteger(row.end_index) && row.end_index > 0
-      ? row.end_index
-      : undefined;
-
-    return [{
-      side: row.side === 'B' ? 'B' : 'A',
-      text,
-      translation,
-      note: cleanOptional(row.note),
-      occurrence,
-      ...(startIndex !== undefined && endIndex !== undefined && endIndex > startIndex
-        ? { start_index: startIndex, end_index: endIndex }
-        : {}),
-    }];
-  });
-
-  return hints.length > 0 ? hints : undefined;
-}
-
-function mapCardContent(card: FlashcardRow) {
+export function mapCardContent(card: FlashcardRow) {
   return {
-    front: cleanLine(card.term),
-    back: cleanLine(card.translation),
+    front: card.term,
+    back: card.translation,
+    key: card.id,
     hint: cleanOptional(card.hint),
     short_observation: cleanOptional(card.short_explanation),
     detailed_explanation: cleanOptional(card.detailed_explanation),
@@ -157,7 +121,7 @@ function mapCardContent(card: FlashcardRow) {
     example: cleanOptional(card.example_text),
     example_translation: cleanOptional(card.example_translation),
     context_tag: cleanOptional(card.context_tag),
-    word_hints: normalizeWordHints(card.word_hints),
+    word_hints: legacyWordHints(card.word_hints),
   };
 }
 

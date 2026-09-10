@@ -14,6 +14,11 @@ export interface LayeredHintDefinition {
   }>;
   startIndex?: number;
   endIndex?: number;
+  scope?: WordHint["scope"];
+  kind?: WordHint["kind"];
+  expression?: string;
+  segments?: WordHint["segments"];
+  occurrence?: WordHint["occurrence"];
 }
 
 export interface LayeredHintMatch extends LayeredHintDefinition {
@@ -88,8 +93,23 @@ function resolveMatches(text: string, definitions: LayeredHintDefinition[]): Lay
   const seen = new Set<string>();
 
   for (const definition of definitions) {
+    if (definition.segments?.length) {
+      // Reject stale/displaced segments together. Never bind the object between
+      // a separable verb and particle as if it were part of the expression.
+      const spans = definition.segments;
+      if (!spans.every((span, index) => Number.isInteger(span.startIndex)
+        && Number.isInteger(span.endIndex) && span.startIndex >= 0
+        && span.endIndex > span.startIndex && span.endIndex <= text.length
+        && normalizeText(text.slice(span.startIndex, span.endIndex)) === normalizeText(span.text)
+        && (index === 0 || spans[index - 1].endIndex <= span.startIndex))) continue;
+      spans.forEach((span) => resolved.push({ ...definition, startIndex: span.startIndex, endIndex: span.endIndex }));
+      continue;
+    }
     const indexed = validIndexedMatch(text, definition);
-    const occurrences = indexed ? [indexed] : findGlossaryOccurrences(text, definition.text);
+    if (definition.scope === "contextual" && definition.startIndex !== undefined && !indexed) continue;
+    const allOccurrences = findGlossaryOccurrences(text, definition.text);
+    const occurrences = indexed ? [indexed] : typeof definition.occurrence === "number"
+      ? allOccurrences.slice(definition.occurrence, definition.occurrence + 1) : allOccurrences;
 
     for (const occurrence of occurrences) {
       const occurrenceKey = `${definition.key}:${occurrence.startIndex}:${occurrence.endIndex}`;
@@ -169,7 +189,7 @@ export function prioritizeLayeredHintMatches(
   const grouped = new Map<string, LayeredHintMatch>();
 
   for (const match of matches) {
-    const key = normalizeText(match.text);
+    const key = `${match.scope ?? "global"}|${normalizeText(match.expression ?? match.text)}`;
     const existing = grouped.get(key);
     if (!existing) {
       grouped.set(key, {
@@ -182,6 +202,8 @@ export function prioritizeLayeredHintMatches(
   }
 
   return Array.from(grouped.values()).sort((a, b) => {
+    const contextual = Number(b.scope === "contextual") - Number(a.scope === "contextual");
+    if (contextual) return contextual;
     const aExact = normalizeText(a.text) === clicked ? 0 : 1;
     const bExact = normalizeText(b.text) === clicked ? 0 : 1;
     if (aExact !== bExact) return aExact - bExact;
@@ -205,6 +227,11 @@ export function definitionsFromMergedHints(hints: MergedHint[]): LayeredHintDefi
     })),
     startIndex: hint.startIndex,
     endIndex: hint.endIndex,
+    scope: hint.scope,
+    kind: hint.kind,
+    expression: hint.expression,
+    segments: hint.segments,
+    occurrence: hint.occurrence,
   }));
 }
 
@@ -215,5 +242,10 @@ export function definitionsFromWordHints(raw: unknown): LayeredHintDefinition[] 
     translations: [{ text: hint.translation, note: hint.note, source: "manual" }],
     startIndex: hint.startIndex,
     endIndex: hint.endIndex,
+    scope: hint.scope ?? "contextual",
+    kind: hint.kind,
+    expression: hint.expression,
+    segments: hint.segments,
+    occurrence: hint.occurrence,
   }));
 }

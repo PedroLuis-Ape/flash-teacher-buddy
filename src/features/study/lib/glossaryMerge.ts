@@ -21,6 +21,11 @@ export interface MergedHint {
   translations: { text: string; note?: string; source: "global" | "manual" }[];
   startIndex?: number;
   endIndex?: number;
+  scope?: WordHint["scope"];
+  kind?: WordHint["kind"];
+  expression?: string;
+  segments?: WordHint["segments"];
+  occurrence?: WordHint["occurrence"];
 }
 
 export interface ExtendedWordHint extends WordHint {
@@ -139,14 +144,25 @@ export function mergeGlossaryAndManual(
     if (
       findGlossaryOccurrences(text, hint.text).length === 0
       && hint.startIndex === undefined
+      && !hint.segments?.length
     ) continue;
 
-    const key = normalize(hint.text);
+    // A term is not an occurrence identity. Two banks in the same sentence
+    // may have different senses; never collapse their indexed annotations.
+    const contextual = hint.scope !== "global";
+    const key = contextual
+      ? `context:${normalize(hint.text)}:${hint.startIndex ?? "all"}:${hint.endIndex ?? "all"}:${hint.occurrence ?? "all"}:${JSON.stringify(hint.segments ?? [])}`
+      : normalize(hint.text);
     const merged = hintMap.get(key) ?? {
       text: hint.text,
       translations: [],
       startIndex: hint.startIndex,
       endIndex: hint.endIndex,
+      scope: contextual ? "contextual" : "global",
+      kind: hint.kind,
+      expression: hint.expression,
+      segments: hint.segments,
+      occurrence: hint.occurrence,
     };
 
     if (hint.startIndex !== undefined) {
@@ -180,5 +196,10 @@ export function mergedHintsToWordHints(
     startIndex: hint.startIndex,
     endIndex: hint.endIndex,
     _mergedTranslations: hint.translations,
+    scope: hint.scope,
+    kind: hint.kind,
+    expression: hint.expression,
+    segments: hint.segments,
+    occurrence: hint.occurrence,
   }));
 }

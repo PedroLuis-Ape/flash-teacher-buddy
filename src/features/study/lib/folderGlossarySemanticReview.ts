@@ -54,6 +54,12 @@ export interface SemanticReviewExample {
   list: string;
   side: GlossarySide;
   text: string;
+  card_id?: string;
+  opposite_text?: string;
+  context_tag?: string | null;
+  example_text?: string | null;
+  example_translation?: string | null;
+  word_hints?: unknown;
 }
 
 export interface SemanticQualityChecks {
@@ -243,6 +249,12 @@ function collectEntryExamples(
           list: example.listTitle,
           side: example.side,
           text: example.text,
+          card_id: example.cardId,
+          opposite_text: example.oppositeText,
+          context_tag: example.context_tag,
+          example_text: example.example_text,
+          example_translation: example.example_translation,
+          word_hints: example.word_hints,
         });
       }
       if (examples.size >= MAX_EXAMPLES_PER_REVIEW_ENTRY) break;
