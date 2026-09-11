@@ -91,8 +91,13 @@ export const FlipStudyView = (props: FlipStudyViewProps) => {
         onToggleRedList={props.onToggleRedList}
         isSpecial={props.isSpecial}
         onToggleSpecial={props.onToggleSpecial}
+        isDifficult={props.isDifficult}
+        onToggleDifficulty={props.onToggleDifficulty}
+        difficultyPending={props.difficultyPending}
         onCorrect={props.onKnew}
         onIncorrect={props.onDidntKnow}
+        onPrevious={props.onPrevious}
+        canGoPrevious={props.canGoPrevious}
         layerCount={props.layerCount}
         layersVisitedCount={props.layersVisitedCount}
         onOpenLayers={props.onOpenLayers}

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Flame, Gauge, Gem, Lightbulb, Loader2, RotateCcw, Settings2, Star } from "lucide-react";
+import { Flame, Gauge, Gem, Lightbulb, Loader2, RefreshCcw, RotateCcw, Settings2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import type { SpecialFocusTag } from "@/hooks/useSpecialFlashcards";
@@ -66,6 +66,9 @@ interface StudyToolsMenuProps {
   favoritePending?: boolean;
   redListPending?: boolean;
   specialPending?: boolean;
+  isDifficult?: boolean;
+  onToggleDifficulty?: () => void;
+  difficultyPending?: boolean;
   onRestartRound?: () => void;
   onRestartJourney?: () => void;
   className?: string;
@@ -148,6 +151,9 @@ export function StudyToolsMenu({
   favoritePending,
   redListPending,
   specialPending,
+  isDifficult,
+  onToggleDifficulty,
+  difficultyPending,
   onRestartRound,
   onRestartJourney,
   className,
@@ -260,7 +266,7 @@ export function StudyToolsMenu({
   };
 
   const hasHint = !!combinedHint && combinedHint.trim().length > 0;
-  const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial);
+  const anyActive = hasAccount && (!!isFavorite || !!isRedListed || !!isSpecial || !!isDifficult);
   const hasSessionActions = Boolean(onRestartRound || onRestartJourney);
   const hasFocusContent = Boolean(focusText.trim() || focusTag || focusNote.trim());
   const rateLabel = rate === 1
@@ -458,6 +464,21 @@ export function StudyToolsMenu({
             </DropdownMenuItem>
           )}
 
+          {hasAccount && onToggleDifficulty && (
+            <DropdownMenuItem
+              disabled={difficultyPending}
+              onSelect={(event) => {
+                event.preventDefault();
+                if (!difficultyPending) onToggleDifficulty();
+              }}
+            >
+              <span className="mr-2 inline-flex w-5 justify-center">
+                {difficultyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+              </span>
+              {isDifficult ? "Remover marcação de difícil" : "Marcar como difícil"}
+            </DropdownMenuItem>
+          )}
+
           {hasAccount && (onToggleFavorite || onToggleSpecial) && <DropdownMenuSeparator />}
 
           <DropdownMenuItem
@@ -528,6 +549,17 @@ export function StudyToolsMenu({
           disabled={specialPending}
           onClick={openSpecialFocusDialog}
           icon={specialIcon}
+        />
+      )}
+      {hasAccount && onToggleDifficulty && (
+        <InlineToolButton
+          label={isDifficult ? "Remover marcação de difícil" : "Marcar como difícil"}
+          visibleLabel={isDifficult ? "Difícil ✓" : "Difícil"}
+          alwaysShowLabel
+          active={isDifficult}
+          disabled={difficultyPending}
+          onClick={onToggleDifficulty}
+          icon={difficultyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
         />
       )}
       <InlineToolButton

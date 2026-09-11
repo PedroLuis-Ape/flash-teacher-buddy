@@ -1848,8 +1848,8 @@ const Study = () => {
   // layer cycling, and restarting the session. Disabled while a modal is open
   // so it doesn't fight with dialog focus / Escape handling.
   // Track whether the active Write view is still waiting for a first
-  // submission — while true, suppress global next/prev/next-layer shortcuts
-  // so they don't conflict with typing or bypass the Advance Gate.
+  // submission — while true, suppress forward/layer shortcuts so they cannot
+  // bypass the Advance Gate. Previous remains available to revisit a card.
   const [writeShortcutsLocked, setWriteShortcutsLocked] = useState<boolean>(() => isWriteAnswerLocked());
   useEffect(() => {
     setWriteShortcutsLocked(isWriteAnswerLocked());
@@ -1864,8 +1864,6 @@ const Study = () => {
         if (currentCard) requestSkip();
       },
       prevCard: () => {
-        if (writeShortcutsLocked) return;
-        if (masteryProgressActive) return;
         goToPrevious();
       },
       nextLayer: () => {
@@ -2199,6 +2197,12 @@ const Study = () => {
 
             {/* Desktop buttons */}
             <div className="hidden md:flex flex-wrap gap-4 justify-center pt-4">
+              {masteryProgressActive && canGoPrevious && (
+                <Button variant="outline" size="lg" onClick={goToPrevious}>
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  Voltar ao último card
+                </Button>
+              )}
               {!showNextRound && (
                 <Button 
                   variant="default" 
@@ -2261,6 +2265,12 @@ const Study = () => {
 
             {/* Mobile buttons */}
             <div className="flex md:hidden flex-wrap gap-3 justify-center pt-4">
+              {masteryProgressActive && canGoPrevious && (
+                <Button variant="outline" size="sm" onClick={goToPrevious}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Último card
+                </Button>
+              )}
               {showNextRound && (
                 <Button variant="secondary" size="sm" onClick={startNextRound}>
                   <RefreshCcw className="mr-2 h-4 w-4" />
@@ -2341,16 +2351,16 @@ const Study = () => {
                   size="sm"
                   className="min-h-11 gap-1.5 px-2.5"
                   disabled={reinforcementMutation.isPending}
-                  title={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
-                  aria-label={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
+                    title={isDisplayedReinforcement ? "Remover marcação de difícil" : "Marcar como difícil"}
+                    aria-label={isDisplayedReinforcement ? "Remover marcação de difícil" : "Marcar como difícil"}
                   aria-pressed={isDisplayedReinforcement}
                   onClick={handleToggleReinforcement}
                 >
                   {reinforcementMutation.isPending
                     ? <Loader2 className="h-4 w-4 animate-spin" />
                     : <RefreshCcw className="h-4 w-4" />}
-                  <span className="hidden sm:inline text-xs">
-                    {isDisplayedReinforcement ? "No Reforço" : "Adicionar ao Reforço"}
+                  <span className="text-xs">
+                    {isDisplayedReinforcement ? "Difícil ✓" : "Difícil"}
                   </span>
                 </Button>
               )}
@@ -2486,11 +2496,14 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={masteryProgressActive ? undefined : navigateNext}
-              onPrevious={masteryProgressActive ? undefined : navigatePrevious}
-              canGoPrevious={!masteryProgressActive && canGoPrevious}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
               canGoNext={!masteryProgressActive && canGoNext}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
@@ -2522,11 +2535,16 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               isSavingAttentionPoint={isSystemCollection ? false : setSpecialLayer.isPending}
               onSaveAttentionPoint={userId && !isSystemCollection ? handleSaveAttentionPoint : undefined}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
               onOpenLayers={hasLayers ? goToNextLayer : undefined}
@@ -2549,9 +2567,14 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
             />
           )}
           {effectiveMode === "unscramble" && displayedCard && (
@@ -2573,9 +2596,14 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
             />
           )}
           {effectiveMode === "pronunciation" && displayedCard && (
@@ -2596,9 +2624,14 @@ const Study = () => {
               onToggleRedList={!isSystemCollection ? handleToggleRedList : undefined}
               isSpecial={isDisplayedSpecial}
               onToggleSpecial={specialToggleHandler}
+              isDifficult={isDisplayedReinforcement}
+              onToggleDifficulty={userId && canToggleReinforcement ? handleToggleReinforcement : undefined}
+              difficultyPending={reinforcementMutation.isPending}
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
             />
           )}
         </div>
@@ -2614,7 +2647,11 @@ const Study = () => {
         {/* Previous card button (only for non-flip modes) */}
         {effectiveMode !== "flip" && currentIndex > 0 && (
           <div className="flex justify-center">
-            <Button variant="ghost" onClick={goToPrevious}>
+            <Button
+              variant="ghost"
+              onClick={goToPrevious}
+              title="Card anterior"
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar ao anterior
             </Button>

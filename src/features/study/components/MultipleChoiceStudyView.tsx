@@ -81,15 +81,28 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
         onToggleRedList={props.onToggleRedList}
         isSpecial={props.isSpecial}
         onToggleSpecial={props.onToggleSpecial}
+        isDifficult={props.isDifficult}
+        onToggleDifficulty={props.onToggleDifficulty}
+        difficultyPending={props.difficultyPending}
         onCorrect={onCorrect}
         onIncorrect={onIncorrect}
         onSkip={onSkip ?? onIncorrect}
+        onPrevious={props.onPrevious}
+        canGoPrevious={props.canGoPrevious}
       />
     );
   }
 
   return (
-    <StudyCardDeck cardKey={cardKey} density="compact">
+    <StudyCardDeck
+      cardKey={cardKey}
+      density="compact"
+      swipeNavigation={{
+        onPrevious: props.onPrevious,
+        canGoPrevious: props.canGoPrevious,
+        canGoNext: false,
+      }}
+    >
       <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando atividade...</div>}>
         <LazyMultipleChoiceStudyView
           {...props}
