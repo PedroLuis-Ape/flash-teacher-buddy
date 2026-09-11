@@ -40,6 +40,7 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const boundaryRef = useRef<HTMLDivElement>(null);
   const submitLockedRef = useRef(false);
+  const submitUnlockTimerRef = useRef(0);
   const navigationLockedRef = useRef(false);
   const shortcuts = useShortcutMap();
   const glossaryHints = useResolvedStudyGlossaryHints({
@@ -55,6 +56,8 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   useEffect(() => {
     submitLockedRef.current = false;
     navigationLockedRef.current = false;
+    window.clearTimeout(submitUnlockTimerRef.current);
+    return () => window.clearTimeout(submitUnlockTimerRef.current);
   }, [cardKey, direction]);
 
   useLayoutEffect(() => {
@@ -169,29 +172,40 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if (!(event.target instanceof Element)) return;
     const button = event.target.closest("button");
-    if (!button?.textContent?.toLocaleLowerCase().includes("corrigir")) return;
+    if (!button) return;
 
     const buttonLabel = button.textContent?.toLocaleLowerCase() ?? "";
+    // Qualquer ação que devolve o aluno ao campo de resposta reabre os dois
+    // gates imediatamente (inclui "Reescrever agora", do fluxo Reescrita).
     if (buttonLabel.includes("tentar corrigir") || buttonLabel.includes("reescrever agora")) {
       submitLockedRef.current = false;
       navigationLockedRef.current = false;
+      window.clearTimeout(submitUnlockTimerRef.current);
       return;
     }
+    if (!buttonLabel.includes("corrigir")) return;
 
     const value = boundaryRef.current
       ?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")
       ?.value.trim();
     if (!value) return;
-    if (!submitLockedRef.current) {
-      // A fresh submission is a new attempt, even when the engine immediately
-      // presents the same card again after an error in mastery mode.
-      submitLockedRef.current = true;
-      navigationLockedRef.current = false;
+
+    if (submitLockedRef.current) {
+      // Somente o duplo-clique/duplo-Enter imediato é descartado.
+      event.preventDefault();
+      event.stopPropagation();
       return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
+    // A fresh submission is a new attempt, even when the engine immediately
+    // presents the same card again after an error in mastery mode. O gate é
+    // temporário para nunca deixar "Corrigir" permanentemente inerte.
+    submitLockedRef.current = true;
+    navigationLockedRef.current = false;
+    window.clearTimeout(submitUnlockTimerRef.current);
+    submitUnlockTimerRef.current = window.setTimeout(() => {
+      submitLockedRef.current = false;
+    }, 700);
   };
 
   if (glossaryHints.isLoading) {

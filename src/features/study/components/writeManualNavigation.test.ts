@@ -24,6 +24,14 @@ describe("write mode stability", () => {
     expect(advanceControllerSource).toContain('if (next === "unanswered") resetAttempt()');
   });
 
+  it("never leaves the submit gate permanently locked", () => {
+    // O bloqueio de envio existe apenas para o duplo-clique imediato: precisa
+    // ser liberado por tempo para não travar "Corrigir" após feedback.
+    expect(writeSource).toContain("submitUnlockTimerRef");
+    expect(writeSource).toContain("window.setTimeout(() => {");
+    expect(writeSource).toContain("window.clearTimeout(submitUnlockTimerRef.current)");
+  });
+
   it("routes mixed write slots through the same stability boundary", () => {
     expect(mixedSource).toContain('import { WriteStudyView } from "./WriteStudyView"');
     expect(mixedSource).not.toContain('import("./WriteStudyView.impl")');
