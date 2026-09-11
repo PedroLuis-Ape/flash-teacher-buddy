@@ -1023,8 +1023,8 @@ export type Database = {
           lang_a: string | null
           lang_b: string | null
           owner_id: string
-          system_kind: string
           study_type: string
+          system_kind: string
           title: string
           tts_enabled: boolean
           updated_at: string
@@ -1042,8 +1042,8 @@ export type Database = {
           lang_a?: string | null
           lang_b?: string | null
           owner_id: string
-          system_kind?: string
           study_type?: string
+          system_kind?: string
           title: string
           tts_enabled?: boolean
           updated_at?: string
@@ -1061,8 +1061,8 @@ export type Database = {
           lang_a?: string | null
           lang_b?: string | null
           owner_id?: string
-          system_kind?: string
           study_type?: string
+          system_kind?: string
           title?: string
           tts_enabled?: boolean
           updated_at?: string
@@ -1476,9 +1476,9 @@ export type Database = {
           lang_b: string | null
           order_index: number
           owner_id: string
-          system_kind: string
           primary_side: string
           study_type: string
+          system_kind: string
           title: string
           tts_enabled: boolean
           updated_at: string
@@ -1499,9 +1499,9 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id: string
-          system_kind?: string
           primary_side?: string
           study_type?: string
+          system_kind?: string
           title: string
           tts_enabled?: boolean
           updated_at?: string
@@ -1522,9 +1522,9 @@ export type Database = {
           lang_b?: string | null
           order_index?: number
           owner_id?: string
-          system_kind?: string
           primary_side?: string
           study_type?: string
+          system_kind?: string
           title?: string
           tts_enabled?: boolean
           updated_at?: string
@@ -2577,6 +2577,58 @@ export type Database = {
           },
         ]
       }
+      user_attention_areas: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          institution_id: string | null
+          list_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          institution_id?: string | null
+          list_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          institution_id?: string | null
+          list_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_attention_areas_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_attention_areas_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_attention_areas_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_favorites: {
         Row: {
           created_at: string
@@ -2917,175 +2969,6 @@ export type Database = {
           },
         ]
       }
-      user_roles: {
-        Row: {
-          created_at: string | null
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_special_flashcards: {
-        Row: {
-          attention_area_id: string | null
-          created_at: string
-          deactivated_at: string | null
-          flashcard_id: string
-          focus_note: string | null
-          focus_side: string | null
-          focus_tag: string | null
-          focus_text: string | null
-          id: string
-          is_active: boolean
-          list_id: string | null
-          materialization_group_id: string | null
-          materialization_list_id: string | null
-          notes: string | null
-          source_group_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          attention_area_id?: string | null
-          created_at?: string
-          deactivated_at?: string | null
-          flashcard_id: string
-          focus_note?: string | null
-          focus_side?: string | null
-          focus_tag?: string | null
-          focus_text?: string | null
-          id?: string
-          is_active?: boolean
-          list_id?: string | null
-          materialization_group_id?: string | null
-          materialization_list_id?: string | null
-          notes?: string | null
-          source_group_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          attention_area_id?: string | null
-          created_at?: string
-          deactivated_at?: string | null
-          flashcard_id?: string
-          focus_note?: string | null
-          focus_side?: string | null
-          focus_tag?: string | null
-          focus_text?: string | null
-          id?: string
-          is_active?: boolean
-          list_id?: string | null
-          materialization_group_id?: string | null
-          materialization_list_id?: string | null
-          notes?: string | null
-          source_group_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_special_flashcards_flashcard_id_fkey"
-            columns: ["flashcard_id"]
-            isOneToOne: false
-            referencedRelation: "flashcards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_special_flashcards_list_id_fkey"
-            columns: ["list_id"]
-            isOneToOne: false
-            referencedRelation: "lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_special_flashcards_attention_area_id_fkey"
-            columns: ["attention_area_id"]
-            isOneToOne: false
-            referencedRelation: "user_attention_areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_special_flashcards_materialization_list_id_fkey"
-            columns: ["materialization_list_id"]
-            isOneToOne: false
-            referencedRelation: "lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_special_flashcards_materialization_group_id_fkey"
-            columns: ["materialization_group_id"]
-            isOneToOne: false
-            referencedRelation: "flashcards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_attention_areas: {
-        Row: {
-          created_at: string
-          folder_id: string
-          id: string
-          institution_id: string | null
-          list_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          folder_id: string
-          id?: string
-          institution_id?: string | null
-          list_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          folder_id?: string
-          id?: string
-          institution_id?: string | null
-          list_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_attention_areas_folder_id_fkey"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_attention_areas_institution_id_fkey"
-            columns: ["institution_id"]
-            isOneToOne: false
-            referencedRelation: "institutions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_attention_areas_list_id_fkey"
-            columns: ["list_id"]
-            isOneToOne: false
-            referencedRelation: "lists"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_reinforcement_areas: {
         Row: {
           created_at: string
@@ -3183,6 +3066,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "user_reinforcement_points_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_points_materialization_group_id_fkey"
+            columns: ["materialization_group_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reinforcement_points_materialization_list_id_fkey"
+            columns: ["materialization_list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_reinforcement_points_source_card_id_fkey"
             columns: ["source_card_id"]
             isOneToOne: false
@@ -3196,25 +3100,121 @@ export type Database = {
             referencedRelation: "lists"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_special_flashcards: {
+        Row: {
+          attention_area_id: string | null
+          created_at: string
+          deactivated_at: string | null
+          flashcard_id: string
+          focus_note: string | null
+          focus_side: string | null
+          focus_tag: string | null
+          focus_text: string | null
+          id: string
+          is_active: boolean
+          list_id: string | null
+          materialization_group_id: string | null
+          materialization_list_id: string | null
+          notes: string | null
+          source_group_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attention_area_id?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          flashcard_id: string
+          focus_note?: string | null
+          focus_side?: string | null
+          focus_tag?: string | null
+          focus_text?: string | null
+          id?: string
+          is_active?: boolean
+          list_id?: string | null
+          materialization_group_id?: string | null
+          materialization_list_id?: string | null
+          notes?: string | null
+          source_group_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attention_area_id?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          flashcard_id?: string
+          focus_note?: string | null
+          focus_side?: string | null
+          focus_tag?: string | null
+          focus_text?: string | null
+          id?: string
+          is_active?: boolean
+          list_id?: string | null
+          materialization_group_id?: string | null
+          materialization_list_id?: string | null
+          notes?: string | null
+          source_group_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "user_reinforcement_points_materialization_list_id_fkey"
-            columns: ["materialization_list_id"]
+            foreignKeyName: "user_special_flashcards_attention_area_id_fkey"
+            columns: ["attention_area_id"]
+            isOneToOne: false
+            referencedRelation: "user_attention_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_special_flashcards_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_special_flashcards_list_id_fkey"
+            columns: ["list_id"]
             isOneToOne: false
             referencedRelation: "lists"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_reinforcement_points_materialization_group_id_fkey"
+            foreignKeyName: "user_special_flashcards_materialization_group_id_fkey"
             columns: ["materialization_group_id"]
             isOneToOne: false
             referencedRelation: "flashcards"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_reinforcement_points_institution_id_fkey"
-            columns: ["institution_id"]
+            foreignKeyName: "user_special_flashcards_materialization_list_id_fkey"
+            columns: ["materialization_list_id"]
             isOneToOne: false
-            referencedRelation: "institutions"
+            referencedRelation: "lists"
             referencedColumns: ["id"]
           },
         ]
@@ -3625,6 +3625,7 @@ export type Database = {
           lang_b: string | null
           owner_id: string
           study_type: string
+          system_kind: string
           title: string
           tts_enabled: boolean
           updated_at: string
@@ -3652,6 +3653,7 @@ export type Database = {
           lang_b: string | null
           owner_id: string
           study_type: string
+          system_kind: string
           title: string
           tts_enabled: boolean
           updated_at: string
@@ -3683,6 +3685,7 @@ export type Database = {
           owner_id: string
           primary_side: string
           study_type: string
+          system_kind: string
           title: string
           tts_enabled: boolean
           updated_at: string
@@ -4164,6 +4167,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_public_teacher_folder_visibility: {
+        Args: { _folder_id: string; _is_public: boolean }
+        Returns: Json
+      }
       set_user_attention_point: {
         Args: {
           _enabled: boolean
@@ -4196,10 +4203,6 @@ export type Database = {
           _flashcard_ids: string[]
           _institution_id?: string
         }
-        Returns: Json
-      }
-      set_public_teacher_folder_visibility: {
-        Args: { _folder_id: string; _is_public: boolean }
         Returns: Json
       }
       smart_word_hints_for_db_v2: { Args: { _raw: Json }; Returns: Json }
@@ -4288,12 +4291,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4317,11 +4320,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4342,11 +4345,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4367,11 +4370,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4384,11 +4387,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

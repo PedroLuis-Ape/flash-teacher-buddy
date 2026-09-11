@@ -145,6 +145,9 @@ interface FlipStudyViewProps {
   onToggleRedList?: () => void;
   isSpecial?: boolean;
   onToggleSpecial?: () => void;
+  isDifficult?: boolean;
+  onToggleDifficulty?: () => void;
+  difficultyPending?: boolean;
   layerCount?: number;
   layersVisitedCount?: number;
   onOpenLayers?: () => void;
@@ -180,6 +183,9 @@ export const FlipStudyView = ({
   onToggleRedList,
   isSpecial = false,
   onToggleSpecial,
+  isDifficult = false,
+  onToggleDifficulty,
+  difficultyPending = false,
 }: FlipStudyViewProps) => {
   const restoredAutoPlay = useRef(readFlipAutoPlayState());
   const playPreset = usePlayPresetRuntime();
@@ -484,6 +490,9 @@ export const FlipStudyView = ({
       onToggleRedList={onToggleRedList ? () => handleToolInteraction(onToggleRedList) : undefined}
       isSpecial={isSpecial}
       onToggleSpecial={onToggleSpecial ? () => handleToolInteraction(onToggleSpecial) : undefined}
+      isDifficult={isDifficult}
+      onToggleDifficulty={onToggleDifficulty ? () => handleToolInteraction(onToggleDifficulty) : undefined}
+      difficultyPending={difficultyPending}
     />
   );
 

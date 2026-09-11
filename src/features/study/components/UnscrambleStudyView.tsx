@@ -24,7 +24,11 @@ export const UnscrambleStudyView = (props: UnscrambleStudyViewProps) => {
 
   if (glossaryHints.isLoading) {
     return (
-      <StudyCardDeck cardKey={cardKey} density="compact">
+      <StudyCardDeck
+        cardKey={cardKey}
+        density="compact"
+        swipeNavigation={{ onPrevious: props.onPrevious, canGoPrevious: props.canGoPrevious, canGoNext: false }}
+      >
         <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
           Carregando glossário da pasta...
         </div>
@@ -33,7 +37,11 @@ export const UnscrambleStudyView = (props: UnscrambleStudyViewProps) => {
   }
 
   return (
-    <StudyCardDeck cardKey={cardKey} density="compact">
+    <StudyCardDeck
+      cardKey={cardKey}
+      density="compact"
+      swipeNavigation={{ onPrevious: props.onPrevious, canGoPrevious: props.canGoPrevious, canGoNext: false }}
+    >
       <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando organizar palavras...</div>}>
         <LazyUnscrambleStudyView
           {...props}

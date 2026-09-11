@@ -18,6 +18,7 @@ describe("write mode stability", () => {
 
   it("unlocks both gates when the learner retries a correction", () => {
     expect(writeSource).toContain('includes("tentar corrigir")');
+    expect(writeSource).toContain('includes("reescrever agora")');
     expect(writeSource).toContain("submitLockedRef.current = false");
     expect(writeSource).toContain("navigationLockedRef.current = false");
     expect(advanceControllerSource).toContain('if (next === "unanswered") resetAttempt()');

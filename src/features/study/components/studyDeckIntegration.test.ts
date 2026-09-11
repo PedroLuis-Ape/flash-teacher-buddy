@@ -18,11 +18,13 @@ describe("study deck integration", () => {
     }
   });
 
-  it("enables swipe navigation only for Flip Fast", () => {
+  it("enables previous-card swipe in every mode while Flip Fast also supports next", () => {
     expect(flip).toContain("props.fastMode");
     expect(flip).toContain("swipeNavigation");
     for (const source of [write, multiple, unscramble, pronunciation]) {
-      expect(source).not.toContain("swipeNavigation");
+      expect(source).toContain("swipeNavigation");
+      expect(source).toContain("onPrevious: props.onPrevious");
+      expect(source).toContain("canGoNext: false");
     }
   });
 

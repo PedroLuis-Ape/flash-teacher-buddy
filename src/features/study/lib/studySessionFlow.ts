@@ -288,6 +288,41 @@ export function recordResult(
   return state;
 }
 
+/**
+ * Reopen the previously answered card in the active mastery round.
+ *
+ * This reverses only the current-round bookkeeping produced by recordResult.
+ * Queue composition and earlier rounds remain untouched, so answering the card
+ * again replaces its round result instead of advancing a second time.
+ */
+export function reopenPreviousCard(state: MasterySessionState): MasterySessionState {
+  if (state.currentRoundIndex <= 0) return state;
+
+  const previousIndex = state.currentRoundIndex - 1;
+  const cardId = state.currentRoundIds[previousIndex];
+  const previousResult = cardId ? state.currentRoundResults[cardId] : undefined;
+  if (!cardId || !previousResult) return state;
+
+  state.currentRoundIndex = previousIndex;
+  state.status = "active";
+  delete state.currentRoundResults[cardId];
+  removeId(state.correctThisRoundIds, cardId);
+  removeId(state.failedThisRoundIds, cardId);
+  removeId(state.masteredIds, cardId);
+
+  const attempts = state.attemptsByCard[cardId] ?? 0;
+  if (attempts <= 1) delete state.attemptsByCard[cardId];
+  else state.attemptsByCard[cardId] = attempts - 1;
+
+  if (!isCorrectResult(previousResult)) {
+    const mistakes = state.mistakesByCard[cardId] ?? 0;
+    if (mistakes <= 1) delete state.mistakesByCard[cardId];
+    else state.mistakesByCard[cardId] = mistakes - 1;
+  }
+
+  return state;
+}
+
 function addValidationIssue(issues: string[], message: string): void {
   if (!issues.includes(message)) issues.push(message);
 }

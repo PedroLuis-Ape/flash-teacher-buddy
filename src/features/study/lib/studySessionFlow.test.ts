@@ -6,6 +6,7 @@ import {
   isRoundFinished,
   isSessionFinished,
   recordResult,
+  reopenPreviousCard,
   startNextRound,
   summarizeCurrentRound,
   composeMasteryRound,
@@ -60,6 +61,31 @@ describe("studySessionFlow — mastery rounds", () => {
     expect(state.currentRoundIndex).toBe(1);
     expect(state.currentRoundResults.c1).toBe("correct");
     expect(state.attemptsByCard.c1).toBe(1);
+  });
+
+  it("reopens the previous card and replaces its mastery result safely", () => {
+    const state = createMasterySession(ids(3));
+    recordResult(state, "c1", "incorrect");
+
+    reopenPreviousCard(state);
+    expect(getCurrentCardId(state)).toBe("c1");
+    expect(state.currentRoundResults.c1).toBeUndefined();
+    expect(state.attemptsByCard.c1).toBeUndefined();
+    expect(state.mistakesByCard.c1).toBeUndefined();
+    expect(state.failedThisRoundIds).not.toContain("c1");
+
+    recordResult(state, "c1", "correct");
+    expect(state.currentRoundIndex).toBe(1);
+    expect(state.currentRoundResults.c1).toBe("correct");
+    expect(state.masteredIds).toContain("c1");
+    expect(validateMasterySessionState(state, new Set(ids(3))).valid).toBe(true);
+  });
+
+  it("does nothing when there is no previous mastery card", () => {
+    const state = createMasterySession(ids(2));
+    expect(reopenPreviousCard(state)).toBe(state);
+    expect(state.currentRoundIndex).toBe(0);
+    expect(state.currentRoundResults).toEqual({});
   });
 
   it("Case 2 — incorrect cards return in the next round with 13 new cards", () => {
