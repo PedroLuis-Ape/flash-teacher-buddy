@@ -91,6 +91,8 @@ Após o usuário relatar que acessou a conta correta, a nova inspeção não enc
 
 Também foi tentado o controle direto do Windows pela habilidade Computer Use, mas a ponte retornou `Trusted RPC service is not configured: sky` antes de listar janelas. Nenhuma ação foi executada no desktop.
 
+Quando o Chrome conectado voltou a ficar disponível, a navegação do projeto redirecionou para `https://lovable.dev/login?redirect=%2Fprojects%2Fb6f1ba83-b44c-4a41-8589-b1e5380cf1ea`. O formulário oferece Google, GitHub, Apple ou e-mail; nenhuma credencial foi inserida e nenhum provedor foi escolhido. A conclusão do login precisa ser feita manualmente nessa aba antes da inspeção do preview.
+
 Durante a navegação repetida da publicação, o console também registrou avisos pré-existentes de `PortalHistorySync`/`EconomyContext` e múltiplas instâncias do GoTrueClient. Como a missão visual proíbe alterações de autenticação, sincronização e backend, esses achados foram mantidos fora do escopo e não foram mascarados.
 
 O preview local não recebeu credenciais nem sessão do usuário. Por isso, o shell do Hub público abriu com os modos renderizados, mas o ID público usado na publicação não foi encontrado pelo runtime local sem configuração de dados; isso limita a validação local do deck, não da composição visual do Hub.
