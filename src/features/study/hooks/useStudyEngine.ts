@@ -78,6 +78,7 @@ import { clearStudyLayerSnapshot } from "@/features/study/lib/studyLayerSnapshot
 import {
   createMasterySession,
   getCurrentCardId,
+  reopenPreviousCard,
   recordResult as recordMasteryResult,
   summarizeCurrentRound,
   startNextRound as startNextMasteryRound,
@@ -1857,11 +1858,32 @@ export function useStudyEngine(
     }
   }, [currentIndex, cardsOrder.length, isMasteryMode]);
 
-  const goToPrevious = useCallback(() => {
+  const navigateToPrevious = useCallback(() => {
+    if (isMasteryMode) {
+      setMasterySession((previous) => {
+        if (!previous || previous.currentRoundIndex <= 0) return previous;
+        return reopenPreviousCard({
+          ...previous,
+          currentRoundIds: [...previous.currentRoundIds],
+          unseenIds: [...previous.unseenIds],
+          retryIds: [...previous.retryIds],
+          masteredIds: [...previous.masteredIds],
+          attemptsByCard: { ...previous.attemptsByCard },
+          mistakesByCard: { ...previous.mistakesByCard },
+          correctThisRoundIds: [...previous.correctThisRoundIds],
+          failedThisRoundIds: [...previous.failedThisRoundIds],
+          reviewSourceThisRound: [...previous.reviewSourceThisRound],
+          currentRoundResults: { ...previous.currentRoundResults },
+        });
+      });
+      return;
+    }
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
     }
-  }, [currentIndex]);
+  }, [currentIndex, isMasteryMode]);
+
+  const goToPrevious = navigateToPrevious;
 
   // Navigate without recording result (for arrow navigation in flip mode)
   const navigateNext = useCallback(() => {
@@ -1873,11 +1895,7 @@ export function useStudyEngine(
     }
   }, [currentIndex, cardsOrder.length]);
 
-  const navigatePrevious = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-    }
-  }, [currentIndex]);
+  const navigatePrevious = navigateToPrevious;
 
   // Start next round (for quiz modes)
   const startNextRound = useCallback(() => {

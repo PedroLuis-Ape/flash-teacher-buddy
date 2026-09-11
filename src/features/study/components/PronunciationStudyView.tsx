@@ -21,7 +21,11 @@ export const PronunciationStudyView = (props: PronunciationStudyViewProps) => {
   const shouldSwap = languageA === "en" && languageB === "pt";
 
   return (
-    <StudyCardDeck cardKey={`${props.front}:${props.back}`} density="compact">
+    <StudyCardDeck
+      cardKey={`${props.front}:${props.back}`}
+      density="compact"
+      swipeNavigation={{ onPrevious: props.onPrevious, canGoPrevious: props.canGoPrevious, canGoNext: false }}
+    >
       <Suspense fallback={<div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">Preparando pronúncia...</div>}>
         <LazyPronunciationStudyView
           {...props}

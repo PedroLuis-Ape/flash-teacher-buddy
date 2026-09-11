@@ -195,7 +195,15 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
 
   if (glossaryHints.isLoading) {
     return (
-      <StudyCardDeck cardKey={cardKey} density="compact">
+      <StudyCardDeck
+        cardKey={cardKey}
+        density="compact"
+        swipeNavigation={{
+          onPrevious: props.onPrevious,
+          canGoPrevious: props.canGoPrevious,
+          canGoNext: false,
+        }}
+      >
         <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
           Carregando glossário da pasta...
         </div>
@@ -204,7 +212,15 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   }
 
   return (
-    <StudyCardDeck cardKey={cardKey} density="compact">
+    <StudyCardDeck
+      cardKey={cardKey}
+      density="compact"
+      swipeNavigation={{
+        onPrevious: props.onPrevious,
+        canGoPrevious: props.canGoPrevious,
+        canGoNext: false,
+      }}
+    >
       <div
         ref={boundaryRef}
         data-write-study-boundary="true"

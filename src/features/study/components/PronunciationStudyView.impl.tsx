@@ -37,6 +37,8 @@ interface PronunciationStudyViewProps {
   onCorrect?: () => void;
   onIncorrect?: () => void;
   onSkip?: () => void;
+  onPrevious?: () => void;
+  canGoPrevious?: boolean;
 }
 
 export function PronunciationStudyView({
@@ -59,6 +61,8 @@ export function PronunciationStudyView({
   onCorrect,
   onIncorrect,
   onSkip,
+  onPrevious: _onPrevious,
+  canGoPrevious: _canGoPrevious,
 }: PronunciationStudyViewProps) {
   const sideA = { text: front, lang: langA, label: labelA || "Termo" };
   const sideB = { text: back, lang: langB, label: labelB || "Definição" };

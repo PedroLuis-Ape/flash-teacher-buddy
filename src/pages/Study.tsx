@@ -1865,7 +1865,6 @@ const Study = () => {
       },
       prevCard: () => {
         if (writeShortcutsLocked) return;
-        if (masteryProgressActive) return;
         goToPrevious();
       },
       nextLayer: () => {
@@ -2341,16 +2340,16 @@ const Study = () => {
                   size="sm"
                   className="min-h-11 gap-1.5 px-2.5"
                   disabled={reinforcementMutation.isPending}
-                  title={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
-                  aria-label={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
+                    title={isDisplayedReinforcement ? "Remover marcação de difícil" : "Marcar como difícil"}
+                    aria-label={isDisplayedReinforcement ? "Remover marcação de difícil" : "Marcar como difícil"}
                   aria-pressed={isDisplayedReinforcement}
                   onClick={handleToggleReinforcement}
                 >
                   {reinforcementMutation.isPending
                     ? <Loader2 className="h-4 w-4 animate-spin" />
                     : <RefreshCcw className="h-4 w-4" />}
-                  <span className="hidden sm:inline text-xs">
-                    {isDisplayedReinforcement ? "No Reforço" : "Adicionar ao Reforço"}
+                  <span className="text-xs">
+                    {isDisplayedReinforcement ? "Difícil ✓" : "Difícil"}
                   </span>
                 </Button>
               )}
@@ -2489,8 +2488,8 @@ const Study = () => {
               onKnew={() => handleNext(true)}
               onDidntKnow={() => handleNext(false)}
               onNext={masteryProgressActive ? undefined : navigateNext}
-              onPrevious={masteryProgressActive ? undefined : navigatePrevious}
-              canGoPrevious={!masteryProgressActive && canGoPrevious}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
               canGoNext={!masteryProgressActive && canGoNext}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
@@ -2527,6 +2526,8 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={() => handleNext(false, true)}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious && !writeShortcutsLocked}
               layerCount={cardLayers?.length ?? 1}
               layersVisitedCount={safeLayerIdx + 1}
               onOpenLayers={hasLayers ? goToNextLayer : undefined}
@@ -2552,6 +2553,8 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
             />
           )}
           {effectiveMode === "unscramble" && displayedCard && (
@@ -2576,6 +2579,8 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
             />
           )}
           {effectiveMode === "pronunciation" && displayedCard && (
@@ -2599,6 +2604,8 @@ const Study = () => {
               onCorrect={() => handleNext(true)}
               onIncorrect={() => handleNext(false)}
               onSkip={requestSkip}
+              onPrevious={navigatePrevious}
+              canGoPrevious={canGoPrevious}
             />
           )}
         </div>
@@ -2614,7 +2621,12 @@ const Study = () => {
         {/* Previous card button (only for non-flip modes) */}
         {effectiveMode !== "flip" && currentIndex > 0 && (
           <div className="flex justify-center">
-            <Button variant="ghost" onClick={goToPrevious}>
+            <Button
+              variant="ghost"
+              onClick={goToPrevious}
+              disabled={writeShortcutsLocked}
+              title={writeShortcutsLocked ? "Responda ou pule este card antes de voltar" : "Card anterior"}
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar ao anterior
             </Button>

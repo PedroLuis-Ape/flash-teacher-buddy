@@ -78,6 +78,8 @@ interface WriteStudyViewProps {
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
+  onPrevious?: () => void;
+  canGoPrevious?: boolean;
   layerCount?: number;
   layersVisitedCount?: number;
   onOpenLayers?: () => void;
@@ -113,6 +115,8 @@ export const WriteStudyView = ({
   onCorrect,
   onIncorrect,
   onSkip,
+  onPrevious: _onPrevious,
+  canGoPrevious: _canGoPrevious,
   layerCount = 1,
   layersVisitedCount = 0,
   onOpenLayers,

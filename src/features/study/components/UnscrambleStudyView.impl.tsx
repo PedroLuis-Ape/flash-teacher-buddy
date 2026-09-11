@@ -37,6 +37,8 @@ interface UnscrambleStudyViewProps {
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip: () => void;
+  onPrevious?: () => void;
+  canGoPrevious?: boolean;
 }
 
 interface WordItem {
@@ -84,6 +86,8 @@ export const UnscrambleStudyView = ({
   onCorrect,
   onIncorrect,
   onSkip,
+  onPrevious: _onPrevious,
+  canGoPrevious: _canGoPrevious,
 }: UnscrambleStudyViewProps) => {
   const [selectedWords, setSelectedWords] = useState<WordItem[]>([]);
   const [availableWords, setAvailableWords] = useState<WordItem[]>([]);

@@ -45,6 +45,8 @@ interface MultipleChoiceStudyViewProps {
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip?: () => void;
+  onPrevious?: () => void;
+  canGoPrevious?: boolean;
 }
 
 export const MultipleChoiceStudyView = ({
@@ -66,6 +68,8 @@ export const MultipleChoiceStudyView = ({
   onCorrect,
   onIncorrect,
   onSkip,
+  onPrevious: _onPrevious,
+  canGoPrevious: _canGoPrevious,
 }: MultipleChoiceStudyViewProps) => {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
