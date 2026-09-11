@@ -56,6 +56,8 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
   useEffect(() => {
     submitLockedRef.current = false;
     navigationLockedRef.current = false;
+    window.clearTimeout(submitUnlockTimerRef.current);
+    return () => window.clearTimeout(submitUnlockTimerRef.current);
   }, [cardKey, direction]);
 
   useLayoutEffect(() => {
