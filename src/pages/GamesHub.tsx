@@ -436,7 +436,7 @@ const GamesHub = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {gameOptions.map(({ mode, visualKey, title, beta, recommended }) => {
               const visual = GAME_MODE_VISUALS[visualKey];
               const normalizedMode = normalizeStudyMode(mode);
@@ -446,9 +446,13 @@ const GamesHub = () => {
                   key={mode}
                   type="button"
                   onClick={() => startGame(mode)}
+                  aria-label={`${title}: ${visual.description}`}
+                  aria-pressed={isConfigured}
+                  data-recommended={recommended ? "true" : undefined}
+                  data-configured={isConfigured ? "true" : undefined}
                   className={cn(
-                    "relative flex min-h-[112px] flex-col items-center justify-center gap-3 rounded-xl border p-3 text-center shadow-sm transition-all",
-                    "hover:-translate-y-0.5 hover:shadow-md",
+                    "group relative flex min-h-[96px] flex-row items-center gap-3 sm:gap-4 rounded-xl border p-3 text-left shadow-sm transition-all sm:min-h-[136px] sm:flex-col sm:justify-center sm:p-4 sm:text-center",
+                    "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     recommended && "border-primary/60 ring-2 ring-primary/15",
                     isConfigured && "outline outline-2 outline-primary/50",
                     visual.cardClass,
@@ -459,22 +463,38 @@ const GamesHub = () => {
                       RECOMENDADO
                     </span>
                   )}
-                  {beta && (
-                    <span className="absolute right-2 top-2 rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow-sm">
-                      BETA
+                  {(isConfigured || beta) && (
+                    <span className="absolute right-2 top-2 flex flex-wrap justify-end gap-1.5">
+                      {isConfigured && (
+                        <span className="rounded-full border border-primary/40 bg-background/80 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-primary shadow-sm">
+                          CONFIGURADO
+                        </span>
+                      )}
+                      {beta && (
+                        <span className="rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-extrabold tracking-wide text-white shadow-sm">
+                          BETA
+                        </span>
+                      )}
                     </span>
                   )}
-                  <span
-                    className={cn(
-                      "flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl shadow-sm",
-                      visual.tileClass,
-                    )}
-                    aria-hidden="true"
-                    title={visual.emojiLabel}
-                  >
-                    {visual.emoji}
-                  </span>
-                  <span className="text-sm font-semibold leading-tight">{title}</span>
+                  <div className="flex min-w-0 items-center gap-3 sm:flex-col sm:gap-3">
+                    <span
+                      className={cn(
+                        "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-2xl shadow-sm",
+                        visual.tileClass,
+                      )}
+                      aria-hidden="true"
+                      title={visual.emojiLabel}
+                    >
+                      {visual.emoji}
+                    </span>
+                    <span className="min-w-0 sm:max-w-[9rem]">
+                      <span className="block text-sm font-semibold leading-tight">{title}</span>
+                      <span className="mt-1 block line-clamp-2 text-xs leading-snug text-muted-foreground">
+                        {visual.description}
+                      </span>
+                    </span>
+                  </div>
                 </button>
               );
             })}
