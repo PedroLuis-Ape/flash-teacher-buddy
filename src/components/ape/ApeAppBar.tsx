@@ -95,20 +95,20 @@ export function ApeAppBar({
             size="icon"
             onClick={handleBack}
             aria-label={t("nav.goBack")}
-            className="shrink-0 h-10 w-10"
+            className="ape-interactive-surface shrink-0 h-10 w-10"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           )}
           {title && (
-            <h1 className="text-base sm:text-lg font-semibold truncate">
+            <h1 className="text-sm sm:text-lg font-semibold leading-tight truncate">
               {title}
             </h1>
           )}
           {children}
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="ape-action-cluster">
           {rightContent}
           {resolvedShowSearch && (
             <Button
@@ -117,7 +117,7 @@ export function ApeAppBar({
               onClick={() => navigate('/search')}
               aria-label={t("nav.searchUsers")}
               title={t("nav.search")}
-              className="h-10 w-10"
+              className="ape-interactive-surface h-10 w-10"
             >
               <Search className="h-5 w-5" />
             </Button>

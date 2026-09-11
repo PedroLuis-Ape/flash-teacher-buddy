@@ -714,3 +714,56 @@ All colors MUST be HSL.
     -webkit-text-size-adjust: 100%;
   }
 }
+
+@layer components {
+  /* Shared shell primitives: visual-only and safe for later screen adoption. */
+  .ape-content-safe-bottom {
+    --ape-tab-bar-height: 4.5rem;
+    min-height: calc(var(--ape-tab-bar-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .ape-action-cluster {
+    @apply flex min-w-0 shrink-0 items-center gap-1 sm:gap-2;
+  }
+
+  .ape-interactive-surface {
+    @apply touch-manipulation;
+    transition: transform 140ms ease, background-color 140ms ease,
+      border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  .ape-interactive-surface:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+
+  .ape-overlay-scroll {
+    @apply min-h-0 overflow-y-auto overscroll-contain;
+    scrollbar-gutter: stable;
+  }
+
+  @media (max-width: 639px) {
+    .ape-content-safe-bottom {
+      --ape-tab-bar-height: 4.25rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .ape-content-safe-bottom {
+      min-height: 0;
+      padding-bottom: 0;
+    }
+  }
+}
+
+/* Shared shell primitives keep their layout while nonessential motion is off. */
+@media (prefers-reduced-motion: reduce) {
+  .ape-content-safe-bottom,
+  .ape-action-cluster,
+  .ape-interactive-surface,
+  .ape-overlay-scroll {
+    animation: none !important;
+    transition: none !important;
+  }
+}

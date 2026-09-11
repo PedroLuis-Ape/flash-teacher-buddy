@@ -51,7 +51,7 @@ export function ApeTabBar() {
   return (
     <nav
       className={cn(
-        "space-ui-tabbar fixed bottom-0 left-0 right-0 z-50 safe-area-pb",
+        "space-ui-tabbar ape-content-safe-bottom fixed bottom-0 left-0 right-0 z-50 safe-area-pb",
         "lg:sticky lg:top-[7rem] lg:bottom-auto lg:left-auto lg:right-auto lg:z-30 lg:self-start lg:shrink-0 lg:safe-area-pb-0",
         settings.backdropBlur ? "tab-bar-premium" : "bg-background border-t border-border",
       )}
@@ -76,7 +76,7 @@ export function ApeTabBar() {
               key={tab.id}
               onClick={() => navigate(tab.path)}
               className={cn(
-                "space-ui-tab relative flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[76px] h-[3.55rem] rounded-2xl px-2",
+                "space-ui-tab ape-interactive-surface relative flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[76px] h-[3.55rem] rounded-2xl px-2",
                 settings.animations && "transition-all duration-200",
                 settings.visualFeedback && "active:scale-95",
                 active ? "space-ui-tab-active text-foreground" : cn("text-muted-foreground", settings.hoverEffects && "hover:text-foreground"),
