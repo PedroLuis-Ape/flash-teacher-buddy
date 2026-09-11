@@ -20,9 +20,10 @@ related:
 
 [DECISION] O usuário forneceu uma especificação para uma camada de motion,
 hover e microinterações, principalmente desktop, preservando a identidade
-visual e a estrutura atual. O escopo foi registrado, mas a implementação não
-começou: por ser uma mudança arquitetural de UI, depende de aprovação de
-design antes do plano e do código.
+visual e a estrutura atual. O design foi detalhado em
+`docs/superpowers/specs/2026-09-11-piteco-motion-system-design.md`; a
+implementação não começou e depende da revisão/aprovação antes do plano e do
+código.
 
 ## Intenção de produto
 
