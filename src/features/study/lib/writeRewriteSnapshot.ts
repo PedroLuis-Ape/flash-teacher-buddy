@@ -24,17 +24,20 @@ export function readRewriteSnapshot(
     const raw = window.localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<RewriteSnapshotEnvelope>;
-    const state = sanitizeRewriteFlowState(parsed.states?.[cardId]);
     if (
       parsed.version !== 1
+      || !parsed.states
+      || typeof parsed.states !== "object"
       || !Number.isFinite(Number(parsed.timestamp))
+      || Number(parsed.timestamp) > now + 60_000
       || now - Number(parsed.timestamp) > MAX_AGE_MS
     ) {
       window.localStorage.removeItem(key);
       return null;
     }
-    return state;
+    return sanitizeRewriteFlowState(parsed.states[cardId]);
   } catch {
+    window.localStorage.removeItem(key);
     return null;
   }
 }

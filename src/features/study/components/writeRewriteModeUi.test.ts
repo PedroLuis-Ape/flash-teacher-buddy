@@ -30,8 +30,16 @@ describe("write rewrite activity UI", () => {
 
   it("routes rewrite submissions through exact-copy evaluation", () => {
     expect(writeSource).toContain("evaluateRewriteAnswer");
-    expect(writeSource).toContain("Reescreva exatamente como aparece acima");
+    expect(writeSource).toContain("Ouça e reconstrua a frase sem vê-la:");
+    expect(writeSource).toContain("Reescreva corretamente a frase revelada:");
     expect(writeSource).toContain('effectiveCorrectionMode: WriteCorrectionMode = isRewriteActivity ? "hard"');
+  });
+
+  it("does not mount the target or interactive glossary during LISTENING", () => {
+    expect(writeSource).toContain("(!isRewriteActivity || rewriteTargetRevealed)");
+    expect(writeSource).toContain('rewriteState.phase !== "LISTENING"');
+    expect(writeSource).toContain("<InteractiveText");
+    expect(writeSource).toContain("<SpeechRateControl />");
   });
 
   it("renders the opposite side declaratively inside the rewrite card", () => {
@@ -44,9 +52,9 @@ describe("write rewrite activity UI", () => {
     expect(writeSource).toContain("Tradução do texto para reescrita");
   });
 
-  it("hides the translation when empty, equal to the prompt, or when feedback is shown", () => {
+  it("shows the translation only during listening and hides duplicates", () => {
     expect(writeSource).toContain(
-      "isRewriteActivity && !hasFeedback && rewriteTranslationText.length > 0",
+      'isRewriteActivity && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0',
     );
     expect(writeSource).toContain(
       "normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)",
@@ -55,7 +63,7 @@ describe("write rewrite activity UI", () => {
 
   it("places the translation before the rewrite instruction", () => {
     const translationIndex = writeSource.indexOf("data-write-rewrite-translation");
-    const instructionIndex = writeSource.indexOf("Reescreva exatamente como aparece acima:");
+    const instructionIndex = writeSource.indexOf("Ouça e reconstrua a frase sem vê-la:");
     expect(translationIndex).toBeGreaterThan(-1);
     expect(instructionIndex).toBeGreaterThan(translationIndex);
   });

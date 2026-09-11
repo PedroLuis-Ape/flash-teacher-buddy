@@ -2527,6 +2527,7 @@ const Study = () => {
               writeRewriteSide={writeSessionSettings.writeRewriteSide}
               writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
               studyFlowMode={writeSessionSettings.studyFlowMode}
+              rewriteSnapshotScope={studySnapshotKey}
               langA={listSettings.langA}
               langB={listSettings.langB}
               isFavorite={!isSystemCollection && isDisplayedGroupFavorite}

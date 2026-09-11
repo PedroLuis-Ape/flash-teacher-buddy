@@ -10,7 +10,7 @@ import { resolveStudySides, toBCP47, getLangLabel } from "@/features/study/lib/r
 import { InteractiveText } from "./InteractiveText";
 import type { MergedHint } from "@/features/study/lib/glossaryMerge";
 import { getRedListCardClass } from "./RedListIndicator";
-import { getSpeechRate } from "./SpeechRateControl";
+import { getSpeechRate, SpeechRateControl } from "./SpeechRateControl";
 import { StudyToolsMenu } from "./StudyToolsMenu";
 import { StudyFeedbackPanel } from "./StudyFeedbackPanel";
 import { AttentionPointSheet } from "./AttentionPointSheet";
@@ -227,14 +227,21 @@ export const WriteStudyView = ({
       : createRewriteFlowState();
     setRewriteState(restoredRewriteState);
     setAnswer(isRewriteActivity ? restoredRewriteState.draft : "");
-    setEvaluation(null);
+    setEvaluation(
+      isRewriteActivity && restoredRewriteState.submittedAnswer
+        ? evaluateRewriteAnswer({
+            userAnswer: restoredRewriteState.submittedAnswer,
+            correctAnswer,
+          })
+        : null,
+    );
     setHintLevel(0);
     setCurrentHint("");
     setRevealed(false);
     setShake(false);
     setAttentionPointOpen(false);
     window.setTimeout(() => inputRef.current?.focus(), 100);
-  }, [front, back, isRewriteActivity, resolvedRewriteSide, rewriteCardIdentity, rewriteSnapshotScope]);
+  }, [correctAnswer, front, back, isRewriteActivity, resolvedRewriteSide, rewriteCardIdentity, rewriteSnapshotScope]);
 
   useEffect(() => {
     if (!isRewriteActivity) return;
@@ -272,6 +279,7 @@ export const WriteStudyView = ({
           mode: correctionMode,
         });
     if (isRewriteActivity) {
+      if (rewriteState.phase !== "LISTENING" && rewriteState.phase !== "REWRITE") return;
       const nextRewriteState = submitRewriteAnswer(rewriteState, userOriginalAnswer, result);
       setRewriteState(nextRewriteState);
       setEvaluation(result);
@@ -465,6 +473,7 @@ export const WriteStudyView = ({
             >
               <Volume2 className={cn(hasFeedback ? "h-4 w-4" : "h-5 w-5")} />
             </Button>
+            {isRewriteActivity && rewriteState.phase === "LISTENING" && <SpeechRateControl />}
           </div>
           {!hasFeedback && (
             <>

@@ -84,12 +84,14 @@ export function buildRewriteHint(target: string, level: 0 | 1 | 2): string {
   if (level === 1) {
     return `${words.length} palavra${words.length === 1 ? "" : "s"} · começa com “${words[0].charAt(0)}”`;
   }
-  return words
+  const masked = words
     .map((word) => {
       const letters = Array.from(word).filter((character) => /[\p{L}\p{N}]/u.test(character));
-      return letters.length > 0 ? `${letters[0]}${"_".repeat(Math.max(letters.length - 1, 0))}` : "_";
+      if (letters.length <= 1) return "_";
+      return `${letters[0]}${"_".repeat(letters.length - 1)}`;
     })
     .join(" ");
+  return masked === target.trim() ? `${words.length} palavra${words.length === 1 ? "" : "s"}` : masked;
 }
 
 export function sanitizeRewriteFlowState(value: unknown): RewriteFlowState | null {
