@@ -317,7 +317,7 @@ adaptive-learning notes before any completion claim.
 - [x] Task 5: Home, cards/listas/coleções e atalhos de turma.
 - [x] Task 6: navegação, overlays e progresso real.
 - [x] Task 7: feedback de estudo e assinaturas dos seis modos reais.
-- [x] Task 8: typecheck, 257/257 arquivos de teste, 1.574/1.574 testes,
+- [x] Task 8: typecheck, 257/257 arquivos de teste, 1.575/1.575 testes,
   lint 0 erros, build, brain-check e QA local responsiva.
 
 Residual de release: comparar no preview Lovable autenticado e publicar no

@@ -145,7 +145,7 @@ O screenshot local está em
 ## Fechamento técnico local — 2026-09-11
 
 - TypeScript app e node passaram sem erros.
-- Vitest completo passou: 257 arquivos e 1.574 testes.
+- Vitest completo passou: 257 arquivos e 1.575 testes.
 - ESLint passou com 0 erros e 72 avisos já existentes.
 - Build Vite passou; permanecem apenas avisos já conhecidos de browserslist,
   CSS legado e chunks grandes.

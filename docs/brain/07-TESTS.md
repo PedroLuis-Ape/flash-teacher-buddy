@@ -90,7 +90,7 @@ related:
   cada ícone recebeu a regra de modo após o ajuste de especificidade, mobile
   390x844 permaneceu sem overflow e reduced motion permaneceu neutro.
 
-- Fechamento técnico local: 257 arquivos/1.574 testes, typecheck app/node,
+- Fechamento técnico local: 257 arquivos/1.575 testes, typecheck app/node,
   lint 0 erros/72 avisos preexistentes e build Vite passaram.
 - Matriz de runtime exercitada no preview: 1280x720 desktop com tilt, 390x844
   coarse sem transformação e 1280x720 reduced motion neutro; todos sem
