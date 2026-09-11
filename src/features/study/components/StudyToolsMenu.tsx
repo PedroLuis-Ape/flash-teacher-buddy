@@ -498,7 +498,7 @@ export function StudyToolsMenu({
               <span className="mr-2 inline-flex w-5 justify-center">
                 {difficultyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
               </span>
-              {isDifficult ? "Remover marcação de difícil" : "Marcar como difícil"}
+              {isDifficult ? "Remover do Reforço" : "Adicionar ao Reforço"}
             </DropdownMenuItem>
           )}
 
@@ -576,8 +576,8 @@ export function StudyToolsMenu({
       )}
       {hasAccount && onToggleDifficulty && (
         <InlineToolButton
-          label={isDifficult ? "Remover marcação de difícil" : "Marcar como difícil"}
-          visibleLabel={isDifficult ? "Difícil ✓" : "Difícil"}
+          label={isDifficult ? "Remover do Reforço" : "Adicionar ao Reforço"}
+          visibleLabel={isDifficult ? "Reforço ✓" : "Reforço"}
           alwaysShowLabel
           active={isDifficult}
           disabled={difficultyPending}

@@ -7,7 +7,7 @@ const study = readFileSync(new URL("../../../pages/Study.tsx", import.meta.url),
 describe("manual in-game difficulty toggle", () => {
   it("exposes an independent reinforcement action in the shared card tools", () => {
     expect(source).toContain("onToggleDifficulty?: () => void");
-    expect(source).toContain("Marcar como difícil");
+    expect(source).toContain("Adicionar ao Reforço");
     expect(source).not.toContain("!isFavorite) onToggleDifficulty");
   });
 
