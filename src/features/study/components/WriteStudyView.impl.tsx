@@ -36,6 +36,21 @@ import { SkipCardConfirmDialog } from "./SkipCardConfirmDialog";
 import { LayeredCardHintButton } from "./LayeredCardHintButton";
 import { setWriteAnswerLocked } from "@/features/study/lib/writeAnswerLock";
 import type { StudyFlowModePreset } from "@/features/study/preferences/studyPreset";
+import {
+  beginRewriteAttempt,
+  buildRewriteHint,
+  createRewriteFlowState,
+  retryRewriteAttempt,
+  revealNextRewriteHint,
+  submitRewriteAnswer,
+  updateRewriteDraft,
+  type RewriteFlowState,
+} from "@/features/study/lib/writeRewriteFlow";
+import {
+  clearRewriteCardSnapshot,
+  readRewriteSnapshot,
+  writeRewriteSnapshot,
+} from "@/features/study/lib/writeRewriteSnapshot";
 
 /** Normaliza aspas/espaços/case apenas para comparação (nunca para exibição). */
 function normalizeRewriteComparison(value: string | null | undefined): string {
@@ -86,6 +101,8 @@ interface WriteStudyViewProps {
   layerCount?: number;
   layersVisitedCount?: number;
   onOpenLayers?: () => void;
+  /** Existing study-session scope used by the Rewrite satellite snapshot. */
+  rewriteSnapshotScope?: string;
 }
 
 export const WriteStudyView = ({
@@ -124,8 +141,19 @@ export const WriteStudyView = ({
   layerCount = 1,
   layersVisitedCount = 0,
   onOpenLayers,
+  rewriteSnapshotScope,
 }: WriteStudyViewProps) => {
-  const [answer, setAnswer] = useState("");
+  const cardIdentity = flashcardId ?? `${front}|${back}`;
+  const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeRewriteSide);
+  const rewriteCardIdentity = `${cardIdentity}:rewrite-${resolvedRewriteSide}`;
+  const [rewriteState, setRewriteState] = useState<RewriteFlowState>(() =>
+    writeActivityMode === "rewrite"
+      ? readRewriteSnapshot(rewriteSnapshotScope, rewriteCardIdentity) ?? createRewriteFlowState()
+      : createRewriteFlowState(),
+  );
+  const [answer, setAnswer] = useState(() =>
+    writeActivityMode === "rewrite" ? rewriteState.draft : "",
+  );
   const [evaluation, setEvaluation] = useState<WriteAnswerEvaluation | null>(null);
   const [hintLevel, setHintLevel] = useState(0);
   const [currentHint, setCurrentHint] = useState("");
@@ -146,8 +174,6 @@ export const WriteStudyView = ({
   const sideB = { text: back, lang: langB, label: getLangLabel(langB), acceptedAnswers: acceptedAnswersPt };
   const translatedSides = resolveStudySides(sideA, sideB, direction, flashcardId || front);
   const isRewriteActivity = writeActivityMode === "rewrite";
-  const cardIdentity = flashcardId ?? `${front}|${back}`;
-  const resolvedRewriteSide = resolveRewriteSideForCard(cardIdentity, writeRewriteSide);
   const rewriteTargetSide = resolvedRewriteSide === "a" ? sideA : sideB;
   const promptSide = isRewriteActivity ? rewriteTargetSide : translatedSides.promptSide;
   const answerSide = isRewriteActivity ? rewriteTargetSide : translatedSides.answerSide;
@@ -162,6 +188,7 @@ export const WriteStudyView = ({
   const promptLang = toBCP47(promptSide.lang);
   const effectiveCorrectionMode: WriteCorrectionMode = isRewriteActivity ? "hard" : correctionMode;
   const attemptCardId = `${cardIdentity}:${isRewriteActivity ? `rewrite-${resolvedRewriteSide}` : "translate"}`;
+  const rewriteTargetRevealed = isRewriteActivity && rewriteState.phase !== "LISTENING";
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
@@ -195,7 +222,11 @@ export const WriteStudyView = ({
       : "text-[clamp(1.12rem,4.8vw,1.55rem)]";
 
   useEffect(() => {
-    setAnswer("");
+    const restoredRewriteState = isRewriteActivity
+      ? readRewriteSnapshot(rewriteSnapshotScope, rewriteCardIdentity) ?? createRewriteFlowState()
+      : createRewriteFlowState();
+    setRewriteState(restoredRewriteState);
+    setAnswer(isRewriteActivity ? restoredRewriteState.draft : "");
     setEvaluation(null);
     setHintLevel(0);
     setCurrentHint("");
@@ -203,7 +234,16 @@ export const WriteStudyView = ({
     setShake(false);
     setAttentionPointOpen(false);
     window.setTimeout(() => inputRef.current?.focus(), 100);
-  }, [front, back, isRewriteActivity, resolvedRewriteSide]);
+  }, [front, back, isRewriteActivity, resolvedRewriteSide, rewriteCardIdentity, rewriteSnapshotScope]);
+
+  useEffect(() => {
+    if (!isRewriteActivity) return;
+    if (rewriteState.phase === "COMPLETED") {
+      clearRewriteCardSnapshot(rewriteSnapshotScope, rewriteCardIdentity);
+      return;
+    }
+    writeRewriteSnapshot(rewriteSnapshotScope, rewriteCardIdentity, rewriteState);
+  }, [isRewriteActivity, rewriteCardIdentity, rewriteSnapshotScope, rewriteState]);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -231,6 +271,17 @@ export const WriteStudyView = ({
           alternatives: alternativeAnswers,
           mode: correctionMode,
         });
+    if (isRewriteActivity) {
+      const nextRewriteState = submitRewriteAnswer(rewriteState, userOriginalAnswer, result);
+      setRewriteState(nextRewriteState);
+      setEvaluation(result);
+      if (result.accepted) {
+        advance.setStatus(nextRewriteState.hadInitialError ? "incorrect" : "correct");
+      }
+      if (result.accepted) playCorrect();
+      else playWrong();
+      return;
+    }
     setEvaluation(result);
     if (result.accepted) playCorrect();
     else playWrong();
@@ -244,7 +295,11 @@ export const WriteStudyView = ({
   };
 
   const handleHint = () => {
-    if (isRewriteActivity) return;
+    if (isRewriteActivity) {
+      if (rewriteState.phase !== "LISTENING") return;
+      setRewriteState((current) => revealNextRewriteHint(current));
+      return;
+    }
     if (hintLevel < 2) {
       const newLevel = hintLevel + 1;
       setHintLevel(newLevel);
@@ -266,6 +321,8 @@ export const WriteStudyView = ({
     if (key === confirmKey) {
       event.preventDefault();
       if (!evaluation) handleSubmit();
+      else if (isRewriteActivity && rewriteState.phase === "REVIEW") handleRewriteStart();
+      else if (isRewriteActivity && rewriteState.phase === "REWRITE" && !evaluation.accepted) handleRetry();
       else if (evaluation.accepted) advance.requestAdvance({ source: "keyboard" });
       else if (effectiveCorrectionMode === "hard") handleRetry();
       else advance.requestAdvance({ source: "keyboard" });
@@ -292,6 +349,11 @@ export const WriteStudyView = ({
   const referenceAnswer = evaluation?.matchedAnswer ?? correctAnswer;
 
   const handleRetry = () => {
+    if (isRewriteActivity && rewriteState.phase === "REWRITE") {
+      const nextState = retryRewriteAttempt(rewriteState);
+      setRewriteState(nextState);
+      setAnswer(nextState.draft);
+    }
     setEvaluation(null);
     advance.setStatus("unanswered");
     window.setTimeout(() => {
@@ -301,6 +363,15 @@ export const WriteStudyView = ({
       const length = input.value.length;
       try { input.setSelectionRange(length, length); } catch { /* noop */ }
     }, 50);
+  };
+
+  const handleRewriteStart = () => {
+    const nextState = beginRewriteAttempt(rewriteState);
+    setRewriteState(nextState);
+    setAnswer(nextState.draft);
+    setEvaluation(null);
+    advance.setStatus("unanswered");
+    window.setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   useEffect(() => {
@@ -325,7 +396,8 @@ export const WriteStudyView = ({
     && normalizeRewriteComparison(rewriteOppositeText) !== normalizeRewriteComparison(prompt)
       ? rewriteOppositeText
       : "";
-  const showRewriteTranslation = isRewriteActivity && !hasFeedback && rewriteTranslationText.length > 0;
+  const showRewriteTranslation = isRewriteActivity && rewriteState.phase === "LISTENING" && rewriteTranslationText.length > 0;
+  const rewriteHint = isRewriteActivity ? buildRewriteHint(correctAnswer, rewriteState.hintLevel) : "";
 
   const handleSaveAttentionPoint = async (focus: SpecialFocusContext) => {
     if (!flashcardId || !onSaveAttentionPoint) return;
@@ -359,23 +431,27 @@ export const WriteStudyView = ({
           "flex flex-col items-center justify-center text-center",
           hasFeedback ? "min-h-0 pt-0 gap-1" : "min-h-[128px] pt-2 sm:min-h-0 sm:pt-0",
         )}>
-          <p className={cn("pr-20 text-xs text-muted-foreground sm:pr-0 sm:text-sm", hasFeedback ? "mb-1" : "mb-3 sm:mb-4")}>{promptLabel}</p>
+          <p className={cn("pr-20 text-xs text-muted-foreground sm:pr-0 sm:text-sm", hasFeedback ? "mb-1" : "mb-3 sm:mb-4")}>
+            {isRewriteActivity && rewriteState.phase === "LISTENING" ? `Ouça em ${promptLabel}` : promptLabel}
+          </p>
           <div className={cn(
             "flex w-full flex-col items-center justify-center gap-2 sm:flex-row sm:gap-3",
             hasFeedback ? "mb-0" : "mb-4 sm:mb-8",
           )}>
-            <p className={cn(
-              "mx-auto max-w-[94%] break-words px-2 font-semibold leading-tight [text-wrap:balance]",
-              hasFeedback ? "text-base sm:text-lg" : cn(promptSizeClass, "sm:text-3xl"),
-            )}>
-              <InteractiveText
-                text={prompt}
-                wordHints={promptWordHints}
-                mergedHints={promptMergedHints}
-                speakOnHintClick
-                speakLang={promptLang}
-              />
-            </p>
+            {(!isRewriteActivity || rewriteTargetRevealed) && (
+              <p className={cn(
+                "mx-auto max-w-[94%] break-words px-2 font-semibold leading-tight [text-wrap:balance]",
+                hasFeedback ? "text-base sm:text-lg" : cn(promptSizeClass, "sm:text-3xl"),
+              )}>
+                <InteractiveText
+                  text={prompt}
+                  wordHints={promptWordHints}
+                  mergedHints={promptMergedHints}
+                  speakOnHintClick
+                  speakLang={promptLang}
+                />
+              </p>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -384,7 +460,8 @@ export const WriteStudyView = ({
                 const rate = getSpeechRate();
                 speak(prompt, { langOverride: promptLang, rate });
               }}
-              aria-label="Ouvir frase"
+              aria-label={isRewriteActivity ? "Ouvir frase para reconstruir" : "Ouvir frase"}
+              title={isRewriteActivity ? "Ouvir novamente" : "Ouvir frase"}
             >
               <Volume2 className={cn(hasFeedback ? "h-4 w-4" : "h-5 w-5")} />
             </Button>
@@ -402,17 +479,21 @@ export const WriteStudyView = ({
               </p>
             )}
             <p className="text-sm text-muted-foreground sm:text-sm">
-              {isRewriteActivity ? "Reescreva exatamente como aparece acima:" : `Traduza para ${answerLabel}:`}
+              {isRewriteActivity
+                ? rewriteState.phase === "LISTENING"
+                  ? "Ouça e reconstrua a frase sem vê-la:"
+                  : "Reescreva corretamente a frase revelada:"
+                : `Traduza para ${answerLabel}:`}
             </p>
             </>
           )}
         </div>
       </Card>
 
-      {currentHint && (
+      {(currentHint || rewriteHint) && (
         <Alert>
           <Lightbulb className="h-4 w-4" />
-          <AlertDescription className="font-mono text-lg">{currentHint}</AlertDescription>
+          <AlertDescription className="font-mono text-lg">{isRewriteActivity ? rewriteHint : currentHint}</AlertDescription>
         </Alert>
       )}
 
@@ -422,16 +503,19 @@ export const WriteStudyView = ({
           ref={inputRef}
           rows={2}
           value={answer}
-          onChange={(event) => setAnswer(event.target.value)}
+          onChange={(event) => {
+            setAnswer(event.target.value);
+            if (isRewriteActivity) setRewriteState((current) => updateRewriteDraft(current, event.target.value));
+          }}
           onKeyDown={handleKeyPress}
-          placeholder={isRewriteActivity ? "Reescreva o texto acima..." : "Digite sua resposta..."}
+          placeholder={isRewriteActivity && rewriteState.phase === "LISTENING" ? "Digite o que você ouviu..." : isRewriteActivity ? "Reescreva a frase correta..." : "Digite sua resposta..."}
           disabled={evaluation !== null}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
           enterKeyHint="done"
-          aria-label={isRewriteActivity ? "Reescreva o texto acima" : "Digite sua resposta"}
+          aria-label={isRewriteActivity && rewriteState.phase === "LISTENING" ? "Digite a frase que você ouviu" : isRewriteActivity ? "Reescreva a frase correta" : "Digite sua resposta"}
           className={cn(
             "min-h-[80px] max-h-[168px] resize-none overflow-y-auto rounded-xl px-4 py-3.5 text-[1.0625rem] leading-6 transition-all duration-300 sm:min-h-[68px] sm:rounded-md sm:px-4 sm:py-3 sm:text-lg",
             shake && "animate-[shake_0.5s_ease-in-out]",
@@ -447,7 +531,7 @@ export const WriteStudyView = ({
           <StudyFeedbackPanel
             status="correct"
             title={isRewriteActivity ? "Reescrita correta!" : "Muito bem!"}
-            message={isRewriteActivity ? "Você escreveu exatamente o texto apresentado." : "Sua resposta está correta."}
+            message={isRewriteActivity ? (rewriteState.hadInitialError ? "Você corrigiu e reescreveu a frase corretamente." : "Você reconstruiu a frase corretamente na primeira tentativa.") : "Sua resposta está correta."}
             correctAnswer={referenceAnswer}
             acceptedAnswers={alternativeAnswers}
             actionLabel="Próximo card"
@@ -481,7 +565,7 @@ export const WriteStudyView = ({
         {feedbackStatus === "incorrect" && evaluation && (
           <StudyFeedbackPanel
             status="incorrect"
-            title={effectiveCorrectionMode === "hard" ? "Corrija para continuar." : "Vamos corrigir."}
+            title={isRewriteActivity && rewriteState.phase === "REVIEW" ? "Revise antes de reescrever." : effectiveCorrectionMode === "hard" ? "Corrija para continuar." : "Vamos corrigir."}
             message={evaluation.summary}
             accuracyPercent={accuracyPercent}
             userAnswer={answer.trim()}
@@ -489,9 +573,11 @@ export const WriteStudyView = ({
             extraContent={<WriteAnswerDiff differences={evaluation.differences} />}
             correctionMessages={correctionMessages}
             hiddenCorrectionCount={hiddenCorrectionCount}
-            actionLabel={effectiveCorrectionMode === "hard" ? "Tentar corrigir" : "Continuar"}
+            actionLabel={isRewriteActivity && rewriteState.phase === "REVIEW" ? "Reescrever agora" : effectiveCorrectionMode === "hard" ? "Tentar corrigir" : "Continuar"}
             onAction={
-              effectiveCorrectionMode === "hard"
+              isRewriteActivity && rewriteState.phase === "REVIEW"
+                ? handleRewriteStart
+                : effectiveCorrectionMode === "hard"
                 ? handleRetry
                 : () => advance.requestAdvance({ source: "next_button" })
             }
@@ -554,9 +640,9 @@ export const WriteStudyView = ({
               variant="ghost"
               size="sm"
               onClick={handleHint}
-              disabled={revealed || isRewriteActivity}
+              disabled={revealed || (isRewriteActivity && (rewriteState.phase !== "LISTENING" || rewriteState.hintLevel >= 2))}
               className="h-11 shrink-0 px-3 text-muted-foreground"
-              title={isRewriteActivity ? "O texto já está visível" : "Dica"}
+              title={isRewriteActivity ? "Mostrar dica gradual" : "Dica"}
             >
               <Lightbulb className="h-4 w-4 sm:mr-1" />
               <span className="hidden sm:inline">Dica</span>
