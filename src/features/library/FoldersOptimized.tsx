@@ -385,7 +385,7 @@ export default function FoldersOptimized() {
   const foldersTab = (
     <div className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-2 py-1">
-        <div className="flex items-center gap-2">
+        <div className="ape-action-cluster">
           {folders.length > 0 && (
             <Button size="sm" variant={selectMode ? "secondary" : "outline"} className="min-h-[40px]" onClick={() => { setSelectMode((value) => !value); if (selectMode) setSelectedFolders(new Set()); }}>
               {selectMode ? <><X className="mr-2 h-4 w-4" />Cancelar</> : <><CheckSquare className="mr-2 h-4 w-4" />Selecionar</>}
@@ -406,7 +406,7 @@ export default function FoldersOptimized() {
       </div>
       {folders.length > 3 && <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={folderSearch} onChange={(event) => setFolderSearch(event.target.value)} placeholder="Buscar pasta..." className="h-10 pl-9" /></div>}
       {folderGrid}
-      {selectMode && selectedFolders.size > 0 && <div className="fixed bottom-20 left-0 right-0 border-t bg-background/95 p-4 backdrop-blur md:static md:mt-4 md:border-0 md:bg-transparent md:p-0"><div className="flex gap-2"><Button variant="outline" className="min-h-[48px] flex-1" onClick={() => { setFoldersToMove(Array.from(selectedFolders)); setMoveDialogOpen(true); }}><FolderInput className="mr-2 h-4 w-4" />Mover ({selectedFolders.size})</Button><Button variant="destructive" className="min-h-[48px] flex-1" onClick={() => setShowBulkDeleteDialog(true)}><Trash2 className="mr-2 h-4 w-4" />Apagar ({selectedFolders.size})</Button></div></div>}
+      {selectMode && selectedFolders.size > 0 && <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 border-t bg-background/95 p-4 backdrop-blur md:static md:mt-4 md:border-0 md:bg-transparent md:p-0"><div className="flex gap-2"><Button variant="outline" className="min-h-[48px] flex-1" onClick={() => { setFoldersToMove(Array.from(selectedFolders)); setMoveDialogOpen(true); }}><FolderInput className="mr-2 h-4 w-4" />Mover ({selectedFolders.size})</Button><Button variant="destructive" className="min-h-[48px] flex-1" onClick={() => setShowBulkDeleteDialog(true)}><Trash2 className="mr-2 h-4 w-4" />Apagar ({selectedFolders.size})</Button></div></div>}
     </div>
   );
 
@@ -433,7 +433,7 @@ export default function FoldersOptimized() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="ape-content-safe-bottom min-h-screen bg-background">
       <ApeAppBar title="Biblioteca" variant="home" />
       <div className="mx-auto max-w-6xl space-y-4 px-4 pt-4 lg:px-8">
         <Card className="border-primary/20 bg-primary/5">

@@ -142,7 +142,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="ape-content-safe-bottom min-h-screen bg-background pb-24">
       {/*
         Home AppBar (Linha 3 — título): mantém apenas o título e a busca.
         Economia, presente e tema são acessíveis pela top bar global / card de perfil
@@ -314,7 +314,8 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 xl:gap-4">
         <>
           <Card
-            className="p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-primary/30 bg-primary/5 h-full"
+            aria-label="Abrir Reforço"
+            className="ape-interactive-surface p-5 cursor-pointer hover:shadow-lg transition-all duration-200 border-primary/30 bg-primary/5 h-full"
             onClick={() => navigate('/reinforcement')}
           >
             <div className="flex items-center gap-4">

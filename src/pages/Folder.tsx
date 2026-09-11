@@ -664,8 +664,8 @@ const Folder = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="container mx-auto px-4 py-8">
+    <div className="ape-content-safe-bottom min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <div className="container mx-auto px-4 py-5 sm:py-8">
         <div className="mb-8">
           <Button
             variant="ghost"
@@ -736,7 +736,7 @@ const Folder = () => {
 
           <TabsContent value="lists">
             {canEdit && (
-              <div className="mb-4 flex flex-wrap gap-2">
+              <div className="ape-action-cluster mb-4 flex-wrap">
                 {/* Folder language settings button */}
                 <Button variant="outline" size="sm" onClick={handleOpenFolderSettings}>
                   <Settings className="mr-1.5 h-4 w-4" />
@@ -865,7 +865,7 @@ const Folder = () => {
 
             {/* Selection Actions Bar */}
             {selectionMode && selectedLists.size > 0 && (
-              <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t z-50 md:relative md:mb-4 md:p-3 md:rounded-lg md:border">
+              <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 p-4 bg-background/95 backdrop-blur border-t z-50 md:relative md:bottom-auto md:mb-4 md:p-3 md:rounded-lg md:border">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={toggleSelectAll}>
