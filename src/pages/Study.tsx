@@ -2351,8 +2351,8 @@ const Study = () => {
                   size="sm"
                   className="min-h-11 gap-1.5 px-2.5"
                   disabled={reinforcementMutation.isPending}
-                    title={isDisplayedReinforcement ? "Remover marcação de difícil" : "Marcar como difícil"}
-                    aria-label={isDisplayedReinforcement ? "Remover marcação de difícil" : "Marcar como difícil"}
+                    title={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
+                    aria-label={isDisplayedReinforcement ? "Remover do Reforço" : "Adicionar ao Reforço"}
                   aria-pressed={isDisplayedReinforcement}
                   onClick={handleToggleReinforcement}
                 >
@@ -2360,7 +2360,7 @@ const Study = () => {
                     ? <Loader2 className="h-4 w-4 animate-spin" />
                     : <RefreshCcw className="h-4 w-4" />}
                   <span className="text-xs">
-                    {isDisplayedReinforcement ? "Difícil ✓" : "Difícil"}
+                    {isDisplayedReinforcement ? "No Reforço ✓" : "Reforço"}
                   </span>
                 </Button>
               )}
