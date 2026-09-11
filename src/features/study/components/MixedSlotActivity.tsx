@@ -31,6 +31,7 @@ interface MixedSlotActivityProps {
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
   difficultyPending?: boolean;
+  rewriteSnapshotScope?: string;
   onCorrect: () => void;
   onIncorrect: () => void;
   onSkip?: () => void;
@@ -95,6 +96,7 @@ export function MixedSlotActivity(props: MixedSlotActivityProps) {
       isDifficult={props.isDifficult}
       onToggleDifficulty={props.onToggleDifficulty}
       difficultyPending={props.difficultyPending}
+      rewriteSnapshotScope={props.rewriteSnapshotScope}
       onCorrect={props.onCorrect}
       onIncorrect={props.onIncorrect}
       onSkip={props.onSkip ?? props.onIncorrect}

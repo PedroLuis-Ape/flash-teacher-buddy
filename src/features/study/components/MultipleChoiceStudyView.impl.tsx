@@ -43,6 +43,7 @@ interface MultipleChoiceStudyViewProps {
   isDifficult?: boolean;
   onToggleDifficulty?: () => void;
   difficultyPending?: boolean;
+  rewriteSnapshotScope?: string;
   onRestartRound?: () => void;
   onRestartJourney?: () => void;
   onCorrect: () => void;

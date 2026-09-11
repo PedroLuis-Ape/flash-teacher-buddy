@@ -702,18 +702,19 @@ export default function MixedStudy() {
   }, [flushMixedStudyOutbox]);
 
   const cardIds = useMemo(() => cards.map((card) => card.id), [cards]);
+  const mixedSnapshotKey = buildStudySnapshotKey({
+    userScope: userId,
+    listId: resolvedId,
+    mode: "mixed",
+    sessionScopeKey: scopeKey,
+    cardsSignature: cardIds.join("|"),
+  });
   const mixed = useAdaptiveMixedSession({
     cardIds,
     // Never reuse a mixed session between users/lists. The old key contained
     // only settings and could make a second list inherit the first list's
     // local journey on the same browser.
-    storageKey: buildStudySnapshotKey({
-      userScope: userId,
-      listId: resolvedId,
-      mode: "mixed",
-      sessionScopeKey: scopeKey,
-      cardsSignature: cardIds.join("|"),
-    }),
+    storageKey: mixedSnapshotKey,
     legacyStorageKey: buildStudySnapshotKey({
       userScope: userId,
       listId: resolvedId,
@@ -1217,6 +1218,7 @@ export default function MixedStudy() {
     onRestartJourney: restartJourneyManually,
     isSpecial: isCurrentCardSpecial,
     onToggleSpecial: handleToggleSpecial,
+    rewriteSnapshotScope: mixedSnapshotKey,
   };
 
   return (
@@ -1297,6 +1299,7 @@ export default function MixedStudy() {
               writeRewriteSide={writeSessionSettings.writeRewriteSide}
               writeCorrectionMode={writeSessionSettings.writeCorrectionMode}
               studyFlowMode={writeSessionSettings.studyFlowMode}
+              rewriteSnapshotScope={mixedSnapshotKey}
               onSkip={() => handleAnswer(false, true)}
               acceptedAnswersEn={currentCard.accepted_answers_en}
               acceptedAnswersPt={currentCard.accepted_answers_pt}

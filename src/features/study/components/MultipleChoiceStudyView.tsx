@@ -20,6 +20,7 @@ const LazyMultipleChoiceStudyView = lazy(() =>
 type MultipleChoiceStudyViewProps = ComponentProps<typeof LazyMultipleChoiceStudyView> & {
   /** Configurações de escrita para o slot "write" das sessões mistas. */
   writeSettings?: WriteSessionSettings;
+  rewriteSnapshotScope?: string;
 };
 
 export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => {
@@ -73,6 +74,7 @@ export const MultipleChoiceStudyView = (props: MultipleChoiceStudyViewProps) => 
         mergedHintsB={glossaryHints.mergedHintsB}
         direction={direction}
         {...(props.writeSettings ?? DEFAULT_WRITE_SESSION_SETTINGS)}
+        rewriteSnapshotScope={props.rewriteSnapshotScope}
         langA={props.langA}
         langB={props.langB}
         isFavorite={props.isFavorite}

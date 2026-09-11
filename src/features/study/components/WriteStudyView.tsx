@@ -36,7 +36,7 @@ function clearStyle(element: HTMLElement | null, properties: string[]) {
 
 export const WriteStudyView = (props: WriteStudyViewProps) => {
   const cardKey = props.flashcardId || `${props.front}:${props.back}`;
-  const rewriteLayerKey = `${props.flashcardId ?? "card"}|${props.front}|${props.back}`;
+  const rewriteLayerKey = `${props.rewriteSnapshotScope ?? "local"}|${props.flashcardId ?? "card"}|${props.front}|${props.back}`;
   const direction = getBalancedDirection(cardKey, props.direction as RuntimeDirection);
   const boundaryRef = useRef<HTMLDivElement>(null);
   const submitLockedRef = useRef(false);
@@ -171,7 +171,8 @@ export const WriteStudyView = (props: WriteStudyViewProps) => {
     const button = event.target.closest("button");
     if (!button?.textContent?.toLocaleLowerCase().includes("corrigir")) return;
 
-    if (button.textContent?.toLocaleLowerCase().includes("tentar corrigir")) {
+    const buttonLabel = button.textContent?.toLocaleLowerCase() ?? "";
+    if (buttonLabel.includes("tentar corrigir") || buttonLabel.includes("reescrever agora")) {
       submitLockedRef.current = false;
       navigationLockedRef.current = false;
       return;
