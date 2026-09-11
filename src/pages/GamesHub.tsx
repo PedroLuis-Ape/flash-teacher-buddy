@@ -7,6 +7,7 @@ import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { resolveEffectiveListSettings } from "@/features/study/lib/resolveStudySides";
 import { normalizeDirection } from "@/features/study/lib/gameCore";
 import { Button } from "@/components/ui/button";
+import { GameCardMotion } from "@/components/ape/GameCardMotion";
 import {
   Select,
   SelectContent,
@@ -442,17 +443,18 @@ const GamesHub = () => {
               const normalizedMode = normalizeStudyMode(mode);
               const isConfigured = configuredMode === normalizedMode;
               return (
-                <button
+                <GameCardMotion
                   key={mode}
                   type="button"
                   onClick={() => startGame(mode)}
                   aria-label={`${title}: ${visual.description}`}
                   aria-pressed={isConfigured}
+                  data-motion-surface="game-card"
                   data-recommended={recommended ? "true" : undefined}
                   data-configured={isConfigured ? "true" : undefined}
                   className={cn(
-                    "group relative flex min-h-[96px] flex-row items-center gap-3 sm:gap-4 rounded-xl border p-3 text-left shadow-sm transition-all sm:min-h-[136px] sm:flex-col sm:justify-center sm:p-4 sm:text-center",
-                    "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    "group relative flex min-h-[96px] flex-row items-center gap-3 sm:gap-4 rounded-xl border p-3 text-left shadow-sm sm:min-h-[136px] sm:flex-col sm:justify-center sm:p-4 sm:text-center",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     recommended && "border-primary/60 ring-2 ring-primary/15",
                     isConfigured && "outline outline-2 outline-primary/50",
                     visual.cardClass,
@@ -483,8 +485,9 @@ const GamesHub = () => {
                         "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-2xl shadow-sm",
                         visual.tileClass,
                       )}
-                      aria-hidden="true"
-                      title={visual.emojiLabel}
+                       aria-hidden="true"
+                       data-motion-icon="game-card"
+                       title={visual.emojiLabel}
                     >
                       {visual.emoji}
                     </span>
@@ -495,7 +498,7 @@ const GamesHub = () => {
                       </span>
                     </span>
                   </div>
-                </button>
+                </GameCardMotion>
               );
             })}
           </div>
