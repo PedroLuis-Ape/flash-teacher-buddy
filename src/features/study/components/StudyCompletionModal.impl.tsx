@@ -60,7 +60,7 @@ export const StudyCompletionModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[min(90dvh,calc(100svh-1rem))] ape-overlay-scroll motion-reduce:animate-none sm:max-w-md">
         <DialogHeader className="text-center items-center">
           <div className="mx-auto mb-2 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-300/25 via-yellow-400/10 to-orange-500/20 shadow-[0_16px_36px_-16px_rgba(245,158,11,0.9)] ring-1 ring-amber-300/30">
             <span role="img" aria-label="Troféu" className="select-none text-5xl leading-none drop-shadow-[0_7px_7px_rgba(0,0,0,0.4)]">🏆</span>
@@ -92,34 +92,34 @@ export const StudyCompletionModal = ({
           </div>
         )}
 
-        <div className="flex flex-col gap-2 pt-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pt-2 ape-overlay-scroll">
           <Button
             onClick={() => runTransition(onComplete)}
             disabled={isCompleting || isRestarting}
-            className="w-full bg-green-600 hover:bg-green-700 text-lg font-bold min-h-[48px]"
+            className="min-h-11 w-full bg-green-600 text-lg font-bold touch-manipulation hover:bg-green-700"
           >
             {isCompleting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5" />}
             {isCompleting ? "CONCLUINDO..." : "CONCLUIR SESSÃO"}
           </Button>
 
-          <Button variant="secondary" onClick={() => runTransition(onRestart)} disabled={isCompleting || isRestarting} className="w-full">
+          <Button variant="secondary" onClick={() => runTransition(onRestart)} disabled={isCompleting || isRestarting} className="min-h-11 w-full touch-manipulation">
             {isRestarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
             {isRestarting ? "Reiniciando..." : "Jogar Novamente"}
           </Button>
 
           {onReviewErrors && errorCount > 0 && (
-            <Button variant="outline" onClick={() => runTransition(onReviewErrors)} className="w-full">
+            <Button variant="outline" onClick={() => runTransition(onReviewErrors)} className="min-h-11 w-full touch-manipulation">
               Rever Errados ({errorCount})
             </Button>
           )}
 
           {fromGoalId && onGoToGoals && (
-            <Button variant="outline" onClick={() => runTransition(onGoToGoals)} className="w-full">
+            <Button variant="outline" onClick={() => runTransition(onGoToGoals)} className="min-h-11 w-full touch-manipulation">
               ← Voltar para Metas
             </Button>
           )}
 
-          <Button variant="ghost" onClick={() => runTransition(onExit)} disabled={isCompleting || isRestarting} className="w-full">
+          <Button variant="ghost" onClick={() => runTransition(onExit)} disabled={isCompleting || isRestarting} className="min-h-11 w-full touch-manipulation">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar à Lista
           </Button>

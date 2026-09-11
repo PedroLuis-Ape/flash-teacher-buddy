@@ -134,8 +134,9 @@ export function StudyFeedbackPanel({
     <Card
       role="status"
       aria-live="polite"
+      data-feedback-status={status}
       className={cn(
-        "relative w-full overflow-hidden rounded-2xl bg-card p-4 shadow-sm animate-fade-in sm:p-5",
+        "relative w-full overflow-hidden rounded-2xl bg-card p-4 shadow-sm motion-safe:animate-fade-in motion-reduce:animate-none sm:p-5",
         config.panelClass,
         className,
       )}
@@ -215,7 +216,7 @@ export function StudyFeedbackPanel({
                       title={playAnswerAriaLabel ?? "Ouvir resposta correta"}
                       aria-pressed={isPlayingAnswer}
                       className={cn(
-                        "h-7 w-7 shrink-0 rounded-full text-emerald-700 hover:bg-emerald-500/15 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200",
+                        "min-h-11 min-w-11 shrink-0 rounded-full text-emerald-700 touch-manipulation hover:bg-emerald-500/15 hover:text-emerald-800 focus-visible:ring-2 focus-visible:ring-ring dark:text-emerald-300 dark:hover:text-emerald-200",
                         isPlayingAnswer && "bg-emerald-500/20",
                       )}
                     >
@@ -262,7 +263,7 @@ export function StudyFeedbackPanel({
                 variant="outline"
                 onClick={onSecondaryAction}
                 disabled={secondaryActionDisabled}
-                className="h-11 w-full gap-2 rounded-xl font-semibold sm:w-auto"
+                className="h-11 w-full gap-2 rounded-xl font-semibold touch-manipulation sm:w-auto"
               >
                 {secondaryActionLabel === "Marcar dificuldade"
                   ? <Flag className="h-4 w-4" />
@@ -276,7 +277,7 @@ export function StudyFeedbackPanel({
                 size="lg"
                 variant="outline"
                 onClick={handleRepeatNextRound}
-                className="h-11 w-full gap-2 rounded-xl border-amber-500/40 font-semibold text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 sm:w-auto"
+                className="h-11 w-full gap-2 rounded-xl border-amber-500/40 font-semibold text-amber-700 touch-manipulation hover:bg-amber-500/10 dark:text-amber-300 sm:w-auto"
                 title="Acertou, mas quer confirmar este card mais uma vez"
               >
                 <RotateCcw className="h-4 w-4" />
@@ -287,7 +288,7 @@ export function StudyFeedbackPanel({
               type="button"
               size="lg"
               onClick={handleAction}
-              className={cn("h-11 w-full gap-2 rounded-xl font-bold shadow-sm sm:w-auto sm:min-w-[12rem]", config.buttonClass)}
+              className={cn("h-11 w-full gap-2 rounded-xl font-bold shadow-sm touch-manipulation sm:w-auto sm:min-w-[12rem]", config.buttonClass)}
             >
               {actionLabel}
               <ArrowRight className="h-4 w-4" />
@@ -308,7 +309,7 @@ export function StudyFeedbackPanel({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-9 w-full gap-1.5 rounded-xl text-xs font-semibold sm:w-auto"
+                  className="min-h-11 w-full gap-1.5 rounded-xl text-xs font-semibold touch-manipulation sm:w-auto"
                   onClick={onTertiaryAction}
                   disabled={tertiaryActionDisabled}
                 >
