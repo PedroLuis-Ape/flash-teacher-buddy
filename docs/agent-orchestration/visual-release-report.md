@@ -91,6 +91,8 @@ Durante a navegação repetida da publicação, o console também registrou avis
 
 O preview local não recebeu credenciais nem sessão do usuário. Por isso, o shell do Hub público abriu com os modos renderizados, mas o ID público usado na publicação não foi encontrado pelo runtime local sem configuração de dados; isso limita a validação local do deck, não da composição visual do Hub.
 
+Na checagem final em 320px, o mesmo ID público de amostra também retornou `Lista não encontrada` na publicação, enquanto a pasta pública correspondente continuou listando `002 Negativo`, `003 Interrogativo` e `001 Presente`. O Hub manteve seus controles e seis modos renderizados. Esse achado indica uma inconsistência de dados/publicação fora do escopo visual; não foi alterado para preservar conteúdo e regras do usuário.
+
 ## Rollback
 
 Os blocos estão separados nos commits `cc6ccc45`, `b3f0cfc1`, `8181c66e`, `bb2c7e15`, `007709f7`, `1d2b4e02` e `ef9b1148`. Para desfazer com segurança, reverta somente os commits visuais na branch de integração, preservando a alteração pré-existente em `supabase/functions/mcp/index.ts`.
