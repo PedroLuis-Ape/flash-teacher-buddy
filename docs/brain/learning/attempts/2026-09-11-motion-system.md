@@ -71,3 +71,12 @@ ampla foi promovida ainda; a observação permanece específica desta tentativa.
 - Lição reutilizável: ao combinar tokens globais com assinaturas locais,
   testar a cascata compilada por modo; especificidade explícita e legível é
   preferível a `!important`.
+
+## Auditoria complementar
+
+- A hipótese de cobertura foi testada procurando cards interativos fora do
+  recorte inicial; três superfícies relevantes foram encontradas na loja e no
+  classroom.
+- A correção foi mínima e o contrato passou 5/5. A expectativa é que os
+  mesmos guards de hover, foco e reduced motion se apliquem sem alterar as
+  ações existentes; o reteste completo é o próximo gate.

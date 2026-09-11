@@ -65,4 +65,14 @@ describe("shared motion system expansion contract", () => {
       expect(source).toContain("motion-reduce:animate-none");
     }
   });
+
+  it("covers the remaining real card surfaces without changing their actions", () => {
+    const store = read("src/features/store/components/SkinCard.tsx");
+    const turmas = read("src/features/classroom/components/TurmasCard.tsx");
+    const students = read("src/features/classroom/components/MeusAlunosCard.tsx");
+
+    expect(store).toContain("ape-interactive-card");
+    expect(turmas).toContain("ape-interactive-card");
+    expect(students).toContain("ape-interactive-card");
+  });
 });

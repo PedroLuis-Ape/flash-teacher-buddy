@@ -137,6 +137,11 @@ O screenshot local está em
   especificidade dos seletores `[data-motion-game]`, preservando o movimento
   limitado e a acessibilidade.
 
+- A auditoria de cobertura encontrou três cards de alto uso fora do primeiro
+  recorte (`SkinCard`, `TurmasCard` e `MeusAlunosCard`); os três agora usam
+  `.ape-interactive-card`, com ícones identificados quando aplicável, sem
+  alterar compra, navegação ou carregamento.
+
 ## Fechamento técnico local — 2026-09-11
 
 - TypeScript app e node passaram sem erros.

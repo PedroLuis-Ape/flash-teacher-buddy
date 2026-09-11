@@ -36,11 +36,11 @@ export function TurmasCard() {
   return (
     <Card
       ref={revealRef}
-      className="scroll-reveal card-3d p-6 cursor-pointer transition-all duration-200 border-border"
+      className="scroll-reveal card-3d ape-interactive-card p-6 cursor-pointer border-border"
       onClick={() => navigate('/turmas')}
     >
       <div className="flex items-center gap-4">
-        <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+        <div data-motion-icon="class" className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
           <BookOpen className="h-6 w-6 text-primary" />
         </div>
         <div className="flex-1 min-w-0">

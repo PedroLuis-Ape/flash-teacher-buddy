@@ -95,6 +95,9 @@ related:
 - Matriz de runtime exercitada no preview: 1280x720 desktop com tilt, 390x844
   coarse sem transformação e 1280x720 reduced motion neutro; todos sem
   overflow horizontal.
+- Auditoria complementar: contrato dos cards residuais de loja/turmas/alunos
+  passou em 5/5; typecheck e suite completa serão repetidos após o commit
+  desta extensão.
 
 ## Limitações da evidência
 

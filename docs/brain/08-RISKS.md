@@ -62,3 +62,6 @@ related:
 - O fechamento técnico local não prova publicação no Lovable: a aba autenticada
   do preview não ficou acessível nesta sessão. Publicar somente após a
   sincronização e conferência final no ambiente de destino.
+- A extensão a cards de loja e sala de aula mantém interações de compra e
+  navegação existentes; retestar essas rotas é obrigatório porque o papel
+  compartilhado tem alcance visual transversal.
