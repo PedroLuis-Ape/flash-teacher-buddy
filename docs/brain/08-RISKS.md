@@ -37,3 +37,9 @@ related:
 - O checker considera as notas fora de `imports/` como memória ativa e apenas
   resolve referências explícitas para o histórico importado; mudanças nessa
   política exigem atualizar a especificação e os testes.
+- O contrato de runtime está correto no core, mas consumidores auxiliares ainda
+  leem `VITE_SUPABASE_*` diretamente; auditar antes de prometer imunidade total
+  a configuração divergente. Ver [[areas/supabase-runtime]].
+- O Motion System é uma proposta arquitetural sem implementação ou QA visual;
+  não declarar sua entrega pronta antes do gate de design e da matriz de
+  interação. Ver [[areas/motion-system]].

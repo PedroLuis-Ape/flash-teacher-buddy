@@ -36,10 +36,16 @@ Polimento visual responsivo, mobile-first, do App Piteco. A lógica de negócio,
   `C:\Users\pedro\.codex\skills\` e exigidas pelo `AGENTS.md`.
 - O vault existente foi migrado sem apagar a origem para `docs/brain/`, com
   `.obsidian`, Properties, wikilinks e histórico preservados.
-- O learning hub e o checker passaram: 32 notas ativas, 162 wikilinks e
+- O learning hub e o checker passaram: 34 notas ativas, 192 wikilinks e
   `BRAIN_CHECK_PASS`. Esta integração está na branch
-  `codex/piteco-memory-skills-20260911`, commit `891b3a46`; aguarda revisão do
+  `codex/piteco-memory-skills-20260911`, commit `4966a6ef`; aguarda revisão do
   usuário e eventual merge.
+- O contrato de ambientes Supabase foi revisado contra o código atual e está
+  documentado em [[areas/supabase-runtime]]. O core usa o backend de dados
+  `ymahldldyxvwjeruaxpr`; consumidores auxiliares que leem variáveis de
+  ambiente diretamente ficaram como `[REVALIDATE]`.
+- A especificação de motion/hover foi registrada em [[areas/motion-system]],
+  mas a implementação está pendente de aprovação da abordagem arquitetural.
 
 ## Worktree autoritativo
 

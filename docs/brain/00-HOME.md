@@ -28,6 +28,8 @@ Memória operacional do trabalho no App Piteco. Esta pasta é um índice de cont
 
 - [[areas/visual-polish]]
 - [[areas/adaptive-learning]]
+- [[areas/supabase-runtime]] — mapa canônico de dados, runtime e preflight.
+- [[areas/motion-system]] — escopo proposto de motion e microinterações.
 
 ## Navegação por contexto
 

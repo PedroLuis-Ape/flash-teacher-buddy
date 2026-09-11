@@ -46,6 +46,17 @@ related:
 - `node scripts/brain-check.mjs` no vault migrado: `BRAIN_CHECK_PASS`, 32 notas
   ativas e 162 wikilinks considerados, com `imports/` preservado como histórico.
 
+## Contrato de ambiente
+
+- `node scripts/check-platform.mjs`: passou neste worktree e confirmou
+  `xrnfhhoxmmstagmelvyi` como projeto gerenciado e
+  `ymahldldyxvwjeruaxpr` como runtime de dados de produção.
+- A confirmação acima é `[VERIFIED-REPO]`, não `[VERIFIED-DB]`: nenhum schema,
+  RPC, RLS ou dado remoto foi inspecionado nesta sessão.
+- A validação do futuro Motion System ainda não começou; não há evidência de
+  screenshot, interação ou performance para esse escopo. Ver
+  [[areas/motion-system]].
+
 ## Limitações da evidência
 
 O preview Lovable não estava disponível na sessão; a verificação visual foi feita na aba Chrome do app publicado e o build foi validado pelo preview smoke local. A validação de produção após merge/publicação ainda deve ser repetida no ambiente final.
